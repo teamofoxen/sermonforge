@@ -1,0 +1,1294 @@
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useDebounce } from "../utils/hooks";
+import {
+  getSeriesById, updateSeries,
+  getSectionsBySeries, createSection, updateSection, deleteSection,
+  getSermonsBySeries, createSermon, updateSermon, deleteSermon,
+  getCalendarNotes,
+} from "../db/database";
+import { getSeasonForDate, getUpcomingSundays, toDateString } from "../utils/churchCalendar";
+import { tryParse, formatDate } from "../utils";
+import DeleteButton from "./DeleteButton";
+import { sendAIMessage } from "../utils/ai";
+
+const CANON_OPTIONS = [
+  { value: "", label: "— Select category —" },
+  { value: "ot", label: "Old Testament" },
+  { value: "nt", label: "New Testament" },
+  { value: "wisdom", label: "Wisdom" },
+  { value: "prophetic", label: "Prophetic" },
+];
+
+const COLOR_OPTIONS = [
+  { value: "gold", label: "Gold" },
+  { value: "crimson", label: "Crimson" },
+  { value: "sage", label: "Sage" },
+  { value: "slate", label: "Slate" },
+];
+
+const STATUS_OPTIONS = [
+  { value: "planning", label: "Planning" },
+  { value: "active", label: "Active" },
+  { value: "complete", label: "Complete" },
+];
+
+// ── Main Component ────────────────────────────────────────────────────────────
+export default function SeriesPlanner({ seriesId, onClose, onOpenSermon }) {
+  const [series, setSeries]     = useState(null);
+  const [sections, setSections] = useState([]);
+  const [sermons, setSermons]   = useState([]);
+  const [calNotes, setCalNotes] = useState([]);
+  const [activeTab, setActiveTab] = useState("overview");
+  const [saving, setSaving]     = useState(false);
+  const [saveError, setSaveError] = useState(false);
+  const [loading, setLoading]   = useState(true);
+  const [showHowItWorks, setShowHowItWorks] = useState(false);
+
+  useEffect(() => { load(); }, [seriesId]);
+
+  async function load() {
+    try {
+      const [s, sects, serms, notes] = await Promise.all([
+        getSeriesById(seriesId),
+        getSectionsBySeries(seriesId),
+        getSermonsBySeries(seriesId),
+        getCalendarNotes(),
+      ]);
+      setSeries(s);
+      setSections(sects);
+      setSermons(serms);
+      setCalNotes(notes);
+    } catch (e) {
+      console.error("SeriesPlanner load error:", e);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const persistSeries = useCallback(async (fields) => {
+    setSaving(true);
+    setSaveError(false);
+    try {
+      await updateSeries(seriesId, fields);
+      setSeries(prev => ({ ...prev, ...fields }));
+    } catch (e) {
+      console.error("[persistSeries]", e);
+      setSaveError(true);
+    } finally {
+      setSaving(false);
+    }
+  }, [seriesId]);
+
+  const debouncedPersist = useDebounce(persistSeries, 800);
+
+  function handleSeriesField(field, value) {
+    setSeries(prev => ({ ...prev, [field]: value }));
+    debouncedPersist({ [field]: value });
+  }
+
+  if (loading || !series) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+        <div style={{ color: "var(--ink-ghost)", fontStyle: "italic" }}>Loading…</div>
+      </div>
+    );
+  }
+
+  const tabs = [
+    { id: "overview",  label: "Overview" },
+    { id: "structure", label: "Structure" },
+    { id: "slots",     label: "Sermon Slots" },
+    { id: "calendar",  label: "Calendar" },
+  ];
+
+  return (
+    <>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+      {/* Topbar */}
+      <div style={{
+        background: "var(--white)", borderBottom: "1px solid var(--parchment-deep)",
+        padding: "0 28px", display: "flex", alignItems: "center", gap: "16px",
+        minHeight: "56px", flexShrink: 0,
+      }}>
+        <button className="btn-ghost btn-sm" onClick={onClose} style={{ flexShrink: 0 }}>
+          ← Back
+        </button>
+        <div style={{
+          width: "10px", height: "10px", borderRadius: "50%", flexShrink: 0,
+          background: `var(--${series.color || "gold"})`,
+        }} />
+        <div style={{
+          flex: 1, fontFamily: "'Playfair Display', serif", fontSize: "17px",
+          fontWeight: "600", color: "var(--ink)", overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis",
+        }}>
+          {series.title}
+        </div>
+        <div style={{ display: "flex", gap: "8px", alignItems: "center", flexShrink: 0 }}>
+          {saving && <span style={{ fontSize: "12px", color: "var(--ink-ghost)", fontStyle: "italic" }}>Saving…</span>}
+          {!saving && saveError && <span style={{ fontSize: "12px", color: "var(--crimson-soft)" }}>Save failed</span>}
+          <span style={{
+            fontSize: "11px", padding: "3px 10px", borderRadius: "10px",
+            background: "var(--parchment-warm)", border: "1px solid var(--parchment-deep)",
+            color: series.status === "active" ? "var(--sage)" : series.status === "complete" ? "var(--gold)" : "var(--ink-ghost)",
+            textTransform: "uppercase", letterSpacing: "0.05em",
+          }}>
+            {series.status || "Planning"}
+          </span>
+        </div>
+        <button
+          onClick={() => setShowHowItWorks(true)}
+          style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ink-ghost)", fontSize: "12px", padding: "4px 8px", fontFamily: "'Crimson Pro', serif", flexShrink: 0 }}
+        >
+          How this works
+        </button>
+      </div>
+
+      {/* Tab bar */}
+      <div style={{
+        background: "var(--white)", borderBottom: "1px solid var(--parchment-deep)",
+        padding: "0 28px", display: "flex", gap: "0", flexShrink: 0,
+      }}>
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            style={{
+              background: "none", border: "none", cursor: "pointer",
+              padding: "14px 18px", fontSize: "14px",
+              fontFamily: "'Crimson Pro', serif",
+              color: activeTab === tab.id ? "var(--gold)" : "var(--ink-soft)",
+              borderBottom: activeTab === tab.id ? "2px solid var(--gold)" : "2px solid transparent",
+              fontWeight: activeTab === tab.id ? "600" : "400",
+              transition: "color 0.15s",
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab content */}
+      <div style={{ flex: 1, overflow: "auto", background: "var(--parchment)" }}>
+        {activeTab === "overview" && (
+          <OverviewTab
+            series={series}
+            onChange={handleSeriesField}
+          />
+        )}
+        {activeTab === "structure" && (
+          <StructureTab
+            series={series}
+            sections={sections}
+            onChange={handleSeriesField}
+            onSectionsChange={setSections}
+            seriesId={seriesId}
+          />
+        )}
+        {activeTab === "slots" && (
+          <SlotsTab
+            series={series}
+            sections={sections}
+            sermons={sermons}
+            seriesId={seriesId}
+            onSermonsChange={setSermons}
+            onOpenSermon={onOpenSermon}
+          />
+        )}
+        {activeTab === "calendar" && (
+          <CalendarTab
+            series={series}
+            sections={sections}
+            sermons={sermons}
+            calNotes={calNotes}
+            onChange={handleSeriesField}
+            onSermonsChange={setSermons}
+          />
+        )}
+      </div>
+    </div>
+    {showHowItWorks && <SeriesHowItWorksModal onClose={() => setShowHowItWorks(false)} />}
+    </>
+  );
+}
+
+// ── Overview Tab ──────────────────────────────────────────────────────────────
+function OverviewTab({ series, onChange }) {
+  const [aiLoading, setAiLoading] = useState(null); // "bigidea" | "overview"
+  const [aiMessages, setAiMessages] = useState([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+
+  async function generateBigIdea() {
+    if (!series.passage_range && !series.title) return;
+    setAiLoading("bigidea");
+    try {
+      const resp = await sendAIMessage(
+        [{ role: "user", content: `Series title: "${series.title}"\nPassage: ${series.passage_range || "not specified"}\nExisting overview: ${series.overview || "none yet"}\n\nWrite a single, compelling series Big Idea sentence — the central truth this series will hammer home. Make it sharp and memorable. Return only the sentence.` }],
+        "You are a sermon series planning assistant. You help pastors craft focused, theologically precise series concepts."
+      );
+      onChange("big_idea", resp.trim());
+    } finally {
+      setAiLoading(null);
+    }
+  }
+
+  async function generateOverview() {
+    if (!series.title && !series.passage_range) return;
+    setAiLoading("overview");
+    try {
+      const resp = await sendAIMessage(
+        [{ role: "user", content: `I am planning a sermon series titled "${series.title}" covering ${series.passage_range || "a biblical passage"}.\nBig Idea: ${series.big_idea || "not yet set"}\n\nWrite a 2-paragraph overview:\n1. The historical/literary context and purpose of this passage in Scripture\n2. Why this passage is urgently relevant to a contemporary congregation\n\nBe theologically substantive. Write as if for a pastor's own notes.` }],
+        "You are a biblical scholar and preaching consultant helping a pastor develop a sermon series."
+      );
+      onChange("overview", resp.trim());
+    } finally {
+      setAiLoading(null);
+    }
+  }
+
+  async function handleChatSubmit(e) {
+    e.preventDefault();
+    if (!chatInput.trim()) return;
+    const userMsg = { role: "user", content: chatInput.trim() };
+    const newMessages = [...aiMessages, userMsg];
+    setAiMessages(newMessages);
+    setChatInput("");
+    setChatLoading(true);
+    try {
+      const context = `Series: "${series.title}" | Passage: ${series.passage_range || "—"} | Big Idea: ${series.big_idea || "—"} | Canon: ${series.canon_category || "—"}`;
+      const resp = await sendAIMessage(newMessages, `You are helping a pastor plan a sermon series. Current series context: ${context}. Answer questions about the passage, theme, structure, or anything related to planning this series.`);
+      setAiMessages([...newMessages, { role: "assistant", content: resp }]);
+    } finally {
+      setChatLoading(false);
+    }
+  }
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: "0", height: "100%" }}>
+      {/* Main form */}
+      <div style={{ padding: "28px 32px", overflowY: "auto", borderRight: "1px solid var(--parchment-deep)" }}>
+
+        {/* Title + description */}
+        <div style={{ marginBottom: "20px" }}>
+          <label style={labelStyle}>Series Title</label>
+          <input
+            style={{ ...inputStyle, fontFamily: "'Playfair Display', serif", fontSize: "18px", marginBottom: "10px" }}
+            value={series.title || ""}
+            onChange={(e) => onChange("title", e.target.value)}
+            placeholder="e.g. The Gospel of Luke: Reintroducing Jesus"
+          />
+          <label style={labelStyle}>Short Description <span style={{ color: "var(--ink-ghost)", fontWeight: 400 }}>(tagline or subtitle)</span></label>
+          <input
+            style={inputStyle}
+            value={series.description || ""}
+            onChange={(e) => onChange("description", e.target.value)}
+            placeholder="A one-line description for the congregation or your own notes…"
+          />
+        </div>
+
+        {/* Row: color + canon + status + year */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 80px", gap: "16px", marginBottom: "20px" }}>
+          <div>
+            <label style={labelStyle}>Color</label>
+            <select style={selectStyle} value={series.color || "gold"} onChange={(e) => onChange("color", e.target.value)}>
+              {COLOR_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={labelStyle}>Biblical Category</label>
+            <select style={selectStyle} value={series.canon_category || ""} onChange={(e) => onChange("canon_category", e.target.value)}>
+              {CANON_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={labelStyle}>Status</label>
+            <select style={selectStyle} value={series.status || "planning"} onChange={(e) => onChange("status", e.target.value)}>
+              {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={labelStyle}>Year</label>
+            <input
+              type="number"
+              style={inputStyle}
+              value={series.year || new Date().getFullYear()}
+              onChange={(e) => onChange("year", parseInt(e.target.value, 10))}
+              min="2000"
+              max="2100"
+            />
+          </div>
+        </div>
+
+        {/* Passage range + dates */}
+        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: "16px", marginBottom: "20px" }}>
+          <div>
+            <label style={labelStyle}>Passage Range</label>
+            <input
+              style={{ ...inputStyle, fontFamily: "'JetBrains Mono', monospace" }}
+              value={series.passage_range || ""}
+              onChange={(e) => onChange("passage_range", e.target.value)}
+              placeholder="e.g. Luke 1:1–24:53"
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>Start Date</label>
+            <input type="date" style={inputStyle} value={series.start_date || ""} onChange={(e) => onChange("start_date", e.target.value)} />
+          </div>
+          <div>
+            <label style={labelStyle}>End Date</label>
+            <input type="date" style={inputStyle} value={series.end_date || ""} onChange={(e) => onChange("end_date", e.target.value)} />
+          </div>
+        </div>
+
+        {/* Big Idea */}
+        <div style={{ marginBottom: "20px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
+            <label style={{ ...labelStyle, marginBottom: 0 }}>Series Big Idea</label>
+            <button
+              className="btn-ghost btn-sm"
+              onClick={generateBigIdea}
+              disabled={aiLoading === "bigidea"}
+            >
+              {aiLoading === "bigidea" ? "Generating…" : "✦ Generate"}
+            </button>
+          </div>
+          <input
+            style={inputStyle}
+            value={series.big_idea || ""}
+            onChange={(e) => onChange("big_idea", e.target.value)}
+            placeholder="The central truth this series will drive home"
+          />
+        </div>
+
+        {/* Overview */}
+        <div style={{ marginBottom: "20px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
+            <label style={{ ...labelStyle, marginBottom: 0 }}>Series Overview</label>
+            <button
+              className="btn-ghost btn-sm"
+              onClick={generateOverview}
+              disabled={aiLoading === "overview"}
+            >
+              {aiLoading === "overview" ? "Generating…" : "✦ Generate"}
+            </button>
+          </div>
+          <textarea
+            style={{ ...textareaStyle, minHeight: "200px" }}
+            value={series.overview || ""}
+            onChange={(e) => onChange("overview", e.target.value)}
+            placeholder="Historical/literary context and contemporary relevance of this passage…"
+          />
+        </div>
+
+      </div>
+
+      {/* AI Chat sidebar */}
+      <AIChatPanel
+        messages={aiMessages}
+        loading={chatLoading}
+        input={chatInput}
+        onInputChange={setChatInput}
+        onSubmit={handleChatSubmit}
+        placeholder="Ask about this passage or series theme…"
+        onClear={() => setAiMessages([])}
+      />
+    </div>
+  );
+}
+
+// ── Structure Tab ─────────────────────────────────────────────────────────────
+function StructureTab({ series, sections, onChange, onSectionsChange, seriesId }) {
+  const [aiLoading, setAiLoading] = useState(null);
+  const [aiMessages, setAiMessages] = useState([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+  const [expandedSection, setExpandedSection] = useState(null);
+
+  const persistSection = useCallback(async (id, fields) => {
+    await updateSection(id, fields);
+  }, []);
+  const debouncedSectionSave = useDebounce(persistSection, 800);
+
+  async function generateOutline() {
+    if (!series.passage_range && !series.title) return;
+    setAiLoading("outline");
+    try {
+      const resp = await sendAIMessage(
+        [{ role: "user", content: `Build a detailed structural/exegetical outline for ${series.passage_range || series.title}. Include major divisions, subdivisions, and key passage markers. Format as a traditional Roman numeral / letter / number outline. Be thorough.` }],
+        "You are a biblical scholar providing a structural outline of a biblical passage for sermon series planning."
+      );
+      onChange("structural_outline", resp.trim());
+    } finally {
+      setAiLoading(null);
+    }
+  }
+
+  async function addSection() {
+    const id = await createSection({ series_id: seriesId, sort_order: sections.length });
+    const updated = await getSectionsBySeries(seriesId);
+    onSectionsChange(updated);
+    setExpandedSection(id);
+  }
+
+  function handleSectionField(id, field, value) {
+    onSectionsChange(prev => prev.map(s => s.id === id ? { ...s, [field]: value } : s));
+    debouncedSectionSave(id, { [field]: value });
+  }
+
+  async function handleDeleteSection(id) {
+    await deleteSection(id);
+    onSectionsChange(prev => prev.filter(s => s.id !== id));
+    if (expandedSection === id) setExpandedSection(null);
+  }
+
+  async function moveSection(id, direction) {
+    const idx = sections.findIndex(s => s.id === id);
+    const newIdx = idx + direction;
+    if (newIdx < 0 || newIdx >= sections.length) return;
+    const reordered = [...sections];
+    [reordered[idx], reordered[newIdx]] = [reordered[newIdx], reordered[idx]];
+    onSectionsChange(reordered);
+    await Promise.all(reordered.map((s, i) => updateSection(s.id, { sort_order: i })));
+  }
+
+  async function handleChatSubmit(e) {
+    e.preventDefault();
+    if (!chatInput.trim()) return;
+    const userMsg = { role: "user", content: chatInput.trim() };
+    const newMessages = [...aiMessages, userMsg];
+    setAiMessages(newMessages);
+    setChatInput("");
+    setChatLoading(true);
+    try {
+      const context = `Series: "${series.title}" | Passage: ${series.passage_range || "—"}`;
+      const resp = await sendAIMessage(newMessages, `You are helping a pastor plan the structure of a sermon series. Context: ${context}. Help with passage divisions, thematic organization, grammatical structure, and section planning.`);
+      setAiMessages([...newMessages, { role: "assistant", content: resp }]);
+    } finally {
+      setChatLoading(false);
+    }
+  }
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: "0", height: "100%" }}>
+      <div style={{ padding: "28px 32px", overflowY: "auto", borderRight: "1px solid var(--parchment-deep)" }}>
+
+        {/* Structural Outline */}
+        <div style={{ marginBottom: "28px" }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
+            <label style={{ ...labelStyle, marginBottom: 0 }}>Structural Outline</label>
+            <button className="btn-ghost btn-sm" onClick={generateOutline} disabled={aiLoading === "outline"}>
+              {aiLoading === "outline" ? "Generating…" : "✦ Generate"}
+            </button>
+          </div>
+          <p style={{ fontSize: "13px", color: "var(--ink-ghost)", marginBottom: "8px" }}>
+            Build this yourself, paste from a commentary, or generate with AI.
+          </p>
+          <textarea
+            style={{ ...textareaStyle, minHeight: "220px", fontFamily: "'Crimson Pro', serif", fontSize: "14px" }}
+            value={series.structural_outline || ""}
+            onChange={(e) => onChange("structural_outline", e.target.value)}
+            placeholder={"I. Major Division (1:1–3:21)\n   A. Sub-section (1:1-25)\n      1. Point\n      2. Point\n   B. Sub-section (1:26-38)"}
+          />
+        </div>
+
+        {/* Sections */}
+        <div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
+            <div>
+              <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: "15px", fontWeight: "600", color: "var(--ink)" }}>
+                Series Sections
+              </h3>
+              <p style={{ fontSize: "13px", color: "var(--ink-ghost)", marginTop: "2px" }}>
+                Optional. Use for longer books with natural major divisions.
+              </p>
+            </div>
+            <button className="btn-ghost btn-sm" onClick={addSection}>+ Add Section</button>
+          </div>
+
+          {sections.length === 0 ? (
+            <div style={{ padding: "24px", background: "var(--parchment-warm)", borderRadius: "var(--radius)", textAlign: "center", color: "var(--ink-ghost)", fontSize: "14px" }}>
+              No sections yet. Add sections if this book has natural major divisions (e.g., Luke's four movements).
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              {sections.map((section, idx) => (
+                <SectionEditor
+                  key={section.id}
+                  section={section}
+                  index={idx}
+                  total={sections.length}
+                  expanded={expandedSection === section.id}
+                  onToggle={() => setExpandedSection(expandedSection === section.id ? null : section.id)}
+                  onChange={(field, value) => handleSectionField(section.id, field, value)}
+                  onDelete={() => handleDeleteSection(section.id)}
+                  onMove={(dir) => moveSection(section.id, dir)}
+                  series={series}
+                  onSectionAI={(text) => setAiMessages(prev => [...prev, { role: "user", content: text }])}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <AIChatPanel
+        messages={aiMessages}
+        loading={chatLoading}
+        input={chatInput}
+        onInputChange={setChatInput}
+        onSubmit={handleChatSubmit}
+        placeholder="Ask about passage divisions, structure, or thematic organization…"
+        onClear={() => setAiMessages([])}
+      />
+    </div>
+  );
+}
+
+function SectionEditor({ section, index, total, expanded, onToggle, onChange, onDelete, onMove, series, onSectionAI }) {
+  return (
+    <div style={{ border: "1px solid var(--parchment-deep)", borderRadius: "var(--radius)", background: "var(--white)", overflow: "hidden" }}>
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 14px", cursor: "pointer" }} onClick={onToggle}>
+        <span style={{ color: "var(--ink-ghost)", fontSize: "12px", width: "16px", textAlign: "center" }}>{index + 1}</span>
+        <span style={{ flex: 1, fontFamily: "'Playfair Display', serif", fontSize: "14px", color: section.title ? "var(--ink)" : "var(--ink-ghost)", fontStyle: section.title ? "normal" : "italic" }}>
+          {section.title || "Untitled Section"}
+        </span>
+        {section.passage_range && (
+          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", color: "var(--ink-soft)" }}>{section.passage_range}</span>
+        )}
+        <div style={{ display: "flex", gap: "2px" }}>
+          {index > 0 && <button onClick={(e) => { e.stopPropagation(); onMove(-1); }} style={iconBtnStyle} title="Move up">↑</button>}
+          {index < total - 1 && <button onClick={(e) => { e.stopPropagation(); onMove(1); }} style={iconBtnStyle} title="Move down">↓</button>}
+          <DeleteButton small onDelete={onDelete} />
+        </div>
+        <span style={{ color: "var(--ink-ghost)", fontSize: "12px" }}>{expanded ? "▲" : "▼"}</span>
+      </div>
+
+      {/* Expanded fields */}
+      {expanded && (
+        <div style={{ padding: "14px", borderTop: "1px solid var(--parchment-deep)", display: "flex", flexDirection: "column", gap: "12px", background: "var(--parchment-warm)" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+            <div>
+              <label style={labelStyle}>Section Title</label>
+              <input style={inputStyle} value={section.title || ""} onChange={(e) => onChange("title", e.target.value)} placeholder="e.g. Seeing Jesus Through Others' Eyes" />
+            </div>
+            <div>
+              <label style={labelStyle}>Passage Range</label>
+              <input style={{ ...inputStyle, fontFamily: "'JetBrains Mono', monospace" }} value={section.passage_range || ""} onChange={(e) => onChange("passage_range", e.target.value)} placeholder="e.g. 1:1–4:13" />
+            </div>
+          </div>
+          <div>
+            <label style={labelStyle}>Section Big Idea</label>
+            <input style={inputStyle} value={section.big_idea || ""} onChange={(e) => onChange("big_idea", e.target.value)} placeholder="The central truth of this section" />
+          </div>
+          <div>
+            <label style={labelStyle}>Section Overview</label>
+            <textarea style={{ ...textareaStyle, minHeight: "80px" }} value={section.overview || ""} onChange={(e) => onChange("overview", e.target.value)} placeholder="What does this section of the book accomplish? What shift happens here?" />
+          </div>
+          <button
+            className="btn-ghost btn-sm"
+            style={{ alignSelf: "flex-start" }}
+            onClick={() => onSectionAI(`Help me write a big idea and overview for this section of ${series.passage_range || series.title}: "${section.title || "untitled section"}" covering ${section.passage_range || "unspecified passage"}.`)}
+          >
+            ✦ Ask AI about this section
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Sermon Slots Tab ──────────────────────────────────────────────────────────
+function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpenSermon }) {
+  const [aiMessages, setAiMessages] = useState([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+
+  const persistSlot = useCallback(async (id, fields) => {
+    await updateSermon(id, fields);
+  }, []);
+  const debouncedSlotSave = useDebounce(persistSlot, 800);
+
+  async function addSlot(sectionId = null) {
+    const id = await createSermon({
+      series_id: seriesId,
+      section_id: sectionId,
+      title: "",
+      passage: "",
+      stage: "planning",
+      is_one_off: 0,
+    });
+    onSermonsChange(prev => [...prev, {
+      id, series_id: seriesId, section_id: sectionId,
+      title: "", passage: "", big_idea: "", date: "", stage: "planning",
+    }]);
+  }
+
+  function handleSlotField(id, field, value) {
+    onSermonsChange(prev => prev.map(s => s.id === id ? { ...s, [field]: value } : s));
+    debouncedSlotSave(id, { [field]: value });
+  }
+
+  async function handleDeleteSlot(id) {
+    await deleteSermon(id);
+    onSermonsChange(prev => prev.filter(s => s.id !== id));
+  }
+
+  async function handleChatSubmit(e) {
+    e.preventDefault();
+    if (!chatInput.trim()) return;
+    const userMsg = { role: "user", content: chatInput.trim() };
+    const newMessages = [...aiMessages, userMsg];
+    setAiMessages(newMessages);
+    setChatInput("");
+    setChatLoading(true);
+    try {
+      const context = `Series: "${series.title}" | Passage: ${series.passage_range || "—"} | Existing slots: ${sermons.map(s => s.passage || s.title).filter(Boolean).join(", ") || "none yet"}`;
+      const resp = await sendAIMessage(newMessages, `You are helping a pastor divide a biblical book into sermon-sized units. Context: ${context}. Suggest natural passage breaks, sermon titles, and big ideas. Be specific about verse ranges.`);
+      setAiMessages([...newMessages, { role: "assistant", content: resp }]);
+    } finally {
+      setChatLoading(false);
+    }
+  }
+
+  // Group sermons by section
+  const unassigned = sermons.filter(s => !s.section_id);
+  const bySectionId = {};
+  for (const sermon of sermons) {
+    if (sermon.section_id) {
+      bySectionId[sermon.section_id] = bySectionId[sermon.section_id] || [];
+      bySectionId[sermon.section_id].push(sermon);
+    }
+  }
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: "0", height: "100%" }}>
+      <div style={{ padding: "28px 32px", overflowY: "auto", borderRight: "1px solid var(--parchment-deep)" }}>
+
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
+          <div>
+            <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: "15px", fontWeight: "600", color: "var(--ink)" }}>
+              Sermon Slots
+            </h3>
+            <p style={{ fontSize: "13px", color: "var(--ink-ghost)", marginTop: "2px" }}>
+              {sermons.length} slot{sermons.length !== 1 ? "s" : ""} planned
+            </p>
+          </div>
+          {sections.length === 0 && (
+            <button className="btn-primary btn-sm" onClick={() => addSlot(null)}>+ Add Slot</button>
+          )}
+        </div>
+
+        {sections.length > 0 ? (
+          // Organized by section
+          <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+            {sections.map((section) => (
+              <div key={section.id}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
+                  <div>
+                    <h4 style={{ fontFamily: "'Playfair Display', serif", fontSize: "14px", fontWeight: "600", color: "var(--ink-soft)" }}>
+                      {section.title || "Untitled Section"}
+                    </h4>
+                    {section.passage_range && (
+                      <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", color: "var(--ink-ghost)" }}>
+                        {section.passage_range}
+                      </span>
+                    )}
+                  </div>
+                  <button className="btn-ghost btn-sm" onClick={() => addSlot(section.id)}>+ Add Slot</button>
+                </div>
+                <SlotList
+                  slots={bySectionId[section.id] || []}
+                  onChange={handleSlotField}
+                  onDelete={handleDeleteSlot}
+                  onOpenSermon={onOpenSermon}
+                  seriesId={seriesId}
+                />
+              </div>
+            ))}
+
+            {/* Unassigned */}
+            {unassigned.length > 0 && (
+              <div>
+                <h4 style={{ fontFamily: "'Playfair Display', serif", fontSize: "14px", fontWeight: "600", color: "var(--ink-ghost)", marginBottom: "10px" }}>
+                  Unassigned
+                </h4>
+                <SlotList slots={unassigned} onChange={handleSlotField} onDelete={handleDeleteSlot} onOpenSermon={onOpenSermon} seriesId={seriesId} />
+              </div>
+            )}
+          </div>
+        ) : (
+          // Flat list
+          <SlotList
+            slots={sermons}
+            onChange={handleSlotField}
+            onDelete={handleDeleteSlot}
+            showAdd
+            onAdd={() => addSlot(null)}
+            onOpenSermon={onOpenSermon}
+            seriesId={seriesId}
+          />
+        )}
+      </div>
+
+      <AIChatPanel
+        messages={aiMessages}
+        loading={chatLoading}
+        input={chatInput}
+        onInputChange={setChatInput}
+        onSubmit={handleChatSubmit}
+        placeholder={`"How many weeks for Galatians?" or "Divide ${series.passage_range || 'this passage'} into 6 units"…`}
+        onClear={() => setAiMessages([])}
+      />
+    </div>
+  );
+}
+
+function SlotList({ slots, onChange, onDelete, showAdd, onAdd, onOpenSermon, seriesId }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+      {slots.length === 0 && (
+        <div style={{ padding: "16px", background: "var(--parchment-warm)", borderRadius: "var(--radius)", textAlign: "center", color: "var(--ink-ghost)", fontSize: "13px" }}>
+          No slots yet.
+        </div>
+      )}
+      {slots.map((slot, idx) => (
+        <SlotRow key={slot.id} slot={slot} index={idx} onChange={onChange} onDelete={onDelete} onOpenSermon={onOpenSermon} seriesId={seriesId} />
+      ))}
+      {showAdd && (
+        <button className="btn-ghost btn-sm" onClick={onAdd} style={{ alignSelf: "flex-start", marginTop: "4px" }}>
+          + Add Slot
+        </button>
+      )}
+    </div>
+  );
+}
+
+function SlotRow({ slot, index, onChange, onDelete, onOpenSermon, seriesId }) {
+  const [expanded, setExpanded] = useState(!slot.title && !slot.passage);
+
+  return (
+    <div style={{ border: "1px solid var(--parchment-deep)", borderRadius: "var(--radius)", background: "var(--white)", overflow: "hidden" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 14px", cursor: "pointer" }} onClick={() => setExpanded(e => !e)}>
+        <span style={{ color: "var(--ink-ghost)", fontSize: "12px", width: "16px" }}>{index + 1}</span>
+        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "12px", color: "var(--ink-soft)", minWidth: "90px" }}>
+          {slot.passage || <span style={{ color: "var(--ink-ghost)", fontStyle: "italic", fontFamily: "'Crimson Pro', serif" }}>No passage</span>}
+        </span>
+        <span style={{ flex: 1, fontSize: "14px", color: slot.title ? "var(--ink)" : "var(--ink-ghost)", fontStyle: slot.title ? "normal" : "italic" }}>
+          {slot.title || "Untitled"}
+        </span>
+        {slot.date && (
+          <span style={{ fontSize: "12px", color: "var(--ink-ghost)" }}>{formatDate(slot.date)}</span>
+        )}
+        {onOpenSermon && (
+          <button
+            className="btn-ghost btn-sm"
+            onClick={(e) => { e.stopPropagation(); onOpenSermon(slot.id, "series-planner", seriesId); }}
+            style={{ fontSize: "12px", padding: "3px 10px" }}
+          >
+            Open
+          </button>
+        )}
+        <DeleteButton small onDelete={() => onDelete(slot.id)} />
+        <span style={{ color: "var(--ink-ghost)", fontSize: "12px" }}>{expanded ? "▲" : "▼"}</span>
+      </div>
+      {expanded && (
+        <div style={{ padding: "12px 14px", borderTop: "1px solid var(--parchment-deep)", background: "var(--parchment-warm)", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+          <div>
+            <label style={labelStyle}>Passage</label>
+            <input
+              style={{ ...inputStyle, fontFamily: "'JetBrains Mono', monospace" }}
+              value={slot.passage || ""}
+              onChange={(e) => onChange(slot.id, "passage", e.target.value)}
+              placeholder="e.g. Luke 1:1-4"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>Working Title</label>
+            <input
+              style={inputStyle}
+              value={slot.title || ""}
+              onChange={(e) => onChange(slot.id, "title", e.target.value)}
+              placeholder="e.g. Through the Eyes of Luke"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+          <div style={{ gridColumn: "1 / -1" }}>
+            <label style={labelStyle}>Big Idea (working)</label>
+            <input
+              style={inputStyle}
+              value={slot.big_idea || ""}
+              onChange={(e) => onChange(slot.id, "big_idea", e.target.value)}
+              placeholder="The central truth of this sermon"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Calendar Tab ──────────────────────────────────────────────────────────────
+function CalendarTab({ series, sections, sermons, calNotes, onChange, onSermonsChange }) {
+  const [aiMessages, setAiMessages] = useState([]);
+  const [chatInput, setChatInput]   = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+  const [schedule, setSchedule]     = useState([]); // [{sermonId, date}]
+  const [calendarSaving, setCalendarSaving] = useState(false);
+  const [calendarSaveMsg, setCalendarSaveMsg] = useState(""); // "" | "saved" | "error"
+
+  const excludeDates = calNotes.map(n => n.date);
+
+  // Always initialise schedule from current sermon dates so manual edits have
+  // something to update and the Save button is always available.
+  useEffect(() => {
+    if (sermons.length === 0) return;
+    setSchedule(sermons.map(s => ({ sermonId: s.id, date: s.date || "" })));
+  }, [sermons]);
+
+  function suggestSundays() {
+    if (!series.start_date || sermons.length === 0) return;
+    const sundays = getUpcomingSundays(series.start_date, sermons.length, excludeDates);
+    const newSchedule = sermons.map((s, i) => ({ sermonId: s.id, date: sundays[i] || "" }));
+    setSchedule(newSchedule);
+  }
+
+  function handleDateChange(sermonId, date) {
+    setSchedule(prev => prev.map(s => s.sermonId === sermonId ? { ...s, date } : s));
+  }
+
+  function skipSunday(sermonId) {
+    // Find current date for this slot, advance by one week
+    const entry = schedule.find(s => s.sermonId === sermonId);
+    if (!entry?.date) return;
+    const d = new Date(entry.date + "T00:00:00");
+    d.setDate(d.getDate() + 7);
+    const next = toDateString(d);
+    handleDateChange(sermonId, next);
+  }
+
+  async function applySchedule() {
+    setCalendarSaving(true);
+    setCalendarSaveMsg("");
+    try {
+      await Promise.all(
+        schedule.map(({ sermonId, date }) => updateSermon(sermonId, { date }))
+      );
+      onSermonsChange(prev => prev.map(s => {
+        const entry = schedule.find(e => e.sermonId === s.id);
+        return entry ? { ...s, date: entry.date } : s;
+      }));
+      // Update series end_date from last slot
+      const lastDate = [...schedule].sort((a, b) => (a.date > b.date ? 1 : -1)).pop()?.date;
+      if (lastDate) onChange("end_date", lastDate);
+      setCalendarSaveMsg("saved");
+      setTimeout(() => setCalendarSaveMsg(""), 2000);
+    } catch (e) {
+      console.error("[applySchedule]", e);
+      setCalendarSaveMsg("error");
+    } finally {
+      setCalendarSaving(false);
+    }
+  }
+
+  async function handleChatSubmit(e) {
+    e.preventDefault();
+    if (!chatInput.trim()) return;
+    const userMsg = { role: "user", content: chatInput.trim() };
+    const newMessages = [...aiMessages, userMsg];
+    setAiMessages(newMessages);
+    setChatInput("");
+    setChatLoading(true);
+    try {
+      const scheduleContext = schedule.map((entry, i) => {
+        const sermon = sermons.find(s => s.id === entry.sermonId);
+        const season = entry.date ? getSeasonForDate(entry.date) : null;
+        return `${i + 1}. ${sermon?.passage || "—"} "${sermon?.title || "Untitled"}" — ${entry.date ? formatDate(entry.date) : "unscheduled"}${season ? ` (${season.shortName})` : ""}`;
+      }).join("\n");
+      const noteContext = calNotes.length > 0 ? `\nCalendar notes (special dates): ${calNotes.map(n => `${n.date}: ${n.label}`).join(", ")}` : "";
+      const resp = await sendAIMessage(
+        newMessages,
+        `You are helping a pastor schedule a sermon series. Series: "${series.title}" starting ${series.start_date || "TBD"}.\nCurrent schedule:\n${scheduleContext}${noteContext}\n\nAdvise on scheduling adjustments. If the pastor asks to skip a week or rearrange slots, explain what the adjusted schedule would look like (list it out). Do not modify anything — just advise clearly.`
+      );
+      setAiMessages([...newMessages, { role: "assistant", content: resp }]);
+    } finally {
+      setChatLoading(false);
+    }
+  }
+
+  const sermonMap = Object.fromEntries(sermons.map(s => [s.id, s]));
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: "0", height: "100%" }}>
+      <div style={{ padding: "28px 32px", overflowY: "auto", borderRight: "1px solid var(--parchment-deep)" }}>
+
+        {/* Controls */}
+        <div style={{ display: "flex", alignItems: "flex-end", gap: "16px", marginBottom: "24px", flexWrap: "wrap" }}>
+          <div>
+            <label style={labelStyle}>Series Start Date</label>
+            <input
+              type="date"
+              style={inputStyle}
+              value={series.start_date || ""}
+              onChange={(e) => onChange("start_date", e.target.value)}
+            />
+          </div>
+          <button
+            className="btn-primary btn-sm"
+            onClick={suggestSundays}
+            disabled={!series.start_date || sermons.length === 0}
+          >
+            Suggest Sundays ({sermons.length} slots)
+          </button>
+          <button className="btn-ghost btn-sm" onClick={applySchedule} disabled={calendarSaving}>
+            {calendarSaving ? "Saving…" : "✓ Save Dates"}
+          </button>
+          {calendarSaveMsg === "saved" && (
+            <span style={{ fontSize: "12px", color: "var(--sage)" }}>Dates saved</span>
+          )}
+          {calendarSaveMsg === "error" && (
+            <span style={{ fontSize: "12px", color: "var(--crimson-soft)" }}>Save failed — check console</span>
+          )}
+        </div>
+
+        {sermons.length === 0 ? (
+          <div style={{ padding: "32px", background: "var(--parchment-warm)", borderRadius: "var(--radius)", textAlign: "center", color: "var(--ink-ghost)", fontSize: "14px" }}>
+            Add sermon slots in the Sermon Slots tab first.
+          </div>
+        ) : (
+          <>
+            {/* Schedule list */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+              {sermons.map((sermon, idx) => {
+                const entry = schedule.find(s => s.sermonId === sermon.id);
+                const date  = entry?.date || sermon.date || "";
+                const season = date ? getSeasonForDate(date) : null;
+                const note  = calNotes.find(n => n.date === date);
+
+                return (
+                  <div key={sermon.id} style={{
+                    display: "grid", gridTemplateColumns: "24px 1fr 1fr auto auto",
+                    alignItems: "center", gap: "12px",
+                    padding: "10px 14px",
+                    background: "var(--white)",
+                    border: "1px solid var(--parchment-deep)",
+                    borderRadius: "var(--radius)",
+                  }}>
+                    <span style={{ fontSize: "12px", color: "var(--ink-ghost)", textAlign: "center" }}>{idx + 1}</span>
+                    <div>
+                      <div style={{ fontSize: "13px", color: "var(--ink)", fontFamily: "'Playfair Display', serif", lineHeight: "1.2" }}>
+                        {sermon.title || <span style={{ color: "var(--ink-ghost)", fontStyle: "italic" }}>Untitled</span>}
+                      </div>
+                      {sermon.passage && (
+                        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", color: "var(--ink-soft)", marginTop: "2px" }}>
+                          {sermon.passage}
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
+                      <input
+                        type="date"
+                        style={{ ...inputStyle, fontSize: "13px", padding: "5px 8px" }}
+                        value={date}
+                        onChange={(e) => handleDateChange(sermon.id, e.target.value)}
+                      />
+                      {note && (
+                        <span style={{ fontSize: "11px", color: "var(--crimson-soft)" }}>⚠ {note.label}</span>
+                      )}
+                    </div>
+                    <div>
+                      {season && (
+                        <span style={{
+                          fontSize: "11px", padding: "2px 7px", borderRadius: "10px",
+                          background: season.color + "22", color: season.color,
+                          border: `1px solid ${season.color}44`,
+                          whiteSpace: "nowrap",
+                        }}>
+                          {season.shortName}
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => skipSunday(sermon.id)}
+                      style={iconBtnStyle}
+                      title="Skip one week"
+                      disabled={!date}
+                    >
+                      +1wk
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div style={{ marginTop: "16px", display: "flex", alignItems: "center", gap: "12px" }}>
+              <button className="btn-primary" onClick={applySchedule} disabled={calendarSaving}>
+                {calendarSaving ? "Saving…" : "✓ Save All Dates to Sermon Records"}
+              </button>
+              {calendarSaveMsg === "saved" && (
+                <span style={{ fontSize: "12px", color: "var(--sage)" }}>Dates saved</span>
+              )}
+              {calendarSaveMsg === "error" && (
+                <span style={{ fontSize: "12px", color: "var(--crimson-soft)" }}>Save failed — check console</span>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+
+      <AIChatPanel
+        messages={aiMessages}
+        loading={chatLoading}
+        input={chatInput}
+        onInputChange={setChatInput}
+        onSubmit={handleChatSubmit}
+        placeholder="Ask about scheduling — e.g. 'skip Christmas week' or 'what falls during Holy Week?'"
+        onClear={() => setAiMessages([])}
+      />
+    </div>
+  );
+}
+
+// ── AI Chat Panel (shared) ────────────────────────────────────────────────────
+function AIChatPanel({ messages, loading, input, onInputChange, onSubmit, placeholder, onClear }) {
+  const bottomRef = useRef(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", background: "var(--white)", borderLeft: "1px solid var(--parchment-deep)" }}>
+      {/* Header */}
+      <div style={{ padding: "14px 16px", borderBottom: "1px solid var(--parchment-deep)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <span style={{ fontSize: "13px", fontWeight: "600", color: "var(--ink-soft)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+          AI Assistant
+        </span>
+        {messages.length > 0 && (
+          <button onClick={onClear} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "12px", color: "var(--ink-ghost)" }}>
+            Clear
+          </button>
+        )}
+      </div>
+
+      {/* Messages */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "16px" }}>
+        {messages.length === 0 && (
+          <div style={{ color: "var(--ink-ghost)", fontSize: "13px", fontStyle: "italic", textAlign: "center", marginTop: "24px" }}>
+            Ask anything about this series…
+          </div>
+        )}
+        {messages.map((msg, i) => (
+          <div key={i} style={{
+            marginBottom: "12px",
+            padding: "10px 12px",
+            borderRadius: "var(--radius)",
+            background: msg.role === "user" ? "var(--parchment-warm)" : "var(--white)",
+            border: msg.role === "assistant" ? "1px solid var(--parchment-deep)" : "none",
+            fontSize: "14px",
+            lineHeight: "1.6",
+            color: "var(--ink-mid)",
+            whiteSpace: "pre-wrap",
+          }}>
+            {msg.content}
+          </div>
+        ))}
+        {loading && (
+          <div style={{ padding: "10px 12px", color: "var(--ink-ghost)", fontSize: "13px", fontStyle: "italic" }}>
+            Thinking…
+          </div>
+        )}
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Input */}
+      <form onSubmit={onSubmit} style={{ padding: "12px 16px", borderTop: "1px solid var(--parchment-deep)" }}>
+        <textarea
+          style={{
+            width: "100%", border: "1px solid var(--parchment-deep)", borderRadius: "var(--radius)",
+            padding: "8px 10px", fontSize: "13px", fontFamily: "'Crimson Pro', serif",
+            resize: "none", background: "var(--parchment-warm)", color: "var(--ink)",
+            outline: "none", lineHeight: "1.5",
+          }}
+          rows={3}
+          value={input}
+          onChange={(e) => onInputChange(e.target.value)}
+          placeholder={placeholder}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSubmit(e); }
+          }}
+        />
+        <button
+          type="submit"
+          className="btn-primary btn-sm"
+          style={{ marginTop: "6px", width: "100%" }}
+          disabled={loading || !input.trim()}
+        >
+          {loading ? "Thinking…" : "Send"}
+        </button>
+      </form>
+    </div>
+  );
+}
+
+// ── Shared styles ─────────────────────────────────────────────────────────────
+const labelStyle = {
+  display: "block",
+  fontSize: "11px",
+  fontWeight: "600",
+  color: "var(--ink-soft)",
+  textTransform: "uppercase",
+  letterSpacing: "0.06em",
+  marginBottom: "5px",
+};
+
+const inputStyle = {
+  width: "100%",
+  border: "1px solid var(--parchment-deep)",
+  borderRadius: "var(--radius)",
+  padding: "8px 10px",
+  fontSize: "14px",
+  fontFamily: "'Crimson Pro', serif",
+  background: "var(--white)",
+  color: "var(--ink)",
+  outline: "none",
+};
+
+const selectStyle = {
+  ...inputStyle,
+  cursor: "pointer",
+};
+
+const textareaStyle = {
+  ...inputStyle,
+  resize: "vertical",
+  lineHeight: "1.6",
+};
+
+const iconBtnStyle = {
+  background: "none",
+  border: "none",
+  cursor: "pointer",
+  color: "var(--ink-ghost)",
+  fontSize: "13px",
+  padding: "2px 4px",
+};
+
+// ── Series Planner "How this works" modal ──────────────────────────────────────
+function SeriesHowItWorksModal({ onClose }) {
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)",
+        display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: "var(--white)", borderRadius: "var(--radius-lg)",
+          boxShadow: "var(--shadow-deep)", padding: "28px 32px",
+          maxWidth: "960px", width: "90vw", position: "relative",
+          maxHeight: "90vh", overflowY: "auto",
+        }}
+      >
+        <button
+          onClick={onClose}
+          style={{
+            position: "absolute", top: "14px", right: "16px",
+            background: "none", border: "none", cursor: "pointer",
+            color: "var(--ink-ghost)", fontSize: "18px", lineHeight: 1,
+          }}
+        >✕</button>
+        <h3 style={{
+          fontFamily: "'Playfair Display', serif", fontSize: "18px",
+          color: "var(--ink)", marginBottom: "6px",
+        }}>How the Series Planner works</h3>
+        <p style={{
+          fontSize: "13px", color: "var(--ink-ghost)",
+          marginBottom: "24px", fontFamily: "'Crimson Pro', serif",
+        }}>Plan and build a sermon series through four planning stages.</p>
+        <div style={{ overflowX: "auto" }}>
+          <svg viewBox="0 0 860 228" style={{ width: "100%", height: "auto", display: "block" }}>
+
+            {/* ── Stage boxes ─────────────────────────────────────────────────── */}
+            <rect x="10" y="16" width="180" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
+            <text x="100" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "'Crimson Pro', serif", fontWeight: 600 }}>Overview</text>
+
+            <rect x="230" y="16" width="180" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
+            <text x="320" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "'Crimson Pro', serif", fontWeight: 600 }}>Structure</text>
+
+            <rect x="450" y="16" width="180" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
+            <text x="540" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "'Crimson Pro', serif", fontWeight: 600 }}>Sermon Slots</text>
+
+            <rect x="670" y="16" width="180" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
+            <text x="760" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "'Crimson Pro', serif", fontWeight: 600 }}>Calendar</text>
+
+            {/* ── Between-stage arrows ────────────────────────────────────────── */}
+            <text x="210" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-ghost)", fontSize: "14px" }}>→</text>
+            <text x="430" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-ghost)", fontSize: "14px" }}>→</text>
+            <text x="650" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-ghost)", fontSize: "14px" }}>→</text>
+
+            {/* ── Stage → first sub-item connectors ───────────────────────────── */}
+            <line x1="100" y1="56" x2="100" y2="76" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <line x1="320" y1="56" x2="320" y2="76" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <line x1="540" y1="56" x2="540" y2="76" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <line x1="760" y1="56" x2="760" y2="76" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+
+            {/* ── Overview sub-items (4) ───────────────────────────────────────── */}
+            <rect x="10" y="76" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <text x="100" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>{"Title & identity"}</text>
+            <line x1="100" y1="104" x2="100" y2="112" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+
+            <rect x="10" y="112" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <text x="100" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>{"Passage & dates"}</text>
+            <line x1="100" y1="140" x2="100" y2="148" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+
+            <rect x="10" y="148" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <text x="100" y="162" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Series Big Idea</text>
+            <line x1="100" y1="176" x2="100" y2="184" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+
+            <rect x="10" y="184" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <text x="100" y="198" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Series Overview</text>
+
+            {/* ── Structure sub-items (2) ──────────────────────────────────────── */}
+            <rect x="230" y="76" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <text x="320" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Structural Outline</text>
+            <line x1="320" y1="104" x2="320" y2="112" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+
+            <rect x="230" y="112" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <text x="320" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Series Sections</text>
+
+            {/* ── Sermon Slots sub-items (3) ───────────────────────────────────── */}
+            <rect x="450" y="76" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <text x="540" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Sermon Slots</text>
+            <line x1="540" y1="104" x2="540" y2="112" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+
+            <rect x="450" y="112" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <text x="540" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Stage: planning</text>
+            <line x1="540" y1="140" x2="540" y2="148" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+
+            <rect x="450" y="148" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <text x="540" y="162" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Promote to active</text>
+
+            {/* ── Calendar sub-items (3) ───────────────────────────────────────── */}
+            <rect x="670" y="76" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <text x="760" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Date assignment</text>
+            <line x1="760" y1="104" x2="760" y2="112" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+
+            <rect x="670" y="112" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <text x="760" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Liturgical seasons</text>
+            <line x1="760" y1="140" x2="760" y2="148" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+
+            <rect x="670" y="148" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <text x="760" y="162" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>AI Advisor</text>
+
+          </svg>
+        </div>
+      </div>
+    </div>
+  );
+}

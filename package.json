@@ -1,0 +1,73 @@
+{
+  "name": "sermonforge",
+  "version": "1.0.0",
+  "description": "Sermon preparation workspace for pastors",
+  "author": "SermonForge",
+  "main": "electron/main.js",
+  "scripts": {
+    "start": "vite build && electron .",
+    "dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && cross-env ELECTRON_DEV=1 electron .\"",
+    "build": "vite build && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --win",
+    "preview": "vite preview",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.27.0",
+    "dotenv": "^16.4.5",
+    "mammoth": "^1.7.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "sql.js": "^1.12.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
+    "electron": "^31.3.1",
+    "electron-builder": "^24.13.3",
+    "vite": "^5.4.2",
+    "vitest": "^4.1.2",
+    "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.sermonforge.app",
+    "productName": "SermonForge",
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "node_modules/**/*"
+    ],
+    "asarUnpack": [
+      "node_modules/sql.js/dist/sql-wasm.wasm"
+    ],
+    "extraResources": [
+      {
+        "from": ".env",
+        "to": ".env"
+      }
+    ],
+    "directories": {
+      "output": "C:/Users/rossa/AppData/Local/SermonForgeBuilds"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "requestedExecutionLevel": "asInvoker",
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "SermonForge",
+      "installerHeader": "",
+      "deleteAppDataOnUninstall": false
+    }
+  }
+}

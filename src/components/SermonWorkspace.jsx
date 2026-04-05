@@ -1,0 +1,464 @@
+import { useState, useEffect, useRef, useCallback } from "react";
+// useRef is used for pendingMessageId — a stable counter so repeated identical
+// prompts each produce a distinct object reference and always trigger the effect.
+import { useDebounce } from "../utils/hooks";
+import { getSermonById, updateSermon, deleteSermon, getSeriesById, getSectionsBySeries, openInLogos } from "../db/database";
+import { updateMemory, extractOutlinePattern, extractPhrasePatterns } from "../utils/memory";
+import DeleteButton from "./DeleteButton";
+import StudyTab from "./StudyTab";
+import OutlineTab from "./OutlineTab";
+import ManuscriptTab from "./ManuscriptTab";
+import DeliveryTab from "./DeliveryTab";
+import AIPanel from "./AIPanel";
+
+const TABS = ["study", "outline", "manuscript", "delivery"];
+
+
+export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
+  const [sermon, setSermon] = useState(null);
+  const [activeTab, setActiveTab] = useState("study");
+  const [activeStep, setActiveStep] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [logosCopied, setLogosCopied] = useState(false);
+  const [pendingMessage, setPendingMessage] = useState(null);
+  const [showHowItWorks, setShowHowItWorks] = useState(false);
+  const pendingIdRef = useRef(0);
+  // Mirrors sermon state synchronously so captureMemory never reads a stale closure.
+  const sermonRef = useRef(null);
+  // Last hash captured — prevents duplicate memory writes when content hasn't changed.
+  const lastCapturedHashRef = useRef(null);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const data = await getSermonById(sermonId);
+
+        // Fetch series and sections in parallel — only what's needed.
+        // Sections are fetched only when both ids are present so we can
+        // pluck the matching section without an extra IPC call.
+        const [series, sections] = await Promise.all([
+          data.series_id
+            ? getSeriesById(data.series_id).catch((e) => { console.error("Series fetch failed:", e); return null; })
+            : Promise.resolve(null),
+          data.series_id && data.section_id
+            ? getSectionsBySeries(data.series_id).catch((e) => { console.error("Sections fetch failed:", e); return []; })
+            : Promise.resolve([]),
+        ]);
+
+        data.series  = series ?? null;
+        data.section = data.section_id
+          ? (sections.find((s) => s.id === data.section_id) ?? null)
+          : null;
+
+        setSermon(data);
+        sermonRef.current = data;
+      } catch (e) {
+        console.error("SermonWorkspace load error:", e);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, [sermonId]);
+
+  function captureMemory(s, { scanPhrases = false } = {}) {
+    if (!s) return;
+    const hash = `${s.mpt ?? ""}|${s.passage ?? ""}|${s.outline ?? ""}`;
+    if (hash === lastCapturedHashRef.current) return;
+    const partial = {};
+
+    const history = {};
+    if (s.mpt?.trim()) history.recentMPTs = [s.mpt.trim()];
+    if (s.passage?.trim()) history.recentPassages = [s.passage.trim()];
+    if (Object.keys(history).length > 0) partial.history = history;
+
+    const patterns = {};
+    const outlinePattern = extractOutlinePattern(s.outline);
+    if (outlinePattern) patterns.outlinePatterns = [outlinePattern];
+    // Phrase extraction is expensive on long manuscripts — only run on tab change,
+    // and only when the manuscript has enough content to yield a real signal.
+    if (scanPhrases && (s.manuscript?.length ?? 0) >= 300) {
+      const phrasePatterns = extractPhrasePatterns(s.manuscript);
+      if (phrasePatterns.length > 0) patterns.phrasePatterns = phrasePatterns.slice(0, 3);
+    }
+    if (Object.keys(patterns).length > 0) partial.patterns = patterns;
+
+    if (Object.keys(partial).length === 0) return;
+    updateMemory(partial);
+    lastCapturedHashRef.current = hash;
+  }
+
+  const persistUpdate = useCallback(
+    async () => {
+      try {
+        await updateSermon(sermonId, sermonRef.current);
+        captureMemory(sermonRef.current);
+      } catch (e) {
+        console.error("Save error:", e);
+      }
+    },
+    [sermonId]
+  );
+
+  const debouncedSave = useDebounce(persistUpdate, 800);
+
+  function handleUpdate(fields) {
+    const merged = { ...sermonRef.current, ...fields };
+    sermonRef.current = merged;
+    setSermon(merged);
+    debouncedSave();
+  }
+
+  function handleTabChange(tab) {
+    captureMemory(sermonRef.current, { scanPhrases: true });
+    setActiveTab(tab);
+    setActiveStep(null);
+  }
+
+  async function handleDelete() {
+    await deleteSermon(sermonId);
+    onClose();
+  }
+
+  const handleOpenLogos = async () => {
+    if (!sermon?.passage) return;
+    try {
+      await openInLogos(sermon.passage);
+      setLogosCopied(true);
+      setTimeout(() => setLogosCopied(false), 4000);
+    } catch (err) {
+      console.error('Logos launch failed:', err);
+    }
+  };
+
+  function handleAI(prompt, systemPrompt) {
+    pendingIdRef.current += 1;
+    setPendingMessage({ prompt, systemPrompt, step: activeStep || activeTab, id: pendingIdRef.current });
+  }
+
+  if (loading) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+        <div style={{ color: "var(--ink-ghost)", fontStyle: "italic" }}>Loading sermon…</div>
+      </div>
+    );
+  }
+
+  if (!sermon) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+        <div>
+          <p style={{ color: "var(--ink-ghost)" }}>Sermon not found.</p>
+          <button className="btn-ghost" onClick={onClose}>← Back</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+      {/* Top bar */}
+      <div className="topbar">
+        <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1, minWidth: 0 }}>
+          <button
+            className="btn-icon"
+            onClick={onClose}
+            title="Back"
+            style={{ flexShrink: 0 }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+          </button>
+          <div className="topbar-left">
+            <div className="topbar-series">
+              {sermon.series_title && sermon.series_id && onOpenSeries ? (
+                <span
+                  onClick={() => onOpenSeries(sermon.series_id)}
+                  style={{ cursor: "pointer", color: "var(--gold)", textDecoration: "none" }}
+                  title="Back to series"
+                >
+                  {sermon.series_title}
+                </span>
+              ) : (
+                sermon.series_title && <span>{sermon.series_title}</span>
+              )}
+              {sermon.series_title && sermon.passage && <span> · </span>}
+              {sermon.passage && (
+                <span
+                  className="passage-ref"
+                  onClick={handleOpenLogos}
+                  title="Open in Logos"
+                >
+                  {sermon.passage}
+                </span>
+              )}
+            </div>
+            <div className="topbar-title">{sermon.title}</div>
+          </div>
+        </div>
+
+        <div className="topbar-right">
+          <DeleteButton onDelete={handleDelete} />
+
+          {sermon.passage && (
+            <button
+              className="btn-ghost btn-sm"
+              onClick={handleOpenLogos}
+              title="Copy passage to clipboard and open Logos"
+              style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: '12px' }}
+            >
+              {logosCopied ? '✓ Copied — paste in Logos' : 'Open in Logos'}
+            </button>
+          )}
+          <button
+            onClick={() => setShowHowItWorks(true)}
+            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ink-ghost)", fontSize: "12px", padding: "4px 8px", fontFamily: "'Crimson Pro', serif" }}
+          >
+            How this works
+          </button>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="stage-tabs">
+        {TABS.map((tab) => (
+          <button
+            key={tab}
+            className={`stage-tab ${activeTab === tab ? "active" : ""}`}
+            onClick={() => handleTabChange(tab)}
+          >
+            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      {/* Body */}
+      <div className="workspace-body">
+        <div className="workspace-main">
+
+          {/* Pastoral Intelligence orientation card — always visible, never a gate */}
+          <div className="card" style={{ margin: "16px 20px 0", padding: "16px 20px" }}>
+            {/* Read-only series context — series sermons only */}
+            {sermon.series_id && (sermon.series?.title || sermon.series?.big_idea || sermon.section?.big_idea) && (
+              <div style={{ marginBottom: "14px", background: "var(--parchment-warm)", border: "1px solid var(--parchment-deep)", borderRadius: "var(--radius)", padding: "10px 14px", fontSize: "13px" }}>
+                {sermon.series?.title && (
+                  <div style={{ color: "var(--ink-ghost)", fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", marginBottom: "4px" }}>
+                    {sermon.series.title}
+                  </div>
+                )}
+                {sermon.series?.big_idea && (
+                  <div style={{ color: "var(--ink-mid)", marginBottom: sermon.section?.big_idea ? "6px" : "0" }}>
+                    <span style={{ color: "var(--ink-ghost)", fontSize: "11px" }}>Series big idea  </span>{sermon.series.big_idea}
+                  </div>
+                )}
+                {sermon.section?.big_idea && (
+                  <div style={{ color: "var(--ink-mid)" }}>
+                    <span style={{ color: "var(--ink-ghost)", fontSize: "11px" }}>Section big idea  </span>{sermon.section.big_idea}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Pastoral intelligence — three editable fields */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px" }}>
+              <div>
+                <label className="field-label">Topic / Theme</label>
+                <textarea
+                  className="field-textarea"
+                  value={sermon.topic_theme || ""}
+                  onChange={e => handleUpdate({ topic_theme: e.target.value })}
+                  placeholder="Topic or theme — doctrine, life situation, question, felt need..."
+                  rows={2}
+                />
+              </div>
+              <div>
+                <label className="field-label">Audience</label>
+                <textarea
+                  className="field-textarea"
+                  value={sermon.audience_assumptions || ""}
+                  onChange={e => handleUpdate({ audience_assumptions: e.target.value })}
+                  placeholder="What do you know about who's in the room?"
+                  rows={2}
+                />
+              </div>
+              <div>
+                <label className="field-label">Background</label>
+                <textarea
+                  className="field-textarea"
+                  value={sermon.background_noise || ""}
+                  onChange={e => handleUpdate({ background_noise: e.target.value })}
+                  placeholder="What's in the air — news, community events, cultural moment?"
+                  rows={2}
+                />
+              </div>
+            </div>
+          </div>
+
+          {activeTab === "study" && (
+            <StudyTab
+              sermon={sermon}
+              onUpdate={handleUpdate}
+              onAI={handleAI}
+              aiLoading={aiLoading}
+              onStepChange={setActiveStep}
+              onTabChange={handleTabChange}
+            />
+          )}
+          {activeTab === "outline" && (
+            <OutlineTab sermon={sermon} onUpdate={handleUpdate} />
+          )}
+          {activeTab === "manuscript" && (
+            <ManuscriptTab
+              sermon={sermon}
+              onUpdate={handleUpdate}
+              onAI={handleAI}
+              aiLoading={aiLoading}
+            />
+          )}
+          {activeTab === "delivery" && (
+            <DeliveryTab sermon={sermon} onUpdate={handleUpdate} />
+          )}
+        </div>
+
+        <AIPanel
+          sermon={sermon}
+          activeTab={activeTab}
+          activeStep={activeStep}
+          externalMessage={pendingMessage}
+          onLoadingChange={setAiLoading}
+          loading={aiLoading}
+        />
+      </div>
+    </div>
+    {showHowItWorks && <SermonHowItWorksModal onClose={() => setShowHowItWorks(false)} />}
+    </>
+  );
+}
+
+// ── Sermon Workspace "How this works" modal ────────────────────────────────────
+function SermonHowItWorksModal({ onClose }) {
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)",
+        display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: "var(--white)", borderRadius: "var(--radius-lg)",
+          boxShadow: "var(--shadow-deep)", padding: "28px 32px",
+          maxWidth: "960px", width: "90vw", position: "relative",
+          maxHeight: "90vh", overflowY: "auto",
+        }}
+      >
+        <button
+          onClick={onClose}
+          style={{
+            position: "absolute", top: "14px", right: "16px",
+            background: "none", border: "none", cursor: "pointer",
+            color: "var(--ink-ghost)", fontSize: "18px", lineHeight: 1,
+          }}
+        >✕</button>
+        <h3 style={{
+          fontFamily: "'Playfair Display', serif", fontSize: "18px",
+          color: "var(--ink)", marginBottom: "6px",
+        }}>How the Sermon Workspace works</h3>
+        <p style={{
+          fontSize: "13px", color: "var(--ink-ghost)",
+          marginBottom: "24px", fontFamily: "'Crimson Pro', serif",
+        }}>Each sermon moves through four stages from exegesis to delivery.</p>
+        <div style={{ overflowX: "auto" }}>
+          <svg viewBox="0 0 860 336" style={{ width: "100%", height: "auto", display: "block" }}>
+
+            {/* ── Stage boxes ─────────────────────────────────────────────────── */}
+            <rect x="10" y="16" width="180" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
+            <text x="100" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "'Crimson Pro', serif", fontWeight: 600 }}>Study</text>
+
+            <rect x="230" y="16" width="180" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
+            <text x="320" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "'Crimson Pro', serif", fontWeight: 600 }}>Outline</text>
+
+            <rect x="450" y="16" width="180" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
+            <text x="540" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "'Crimson Pro', serif", fontWeight: 600 }}>Manuscript</text>
+
+            <rect x="670" y="16" width="180" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
+            <text x="760" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "'Crimson Pro', serif", fontWeight: 600 }}>Delivery</text>
+
+            {/* ── Between-stage arrows ────────────────────────────────────────── */}
+            <text x="210" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-ghost)", fontSize: "14px" }}>→</text>
+            <text x="430" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-ghost)", fontSize: "14px" }}>→</text>
+            <text x="650" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-ghost)", fontSize: "14px" }}>→</text>
+
+            {/* ── Stage → first sub-item connectors ───────────────────────────── */}
+            <line x1="100" y1="56" x2="100" y2="76" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <line x1="320" y1="56" x2="320" y2="76" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <line x1="540" y1="56" x2="540" y2="76" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <line x1="760" y1="56" x2="760" y2="76" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+
+            {/* ── Study sub-items (7) ──────────────────────────────────────────── */}
+            <rect x="10" y="76" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <text x="100" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Observe</text>
+            <line x1="100" y1="104" x2="100" y2="112" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+
+            <rect x="10" y="112" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <text x="100" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Interpret</text>
+            <line x1="100" y1="140" x2="100" y2="148" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+
+            <rect x="10" y="148" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <text x="100" y="162" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Redemptive Thread</text>
+            <line x1="100" y1="176" x2="100" y2="184" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+
+            <rect x="10" y="184" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <text x="100" y="198" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Implications</text>
+            <line x1="100" y1="212" x2="100" y2="220" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+
+            <rect x="10" y="220" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <text x="100" y="234" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>MPT / MPS</text>
+            <line x1="100" y1="248" x2="100" y2="256" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+
+            <rect x="10" y="256" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <text x="100" y="270" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Outline</text>
+            <line x1="100" y1="284" x2="100" y2="292" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+
+            <rect x="10" y="292" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <text x="100" y="306" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Functional Elements</text>
+
+            {/* ── Outline sub-items (1) ────────────────────────────────────────── */}
+            <rect x="230" y="76" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <text x="320" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Outline Editor</text>
+
+            {/* ── Manuscript sub-items (2) ─────────────────────────────────────── */}
+            <rect x="450" y="76" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <text x="540" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Manuscript Editor</text>
+            <line x1="540" y1="104" x2="540" y2="112" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+
+            <rect x="450" y="112" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <text x="540" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Tune-Up Engine</text>
+
+            {/* ── Delivery sub-items (4) ───────────────────────────────────────── */}
+            <rect x="670" y="76" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <text x="760" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Delivery Notes</text>
+            <line x1="760" y1="104" x2="760" y2="112" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+
+            <rect x="670" y="112" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <text x="760" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Timing Notes</text>
+            <line x1="760" y1="140" x2="760" y2="148" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+
+            <rect x="670" y="148" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <text x="760" y="162" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Post-Sermon</text>
+            <line x1="760" y1="176" x2="760" y2="184" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+
+            <rect x="670" y="184" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <text x="760" y="198" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Checklist</text>
+
+          </svg>
+        </div>
+      </div>
+    </div>
+  );
+}
