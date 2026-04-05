@@ -565,6 +565,42 @@ Series Booklet Export (planned — not yet implemented):
 
 ---
 
+## GIT WORKFLOW
+
+### Before starting any significant work
+
+- If the task touches more than one or two files, or could span multiple
+  sessions, create a branch first:
+    git checkout -b feature/description
+    git checkout -b fix/description
+- Low-risk, single-file changes can be made directly on main
+
+### Branch naming conventions
+
+  feature/   — new functionality        (e.g. feature/booklet-export)
+  fix/       — bug fixes                (e.g. fix/calendar-feedback)
+  refactor/  — structural changes with  (e.g. refactor/ipc-consolidation)
+               no new behavior
+
+### During work
+
+- Commit at logical checkpoints, not just at the end of a session
+- Commit messages should be descriptive: what changed and why, not just "updates"
+
+### Finishing a branch
+
+When work is complete and stable:
+1. Merge into main:  git checkout main && git merge feature/description
+2. Push:             git push
+3. Delete the branch: git branch -d feature/description
+
+### Never
+
+- Force push to main
+- Commit .env, .db files, or node_modules
+
+---
+
 ## DEVELOPMENT RULES
 
 1. Read CLAUDE.md, CHANGELOG.md, and DECISIONS.md before every session
