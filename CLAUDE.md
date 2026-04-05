@@ -617,7 +617,7 @@ When work is complete and stable:
    always use path.join(), never hardcode separators
 10. After completing any set of changes, run `npm run build` to produce an
     updated installer. Output goes to:
-    C:\Users\rossa\AppData\Local\SermonForgeBuilds\
+    C:\Users\rossa\OneDrive\SermonForgeBuilds\
     Do not wait to be asked — build is part of finishing a task.
 
 ---
