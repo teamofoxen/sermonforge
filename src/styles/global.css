@@ -978,6 +978,38 @@ button {
   color: var(--ink);
 }
 
+.ai-copy-btn {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 11px;
+  font-family: 'Crimson Pro', serif;
+  color: var(--ink-ghost);
+  padding: 2px 6px;
+  border-radius: 3px;
+  opacity: 0;
+  transition: opacity 0.15s;
+  pointer-events: none;
+}
+
+.ai-message.assistant:hover .ai-copy-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.ai-copy-btn:hover {
+  background: var(--parchment-deep);
+  color: var(--ink-soft);
+}
+
+.aichat-msg-assistant:hover .ai-copy-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 .ai-message.empty-state {
   background: transparent;
   border: 1px dashed var(--parchment-deep);

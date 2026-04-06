@@ -78,14 +78,23 @@ export default function SeriesPlanner({ seriesId, onClose, onOpenSermon }) {
   const [sections, setSections] = useState([]);
   const [sermons, setSermons]   = useState([]);
   const [calNotes, setCalNotes] = useState([]);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState("book-study");
   const [saving, setSaving]     = useState(false);
   const [saveError, setSaveError] = useState(false);
   const [loading, setLoading]   = useState(true);
   const [showHowItWorks, setShowHowItWorks]   = useState(false);
   const [showStudyGuide, setShowStudyGuide]   = useState(false);
 
-  useEffect(() => { load(); }, [seriesId]);
+  useEffect(() => {
+    load();
+    const saved = localStorage.getItem(`sermonforge_planner_tab_${seriesId}`);
+    setActiveTab(saved || "book-study");
+  }, [seriesId]);
+
+  function handleTabChange(tabId) {
+    setActiveTab(tabId);
+    localStorage.setItem(`sermonforge_planner_tab_${seriesId}`, tabId);
+  }
 
   async function load() {
     try {
@@ -199,7 +208,7 @@ export default function SeriesPlanner({ seriesId, onClose, onOpenSermon }) {
         {tabs.map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => handleTabChange(tab.id)}
             style={{
               background: "none", border: "none", cursor: "pointer",
               padding: "14px 18px", fontSize: "14px",
@@ -216,7 +225,7 @@ export default function SeriesPlanner({ seriesId, onClose, onOpenSermon }) {
       </div>
 
       {/* Tab content */}
-      <div style={{ flex: 1, overflow: "auto", background: "var(--parchment)" }}>
+      <div style={{ flex: 1, overflow: "hidden", background: "var(--parchment)" }}>
         {activeTab === "book-study" && (
           <BookStudyTab
             series={series}
@@ -279,17 +288,22 @@ function BookStudyTab({ series, onChange }) {
 
     const populatedFields = BOOK_STUDY_FIELDS.filter(f => series[f.key]?.trim().length > 0);
 
+    let identity = `We are studying ${series.title || "this series"}`;
+    if (series.passage_range?.trim()) identity += ` — ${series.passage_range.trim()}`;
+    if (series.canon_category?.trim()) identity += ` (${series.canon_category.trim()})`;
+    identity += ".";
+
     let userContent;
     if (populatedFields.length === 1) {
       // Only this field has content — use the focused solo prompt.
-      userContent = `${currentContent}\n\n${fieldDef.soloPrompt}`;
+      userContent = `${identity}\n\n${currentContent}\n\n${fieldDef.soloPrompt}`;
     } else {
       // Multiple fields populated — send current field as primary, others as context.
       const otherFields = populatedFields.filter(f => f.key !== fieldDef.key);
       const contextLines = otherFields
         .map(f => `${f.label}:\n${series[f.key].trim()}`)
         .join("\n\n");
-      userContent = `${fieldDef.label}:\n${currentContent}\n\n${fieldDef.soloPrompt}\n\nFor context, here is what I have noted in other areas of my book study:\n\n${contextLines}`;
+      userContent = `${identity}\n\n${fieldDef.label}:\n${currentContent}\n\n${fieldDef.soloPrompt}\n\nFor context, here is what I have noted in other areas of my book study:\n\n${contextLines}`;
     }
 
     const userMsg = { role: "user", content: userContent };
@@ -313,7 +327,11 @@ function BookStudyTab({ series, onChange }) {
   async function handleChatSubmit(e) {
     e.preventDefault();
     if (!chatInput.trim()) return;
-    const userMsg = { role: "user", content: chatInput.trim() };
+    let identity = `We are studying ${series.title || "this series"}`;
+    if (series.passage_range?.trim()) identity += ` — ${series.passage_range.trim()}`;
+    if (series.canon_category?.trim()) identity += ` (${series.canon_category.trim()})`;
+    identity += ".";
+    const userMsg = { role: "user", content: `${identity}\n\n${chatInput.trim()}` };
     const newMessages = [...aiMessages, userMsg];
     setAiMessages(newMessages);
     setChatInput("");
@@ -342,6 +360,34 @@ function BookStudyTab({ series, onChange }) {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: "0", height: "100%" }}>
       <div style={{ padding: "28px 32px", overflowY: "auto", borderRight: "1px solid var(--parchment-deep)" }}>
+
+        {/* Book identity header */}
+        <div style={{ marginBottom: "24px", padding: "14px 16px", background: "var(--parchment-warm)", border: "1px solid var(--parchment-deep)", borderRadius: "var(--radius)" }}>
+          <input
+            style={{ ...inputStyle, fontFamily: "'Playfair Display', serif", fontSize: "18px", fontWeight: "600", marginBottom: (series.passage_range || series.canon_category) ? "6px" : "0" }}
+            value={series.title || ""}
+            onChange={(e) => onChange("title", e.target.value)}
+            placeholder="Series Text"
+          />
+          {(series.passage_range || series.canon_category) && (
+            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+              {series.passage_range && (
+                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "13px", color: "var(--ink-soft)" }}>
+                  {series.passage_range}
+                </span>
+              )}
+              {series.canon_category && (
+                <span style={{
+                  fontSize: "10px", padding: "2px 7px", borderRadius: "10px",
+                  background: "var(--parchment-deep)", color: "var(--ink-soft)",
+                  fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.05em",
+                }}>
+                  {series.canon_category}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
 
         {BOOK_STUDY_FIELDS.map((fieldDef) => (
           <div key={fieldDef.key} style={{ marginBottom: "24px" }}>
@@ -1305,6 +1351,25 @@ function CalendarTab({ series, sections, sermons, calNotes, onChange, onSermonsC
   );
 }
 
+// ── Copy Button (used in AIChatPanel) ────────────────────────────────────────
+function CopyButton({ text }) {
+  const [copied, setCopied] = useState(false);
+
+  function handleCopy(e) {
+    e.stopPropagation();
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
+  return (
+    <button onClick={handleCopy} className="ai-copy-btn" title="Copy response">
+      {copied ? "✓ Copied" : "Copy"}
+    </button>
+  );
+}
+
 // ── AI Chat Panel (shared) ────────────────────────────────────────────────────
 function AIChatPanel({ messages, loading, input, onInputChange, onSubmit, placeholder, onClear }) {
   const bottomRef = useRef(null);
@@ -1335,7 +1400,7 @@ function AIChatPanel({ messages, loading, input, onInputChange, onSubmit, placeh
           </div>
         )}
         {messages.map((msg, i) => (
-          <div key={i} style={{
+          <div key={i} className={msg.role === "assistant" ? "aichat-msg-assistant" : undefined} style={{
             marginBottom: "12px",
             padding: "10px 12px",
             borderRadius: "var(--radius)",
@@ -1345,8 +1410,10 @@ function AIChatPanel({ messages, loading, input, onInputChange, onSubmit, placeh
             lineHeight: "1.6",
             color: "var(--ink-mid)",
             whiteSpace: "pre-wrap",
+            position: "relative",
           }}>
             {msg.content}
+            {msg.role === "assistant" && <CopyButton text={msg.content} />}
           </div>
         ))}
         {loading && (
@@ -1464,81 +1531,102 @@ function SeriesHowItWorksModal({ onClose }) {
         <p style={{
           fontSize: "13px", color: "var(--ink-ghost)",
           marginBottom: "24px", fontFamily: "'Crimson Pro', serif",
-        }}>Plan and build a sermon series through four planning stages.</p>
+        }}>Plan and build a sermon series through five planning stages.</p>
         <div style={{ overflowX: "auto" }}>
-          <svg viewBox="0 0 860 228" style={{ width: "100%", height: "auto", display: "block" }}>
+          <svg viewBox="0 0 1080 228" style={{ width: "100%", height: "auto", display: "block" }}>
 
             {/* ── Stage boxes ─────────────────────────────────────────────────── */}
             <rect x="10" y="16" width="180" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
-            <text x="100" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "'Crimson Pro', serif", fontWeight: 600 }}>Overview</text>
+            <text x="100" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "'Crimson Pro', serif", fontWeight: 600 }}>Book Study</text>
 
             <rect x="230" y="16" width="180" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
-            <text x="320" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "'Crimson Pro', serif", fontWeight: 600 }}>Structure</text>
+            <text x="320" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "'Crimson Pro', serif", fontWeight: 600 }}>Overview</text>
 
             <rect x="450" y="16" width="180" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
-            <text x="540" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "'Crimson Pro', serif", fontWeight: 600 }}>Sermon Slots</text>
+            <text x="540" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "'Crimson Pro', serif", fontWeight: 600 }}>Structure</text>
 
             <rect x="670" y="16" width="180" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
-            <text x="760" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "'Crimson Pro', serif", fontWeight: 600 }}>Calendar</text>
+            <text x="760" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "'Crimson Pro', serif", fontWeight: 600 }}>Sermon Slots</text>
+
+            <rect x="890" y="16" width="180" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
+            <text x="980" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "'Crimson Pro', serif", fontWeight: 600 }}>Calendar</text>
 
             {/* ── Between-stage arrows ────────────────────────────────────────── */}
             <text x="210" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-ghost)", fontSize: "14px" }}>→</text>
             <text x="430" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-ghost)", fontSize: "14px" }}>→</text>
             <text x="650" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-ghost)", fontSize: "14px" }}>→</text>
+            <text x="870" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-ghost)", fontSize: "14px" }}>→</text>
 
             {/* ── Stage → first sub-item connectors ───────────────────────────── */}
             <line x1="100" y1="56" x2="100" y2="76" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
             <line x1="320" y1="56" x2="320" y2="76" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
             <line x1="540" y1="56" x2="540" y2="76" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
             <line x1="760" y1="56" x2="760" y2="76" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <line x1="980" y1="56" x2="980" y2="76" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
 
-            {/* ── Overview sub-items (4) ───────────────────────────────────────── */}
+            {/* ── Book Study sub-items (4) ────────────────────────────────────── */}
             <rect x="10" y="76" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="100" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>{"Title & identity"}</text>
+            <text x="100" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Redemptive Context</text>
             <line x1="100" y1="104" x2="100" y2="112" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
 
             <rect x="10" y="112" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="100" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>{"Passage & dates"}</text>
+            <text x="100" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Book Background</text>
             <line x1="100" y1="140" x2="100" y2="148" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
 
             <rect x="10" y="148" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="100" y="162" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Series Big Idea</text>
+            <text x="100" y="162" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Argument &amp; Structure</text>
             <line x1="100" y1="176" x2="100" y2="184" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
 
             <rect x="10" y="184" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="100" y="198" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Series Overview</text>
+            <text x="100" y="198" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Working Big Idea</text>
 
-            {/* ── Structure sub-items (2) ──────────────────────────────────────── */}
+            {/* ── Overview sub-items (4) ───────────────────────────────────────── */}
             <rect x="230" y="76" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="320" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Structural Outline</text>
+            <text x="320" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>{"Title & identity"}</text>
             <line x1="320" y1="104" x2="320" y2="112" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
 
             <rect x="230" y="112" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="320" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Series Sections</text>
+            <text x="320" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>{"Passage & dates"}</text>
+            <line x1="320" y1="140" x2="320" y2="148" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
 
-            {/* ── Sermon Slots sub-items (3) ───────────────────────────────────── */}
+            <rect x="230" y="148" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <text x="320" y="162" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Series Big Idea</text>
+            <line x1="320" y1="176" x2="320" y2="184" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+
+            <rect x="230" y="184" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <text x="320" y="198" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Series Overview</text>
+
+            {/* ── Structure sub-items (2) ──────────────────────────────────────── */}
             <rect x="450" y="76" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="540" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Sermon Slots</text>
+            <text x="540" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Structural Outline</text>
             <line x1="540" y1="104" x2="540" y2="112" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
 
             <rect x="450" y="112" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="540" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Stage: planning</text>
-            <line x1="540" y1="140" x2="540" y2="148" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <text x="540" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Series Sections</text>
 
-            <rect x="450" y="148" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="540" y="162" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Promote to active</text>
-
-            {/* ── Calendar sub-items (3) ───────────────────────────────────────── */}
+            {/* ── Sermon Slots sub-items (3) ───────────────────────────────────── */}
             <rect x="670" y="76" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="760" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Date assignment</text>
+            <text x="760" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Sermon Slots</text>
             <line x1="760" y1="104" x2="760" y2="112" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
 
             <rect x="670" y="112" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="760" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Liturgical seasons</text>
+            <text x="760" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Stage: planning</text>
             <line x1="760" y1="140" x2="760" y2="148" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
 
             <rect x="670" y="148" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="760" y="162" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>AI Advisor</text>
+            <text x="760" y="162" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Promote to active</text>
+
+            {/* ── Calendar sub-items (3) ───────────────────────────────────────── */}
+            <rect x="890" y="76" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <text x="980" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Date assignment</text>
+            <line x1="980" y1="104" x2="980" y2="112" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+
+            <rect x="890" y="112" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <text x="980" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Liturgical seasons</text>
+            <line x1="980" y1="140" x2="980" y2="148" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+
+            <rect x="890" y="148" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <text x="980" y="162" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>AI Advisor</text>
 
           </svg>
         </div>

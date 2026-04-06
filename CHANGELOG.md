@@ -2,6 +2,144 @@
 
 ---
 
+## 2026-04-06 — SeriesPlanner UX: default tab, scroll isolation, copy button, SVG update
+
+### src/components/SeriesPlanner.jsx
+
+**Default tab changed to Book Study.** `activeTab` initializes to `"book-study"` instead
+of `"overview"`. On `seriesId` change, the saved tab is restored from localStorage keyed
+by `sermonforge_planner_tab_${seriesId}`. On tab change, `handleTabChange()` persists the
+selection to localStorage so each series remembers where the pastor left off.
+
+**Scroll isolation.** The tab content wrapper changed from `overflow: "auto"` to
+`overflow: "hidden"`. Each tab component already uses `height: "100%"` with its own
+`overflowY: "auto"` left panel and AIChatPanel managing its own scroll independently.
+This ensures neither panel's scroll bleeds into the other.
+
+**Copy button on AI messages (AIChatPanel).** A `CopyButton` component added above
+`AIChatPanel`. Assistant messages now render with `position: "relative"` and a
+`class="aichat-msg-assistant"` so the CSS hover rule reveals the copy button. Shows
+"Copy" by default, "✓ Copied" for 2 seconds after click via `navigator.clipboard`.
+
+**"How this works" SVG updated.** Book Study added as the first column (before Overview).
+ViewBox widened from `0 0 860 228` to `0 0 1080 228`. All original columns shifted right
+by 220px. Book Study has 4 sub-items: Redemptive Context, Book Background, Argument &
+Structure, Working Big Idea. Intro text updated: "four planning stages" → "five planning
+stages".
+
+### src/components/AIPanel.jsx
+
+**Copy button on AI messages.** A `CopyButton` component added above
+`captureResponsePatterns`. Assistant message divs now render with `position: "relative"`.
+CopyButton appears on hover, uses `navigator.clipboard.writeText`, shows "✓ Copied" for
+2 seconds then resets.
+
+### src/styles/global.css
+
+Added `.ai-copy-btn` rule: absolutely positioned bottom-right of the message bubble,
+`opacity: 0`, transitions to `opacity: 1` on parent hover via two rules:
+`.ai-message.assistant:hover .ai-copy-btn` (for AIPanel) and
+`.aichat-msg-assistant:hover .ai-copy-btn` (for SeriesPlanner AIChatPanel).
+`pointer-events` toggled in parallel so the hidden button is not clickable.
+
+---
+
+## 2026-04-05 — Feedback system: sidebar link, modal, and file writer
+
+### src/components/FeedbackModal.jsx (new file)
+Modal with a structured feedback form. Primary category dropdown controls which
+secondary fields appear:
+- **Bug** — "What were you doing?" + "What did you expect?"
+- **UI/UX** — part-of-app dropdown + freeform "What felt wrong?"
+- **AI Quality** — step dropdown + response-problem dropdown + optional notes
+- **Missing Feature** — workflow location + feature description
+- **Content/Copy** — "Where is the text?" + "What should it say?"
+
+Auto-captures current view, schema version, and app version on mount via
+`getSchemaVersion()` and `getAppVersion()` in parallel (falls back to "unknown"
+on error). On submit, calls `submitFeedback(payload)` via IPC. Shows
+"Feedback saved — thank you." in var(--sage) and closes after 1500ms on success.
+Shows error in var(--crimson-soft) and re-enables the button on failure.
+
+### src/components/Sidebar.jsx
+Added `showFeedback` state. Added "Send feedback" text button in the sidebar
+footer below "SermonForge v1.0" — Crimson Pro, var(--ink-ghost), 12px, subtle.
+Renders `<FeedbackModal>` when `showFeedback` is true, passing `currentView` prop.
+`currentView` was already passed to Sidebar from App.jsx — no App changes needed.
+
+### electron/main.js
+Three new IPC handlers:
+- `db-getSchemaVersion` — reads `schema_version` from the meta table, returns
+  `{ version: string }`
+- `app-get-version` — returns `{ version: app.getVersion() }`
+- `feedback-submit` — assembles a markdown file with YAML-style frontmatter
+  (Date, Type, View, Schema, App) and labeled body sections; saves to
+  `~/OneDrive/SermonForge/Feedback/YYYY-MM-DD-HH-MM-category.md`; creates the
+  Feedback directory if absent; returns `{ success, filepath }` or
+  `{ success: false, error }`
+
+### electron/preload.js
+Exposed `getSchemaVersion`, `getAppVersion`, and `submitFeedback` on
+`window.electronAPI`.
+
+### src/db/database.js
+Added `getSchemaVersion`, `getAppVersion`, and `submitFeedback` wrapper exports.
+
+---
+
+## 2026-04-05 — BookStudyTab: editable title in identity header
+
+### src/components/SeriesPlanner.jsx
+
+The series title in the BookStudyTab identity header is now an editable input field
+(Playfair Display, 18px) wired to `onChange("title", ...)` — the same save path as the
+title field in Overview. Pastors can enter the book/series name from Book Study without
+switching tabs. Blank state placeholder changed from "Untitled Series" to "Series Text".
+
+## 2026-04-05 — BookStudyTab: identity header bar and prompt context prefix
+
+### src/components/SeriesPlanner.jsx
+
+**Read-only identity header bar** added at the top of the BookStudyTab left panel,
+above the six fields. Displays:
+- Series title in Playfair Display (18px, prominent)
+- Passage range in JetBrains Mono / var(--ink-soft), shown only when present
+- Canon category badge (parchment-deep background, ink-soft text, uppercase) shown
+  only when present
+Styled as a parchment-warm card matching the Pastoral Intelligence read-only context
+block pattern in SermonWorkspace.jsx. Uses only existing CSS variables.
+
+**Book identity prefix** prepended to every prompt sent from BookStudyTab:
+`"We are studying [title] — [passage_range] ([canon_category])."` Passage range and
+canon category are each omitted if not present; falls back to `"We are studying [title]."`
+Applied to the user message in both `handleAnalyze()` (all six field-specific prompts)
+and `handleChatSubmit()`. Does not affect the system prompt.
+
+## 2026-04-05 — Housekeeping: build output path, git workflow docs, Dashboard analysis
+
+### package.json
+Changed electron-builder output directory from `C:/Users/rossa/AppData/Local/SermonForgeBuilds`
+to `C:/Users/rossa/OneDrive/SermonForgeBuilds` so the installer is accessible via File Explorer
+without navigating into the hidden AppData tree.
+
+### CLAUDE.md
+Added `## GIT WORKFLOW` section documenting branching conventions, commit discipline, branch
+naming (feature/, fix/, refactor/), merge/push/delete sequence, and hard prohibitions
+(no force-push to main, no .env/.db commits). Updated build output path to match package.json.
+
+### Dashboard analysis (no code changes)
+Audited Dashboard.jsx against the mental model in CLAUDE.md. Identified misalignment:
+the current Dashboard is a sermon-centric status board (recent sermons, pipeline list,
+biblical coverage counts) rather than a series arc planning room. Key tensions:
+- "Continue Where You Left Off" surfaces individual sermons — series is the primary unit
+- Series Pipeline groups by status, not by arc position or upcoming preaching schedule
+- Biblical Coverage reads as a stats widget, not a planning orientation
+- Complete series appear alongside active/planning ones
+- "+ New Sermon" header button bypasses the Series → Sermon hierarchy
+No changes made; redesign pending user direction.
+
+---
+
 ## 2026-04-05 — Documentation: ADR-008 version tracking and FUTURE.md Entry 7 expanded
 
 Updated ADR-008 in DECISIONS.md: "Current version" corrected from 4 to 7; migration history

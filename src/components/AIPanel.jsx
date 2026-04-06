@@ -264,8 +264,9 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
           </div>
         )}
         {messages.map((msg, i) => (
-          <div key={i} className={`ai-message ${msg.role}`} style={{ whiteSpace: "pre-wrap" }}>
+          <div key={i} className={`ai-message ${msg.role}`} style={{ whiteSpace: "pre-wrap", position: "relative" }}>
             {msg.content}
+            {msg.role === "assistant" && <CopyButton text={msg.content} />}
           </div>
         ))}
         {loading && (
@@ -354,6 +355,29 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
         </div>
       </div>
     </aside>
+  );
+}
+
+// ── Copy Button ────────────────────────────────────────────────────────────────
+function CopyButton({ text }) {
+  const [copied, setCopied] = useState(false);
+
+  function handleCopy(e) {
+    e.stopPropagation();
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
+  return (
+    <button
+      onClick={handleCopy}
+      className="ai-copy-btn"
+      title="Copy response"
+    >
+      {copied ? "✓ Copied" : "Copy"}
+    </button>
   );
 }
 
