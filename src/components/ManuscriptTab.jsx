@@ -51,7 +51,7 @@ function wordCount(text) {
   return text.trim().split(/\s+/).filter(Boolean).length;
 }
 
-export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading }) {
+export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading, onOpenDrawer }) {
   const templateInjectedRef = useRef(false);
 
   useEffect(() => {
@@ -67,6 +67,7 @@ export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading }) {
   function runTuneUp() {
     const outline = getOutline(sermon);
     const prompt = `Title: ${sermon.title || "Untitled"}\nPassage: ${sermon.passage || "unknown"}\nMPT: ${sermon.mpt || "(not set)"}\nMPS: ${sermon.mps || "(not set)"}\n\nOutline:\n${outline.map((p, i) => `${i + 1}. ${p.text}`).join("\n") || "(none)"}\n\nManuscript:\n\n${sermon.manuscript || "(empty)"}`;
+    onOpenDrawer?.();
     onAI(prompt, TUNE_UP_SYSTEM);
   }
 

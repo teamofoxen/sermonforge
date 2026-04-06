@@ -1,6 +1,12 @@
 import { useState } from "react";
 import { tryParse, getOutline } from "../utils";
 
+function autoResize(el) {
+  if (!el) return;
+  el.style.height = "auto";
+  el.style.height = Math.min(el.scrollHeight, window.innerHeight * 0.6) + "px";
+}
+
 const DEFAULT_CHECKLIST = [
   "Review manuscript or notes",
   "Pray through the message",
@@ -87,10 +93,12 @@ export default function DeliveryTab({ sermon, onUpdate }) {
             </div>
             <textarea
               className="field-textarea"
-              style={{ minHeight: "100px" }}
+              rows={3}
               value={sermon.timing_notes || ""}
               onChange={(e) => onUpdate({ timing_notes: e.target.value })}
-              placeholder="Target length, per-section timing, areas to cut if running long…"
+              onInput={(e) => autoResize(e.target)}
+              ref={(el) => autoResize(el)}
+              placeholder="Target: 38 min. Intro 5 min · Point 1: 10 min · Point 2: 10 min · Conclusion: 5 min. If running long, cut the third illustration in Point 2."
             />
           </div>
 
@@ -101,10 +109,12 @@ export default function DeliveryTab({ sermon, onUpdate }) {
             </div>
             <textarea
               className="field-textarea"
-              style={{ minHeight: "120px" }}
+              rows={3}
               value={sermon.post_sermon || ""}
               onChange={(e) => onUpdate({ post_sermon: e.target.value })}
-              placeholder="What landed? What fell flat? What would you change? What feedback did you receive?"
+              onInput={(e) => autoResize(e.target)}
+              ref={(el) => autoResize(el)}
+              placeholder="What landed and why? What fell flat? What would you restructure — the outline, an illustration, the application? What feedback did you receive from the congregation?"
             />
           </div>
         </div>
@@ -117,9 +127,12 @@ export default function DeliveryTab({ sermon, onUpdate }) {
         </div>
         <textarea
           className="field-textarea large"
+          rows={3}
           value={sermon.delivery_notes || ""}
           onChange={(e) => onUpdate({ delivery_notes: e.target.value })}
-          placeholder="Emphasis points, transitions, emotional register, pauses, illustrations to gesture…"
+          onInput={(e) => autoResize(e.target)}
+          ref={(el) => autoResize(el)}
+          placeholder="Pace and pauses: slow down through the opening illustration. Voice: drop volume at the moment of grace in Point 2. Transitions: signal each point shift clearly. Eye contact during the conclusion. Any gestures or movements to note."
         />
       </div>
 

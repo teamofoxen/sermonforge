@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { getRecentSermons, createSermon } from "../db/database.js";
+import FeedbackModal from "./FeedbackModal.jsx";
 
 const NAV_ITEMS = [
   {
@@ -38,6 +39,7 @@ const CHEVRON_UP = (
 export default function Sidebar({ currentView, onNavigate, onOpenSermon }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [recentSermons, setRecentSermons] = useState([]);
+  const [showFeedback, setShowFeedback] = useState(false);
 
   const visibleRecents = recentSermons.filter((s) => s.title?.trim() && s.stage !== "planning");
 
@@ -157,7 +159,31 @@ export default function Sidebar({ currentView, onNavigate, onOpenSermon }) {
         ))}
       </nav>
 
-      <div className="sidebar-footer">SermonForge v1.0</div>
+      <div className="sidebar-footer">
+        <div>SermonForge v1.0</div>
+        <button
+          onClick={() => setShowFeedback(true)}
+          style={{
+            background: "none",
+            border: "none",
+            padding: "4px 0 0",
+            cursor: "pointer",
+            fontFamily: "'Crimson Pro', serif",
+            fontSize: 12,
+            color: "var(--ink-ghost)",
+            textDecoration: "none",
+          }}
+        >
+          Send feedback
+        </button>
+      </div>
+
+      {showFeedback && (
+        <FeedbackModal
+          currentView={currentView}
+          onClose={() => setShowFeedback(false)}
+        />
+      )}
     </aside>
   );
 }

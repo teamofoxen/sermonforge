@@ -3,9 +3,17 @@ import { getOutline, serializeOutline, getFunctionalElements, serializeFunctiona
 import { STEPS, PHASES, PHASE_SEQUENCE, STEP_SEQUENCE } from "../constants/steps";
 import { sendAIMessage } from "../utils/ai";
 import OutlineBuilder from "./OutlineBuilder";
+import InlineAIResponse from "./InlineAIResponse";
 
 const STEP_LABELS = ["Exegesis", "MPT / MPS", "Outline", "Functional Elements"];
 const PHASE_LABELS = ["Observe", "Interpret", "Redemptive Thread", "Implications"];
+
+// Auto-resize a textarea to fit its content, capped at 60vh.
+function autoResize(el) {
+  if (!el) return;
+  el.style.height = "auto";
+  el.style.height = Math.min(el.scrollHeight, window.innerHeight * 0.6) + "px";
+}
 
 function CollapseArrow({ open }) {
   return (
@@ -36,25 +44,6 @@ function SummaryBlock({ summaryKey, summaries, summaryLoading }) {
           <div className="summary-content">{text}</div>
         </>
       )}
-    </div>
-  );
-}
-
-function SubPhase({ hint, value, onChange, onReview, loading }) {
-  return (
-    <div className="sub-phase-body">
-      <p className="sub-phase-hint">{hint}</p>
-      <textarea
-        className="field-textarea large"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder="Your notes…"
-      />
-      <div style={{ marginTop: "8px" }}>
-        <button className="btn-ghost btn-sm" onClick={onReview} disabled={loading}>
-          {loading ? "Reviewing…" : "Review →"}
-        </button>
-      </div>
     </div>
   );
 }
@@ -126,7 +115,9 @@ function FuncElem({ pointText, pointId, displayIndex, funcData, onUpdate }) {
               style={{ minHeight: "80px" }}
               value={data.explanation}
               onChange={(e) => update("explanation", e.target.value)}
-              placeholder="What does the audience need to understand about this portion of the text?"
+              onInput={(e) => autoResize(e.target)}
+              ref={(el) => autoResize(el)}
+              placeholder="How does this point emerge from the text? Ground it exegetically."
             />
           </div>
           <div>
@@ -136,7 +127,9 @@ function FuncElem({ pointText, pointId, displayIndex, funcData, onUpdate }) {
               style={{ minHeight: "80px" }}
               value={data.application}
               onChange={(e) => update("application", e.target.value)}
-              placeholder="What response does this point press — and is it gospel-rooted?"
+              onInput={(e) => autoResize(e.target)}
+              ref={(el) => autoResize(el)}
+              placeholder="What does this point ask of the congregation? Make it specific."
             />
           </div>
           <div>
@@ -146,7 +139,9 @@ function FuncElem({ pointText, pointId, displayIndex, funcData, onUpdate }) {
               style={{ minHeight: "60px" }}
               value={data.illustration}
               onChange={(e) => update("illustration", e.target.value)}
-              placeholder="What clarifies or moves affections? (Leave blank if none needed)"
+              onInput={(e) => autoResize(e.target)}
+              ref={(el) => autoResize(el)}
+              placeholder="What story, image, or example makes this point land?"
             />
           </div>
         </div>
@@ -163,7 +158,72 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
   const [summaryLoading, setSummaryLoading] = useState(null);
   const [funcData, setFuncData] = useState(() => getFunctionalElements(sermon));
 
+  // Inline AI response state — keyed by section name
+  const [inlineResponses, setInlineResponses] = useState({});
+  const [inlineLoading, setInlineLoading] = useState(null); // key of section currently loading
+
+  // Draft-generation loading flags
+  const [draftLoading, setDraftLoading] = useState(null); // "mpt" | "mps" | "big_idea"
+
   const outline = getOutline(sermon);
+
+  async function fetchInline(key, prompt, system) {
+    setInlineLoading(key);
+    try {
+      const response = await sendAIMessage([{ role: "user", content: prompt }], system);
+      setInlineResponses(prev => ({ ...prev, [key]: response }));
+    } catch (e) {
+      setInlineResponses(prev => ({ ...prev, [key]: `Error: ${e.message}` }));
+    } finally {
+      setInlineLoading(null);
+    }
+  }
+
+  function dismissInline(key) {
+    setInlineResponses(prev => { const n = { ...prev }; delete n[key]; return n; });
+  }
+
+  async function generateMPT() {
+    if (draftLoading) return;
+    setDraftLoading("mpt");
+    try {
+      const resp = await sendAIMessage(
+        [{ role: "user", content: `Passage: ${sermon.passage || "unknown"}\n\nObservations:\n${sermon.observations || "(none)"}\n\nInterpretation:\n${sermon.interpretation || "(none)"}\n\nDraft a Main Point of the Text (MPT) for this passage. The MPT is a single sentence in past tense summarizing what the author was saying to the original audience. Return only the sentence.` }],
+        "You are a biblical scholar helping a pastor formulate the main point of a text. The MPT must be historically grounded, past tense, and accurately reflect the author's original intent."
+      );
+      onUpdate({ mpt: resp.trim() });
+    } finally {
+      setDraftLoading(null);
+    }
+  }
+
+  async function generateMPS() {
+    if (draftLoading || !sermon.mpt?.trim()) return;
+    setDraftLoading("mps");
+    try {
+      const resp = await sendAIMessage(
+        [{ role: "user", content: `Passage: ${sermon.passage || "unknown"}\n\nMPT: ${sermon.mpt}\n\nDraft a Main Point of the Sermon (MPS) that flows organically from this MPT. The MPS is a single sentence in present tense stating what this text says to this congregation today. Return only the sentence.` }],
+        "You are a homiletics consultant helping a pastor bridge the MPT to a present-tense sermon claim. The MPS must grow directly from the MPT — not be imposed from outside."
+      );
+      onUpdate({ mps: resp.trim() });
+    } finally {
+      setDraftLoading(null);
+    }
+  }
+
+  async function generateBigIdea() {
+    if (draftLoading) return;
+    setDraftLoading("big_idea");
+    try {
+      const resp = await sendAIMessage(
+        [{ role: "user", content: `Passage: ${sermon.passage || "unknown"}\n\nMPT: ${sermon.mpt || "(none)"}\nMPS: ${sermon.mps || "(none)"}\n\nDraft a one-sentence sermon big idea that captures the central truth of this sermon. Make it sharp and memorable. Return only the sentence.` }],
+        "You are a sermon preparation consultant helping a pastor crystallize a sermon big idea."
+      );
+      onUpdate({ big_idea: resp.trim() });
+    } finally {
+      setDraftLoading(null);
+    }
+  }
 
   async function generateSummary(key, userPrompt, systemPrompt) {
     setSummaryLoading(key);
@@ -184,7 +244,6 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
     const next = activeSubPhase + 1;
 
     if (next > 4) {
-      // Leave Step 1, enter Step 2
       setActiveStep(2);
       setActiveSubPhase(1);
       onStepChange?.(STEPS.MPT_MPS);
@@ -254,10 +313,6 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
     onStepChange?.(PHASE_SEQUENCE[phase - 1]);
   }
 
-  function sendReview(systemMsg, content) {
-    onAI(`Passage: ${sermon.passage || "this passage"}\n\n${content}`, systemMsg);
-  }
-
   function updateFuncData(pointId, data) {
     const next = { ...funcData, [pointId]: data };
     setFuncData(next);
@@ -313,52 +368,139 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
           {activeSubPhase === 4 && <SummaryBlock summaryKey="p4" {...summaryProps} />}
 
           {activeSubPhase === 1 && (
-            <SubPhase
-              hint="Read and reread. Note main features: context, divisions, commands, statements, characters, big ideas."
-              value={sermon.observations || ""}
-              onChange={(v) => onUpdate({ observations: v })}
-              loading={aiLoading}
-              onReview={() => sendReview(
-                `Review these observations as a careful biblical scholar would. Evaluate for completeness and accuracy. What key textual features have been noticed? What is missing? Be specific and constructive.`,
-                `My observations on ${sermon.passage || "this passage"}:\n\n${sermon.observations || "(none yet)"}`
-              )}
-            />
+            <div className="sub-phase-body">
+              <p className="sub-phase-hint">Read and reread. Note main features: context, divisions, commands, statements, characters, big ideas.</p>
+              <textarea
+                className="field-textarea large"
+                rows={3}
+                value={sermon.observations || ""}
+                onChange={(e) => onUpdate({ observations: e.target.value })}
+                onInput={(e) => autoResize(e.target)}
+                ref={(el) => autoResize(el)}
+                placeholder="What does the text actually say? Note repeated words, structural markers, commands, promises, contrasts, connections to other passages — anything that surprises you. Stay descriptive, not interpretive."
+              />
+              <div style={{ marginTop: "8px" }}>
+                <button
+                  className="btn-ghost btn-sm"
+                  onClick={() => fetchInline(
+                    "observe",
+                    `Passage: ${sermon.passage || "this passage"}\n\nMy observations on ${sermon.passage || "this passage"}:\n\n${sermon.observations || "(none yet)"}`,
+                    `Review these observations as a careful biblical scholar would. Evaluate for completeness and accuracy. What key textual features have been noticed? What is missing? Be specific and constructive.`
+                  )}
+                  disabled={inlineLoading !== null}
+                >
+                  {inlineLoading === "observe" ? "Reviewing…" : "Review →"}
+                </button>
+              </div>
+              <InlineAIResponse
+                fieldName="Observations"
+                response={inlineResponses["observe"]}
+                loading={inlineLoading === "observe"}
+                onDismiss={() => dismissInline("observe")}
+              />
+            </div>
           )}
+
           {activeSubPhase === 2 && (
-            <SubPhase
-              hint="Move from observation to meaning. Context, contrasts, key words, cross-references, commentaries."
-              value={sermon.interpretation || ""}
-              onChange={(v) => onUpdate({ interpretation: v })}
-              loading={aiLoading}
-              onReview={() => sendReview(
-                `Review this interpretive work as a biblical scholar would. Evaluate for hermeneutical soundness. Does it move correctly from observation to meaning? Are the contextual and lexical insights valid? Be direct.`,
-                `My interpretation of ${sermon.passage || "this passage"}:\n\n${sermon.interpretation || "(none yet)"}`
-              )}
-            />
+            <div className="sub-phase-body">
+              <p className="sub-phase-hint">Move from observation to meaning. Context, contrasts, key words, cross-references, commentaries.</p>
+              <textarea
+                className="field-textarea large"
+                rows={3}
+                value={sermon.interpretation || ""}
+                onChange={(e) => onUpdate({ interpretation: e.target.value })}
+                onInput={(e) => autoResize(e.target)}
+                ref={(el) => autoResize(el)}
+                placeholder="What does the text mean? Work from your observations. What is the author's intent? What does this passage claim theologically?"
+              />
+              <div style={{ marginTop: "8px" }}>
+                <button
+                  className="btn-ghost btn-sm"
+                  onClick={() => fetchInline(
+                    "interpret",
+                    `Passage: ${sermon.passage || "this passage"}\n\nMy interpretation of ${sermon.passage || "this passage"}:\n\n${sermon.interpretation || "(none yet)"}`,
+                    `Review this interpretive work as a biblical scholar would. Evaluate for hermeneutical soundness. Does it move correctly from observation to meaning? Are the contextual and lexical insights valid? Be direct.`
+                  )}
+                  disabled={inlineLoading !== null}
+                >
+                  {inlineLoading === "interpret" ? "Reviewing…" : "Review →"}
+                </button>
+              </div>
+              <InlineAIResponse
+                fieldName="Interpretation"
+                response={inlineResponses["interpret"]}
+                loading={inlineLoading === "interpret"}
+                onDismiss={() => dismissInline("interpret")}
+              />
+            </div>
           )}
+
           {activeSubPhase === 3 && (
-            <SubPhase
-              hint="How does this passage point to or depend on Christ? Where does it stand in redemptive history?"
-              value={sermon.redemptive_thread || ""}
-              onChange={(v) => onUpdate({ redemptive_thread: v })}
-              loading={aiLoading}
-              onReview={() => sendReview(
-                `Evaluate this redemptive-historical work as a Reformed biblical theologian would. Is Christ's connection to this passage structurally necessary or decorative? Is the passage placed correctly in redemptive history? Offer specific, textually grounded feedback.`,
-                `Redemptive thread for ${sermon.passage || "this passage"}:\n\n${sermon.redemptive_thread || "(none yet)"}`
-              )}
-            />
+            <div className="sub-phase-body">
+              <p className="sub-phase-hint">How does this passage point to or depend on Christ? Where does it stand in redemptive history?</p>
+              <textarea
+                className="field-textarea large"
+                rows={3}
+                value={sermon.redemptive_thread || ""}
+                onChange={(e) => onUpdate({ redemptive_thread: e.target.value })}
+                onInput={(e) => autoResize(e.target)}
+                ref={(el) => autoResize(el)}
+                placeholder="Where does this passage sit in the biblical story? How does it point to, assume, or fulfill Christ? What would be lost without the gospel here?"
+              />
+              <div style={{ marginTop: "8px" }}>
+                <button
+                  className="btn-ghost btn-sm"
+                  onClick={() => fetchInline(
+                    "redemptive",
+                    `Passage: ${sermon.passage || "this passage"}\n\nRedemptive thread for ${sermon.passage || "this passage"}:\n\n${sermon.redemptive_thread || "(none yet)"}`,
+                    `Evaluate this redemptive-historical work as a Reformed biblical theologian would. Is Christ's connection to this passage structurally necessary or decorative? Is the passage placed correctly in redemptive history? Offer specific, textually grounded feedback.`
+                  )}
+                  disabled={inlineLoading !== null}
+                >
+                  {inlineLoading === "redemptive" ? "Reviewing…" : "Review →"}
+                </button>
+              </div>
+              <InlineAIResponse
+                fieldName="Redemptive Thread"
+                response={inlineResponses["redemptive"]}
+                loading={inlineLoading === "redemptive"}
+                onDismiss={() => dismissInline("redemptive")}
+              />
+            </div>
           )}
+
           {activeSubPhase === 4 && (
-            <SubPhase
-              hint="Theological: what does this teach about God, humanity, Christ? Personal: examples, commands, promises, convictions."
-              value={sermon.implications || ""}
-              onChange={(v) => onUpdate({ implications: v })}
-              loading={aiLoading}
-              onReview={() => sendReview(
-                `Review these implications as a homiletics mentor would. Are the theological claims well-grounded? Are the applications gospel-rooted rather than behavior-driven? Are any obvious implications missing?`,
-                `Implications from ${sermon.passage || "this passage"}:\n\n${sermon.implications || "(none yet)"}`
-              )}
-            />
+            <div className="sub-phase-body">
+              <p className="sub-phase-hint">Theological: what does this teach about God, humanity, Christ? Personal: examples, commands, promises, convictions.</p>
+              <textarea
+                className="field-textarea large"
+                rows={3}
+                value={sermon.implications || ""}
+                onChange={(e) => onUpdate({ implications: e.target.value })}
+                onInput={(e) => autoResize(e.target)}
+                ref={(el) => autoResize(el)}
+                placeholder="If this text is true, what follows? What does it demand, promise, or reorder? Think congregation-first."
+              />
+              <div style={{ marginTop: "8px" }}>
+                <button
+                  className="btn-ghost btn-sm"
+                  onClick={() => fetchInline(
+                    "implications",
+                    `Passage: ${sermon.passage || "this passage"}\n\nImplications from ${sermon.passage || "this passage"}:\n\n${sermon.implications || "(none yet)"}`,
+                    `Review these implications as a homiletics mentor would. Are the theological claims well-grounded? Are the applications gospel-rooted rather than behavior-driven? Are any obvious implications missing?`
+                  )}
+                  disabled={inlineLoading !== null}
+                >
+                  {inlineLoading === "implications" ? "Reviewing…" : "Review →"}
+                </button>
+              </div>
+              <InlineAIResponse
+                fieldName="Implications"
+                response={inlineResponses["implications"]}
+                loading={inlineLoading === "implications"}
+                onDismiss={() => dismissInline("implications")}
+              />
+            </div>
           )}
 
           <div className="step-advance">
@@ -378,23 +520,53 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
 
           <div className="mpt-mps-grid">
             <div className="field-group">
-              <label className="field-label">Main Point of the Text (MPT)</label>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "5px" }}>
+                <label className="field-label" style={{ marginBottom: 0 }}>Main Point of the Text (MPT)</label>
+                {(sermon.passage || sermon.observations) && (
+                  <button
+                    className="btn-ghost btn-sm"
+                    onClick={generateMPT}
+                    disabled={draftLoading !== null}
+                    style={{ fontSize: "12px" }}
+                  >
+                    {draftLoading === "mpt" ? "Drafting…" : "Draft →"}
+                  </button>
+                )}
+              </div>
               <textarea
                 className="field-textarea"
-                style={{ minHeight: "120px" }}
+                rows={3}
+                style={{ minHeight: "80px" }}
                 value={sermon.mpt || ""}
                 onChange={(e) => onUpdate({ mpt: e.target.value })}
-                placeholder="Past tense — what the text meant to its original audience"
+                onInput={(e) => autoResize(e.target)}
+                ref={(el) => autoResize(el)}
+                placeholder="The main point of the text in past tense — what the author was saying to the original audience."
               />
             </div>
             <div className="field-group">
-              <label className="field-label">Main Point of the Sermon (MPS)</label>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "5px" }}>
+                <label className="field-label" style={{ marginBottom: 0 }}>Main Point of the Sermon (MPS)</label>
+                {sermon.mpt?.trim() && (
+                  <button
+                    className="btn-ghost btn-sm"
+                    onClick={generateMPS}
+                    disabled={draftLoading !== null}
+                    style={{ fontSize: "12px" }}
+                  >
+                    {draftLoading === "mps" ? "Drafting…" : "Draft →"}
+                  </button>
+                )}
+              </div>
               <textarea
                 className="field-textarea"
-                style={{ minHeight: "120px" }}
+                rows={3}
+                style={{ minHeight: "80px" }}
                 value={sermon.mps || ""}
                 onChange={(e) => onUpdate({ mps: e.target.value })}
-                placeholder="Present/future tense — the one idea your congregation takes home"
+                onInput={(e) => autoResize(e.target)}
+                ref={(el) => autoResize(el)}
+                placeholder="The main point of the sermon in present tense — what this text is saying to this congregation today."
               />
             </div>
           </div>
@@ -402,8 +574,9 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
           <div style={{ display: "flex", gap: "10px", marginTop: "12px" }}>
             <button
               className="btn-ghost btn-sm"
-              disabled={aiLoading}
-              onClick={() => onAI(
+              disabled={inlineLoading !== null}
+              onClick={() => fetchInline(
+                "mpt-challenge",
                 `Passage: ${sermon.passage || "unknown"}. MPT: "${sermon.mpt || "(not written)"}"`,
                 `Push back on this MPT as a careful biblical scholar would. Evaluate: Does this accurately reflect the author's original intent? Is it past tense and historically grounded? Does it avoid reading back NT theology into OT texts inappropriately? Is anything missing from the text's main thrust? Be direct and specific. Quote the text where relevant. This is not encouragement — it is a scholarly challenge.`
               )}
@@ -412,8 +585,9 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
             </button>
             <button
               className="btn-ghost btn-sm"
-              disabled={aiLoading}
-              onClick={() => onAI(
+              disabled={inlineLoading !== null}
+              onClick={() => fetchInline(
+                "mpt-mps-chain",
                 `MPT: "${sermon.mpt || "(not written)"}". MPS: "${sermon.mps || "(not written)"}"`,
                 `Evaluate whether this MPS grows organically from this MPT. MPT: "${sermon.mpt || "(not written)"}". MPS: "${sermon.mps || "(not written)"}". Does the MPS follow from the MPT or is it imposed? Is the chain clean, weak, or broken? Be specific.`
               )}
@@ -421,6 +595,42 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
               Check MPT→MPS Chain
             </button>
           </div>
+
+          <InlineAIResponse
+            fieldName="MPT Challenge"
+            response={inlineResponses["mpt-challenge"]}
+            loading={inlineLoading === "mpt-challenge"}
+            onDismiss={() => dismissInline("mpt-challenge")}
+          />
+          <InlineAIResponse
+            fieldName="MPT→MPS Chain"
+            response={inlineResponses["mpt-mps-chain"]}
+            loading={inlineLoading === "mpt-mps-chain"}
+            onDismiss={() => dismissInline("mpt-mps-chain")}
+          />
+
+          {/* Sermon Big Idea draft — only when MPT or MPS exist */}
+          {(sermon.mpt?.trim() || sermon.mps?.trim()) && (
+            <div style={{ marginTop: "16px", padding: "14px 16px", background: "var(--parchment-warm)", border: "1px solid var(--parchment-deep)", borderRadius: "var(--radius)" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
+                <label className="field-label" style={{ marginBottom: 0 }}>Sermon Big Idea</label>
+                <button
+                  className="btn-ghost btn-sm"
+                  onClick={generateBigIdea}
+                  disabled={draftLoading !== null}
+                  style={{ fontSize: "12px" }}
+                >
+                  {draftLoading === "big_idea" ? "Drafting…" : "Draft →"}
+                </button>
+              </div>
+              <input
+                style={{ width: "100%", border: "1px solid var(--parchment-deep)", borderRadius: "var(--radius)", padding: "8px 10px", fontSize: "14px", fontFamily: "'Crimson Pro', serif", background: "var(--white)", color: "var(--ink)", outline: "none" }}
+                value={sermon.big_idea || ""}
+                onChange={(e) => onUpdate({ big_idea: e.target.value })}
+                placeholder="The controlling idea of this sermon in one sentence."
+              />
+            </div>
+          )}
 
           <div className="step-advance">
             <button className="btn-primary btn-sm" onClick={advanceStep}>
@@ -444,18 +654,26 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
           <div style={{ marginTop: "12px", display: "flex", gap: "10px", alignItems: "center" }}>
             <button
               className="btn-ghost btn-sm"
-              disabled={aiLoading}
+              disabled={inlineLoading !== null}
               onClick={() => {
                 const pts = outline.map((p, i) => `${i + 1}. ${p.text}`).join("\n");
-                onAI(
+                fetchInline(
+                  "outline-review",
                   `Passage: ${sermon.passage || "unknown"}.\nMPT: ${sermon.mpt || "(none)"}.\nMPS: ${sermon.mps || "(none)"}.\n\nOutline:\n${pts || "(no points yet)"}`,
                   `Review this sermon outline. Evaluate: Do the points derive from the text? Do they ladder up to the MPS? Is the progression clear? Does tension resolve in the gospel? Suggest the minimum changes needed.`
                 );
               }}
             >
-              Review Outline
+              {inlineLoading === "outline-review" ? "Reviewing…" : "Review Outline"}
             </button>
           </div>
+
+          <InlineAIResponse
+            fieldName="Outline Review"
+            response={inlineResponses["outline-review"]}
+            loading={inlineLoading === "outline-review"}
+            onDismiss={() => dismissInline("outline-review")}
+          />
 
           {outline.length > 0 && (
             <div className="step-advance">
@@ -479,21 +697,29 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
           <div style={{ marginTop: "12px" }}>
             <button
               className="btn-ghost btn-sm"
-              disabled={aiLoading}
+              disabled={inlineLoading !== null}
               onClick={() => {
                 const allEAI = outline.map((pt, i) => {
                   const d = funcData[pt.id] || {};
                   return `Point ${i + 1}: ${pt.text}\n  E: ${d.explanation || "(none)"}\n  A: ${d.application || "(none)"}\n  I: ${d.illustration || "(none)"}`;
                 }).join("\n\n");
-                onAI(
+                fetchInline(
+                  "eai-review",
                   `Passage: ${sermon.passage || "unknown"}.\n\nFunctional elements:\n${allEAI}`,
                   `Evaluate the Explanation/Application/Illustration balance across all outline points for ${sermon.passage || "this passage"}. Is explanation too thin or too heavy? Is application gospel-rooted or behavior-driven? Are the illustrations doing real work? Give a point-by-point assessment.`
                 );
               }}
             >
-              Review E/A/I Balance
+              {inlineLoading === "eai-review" ? "Reviewing…" : "Review E/A/I Balance"}
             </button>
           </div>
+
+          <InlineAIResponse
+            fieldName="E/A/I Balance"
+            response={inlineResponses["eai-review"]}
+            loading={inlineLoading === "eai-review"}
+            onDismiss={() => dismissInline("eai-review")}
+          />
 
           <div className="step-advance">
             <button className="btn-primary btn-sm" onClick={() => onTabChange?.("outline")}>

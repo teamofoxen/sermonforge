@@ -54,3 +54,8 @@ export const openInLogos = (passage) => api.openInLogos(passage);
 
 // ── Export ────────────────────────────────────────────────────────────────────
 export const exportStudyGuide = (seriesId) => api.exportStudyGuide(seriesId);
+
+// ── Feedback ──────────────────────────────────────────────────────────────────
+export const getSchemaVersion = () => api.getSchemaVersion();
+export const getAppVersion    = () => api.getAppVersion();
+export const submitFeedback   = (payload) => api.submitFeedback(payload);

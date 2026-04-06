@@ -23,6 +23,7 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
   const [logosCopied, setLogosCopied] = useState(false);
   const [pendingMessage, setPendingMessage] = useState(null);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const pendingIdRef = useRef(0);
   // Mirrors sermon state synchronously so captureMemory never reads a stale closure.
   const sermonRef = useRef(null);
@@ -132,7 +133,8 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
     }
   };
 
-  function handleAI(prompt, systemPrompt) {
+  function handleAI(prompt, systemPrompt, options = {}) {
+    if (options.openDrawer) setDrawerOpen(true);
     pendingIdRef.current += 1;
     setPendingMessage({ prompt, systemPrompt, step: activeStep || activeTab, id: pendingIdRef.current });
   }
@@ -218,6 +220,13 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
             style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ink-ghost)", fontSize: "12px", padding: "4px 8px", fontFamily: "'Crimson Pro', serif" }}
           >
             How this works
+          </button>
+          <button
+            className="btn-ghost btn-sm"
+            onClick={() => setDrawerOpen(v => !v)}
+            style={{ fontSize: "13px", color: drawerOpen ? "var(--gold)" : "var(--ink-ghost)", borderColor: drawerOpen ? "var(--gold)" : undefined }}
+          >
+            Chat with AI
           </button>
         </div>
       </div>
@@ -316,6 +325,7 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
               onUpdate={handleUpdate}
               onAI={handleAI}
               aiLoading={aiLoading}
+              onOpenDrawer={() => setDrawerOpen(true)}
             />
           )}
           {activeTab === "delivery" && (
@@ -323,15 +333,22 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
           )}
         </div>
 
-        <AIPanel
-          sermon={sermon}
-          activeTab={activeTab}
-          activeStep={activeStep}
-          externalMessage={pendingMessage}
-          onLoadingChange={setAiLoading}
-          loading={aiLoading}
-        />
       </div>
+    </div>
+
+    {/* AI drawer — slides in from right, overlays content */}
+    <div className={`ai-drawer ${drawerOpen ? "open" : ""}`}>
+      <div className="ai-drawer-close-bar">
+        <button className="ai-drawer-close-btn" onClick={() => setDrawerOpen(false)}>✕</button>
+      </div>
+      <AIPanel
+        sermon={sermon}
+        activeTab={activeTab}
+        activeStep={activeStep}
+        externalMessage={pendingMessage}
+        onLoadingChange={setAiLoading}
+        loading={aiLoading}
+      />
     </div>
     {showHowItWorks && <SermonHowItWorksModal onClose={() => setShowHowItWorks(false)} />}
     </>

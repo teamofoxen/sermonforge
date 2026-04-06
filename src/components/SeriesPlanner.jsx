@@ -10,6 +10,14 @@ import { getSeasonForDate, getUpcomingSundays, toDateString } from "../utils/chu
 import { tryParse, formatDate } from "../utils";
 import DeleteButton from "./DeleteButton";
 import { sendAIMessage } from "../utils/ai";
+import InlineAIResponse from "./InlineAIResponse";
+
+// Auto-resize a textarea to fit its content, capped at 60vh.
+function autoResize(el) {
+  if (!el) return;
+  el.style.height = "auto";
+  el.style.height = Math.min(el.scrollHeight, window.innerHeight * 0.6) + "px";
+}
 
 const CANON_OPTIONS = [
   { value: "", label: "— Select category —" },
@@ -84,6 +92,7 @@ export default function SeriesPlanner({ seriesId, onClose, onOpenSermon }) {
   const [loading, setLoading]   = useState(true);
   const [showHowItWorks, setShowHowItWorks]   = useState(false);
   const [showStudyGuide, setShowStudyGuide]   = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
     load();
@@ -198,6 +207,13 @@ export default function SeriesPlanner({ seriesId, onClose, onOpenSermon }) {
         >
           Study Guide
         </button>
+        <button
+          className="btn-ghost btn-sm"
+          onClick={() => setDrawerOpen(v => !v)}
+          style={{ fontSize: "13px", color: drawerOpen ? "var(--gold)" : "var(--ink-ghost)", borderColor: drawerOpen ? "var(--gold)" : undefined, flexShrink: 0 }}
+        >
+          Chat with AI
+        </button>
       </div>
 
       {/* Tab bar */}
@@ -230,12 +246,18 @@ export default function SeriesPlanner({ seriesId, onClose, onOpenSermon }) {
           <BookStudyTab
             series={series}
             onChange={handleSeriesField}
+            drawerOpen={drawerOpen}
+            onOpenDrawer={() => setDrawerOpen(true)}
+            onCloseDrawer={() => setDrawerOpen(false)}
           />
         )}
         {activeTab === "overview" && (
           <OverviewTab
             series={series}
             onChange={handleSeriesField}
+            drawerOpen={drawerOpen}
+            onOpenDrawer={() => setDrawerOpen(true)}
+            onCloseDrawer={() => setDrawerOpen(false)}
           />
         )}
         {activeTab === "structure" && (
@@ -245,6 +267,9 @@ export default function SeriesPlanner({ seriesId, onClose, onOpenSermon }) {
             onChange={handleSeriesField}
             onSectionsChange={setSections}
             seriesId={seriesId}
+            drawerOpen={drawerOpen}
+            onOpenDrawer={() => setDrawerOpen(true)}
+            onCloseDrawer={() => setDrawerOpen(false)}
           />
         )}
         {activeTab === "slots" && (
@@ -255,6 +280,9 @@ export default function SeriesPlanner({ seriesId, onClose, onOpenSermon }) {
             seriesId={seriesId}
             onSermonsChange={setSermons}
             onOpenSermon={onOpenSermon}
+            drawerOpen={drawerOpen}
+            onOpenDrawer={() => setDrawerOpen(true)}
+            onCloseDrawer={() => setDrawerOpen(false)}
           />
         )}
         {activeTab === "calendar" && (
@@ -265,6 +293,9 @@ export default function SeriesPlanner({ seriesId, onClose, onOpenSermon }) {
             calNotes={calNotes}
             onChange={handleSeriesField}
             onSermonsChange={setSermons}
+            drawerOpen={drawerOpen}
+            onOpenDrawer={() => setDrawerOpen(true)}
+            onCloseDrawer={() => setDrawerOpen(false)}
           />
         )}
       </div>
@@ -276,11 +307,27 @@ export default function SeriesPlanner({ seriesId, onClose, onOpenSermon }) {
 }
 
 // ── Book Study Tab ────────────────────────────────────────────────────────────
-function BookStudyTab({ series, onChange }) {
+// Rich placeholders that replace the generic ones from BOOK_STUDY_FIELDS
+const BOOK_STUDY_PLACEHOLDERS = {
+  redemptive_context: "Where does this book sit in the arc from creation to new creation? How does it anticipate or reflect Christ?",
+  book_background: "Author, audience, occasion, date, historical setting, literary genre. Paste from a commentary introduction or write your own notes.",
+  book_argument: "What is the author's central claim or purpose? What is this book trying to do to its reader?",
+  book_structure: "Major movements, structural markers, turning points, chiasms, repeated refrains. How does the shape of the book serve its argument?",
+  series_motivation: "What does this congregation need from this book right now? What pastoral urgency drives this series?",
+  emerging_big_idea: "A draft of the series big idea — what this book is saying and doing in one sentence. Refine it as you go.",
+};
+
+function BookStudyTab({ series, onChange, drawerOpen, onOpenDrawer, onCloseDrawer }) {
   const [aiMessages, setAiMessages]   = useState([]);
   const [chatInput, setChatInput]     = useState("");
   const [chatLoading, setChatLoading] = useState(false);
-  const [analyzeLoading, setAnalyzeLoading] = useState(null); // field key | null
+
+  // Inline response state — keyed by field key
+  const [inlineResponses, setInlineResponses] = useState({});
+  const [inlineLoading, setInlineLoading] = useState(null); // field key | null
+
+  // Draft loading for Working Big Idea
+  const [draftLoading, setDraftLoading] = useState(false);
 
   async function handleAnalyze(fieldDef) {
     const currentContent = series[fieldDef.key]?.trim();
@@ -295,10 +342,8 @@ function BookStudyTab({ series, onChange }) {
 
     let userContent;
     if (populatedFields.length === 1) {
-      // Only this field has content — use the focused solo prompt.
       userContent = `${identity}\n\n${currentContent}\n\n${fieldDef.soloPrompt}`;
     } else {
-      // Multiple fields populated — send current field as primary, others as context.
       const otherFields = populatedFields.filter(f => f.key !== fieldDef.key);
       const contextLines = otherFields
         .map(f => `${f.label}:\n${series[f.key].trim()}`)
@@ -306,21 +351,32 @@ function BookStudyTab({ series, onChange }) {
       userContent = `${identity}\n\n${fieldDef.label}:\n${currentContent}\n\n${fieldDef.soloPrompt}\n\nFor context, here is what I have noted in other areas of my book study:\n\n${contextLines}`;
     }
 
-    const userMsg = { role: "user", content: userContent };
-    const newMessages = [...aiMessages, userMsg];
-    setAiMessages(newMessages);
-    setAnalyzeLoading(fieldDef.key);
+    setInlineLoading(fieldDef.key);
     try {
       const resp = await sendAIMessage(
-        newMessages,
+        [{ role: "user", content: userContent }],
         `You are a biblical scholar and preaching consultant helping a pastor develop their book study for a sermon series on "${series.title || "this book"}"${series.passage_range ? ` (${series.passage_range})` : ""}. Engage seriously with the pastor's notes and give substantive, practical feedback.`
       );
-      setAiMessages([...newMessages, { role: "assistant", content: resp }]);
+      setInlineResponses(prev => ({ ...prev, [fieldDef.key]: resp }));
     } catch (e) {
       console.error("[handleAnalyze]", e);
-      setAiMessages([...newMessages, { role: "assistant", content: "Something went wrong. Please try again." }]);
+      setInlineResponses(prev => ({ ...prev, [fieldDef.key]: "Something went wrong. Please try again." }));
     } finally {
-      setAnalyzeLoading(null);
+      setInlineLoading(null);
+    }
+  }
+
+  async function generateWorkingBigIdea() {
+    if (draftLoading) return;
+    setDraftLoading(true);
+    try {
+      const resp = await sendAIMessage(
+        [{ role: "user", content: `Series: "${series.title || "unknown"}"\nPassage: ${series.passage_range || "unknown"}\n\nBook Study notes:\n${BOOK_STUDY_FIELDS.filter(f => f.key !== "emerging_big_idea" && series[f.key]?.trim()).map(f => `${f.label}:\n${series[f.key].trim()}`).join("\n\n") || "(none yet)"}\n\nDraft a series big idea — one sentence summarizing the central truth this book drives home. Make it sharp, memorable, and theologically precise. Return only the sentence.` }],
+        "You are helping a pastor crystallize a series big idea from their book study work."
+      );
+      onChange("emerging_big_idea", resp.trim());
+    } finally {
+      setDraftLoading(false);
     }
   }
 
@@ -358,8 +414,8 @@ function BookStudyTab({ series, onChange }) {
   }
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: "0", height: "100%" }}>
-      <div style={{ padding: "28px 32px", overflowY: "auto", borderRight: "1px solid var(--parchment-deep)" }}>
+    <>
+      <div style={{ height: "100%", padding: "28px 32px", overflowY: "auto" }}>
 
         {/* Book identity header */}
         <div style={{ marginBottom: "24px", padding: "14px 16px", background: "var(--parchment-warm)", border: "1px solid var(--parchment-deep)", borderRadius: "var(--radius)" }}>
@@ -393,40 +449,69 @@ function BookStudyTab({ series, onChange }) {
           <div key={fieldDef.key} style={{ marginBottom: "24px" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
               <label style={{ ...labelStyle, marginBottom: 0 }}>{fieldDef.label}</label>
-              <button
-                className="btn-ghost btn-sm"
-                onClick={() => handleAnalyze(fieldDef)}
-                disabled={!series[fieldDef.key]?.trim() || analyzeLoading !== null}
-              >
-                {analyzeLoading === fieldDef.key ? "Analyzing…" : "Analyze"}
-              </button>
+              <div style={{ display: "flex", gap: "6px" }}>
+                {/* Draft button only on Working Big Idea */}
+                {fieldDef.key === "emerging_big_idea" && (series.passage_range || series.title) && (
+                  <button
+                    className="btn-ghost btn-sm"
+                    onClick={generateWorkingBigIdea}
+                    disabled={draftLoading || inlineLoading !== null}
+                    style={{ fontSize: "12px" }}
+                  >
+                    {draftLoading ? "Drafting…" : "Draft →"}
+                  </button>
+                )}
+                <button
+                  className="btn-ghost btn-sm"
+                  onClick={() => handleAnalyze(fieldDef)}
+                  disabled={!series[fieldDef.key]?.trim() || inlineLoading !== null}
+                >
+                  {inlineLoading === fieldDef.key ? "Analyzing…" : "Analyze"}
+                </button>
+              </div>
             </div>
             <textarea
-              style={{ ...textareaStyle, minHeight: "120px" }}
+              style={{ ...textareaStyle }}
+              rows={3}
               value={series[fieldDef.key] || ""}
               onChange={(e) => onChange(fieldDef.key, e.target.value)}
-              placeholder={fieldDef.placeholder}
+              onInput={(e) => autoResize(e.target)}
+              ref={(el) => autoResize(el)}
+              placeholder={BOOK_STUDY_PLACEHOLDERS[fieldDef.key] || fieldDef.placeholder}
+            />
+            <InlineAIResponse
+              fieldName={fieldDef.label}
+              response={inlineResponses[fieldDef.key]}
+              loading={inlineLoading === fieldDef.key}
+              onDismiss={() => setInlineResponses(prev => { const n = { ...prev }; delete n[fieldDef.key]; return n; })}
             />
           </div>
         ))}
 
       </div>
 
-      <AIChatPanel
-        messages={aiMessages}
-        loading={chatLoading || analyzeLoading !== null}
-        input={chatInput}
-        onInputChange={setChatInput}
-        onSubmit={handleChatSubmit}
-        placeholder="Ask about this book, its argument, historical context, or place in redemptive history…"
-        onClear={() => setAiMessages([])}
-      />
-    </div>
+      {drawerOpen && (
+        <div className="ai-drawer open">
+          <div className="ai-drawer-close-bar">
+            <button className="ai-drawer-close-btn" onClick={onCloseDrawer}>✕</button>
+          </div>
+          <AIChatPanel
+            messages={aiMessages}
+            loading={chatLoading}
+            input={chatInput}
+            onInputChange={setChatInput}
+            onSubmit={handleChatSubmit}
+            placeholder="Ask about this book, its argument, historical context, or place in redemptive history…"
+            onClear={() => setAiMessages([])}
+          />
+        </div>
+      )}
+    </>
   );
 }
 
 // ── Overview Tab ──────────────────────────────────────────────────────────────
-function OverviewTab({ series, onChange }) {
+function OverviewTab({ series, onChange, drawerOpen, onOpenDrawer, onCloseDrawer }) {
   const [aiLoading, setAiLoading] = useState(null); // "bigidea" | "overview"
   const [aiMessages, setAiMessages] = useState([]);
   const [chatInput, setChatInput] = useState("");
@@ -478,9 +563,8 @@ function OverviewTab({ series, onChange }) {
   }
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: "0", height: "100%" }}>
-      {/* Main form */}
-      <div style={{ padding: "28px 32px", overflowY: "auto", borderRight: "1px solid var(--parchment-deep)" }}>
+    <>
+      <div style={{ height: "100%", padding: "28px 32px", overflowY: "auto" }}>
 
         {/* Title + description */}
         <div style={{ marginBottom: "20px" }}>
@@ -590,7 +674,7 @@ function OverviewTab({ series, onChange }) {
             style={inputStyle}
             value={series.big_idea || ""}
             onChange={(e) => onChange("big_idea", e.target.value)}
-            placeholder="The central truth this series will drive home"
+            placeholder="The controlling idea of the entire series in one sentence."
           />
         </div>
 
@@ -607,31 +691,40 @@ function OverviewTab({ series, onChange }) {
             </button>
           </div>
           <textarea
-            style={{ ...textareaStyle, minHeight: "200px" }}
+            style={{ ...textareaStyle }}
+            rows={3}
             value={series.overview || ""}
             onChange={(e) => onChange("overview", e.target.value)}
-            placeholder="Historical/literary context and contemporary relevance of this passage…"
+            onInput={(e) => autoResize(e.target)}
+            ref={(el) => autoResize(el)}
+            placeholder="The theological arc of this series — where it starts, where it goes, what it asks of the congregation."
           />
         </div>
 
       </div>
 
-      {/* AI Chat sidebar */}
-      <AIChatPanel
-        messages={aiMessages}
-        loading={chatLoading}
-        input={chatInput}
-        onInputChange={setChatInput}
-        onSubmit={handleChatSubmit}
-        placeholder="Ask about this passage or series theme…"
-        onClear={() => setAiMessages([])}
-      />
-    </div>
+      {drawerOpen && (
+        <div className="ai-drawer open">
+          <div className="ai-drawer-close-bar">
+            <button className="ai-drawer-close-btn" onClick={onCloseDrawer}>✕</button>
+          </div>
+          <AIChatPanel
+            messages={aiMessages}
+            loading={chatLoading}
+            input={chatInput}
+            onInputChange={setChatInput}
+            onSubmit={handleChatSubmit}
+            placeholder="Ask about this passage or series theme…"
+            onClear={() => setAiMessages([])}
+          />
+        </div>
+      )}
+    </>
   );
 }
 
 // ── Structure Tab ─────────────────────────────────────────────────────────────
-function StructureTab({ series, sections, onChange, onSectionsChange, seriesId }) {
+function StructureTab({ series, sections, onChange, onSectionsChange, seriesId, drawerOpen, onOpenDrawer, onCloseDrawer }) {
   const [aiLoading, setAiLoading] = useState(null);
   const [aiMessages, setAiMessages] = useState([]);
   const [chatInput, setChatInput] = useState("");
@@ -703,8 +796,8 @@ function StructureTab({ series, sections, onChange, onSectionsChange, seriesId }
   }
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: "0", height: "100%" }}>
-      <div style={{ padding: "28px 32px", overflowY: "auto", borderRight: "1px solid var(--parchment-deep)" }}>
+    <>
+      <div style={{ height: "100%", padding: "28px 32px", overflowY: "auto" }}>
 
         {/* Structural Outline */}
         <div style={{ marginBottom: "28px" }}>
@@ -718,9 +811,12 @@ function StructureTab({ series, sections, onChange, onSectionsChange, seriesId }
             Build this yourself, paste from a commentary, or generate with AI.
           </p>
           <textarea
-            style={{ ...textareaStyle, minHeight: "220px", fontFamily: "'Crimson Pro', serif", fontSize: "14px" }}
+            style={{ ...textareaStyle, fontFamily: "'Crimson Pro', serif", fontSize: "14px" }}
+            rows={5}
             value={series.structural_outline || ""}
             onChange={(e) => onChange("structural_outline", e.target.value)}
+            onInput={(e) => autoResize(e.target)}
+            ref={(el) => autoResize(el)}
             placeholder={"I. Major Division (1:1–3:21)\n   A. Sub-section (1:1-25)\n      1. Point\n      2. Point\n   B. Sub-section (1:26-38)"}
           />
         </div>
@@ -765,16 +861,23 @@ function StructureTab({ series, sections, onChange, onSectionsChange, seriesId }
         </div>
       </div>
 
-      <AIChatPanel
-        messages={aiMessages}
-        loading={chatLoading}
-        input={chatInput}
-        onInputChange={setChatInput}
-        onSubmit={handleChatSubmit}
-        placeholder="Ask about passage divisions, structure, or thematic organization…"
-        onClear={() => setAiMessages([])}
-      />
-    </div>
+      {drawerOpen && (
+        <div className="ai-drawer open">
+          <div className="ai-drawer-close-bar">
+            <button className="ai-drawer-close-btn" onClick={onCloseDrawer}>✕</button>
+          </div>
+          <AIChatPanel
+            messages={aiMessages}
+            loading={chatLoading}
+            input={chatInput}
+            onInputChange={setChatInput}
+            onSubmit={handleChatSubmit}
+            placeholder="Ask about passage divisions, structure, or thematic organization…"
+            onClear={() => setAiMessages([])}
+          />
+        </div>
+      )}
+    </>
   );
 }
 
@@ -817,7 +920,15 @@ function SectionEditor({ section, index, total, expanded, onToggle, onChange, on
           </div>
           <div>
             <label style={labelStyle}>Section Overview</label>
-            <textarea style={{ ...textareaStyle, minHeight: "80px" }} value={section.overview || ""} onChange={(e) => onChange("overview", e.target.value)} placeholder="What does this section of the book accomplish? What shift happens here?" />
+            <textarea
+              style={{ ...textareaStyle }}
+              rows={3}
+              value={section.overview || ""}
+              onChange={(e) => onChange("overview", e.target.value)}
+              onInput={(e) => autoResize(e.target)}
+              ref={(el) => autoResize(el)}
+              placeholder="What does this section of the book accomplish? What shift happens here?"
+            />
           </div>
           <button
             className="btn-ghost btn-sm"
@@ -833,7 +944,7 @@ function SectionEditor({ section, index, total, expanded, onToggle, onChange, on
 }
 
 // ── Sermon Slots Tab ──────────────────────────────────────────────────────────
-function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpenSermon }) {
+function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpenSermon, drawerOpen, onOpenDrawer, onCloseDrawer }) {
   const [aiMessages, setAiMessages] = useState([]);
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
@@ -916,8 +1027,8 @@ function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpen
   }
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: "0", height: "100%" }}>
-      <div style={{ padding: "28px 32px", overflowY: "auto", borderRight: "1px solid var(--parchment-deep)" }}>
+    <>
+      <div style={{ height: "100%", padding: "28px 32px", overflowY: "auto" }}>
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
           <div>
@@ -993,16 +1104,23 @@ function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpen
         )}
       </div>
 
-      <AIChatPanel
-        messages={aiMessages}
-        loading={chatLoading}
-        input={chatInput}
-        onInputChange={setChatInput}
-        onSubmit={handleChatSubmit}
-        placeholder={`"How many weeks for Galatians?" or "Divide ${series.passage_range || 'this passage'} into 6 units"…`}
-        onClear={() => setAiMessages([])}
-      />
-    </div>
+      {drawerOpen && (
+        <div className="ai-drawer open">
+          <div className="ai-drawer-close-bar">
+            <button className="ai-drawer-close-btn" onClick={onCloseDrawer}>✕</button>
+          </div>
+          <AIChatPanel
+            messages={aiMessages}
+            loading={chatLoading}
+            input={chatInput}
+            onInputChange={setChatInput}
+            onSubmit={handleChatSubmit}
+            placeholder={`"How many weeks for Galatians?" or "Divide ${series.passage_range || 'this passage'} into 6 units"…`}
+            onClear={() => setAiMessages([])}
+          />
+        </div>
+      )}
+    </>
   );
 }
 
@@ -1029,10 +1147,11 @@ function SlotList({ slots, onChange, onDelete, showAdd, onAdd, onOpenSermon, ser
 function SlotRow({ slot, index, onChange, onDelete, onOpenSermon, seriesId, series, totalSlots, sectionBigIdea, onSlotAI }) {
   const [expanded, setExpanded] = useState(!slot.title && !slot.passage);
   const [assistLoading, setAssistLoading] = useState(false);
+  const [assistResponse, setAssistResponse] = useState(null);
 
   async function handleAssist(e) {
     e.stopPropagation();
-    if (assistLoading || !onSlotAI) return;
+    if (assistLoading) return;
     const parts = [
       `Sermon ${index + 1} of ${totalSlots}: ${slot.passage || "passage TBD"}${slot.title ? ` — "${slot.title}"` : ""}`,
       series?.big_idea   ? `Series big idea: ${series.big_idea}`           : null,
@@ -1042,7 +1161,13 @@ function SlotRow({ slot, index, onChange, onDelete, onOpenSermon, seriesId, seri
     const message = `${parts}\n\nWrite one or two sentences orienting a reader to how this sermon participates in the series arc. Write for a congregation member, not a scholar. Connect it to the series big idea.`;
     setAssistLoading(true);
     try {
-      await onSlotAI(message);
+      const resp = await sendAIMessage(
+        [{ role: "user", content: message }],
+        `You are helping a pastor write study guide notes for a sermon series titled "${series?.title || "this series"}". Write for a congregation member — clear, warm, and connected to the series arc.`
+      );
+      setAssistResponse(resp);
+    } catch (e) {
+      setAssistResponse(`Error: ${e.message}`);
     } finally {
       setAssistLoading(false);
     }
@@ -1117,11 +1242,20 @@ function SlotRow({ slot, index, onChange, onDelete, onOpenSermon, seriesId, seri
               </button>
             </div>
             <textarea
-              style={{ ...textareaStyle, minHeight: "60px" }}
+              style={{ ...textareaStyle }}
+              rows={3}
               value={slot.study_guide_note || ""}
-              onChange={(e) => onChange(slot.id, "study_guide_note", e.target.value)}
-              placeholder="A sentence or two orienting readers to how this sermon fits the series arc."
+              onChange={(e) => { onChange(slot.id, "study_guide_note", e.target.value); }}
+              onInput={(e) => autoResize(e.target)}
+              ref={(el) => autoResize(el)}
+              placeholder="Orient the congregation reader — how does this sermon fit the series arc? What should they be watching for?"
               onClick={(e) => e.stopPropagation()}
+            />
+            <InlineAIResponse
+              fieldName="Study Guide Note"
+              response={assistResponse}
+              loading={assistLoading && !assistResponse}
+              onDismiss={() => setAssistResponse(null)}
             />
           </div>
         </div>
@@ -1131,7 +1265,7 @@ function SlotRow({ slot, index, onChange, onDelete, onOpenSermon, seriesId, seri
 }
 
 // ── Calendar Tab ──────────────────────────────────────────────────────────────
-function CalendarTab({ series, sections, sermons, calNotes, onChange, onSermonsChange }) {
+function CalendarTab({ series, sections, sermons, calNotes, onChange, onSermonsChange, drawerOpen, onOpenDrawer, onCloseDrawer }) {
   const [aiMessages, setAiMessages] = useState([]);
   const [chatInput, setChatInput]   = useState("");
   const [chatLoading, setChatLoading] = useState(false);
@@ -1221,8 +1355,8 @@ function CalendarTab({ series, sections, sermons, calNotes, onChange, onSermonsC
   const sermonMap = Object.fromEntries(sermons.map(s => [s.id, s]));
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: "0", height: "100%" }}>
-      <div style={{ padding: "28px 32px", overflowY: "auto", borderRight: "1px solid var(--parchment-deep)" }}>
+    <>
+      <div style={{ height: "100%", padding: "28px 32px", overflowY: "auto" }}>
 
         {/* Controls */}
         <div style={{ display: "flex", alignItems: "flex-end", gap: "16px", marginBottom: "24px", flexWrap: "wrap" }}>
@@ -1338,16 +1472,23 @@ function CalendarTab({ series, sections, sermons, calNotes, onChange, onSermonsC
         )}
       </div>
 
-      <AIChatPanel
-        messages={aiMessages}
-        loading={chatLoading}
-        input={chatInput}
-        onInputChange={setChatInput}
-        onSubmit={handleChatSubmit}
-        placeholder="Ask about scheduling — e.g. 'skip Christmas week' or 'what falls during Holy Week?'"
-        onClear={() => setAiMessages([])}
-      />
-    </div>
+      {drawerOpen && (
+        <div className="ai-drawer open">
+          <div className="ai-drawer-close-bar">
+            <button className="ai-drawer-close-btn" onClick={onCloseDrawer}>✕</button>
+          </div>
+          <AIChatPanel
+            messages={aiMessages}
+            loading={chatLoading}
+            input={chatInput}
+            onInputChange={setChatInput}
+            onSubmit={handleChatSubmit}
+            placeholder="Ask about scheduling — e.g. 'skip Christmas week' or 'what falls during Holy Week?'"
+            onClear={() => setAiMessages([])}
+          />
+        </div>
+      )}
+    </>
   );
 }
 
@@ -1379,7 +1520,7 @@ function AIChatPanel({ messages, loading, input, onInputChange, onSubmit, placeh
   }, [messages]);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", background: "var(--white)", borderLeft: "1px solid var(--parchment-deep)" }}>
+    <div className="aichat-panel" style={{ display: "flex", flexDirection: "column", height: "100%", background: "var(--white)", borderLeft: "1px solid var(--parchment-deep)" }}>
       {/* Header */}
       <div style={{ padding: "14px 16px", borderBottom: "1px solid var(--parchment-deep)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <span style={{ fontSize: "13px", fontWeight: "600", color: "var(--ink-soft)", textTransform: "uppercase", letterSpacing: "0.06em" }}>

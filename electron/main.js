@@ -1289,6 +1289,135 @@ ipcMain.handle("series-export-study-guide", async (_, seriesId) => {
   }
 });
 
+// ── Feedback ──────────────────────────────────────────────────────────────────
+ipcMain.handle("db-getSchemaVersion", () => {
+  const row = queryOne("SELECT value FROM meta WHERE key = 'schema_version'");
+  return { version: row ? row.value : "unknown" };
+});
+
+ipcMain.handle("app-get-version", () => {
+  return { version: app.getVersion() };
+});
+
+const CATEGORY_LABELS = {
+  bug:     "Bug",
+  ux:      "UI/UX",
+  ai:      "AI Quality",
+  feature: "Missing Feature",
+  copy:    "Content/Copy",
+};
+
+ipcMain.handle("feedback-submit", (_, payload) => {
+  try {
+    const {
+      category, currentView, schemaVersion, appVersion, submittedAt,
+      // bug
+      whatHappened, whatExpected,
+      // ux
+      whichPart, whatWrong,
+      // ai
+      whichStep, whatWrongAI, aiNotes,
+      // feature
+      whereInWorkflow, describeFeature,
+      // copy
+      whereIsText, whatItShouldSay,
+    } = payload;
+
+    const categoryLabel = CATEGORY_LABELS[category] || category;
+
+    const lines = [];
+    lines.push("---");
+    lines.push(`Date: ${submittedAt}`);
+    lines.push(`Type: ${categoryLabel}`);
+    lines.push(`View: ${currentView || "unknown"}`);
+    lines.push(`Schema: ${schemaVersion || "unknown"}`);
+    lines.push(`App: ${appVersion || "unknown"}`);
+    lines.push("---");
+    lines.push("");
+
+    if (category === "bug") {
+      if (whatHappened?.trim()) {
+        lines.push("## What were you doing?");
+        lines.push(whatHappened.trim());
+        lines.push("");
+      }
+      if (whatExpected?.trim()) {
+        lines.push("## What did you expect?");
+        lines.push(whatExpected.trim());
+        lines.push("");
+      }
+    } else if (category === "ux") {
+      if (whichPart?.trim()) {
+        lines.push("## Which part of the app?");
+        lines.push(whichPart.trim());
+        lines.push("");
+      }
+      if (whatWrong?.trim()) {
+        lines.push("## What felt wrong or confusing?");
+        lines.push(whatWrong.trim());
+        lines.push("");
+      }
+    } else if (category === "ai") {
+      if (whichStep?.trim()) {
+        lines.push("## Which step?");
+        lines.push(whichStep.trim());
+        lines.push("");
+      }
+      if (whatWrongAI?.trim()) {
+        lines.push("## What was wrong with the response?");
+        lines.push(whatWrongAI.trim());
+        lines.push("");
+      }
+      if (aiNotes?.trim()) {
+        lines.push("## Additional notes");
+        lines.push(aiNotes.trim());
+        lines.push("");
+      }
+    } else if (category === "feature") {
+      if (whereInWorkflow?.trim()) {
+        lines.push("## Where in the workflow?");
+        lines.push(whereInWorkflow.trim());
+        lines.push("");
+      }
+      if (describeFeature?.trim()) {
+        lines.push("## What do you need?");
+        lines.push(describeFeature.trim());
+        lines.push("");
+      }
+    } else if (category === "copy") {
+      if (whereIsText?.trim()) {
+        lines.push("## Where is the text?");
+        lines.push(whereIsText.trim());
+        lines.push("");
+      }
+      if (whatItShouldSay?.trim()) {
+        lines.push("## What should it say instead?");
+        lines.push(whatItShouldSay.trim());
+        lines.push("");
+      }
+    }
+
+    const feedbackDir = path.join(os.homedir(), "OneDrive", "SermonForge", "Feedback");
+    if (!fs.existsSync(feedbackDir)) {
+      fs.mkdirSync(feedbackDir, { recursive: true });
+    }
+
+    // Filename: YYYY-MM-DD-HH-MM-category.md
+    const dt = new Date(submittedAt);
+    const pad = (n) => String(n).padStart(2, "0");
+    const datePart = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
+    const timePart = `${pad(dt.getHours())}-${pad(dt.getMinutes())}`;
+    const filename = `${datePart}-${timePart}-${category}.md`;
+    const filepath = path.join(feedbackDir, filename);
+
+    fs.writeFileSync(filepath, lines.join("\n"), "utf8");
+    return { success: true, filepath };
+  } catch (e) {
+    console.error("[feedback-submit]", e);
+    return { success: false, error: e.message };
+  }
+});
+
 // ── Logos URL builder ────────────────────────────────────────────────────────
 const BOOK_ABBREVS = {
   Genesis: "Gen", Exodus: "Exo", Leviticus: "Lev", Numbers: "Num",

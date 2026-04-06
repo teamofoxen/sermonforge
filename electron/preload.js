@@ -57,6 +57,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // ── Export ───────────────────────────────────────────────────────────────────
   exportStudyGuide: (seriesId) => ipcRenderer.invoke("series-export-study-guide", seriesId),
 
+  // ── Feedback ──────────────────────────────────────────────────────────────
+  getSchemaVersion: () => ipcRenderer.invoke("db-getSchemaVersion"),
+  getAppVersion:    () => ipcRenderer.invoke("app-get-version"),
+  submitFeedback:   (payload) => ipcRenderer.invoke("feedback-submit", payload),
+
   // ── Progress events ───────────────────────────────────────────────────────
   onLibraryImportProgress: (callback) => {
     const handler = (event, data) => callback(data);

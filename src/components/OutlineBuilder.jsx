@@ -55,7 +55,7 @@ export default function OutlineBuilder({ outline, onUpdate, onRemove }) {
                 className="outline-input"
                 value={pt.text}
                 onChange={(e) => updatePoint(i, e.target.value)}
-                placeholder={`Point ${i + 1}…`}
+                placeholder={`Point ${i + 1} — state a single clear claim that flows from the text`}
               />
               <div className="outline-actions">
                 <button

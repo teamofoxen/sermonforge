@@ -2,6 +2,68 @@
 
 ---
 
+## 2026-04-06 — UX restructuring: inline AI responses, AI drawer, auto-expand textareas, rich placeholders, draft buttons
+
+Five-part UX overhaul across SeriesPlanner, SermonWorkspace, StudyTab, and all supporting tabs. Goal: move AI output closer to the field that triggered it, reduce panel overhead for inline analysis, and replace generic placeholder copy with instructional guidance.
+
+### Part 1 — Inline AI responses (new component)
+
+**`src/components/InlineAIResponse.jsx`** (new file). Shared component that renders directly below a field when AI analysis is triggered. Features: parchment-warm background, 3px gold left border, "AI · [field name]" label, Crimson Pro italic response text, Copy + Dismiss actions bottom-right, fade + upward-translate entry animation.
+
+**`src/styles/global.css`** — appended styles: `@keyframes inlineAIFadeIn`, `.inline-ai-response`, `.inline-ai-label`, `.inline-ai-text`, `.inline-ai-actions`, `.inline-ai-copy`, `.inline-ai-dismiss`.
+
+**`src/components/StudyTab.jsx`** — all Review/Challenge/Analyze buttons now produce inline responses below their respective fields via direct `sendAIMessage` calls. Removed all `onAI` calls from these buttons. New state: `inlineResponses` (keyed object), `inlineLoading` (string key or null). New function: `fetchInline(key, prompt, system)` handles the async call and state updates. `dismissInline(key)` clears a response.
+
+**`src/components/SeriesPlanner.jsx`** — `BookStudyTab.handleAnalyze()` decoupled from `aiMessages` state; now writes only to `inlineResponses`. Each Book Study field renders `<InlineAIResponse>` beneath it. `SlotRow.handleAssist()` likewise calls `sendAIMessage` directly and sets local `assistResponse` state; `<InlineAIResponse>` rendered below the study_guide_note field.
+
+### Part 2 — AI panel becomes on-demand chat drawer
+
+**`src/components/SermonWorkspace.jsx`** — added `drawerOpen` state. "Chat with AI" `btn-ghost btn-sm` button added to topbar. AIPanel removed from `workspace-body` flex layout; now rendered as a fixed `ai-drawer` overlay at Fragment level. `handleAI(prompt, systemPrompt, options)` accepts `options.openDrawer` to programmatically open the drawer. `onOpenDrawer` prop passed to ManuscriptTab.
+
+**`src/components/ManuscriptTab.jsx`** — added `onOpenDrawer` prop. `runTuneUp()` calls `onOpenDrawer?.()` before `onAI()` so the Tune-Up Engine output always opens the drawer.
+
+**`src/components/SeriesPlanner.jsx`** — added `drawerOpen` state. "Chat with AI" button added to topbar. All five tab components (BookStudyTab, OverviewTab, StructureTab, SlotsTab, CalendarTab) receive `drawerOpen`, `onOpenDrawer`, `onCloseDrawer` props. Each tab renders the `AIChatPanel` as a conditional fixed `ai-drawer` overlay. Layout changed from CSS grid with `340px` right column to Fragment + full-width content div + overlay drawer.
+
+**`src/styles/global.css`** — appended: `.ai-drawer`, `.ai-drawer.open` (slide-in transition), `.ai-drawer-close-bar`, `.ai-drawer-close-btn`, `.ai-drawer .ai-panel` (width override), `.ai-drawer .aichat-panel`.
+
+### Part 3 — Auto-expanding textareas
+
+Module-level `autoResize(el)` helper added to StudyTab.jsx, SeriesPlanner.jsx, and DeliveryTab.jsx. Sets `style.height = "auto"` then `style.height = Math.min(el.scrollHeight, window.innerHeight * 0.6) + "px"`. Applied via `rows={3}` + `onInput` handler + `ref` callback on all long-form textareas.
+
+`max-height: 60vh` added to `.field-textarea` in global.css as a CSS-side companion constraint.
+
+Fields updated: all six Book Study textareas, series overview, section overview, study_guide_note, all four Exegesis phase fields, timing_notes, post_sermon, delivery_notes.
+
+Manuscript textarea excluded — uses its own `minHeight: calc(100vh - 280px)` / `resize: vertical` sizing appropriate for a large editor.
+
+### Part 4 — Rich placeholder text
+
+All generic "Enter…" or "Type…" placeholders replaced with specific instructional copy. Fields updated:
+
+- Book Study: six fields — each placeholder describes what to put there and why
+- Exegesis (Observe, Interpret, Redemptive Thread, Implications): specific methodological prompts
+- MPT / MPS: format and purpose reminders
+- Sermon Big Idea: relationship to MPT/MPS
+- Series Overview / Big Idea: framing guidance
+- Section overview: scope note
+- Study Guide Note: congregational orientation prompt
+- Outline points (OutlineBuilder): "state a single clear claim that flows from the text"
+- Functional Elements (Explanation, Application, Illustration per point)
+- Delivery: Timing Notes, Post-Sermon Reflection, Delivery Notes
+
+### Part 5 — AI Draft buttons for structured output fields
+
+**StudyTab.jsx** — three new draft-generation functions:
+- `generateMPT()`: drafts MPT from passage + observations when either is present. "Draft →" button shown next to MPT label.
+- `generateMPS()`: drafts MPS from MPT when MPT has content. "Draft →" button shown next to MPS label.
+- `generateBigIdea()`: drafts sermon big idea from MPT + MPS. Sermon Big Idea card shown when either MPT or MPS has content.
+
+**SeriesPlanner.jsx (BookStudyTab)** — `generateWorkingBigIdea()`: drafts emerging_big_idea from passage range, series title, and all other populated Book Study fields. "Draft →" button shown on the Working Big Idea field when series.passage_range or series.title is present.
+
+Draft state managed via `draftLoading` string (field key or null) in each component. Drafts call `sendAIMessage` directly and write result to the field via `onUpdate`.
+
+---
+
 ## 2026-04-06 — SeriesPlanner UX: default tab, scroll isolation, copy button, SVG update
 
 ### src/components/SeriesPlanner.jsx
