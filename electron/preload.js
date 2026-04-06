@@ -54,6 +54,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // ── Logos ─────────────────────────────────────────────────────────────────
   openInLogos: (passage) => ipcRenderer.invoke("open-logos", passage),
 
+  // ── Export ───────────────────────────────────────────────────────────────────
+  exportStudyGuide: (seriesId) => ipcRenderer.invoke("series-export-study-guide", seriesId),
+
   // ── Progress events ───────────────────────────────────────────────────────
   onLibraryImportProgress: (callback) => {
     const handler = (event, data) => callback(data);

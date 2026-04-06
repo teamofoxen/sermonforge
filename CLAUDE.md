@@ -126,7 +126,8 @@ SermonForge/
         ├── Sidebar.jsx
         ├── Dashboard.jsx
         ├── Planning.jsx       — Series list + biblical coverage view
-        ├── SeriesPlanner.jsx  — Series planning workspace (4 tabs)
+        ├── SeriesPlanner.jsx  — Series planning workspace (5 tabs); contains
+        │                        StudyGuideModal (read-only 5-part preview + Word export)
         ├── SermonList.jsx
         ├── Calendar.jsx
         ├── Illustrations.jsx
@@ -144,7 +145,7 @@ SermonForge/
 
 ## DATABASE SCHEMA
 
-Current schema version: 6
+Current schema version: 7
 
 Table: series
   id                TEXT PRIMARY KEY
@@ -160,6 +161,12 @@ Table: series
   structural_outline TEXT  — detailed book outline (paste or AI-generated)
   status            TEXT  (planning | active | complete)
   canon_category    TEXT  (ot | nt | wisdom | prophetic)
+  redemptive_context TEXT  — where this book sits in the arc from creation to new creation (Book Study)
+  book_background   TEXT  — author, audience, occasion, historical setting, genre (Book Study)
+  book_argument     TEXT  — the book's controlling argument or central purpose (Book Study)
+  book_structure    TEXT  — major movements, structural markers, turning points (Book Study)
+  series_motivation TEXT  — why this congregation needs this book now (Book Study; feeds tier 4)
+  emerging_big_idea TEXT  — working draft of the series big idea, developed in Book Study
 
 Table: series_sections
   id            TEXT PRIMARY KEY
@@ -198,6 +205,8 @@ Table: sermons
   topic_theme         TEXT  — pastoral intelligence: the doctrine, situation, or felt need
   audience_assumptions TEXT — pastoral intelligence: who is in the room and what they carry
   background_noise    TEXT  — pastoral intelligence: external context (news, events, moment)
+  study_guide_note    TEXT  — short note orienting congregation readers to how this sermon
+                              fits the series arc; written per slot in Sermon Slots tab
   created_at          TEXT
   updated_at          TEXT
 
@@ -273,21 +282,54 @@ channels. The API key never touches the renderer.
     receives: { ids: string[], truncate: bool, maxChars: number }
     returns:  array of { id, title, passage, series_name, manuscript_text }
 
+  "series-export-study-guide"
+    receives: series id string
+    returns:  { success: true, filepath: string }
+            | { success: false, error: string }
+    — Assembles a 5-part .docx study guide from all series fields, sections, and
+      sermon slots. Saves to ~/OneDrive/SermonForge/StudyGuides/[title] — Study Guide.docx.
+      Creates the StudyGuides directory if absent. Empty parts are omitted entirely.
+
 ---
 
 ## SERIES PLANNING SYSTEM
 
 Three-level hierarchy: Series → Sections → Sermons
 
-Series Planning Workspace (SeriesPlanner.jsx) has four tabs:
+Series Planning Workspace (SeriesPlanner.jsx) has five tabs:
+  Book Study — foundational research before planning begins; six fields:
+               1. Redemptive Context (redemptive_context) — where this book sits in the
+                  biblical story; feeds tier 4 context pipeline
+               2. The World of This Book (book_background) — author, audience, setting, genre
+               3. The Book's Controlling Argument (book_argument) — the author's central claim
+               4. How the Book Is Built (book_structure) — major movements and structure
+               5. Why This Congregation, Why Now (series_motivation) — pastoral urgency;
+                  feeds tier 4 context pipeline
+               6. Working Big Idea (emerging_big_idea) — draft big idea developed in study;
+                  shown read-only in Overview when both it and the final big_idea are present
+               Each field has an "Analyze" button with context-aware AI prompting. Fields
+               2–4 and 6 are deliberately excluded from the per-sermon context pipeline
+               (too long for that budget; belong in series planning only).
   Overview  — title, color, canon category, status, passage range, dates,
-              big idea (AI-generate), overview narrative (AI-generate)
+              big idea (AI-generate), overview narrative (AI-generate);
+              shows read-only working hypothesis from Book Study when both are present
   Structure — structural outline (paste or AI-generate), section builder
               (each section: title, passage range, big idea, overview)
   Sermon Slots — sermon records (stage=planning) within the series,
-                 organized by section if sections exist
+                 organized by section if sections exist; each slot has a
+                 study_guide_note field with "Assist" AI button
   Calendar  — auto-suggest Sundays from start date, liturgical season
               badges, skip controls, AI scheduling advice, save dates
+
+Study Guide export (StudyGuideModal):
+  Accessible via "Study Guide" toolbar button. Read-only 5-part preview:
+    Part 1: The Series — big idea and overview
+    Part 2: The Book — book_background, book_argument, book_structure
+    Part 3: Where This Fits — redemptive_context, emerging_big_idea (if distinct)
+    Part 4: Why This Series, Why Now — series_motivation
+    Part 5: The Sermons — all slots with passage, title, date, season, study_guide_note
+  "Export to Word" writes a .docx to StudyGuides/ via series-export-study-guide IPC.
+  Empty parts are omitted from both the preview and the exported document.
 
 Church calendar engine (src/utils/churchCalendar.js):
   - Computes Easter via Gregorian computus
@@ -442,8 +484,13 @@ unless gospel repair required, no new illustrations unless asked.
    - stepDesc (dynamic, keyed to active step/tab)
    - ADAPTIVE GUIDANCE (dynamic, from buildAdaptiveHints(memory, step, sermonId))
 4. buildContext({ sermon, step, libraryChunks, theologyChunks }) assembles the context payload:
-   - normalizeSermon() cleans raw sermon data (includes topic_theme, audience_assumptions, background_noise)
-   - buildTiers() groups data into 7 priority tiers
+   - normalizeSermon() cleans raw sermon data (includes topic_theme, audience_assumptions,
+     background_noise; also extracts series_motivation and redemptive_context from sermon.series)
+   - buildTiers() groups data into 7 priority tiers:
+       tier 4 (series context, 1200-char budget) includes big_idea, series_motivation,
+       redemptive_context, and section big_idea via summarizeSeries(); the four long-form
+       Book Study fields (book_background, book_argument, book_structure, emerging_big_idea)
+       are excluded — too large for per-sermon context
    - resolveIncludes(step) gates which tiers are active for this step
      (tier7 / pastoralContext is always true; gated by content, not step)
    - assembleContext() formats active tiers into labeled sections:
@@ -509,46 +556,54 @@ unless gospel repair required, no new illustrations unless asked.
 4. openPlanner(series.id) sets currentView = "series-planner", openSeriesId = series.id
 5. SeriesPlanner mounts, fetches series by ID + all sections via getSectionsBySeries()
 
+Book Study tab:
+6. Pastor pastes commentary material or types notes into six fields (redemptive_context,
+   book_background, book_argument, book_structure, series_motivation, emerging_big_idea)
+7. Each field change calls updateSeries(id, fields) via onChange → handleSeriesField →
+   debouncedPersist (same debounced save path as all series fields)
+8. "Analyze" button builds a context-aware prompt from the field content + other populated
+   fields, sends to AI chat panel on the right
+
 Overview tab:
-6. Pastor fills title, passage range, canon category, status, dates, big idea, overview
-7. Each field change calls updateSeries(id, fields) via onUpdate → 800ms debounced save
-8. AI Generate buttons send series context to sendAIMessage() → response populates field
+9. Pastor fills title, passage range, canon category, status, dates, big idea, overview
+10. Each field change calls updateSeries(id, fields) via onUpdate → 800ms debounced save
+11. AI Generate buttons send series context to sendAIMessage() → response populates field
+12. emerging_big_idea from Book Study shown read-only above big_idea when both are present
 
 Structure tab:
-9. Pastor adds sections via createSection({ series_id, title, passage_range, big_idea, overview, sort_order })
-10. Sections reordered via updateSection(id, { sort_order }) per drag
-11. Structural outline textarea saves to series.structural_outline via updateSeries()
-12. AI context for section questions includes series big idea + section data
+13. Pastor adds sections via createSection({ series_id, title, passage_range, big_idea, overview, sort_order })
+14. Sections reordered via updateSection(id, { sort_order }) per drag
+15. Structural outline textarea saves to series.structural_outline via updateSeries()
+16. AI context for section questions includes series big idea + section data
 
 Sermon Slots tab:
-13. Pastor adds sermon slots via createSermon({ series_id, section_id, is_one_off: 0, stage: "planning" })
-14. Slots are real sermon records — no separate table
-15. Each slot: passage and working title saved via updateSermon()
-16. "Open" button calls onOpenSermon(slot.id, "series-planner", series.id) → see Flow 3
+17. Pastor adds sermon slots via createSermon({ series_id, section_id, is_one_off: 0, stage: "planning" })
+18. Slots are real sermon records — no separate table
+19. Each slot: passage, working title, big idea saved via updateSermon()
+20. Each slot has a study_guide_note textarea + "Assist" button
+    — "Assist" builds a prompt from slot position, series big idea, section big idea,
+      series_motivation, sends to SlotsTab AI chat panel
+21. "Open" button calls onOpenSermon(slot.id, "series-planner", series.id) → see Flow 3
 
 Calendar tab:
-17. Pastor sets series start date
-18. getUpcomingSundays(startDate, count, excludeDates) generates Sunday suggestions
+22. Pastor sets series start date
+23. getUpcomingSundays(startDate, count, excludeDates) generates Sunday suggestions
     — excludeDates pulled from calendar_notes table
     — liturgical season computed per date via getSeasonForDate()
-19. Pastor adjusts dates manually or accepts suggestions
-20. "Save All Dates" writes date to each sermon record via updateSermon()
+24. Pastor adjusts dates manually or accepts suggestions
+25. "Save All Dates" writes date to each sermon record via updateSermon()
     and updates series.end_date via updateSeries()
-21. AI scheduling advisor receives series slot count, start date, calendar notes context
+26. AI scheduling advisor receives series slot count, start date, calendar notes context
 
-Series Booklet Export (planned — not yet implemented):
-22. From the Series Planner (likely Overview or Structure tab), pastor triggers booklet export
-23. Booklet assembles from series fields in a defined order:
-    - Series title, passage range, canon category, dates
-    - Series big idea
-    - Series overview narrative
-    - Structural outline
-    - Per-section: title, passage range, big idea, overview
-    - Per-sermon slot: title, passage, date, liturgical season
-24. Output is a formatted .docx file generated via the docx library in the main process
-25. File saved to a pastor-specified location or a default exports folder
-26. IPC pattern: renderer requests export → main process assembles and writes file
-    → returns { success, filepath } to renderer
+Study Guide export:
+27. Pastor clicks "Study Guide" toolbar button → StudyGuideModal opens
+28. Modal shows 5-part read-only preview of all accumulated series content
+    — parts with no content are omitted from the preview
+29. "Export to Word" button calls exportStudyGuide(series.id) via IPC
+30. series-export-study-guide handler in main.js fetches series + sections + sermons,
+    builds Document via docx library, writes to
+    ~/OneDrive/SermonForge/StudyGuides/[title] — Study Guide.docx
+31. On success modal shows the saved filepath; on failure shows the error message
 
 ---
 
@@ -659,12 +714,13 @@ Before finishing any change verify:
 
 ## NEXT PRIORITIES
 
-Series planning system is live (Phase 1). Remaining planned work:
+Series planning system is live including Book Study, Study Guide export, and contextual
+AI assist at every tab. Remaining planned work:
 
-Phase 2 (series planning):
+Phase 2 (series planning — remaining):
 - Calendar notes UI (add/manage special dates from within the app)
-- Series booklet export (Word .docx via docx library)
 - Dashboard "Active Series" cards using new series fields
+  (series_motivation, redemptive_context, emerging_big_idea)
 
 Possible future work:
 - Illustration linking (mark an illustration as used in a specific sermon)

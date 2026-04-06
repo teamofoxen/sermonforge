@@ -125,30 +125,39 @@ be hit.
 
 ---
 
-## Entry 6 — Series Booklet Export
+## Entry 6 — Series Study Guide Export
 
-**Current situation:** Not yet built. The data model and intended implementation approach
-are documented in ADR-014.
+**Status: BUILT — 2026-04-05**
 
-**Intended approach:** `.docx` file generated via the `docx` npm library in the main
-process. Assembles series title, passage range, big idea, overview, structural outline,
-per-section breakdown, and per-sermon slot with date and liturgical season. IPC pattern:
-renderer requests export → main process assembles and writes → returns
-`{ success, filepath }`.
+The study guide export is implemented. "Export to Word" in the StudyGuideModal writes a
+5-part .docx to `~/OneDrive/SermonForge/StudyGuides/[title] — Study Guide.docx` via the
+`series-export-study-guide` IPC channel. See ADR-014 for the full specification.
 
-**Implementation notes when building:**
-- All outline data must go through `getOutline()` — never raw JSON parse
-- Follow the two-location schema pattern if new columns are needed
-  (DDL + migration block)
-- Read the docx skill at `/mnt/skills/public/docx/SKILL.md` before writing any code
+**What was built:** Series title + accent color, passage range, date range, then five
+content parts (The World of This Book, Why We're Here, The Big Idea, The Journey, Reference).
+Empty parts are omitted. Each sermon in Part 4 shows passage, title, date, liturgical season,
+and the study_guide_note written in the Sermon Slots tab.
 
-**Triggers building:** When the pastor needs it.
+**Remaining improvements worth revisiting:**
+- **Cover page / title page formatting** — the current output uses plain heading styles.
+  A proper title page with the series color as a design element would make it more
+  distributable. Requires a .dotx template or custom XML — non-trivial with the docx library.
+- **Table of contents** — for long series (10+ sermons, multiple sections), a ToC after
+  the title would improve navigability. The docx library supports ToC generation; deferred
+  for now.
+- **Congregation-facing polish** — the current output is a faithful assembly of planning
+  data. A "congregation version" might want the book study research omitted and only the
+  sermon arc (Part 4) plus big idea exported. A mode selector (full / abbreviated) could
+  address this without maintaining two separate export flows.
+
+**Triggers revisiting:** If the pastor wants to distribute the study guide to congregation
+members and needs cleaner formatting, or if a ToC becomes useful for longer series.
 
 ---
 
 ## Entry 7 — Unused dead code cleanup
 
-**Current situation:** Three items of dead code exist in the codebase:
+**Current situation:** Six items of dead code exist in the codebase:
 
 - `electron/main.js`: `buildLogosUrl()` function — fully implemented, never called. The
   `open-logos` handler uses clipboard only.
@@ -156,8 +165,38 @@ renderer requests export → main process assembles and writes → returns
   handlers call `randomUUID()` directly.
 - `src/components/AIPanel.jsx`: `getSuggestions("series")` branch — unreachable from any
   real tab value in `SermonWorkspace`.
+- `src/components/AIPanel.jsx`: `getSuggestions("book-study")` branch — unreachable because
+  Book Study uses `AIChatPanel` (SeriesPlanner's local component) with inline system prompts,
+  not `AIPanel.jsx`. Structurally identical to the `"series"` case above.
+- `src/components/AIPanel.jsx`: `HOW_CHIP_MESSAGES["book-study"]` entry — same reason.
+- `src/components/AIPanel.jsx`: `buildSystemPrompt()` `stepDescriptions["book-study"]` entry
+  — same reason.
 
 **Why deferred:** Dead code, no behavioral impact.
 
 **Triggers revisiting:** Any session that touches these files for another reason — remove
 the dead code at that point.
+
+---
+
+## Entry 8 — Pre-v7 silent failure handlers in SeriesPlanner.jsx
+
+**Current situation:** The Overview, Structure, and Calendar tab AI handlers in
+`SeriesPlanner.jsx` use `try/finally` with no `catch` block. When `sendAIMessage` throws,
+the error is an unhandled promise rejection — the loading spinner stops but no error is
+surfaced to the user. This pattern predates v7 and was confirmed in the 2026-04-05 audit.
+The three new v7 handlers (`handleAnalyze`, `handleChatSubmit`, `handleSlotAI`) were fixed
+in that session; the pre-v7 handlers were explicitly left out of scope.
+
+**Also deferred:** `normalizeSermon()` in `contextBuilder.js` lacks a test for the case
+where `sermon.series` is present but `series_motivation` and `redemptive_context` are both
+missing entirely (a pre-v7 series record with no v7 columns). The `?? ""` default handles
+this correctly in code but the case is untested.
+
+**Why deferred:** The pre-v7 handlers are behaviorally identical to each other and to the
+pattern as it existed before the v7 session. Fixing them in isolation would touch many
+handlers across three tabs with no architectural change. The test gap is a single edge case
+with no known failure mode.
+
+**Triggers revisiting:** Next maintenance audit, or any session that touches
+`SeriesPlanner.jsx` AI handlers or `contextBuilder` tests.

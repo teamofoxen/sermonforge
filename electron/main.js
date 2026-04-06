@@ -64,7 +64,13 @@ async function initDatabase() {
       end_date TEXT DEFAULT '',
       structural_outline TEXT DEFAULT '',
       status TEXT DEFAULT 'planning',
-      canon_category TEXT DEFAULT ''
+      canon_category TEXT DEFAULT '',
+      redemptive_context TEXT DEFAULT '',
+      book_background TEXT DEFAULT '',
+      book_argument TEXT DEFAULT '',
+      book_structure TEXT DEFAULT '',
+      series_motivation TEXT DEFAULT '',
+      emerging_big_idea TEXT DEFAULT ''
     );
 
     CREATE TABLE IF NOT EXISTS sermons (
@@ -94,6 +100,7 @@ async function initDatabase() {
       topic_theme TEXT DEFAULT '',
       audience_assumptions TEXT DEFAULT '',
       background_noise TEXT DEFAULT '',
+      study_guide_note TEXT DEFAULT '',
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
     );
@@ -354,6 +361,19 @@ function runMigrations() {
     db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '6')");
     version = 6;
   }
+
+  if (version < 7) {
+    // v7: series study fields + sermon study guide note
+    try { db.run("ALTER TABLE series ADD COLUMN redemptive_context TEXT DEFAULT ''"); } catch (_) {}
+    try { db.run("ALTER TABLE series ADD COLUMN book_background TEXT DEFAULT ''"); } catch (_) {}
+    try { db.run("ALTER TABLE series ADD COLUMN book_argument TEXT DEFAULT ''"); } catch (_) {}
+    try { db.run("ALTER TABLE series ADD COLUMN book_structure TEXT DEFAULT ''"); } catch (_) {}
+    try { db.run("ALTER TABLE series ADD COLUMN series_motivation TEXT DEFAULT ''"); } catch (_) {}
+    try { db.run("ALTER TABLE series ADD COLUMN emerging_big_idea TEXT DEFAULT ''"); } catch (_) {}
+    try { db.run("ALTER TABLE sermons ADD COLUMN study_guide_note TEXT DEFAULT ''"); } catch (_) {}
+    db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '7')");
+    version = 7;
+  }
 }
 
 // ── Query helpers ────────────────────────────────────────────────────────────
@@ -493,12 +513,14 @@ const SERMON_COLUMNS = new Set([
   "observations", "interpretation", "redemptive_thread", "implications",
   "outline", "manuscript", "delivery_notes", "timing_notes", "post_sermon",
   "functional_elements", "checklist", "series_id", "section_id", "is_one_off",
-  "topic_theme", "audience_assumptions", "background_noise",
+  "topic_theme", "audience_assumptions", "background_noise", "study_guide_note",
 ]);
 
 const SERIES_COLUMNS = new Set([
   "title", "color", "description", "year", "big_idea", "overview",
   "passage_range", "start_date", "end_date", "structural_outline", "status", "canon_category",
+  "redemptive_context", "book_background", "book_argument", "book_structure",
+  "series_motivation", "emerging_big_idea",
 ]);
 
 const SECTION_COLUMNS = new Set([
@@ -979,6 +1001,292 @@ ipcMain.handle('open-logos', async (event, passage) => {
     return { success: false };
   }
   return { success: true };
+});
+
+// ── Study Guide Export ────────────────────────────────────────────────────────
+const SERIES_COLOR_HEX = {
+  gold:    "b8860b",
+  crimson: "8b1a1a",
+  sage:    "4a6741",
+  slate:   "2c3e50",
+};
+
+// Inline season name helper — churchCalendar.js is ESM and cannot be required here.
+function getSeasonNameForExport(dateStr) {
+  if (!dateStr) return null;
+  try {
+    const [y, m, d] = dateStr.split("-").map(Number);
+    const date = new Date(y, m - 1, d);
+    const year = date.getFullYear();
+    // Gregorian Easter computus
+    const a = year % 19;
+    const b = Math.floor(year / 100);
+    const c = year % 100;
+    const dd = Math.floor(b / 4);
+    const e = b % 4;
+    const f = Math.floor((b + 8) / 25);
+    const g = Math.floor((b - f + 1) / 3);
+    const h = (19 * a + b - dd - g + 15) % 30;
+    const ii = Math.floor(c / 4);
+    const k = c % 4;
+    const l = (32 + 2 * e + 2 * ii - h - k) % 7;
+    const m2 = Math.floor((a + 11 * h + 22 * l) / 451);
+    const eMonth = Math.floor((h + l - 7 * m2 + 114) / 31);
+    const eDay   = ((h + l - 7 * m2 + 114) % 31) + 1;
+    const easter = new Date(year, eMonth - 1, eDay);
+    const shift = (n) => { const r = new Date(easter); r.setDate(r.getDate() + n); return r; };
+    const ashWed     = shift(-46);
+    const palmSun    = shift(-7);
+    const pentecost  = shift(49);
+    const christmas  = new Date(year, 11, 25);
+    const dec25Day   = christmas.getDay();
+    const daysBack   = dec25Day === 0 ? 28 : dec25Day + 21;
+    const adventStart = new Date(christmas);
+    adventStart.setDate(adventStart.getDate() - daysBack);
+    const epiphany = new Date(year, 0, 6);
+    if (date < epiphany)     return "Christmas";
+    if (date < ashWed)       return "Epiphany";
+    if (date < palmSun)      return "Lent";
+    if (date < easter)       return "Holy Week";
+    if (date <= pentecost)   return "Easter";
+    if (date < adventStart)  return "Ordinary Time";
+    if (date < christmas)    return "Advent";
+    return "Christmas";
+  } catch { return null; }
+}
+
+function buildStudyGuideDoc(series, sections, sermons) {
+  const { Document, Paragraph, TextRun, HeadingLevel } = require("docx");
+  const accentHex = SERIES_COLOR_HEX[series.color] || SERIES_COLOR_HEX.gold;
+
+  function hasContent(val) {
+    return val != null && val.trim().length > 0;
+  }
+
+  function bodyParas(text) {
+    return (text || "").split(/\n+/).filter(l => l.trim()).map(line =>
+      new Paragraph({
+        children: [new TextRun({ text: line.trim() })],
+        spacing: { after: 100 },
+      })
+    );
+  }
+
+  function partHeading(text) {
+    return new Paragraph({
+      heading: HeadingLevel.HEADING_1,
+      spacing: { before: 400, after: 160 },
+      children: [new TextRun({ text, color: accentHex, bold: true })],
+    });
+  }
+
+  function subHead(text) {
+    return new Paragraph({
+      heading: HeadingLevel.HEADING_2,
+      spacing: { before: 240, after: 80 },
+      children: [new TextRun({ text })],
+    });
+  }
+
+  function secHead(text) {
+    return new Paragraph({
+      heading: HeadingLevel.HEADING_3,
+      spacing: { before: 200, after: 80 },
+      children: [new TextRun({ text, color: accentHex })],
+    });
+  }
+
+  function spacer() {
+    return new Paragraph({ text: "", spacing: { after: 60 } });
+  }
+
+  function sermonRows(list) {
+    const rows = [];
+    list.forEach((sermon, i) => {
+      const labelParts = [];
+      if (sermon.passage) labelParts.push(sermon.passage);
+      if (sermon.title)   labelParts.push(sermon.title);
+      const labelText = `${i + 1}. ${labelParts.join(" — ") || "Untitled"}`;
+      const headerRuns = [new TextRun({ text: labelText, bold: true })];
+      if (sermon.date) {
+        const seasonName = getSeasonNameForExport(sermon.date);
+        try {
+          const [ys, ms, ds] = sermon.date.split("-").map(Number);
+          const formatted = new Date(ys, ms - 1, ds)
+            .toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+          const dateText = seasonName ? `  ${formatted} (${seasonName})` : `  ${formatted}`;
+          headerRuns.push(new TextRun({ text: dateText, color: "888888" }));
+        } catch {}
+      }
+      rows.push(new Paragraph({
+        children: headerRuns,
+        spacing: { before: 160, after: 60 },
+      }));
+      if (hasContent(sermon.study_guide_note)) {
+        sermon.study_guide_note.trim().split(/\n+/).filter(l => l.trim()).forEach(line => {
+          rows.push(new Paragraph({
+            children: [new TextRun({ text: line.trim() })],
+            indent: { left: 360 },
+            spacing: { after: 80 },
+          }));
+        });
+      }
+    });
+    return rows;
+  }
+
+  const children = [];
+
+  // Title block
+  children.push(new Paragraph({
+    children: [new TextRun({ text: series.title || "Study Guide", bold: true, color: accentHex, size: 48 })],
+    spacing: { after: 120 },
+  }));
+  if (hasContent(series.passage_range)) {
+    children.push(new Paragraph({
+      children: [new TextRun({ text: series.passage_range, italics: true, size: 28 })],
+      spacing: { after: 80 },
+    }));
+  }
+  const dates = [series.start_date, series.end_date].filter(Boolean);
+  if (dates.length > 0) {
+    const dateRange = dates.map(d => {
+      try {
+        const [ys, ms, ds] = d.split("-").map(Number);
+        return new Date(ys, ms - 1, ds).toLocaleDateString("en-US", { month: "long", year: "numeric" });
+      } catch { return d; }
+    }).join(" — ");
+    children.push(new Paragraph({
+      children: [new TextRun({ text: dateRange, color: "888888", size: 22 })],
+      spacing: { after: 480 },
+    }));
+  } else {
+    children.push(spacer());
+  }
+
+  // PART 1 — THE WORLD OF THIS BOOK
+  if (hasContent(series.book_background) || hasContent(series.book_argument) || hasContent(series.book_structure)) {
+    children.push(partHeading("PART 1 — THE WORLD OF THIS BOOK"));
+    if (hasContent(series.book_background)) {
+      children.push(subHead("Then"));
+      children.push(...bodyParas(series.book_background));
+    }
+    if (hasContent(series.book_argument) || hasContent(series.book_structure)) {
+      children.push(subHead("The Argument"));
+      if (hasContent(series.book_argument)) children.push(...bodyParas(series.book_argument));
+      if (hasContent(series.book_structure)) {
+        if (hasContent(series.book_argument)) children.push(spacer());
+        children.push(...bodyParas(series.book_structure));
+      }
+    }
+  }
+
+  // PART 2 — WHY WE'RE HERE
+  if (hasContent(series.redemptive_context) || hasContent(series.series_motivation)) {
+    children.push(partHeading("PART 2 — WHY WE'RE HERE"));
+    if (hasContent(series.redemptive_context)) {
+      children.push(subHead("Where It Sits in the Story"));
+      children.push(...bodyParas(series.redemptive_context));
+    }
+    if (hasContent(series.series_motivation)) {
+      children.push(subHead("Why This Congregation, Why Now"));
+      children.push(...bodyParas(series.series_motivation));
+    }
+  }
+
+  // PART 3 — THE BIG IDEA
+  if (hasContent(series.emerging_big_idea) || hasContent(series.big_idea) || hasContent(series.overview)) {
+    children.push(partHeading("PART 3 — THE BIG IDEA"));
+    if (hasContent(series.emerging_big_idea)) {
+      children.push(subHead("Working Hypothesis"));
+      children.push(...bodyParas(series.emerging_big_idea));
+    }
+    if (hasContent(series.big_idea)) {
+      children.push(subHead("Series Big Idea"));
+      children.push(...bodyParas(series.big_idea));
+    }
+    if (hasContent(series.overview)) {
+      children.push(subHead("Overview"));
+      children.push(...bodyParas(series.overview));
+    }
+  }
+
+  // PART 4 — THE JOURNEY
+  if (sermons.length > 0) {
+    children.push(partHeading("PART 4 — THE JOURNEY"));
+    const assignedIds = new Set();
+    for (const section of sections) {
+      const sectionSermons = sermons.filter(s => s.section_id === section.id);
+      sectionSermons.forEach(s => assignedIds.add(s.id));
+      if (!hasContent(section.title) && !hasContent(section.passage_range) &&
+          !hasContent(section.big_idea) && !hasContent(section.overview) &&
+          sectionSermons.length === 0) continue;
+      if (hasContent(section.title)) children.push(secHead(section.title));
+      if (hasContent(section.passage_range)) {
+        children.push(new Paragraph({
+          children: [new TextRun({ text: section.passage_range, italics: true, size: 20 })],
+          spacing: { after: 80 },
+        }));
+      }
+      if (hasContent(section.big_idea)) {
+        children.push(new Paragraph({
+          children: [new TextRun({ text: section.big_idea, italics: true })],
+          spacing: { after: 80 },
+        }));
+      }
+      if (hasContent(section.overview)) children.push(...bodyParas(section.overview));
+      if (sectionSermons.length > 0) children.push(...sermonRows(sectionSermons));
+    }
+    const unsectioned = sermons.filter(s => !assignedIds.has(s.id));
+    if (unsectioned.length > 0) {
+      if (sections.length > 0) children.push(secHead("Remaining Sermons"));
+      children.push(...sermonRows(unsectioned));
+    }
+  }
+
+  // PART 5 — REFERENCE
+  if (hasContent(series.structural_outline)) {
+    children.push(partHeading("PART 5 — REFERENCE"));
+    children.push(subHead("How the Book Is Built"));
+    children.push(...bodyParas(series.structural_outline));
+  }
+
+  return new Document({ sections: [{ properties: {}, children }] });
+}
+
+ipcMain.handle("series-export-study-guide", async (_, seriesId) => {
+  try {
+    const series = queryOne("SELECT * FROM series WHERE id = ?", [seriesId]);
+    if (!series) return { success: false, error: "Series not found" };
+
+    const sections = queryAll(
+      "SELECT * FROM series_sections WHERE series_id = ? ORDER BY sort_order ASC",
+      [seriesId]
+    );
+    const sermons = queryAll(
+      "SELECT * FROM sermons WHERE series_id = ? ORDER BY date ASC, created_at ASC",
+      [seriesId]
+    );
+
+    const doc = buildStudyGuideDoc(series, sections, sermons);
+
+    const studyGuidesDir = path.join(os.homedir(), "OneDrive", "SermonForge", "StudyGuides");
+    if (!fs.existsSync(studyGuidesDir)) {
+      fs.mkdirSync(studyGuidesDir, { recursive: true });
+    }
+
+    const safeTitle = (series.title || "Untitled").replace(/[<>:"/\\|?*\n\r\t]/g, "—").trim();
+    const filepath = path.join(studyGuidesDir, `${safeTitle} — Study Guide.docx`);
+
+    const { Packer } = require("docx");
+    const buffer = await Packer.toBuffer(doc);
+    fs.writeFileSync(filepath, buffer);
+
+    return { success: true, filepath };
+  } catch (e) {
+    console.error("[series-export-study-guide]", e);
+    return { success: false, error: e.message };
+  }
 });
 
 // ── Logos URL builder ────────────────────────────────────────────────────────

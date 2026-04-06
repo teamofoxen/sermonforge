@@ -422,7 +422,7 @@ describe("buildAdaptiveHints — hint format and category dedup", () => {
 
 // ── Pastoral Intelligence tier (tier7) ────────────────────────────────────────
 
-import { normalizeSermon, assembleContext } from "./contextBuilder";
+import { normalizeSermon, assembleContext, summarizeSeries } from "./contextBuilder";
 
 describe("tier7 — pastoral intelligence: always-on, content-gated", () => {
   it("active at every step when fields have content", () => {
@@ -571,5 +571,157 @@ describe("memory feedback loop guard — mock shape sanity check", () => {
     expect(Array.isArray(_mockMemory.patterns.phrasePatterns)).toBe(true);
     expect(Array.isArray(_mockMemory.patterns.aiPhrasePatterns)).toBe(true);
     expect(_mockMemory.patterns.phrasePatterns).not.toBe(_mockMemory.patterns.aiPhrasePatterns);
+  });
+});
+
+// ── v7: series_motivation and redemptive_context in tier 4 ────────────────────
+
+// A series object with all six v7 columns present, including the four that must
+// be excluded from tier 4 (book_background, book_argument, book_structure,
+// emerging_big_idea).
+const SERIES_V7_FULL = {
+  title:              "Romans",
+  big_idea:           "The righteousness of God revealed in Christ",
+  series_motivation:  "To anchor the church in gospel grace and identity",
+  redemptive_context: "Christ bears the condemnation the law cannot lift",
+  book_background:    "Paul wrote to a divided church in Rome around AD 57",
+  book_argument:      "The argument moves from universal guilt to justification by faith",
+  book_structure:     "Chapters 1–8: Justification; 9–11: Israel; 12–16: Ethics",
+  emerging_big_idea:  "Draft: The gospel reveals the righteousness of God for all who believe",
+};
+
+// The two included fields only, for simpler positive tests.
+const SERIES_V7_INCLUDED = {
+  title:              "Romans",
+  big_idea:           "The righteousness of God revealed in Christ",
+  series_motivation:  "To anchor the church in gospel grace and identity",
+  redemptive_context: "Christ bears the condemnation the law cannot lift",
+};
+
+describe("summarizeSeries() — v7: series_motivation and redemptive_context", () => {
+  it("includes series_motivation in output when present", () => {
+    const result = summarizeSeries(SERIES_V7_INCLUDED, null);
+    expect(result).toContain("To anchor the church in gospel grace and identity");
+  });
+
+  it("includes redemptive_context in output when present", () => {
+    const result = summarizeSeries(SERIES_V7_INCLUDED, null);
+    expect(result).toContain("Christ bears the condemnation the law cannot lift");
+  });
+
+  it("priority order: big_idea before series_motivation before redemptive_context", () => {
+    const result = summarizeSeries(SERIES_V7_INCLUDED, null);
+    const posBigIdea    = result.indexOf("Series:");
+    const posMotivation = result.indexOf("Motivation:");
+    const posRedemptive = result.indexOf("Redemptive context:");
+    expect(posBigIdea).toBeGreaterThanOrEqual(0);
+    expect(posMotivation).toBeGreaterThan(posBigIdea);
+    expect(posRedemptive).toBeGreaterThan(posMotivation);
+  });
+
+  it("book_background is excluded regardless of content", () => {
+    const result = summarizeSeries(SERIES_V7_FULL, null);
+    expect(result).not.toContain("Paul wrote to a divided church in Rome");
+  });
+
+  it("book_argument is excluded regardless of content", () => {
+    const result = summarizeSeries(SERIES_V7_FULL, null);
+    expect(result).not.toContain("The argument moves from universal guilt");
+  });
+
+  it("book_structure is excluded regardless of content", () => {
+    const result = summarizeSeries(SERIES_V7_FULL, null);
+    expect(result).not.toContain("Chapters 1");
+  });
+
+  it("emerging_big_idea is excluded regardless of content", () => {
+    const result = summarizeSeries(SERIES_V7_FULL, null);
+    expect(result).not.toContain("Draft:");
+  });
+
+  it("returns '' when series is null", () => {
+    expect(summarizeSeries(null, null)).toBe("");
+  });
+
+  it("series_motivation alone (no big_idea) still appears", () => {
+    const series = { series_motivation: "To preach grace to the weary", redemptive_context: "" };
+    const result = summarizeSeries(series, null);
+    expect(result).toContain("To preach grace to the weary");
+  });
+});
+
+describe("tier 4 — v7: series_motivation and redemptive_context appear; excluded fields do not", () => {
+  // Build COMP using summarizeSeries directly so the test exercises the real pipeline.
+  const COMP_V7 = {
+    exegesis: COMP.exegesis,
+    outline:  COMP.outline,
+    series:   summarizeSeries(SERIES_V7_FULL, null),
+  };
+
+  const NORM_V7 = { ...NORM, series: SERIES_V7_INCLUDED };
+
+  it("series_motivation appears in tier4.series", () => {
+    const t = buildTiers({ normalized: NORM_V7, compressed: COMP_V7, libraryChunks: [], theologyChunks: [], step: STEPS.OUTLINE });
+    expect(t.tier4).not.toBeNull();
+    expect(t.tier4.series).toContain("To anchor the church in gospel grace and identity");
+  });
+
+  it("redemptive_context appears in tier4.series", () => {
+    const t = buildTiers({ normalized: NORM_V7, compressed: COMP_V7, libraryChunks: [], theologyChunks: [], step: STEPS.OUTLINE });
+    expect(t.tier4).not.toBeNull();
+    expect(t.tier4.series).toContain("Christ bears the condemnation the law cannot lift");
+  });
+
+  it("book_background does not appear in tier4.series", () => {
+    const t = buildTiers({ normalized: NORM_V7, compressed: COMP_V7, libraryChunks: [], theologyChunks: [], step: STEPS.OUTLINE });
+    expect(t.tier4.series).not.toContain("Paul wrote to a divided church in Rome");
+  });
+
+  it("book_argument does not appear in tier4.series", () => {
+    const t = buildTiers({ normalized: NORM_V7, compressed: COMP_V7, libraryChunks: [], theologyChunks: [], step: STEPS.OUTLINE });
+    expect(t.tier4.series).not.toContain("The argument moves from universal guilt");
+  });
+
+  it("book_structure does not appear in tier4.series", () => {
+    const t = buildTiers({ normalized: NORM_V7, compressed: COMP_V7, libraryChunks: [], theologyChunks: [], step: STEPS.OUTLINE });
+    expect(t.tier4.series).not.toContain("Chapters 1");
+  });
+
+  it("emerging_big_idea does not appear in tier4.series", () => {
+    const t = buildTiers({ normalized: NORM_V7, compressed: COMP_V7, libraryChunks: [], theologyChunks: [], step: STEPS.OUTLINE });
+    expect(t.tier4.series).not.toContain("Draft:");
+  });
+});
+
+describe("normalizeSermon() — v7: series_motivation and redemptive_context", () => {
+  it("passes through series_motivation when present", () => {
+    const sermon = { series: { title: "Romans", big_idea: "Grace", series_motivation: "Anchor in gospel", redemptive_context: "" } };
+    expect(normalizeSermon(sermon).series.series_motivation).toBe("Anchor in gospel");
+  });
+
+  it("passes through redemptive_context when present", () => {
+    const sermon = { series: { title: "Romans", big_idea: "Grace", series_motivation: "", redemptive_context: "Christ atones" } };
+    expect(normalizeSermon(sermon).series.redemptive_context).toBe("Christ atones");
+  });
+
+  it("defaults series_motivation to '' when absent", () => {
+    const sermon = { series: { title: "Romans", big_idea: "Grace" } };
+    expect(normalizeSermon(sermon).series.series_motivation).toBe("");
+  });
+
+  it("defaults redemptive_context to '' when absent", () => {
+    const sermon = { series: { title: "Romans", big_idea: "Grace" } };
+    expect(normalizeSermon(sermon).series.redemptive_context).toBe("");
+  });
+
+  it("defaults both to '' when sermon is null", () => {
+    // series is null when sermon is null — no series object to check fields on.
+    expect(normalizeSermon(null).series).toBeNull();
+  });
+
+  it("series_motivation null on sermon becomes ''", () => {
+    const sermon = { series: { title: "Romans", big_idea: "Grace", series_motivation: null, redemptive_context: null } };
+    expect(normalizeSermon(sermon).series.series_motivation).toBe("");
+    expect(normalizeSermon(sermon).series.redemptive_context).toBe("");
   });
 });

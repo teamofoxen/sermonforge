@@ -391,9 +391,10 @@ function buildSystemPrompt(step, sermonId) {
     [STEPS.MPT_MPS]:             "The pastor is forging the Main Point of the Text (MPT) and Main Point of the Sermon (MPS).",
     [STEPS.OUTLINE]:             "The pastor is building the sermon outline.",
     [STEPS.FUNCTIONAL_ELEMENTS]: "The pastor is developing functional elements (explanation, application, illustration) per outline point.",
-    "outline":    "The pastor is working on the sermon outline.",
-    "manuscript": "The pastor is writing the sermon manuscript.",
-    "delivery":   "The pastor is preparing delivery notes.",
+    "outline":     "The pastor is working on the sermon outline.",
+    "manuscript":  "The pastor is writing the sermon manuscript.",
+    "delivery":    "The pastor is preparing delivery notes.",
+    "book-study":  "The pastor is in the Book Study phase — doing foundational research and theological reflection before series planning begins. This phase involves pasting commentary material, developing the book's argument, locating it in redemptive history, and forming a working big idea. The AI should act as a thinking partner for deep theological and structural exploration, not a content generator.",
   };
 
   const stepDesc = stepDescriptions[step]
@@ -454,6 +455,7 @@ const HOW_CHIP_MESSAGES = {
   "delivery":   "Explain the Delivery tab — what it's for and how to use it well.",
   "series":     "Explain how Series Planning works in SermonForge — what it's for, how it relates to individual sermon prep, and how to use it well.",
   "study":      "Explain how the Study tab works — the four phases of exegesis and the steps that follow.",
+  "book-study": "Explain how the Book Study phase works within SermonForge. Describe how each field contributes to the series planning process and how the work here feeds into the rest of the workflow.",
 };
 
 function howChip(key) {
@@ -533,6 +535,32 @@ function getSuggestions(tab, sermon, libraryCount = 0, activeStep) {
 
   if (tab === "series") {
     return [howChip("series")];
+  }
+
+  if (tab === "book-study") {
+    return [
+      howChip("book-study"),
+      {
+        label: "Summarize the book's argument",
+        prompt: "Based on what I've shared, summarize the controlling argument of this book in a form I can work from.",
+      },
+      {
+        label: "Suggest sermon divisions",
+        prompt: "Based on the book's structure, suggest how it might be divided into a preaching series. Give me 4-8 divisions with passage ranges and a one-sentence rationale for each.",
+      },
+      {
+        label: "Where does this sit in redemptive history",
+        prompt: "Help me articulate where this book sits in the arc of redemptive history — from creation to new creation. What does it contribute to the story that only it can contribute?",
+      },
+      {
+        label: "What does this book demand of this congregation",
+        prompt: "Given what this book argues and who this congregation is, what is the specific claim this book makes on us? What does it demand that we believe, repent of, or do?",
+      },
+      {
+        label: "Help me find the big idea",
+        prompt: "I'm working toward a series big idea. Rather than giving me one, ask me three questions that will help me find it myself.",
+      },
+    ];
   }
 
   return [];

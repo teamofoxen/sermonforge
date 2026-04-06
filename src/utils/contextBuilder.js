@@ -17,15 +17,17 @@ import { getMemory } from "./memory";
  *   mps: string,
  *   outline: string[],
  *   functionalElements: object,
- *   series: { title: string, big_idea: string } | null,
+ *   series: { title: string, big_idea: string, series_motivation: string, redemptive_context: string } | null,
  *   section: { big_idea: string } | null,
  * }}
  */
 export function normalizeSermon(sermon) {
-  const seriesTitle   = sermon?.series?.title   ?? null;
-  const seriesBigIdea = sermon?.series?.big_idea ?? null;
+  const seriesTitle         = sermon?.series?.title            ?? null;
+  const seriesBigIdea       = sermon?.series?.big_idea         ?? null;
+  const seriesMotivation    = sermon?.series?.series_motivation ?? "";
+  const seriesRedemptive    = sermon?.series?.redemptive_context ?? "";
   const series = (seriesTitle !== null || seriesBigIdea !== null)
-    ? { title: seriesTitle ?? "", big_idea: seriesBigIdea ?? "" }
+    ? { title: seriesTitle ?? "", big_idea: seriesBigIdea ?? "", series_motivation: seriesMotivation, redemptive_context: seriesRedemptive }
     : null;
 
   const sectionBigIdea = sermon?.section?.big_idea ?? null;
@@ -87,17 +89,23 @@ export function summarizeOutline(outline) {
 }
 
 /**
- * Combine series and section big ideas into a single sentence.
- * Returns "" if neither is present.
+ * Combine series context fields and section big idea into a single sentence.
+ * Priority order (for natural trimming): big_idea, series_motivation,
+ * redemptive_context, section big_idea. Fields excluded by design:
+ * book_background, book_argument, book_structure, emerging_big_idea
+ * (too large for per-sermon context; belong in the Series Planner only).
+ * Returns "" if no fields have content.
  *
- * @param {{ title: string, big_idea: string } | null} series
+ * @param {{ title: string, big_idea: string, series_motivation: string, redemptive_context: string } | null} series
  * @param {{ big_idea: string } | null} section
  * @returns {string}
  */
 export function summarizeSeries(series, section) {
   const parts = [
-    series?.big_idea?.trim()  && `Series: ${series.big_idea.trim()}`,
-    section?.big_idea?.trim() && `Section: ${section.big_idea.trim()}`,
+    series?.big_idea?.trim()           && `Series: ${series.big_idea.trim()}`,
+    series?.series_motivation?.trim()  && `Motivation: ${series.series_motivation.trim()}`,
+    series?.redemptive_context?.trim() && `Redemptive context: ${series.redemptive_context.trim()}`,
+    section?.big_idea?.trim()          && `Section: ${section.big_idea.trim()}`,
   ].filter(Boolean);
 
   return parts.join("; ");
@@ -435,7 +443,8 @@ export function buildTiers({ normalized, compressed, libraryChunks = [], theolog
     tier3 = { outline, functionalElements, outlineArr: normalized.outline };
   }
 
-  // Tier 4 — suppressed when step excludes it or no series big_idea exists.
+  // Tier 4 — suppressed when step excludes it or series has no usable context.
+  // Content comes from summarizeSeries(): big_idea, series_motivation, redemptive_context, section big_idea.
   let tier4 = null;
   if (inc.tier4 && compressed.series) {
     tier4 = { series: trimStr(compressed.series, TIER_LIMITS.tier4) };

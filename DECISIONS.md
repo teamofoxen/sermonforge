@@ -122,13 +122,15 @@ Examples:
 - `runMigrations()` called in `initDatabase()` after table creation, before `saveDb()`
 - Each migration version is a guarded block: `if (version < N) { ... ALTER TABLE ... set version N }`
 - `ALTER TABLE ADD COLUMN` errors are caught silently — on fresh installs the columns already exist from `CREATE TABLE`, so the error is expected and harmless
-- Current version: **4**
+- Current version: **7**
 
 **Migration history:**
 - v0 → v2: Added `functional_elements TEXT DEFAULT '{}'` and `checklist TEXT DEFAULT '{}'` to `sermons`
 - v2 → v3: Added `library` table and `library_fts` FTS4 virtual table for sermon library import and search
 - v3 → v4: Added series planning fields (`big_idea`, `overview`, `passage_range`, `start_date`, `end_date`, `structural_outline`, `canon_category`) to `series`; added `series_sections` table; added `calendar_notes` table; added `section_id` and `is_one_off` columns to `sermons`
 - v4 → v5: Data migration — converts `outline` from `string[]` to `{id, text}[]` and remaps `functional_elements` keys from numeric strings to UUIDs (ADR-009 resolution). No structural schema changes.
+- v5 → v6: Added three pastoral intelligence columns to `sermons`: `topic_theme`, `audience_assumptions`, `background_noise` — all `TEXT DEFAULT ''`. See ADR-015.
+- v6 → v7: Added six Book Study columns to `series`: `redemptive_context`, `book_background`, `book_argument`, `book_structure`, `series_motivation`, `emerging_big_idea` — all `TEXT DEFAULT ''`. Added one column to `sermons`: `study_guide_note TEXT DEFAULT ''`. See ADR-016.
 
 **Trade-offs accepted:**
 - Migrations are one-directional (no rollback). Acceptable for a single-user app.
@@ -329,30 +331,49 @@ key to the `meta` table and write/read the JSON blob there instead.
 
 ---
 
-## ADR-014 — Series Booklet Export: .docx via docx library, generated in main process
+## ADR-014 — Series Study Guide Export: .docx via docx library, generated in main process
 
-**Status: Planned — not yet implemented**
+**Status: Implemented — 2026-04-05**
 
-**Decision:** The series booklet export will generate a formatted .docx file using the docx npm library, assembled entirely in the main process and written to disk via IPC.
+**Decision:** The series study guide export generates a formatted .docx file using the docx
+npm library (v9), assembled entirely in the main process and written to disk via IPC.
 
-**Context:** The Series Planner produces a body of structured content — series big idea, overview narrative, structural outline, section breakdowns, sermon slots with dates and liturgical seasons — that a pastor would want as a printable or shareable document. A booklet export makes this planning work portable outside the app.
+**Context:** The Series Planner accumulates a substantial body of structured theological
+work — book study research, redemptive framing, series motivation, section breakdowns, and
+per-sermon study guide notes — that a pastor would want as a printable or distributable
+document for congregational study or personal reference.
 
-**Intended output structure:**
-- Series title, passage range, canon category, dates
-- Series big idea
-- Series overview narrative
-- Structural outline
-- Per-section: title, passage range, big idea, overview
-- Per-sermon slot: title, passage, date, liturgical season
+**Implemented output structure (5 parts; empty parts omitted entirely):**
+- PART 1 — THE WORLD OF THIS BOOK: "Then" (book_background); "The Argument"
+  (book_argument + book_structure)
+- PART 2 — WHY WE'RE HERE: "Where It Sits in the Story" (redemptive_context);
+  "Why This Congregation, Why Now" (series_motivation)
+- PART 3 — THE BIG IDEA: "Working Hypothesis" (emerging_big_idea, if present);
+  "Series Big Idea" (big_idea); "Overview"
+- PART 4 — THE JOURNEY: per section (heading, passage, big idea, overview) with
+  per-sermon rows (number, passage, title, date + liturgical season, study_guide_note)
+- PART 5 — REFERENCE: "How the Book Is Built" (structural_outline)
 
-**Implementation approach:**
-- docx library handles .docx generation — pure JavaScript, no native compilation required, consistent with the project's ADR-001 constraint against native addons
-- Assembly and file write happen in the main process — consistent with the IPC-only file system access pattern used throughout the app
-- Renderer triggers export via a named IPC channel (e.g. series-export-booklet)
-- Main process returns { success, filepath } so the renderer can confirm completion
-- Export location: pastor-specified via a save dialog, or a default exports folder
+**Implementation:**
+- `docx@9.6.1` added as a dependency — pure JavaScript, no native compilation (consistent
+  with ADR-001 constraint against native addons)
+- `buildStudyGuideDoc(series, sections, sermons)` and `getSeasonNameForExport(dateStr)` in
+  `electron/main.js` — main process only; churchCalendar.js is ESM and cannot be required
+  from CommonJS main.js, so season logic is inlined
+- Series color (gold/crimson/sage/slate) used as accent hex on part and section headings
+- IPC channel: `series-export-study-guide` (series id → `{ success, filepath }`)
+- Export path: `~/OneDrive/SermonForge/StudyGuides/[title] — Study Guide.docx`
+  StudyGuides directory created automatically if absent
+- Renderer integration: "Study Guide" toolbar button in SeriesPlanner → StudyGuideModal
+  (5-part read-only preview with status dots) → "Export to Word" button
 
-**Revisit if:** The booklet needs richer formatting (embedded images, complex styles) that the docx library handles poorly, at which point a different generation approach should be evaluated.
+**Trade-offs accepted:**
+- Fixed export path (no save dialog) — simpler UX, consistent location, OneDrive syncs it
+- docx v9 heading styles are document-default (no custom theme injected) — adequate for
+  a working document; richer styling would require custom styles or a template file
+
+**Revisit if:** The pastor needs richer formatting (cover page, custom fonts, table of
+contents), at which point a .dotx template approach should be evaluated.
 
 ---
 
@@ -395,13 +416,87 @@ active. The exegesis phases (`PHASES.OBSERVE`, `PHASES.INTERPRET`,
 series big idea should not shape what the text is understood to say before that
 interpretation work is complete.
 
+**Tier 4 extension — series_motivation and redemptive_context (2026-04-05):**
+`summarizeSeries()` now includes two Book Study fields in tier 4 alongside big_idea:
+- `series_motivation` (labeled `Motivation:`) — pastoral urgency; helps AI calibrate
+  application tone for the congregation
+- `redemptive_context` (labeled `Redemptive context:`) — biblical-theological framing;
+  helps AI keep suggestions connected to the redemptive arc
+
+Priority order in `summarizeSeries()`: big_idea → series_motivation → redemptive_context
+→ section big_idea. Because tier 4 head-slices to 1200 chars, this order determines what
+survives trimming — big_idea is always preserved first.
+
+The four remaining Book Study fields (`book_background`, `book_argument`, `book_structure`,
+`emerging_big_idea`) are deliberately excluded from tier 4 — they are long-form pasted
+material appropriate for Series Planner exploration but too large for per-sermon context
+budget. See ADR-016 for the full rationale on field classification.
+
 **Trade-offs accepted:**
 - Pastoral intelligence is ungated because it describes the room, not the predetermined
   answer. Tier 4 (series context) remains gated for exegesis phases because a series
   big idea is a theological claim that can predetermine what the text appears to say.
+- series_motivation and redemptive_context included in tier 4 even at gated exegesis steps
+  is an acceptable edge case because both are pastoral/contextual rather than interpretive.
 - The three fields save via the standard debounced path — no real-time sync guarantee,
   but 800ms lag is imperceptible for orientation-level fields.
 
 **Revisit if:** A pastor reports that audience or background context is shaping their
 exegesis in ways that feel like contamination rather than orientation. If that happens,
 add step-level gating to `pastoralContext` in `resolveIncludes()`.
+
+---
+
+## ADR-016 — Book Study phase: discovery work separated from planning conclusions
+
+**Decision:** The Series Planner has a dedicated Book Study tab that holds foundational
+research material — background, argument, structure, redemptive framing, pastoral motivation,
+and a working big idea — separately from the planning conclusions that flow downstream into
+sermons and the AI context pipeline.
+
+**Context:** Before planning a series, a pastor typically does substantial discovery work:
+reading introductions, consulting commentaries, tracing the biblical-theological thread,
+identifying the pastoral moment. This work is qualitatively different from the conclusions
+it produces (big idea, section divisions, sermon titles). Conflating them in one form risks
+either cluttering the planning workspace with raw notes or losing the notes entirely once
+conclusions are committed.
+
+**The paste-and-interact pattern:** Book Study fields are designed for pasting — the pastor
+pastes a commentary introduction, a theological summary, their own margin notes. The "Analyze"
+button then sends that content to AI with a focused prompt, turning raw material into refined
+conclusions. This is not a generation workflow; the pastor supplies substance, AI helps
+refine it. The fields serve as a reading-and-thinking workspace before planning begins.
+
+**Field classification — two tiers:**
+
+Tier A (feeds AI context pipeline — tier 4):
+- `series_motivation` — pastoral urgency; situational, not interpretive. Safe to include
+  in per-sermon AI prompts as orientation for tone and application.
+- `redemptive_context` — biblical-theological framing; helps AI align suggestions with the
+  redemptive arc of the series. Concise by design.
+
+Tier B (Series Planner only — excluded from per-sermon context pipeline):
+- `book_background` — often pasted verbatim from a commentary introduction; long and
+  reference-oriented, not sermon-prompt-oriented.
+- `book_argument` — may also be pasted; detailed and analytical, overloads the context budget.
+- `book_structure` — structural outlines with chapter/verse markers; better as a reference
+  document than as AI prompt context.
+- `emerging_big_idea` — a draft hypothesis, not the settled conclusion. Including a draft
+  alongside the final big_idea would create confusion. The final big_idea already appears in
+  tier 4; the working draft is surfaced read-only in the Overview tab for human reference only.
+
+**Rationale for the split:** The two Tier A fields are short by design and pastoral in
+character — they say something about the congregation and the biblical story's shape, not
+raw scholarly content. The four Tier B fields are long-form and reference-oriented — useful
+for building the series but not appropriate as per-sermon AI prompt content.
+
+**Trade-offs accepted:**
+- A pastor who wants to reference book_argument or book_structure in an AI conversation
+  must do so manually by copy-pasting or from the Book Study tab's own AI chat panel.
+- The emerging_big_idea is not available in the sermon prep workspace AI context even if it
+  differs meaningfully from the final big_idea. This is intentional — the final big_idea
+  should be the authoritative statement; surface the draft only in planning.
+
+**Revisit if:** A pastor consistently wants the book's argument or structure visible to the
+AI during sermon prep — if that becomes a real workflow need, a slim summary field (50–100
+chars) could be introduced as a Tier A companion to the long-form fields.

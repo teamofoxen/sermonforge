@@ -2,6 +2,218 @@
 
 ---
 
+## 2026-04-05 — Documentation: ADR-008 version tracking and FUTURE.md Entry 7 expanded
+
+Updated ADR-008 in DECISIONS.md: "Current version" corrected from 4 to 7; migration history
+extended with v5 (outline UUID migration), v6 (pastoral intelligence columns), and v7
+(Book Study columns + study_guide_note).
+
+Updated FUTURE.md Entry 7: three unreachable `"book-study"` entries in AIPanel.jsx
+(`getSuggestions`, `HOW_CHIP_MESSAGES`, `buildSystemPrompt` stepDescriptions) added to the
+dead code list alongside the existing `"series"` branch. Dead code count updated from 3 to 6.
+
+---
+
+## 2026-04-05 — FUTURE.md Entry 8: pre-v7 silent failure handlers and normalizeSermon test gap
+
+Added FUTURE.md Entry 8 documenting two deferred items from the 2026-04-05 audit: the
+pre-v7 `try/finally`-only AI handlers in SeriesPlanner.jsx, and the missing `normalizeSermon()`
+test for pre-v7 series records.
+
+---
+
+## 2026-04-05 — Fix silent failures in three SeriesPlanner AI handlers
+
+### src/components/SeriesPlanner.jsx
+
+Added `catch` blocks to three handlers that previously used `try/finally` with no error
+handling. On failure each handler now logs to console with a prefixed label and appends
+an assistant message "Something went wrong. Please try again." to the relevant chat panel
+— consistent with the pattern already used in `AIPanel.jsx`.
+
+- `handleAnalyze()` (BookStudyTab) — `catch` logs `[handleAnalyze]` and adds error message
+- `handleChatSubmit()` (BookStudyTab) — `catch` logs `[handleChatSubmit]` and adds error message
+- `handleSlotAI()` (SlotsTab) — `catch` logs `[handleSlotAI]` and adds error message
+
+No other changes. Pre-v7 handlers with the same pattern are out of scope for this fix.
+
+---
+
+## 2026-04-05 — Book Study phase, Study Guide export, schema v7
+
+This entry covers the full feature set delivered across one session. All parts were tested
+together with `npm start` and `npm run build` before this entry was written.
+
+### What was built
+
+**Book Study tab in Series Planner** — a foundational research workspace that sits before
+Overview in the planning sequence. Six fields for accumulating discovery work before series
+planning conclusions are committed. Designed for the paste-and-interact pattern: paste
+commentary material, click Analyze, refine with AI.
+
+**Study Guide export** — "Study Guide" toolbar button → StudyGuideModal (read-only 5-part
+preview) → "Export to Word" writes a .docx to `~/OneDrive/SermonForge/StudyGuides/`.
+The exported document assembles all series study content; empty parts are omitted.
+
+**Context pipeline extension** — two Book Study fields now feed into the per-sermon AI
+context (tier 4): `series_motivation` and `redemptive_context`. Four fields are
+deliberately excluded (too long for context budget).
+
+**Study Guide Note per sermon slot** — each slot in the Sermon Slots tab now has a
+`study_guide_note` textarea with an "Assist" AI button. Notes appear in the exported
+study guide.
+
+---
+
+### electron/main.js
+
+**Schema version: 6 → 7**
+
+**v7 migration block in `runMigrations()`** — six new columns on `series` (each try/catch-wrapped):
+  `redemptive_context`, `book_background`, `book_argument`, `book_structure`,
+  `series_motivation`, `emerging_big_idea` — all `TEXT DEFAULT ''`.
+One new column on `sermons` (try/catch-wrapped): `study_guide_note TEXT DEFAULT ''`.
+`schema_version` set to `'7'` in `meta` after migration runs.
+
+**`CREATE TABLE IF NOT EXISTS series`** — all six new columns added to DDL for fresh installs.
+
+**`CREATE TABLE IF NOT EXISTS sermons`** — `study_guide_note` added before `created_at`.
+
+**`SERIES_COLUMNS` allowlist** — added the six new series columns.
+
+**`SERMON_COLUMNS` allowlist** — added `study_guide_note`.
+
+**`SERIES_COLOR_HEX`** — color map (gold/crimson/sage/slate → hex without `#`) for docx export.
+
+**`getSeasonNameForExport(dateStr)`** — inline CommonJS liturgical season calculator. The
+ESM `churchCalendar.js` cannot be required from the CommonJS main process, so the full
+Gregorian Easter computus is inlined here. Returns a short name string or null.
+
+**`buildStudyGuideDoc(series, sections, sermons)`** — assembles a docx v9 `Document` with
+five parts. Each part is fully omitted if all its fields are empty. Series color used as
+accent hex on part headings (HEADING_1) and section headings (HEADING_3). Sermon rows in
+Part 4 include: number, passage, title, date + liturgical season (grey), and study_guide_note
+indented below. Unsectioned sermons follow any sectioned groups.
+
+**`ipcMain.handle("series-export-study-guide")`** — fetches series, sections (ordered by
+sort_order ASC), and sermons (ordered by date ASC). Calls `buildStudyGuideDoc`, writes to
+`~/OneDrive/SermonForge/StudyGuides/[title] — Study Guide.docx` (creates directory if absent).
+Returns `{ success: true, filepath }` or `{ success: false, error }`.
+
+---
+
+### electron/preload.js
+
+Added `exportStudyGuide: (seriesId) => ipcRenderer.invoke("series-export-study-guide", seriesId)`.
+
+---
+
+### src/db/database.js
+
+Added `export const exportStudyGuide = (seriesId) => api.exportStudyGuide(seriesId)`.
+
+---
+
+### src/utils/contextBuilder.js
+
+**`normalizeSermon()`** — added `series_motivation` and `redemptive_context` to the
+normalized `series` object. Both extracted from `sermon?.series` with `?? ""` defaults.
+The null-guard condition for the series object is unchanged.
+
+**`summarizeSeries()`** — extended to include `series_motivation` (labeled `Motivation:`)
+and `redemptive_context` (labeled `Redemptive context:`). Priority order in output string:
+`big_idea` → `series_motivation` → `redemptive_context` → section big_idea. Determines
+trim survival because tier 4 head-slices to 1200 chars. Four v7 fields deliberately
+excluded: `book_background`, `book_argument`, `book_structure`, `emerging_big_idea`.
+
+**`buildTiers()`** — updated comment on tier 4 gate condition to reflect that any of the
+three series fields (not only big_idea) can now make tier 4 non-empty.
+
+---
+
+### src/utils/contextBuilder.test.js
+
+Import extended to include `summarizeSeries`.
+
+Three new describe blocks (20 new tests; total: 83 passing):
+- `summarizeSeries() — v7: series_motivation and redemptive_context` — presence, priority
+  order, exclusion of all four long-form fields, edge cases (null series, motivation-only)
+- `tier 4 — v7: series_motivation and redemptive_context appear; excluded fields do not`
+- `normalizeSermon() — v7: series_motivation and redemptive_context` — pass-through, defaults,
+  null cases
+
+---
+
+### src/components/SeriesPlanner.jsx
+
+**`BOOK_STUDY_FIELDS` constant** — module-level array of six field definitions
+(`key`, `label`, `placeholder`, `soloPrompt`). Keys match the v7 series columns.
+
+**`tabs` array** — Book Study inserted as first tab. Order: Book Study → Overview →
+Structure → Sermon Slots → Calendar. Existing tab IDs unchanged.
+
+**`BookStudyTab` component** — six textareas from `BOOK_STUDY_FIELDS`, each with
+`minHeight: 120px`. All save through the existing `onChange → handleSeriesField →
+debouncedPersist` path. Each has an **Analyze** button:
+- Disabled when field is empty or any analyze is in-flight.
+- Prompt logic: if only this field has content, uses `soloPrompt`; if multiple fields
+  populated, sends current field + solo prompt + other populated fields as labeled context.
+- Analyze response and free-chat responses share one `aiMessages` state → one continuous
+  thread in the `AIChatPanel` sidebar.
+- `loading` to `AIChatPanel` is `chatLoading || analyzeLoading !== null`.
+
+**`OverviewTab`** — reads `emerging_big_idea` from series state; shows a read-only card above
+the Series Big Idea field when both it and `big_idea` have content. Label: "Working hypothesis
+from Book Study". Italic Crimson Pro on parchment-warm. Separator `borderTop` below it.
+`emerging_big_idea` is only editable in Book Study — never in Overview.
+
+**`SlotsTab`** — added `handleSlotAI(messageContent)`: appends user message, calls
+`sendAIMessage` with a system prompt scoped to congregation-facing study guide writing,
+appends response. Sets `chatLoading` for the duration. Three `SlotList` call sites extended
+with `series`, `totalSlots`, `sectionBigIdea`, `onSlotAI`.
+
+**`SlotList`** — signature extended; all four props threaded to `SlotRow`.
+
+**`SlotRow`** — `assistLoading` state; `handleAssist(e)` (stops propagation, builds
+prompt from slot position, series big idea, section big idea, series_motivation);
+**Study Guide Note** field (last in expanded area, `gridColumn: "1 / -1"`, `minHeight: 60px`,
+saves to `study_guide_note` via existing debounced path); Assist button shows "Assisting…"
+during call.
+
+**`showStudyGuide` state** — controls `StudyGuideModal` visibility.
+
+**"Study Guide" toolbar button** — added after "How this works" in the SeriesPlanner topbar.
+
+**`StudyGuideModal` component** — internal sub-components: `SgStatusDot`, `SgPartHeader`,
+`SgPartDivider`, `SgSection`, `SgSlotRow`. Five-part read-only preview on parchment
+background. Status dots: filled sage (>100 chars), hollow gold (≤100 chars non-empty), hollow
+ink-ghost (empty). Source hints on empty fields. `emerging_big_idea` shown in Part 3 only
+when it differs from `big_idea` (or `big_idea` is empty). `exporting` and `exportResult`
+state; `handleExport()` calls `exportStudyGuide(series.id)`. On success shows saved filepath
+in sage green; on failure shows error in crimson-soft.
+
+---
+
+### src/components/AIPanel.jsx
+
+**`HOW_CHIP_MESSAGES`** — added `"book-study"` entry.
+
+**`getSuggestions()`** — added `if (tab === "book-study")` case returning six chips:
+"How does this step work?", "Summarize the book's argument", "Suggest sermon divisions",
+"Where does this sit in redemptive history", "What does this book demand of this congregation",
+"Help me find the big idea".
+
+**`buildSystemPrompt()` stepDescriptions** — added `"book-study"` entry describing the
+paste-and-interact pattern and AI's role as thinking partner, not content generator.
+
+---
+
+### package.json / dependencies
+
+Added `docx@9.6.1` — pure JavaScript .docx generation, no native compilation.
+
+---
+
 ## 2026-04-04 — Shared CONTEXT_SCHEMA constant; FUTURE.md Entry 2 closed
 
 ### src/constants/contextSchema.js (new file)

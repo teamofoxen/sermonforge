@@ -4,7 +4,7 @@ import {
   getSeriesById, updateSeries,
   getSectionsBySeries, createSection, updateSection, deleteSection,
   getSermonsBySeries, createSermon, updateSermon, deleteSermon,
-  getCalendarNotes,
+  getCalendarNotes, exportStudyGuide,
 } from "../db/database";
 import { getSeasonForDate, getUpcomingSundays, toDateString } from "../utils/churchCalendar";
 import { tryParse, formatDate } from "../utils";
@@ -32,6 +32,46 @@ const STATUS_OPTIONS = [
   { value: "complete", label: "Complete" },
 ];
 
+// ── Book Study field definitions ──────────────────────────────────────────────
+const BOOK_STUDY_FIELDS = [
+  {
+    key: "redemptive_context",
+    label: "Where This Book Sits in Redemptive History",
+    placeholder: "How does this book fit in the arc from creation to new creation? Where does it land in the story of Israel, the coming of Christ, the mission of the church?",
+    soloPrompt: "Here is my working note on where this book sits in redemptive history. Help me develop this into a clear statement of how this book participates in the arc from creation to new creation.",
+  },
+  {
+    key: "book_background",
+    label: "The World of This Book",
+    placeholder: "Author, audience, occasion, historical setting, genre — what shaped why this book was written and who first received it?",
+    soloPrompt: "Here is background material on this book. Summarize the author, audience, occasion, and genre in a way that closes the gap between their world and ours.",
+  },
+  {
+    key: "book_argument",
+    label: "The Book's Controlling Argument",
+    placeholder: "What is the author's central claim? What is he trying to prove, teach, or accomplish from beginning to end?",
+    soloPrompt: "Here is material on this book's argument. Distill the author's controlling claim in two or three sentences a pastor could work from.",
+  },
+  {
+    key: "book_structure",
+    label: "How the Book Is Built",
+    placeholder: "Major movements, structural markers, turning points — how does the book progress from its opening to its conclusion?",
+    soloPrompt: "Here is a structural analysis of this book. Suggest how this structure might translate into sermon divisions for a preaching series.",
+  },
+  {
+    key: "series_motivation",
+    label: "Why This Congregation, Why Now",
+    placeholder: "What pastoral need, cultural moment, or congregational gap makes this book urgent for this people at this time?",
+    soloPrompt: "Here is my pastoral reasoning for preaching this series. Help me sharpen this into a clear statement of why this congregation needs this book now.",
+  },
+  {
+    key: "emerging_big_idea",
+    label: "Working Big Idea",
+    placeholder: "A working draft of the central truth this series will drive home — the one thing you want every listener to carry out the door.",
+    soloPrompt: "Here is my working big idea for this series. Push back on it — is it the book's idea or mine? Is it too broad, too narrow, or exactly right?",
+  },
+];
+
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function SeriesPlanner({ seriesId, onClose, onOpenSermon }) {
   const [series, setSeries]     = useState(null);
@@ -42,7 +82,8 @@ export default function SeriesPlanner({ seriesId, onClose, onOpenSermon }) {
   const [saving, setSaving]     = useState(false);
   const [saveError, setSaveError] = useState(false);
   const [loading, setLoading]   = useState(true);
-  const [showHowItWorks, setShowHowItWorks] = useState(false);
+  const [showHowItWorks, setShowHowItWorks]   = useState(false);
+  const [showStudyGuide, setShowStudyGuide]   = useState(false);
 
   useEffect(() => { load(); }, [seriesId]);
 
@@ -95,10 +136,11 @@ export default function SeriesPlanner({ seriesId, onClose, onOpenSermon }) {
   }
 
   const tabs = [
-    { id: "overview",  label: "Overview" },
-    { id: "structure", label: "Structure" },
-    { id: "slots",     label: "Sermon Slots" },
-    { id: "calendar",  label: "Calendar" },
+    { id: "book-study", label: "Book Study" },
+    { id: "overview",   label: "Overview" },
+    { id: "structure",  label: "Structure" },
+    { id: "slots",      label: "Sermon Slots" },
+    { id: "calendar",   label: "Calendar" },
   ];
 
   return (
@@ -141,6 +183,12 @@ export default function SeriesPlanner({ seriesId, onClose, onOpenSermon }) {
         >
           How this works
         </button>
+        <button
+          onClick={() => setShowStudyGuide(true)}
+          style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ink-ghost)", fontSize: "12px", padding: "4px 8px", fontFamily: "'Crimson Pro', serif", flexShrink: 0 }}
+        >
+          Study Guide
+        </button>
       </div>
 
       {/* Tab bar */}
@@ -169,6 +217,12 @@ export default function SeriesPlanner({ seriesId, onClose, onOpenSermon }) {
 
       {/* Tab content */}
       <div style={{ flex: 1, overflow: "auto", background: "var(--parchment)" }}>
+        {activeTab === "book-study" && (
+          <BookStudyTab
+            series={series}
+            onChange={handleSeriesField}
+          />
+        )}
         {activeTab === "overview" && (
           <OverviewTab
             series={series}
@@ -207,7 +261,121 @@ export default function SeriesPlanner({ seriesId, onClose, onOpenSermon }) {
       </div>
     </div>
     {showHowItWorks && <SeriesHowItWorksModal onClose={() => setShowHowItWorks(false)} />}
+    {showStudyGuide && <StudyGuideModal series={series} sections={sections} sermons={sermons} onClose={() => setShowStudyGuide(false)} />}
     </>
+  );
+}
+
+// ── Book Study Tab ────────────────────────────────────────────────────────────
+function BookStudyTab({ series, onChange }) {
+  const [aiMessages, setAiMessages]   = useState([]);
+  const [chatInput, setChatInput]     = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+  const [analyzeLoading, setAnalyzeLoading] = useState(null); // field key | null
+
+  async function handleAnalyze(fieldDef) {
+    const currentContent = series[fieldDef.key]?.trim();
+    if (!currentContent) return;
+
+    const populatedFields = BOOK_STUDY_FIELDS.filter(f => series[f.key]?.trim().length > 0);
+
+    let userContent;
+    if (populatedFields.length === 1) {
+      // Only this field has content — use the focused solo prompt.
+      userContent = `${currentContent}\n\n${fieldDef.soloPrompt}`;
+    } else {
+      // Multiple fields populated — send current field as primary, others as context.
+      const otherFields = populatedFields.filter(f => f.key !== fieldDef.key);
+      const contextLines = otherFields
+        .map(f => `${f.label}:\n${series[f.key].trim()}`)
+        .join("\n\n");
+      userContent = `${fieldDef.label}:\n${currentContent}\n\n${fieldDef.soloPrompt}\n\nFor context, here is what I have noted in other areas of my book study:\n\n${contextLines}`;
+    }
+
+    const userMsg = { role: "user", content: userContent };
+    const newMessages = [...aiMessages, userMsg];
+    setAiMessages(newMessages);
+    setAnalyzeLoading(fieldDef.key);
+    try {
+      const resp = await sendAIMessage(
+        newMessages,
+        `You are a biblical scholar and preaching consultant helping a pastor develop their book study for a sermon series on "${series.title || "this book"}"${series.passage_range ? ` (${series.passage_range})` : ""}. Engage seriously with the pastor's notes and give substantive, practical feedback.`
+      );
+      setAiMessages([...newMessages, { role: "assistant", content: resp }]);
+    } catch (e) {
+      console.error("[handleAnalyze]", e);
+      setAiMessages([...newMessages, { role: "assistant", content: "Something went wrong. Please try again." }]);
+    } finally {
+      setAnalyzeLoading(null);
+    }
+  }
+
+  async function handleChatSubmit(e) {
+    e.preventDefault();
+    if (!chatInput.trim()) return;
+    const userMsg = { role: "user", content: chatInput.trim() };
+    const newMessages = [...aiMessages, userMsg];
+    setAiMessages(newMessages);
+    setChatInput("");
+    setChatLoading(true);
+    try {
+      const populatedSummary = BOOK_STUDY_FIELDS
+        .filter(f => series[f.key]?.trim())
+        .map(f => `${f.label}: ${series[f.key].trim()}`)
+        .join("\n");
+      const systemCtx = populatedSummary
+        ? `Book study notes:\n${populatedSummary}`
+        : `Series: "${series.title || "untitled"}"${series.passage_range ? ` (${series.passage_range})` : ""}`;
+      const resp = await sendAIMessage(
+        newMessages,
+        `You are a biblical scholar and preaching consultant helping a pastor develop their book study. ${systemCtx}`
+      );
+      setAiMessages([...newMessages, { role: "assistant", content: resp }]);
+    } catch (e) {
+      console.error("[handleChatSubmit]", e);
+      setAiMessages([...newMessages, { role: "assistant", content: "Something went wrong. Please try again." }]);
+    } finally {
+      setChatLoading(false);
+    }
+  }
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: "0", height: "100%" }}>
+      <div style={{ padding: "28px 32px", overflowY: "auto", borderRight: "1px solid var(--parchment-deep)" }}>
+
+        {BOOK_STUDY_FIELDS.map((fieldDef) => (
+          <div key={fieldDef.key} style={{ marginBottom: "24px" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
+              <label style={{ ...labelStyle, marginBottom: 0 }}>{fieldDef.label}</label>
+              <button
+                className="btn-ghost btn-sm"
+                onClick={() => handleAnalyze(fieldDef)}
+                disabled={!series[fieldDef.key]?.trim() || analyzeLoading !== null}
+              >
+                {analyzeLoading === fieldDef.key ? "Analyzing…" : "Analyze"}
+              </button>
+            </div>
+            <textarea
+              style={{ ...textareaStyle, minHeight: "120px" }}
+              value={series[fieldDef.key] || ""}
+              onChange={(e) => onChange(fieldDef.key, e.target.value)}
+              placeholder={fieldDef.placeholder}
+            />
+          </div>
+        ))}
+
+      </div>
+
+      <AIChatPanel
+        messages={aiMessages}
+        loading={chatLoading || analyzeLoading !== null}
+        input={chatInput}
+        onInputChange={setChatInput}
+        onSubmit={handleChatSubmit}
+        placeholder="Ask about this book, its argument, historical context, or place in redemptive history…"
+        onClear={() => setAiMessages([])}
+      />
+    </div>
   );
 }
 
@@ -342,6 +510,26 @@ function OverviewTab({ series, onChange }) {
 
         {/* Big Idea */}
         <div style={{ marginBottom: "20px" }}>
+          {/* Working hypothesis from Book Study — read-only, shown when both fields have content */}
+          {series.emerging_big_idea?.trim() && series.big_idea?.trim() && (
+            <>
+              <div style={{
+                padding: "10px 14px", marginBottom: "10px",
+                background: "var(--parchment-warm)",
+                border: "1px solid var(--parchment-deep)",
+                borderRadius: "var(--radius)",
+              }}>
+                <div style={{ ...labelStyle, marginBottom: "4px" }}>Working hypothesis from Book Study</div>
+                <div style={{
+                  fontSize: "14px", fontFamily: "'Crimson Pro', serif",
+                  color: "var(--ink-soft)", fontStyle: "italic", lineHeight: "1.6",
+                }}>
+                  {series.emerging_big_idea}
+                </div>
+              </div>
+              <div style={{ borderTop: "1px solid var(--parchment-deep)", marginBottom: "10px" }} />
+            </>
+          )}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
             <label style={{ ...labelStyle, marginBottom: 0 }}>Series Big Idea</label>
             <button
@@ -609,6 +797,26 @@ function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpen
   }, []);
   const debouncedSlotSave = useDebounce(persistSlot, 800);
 
+  // Called by SlotRow Assist buttons — sends message to AI, adds response to chat panel.
+  async function handleSlotAI(messageContent) {
+    const userMsg = { role: "user", content: messageContent };
+    const newMessages = [...aiMessages, userMsg];
+    setAiMessages(newMessages);
+    setChatLoading(true);
+    try {
+      const resp = await sendAIMessage(
+        newMessages,
+        `You are helping a pastor write study guide notes for a sermon series titled "${series.title || "this series"}". Write for a congregation member — clear, warm, and connected to the series arc.`
+      );
+      setAiMessages([...newMessages, { role: "assistant", content: resp }]);
+    } catch (e) {
+      console.error("[handleSlotAI]", e);
+      setAiMessages([...newMessages, { role: "assistant", content: "Something went wrong. Please try again." }]);
+    } finally {
+      setChatLoading(false);
+    }
+  }
+
   async function addSlot(sectionId = null) {
     const id = await createSermon({
       series_id: seriesId,
@@ -703,6 +911,10 @@ function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpen
                   onDelete={handleDeleteSlot}
                   onOpenSermon={onOpenSermon}
                   seriesId={seriesId}
+                  series={series}
+                  totalSlots={sermons.length}
+                  sectionBigIdea={section.big_idea || ""}
+                  onSlotAI={handleSlotAI}
                 />
               </div>
             ))}
@@ -713,7 +925,7 @@ function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpen
                 <h4 style={{ fontFamily: "'Playfair Display', serif", fontSize: "14px", fontWeight: "600", color: "var(--ink-ghost)", marginBottom: "10px" }}>
                   Unassigned
                 </h4>
-                <SlotList slots={unassigned} onChange={handleSlotField} onDelete={handleDeleteSlot} onOpenSermon={onOpenSermon} seriesId={seriesId} />
+                <SlotList slots={unassigned} onChange={handleSlotField} onDelete={handleDeleteSlot} onOpenSermon={onOpenSermon} seriesId={seriesId} series={series} totalSlots={sermons.length} sectionBigIdea="" onSlotAI={handleSlotAI} />
               </div>
             )}
           </div>
@@ -727,6 +939,10 @@ function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpen
             onAdd={() => addSlot(null)}
             onOpenSermon={onOpenSermon}
             seriesId={seriesId}
+            series={series}
+            totalSlots={sermons.length}
+            sectionBigIdea=""
+            onSlotAI={handleSlotAI}
           />
         )}
       </div>
@@ -744,7 +960,7 @@ function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpen
   );
 }
 
-function SlotList({ slots, onChange, onDelete, showAdd, onAdd, onOpenSermon, seriesId }) {
+function SlotList({ slots, onChange, onDelete, showAdd, onAdd, onOpenSermon, seriesId, series, totalSlots, sectionBigIdea, onSlotAI }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
       {slots.length === 0 && (
@@ -753,7 +969,7 @@ function SlotList({ slots, onChange, onDelete, showAdd, onAdd, onOpenSermon, ser
         </div>
       )}
       {slots.map((slot, idx) => (
-        <SlotRow key={slot.id} slot={slot} index={idx} onChange={onChange} onDelete={onDelete} onOpenSermon={onOpenSermon} seriesId={seriesId} />
+        <SlotRow key={slot.id} slot={slot} index={idx} onChange={onChange} onDelete={onDelete} onOpenSermon={onOpenSermon} seriesId={seriesId} series={series} totalSlots={totalSlots} sectionBigIdea={sectionBigIdea} onSlotAI={onSlotAI} />
       ))}
       {showAdd && (
         <button className="btn-ghost btn-sm" onClick={onAdd} style={{ alignSelf: "flex-start", marginTop: "4px" }}>
@@ -764,8 +980,27 @@ function SlotList({ slots, onChange, onDelete, showAdd, onAdd, onOpenSermon, ser
   );
 }
 
-function SlotRow({ slot, index, onChange, onDelete, onOpenSermon, seriesId }) {
+function SlotRow({ slot, index, onChange, onDelete, onOpenSermon, seriesId, series, totalSlots, sectionBigIdea, onSlotAI }) {
   const [expanded, setExpanded] = useState(!slot.title && !slot.passage);
+  const [assistLoading, setAssistLoading] = useState(false);
+
+  async function handleAssist(e) {
+    e.stopPropagation();
+    if (assistLoading || !onSlotAI) return;
+    const parts = [
+      `Sermon ${index + 1} of ${totalSlots}: ${slot.passage || "passage TBD"}${slot.title ? ` — "${slot.title}"` : ""}`,
+      series?.big_idea   ? `Series big idea: ${series.big_idea}`           : null,
+      sectionBigIdea     ? `Section big idea: ${sectionBigIdea}`           : null,
+      series?.series_motivation ? `Pastoral motivation for this series: ${series.series_motivation}` : null,
+    ].filter(Boolean).join("\n");
+    const message = `${parts}\n\nWrite one or two sentences orienting a reader to how this sermon participates in the series arc. Write for a congregation member, not a scholar. Connect it to the series big idea.`;
+    setAssistLoading(true);
+    try {
+      await onSlotAI(message);
+    } finally {
+      setAssistLoading(false);
+    }
+  }
 
   return (
     <div style={{ border: "1px solid var(--parchment-deep)", borderRadius: "var(--radius)", background: "var(--white)", overflow: "hidden" }}>
@@ -821,6 +1056,25 @@ function SlotRow({ slot, index, onChange, onDelete, onOpenSermon, seriesId }) {
               value={slot.big_idea || ""}
               onChange={(e) => onChange(slot.id, "big_idea", e.target.value)}
               placeholder="The central truth of this sermon"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+          <div style={{ gridColumn: "1 / -1" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "5px" }}>
+              <label style={{ ...labelStyle, marginBottom: 0 }}>Study Guide Note</label>
+              <button
+                className="btn-ghost btn-sm"
+                onClick={handleAssist}
+                disabled={assistLoading}
+              >
+                {assistLoading ? "Assisting…" : "Assist"}
+              </button>
+            </div>
+            <textarea
+              style={{ ...textareaStyle, minHeight: "60px" }}
+              value={slot.study_guide_note || ""}
+              onChange={(e) => onChange(slot.id, "study_guide_note", e.target.value)}
+              placeholder="A sentence or two orienting readers to how this sermon fits the series arc."
               onClick={(e) => e.stopPropagation()}
             />
           </div>
@@ -1287,6 +1541,275 @@ function SeriesHowItWorksModal({ onClose }) {
             <text x="760" y="162" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>AI Advisor</text>
 
           </svg>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Study Guide Modal ─────────────────────────────────────────────────────────
+function StudyGuideModal({ series, sections, sermons, onClose }) {
+  const [exporting, setExporting]     = useState(false);
+  const [exportResult, setExportResult] = useState(null); // null | { ok, filepath?, error? }
+
+  async function handleExport() {
+    setExporting(true);
+    setExportResult(null);
+    try {
+      const result = await exportStudyGuide(series.id);
+      setExportResult(result.success
+        ? { ok: true, filepath: result.filepath }
+        : { ok: false, error: result.error || "Export failed" }
+      );
+    } catch (e) {
+      setExportResult({ ok: false, error: e.message });
+    } finally {
+      setExporting(false);
+    }
+  }
+
+
+  function SgStatusDot({ value }) {
+    const len = value?.trim().length || 0;
+    if (len > 100) {
+      return (
+        <span style={{
+          display: "inline-block", width: "8px", height: "8px", borderRadius: "50%",
+          background: "var(--sage)", flexShrink: 0, marginTop: "4px",
+        }} title="Substantive content" />
+      );
+    } else if (len > 0) {
+      return (
+        <span style={{
+          display: "inline-block", width: "8px", height: "8px", borderRadius: "50%",
+          border: "2px solid var(--gold)", flexShrink: 0, marginTop: "4px",
+        }} title="Brief content" />
+      );
+    } else {
+      return (
+        <span style={{
+          display: "inline-block", width: "8px", height: "8px", borderRadius: "50%",
+          border: "2px solid var(--ink-ghost)", flexShrink: 0, marginTop: "4px",
+        }} title="Empty" />
+      );
+    }
+  }
+
+  function SgPartHeader({ number, title }) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
+        <span style={{
+          display: "flex", alignItems: "center", justifyContent: "center",
+          width: "24px", height: "24px", borderRadius: "50%",
+          background: "var(--gold)", color: "var(--white)",
+          fontSize: "12px", fontWeight: "700", fontFamily: "'Crimson Pro', serif",
+          flexShrink: 0,
+        }}>{number}</span>
+        <h3 style={{
+          fontFamily: "'Playfair Display', serif", fontSize: "16px",
+          fontWeight: "600", color: "var(--ink)", margin: 0,
+        }}>{title}</h3>
+      </div>
+    );
+  }
+
+  function SgPartDivider() {
+    return <div style={{ borderTop: "1px solid var(--parchment-deep)", margin: "28px 0" }} />;
+  }
+
+  function SgSection({ label, value, hint }) {
+    const content = value?.trim();
+    return (
+      <div style={{ marginBottom: "20px" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: "8px", marginBottom: "6px" }}>
+          <SgStatusDot value={value} />
+          <span style={{ ...labelStyle, marginBottom: 0 }}>{label}</span>
+        </div>
+        {content ? (
+          <div style={{ paddingLeft: "16px" }}>
+            {content.split(/\n+/).filter(p => p.trim()).map((para, i) => (
+              <p key={i} style={{
+                fontSize: "14px", fontFamily: "'Crimson Pro', serif",
+                color: "var(--ink)", lineHeight: "1.7", margin: "0 0 8px",
+              }}>
+                {para}
+              </p>
+            ))}
+          </div>
+        ) : (
+          <div style={{ paddingLeft: "16px", fontSize: "13px", fontStyle: "italic", color: "var(--ink-ghost)" }}>
+            {hint || "No content yet."}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  function SgSlotRow({ sermon, index }) {
+    const season = sermon.date ? getSeasonForDate(sermon.date) : null;
+    return (
+      <div style={{
+        marginBottom: "12px", padding: "14px 16px",
+        background: "var(--white)", border: "1px solid var(--parchment-deep)",
+        borderRadius: "var(--radius)",
+      }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: "10px", marginBottom: (sermon.big_idea || sermon.study_guide_note) ? "10px" : 0 }}>
+          <span style={{ fontSize: "12px", color: "var(--ink-ghost)", width: "18px", flexShrink: 0, marginTop: "2px" }}>{index + 1}</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ display: "flex", alignItems: "baseline", gap: "8px", flexWrap: "wrap" }}>
+              {sermon.passage && (
+                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "12px", color: "var(--ink-soft)" }}>
+                  {sermon.passage}
+                </span>
+              )}
+              {sermon.title && (
+                <span style={{ fontFamily: "'Playfair Display', serif", fontSize: "14px", fontWeight: "600", color: "var(--ink)" }}>
+                  {sermon.title}
+                </span>
+              )}
+              {!sermon.passage && !sermon.title && (
+                <span style={{ fontStyle: "italic", color: "var(--ink-ghost)", fontSize: "13px" }}>Untitled</span>
+              )}
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
+              {sermon.date && (
+                <span style={{ fontSize: "12px", color: "var(--ink-ghost)" }}>{formatDate(sermon.date)}</span>
+              )}
+              {season && (
+                <span style={{
+                  fontSize: "11px", padding: "1px 6px", borderRadius: "10px",
+                  background: season.color + "22", color: season.color,
+                  border: `1px solid ${season.color}44`,
+                }}>
+                  {season.shortName}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+        {sermon.big_idea && (
+          <div style={{ paddingLeft: "28px", marginBottom: "6px" }}>
+            <span style={{ fontSize: "11px", fontWeight: "600", color: "var(--ink-ghost)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              Big Idea:{" "}
+            </span>
+            <span style={{ fontSize: "13px", fontFamily: "'Crimson Pro', serif", color: "var(--ink-soft)", fontStyle: "italic" }}>
+              {sermon.big_idea}
+            </span>
+          </div>
+        )}
+        {sermon.study_guide_note && (
+          <div style={{ paddingLeft: "28px" }}>
+            <p style={{ fontSize: "14px", fontFamily: "'Crimson Pro', serif", color: "var(--ink)", lineHeight: "1.6", margin: 0 }}>
+              {sermon.study_guide_note}
+            </p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)",
+        display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000,
+      }}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          background: "var(--parchment)", borderRadius: "var(--radius-lg)",
+          boxShadow: "var(--shadow-deep)", padding: "28px 32px",
+          maxWidth: "760px", width: "90vw", position: "relative",
+          maxHeight: "90vh", overflowY: "auto",
+        }}
+      >
+        <button
+          onClick={onClose}
+          style={{
+            position: "absolute", top: "14px", right: "16px",
+            background: "none", border: "none", cursor: "pointer",
+            color: "var(--ink-ghost)", fontSize: "18px", lineHeight: 1,
+          }}
+        >✕</button>
+
+        {/* Header */}
+        <div style={{ marginBottom: "24px", paddingRight: "32px" }}>
+          <h2 style={{
+            fontFamily: "'Playfair Display', serif", fontSize: "20px",
+            fontWeight: "600", color: "var(--ink)", marginBottom: "4px",
+          }}>
+            Study Guide Preview
+          </h2>
+          <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "12px", color: "var(--ink-ghost)" }}>
+            {series.title}{series.passage_range ? ` — ${series.passage_range}` : ""}
+          </div>
+        </div>
+
+        {/* Part 1: The Series */}
+        <SgPartHeader number="1" title="The Series" />
+        <SgSection label="Series Big Idea" value={series.big_idea} hint="Add in Overview → Series Big Idea" />
+        <SgSection label="Overview" value={series.overview} hint="Add in Overview → Series Overview" />
+
+        <SgPartDivider />
+
+        {/* Part 2: The Book */}
+        <SgPartHeader number="2" title="The Book" />
+        <SgSection label="The World of This Book" value={series.book_background} hint="Add in Book Study → The World of This Book" />
+        <SgSection label="The Book's Controlling Argument" value={series.book_argument} hint="Add in Book Study → The Book's Controlling Argument" />
+        <SgSection label="How the Book Is Built" value={series.book_structure} hint="Add in Book Study → How the Book Is Built" />
+
+        <SgPartDivider />
+
+        {/* Part 3: Where This Fits */}
+        <SgPartHeader number="3" title="Where This Fits in the Story" />
+        <SgSection label="Redemptive Context" value={series.redemptive_context} hint="Add in Book Study → Where This Book Sits in Redemptive History" />
+        {series.emerging_big_idea?.trim() &&
+          (series.emerging_big_idea.trim() !== series.big_idea?.trim() || !series.big_idea?.trim()) && (
+          <SgSection label="Working Big Idea (from Book Study)" value={series.emerging_big_idea} hint="Add in Book Study → Working Big Idea" />
+        )}
+
+        <SgPartDivider />
+
+        {/* Part 4: Why This Series, Why Now */}
+        <SgPartHeader number="4" title="Why This Series, Why Now" />
+        <SgSection label="Pastoral Motivation" value={series.series_motivation} hint="Add in Book Study → Why This Congregation, Why Now" />
+
+        <SgPartDivider />
+
+        {/* Part 5: The Sermons */}
+        <SgPartHeader number="5" title={`The Sermons (${sermons.length})`} />
+        {sermons.length === 0 ? (
+          <div style={{ fontSize: "13px", fontStyle: "italic", color: "var(--ink-ghost)" }}>
+            Add sermon slots in the Sermon Slots tab.
+          </div>
+        ) : (
+          <div>
+            {sermons.map((sermon, idx) => (
+              <SgSlotRow key={sermon.id} sermon={sermon} index={idx} />
+            ))}
+          </div>
+        )}
+
+        {/* Footer */}
+        <div style={{ marginTop: "28px", paddingTop: "20px", borderTop: "1px solid var(--parchment-deep)" }}>
+          {exportResult?.ok && (
+            <div style={{ fontSize: "12px", color: "var(--sage)", marginBottom: "10px", fontFamily: "'Crimson Pro', serif" }}>
+              Saved to: {exportResult.filepath}
+            </div>
+          )}
+          {exportResult && !exportResult.ok && (
+            <div style={{ fontSize: "12px", color: "var(--crimson-soft)", marginBottom: "10px", fontFamily: "'Crimson Pro', serif" }}>
+              Export failed: {exportResult.error}
+            </div>
+          )}
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+            <button className="btn-ghost btn-sm" onClick={onClose}>Close</button>
+            <button className="btn-primary" onClick={handleExport} disabled={exporting}>
+              {exporting ? "Exporting…" : "Export to Word"}
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -51,3 +51,6 @@ export const getRecentSermons   = (limit = 3)  => api.getRecentSermons(limit);
 
 // ── Logos ─────────────────────────────────────────────────────────────────────
 export const openInLogos = (passage) => api.openInLogos(passage);
+
+// ── Export ────────────────────────────────────────────────────────────────────
+export const exportStudyGuide = (seriesId) => api.exportStudyGuide(seriesId);
