@@ -49,6 +49,9 @@ export const getTheologyChunks      = (ids, maxChars = 600) => api.getTheologyCh
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 export const getRecentSermons   = (limit = 3)  => api.getRecentSermons(limit);
 
+// ── Bible passage viewer ──────────────────────────────────────────────────
+export const fetchPassage = (passage) => api.fetchPassage(passage);
+
 // ── Logos ─────────────────────────────────────────────────────────────────────
 export const openInLogos = (passage) => api.openInLogos(passage);
 

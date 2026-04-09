@@ -2,6 +2,66 @@
 
 ---
 
+## 2026-04-08 — Cross-build integration audit (4 builds)
+
+Audited the seams between four recent builds: exegesis worksheets, passage popup,
+PI card collapse, and react-markdown rendering. Five audit areas checked.
+
+**Results:**
+1. **StudyTab state isolation (builds 1+2):** CLEAN — `passageAnchor` state is fully
+   independent of worksheet `useMemo` data. Phase-advance summaries use separate state.
+2. **Context pipeline (builds 1+3):** CLEAN — `flattenExegesis()` output capped by
+   `trimStr()` in `buildTiers()`. PI collapse is display-only; tier 7 reads sermon data
+   directly, unaffected by UI state.
+3. **AIPanel dead code integrity (build 4):** CLEAN — all 4 dead code items from
+   FUTURE.md Entry 7 intact and unmodified. No new dead code from react-markdown or
+   scroll changes (`latestAssistantRef`, `prevCountRef`, `messagesEndRef` all active).
+4. **CLAUDE.md documentation gaps:** 5 corrections applied (see below).
+5. **Build verification:** `npx vite build` passes clean (224 modules, 0 warnings).
+
+**Corrections made:**
+- **Guardrail violation fixed:** `PassagePopup.jsx` called `window.electronAPI.fetchPassage()`
+  directly. Added `fetchPassage` wrapper to `src/db/database.js` and updated the component
+  to import from the wrapper.
+- **CLAUDE.md IPC CHANNELS:** Added `passage-fetch` channel documentation.
+- **CLAUDE.md PROJECT STRUCTURE:** Added `PassagePopup.jsx` and `contextSchema.js`.
+- **CLAUDE.md PASTORAL INTELLIGENCE:** Updated to document collapsible card behavior
+  (auto-collapses when fields have content, expand on click, UI-only).
+- **CLAUDE.md STUDY TAB STRUCTURE:** Added "Show Text" button documentation.
+
+**Files changed:** `src/db/database.js`, `src/components/PassagePopup.jsx`, `CLAUDE.md`.
+
+---
+
+## 2026-04-08 — Show Text: 3-translation passage viewer in Study tab
+
+**What changed:**
+- New "Show Text" button appears above the worksheet in each of the four exegesis phases
+  (Observe, Interpret, Redemptive Thread, Implications). Hover to open; stays open until
+  click-outside or ✕.
+- Opens a floating 3-column popup (ESV | NIV | The Message) showing the sermon passage.
+  Rendered via React portal so it escapes overflow constraints of the content area.
+- New `passage-fetch` IPC channel in `electron/main.js` handles all API calls server-side
+  (API keys never reach the renderer).
+  - NIV and The Message fetched from API.Bible (`BIBLE_API_KEY`).
+  - ESV fetched from Crossway ESV API (`ESV_API_KEY`) — shows a config note in the ESV
+    column until the key is added.
+  - OSIS passage ID parser handles all common sermon passage formats
+    (single verse, range, cross-chapter range, whole chapter).
+  - In-memory cache per session avoids redundant API calls.
+- New `PassagePopup.jsx` component — positioned with `position: fixed`, auto-flips above
+  the anchor if there's insufficient room below.
+- New CSS in `global.css`: `.passage-popup`, `.passage-column`, `.show-text-btn`.
+
+**Files changed:** `electron/main.js`, `electron/preload.js`,
+`src/components/PassagePopup.jsx` (new), `src/components/StudyTab.jsx`,
+`src/styles/global.css`.
+
+**Config:** Requires `BIBLE_API_KEY` in `.env` (API.Bible). ESV column activates once
+`ESV_API_KEY` is added (Crossway ESV API).
+
+---
+
 ## 2026-04-08 — Auto-expanding textareas; consolidate autoResize utility
 
 **What changed:**

@@ -1434,6 +1434,175 @@ ipcMain.handle("feedback-submit", (_, payload) => {
   }
 });
 
+// ── Bible passage fetch ───────────────────────────────────────────────────────
+// In-memory caches — keyed by `${bibleId}|${passageId}` or `esv|${passage}`
+const _passageCache = new Map();
+let _bibleCatalog = null; // { niv: id|null, msg: id|null } — populated on first use
+
+const OSIS_BOOK_IDS = {
+  genesis:'GEN',gen:'GEN',exodus:'EXO',exo:'EXO',ex:'EXO',leviticus:'LEV',lev:'LEV',
+  numbers:'NUM',num:'NUM',deuteronomy:'DEU',deut:'DEU',deu:'DEU',
+  joshua:'JOS',josh:'JOS',jos:'JOS',judges:'JDG',judg:'JDG',jdg:'JDG',
+  ruth:'RUT',rut:'RUT',
+  '1 samuel':'1SA','1samuel':'1SA','1 sam':'1SA','1sam':'1SA',
+  '2 samuel':'2SA','2samuel':'2SA','2 sam':'2SA','2sam':'2SA',
+  '1 kings':'1KI','1kings':'1KI','1 kgs':'1KI','1kgs':'1KI',
+  '2 kings':'2KI','2kings':'2KI','2 kgs':'2KI','2kgs':'2KI',
+  '1 chronicles':'1CH','1chronicles':'1CH','1 chr':'1CH','1chr':'1CH','1 chron':'1CH',
+  '2 chronicles':'2CH','2chronicles':'2CH','2 chr':'2CH','2chr':'2CH','2 chron':'2CH',
+  ezra:'EZR',nehemiah:'NEH',neh:'NEH',esther:'EST',esth:'EST',job:'JOB',
+  psalms:'PSA',psalm:'PSA',ps:'PSA',psa:'PSA',
+  proverbs:'PRO',prov:'PRO',pro:'PRO',ecclesiastes:'ECC',eccl:'ECC',ecc:'ECC',
+  'song of solomon':'SNG','song of songs':'SNG',song:'SNG',sos:'SNG',
+  isaiah:'ISA',isa:'ISA',jeremiah:'JER',jer:'JER',lamentations:'LAM',lam:'LAM',
+  ezekiel:'EZK',ezek:'EZK',ezk:'EZK',daniel:'DAN',dan:'DAN',
+  hosea:'HOS',hos:'HOS',joel:'JOL',joe:'JOL',amos:'AMO',
+  obadiah:'OBA',obad:'OBA',oba:'OBA',jonah:'JON',jon:'JON',
+  micah:'MIC',mic:'MIC',nahum:'NAM',nah:'NAM',habakkuk:'HAB',hab:'HAB',
+  zephaniah:'ZEP',zeph:'ZEP',zep:'ZEP',haggai:'HAG',hag:'HAG',
+  zechariah:'ZEC',zech:'ZEC',zec:'ZEC',malachi:'MAL',mal:'MAL',
+  matthew:'MAT',matt:'MAT',mat:'MAT',mark:'MRK',mrk:'MRK',mk:'MRK',
+  luke:'LUK',lk:'LUK',john:'JHN',jn:'JHN',acts:'ACT',
+  romans:'ROM',rom:'ROM',
+  '1 corinthians':'1CO','1corinthians':'1CO','1 cor':'1CO','1cor':'1CO',
+  '2 corinthians':'2CO','2corinthians':'2CO','2 cor':'2CO','2cor':'2CO',
+  galatians:'GAL',gal:'GAL',ephesians:'EPH',eph:'EPH',
+  philippians:'PHP',phil:'PHP',php:'PHP',colossians:'COL',col:'COL',
+  '1 thessalonians':'1TH','1thessalonians':'1TH','1 thess':'1TH','1thess':'1TH',
+  '2 thessalonians':'2TH','2thessalonians':'2TH','2 thess':'2TH','2thess':'2TH',
+  '1 timothy':'1TI','1timothy':'1TI','1 tim':'1TI','1tim':'1TI',
+  '2 timothy':'2TI','2timothy':'2TI','2 tim':'2TI','2tim':'2TI',
+  titus:'TIT',tit:'TIT',philemon:'PHM',phlm:'PHM',phm:'PHM',
+  hebrews:'HEB',heb:'HEB',james:'JAS',jas:'JAS',
+  '1 peter':'1PE','1peter':'1PE','1 pet':'1PE','1pet':'1PE',
+  '2 peter':'2PE','2peter':'2PE','2 pet':'2PE','2pet':'2PE',
+  '1 john':'1JO','1john':'1JO','1 jn':'1JO','1jn':'1JO',
+  '2 john':'2JO','2john':'2JO','2 jn':'2JO','2jn':'2JO',
+  '3 john':'3JO','3john':'3JO','3 jn':'3JO','3jn':'3JO',
+  jude:'JUD',revelation:'REV',rev:'REV',
+};
+
+function passageToOsisId(passage) {
+  const p = passage.trim().replace(/[–—]/g, '-').replace(/\s+/g, ' ');
+  // Match: [optional leading number + space] book_name [space] chapter/verse_ref
+  const m = p.match(/^((?:\d+\s+)?[a-zA-Z\s]+?)\s+(\d[\d:,\-]*)$/);
+  if (!m) return null;
+  const bookId = OSIS_BOOK_IDS[m[1].trim().toLowerCase()];
+  if (!bookId) return null;
+  const ref = m[2].trim();
+  // "23" → whole chapter
+  if (/^\d+$/.test(ref)) return `${bookId}.${ref}`;
+  // "3:16" → single verse
+  if (/^\d+:\d+$/.test(ref)) { const [c,v]=ref.split(':'); return `${bookId}.${c}.${v}`; }
+  // "1:1-10" → range in same chapter
+  if (/^\d+:\d+-\d+$/.test(ref)) {
+    const [cv,ev]=ref.split('-'); const [c,vs]=cv.split(':');
+    return `${bookId}.${c}.${vs}-${bookId}.${c}.${ev}`;
+  }
+  // "1:1-2:5" → cross-chapter range
+  if (/^\d+:\d+-\d+:\d+$/.test(ref)) {
+    const [s,e]=ref.split('-'); const [c1,v1]=s.split(':'); const [c2,v2]=e.split(':');
+    return `${bookId}.${c1}.${v1}-${bookId}.${c2}.${v2}`;
+  }
+  // "1-5" → chapter range
+  if (/^\d+-\d+$/.test(ref)) {
+    const [c1,c2]=ref.split('-'); return `${bookId}.${c1}-${bookId}.${c2}`;
+  }
+  return null;
+}
+
+async function getBibleCatalog() {
+  if (_bibleCatalog) return _bibleCatalog;
+  const apiKey = process.env.BIBLE_API_KEY;
+  if (!apiKey) return { niv: null, msg: null, error: 'BIBLE_API_KEY not set in .env' };
+  try {
+    const res = await fetch('https://rest.api.bible/v1/bibles', {
+      headers: { 'api-key': apiKey },
+    });
+    if (!res.ok) {
+      const err = `API.Bible returned HTTP ${res.status} — check your key at scripture.api.bible`;
+      console.error('[bible-catalog]', err);
+      return { niv: null, msg: null, error: err };
+    }
+    const json = await res.json();
+    let niv = null, msg = null;
+    for (const b of (json.data || [])) {
+      const abbr = (b.abbreviation || '').toUpperCase();
+      const name = (b.name || '').toLowerCase();
+      if (!niv && (abbr === 'NIV' || name.includes('new international version'))) niv = b.id;
+      if (!msg && (abbr === 'MSG' || name.includes('the message'))) msg = b.id;
+    }
+    _bibleCatalog = { niv, msg };
+    return _bibleCatalog;
+  } catch (e) {
+    console.error('[bible-catalog]', e.message);
+    return { niv: null, msg: null, error: e.message };
+  }
+}
+
+async function fetchApiBibleText(bibleId, osisId, apiKey) {
+  const cacheKey = `${bibleId}|${osisId}`;
+  if (_passageCache.has(cacheKey)) return _passageCache.get(cacheKey);
+  const url = `https://rest.api.bible/v1/bibles/${bibleId}/passages/${encodeURIComponent(osisId)}` +
+    `?content-type=text&include-notes=false&include-titles=false` +
+    `&include-chapter-numbers=false&include-verse-numbers=true&include-verse-spans=false`;
+  const res = await fetch(url, { headers: { 'api-key': apiKey } });
+  if (!res.ok) throw new Error(`API.Bible HTTP ${res.status}`);
+  const json = await res.json();
+  const raw = json.data?.content || '';
+  const text = raw
+    .replace(/¶\s*/g, '')
+    .replace(/\u00a0/g, ' ')
+    .replace(/\[(\d+)\]\s*/g, '[$1] ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+  _passageCache.set(cacheKey, text);
+  return text;
+}
+
+async function fetchEsvText(passage) {
+  const esvKey = process.env.ESV_API_KEY;
+  if (!esvKey) return null; // null = key not configured yet
+  const cacheKey = `esv|${passage}`;
+  if (_passageCache.has(cacheKey)) return _passageCache.get(cacheKey);
+  const url = `https://api.esv.org/v3/passage/text/?q=${encodeURIComponent(passage)}` +
+    `&include-headings=false&include-footnotes=false&include-verse-numbers=true` +
+    `&include-short-copyright=false&include-passage-references=false`;
+  const res = await fetch(url, { headers: { 'Authorization': `Token ${esvKey}` } });
+  if (!res.ok) throw new Error(`ESV API HTTP ${res.status}`);
+  const json = await res.json();
+  const text = (json.passages || []).join('\n\n').trim();
+  _passageCache.set(cacheKey, text);
+  return text;
+}
+
+ipcMain.handle('passage-fetch', async (_, passage) => {
+  const apiKey = process.env.BIBLE_API_KEY;
+  const osisId = passageToOsisId(passage);
+  const catalog = await getBibleCatalog();
+  const result = { esv: null, niv: null, msg: null, esvPending: false };
+
+  const catalogErr = catalog.error || null;
+
+  await Promise.all([
+    fetchEsvText(passage)
+      .then(t => { if (t === null) result.esvPending = true; else result.esv = t; })
+      .catch(e => { result.esvError = e.message; }),
+    apiKey && catalog.niv && osisId
+      ? fetchApiBibleText(catalog.niv, osisId, apiKey)
+          .then(t => { result.niv = t; })
+          .catch(e => { result.nivError = e.message; })
+      : Promise.resolve().then(() => { result.nivError = catalogErr || (!osisId ? 'Could not parse passage reference' : 'NIV not in your API.Bible catalog'); }),
+    apiKey && catalog.msg && osisId
+      ? fetchApiBibleText(catalog.msg, osisId, apiKey)
+          .then(t => { result.msg = t; })
+          .catch(e => { result.msgError = e.message; })
+      : Promise.resolve().then(() => { result.msgError = catalogErr || (!osisId ? 'Could not parse passage reference' : 'MSG not in your API.Bible catalog'); }),
+  ]);
+
+  return result;
+});
+
 // ── Logos URL builder ────────────────────────────────────────────────────────
 const BOOK_ABBREVS = {
   Genesis: "Gen", Exodus: "Exo", Leviticus: "Lev", Numbers: "Num",

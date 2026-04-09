@@ -25,6 +25,8 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
   const [pendingMessage, setPendingMessage] = useState(null);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  // Pastoral Intelligence card — open when empty, collapsed when filled
+  const [piOpen, setPiOpen] = useState(true);
   const pendingIdRef = useRef(0);
   // Mirrors sermon state synchronously so captureMemory never reads a stale closure.
   const sermonRef = useRef(null);
@@ -55,6 +57,10 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
 
         setSermon(data);
         sermonRef.current = data;
+        // Auto-collapse PI card if any field already has content
+        if (data.topic_theme?.trim() || data.audience_assumptions?.trim() || data.background_noise?.trim()) {
+          setPiOpen(false);
+        }
       } catch (e) {
         console.error("SermonWorkspace load error:", e);
       } finally {
@@ -249,68 +255,98 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
       <div className="workspace-body">
         <div className="workspace-main">
 
-          {/* Pastoral Intelligence orientation card — always visible, never a gate */}
-          <div className="card" style={{ margin: "16px 20px 0", padding: "16px 20px" }}>
-            {/* Read-only series context — series sermons only */}
-            {sermon.series_id && (sermon.series?.title || sermon.series?.big_idea || sermon.section?.big_idea) && (
-              <div style={{ marginBottom: "14px", background: "var(--parchment-warm)", border: "1px solid var(--parchment-deep)", borderRadius: "var(--radius)", padding: "10px 14px", fontSize: "13px" }}>
-                {sermon.series?.title && (
-                  <div style={{ color: "var(--ink-ghost)", fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", marginBottom: "4px" }}>
-                    {sermon.series.title}
+          {/* Pastoral Intelligence orientation card — collapsible */}
+          <div className="card" style={{ margin: "16px 20px 0", padding: "0" }}>
+            {/* Header — always visible, click to toggle */}
+            <div
+              onClick={() => setPiOpen(v => !v)}
+              style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", cursor: "pointer", userSelect: "none", gap: "12px" }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "12px", minWidth: 0, flex: 1 }}>
+                <span style={{ fontFamily: "'Playfair Display', serif", fontSize: "10px", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-ghost)", flexShrink: 0 }}>
+                  Pastoral Context
+                </span>
+                {!piOpen && (
+                  <span style={{ fontSize: "12px", color: "var(--ink-soft)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {[
+                      sermon.topic_theme?.trim() && `${sermon.topic_theme.trim().slice(0, 40)}${sermon.topic_theme.trim().length > 40 ? "…" : ""}`,
+                      sermon.audience_assumptions?.trim() && `${sermon.audience_assumptions.trim().slice(0, 40)}${sermon.audience_assumptions.trim().length > 40 ? "…" : ""}`,
+                      sermon.background_noise?.trim() && `${sermon.background_noise.trim().slice(0, 40)}${sermon.background_noise.trim().length > 40 ? "…" : ""}`,
+                    ].filter(Boolean).join("  ·  ") || <span style={{ color: "var(--ink-ghost)", fontStyle: "italic" }}>No context set</span>}
+                  </span>
+                )}
+              </div>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                style={{ transform: piOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s ease", flexShrink: 0, color: "var(--ink-ghost)" }}>
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </div>
+
+            {/* Expanded body */}
+            {piOpen && (
+              <div style={{ padding: "0 16px 14px", borderTop: "1px solid var(--parchment-deep)" }}>
+                {/* Read-only series context — series sermons only */}
+                {sermon.series_id && (sermon.series?.title || sermon.series?.big_idea || sermon.section?.big_idea) && (
+                  <div style={{ marginTop: "12px", marginBottom: "12px", background: "var(--parchment-warm)", border: "1px solid var(--parchment-deep)", borderRadius: "var(--radius)", padding: "10px 14px", fontSize: "13px" }}>
+                    {sermon.series?.title && (
+                      <div style={{ color: "var(--ink-ghost)", fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", marginBottom: "4px" }}>
+                        {sermon.series.title}
+                      </div>
+                    )}
+                    {sermon.series?.big_idea && (
+                      <div style={{ color: "var(--ink-mid)", marginBottom: sermon.section?.big_idea ? "6px" : "0" }}>
+                        <span style={{ color: "var(--ink-ghost)", fontSize: "11px" }}>Series big idea  </span>{sermon.series.big_idea}
+                      </div>
+                    )}
+                    {sermon.section?.big_idea && (
+                      <div style={{ color: "var(--ink-mid)" }}>
+                        <span style={{ color: "var(--ink-ghost)", fontSize: "11px" }}>Section big idea  </span>{sermon.section.big_idea}
+                      </div>
+                    )}
                   </div>
                 )}
-                {sermon.series?.big_idea && (
-                  <div style={{ color: "var(--ink-mid)", marginBottom: sermon.section?.big_idea ? "6px" : "0" }}>
-                    <span style={{ color: "var(--ink-ghost)", fontSize: "11px" }}>Series big idea  </span>{sermon.series.big_idea}
+
+                {/* Three editable fields */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px", marginTop: "12px" }}>
+                  <div>
+                    <label className="field-label">Topic / Theme</label>
+                    <textarea
+                      className="field-textarea"
+                      value={sermon.topic_theme || ""}
+                      onChange={e => handleUpdate({ topic_theme: e.target.value })}
+                      onInput={(e) => autoResize(e.target)}
+                      ref={(el) => autoResize(el)}
+                      placeholder="Topic or theme — doctrine, life situation, question, felt need..."
+                      rows={1}
+                    />
                   </div>
-                )}
-                {sermon.section?.big_idea && (
-                  <div style={{ color: "var(--ink-mid)" }}>
-                    <span style={{ color: "var(--ink-ghost)", fontSize: "11px" }}>Section big idea  </span>{sermon.section.big_idea}
+                  <div>
+                    <label className="field-label">Audience</label>
+                    <textarea
+                      className="field-textarea"
+                      value={sermon.audience_assumptions || ""}
+                      onChange={e => handleUpdate({ audience_assumptions: e.target.value })}
+                      onInput={(e) => autoResize(e.target)}
+                      ref={(el) => autoResize(el)}
+                      placeholder="What do you know about who's in the room?"
+                      rows={1}
+                    />
                   </div>
-                )}
+                  <div>
+                    <label className="field-label">Background</label>
+                    <textarea
+                      className="field-textarea"
+                      value={sermon.background_noise || ""}
+                      onChange={e => handleUpdate({ background_noise: e.target.value })}
+                      onInput={(e) => autoResize(e.target)}
+                      ref={(el) => autoResize(el)}
+                      placeholder="What's in the air — news, community events, cultural moment?"
+                      rows={1}
+                    />
+                  </div>
+                </div>
               </div>
             )}
-
-            {/* Pastoral intelligence — three editable fields */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px" }}>
-              <div>
-                <label className="field-label">Topic / Theme</label>
-                <textarea
-                  className="field-textarea"
-                  value={sermon.topic_theme || ""}
-                  onChange={e => handleUpdate({ topic_theme: e.target.value })}
-                  onInput={(e) => autoResize(e.target)}
-                  ref={(el) => autoResize(el)}
-                  placeholder="Topic or theme — doctrine, life situation, question, felt need..."
-                  rows={1}
-                />
-              </div>
-              <div>
-                <label className="field-label">Audience</label>
-                <textarea
-                  className="field-textarea"
-                  value={sermon.audience_assumptions || ""}
-                  onChange={e => handleUpdate({ audience_assumptions: e.target.value })}
-                  onInput={(e) => autoResize(e.target)}
-                  ref={(el) => autoResize(el)}
-                  placeholder="What do you know about who's in the room?"
-                  rows={1}
-                />
-              </div>
-              <div>
-                <label className="field-label">Background</label>
-                <textarea
-                  className="field-textarea"
-                  value={sermon.background_noise || ""}
-                  onChange={e => handleUpdate({ background_noise: e.target.value })}
-                  onInput={(e) => autoResize(e.target)}
-                  ref={(el) => autoResize(el)}
-                  placeholder="What's in the air — news, community events, cultural moment?"
-                  rows={1}
-                />
-              </div>
-            </div>
           </div>
 
           {activeTab === "study" && (

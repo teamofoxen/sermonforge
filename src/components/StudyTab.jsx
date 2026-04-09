@@ -11,6 +11,7 @@ import {
 } from "../utils/studyFields";
 import OutlineBuilder from "./OutlineBuilder";
 import InlineAIResponse from "./InlineAIResponse";
+import PassagePopup from "./PassagePopup";
 
 const STEP_LABELS = ["Exegesis", "MPT / MPS", "Outline", "Functional Elements"];
 const PHASE_LABELS = ["Observe", "Interpret", "Redemptive Thread", "Implications"];
@@ -196,6 +197,9 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
 
   // Draft-generation loading flags
   const [draftLoading, setDraftLoading] = useState(null); // "mpt" | "mps" | "big_idea"
+
+  // Passage popup anchor — DOM element of the triggering button, or null when closed
+  const [passageAnchor, setPassageAnchor] = useState(null);
 
   const outline = getOutline(sermon);
 
@@ -423,7 +427,10 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
 
           {activeSubPhase === 1 && (
             <div className="sub-phase-body">
-              <p className="sub-phase-hint">Observe the text — what it says before what it means. Read and reread prayerfully.</p>
+              <div style={{ position: "sticky", top: 0, zIndex: 10, display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", background: "var(--parchment)", paddingTop: "6px", paddingBottom: "10px", marginBottom: "4px" }}>
+                <p className="sub-phase-hint" style={{ margin: 0 }}>Observe the text — what it says before what it means. Read and reread prayerfully.</p>
+                <button className="show-text-btn" onMouseEnter={(e) => setPassageAnchor(e.currentTarget)}>Show Text</button>
+              </div>
               <StructuredWorksheet
                 fields={OBSERVE_FIELDS}
                 data={obsData}
@@ -460,7 +467,10 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
 
           {activeSubPhase === 2 && (
             <div className="sub-phase-body">
-              <p className="sub-phase-hint">Find the meaning of the text. Move from observation to interpretation.</p>
+              <div style={{ position: "sticky", top: 0, zIndex: 10, display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", background: "var(--parchment)", paddingTop: "6px", paddingBottom: "10px", marginBottom: "4px" }}>
+                <p className="sub-phase-hint" style={{ margin: 0 }}>Find the meaning of the text. Move from observation to interpretation.</p>
+                <button className="show-text-btn" onMouseEnter={(e) => setPassageAnchor(e.currentTarget)}>Show Text</button>
+              </div>
               <StructuredWorksheet
                 fields={INTERPRET_FIELDS}
                 data={intData}
@@ -497,7 +507,10 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
 
           {activeSubPhase === 3 && (
             <div className="sub-phase-body">
-              <p className="sub-phase-hint">Find the redemptive features. How does this text point to or depend on Christ?</p>
+              <div style={{ position: "sticky", top: 0, zIndex: 10, display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", background: "var(--parchment)", paddingTop: "6px", paddingBottom: "10px", marginBottom: "4px" }}>
+                <p className="sub-phase-hint" style={{ margin: 0 }}>Find the redemptive features. How does this text point to or depend on Christ?</p>
+                <button className="show-text-btn" onMouseEnter={(e) => setPassageAnchor(e.currentTarget)}>Show Text</button>
+              </div>
               <StructuredWorksheet
                 fields={REDEMPTIVE_FIELDS}
                 data={redData}
@@ -576,7 +589,10 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
 
           {activeSubPhase === 4 && (
             <div className="sub-phase-body">
-              <p className="sub-phase-hint">Concluding implications — how does this passage apply to us today?</p>
+              <div style={{ position: "sticky", top: 0, zIndex: 10, display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", background: "var(--parchment)", paddingTop: "6px", paddingBottom: "10px", marginBottom: "4px" }}>
+                <p className="sub-phase-hint" style={{ margin: 0 }}>Concluding implications — how does this passage apply to us today?</p>
+                <button className="show-text-btn" onMouseEnter={(e) => setPassageAnchor(e.currentTarget)}>Show Text</button>
+              </div>
 
               <div className="worksheet-group-header">Theological Significance</div>
               <StructuredWorksheet
@@ -904,6 +920,14 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
             </button>
           </div>
         </div>
+      )}
+
+      {passageAnchor && (
+        <PassagePopup
+          passage={sermon.passage}
+          anchorEl={passageAnchor}
+          onClose={() => setPassageAnchor(null)}
+        />
       )}
 
     </div>

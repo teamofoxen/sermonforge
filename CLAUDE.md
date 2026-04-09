@@ -123,7 +123,8 @@ SermonForge/
     │   ├── hooks.js          — shared React hooks (useDebounce)
     │   └── memory.js         — localStorage pastor memory layer; load/save/update/extract patterns
     └── constants/
-    │   └── steps.js          — STEPS, PHASES, STEP_SEQUENCE, PHASE_SEQUENCE — all step/phase name constants
+    │   ├── steps.js          — STEPS, PHASES, STEP_SEQUENCE, PHASE_SEQUENCE — all step/phase name constants
+    │   └── contextSchema.js  — CONTEXT_SECTIONS: shared section label constants for pipeline + system prompt
     └── components/
         ├── Sidebar.jsx
         ├── Dashboard.jsx
@@ -141,6 +142,7 @@ SermonForge/
         ├── ManuscriptTab.jsx
         ├── DeliveryTab.jsx
         ├── AIPanel.jsx
+        ├── PassagePopup.jsx   — floating 3-translation scripture viewer (ESV | NIV | The Message)
         └── NewSermonModal.jsx
 
 ---
@@ -316,6 +318,13 @@ channels. The API key never touches the renderer.
     — Writes a markdown feedback file to ~/OneDrive/SermonForge/Feedback/YYYY-MM-DD-HH-MM-category.md.
       Creates the Feedback directory if absent.
 
+  "passage-fetch"
+    receives: passage string (e.g. "Galatians 1:1-10")
+    returns:  { esv, niv, msg, esvPending, esvError, nivError, msgError }
+    — Fetches passage text in three translations (ESV via Crossway API,
+      NIV and The Message via API.Bible). Results cached in-memory per
+      session. esvPending=true when ESV_API_KEY not set.
+
   "theology-status"
     receives: nothing
     returns:  { available: bool } — whether theology.db is present and loaded
@@ -437,6 +446,11 @@ STEP 1 — EXEGESIS (four structured worksheet phases):
   content is preserved under a "legacy_notes" key and shown at the top.
   Field definitions live in src/utils/studyFields.js.
 
+  Each phase has a sticky "Show Text" button that opens PassagePopup — a
+  floating 3-column scripture viewer (ESV | NIV | The Message) anchored
+  above the button. Opens on hover, stays open until click-outside.
+  Rendered via React portal to document.body.
+
   Phase 1: Observe      → saves to sermons.observations (JSON)
     9 fields: context, divisions, commands, statements, characters,
     big_ideas, obvious_point, basic_outline, applications
@@ -498,9 +512,11 @@ STEP 4 — FUNCTIONAL ELEMENTS:
 
 ## PASTORAL INTELLIGENCE
 
-The Pastoral Intelligence card is a persistent orientation card visible at the top of the
+The Pastoral Intelligence card is a collapsible orientation card visible at the top of the
 Sermon Workspace content area at every tab and every step. It is never a gate — the pastor
-can proceed to any stage without filling it.
+can proceed to any stage without filling it. The card auto-collapses on load when any of
+the three fields have content (showing truncated field snippets in the header); it expands
+on click. Collapse state is UI-only — the underlying data and context pipeline are unaffected.
 
 It captures three pastor-supplied fields:
 

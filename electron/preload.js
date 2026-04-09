@@ -57,6 +57,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // ── Export ───────────────────────────────────────────────────────────────────
   exportStudyGuide: (seriesId) => ipcRenderer.invoke("series-export-study-guide", seriesId),
 
+  // ── Bible passage ─────────────────────────────────────────────────────────
+  fetchPassage: (passage) => ipcRenderer.invoke('passage-fetch', passage),
+
   // ── Feedback ──────────────────────────────────────────────────────────────
   getSchemaVersion: () => ipcRenderer.invoke("db-getSchemaVersion"),
   getAppVersion:    () => ipcRenderer.invoke("app-get-version"),
