@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { getRecentSermons, createSermon } from "../db/database.js";
+import { getRecentSermons } from "../db/database.js";
+import NewSermonModal from "./NewSermonModal.jsx";
 import FeedbackModal from "./FeedbackModal.jsx";
 
 const NAV_ITEMS = [
@@ -50,15 +51,11 @@ export default function Sidebar({ currentView, onNavigate, onOpenSermon }) {
       .catch((err) => console.error("[Sidebar] Failed to load recent sermons:", err));
   }, [dropdownOpen]);
 
-  async function handleNewSermon() {
-    try {
-      // main.js generates the UUID internally and returns it — do not pass a local id.
-      const id = await createSermon({ title: "", passage: "", stage: "planning", is_one_off: 1 });
-      setDropdownOpen(false);
-      onOpenSermon(id);
-    } catch (err) {
-      console.error("[Sidebar] Failed to create sermon:", err);
-    }
+  const [showNewModal, setShowNewModal] = useState(false);
+
+  function handleNewSermon() {
+    setDropdownOpen(false);
+    setShowNewModal(true);
   }
 
   function handleRecentSermon(id) {
@@ -182,6 +179,16 @@ export default function Sidebar({ currentView, onNavigate, onOpenSermon }) {
         <FeedbackModal
           currentView={currentView}
           onClose={() => setShowFeedback(false)}
+        />
+      )}
+
+      {showNewModal && (
+        <NewSermonModal
+          onClose={() => setShowNewModal(false)}
+          onCreated={(id) => {
+            setShowNewModal(false);
+            onOpenSermon(id);
+          }}
         />
       )}
     </aside>

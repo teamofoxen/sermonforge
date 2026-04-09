@@ -181,22 +181,31 @@ the dead code at that point.
 
 ## Entry 8 — Pre-v7 silent failure handlers in SeriesPlanner.jsx
 
-**Current situation:** The Overview, Structure, and Calendar tab AI handlers in
-`SeriesPlanner.jsx` use `try/finally` with no `catch` block. When `sendAIMessage` throws,
-the error is an unhandled promise rejection — the loading spinner stops but no error is
-surfaced to the user. This pattern predates v7 and was confirmed in the 2026-04-05 audit.
-The three new v7 handlers (`handleAnalyze`, `handleChatSubmit`, `handleSlotAI`) were fixed
-in that session; the pre-v7 handlers were explicitly left out of scope.
+**Current situation:** Several AI handlers across `SeriesPlanner.jsx` (Overview, Structure,
+Calendar chat tabs) and `StudyTab.jsx` use `try/finally` with no `catch` block. These fall
+into two sub-patterns:
+
+1. **Chat handlers** (`handleChatSubmit` in Overview/Structure/Slots/Calendar tabs,
+   `SeriesPlanner.jsx` lines ~558, ~792, ~1012, ~1350): When `sendAIMessage` throws, the
+   loading spinner stops but no error is surfaced. The conversation appears stuck.
+
+2. **Generate/draft handlers** — previously also wrote the result directly to fields
+   (`onChange("field", resp.trim())`). This carried a data-loss dimension: if
+   `sendAIMessage` returned `''` (its silent error return), the field was overwritten with
+   empty string. **This sub-pattern was fixed 2026-04-07** — all generate/draft handlers
+   in `SeriesPlanner.jsx` and `StudyTab.jsx` now guard writes with `if (resp?.trim())`.
+   Only the missing error-message aspect of the chat handlers remains deferred.
+
+The pattern predates v7. The three new v7 handlers (`handleAnalyze`, `handleChatSubmit` in
+BookStudyTab, `handleSlotAI`) were fixed in the 2026-04-05 session.
 
 **Also deferred:** `normalizeSermon()` in `contextBuilder.js` lacks a test for the case
 where `sermon.series` is present but `series_motivation` and `redemptive_context` are both
 missing entirely (a pre-v7 series record with no v7 columns). The `?? ""` default handles
 this correctly in code but the case is untested.
 
-**Why deferred:** The pre-v7 handlers are behaviorally identical to each other and to the
-pattern as it existed before the v7 session. Fixing them in isolation would touch many
-handlers across three tabs with no architectural change. The test gap is a single edge case
-with no known failure mode.
+**Why deferred:** The remaining chat handlers show no response but do not lose data. Fixing
+them requires touching multiple handlers across three tabs with no architectural change.
 
 **Triggers revisiting:** Next maintenance audit, or any session that touches
 `SeriesPlanner.jsx` AI handlers or `contextBuilder` tests.

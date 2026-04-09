@@ -118,6 +118,8 @@ SermonForge/
     │   ├── churchCalendar.js — liturgical season engine (pure JS)
     │   ├── contextBuilder.js — 7-tier context assembly pipeline; buildContext, buildAdaptiveHints,
     │   │                        buildMemoryContext, resolveIncludes
+    │   ├── studyFields.js    — structured worksheet field definitions (OBSERVE_FIELDS, INTERPRET_FIELDS,
+    │   │                        REDEMPTIVE_FIELDS, IMPLICATIONS_*); parse/serialize/flatten helpers
     │   ├── hooks.js          — shared React hooks (useDebounce)
     │   └── memory.js         — localStorage pastor memory layer; load/save/update/extract patterns
     └── constants/
@@ -191,10 +193,10 @@ Table: sermons
   big_idea          TEXT
   mpt               TEXT  — Main Point of the Text (past tense)
   mps               TEXT  — Main Point of the Sermon (present tense)
-  observations      TEXT  — Step 1 Phase 1
-  interpretation    TEXT  — Step 1 Phase 2
-  redemptive_thread TEXT  — Step 1 Phase 3
-  implications      TEXT  — Step 1 Phase 4
+  observations      TEXT  — Step 1 Phase 1 (JSON: structured per-question fields, or legacy plain text)
+  interpretation    TEXT  — Step 1 Phase 2 (JSON: structured per-question fields, or legacy plain text)
+  redemptive_thread TEXT  — Step 1 Phase 3 (JSON: structured per-question fields + summary, or legacy plain text)
+  implications      TEXT  — Step 1 Phase 4 (JSON: structured per-question fields + compiled, or legacy plain text)
   outline             TEXT  — JSON array of point strings
   manuscript          TEXT
   delivery_notes      TEXT
@@ -429,12 +431,42 @@ Component rules:
 
 The Study tab implements the full sermon prep guide in four steps:
 
-STEP 1 — EXEGESIS (four collapsible phases):
-  Phase 1: Observe      → saves to sermons.observations
-  Phase 2: Interpret    → saves to sermons.interpretation
-  Phase 3: Redemptive Thread → saves to sermons.redemptive_thread
-  Phase 4: Implications → saves to sermons.implications
-  Each phase has a textarea and a "Review" button that sends content to AI.
+STEP 1 — EXEGESIS (four structured worksheet phases):
+  Each phase renders individual fields per question from the prep guide.
+  Data is stored as JSON in the existing text columns. Legacy plain-text
+  content is preserved under a "legacy_notes" key and shown at the top.
+  Field definitions live in src/utils/studyFields.js.
+
+  Phase 1: Observe      → saves to sermons.observations (JSON)
+    9 fields: context, divisions, commands, statements, characters,
+    big_ideas, obvious_point, basic_outline, applications
+    "Review" button assembles all filled fields for AI evaluation.
+
+  Phase 2: Interpret    → saves to sermons.interpretation (JSON)
+    9 fields: context_impact, recurring_ideas, characters, contrasts,
+    diagram, cross_refs, commentary, summarize_parts, summarize_whole
+    "Review" button assembles all filled fields for AI evaluation.
+
+  Phase 3: Redemptive Thread → saves to sermons.redemptive_thread (JSON)
+    7 question fields + 1 summary field (key: "summary")
+    "Synthesize →" button: AI compiles all 7 answers into a cohesive
+    redemptive features summary. Summary is also hand-editable.
+    "Review" button sends all fields + summary for AI evaluation.
+
+  Phase 4: Implications → saves to sermons.implications (JSON)
+    3 grouped sections:
+      Theological Significance (5 fields): about_god, about_ourselves,
+        about_christ, timeless, doctrines
+      Personal Application (8 fields): examples, commands, errors, sins,
+        promises, new_thoughts, explore, convictions
+      Unbeliever implications (1 field, key: "unbeliever")
+    + compiled list field (key: "compiled")
+    "Compile →" button: AI consolidates all answers into a master list.
+    "Review" button sends all fields + compiled list for AI evaluation.
+
+  Context pipeline: summarizeExegesis() in contextBuilder.js detects
+  structured JSON and uses flattenExegesis() from studyFields.js to
+  produce readable text for the AI context tiers.
 
 STEP 2 — MPT→MPS FORGE:
   Two fields: mpt (past tense) and mps (present tense)

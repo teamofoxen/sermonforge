@@ -731,6 +731,78 @@ button {
   line-height: 1.5;
 }
 
+/* Structured worksheet — per-question fields */
+.structured-worksheet {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.worksheet-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.worksheet-field-label {
+  font-family: 'Crimson Pro', serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-mid);
+  line-height: 1.4;
+}
+
+.worksheet-field .field-textarea {
+  min-height: 56px;
+}
+
+.worksheet-group-header {
+  font-family: 'Playfair Display', serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-ghost);
+  margin-top: 18px;
+  margin-bottom: 4px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--parchment-deep);
+}
+
+.worksheet-summary-block {
+  margin-top: 18px;
+  padding: 14px 16px;
+  background: var(--parchment-warm);
+  border: 1px solid var(--parchment-deep);
+  border-left: 3px solid var(--gold);
+  border-radius: var(--radius);
+}
+
+.worksheet-legacy {
+  background: var(--parchment-warm);
+  border: 1px solid var(--parchment-deep);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  margin-bottom: 14px;
+}
+
+.worksheet-legacy-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-ghost);
+  margin-bottom: 6px;
+}
+
+.worksheet-legacy-content {
+  font-family: 'Crimson Pro', serif;
+  font-size: 14px;
+  color: var(--ink-soft);
+  white-space: pre-wrap;
+  line-height: 1.6;
+}
+
 /* Handoff summary block */
 .summary-block {
   background: var(--parchment-warm);
@@ -1009,6 +1081,49 @@ button {
   opacity: 1;
   pointer-events: auto;
 }
+
+/* ── AI Markdown Rendering ─────────────────────────────────── */
+.ai-markdown { font-family: 'Crimson Pro', serif; font-size: 14px; line-height: 1.6; }
+.ai-markdown p { margin: 0 0 8px 0; }
+.ai-markdown p:last-child { margin-bottom: 0; }
+.ai-markdown h1, .ai-markdown h2, .ai-markdown h3, .ai-markdown h4 {
+  font-family: 'Playfair Display', serif;
+  color: var(--ink);
+  margin: 12px 0 4px 0;
+  line-height: 1.3;
+}
+.ai-markdown h1 { font-size: 16px; }
+.ai-markdown h2 { font-size: 15px; }
+.ai-markdown h3 { font-size: 14px; font-weight: 700; }
+.ai-markdown h4 { font-size: 14px; font-weight: 600; font-style: italic; }
+.ai-markdown ul, .ai-markdown ol { margin: 4px 0 8px 0; padding-left: 20px; }
+.ai-markdown li { margin-bottom: 2px; }
+.ai-markdown li::marker { color: var(--ink-ghost); }
+.ai-markdown strong { color: var(--ink); font-weight: 700; }
+.ai-markdown em { font-style: italic; }
+.ai-markdown blockquote {
+  border-left: 3px solid var(--gold-pale);
+  margin: 8px 0;
+  padding: 4px 12px;
+  color: var(--ink-soft);
+  font-style: italic;
+}
+.ai-markdown code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  background: var(--parchment-warm);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+.ai-markdown pre {
+  background: var(--parchment-warm);
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  overflow-x: auto;
+  margin: 8px 0;
+}
+.ai-markdown pre code { background: none; padding: 0; }
+.ai-markdown hr { border: none; border-top: 1px solid var(--parchment-deep); margin: 12px 0; }
 
 .ai-message.empty-state {
   background: transparent;

@@ -374,7 +374,7 @@ function BookStudyTab({ series, onChange, drawerOpen, onOpenDrawer, onCloseDrawe
         [{ role: "user", content: `Series: "${series.title || "unknown"}"\nPassage: ${series.passage_range || "unknown"}\n\nBook Study notes:\n${BOOK_STUDY_FIELDS.filter(f => f.key !== "emerging_big_idea" && series[f.key]?.trim()).map(f => `${f.label}:\n${series[f.key].trim()}`).join("\n\n") || "(none yet)"}\n\nDraft a series big idea — one sentence summarizing the central truth this book drives home. Make it sharp, memorable, and theologically precise. Return only the sentence.` }],
         "You are helping a pastor crystallize a series big idea from their book study work."
       );
-      onChange("emerging_big_idea", resp.trim());
+      if (resp?.trim()) onChange("emerging_big_idea", resp.trim());
     } finally {
       setDraftLoading(false);
     }
@@ -525,7 +525,7 @@ function OverviewTab({ series, onChange, drawerOpen, onOpenDrawer, onCloseDrawer
         [{ role: "user", content: `Series title: "${series.title}"\nPassage: ${series.passage_range || "not specified"}\nExisting overview: ${series.overview || "none yet"}\n\nWrite a single, compelling series Big Idea sentence — the central truth this series will hammer home. Make it sharp and memorable. Return only the sentence.` }],
         "You are a sermon series planning assistant. You help pastors craft focused, theologically precise series concepts."
       );
-      onChange("big_idea", resp.trim());
+      if (resp?.trim()) onChange("big_idea", resp.trim());
     } finally {
       setAiLoading(null);
     }
@@ -539,7 +539,7 @@ function OverviewTab({ series, onChange, drawerOpen, onOpenDrawer, onCloseDrawer
         [{ role: "user", content: `I am planning a sermon series titled "${series.title}" covering ${series.passage_range || "a biblical passage"}.\nBig Idea: ${series.big_idea || "not yet set"}\n\nWrite a 2-paragraph overview:\n1. The historical/literary context and purpose of this passage in Scripture\n2. Why this passage is urgently relevant to a contemporary congregation\n\nBe theologically substantive. Write as if for a pastor's own notes.` }],
         "You are a biblical scholar and preaching consultant helping a pastor develop a sermon series."
       );
-      onChange("overview", resp.trim());
+      if (resp?.trim()) onChange("overview", resp.trim());
     } finally {
       setAiLoading(null);
     }
@@ -744,7 +744,7 @@ function StructureTab({ series, sections, onChange, onSectionsChange, seriesId, 
         [{ role: "user", content: `Build a detailed structural/exegetical outline for ${series.passage_range || series.title}. Include major divisions, subdivisions, and key passage markers. Format as a traditional Roman numeral / letter / number outline. Be thorough.` }],
         "You are a biblical scholar providing a structural outline of a biblical passage for sermon series planning."
       );
-      onChange("structural_outline", resp.trim());
+      if (resp?.trim()) onChange("structural_outline", resp.trim());
     } finally {
       setAiLoading(null);
     }

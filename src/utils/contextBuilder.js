@@ -5,6 +5,7 @@ import { STEPS, PHASES } from "../constants/steps";
 import { CONTEXT_SECTIONS } from "../constants/contextSchema";
 import { getOutline, getFunctionalElements } from "../utils";
 import { getMemory } from "./memory";
+import { flattenExegesis } from "./studyFields";
 
 /**
  * Normalize a raw sermon record into a clean object with guaranteed shapes.
@@ -57,6 +58,13 @@ export function normalizeSermon(sermon) {
  * @returns {string}
  */
 export function summarizeExegesis(sermon) {
+  // Detect structured JSON in any exegesis column — if found, use the
+  // structured flattener which knows about per-question fields.
+  const cols = [sermon?.observations, sermon?.interpretation, sermon?.redemptive_thread, sermon?.implications];
+  const hasStructured = cols.some(c => typeof c === "string" && c.trim().startsWith("{"));
+  if (hasStructured) return flattenExegesis(sermon);
+
+  // Legacy plain-text path
   const parts = [
     sermon?.observations      && `Observations: ${sermon.observations.trim()}`,
     sermon?.interpretation    && `Interpretation: ${sermon.interpretation.trim()}`,

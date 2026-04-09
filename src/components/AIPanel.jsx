@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import ReactMarkdown from "react-markdown";
 import { getOutline } from "../utils";
 import { STEPS, PHASES } from "../constants/steps";
 import { CONTEXT_SECTIONS } from "../constants/contextSchema";
@@ -20,12 +21,34 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
   const [theologyEnabled, setTheologyEnabled] = useState(false);
   const [inputText, setInputText] = useState("");
   const messagesEndRef = useRef(null);
+  const latestAssistantRef = useRef(null);
+  const prevCountRef = useRef(0);
   // messagesRef keeps sendMessage closures from going stale when called from the
   // externalMessage effect — always reflects the current conversation history.
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
 
   useEffect(() => {
+    const prevCount = prevCountRef.current;
+    prevCountRef.current = messages.length;
+
+    if (messages.length === 0) return;
+
+    const lastMsg = messages[messages.length - 1];
+
+    // New assistant message arrived — scroll its top into view so the pastor
+    // reads from the beginning instead of landing at the bottom.
+    if (messages.length > prevCount && lastMsg.role === "assistant") {
+      // Use requestAnimationFrame so the DOM has rendered the new message.
+      requestAnimationFrame(() => {
+        if (latestAssistantRef.current) {
+          latestAssistantRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      });
+      return;
+    }
+
+    // For user messages and loading indicator, scroll to the bottom as before.
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
@@ -127,16 +150,27 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
   async function handleLibrarySearch() {
     if (!sermon || loading) return;
 
-    // Library context is suppressed for OBSERVE and INTERPRET by the context pipeline
-    // (resolveIncludes gates library: false for both phases). Running the search would
-    // fetch and rank manuscripts only for them to be silently discarded. Fall back to
-    // a plain sendMessage so the user still gets a useful response.
-    if (activeStep === PHASES.OBSERVE || activeStep === PHASES.INTERPRET) {
+    // Library context is suppressed by resolveIncludes at all steps except "manuscript".
+    // Running the full search at those steps would fetch and rank manuscripts only for them
+    // to be silently discarded by buildContext. Fall back to a plain sendMessage so the
+    // user still gets a useful response based on the standard context for that step.
+    const LIBRARY_GATED_STEPS = new Set([
+      PHASES.OBSERVE, PHASES.INTERPRET, PHASES.REDEMPTIVE_THREAD, PHASES.IMPLICATIONS,
+      STEPS.MPT_MPS, STEPS.OUTLINE, STEPS.FUNCTIONAL_ELEMENTS,
+    ]);
+    if (LIBRARY_GATED_STEPS.has(activeStep)) {
       const step = activeStep;
       const context = buildContext({ sermon, step });
-      const promptAction = activeStep === PHASES.OBSERVE
-        ? "What structural observations or textual features have I highlighted in related passages before?"
-        : "How have I interpreted similar texts or themes before? What theological conclusions did I draw?";
+      const promptActionMap = {
+        [PHASES.OBSERVE]:           "What structural observations or textual features have I highlighted in related passages before?",
+        [PHASES.INTERPRET]:         "How have I interpreted similar texts or themes before? What theological conclusions did I draw?",
+        [PHASES.REDEMPTIVE_THREAD]: "How have I traced the redemptive thread through similar passages or themes before?",
+        [PHASES.IMPLICATIONS]:      "What application directions and implications have I used for similar themes or passages?",
+        [STEPS.MPT_MPS]:            "How have I formulated MPTs and MPSs for similar passages before?",
+        [STEPS.OUTLINE]:            "What outline patterns have worked well for similar passages or themes?",
+        [STEPS.FUNCTIONAL_ELEMENTS]: "How have I developed explanation, application, and illustration for similar passages?",
+      };
+      const promptAction = promptActionMap[step] || "What insights from my previous work should inform this new sermon?";
       const content = context
         ? `CONTEXT:\n${context}\n\nUSER REQUEST:\n${promptAction}`
         : promptAction;
@@ -162,18 +196,22 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
     // Build a richer query: book name + MPS/MPT + early observation keywords
     const parts = [bookName, mps, mpt].filter(Boolean);
     if (activeTab === "study" && sermon.observations) {
-      parts.push(sermon.observations.substring(0, 200));
+      // observations may be structured JSON or plain text; extract readable content
+      let obsText = sermon.observations;
+      if (sermon.observations.trim().startsWith("{")) {
+        try {
+          obsText = Object.values(JSON.parse(sermon.observations) || {}).filter(v => typeof v === "string").join(" ");
+        } catch { /* malformed JSON — fall through to raw string */ }
+      }
+      if (obsText) parts.push(obsText.substring(0, 200));
     }
     const searchQuery = parts.join(" ");
 
-    let promptAction = "What insights from my previous work should inform this new sermon?";
-    if (activeStep === PHASES.REDEMPTIVE_THREAD) {
-      promptAction = "How have I traced the redemptive thread through similar passages or themes before?";
-    } else if (activeStep === PHASES.IMPLICATIONS) {
-      promptAction = "What application directions and implications have I used for similar themes or passages?";
-    } else if (activeTab === "manuscript") {
-      promptAction = "What rhetorical moves, transitions, or compelling phrases from my past work could I adapt here?";
-    }
+    // At this point only "manuscript" (and "outline" without an activeStep set) reaches here,
+    // since all other library-gated steps returned early above.
+    let promptAction = activeTab === "manuscript"
+      ? "What rhetorical moves, transitions, or compelling phrases from my past work could I adapt here?"
+      : "What insights from my previous work should inform this new sermon?";
 
     onLoadingChange?.(true);
     try {
@@ -263,12 +301,23 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
             Ask anything about your passage, or use the quick actions below.
           </div>
         )}
-        {messages.map((msg, i) => (
-          <div key={i} className={`ai-message ${msg.role}`} style={{ whiteSpace: "pre-wrap", position: "relative" }}>
-            {msg.content}
-            {msg.role === "assistant" && <CopyButton text={msg.content} />}
-          </div>
-        ))}
+        {messages.map((msg, i) => {
+          // Attach ref to the last assistant message so we can scroll its top into view.
+          const isLastAssistant = msg.role === "assistant" && i === messages.length - 1;
+          return (
+            <div
+              key={i}
+              ref={isLastAssistant ? latestAssistantRef : undefined}
+              className={`ai-message ${msg.role}`}
+              style={{ whiteSpace: msg.role === "assistant" ? undefined : "pre-wrap", position: "relative" }}
+            >
+              {msg.role === "assistant"
+                ? <div className="ai-markdown"><ReactMarkdown>{msg.content}</ReactMarkdown></div>
+                : msg.content}
+              {msg.role === "assistant" && <CopyButton text={msg.content} />}
+            </div>
+          );
+        })}
         {loading && (
           <div className="ai-loading">
             <div className="ai-loading-dot" />

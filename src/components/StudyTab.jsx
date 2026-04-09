@@ -1,7 +1,14 @@
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { getOutline, serializeOutline, getFunctionalElements, serializeFunctionalElements } from "../utils";
 import { STEPS, PHASES, PHASE_SEQUENCE, STEP_SEQUENCE } from "../constants/steps";
 import { sendAIMessage } from "../utils/ai";
+import {
+  OBSERVE_FIELDS, INTERPRET_FIELDS,
+  REDEMPTIVE_FIELDS, REDEMPTIVE_SUMMARY_KEY,
+  IMPLICATIONS_THEOLOGICAL, IMPLICATIONS_PERSONAL,
+  IMPLICATIONS_UNBELIEVER_KEY, IMPLICATIONS_COMPILED_KEY,
+  parseStructuredField, serializeStructuredField,
+} from "../utils/studyFields";
 import OutlineBuilder from "./OutlineBuilder";
 import InlineAIResponse from "./InlineAIResponse";
 
@@ -151,6 +158,37 @@ function FuncElem({ pointText, pointId, displayIndex, funcData, onUpdate }) {
 }
 
 
+/**
+ * StructuredWorksheet — renders a list of field definitions as labeled textareas.
+ * Each field gets its own row with the question as the label and the hint as placeholder.
+ */
+function StructuredWorksheet({ fields, data, onChange, legacyNotes }) {
+  return (
+    <div className="structured-worksheet">
+      {legacyNotes && (
+        <div className="worksheet-legacy">
+          <div className="worksheet-legacy-label">Previous notes (before structured fields)</div>
+          <div className="worksheet-legacy-content">{legacyNotes}</div>
+        </div>
+      )}
+      {fields.map((f) => (
+        <div key={f.key} className="worksheet-field">
+          <label className="worksheet-field-label">{f.label}</label>
+          <textarea
+            className="field-textarea"
+            rows={2}
+            value={data[f.key] || ""}
+            onChange={(e) => onChange(f.key, e.target.value)}
+            onInput={(e) => autoResize(e.target)}
+            ref={(el) => autoResize(el)}
+            placeholder={f.hint || ""}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChange, onTabChange }) {
   const [activeStep, setActiveStep] = useState(1);
   const [activeSubPhase, setActiveSubPhase] = useState(1);
@@ -166,6 +204,17 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
   const [draftLoading, setDraftLoading] = useState(null); // "mpt" | "mps" | "big_idea"
 
   const outline = getOutline(sermon);
+
+  // ── Structured field data for each phase ──
+  const obsData = useMemo(() => parseStructuredField(sermon.observations), [sermon.observations]);
+  const intData = useMemo(() => parseStructuredField(sermon.interpretation), [sermon.interpretation]);
+  const redData = useMemo(() => parseStructuredField(sermon.redemptive_thread), [sermon.redemptive_thread]);
+  const impData = useMemo(() => parseStructuredField(sermon.implications), [sermon.implications]);
+
+  const updateStructured = useCallback((column, currentData, key, value) => {
+    const next = { ...currentData, [key]: value };
+    onUpdate({ [column]: serializeStructuredField(next) });
+  }, [onUpdate]);
 
   async function fetchInline(key, prompt, system) {
     setInlineLoading(key);
@@ -183,15 +232,26 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
     setInlineResponses(prev => { const n = { ...prev }; delete n[key]; return n; });
   }
 
+  /** Format structured field data (or legacy text) into readable text for AI summaries. */
+  function formatPhaseText(data, fieldDefs) {
+    if (!data || typeof data !== "object") return "(none)";
+    const parts = [];
+    if (data.legacy_notes?.trim()) parts.push(data.legacy_notes.trim());
+    for (const f of fieldDefs) {
+      if (data[f.key]?.trim()) parts.push(`${f.label}: ${data[f.key].trim()}`);
+    }
+    return parts.length > 0 ? parts.join("\n\n") : "(none)";
+  }
+
   async function generateMPT() {
     if (draftLoading) return;
     setDraftLoading("mpt");
     try {
       const resp = await sendAIMessage(
-        [{ role: "user", content: `Passage: ${sermon.passage || "unknown"}\n\nObservations:\n${sermon.observations || "(none)"}\n\nInterpretation:\n${sermon.interpretation || "(none)"}\n\nDraft a Main Point of the Text (MPT) for this passage. The MPT is a single sentence in past tense summarizing what the author was saying to the original audience. Return only the sentence.` }],
+        [{ role: "user", content: `Passage: ${sermon.passage || "unknown"}\n\nObservations:\n${formatPhaseText(obsData, OBSERVE_FIELDS)}\n\nInterpretation:\n${formatPhaseText(intData, INTERPRET_FIELDS)}\n\nDraft a Main Point of the Text (MPT) for this passage. The MPT is a single sentence in past tense summarizing what the author was saying to the original audience. Return only the sentence.` }],
         "You are a biblical scholar helping a pastor formulate the main point of a text. The MPT must be historically grounded, past tense, and accurately reflect the author's original intent."
       );
-      onUpdate({ mpt: resp.trim() });
+      if (resp?.trim()) onUpdate({ mpt: resp.trim() });
     } finally {
       setDraftLoading(null);
     }
@@ -205,7 +265,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
         [{ role: "user", content: `Passage: ${sermon.passage || "unknown"}\n\nMPT: ${sermon.mpt}\n\nDraft a Main Point of the Sermon (MPS) that flows organically from this MPT. The MPS is a single sentence in present tense stating what this text says to this congregation today. Return only the sentence.` }],
         "You are a homiletics consultant helping a pastor bridge the MPT to a present-tense sermon claim. The MPS must grow directly from the MPT — not be imposed from outside."
       );
-      onUpdate({ mps: resp.trim() });
+      if (resp?.trim()) onUpdate({ mps: resp.trim() });
     } finally {
       setDraftLoading(null);
     }
@@ -219,7 +279,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
         [{ role: "user", content: `Passage: ${sermon.passage || "unknown"}\n\nMPT: ${sermon.mpt || "(none)"}\nMPS: ${sermon.mps || "(none)"}\n\nDraft a one-sentence sermon big idea that captures the central truth of this sermon. Make it sharp and memorable. Return only the sentence.` }],
         "You are a sermon preparation consultant helping a pastor crystallize a sermon big idea."
       );
-      onUpdate({ big_idea: resp.trim() });
+      if (resp?.trim()) onUpdate({ big_idea: resp.trim() });
     } finally {
       setDraftLoading(null);
     }
@@ -249,7 +309,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
       onStepChange?.(STEPS.MPT_MPS);
       generateSummary(
         "s2",
-        `Passage: ${sermon.passage || "unknown"}.\n\nPhase 1 – Observations:\n${sermon.observations || "(none)"}\n\nPhase 2 – Interpretation:\n${sermon.interpretation || "(none)"}\n\nPhase 3 – Redemptive Thread:\n${sermon.redemptive_thread || "(none)"}\n\nPhase 4 – Implications:\n${sermon.implications || "(none)"}`,
+        `Passage: ${sermon.passage || "unknown"}.\n\nPhase 1 – Observations:\n${formatPhaseText(obsData, OBSERVE_FIELDS)}\n\nPhase 2 – Interpretation:\n${formatPhaseText(intData, INTERPRET_FIELDS)}\n\nPhase 3 – Redemptive Thread:\n${formatPhaseText(redData, REDEMPTIVE_FIELDS)}\n\nPhase 4 – Implications:\n${formatPhaseText(impData, [...IMPLICATIONS_THEOLOGICAL, ...IMPLICATIONS_PERSONAL])}`,
         `You are synthesizing a preacher's complete exegetical work on ${sermon.passage || "a passage"} before they forge the main point. Provide 4–6 concise bullet points covering: key textual observations, interpretive conclusions, the Christ-connection established, and theological and practical implications surfaced. This will directly inform their MPT and MPS. Be specific to the text, not generic.`
       );
       return;
@@ -261,19 +321,19 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
     if (next === 2) {
       generateSummary(
         "p2",
-        `Passage: ${sermon.passage || "unknown"}.\n\nObservations:\n${sermon.observations || "(none)"}`,
+        `Passage: ${sermon.passage || "unknown"}.\n\nObservations:\n${formatPhaseText(obsData, OBSERVE_FIELDS)}`,
         `Summarize the key observations a preacher noted about ${sermon.passage || "a biblical passage"} in 3–5 concise bullet points. These will orient their interpretation work. Synthesis only — no quality commentary.`
       );
     } else if (next === 3) {
       generateSummary(
         "p3",
-        `Passage: ${sermon.passage || "unknown"}.\n\nInterpretation notes:\n${sermon.interpretation || "(none)"}`,
+        `Passage: ${sermon.passage || "unknown"}.\n\nInterpretation notes:\n${formatPhaseText(intData, INTERPRET_FIELDS)}`,
         `Summarize the key interpretive conclusions reached about ${sermon.passage || "a biblical passage"} in 3–5 bullet points. These will orient work on the redemptive thread. Synthesis only.`
       );
     } else if (next === 4) {
       generateSummary(
         "p4",
-        `Passage: ${sermon.passage || "unknown"}.\n\nRedemptive thread:\n${sermon.redemptive_thread || "(none)"}`,
+        `Passage: ${sermon.passage || "unknown"}.\n\nRedemptive thread:\n${formatPhaseText(redData, REDEMPTIVE_FIELDS)}`,
         `Summarize in 2–3 sentences the Christ-connection a preacher has established for ${sermon.passage || "a biblical passage"}. This will orient their work on theological and practical implications.`
       );
     }
@@ -369,24 +429,27 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
 
           {activeSubPhase === 1 && (
             <div className="sub-phase-body">
-              <p className="sub-phase-hint">Read and reread. Note main features: context, divisions, commands, statements, characters, big ideas.</p>
-              <textarea
-                className="field-textarea large"
-                rows={3}
-                value={sermon.observations || ""}
-                onChange={(e) => onUpdate({ observations: e.target.value })}
-                onInput={(e) => autoResize(e.target)}
-                ref={(el) => autoResize(el)}
-                placeholder="What does the text actually say? Note repeated words, structural markers, commands, promises, contrasts, connections to other passages — anything that surprises you. Stay descriptive, not interpretive."
+              <p className="sub-phase-hint">Observe the text — what it says before what it means. Read and reread prayerfully.</p>
+              <StructuredWorksheet
+                fields={OBSERVE_FIELDS}
+                data={obsData}
+                onChange={(key, value) => updateStructured("observations", obsData, key, value)}
+                legacyNotes={obsData.legacy_notes}
               />
               <div style={{ marginTop: "8px" }}>
                 <button
                   className="btn-ghost btn-sm"
-                  onClick={() => fetchInline(
-                    "observe",
-                    `Passage: ${sermon.passage || "this passage"}\n\nMy observations on ${sermon.passage || "this passage"}:\n\n${sermon.observations || "(none yet)"}`,
-                    `Review these observations as a careful biblical scholar would. Evaluate for completeness and accuracy. What key textual features have been noticed? What is missing? Be specific and constructive.`
-                  )}
+                  onClick={() => {
+                    const filled = OBSERVE_FIELDS
+                      .filter(f => obsData[f.key]?.trim())
+                      .map(f => `${f.label}: ${obsData[f.key].trim()}`)
+                      .join("\n\n");
+                    fetchInline(
+                      "observe",
+                      `Passage: ${sermon.passage || "this passage"}\n\nMy observations on ${sermon.passage || "this passage"}:\n\n${filled || "(none yet)"}`,
+                      `Review these observations as a careful biblical scholar would. Evaluate for completeness and accuracy. What key textual features have been noticed? What is missing? Be specific and constructive.`
+                    );
+                  }}
                   disabled={inlineLoading !== null}
                 >
                   {inlineLoading === "observe" ? "Reviewing…" : "Review →"}
@@ -403,24 +466,27 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
 
           {activeSubPhase === 2 && (
             <div className="sub-phase-body">
-              <p className="sub-phase-hint">Move from observation to meaning. Context, contrasts, key words, cross-references, commentaries.</p>
-              <textarea
-                className="field-textarea large"
-                rows={3}
-                value={sermon.interpretation || ""}
-                onChange={(e) => onUpdate({ interpretation: e.target.value })}
-                onInput={(e) => autoResize(e.target)}
-                ref={(el) => autoResize(el)}
-                placeholder="What does the text mean? Work from your observations. What is the author's intent? What does this passage claim theologically?"
+              <p className="sub-phase-hint">Find the meaning of the text. Move from observation to interpretation.</p>
+              <StructuredWorksheet
+                fields={INTERPRET_FIELDS}
+                data={intData}
+                onChange={(key, value) => updateStructured("interpretation", intData, key, value)}
+                legacyNotes={intData.legacy_notes}
               />
               <div style={{ marginTop: "8px" }}>
                 <button
                   className="btn-ghost btn-sm"
-                  onClick={() => fetchInline(
-                    "interpret",
-                    `Passage: ${sermon.passage || "this passage"}\n\nMy interpretation of ${sermon.passage || "this passage"}:\n\n${sermon.interpretation || "(none yet)"}`,
-                    `Review this interpretive work as a biblical scholar would. Evaluate for hermeneutical soundness. Does it move correctly from observation to meaning? Are the contextual and lexical insights valid? Be direct.`
-                  )}
+                  onClick={() => {
+                    const filled = INTERPRET_FIELDS
+                      .filter(f => intData[f.key]?.trim())
+                      .map(f => `${f.label}: ${intData[f.key].trim()}`)
+                      .join("\n\n");
+                    fetchInline(
+                      "interpret",
+                      `Passage: ${sermon.passage || "this passage"}\n\nMy interpretation of ${sermon.passage || "this passage"}:\n\n${filled || "(none yet)"}`,
+                      `Review this interpretive work as a biblical scholar would. Evaluate for hermeneutical soundness. Does it move correctly from observation to meaning? Are the contextual and lexical insights valid? Be direct.`
+                    );
+                  }}
                   disabled={inlineLoading !== null}
                 >
                   {inlineLoading === "interpret" ? "Reviewing…" : "Review →"}
@@ -437,24 +503,69 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
 
           {activeSubPhase === 3 && (
             <div className="sub-phase-body">
-              <p className="sub-phase-hint">How does this passage point to or depend on Christ? Where does it stand in redemptive history?</p>
-              <textarea
-                className="field-textarea large"
-                rows={3}
-                value={sermon.redemptive_thread || ""}
-                onChange={(e) => onUpdate({ redemptive_thread: e.target.value })}
-                onInput={(e) => autoResize(e.target)}
-                ref={(el) => autoResize(el)}
-                placeholder="Where does this passage sit in the biblical story? How does it point to, assume, or fulfill Christ? What would be lost without the gospel here?"
+              <p className="sub-phase-hint">Find the redemptive features. How does this text point to or depend on Christ?</p>
+              <StructuredWorksheet
+                fields={REDEMPTIVE_FIELDS}
+                data={redData}
+                onChange={(key, value) => updateStructured("redemptive_thread", redData, key, value)}
+                legacyNotes={redData.legacy_notes}
               />
+
+              {/* Summary field — auto-synthesized or hand-written */}
+              <div className="worksheet-summary-block">
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
+                  <label className="worksheet-field-label" style={{ marginBottom: 0 }}>Summary of Redemptive Features</label>
+                  <button
+                    className="btn-ghost btn-sm"
+                    disabled={draftLoading !== null}
+                    onClick={async () => {
+                      setDraftLoading("red_summary");
+                      try {
+                        const filled = REDEMPTIVE_FIELDS
+                          .filter(f => redData[f.key]?.trim())
+                          .map(f => `${f.label}: ${redData[f.key].trim()}`)
+                          .join("\n\n");
+                        const resp = await sendAIMessage(
+                          [{ role: "user", content: `Passage: ${sermon.passage || "unknown"}\n\nRedemptive feature answers:\n\n${filled || "(none yet)"}\n\nSynthesize these answers into a cohesive summary of how this passage participates in redemptive history and points to Christ. Write 3–5 sentences. Be specific to the text.` }],
+                          "You are a Reformed biblical theologian helping a pastor synthesize redemptive-historical observations into a clear summary. Ground every claim in the text."
+                        );
+                        if (resp?.trim()) {
+                          const next = { ...redData, [REDEMPTIVE_SUMMARY_KEY]: resp.trim() };
+                          onUpdate({ redemptive_thread: serializeStructuredField(next) });
+                        }
+                      } finally { setDraftLoading(null); }
+                    }}
+                    style={{ fontSize: "12px" }}
+                  >
+                    {draftLoading === "red_summary" ? "Synthesizing…" : "Synthesize →"}
+                  </button>
+                </div>
+                <textarea
+                  className="field-textarea"
+                  rows={3}
+                  value={redData[REDEMPTIVE_SUMMARY_KEY] || ""}
+                  onChange={(e) => updateStructured("redemptive_thread", redData, REDEMPTIVE_SUMMARY_KEY, e.target.value)}
+                  onInput={(e) => autoResize(e.target)}
+                  ref={(el) => autoResize(el)}
+                  placeholder="A cohesive summary of how this passage participates in redemptive history and points to Christ."
+                />
+              </div>
+
               <div style={{ marginTop: "8px" }}>
                 <button
                   className="btn-ghost btn-sm"
-                  onClick={() => fetchInline(
-                    "redemptive",
-                    `Passage: ${sermon.passage || "this passage"}\n\nRedemptive thread for ${sermon.passage || "this passage"}:\n\n${sermon.redemptive_thread || "(none yet)"}`,
-                    `Evaluate this redemptive-historical work as a Reformed biblical theologian would. Is Christ's connection to this passage structurally necessary or decorative? Is the passage placed correctly in redemptive history? Offer specific, textually grounded feedback.`
-                  )}
+                  onClick={() => {
+                    const filled = REDEMPTIVE_FIELDS
+                      .filter(f => redData[f.key]?.trim())
+                      .map(f => `${f.label}: ${redData[f.key].trim()}`)
+                      .join("\n\n");
+                    const summary = redData[REDEMPTIVE_SUMMARY_KEY]?.trim() || "";
+                    fetchInline(
+                      "redemptive",
+                      `Passage: ${sermon.passage || "this passage"}\n\nRedemptive thread for ${sermon.passage || "this passage"}:\n\n${filled}\n\n${summary ? `Summary: ${summary}` : ""}`,
+                      `Evaluate this redemptive-historical work as a Reformed biblical theologian would. Is Christ's connection to this passage structurally necessary or decorative? Is the passage placed correctly in redemptive history? Offer specific, textually grounded feedback.`
+                    );
+                  }}
                   disabled={inlineLoading !== null}
                 >
                   {inlineLoading === "redemptive" ? "Reviewing…" : "Review →"}
@@ -471,24 +582,96 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
 
           {activeSubPhase === 4 && (
             <div className="sub-phase-body">
-              <p className="sub-phase-hint">Theological: what does this teach about God, humanity, Christ? Personal: examples, commands, promises, convictions.</p>
-              <textarea
-                className="field-textarea large"
-                rows={3}
-                value={sermon.implications || ""}
-                onChange={(e) => onUpdate({ implications: e.target.value })}
-                onInput={(e) => autoResize(e.target)}
-                ref={(el) => autoResize(el)}
-                placeholder="If this text is true, what follows? What does it demand, promise, or reorder? Think congregation-first."
+              <p className="sub-phase-hint">Concluding implications — how does this passage apply to us today?</p>
+
+              <div className="worksheet-group-header">Theological Significance</div>
+              <StructuredWorksheet
+                fields={IMPLICATIONS_THEOLOGICAL}
+                data={impData}
+                onChange={(key, value) => updateStructured("implications", impData, key, value)}
+                legacyNotes={impData.legacy_notes}
               />
+
+              <div className="worksheet-group-header">Personal Application</div>
+              <StructuredWorksheet
+                fields={IMPLICATIONS_PERSONAL}
+                data={impData}
+                onChange={(key, value) => updateStructured("implications", impData, key, value)}
+              />
+
+              <div className="worksheet-group-header">Implications for Unbelievers</div>
+              <div className="worksheet-field">
+                <textarea
+                  className="field-textarea"
+                  rows={2}
+                  value={impData[IMPLICATIONS_UNBELIEVER_KEY] || ""}
+                  onChange={(e) => updateStructured("implications", impData, IMPLICATIONS_UNBELIEVER_KEY, e.target.value)}
+                  onInput={(e) => autoResize(e.target)}
+                  ref={(el) => autoResize(el)}
+                  placeholder="What are some possible implications for unbelievers?"
+                />
+              </div>
+
+              {/* Compiled implications list — auto-generated or hand-written */}
+              <div className="worksheet-summary-block">
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
+                  <label className="worksheet-field-label" style={{ marginBottom: 0 }}>Compiled Implications</label>
+                  <button
+                    className="btn-ghost btn-sm"
+                    disabled={draftLoading !== null}
+                    onClick={async () => {
+                      setDraftLoading("imp_compile");
+                      try {
+                        const theo = IMPLICATIONS_THEOLOGICAL
+                          .filter(f => impData[f.key]?.trim())
+                          .map(f => `${f.label} ${impData[f.key].trim()}`)
+                          .join("\n");
+                        const pers = IMPLICATIONS_PERSONAL
+                          .filter(f => impData[f.key]?.trim())
+                          .map(f => `${f.label} ${impData[f.key].trim()}`)
+                          .join("\n");
+                        const unb = impData[IMPLICATIONS_UNBELIEVER_KEY]?.trim() || "";
+                        const resp = await sendAIMessage(
+                          [{ role: "user", content: `Passage: ${sermon.passage || "unknown"}\n\nTheological significance:\n${theo || "(none)"}\n\nPersonal application:\n${pers || "(none)"}\n\nImplications for unbelievers:\n${unb || "(none)"}\n\nCompile all of these into a single consolidated list of implications. Each item should be one clear, actionable sentence. Group naturally but don't repeat. Include both theological and practical implications.` }],
+                          "You are a homiletics consultant helping a pastor compile a master list of sermon implications. Every item must be grounded in the text, gospel-rooted, and congregation-facing."
+                        );
+                        if (resp?.trim()) {
+                          const next = { ...impData, [IMPLICATIONS_COMPILED_KEY]: resp.trim() };
+                          onUpdate({ implications: serializeStructuredField(next) });
+                        }
+                      } finally { setDraftLoading(null); }
+                    }}
+                    style={{ fontSize: "12px" }}
+                  >
+                    {draftLoading === "imp_compile" ? "Compiling…" : "Compile →"}
+                  </button>
+                </div>
+                <textarea
+                  className="field-textarea"
+                  rows={4}
+                  value={impData[IMPLICATIONS_COMPILED_KEY] || ""}
+                  onChange={(e) => updateStructured("implications", impData, IMPLICATIONS_COMPILED_KEY, e.target.value)}
+                  onInput={(e) => autoResize(e.target)}
+                  ref={(el) => autoResize(el)}
+                  placeholder="A consolidated list of all implications from your study — theological, personal, and for unbelievers."
+                />
+              </div>
+
               <div style={{ marginTop: "8px" }}>
                 <button
                   className="btn-ghost btn-sm"
-                  onClick={() => fetchInline(
-                    "implications",
-                    `Passage: ${sermon.passage || "this passage"}\n\nImplications from ${sermon.passage || "this passage"}:\n\n${sermon.implications || "(none yet)"}`,
-                    `Review these implications as a homiletics mentor would. Are the theological claims well-grounded? Are the applications gospel-rooted rather than behavior-driven? Are any obvious implications missing?`
-                  )}
+                  onClick={() => {
+                    const allFields = [...IMPLICATIONS_THEOLOGICAL, ...IMPLICATIONS_PERSONAL]
+                      .filter(f => impData[f.key]?.trim())
+                      .map(f => `${f.label} ${impData[f.key].trim()}`)
+                      .join("\n\n");
+                    const compiled = impData[IMPLICATIONS_COMPILED_KEY]?.trim() || "";
+                    fetchInline(
+                      "implications",
+                      `Passage: ${sermon.passage || "this passage"}\n\nImplications from ${sermon.passage || "this passage"}:\n\n${allFields}\n\n${compiled ? `Compiled list: ${compiled}` : ""}`,
+                      `Review these implications as a homiletics mentor would. Are the theological claims well-grounded? Are the applications gospel-rooted rather than behavior-driven? Are any obvious implications missing?`
+                    );
+                  }}
                   disabled={inlineLoading !== null}
                 >
                   {inlineLoading === "implications" ? "Reviewing…" : "Review →"}
@@ -522,7 +705,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
             <div className="field-group">
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "5px" }}>
                 <label className="field-label" style={{ marginBottom: 0 }}>Main Point of the Text (MPT)</label>
-                {(sermon.passage || sermon.observations) && (
+                {(sermon.passage || Object.keys(obsData).some(k => k !== "legacy_notes" && obsData[k]?.trim())) && (
                   <button
                     className="btn-ghost btn-sm"
                     onClick={generateMPT}

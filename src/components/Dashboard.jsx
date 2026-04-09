@@ -3,6 +3,7 @@ import { getAllSeries, getAllSermons, getRecentSermons } from "../db/database";
 import NewSermonModal from "./NewSermonModal";
 import { formatDate, getOutline } from "../utils";
 import { sendAIMessage } from "../utils/ai";
+import { flattenExegesis } from "../utils/studyFields";
 
 export default function Dashboard({ onOpenSermon, onOpenSeries, onNewSeries, onNavigate }) {
   const [series, setSeries] = useState([]);
@@ -52,10 +53,8 @@ export default function Dashboard({ onOpenSermon, onOpenSeries, onNewSeries, onN
     if (sermon.big_idea) parts.push(`Big Idea: ${sermon.big_idea}`);
     if (sermon.mpt) parts.push(`Main Point of the Text (MPT): ${sermon.mpt}`);
     if (sermon.mps) parts.push(`Main Point of the Sermon (MPS): ${sermon.mps}`);
-    if (sermon.observations) parts.push(`Observations:\n${sermon.observations}`);
-    if (sermon.interpretation) parts.push(`Interpretation:\n${sermon.interpretation}`);
-    if (sermon.redemptive_thread) parts.push(`Redemptive Thread:\n${sermon.redemptive_thread}`);
-    if (sermon.implications) parts.push(`Implications:\n${sermon.implications}`);
+    const exegesis = flattenExegesis(sermon);
+    if (exegesis) parts.push(exegesis);
     const outline = getOutline(sermon);
     if (outline.length > 0) {
       parts.push(`Outline:\n${outline.map((p, i) => `  ${i + 1}. ${p.text}`).join("\n")}`);

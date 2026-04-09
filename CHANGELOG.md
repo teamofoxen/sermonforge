@@ -2,6 +2,144 @@
 
 ---
 
+## 2026-04-08 — Audit: structured worksheet feature (3 fixes)
+
+Audited the structured exegesis worksheet feature. Three corrections made:
+
+1. **Unprotected JSON.parse in AIPanel.jsx** — The library search keyword
+   extraction parsed `sermon.observations` with bare `JSON.parse()`. If
+   the string started with `{` but was malformed, this would throw and crash
+   the search flow. Wrapped in try/catch per guardrail rules.
+
+2. **Unused `fieldDefs` parameter in `updateStructured`** — The callback
+   accepted a `fieldDefs` argument that was never used. Removed the parameter
+   and cleaned all 8 call sites. This also eliminated unnecessary array
+   allocations (`[...IMPLICATIONS_THEOLOGICAL, ...IMPLICATIONS_PERSONAL]`)
+   on every keystroke in Phase 4.
+
+3. **Unrelated changes snuck into contextBuilder.js** — Three modifications
+   that were not part of the worksheet feature were reverted:
+   (a) `"delivery"` case was moved out of the default fallback and given
+   tier2/tier3/tier4 — this broke the test expectation. Reverted to original
+   position in the default/fallback group.
+   (b) Tier7 pastoral budget trimming was changed to newline-aware truncation.
+   Reverted to original `slice(0, PASTORAL_BUDGET)` behavior.
+   (c) Fallback context section label was changed from `"[PASSAGE & MPT]"`
+   to `CONTEXT_SECTIONS.PASSAGE`. Reverted to hardcoded string.
+
+**Verified:** Schema version still 7 (no migration added). All 91 tests pass.
+Build clean with no warnings. All AI calls go through `sendAIMessage`. No
+`window.electronAPI` in StudyTab. No raw SQL in renderer. No new hex values
+or font names in CSS — only existing CSS variables.
+
+**Files changed:** `src/components/AIPanel.jsx` (try/catch fix),
+`src/components/StudyTab.jsx` (remove unused param from 8 call sites),
+`src/utils/contextBuilder.js` (revert 3 unrelated changes).
+
+---
+
+## 2026-04-08 — Structured exegesis worksheets: per-question fields for all 4 study phases
+
+Replaced the single textarea per phase in the Study tab with structured worksheets
+where each question from the sermon prep guide gets its own labeled field. The pastor
+can now work through each question individually rather than dumping everything into
+one text block.
+
+**Phase 1 (Observe):** 9 fields — context, divisions, commands, statements, characters,
+big ideas, obvious point, basic outline, possible applications.
+
+**Phase 2 (Interpret):** 9 fields — context impact, recurring ideas, characters,
+contrasts, diagram/relationships, cross-references, commentary notes, summarize parts,
+summarize whole.
+
+**Phase 3 (Redemptive Thread):** 7 question fields + AI "Synthesize" button that
+compiles all answers into a cohesive redemptive features summary.
+
+**Phase 4 (Implications):** 3 grouped sections (Theological Significance: 5 fields,
+Personal Application: 8 fields, Unbeliever implications: 1 field) + AI "Compile"
+button that produces a consolidated implications list.
+
+**Storage:** Each phase stores structured data as JSON in the existing column
+(observations, interpretation, redemptive_thread, implications). No schema migration
+needed. Legacy plain-text content is preserved under a "legacy_notes" key and displayed
+at the top of the phase when present.
+
+**Context pipeline:** `summarizeExegesis()` in contextBuilder.js now detects structured
+JSON and flattens it to readable text via `flattenExegesis()` from the new
+`studyFields.js` utility module. The AI context pipeline receives clean text regardless
+of storage format.
+
+**AI integration:** All "Review" buttons, summary generation between phases, and
+MPT/MPS drafting now assemble structured field content with labels for richer AI context.
+Phase 3 "Synthesize" and Phase 4 "Compile" buttons use sendAIMessage to auto-generate
+summary fields from the pastor's individual answers.
+
+**Files changed:** `src/components/StudyTab.jsx` (restructured all 4 phases),
+`src/utils/studyFields.js` (new — field definitions, parse/serialize/flatten helpers),
+`src/utils/contextBuilder.js` (structured JSON detection in summarizeExegesis),
+`src/components/AIPanel.jsx` (handle JSON observations in library search),
+`src/components/Dashboard.jsx` (use flattenExegesis for reorientation summary),
+`src/styles/global.css` (worksheet CSS classes).
+
+---
+
+## 2026-04-08 — Render AI responses as formatted markdown; fix scroll position; fix sidebar New Sermon flow
+
+AI panel responses were displaying raw markdown symbols (**, ##, -, etc.) as
+plain text, making them visually noisy and hard to scan.
+
+Added `react-markdown` dependency and wrapped assistant messages in a
+`<ReactMarkdown>` component. User messages remain plain text (pre-wrap).
+
+New `.ai-markdown` CSS rules in `global.css` style headings (Playfair Display),
+body text (Crimson Pro), lists, blockquotes, inline code, and code blocks —
+all scoped to the AI panel and consistent with the existing design system.
+
+Fixed AI panel scroll behavior: previously, when a new response arrived the
+panel scrolled to the very bottom, forcing the pastor to scroll back up to
+start reading. Now, when an assistant message arrives the panel scrolls to the
+*top* of that message. User messages and the loading indicator still scroll to
+the bottom as before.
+
+Fixed Sidebar "+ New Sermon" flow: previously it created an empty sermon record
+immediately and opened the workspace, bypassing `NewSermonModal`. Now it opens
+the same modal used by Dashboard and SermonList, so the pastor can enter passage,
+date, and series before the record is created. Removed the unused `createSermon`
+import from Sidebar.
+
+**Files changed:** `src/components/AIPanel.jsx`, `src/styles/global.css`,
+`src/components/Sidebar.jsx`, `package.json` (new dep: `react-markdown`).
+
+### Post-change sanity check (verified, no corrections needed)
+
+Audited all three changes against CLAUDE.md, DECISIONS.md, and the codebase:
+
+1. **ReactMarkdown** — confirmed applied only to `msg.role === "assistant"` messages.
+   User messages render as plain text with `whiteSpace: "pre-wrap"`. `CopyButton`
+   receives `msg.content` (raw string), not rendered HTML — clipboard copies are clean.
+
+2. **`.ai-markdown` CSS** — all values reference existing CSS variables (`--ink`,
+   `--ink-ghost`, `--ink-soft`, `--gold-pale`, `--parchment-warm`, `--parchment-deep`,
+   `--radius`) and approved fonts (`Crimson Pro`, `Playfair Display`, `JetBrains Mono`).
+   No new hex values or font names introduced.
+
+3. **Scroll logic** — `prevCountRef` tracks message count across renders. On send:
+   user message appended → `messages.length > prevCount` but `lastMsg.role === "user"`
+   → falls through to `messagesEndRef` (bottom scroll, shows loading dots). On response:
+   assistant message appended → `messages.length > prevCount` and
+   `lastMsg.role === "assistant"` → scrolls to `latestAssistantRef` (top of response).
+   `clearHistory()` resets messages to `[]`, effect returns early, `prevCountRef` resets
+   to 0. Fresh conversations start clean. The ref is stable: `isLastAssistant` is
+   computed per render and always points to the correct DOM node.
+
+4. **Sidebar modal** — `NewSermonModal` wiring (`onClose`, `onCreated`) is identical to
+   Dashboard and SermonList. `createSermon` import fully removed from Sidebar — no
+   dangling references. `handleNewSermon` closes the dropdown and opens the modal.
+
+5. **Build** — `vite build` passes with no errors or warnings.
+
+---
+
 ## 2026-04-07 — IPC layer and database boundary audit fixes
 
 Five surgical fixes from a deep audit of the IPC layer and database boundary
