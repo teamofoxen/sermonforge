@@ -32,7 +32,12 @@ function registerAIHandlers(ipcMain) {
       throw e;
     }
 
-    return response.content[0].text;
+    const text = response.content?.[0]?.text;
+    if (text == null) {
+      console.error("[ai-message] Unexpected response shape:", JSON.stringify(response.content));
+      return "AI returned an unexpected response format.";
+    }
+    return text;
   });
 }
 

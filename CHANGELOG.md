@@ -2,6 +2,149 @@
 
 ---
 
+## 2026-04-07 — IPC layer and database boundary audit fixes
+
+Five surgical fixes from a deep audit of the IPC layer and database boundary
+(`electron/main.js`, `electron/ai.js`). No new features, no schema changes.
+
+### Fix 1 — db-updateSection no longer silently succeeds on rejected fields
+
+`electron/main.js`
+
+`db-updateSection` returned `undefined` (indistinguishable from success) when
+`buildUpdate` returned null because all fields were rejected. Added the same
+log-and-return pattern used by `db-updateSermon` and `db-updateSeries`: logs the
+error and returns `{ error, attempted }` so callers can distinguish failure from
+a successful no-op write.
+
+### Fix 2 — db-deleteLibraryItem wrapped in a transaction
+
+`electron/main.js`
+
+The handler performed two separate `db.run()` calls (DELETE from library, DELETE
+from library_fts) with no transaction. If the second delete threw, the library
+row would be gone but its FTS entry orphaned — causing phantom search hits. Now
+wrapped in BEGIN/COMMIT/ROLLBACK, consistent with `db-deleteSeries` and
+`db-deleteSection`.
+
+### Fix 3 — ai.js response.content[0].text now guarded
+
+`electron/ai.js`
+
+Replaced bare `return response.content[0].text` with optional chaining. If the
+Anthropic SDK ever returns an empty content array or a non-text block, the
+handler now logs a diagnostic error and returns a user-readable string rather
+than crashing with an unhelpful TypeError.
+
+### Fix 4 — FTS rebuild loop now logs failed inserts
+
+`electron/main.js`
+
+The empty `catch (_) {}` in the FTS index rebuild loop (run on startup when the
+index is missing) has been replaced with a `console.warn` that includes the
+row id and error message. A library item that fails to index is now visible in
+the log rather than silently invisible to search.
+
+### Fix 5 — Library import saves every 50 files
+
+`electron/main.js`
+
+`library-import` previously called `saveDb()` once at the end of the loop. For
+large imports (374+ files), a crash mid-loop would lose all progress. A periodic
+`saveDb()` every 50 files limits the crash window to 50 files rather than the
+entire import.
+
+### Documentation — CLAUDE.md IPC CHANNELS section completed
+
+`CLAUDE.md`
+
+Added eight previously undocumented but fully-working IPC channels to the
+IPC CHANNELS section: `db-deleteLibraryItem`, `db-getRecentSermons`,
+`db-getSchemaVersion`, `app-get-version`, `feedback-submit`, `theology-status`,
+`theology-search`, `theology-get-chunks`. All have matching handler/preload pairs.
+
+---
+
+## 2026-04-07 — Context pipeline audit fixes (two more findings)
+
+Two further surgical fixes from the 2026-04-07 audit of the context pipeline.
+
+### Fix 1 — Delivery tab now has full sermon context
+
+`src/utils/contextBuilder.js`
+
+`resolveIncludes` previously mapped `"delivery"` to the same tier1-only return as unknown
+steps (it was a fall-through into the `default` branch). The delivery tab's AI had no
+knowledge of the MPS, outline, series context, or pastoral intelligence — only passage and
+MPT — making delivery coaching significantly less useful.
+
+Added an explicit `"delivery"` case returning `{ tier2: true, tier3: true, tier4: true,
+library: false, theology: false, memory: true, pastoralContext: true }`. The delivery tab
+now receives the same structural context as the outline and manuscript tabs (minus library
+and theology sources, which are not relevant at that stage). `"delivery"` removed from the
+`STEPS.EXEGESIS` / `"study"` / `default` fall-through.
+
+### Fix 2 — Pastoral intelligence tier truncates at field boundaries
+
+`src/utils/contextBuilder.js`
+
+The tier7 800-char shared budget was enforced as `joined.slice(0, 800).trimEnd()`, which
+could cut mid-word or mid-sentence inside a field. When two or three fields together exceed
+800 chars, the last field would appear truncated in the AI prompt.
+
+Replaced with newline-boundary truncation: find the last `\n` before the 800-char cut
+point and break there, so only complete fields are included. If no newline exists before
+the cut point (single very long field), the hard slice is used as a fallback. This is the
+same pattern used by `buildMemoryContext` for its 650-char cap.
+
+---
+
+## 2026-04-07 — Context pipeline audit fixes (three findings)
+
+Three surgical fixes from the 2026-04-07 audit of the context pipeline.
+
+### Fix 1 — Generate handlers no longer overwrite fields on API failure
+
+`src/components/SeriesPlanner.jsx` and `src/components/StudyTab.jsx`
+
+`sendAIMessage` returns `''` on all failure paths (network error, null response, IPC
+failure). Seven "generate" and "draft" handlers previously called `onChange(field, resp.trim())`
+unconditionally — if `resp` was `''`, the existing field content was silently overwritten
+with empty string and the debounced save persisted the empty value to the database.
+
+All seven sites now guard the write: `if (resp?.trim()) onChange(field, resp.trim())`.
+Affected handlers: `SeriesPlanner.generateBigIdea`, `generateOverview`, `generateOutline`,
+`handleDraftBigIdea`; `StudyTab.generateMPT`, `generateMPS`, `generateBigIdea`.
+
+### Fix 2 — Library search falls back gracefully at all gated steps
+
+`src/components/AIPanel.jsx`
+
+`handleLibrarySearch` had an early-return guard for `PHASES.OBSERVE` and `PHASES.INTERPRET`
+only. All other steps except `"manuscript"` also have `library: false` in `resolveIncludes`,
+meaning the search would run (IPC round-trip + ranking) but the results would be silently
+discarded by `buildContext`. The "Search My Library" button implied it used the library but
+didn't.
+
+The guard now covers all library-gated steps: `PHASES.REDEMPTIVE_THREAD`,
+`PHASES.IMPLICATIONS`, `STEPS.MPT_MPS`, `STEPS.OUTLINE`, `STEPS.FUNCTIONAL_ELEMENTS`.
+Each has a step-specific fallback `promptAction` in the guard. The redundant
+`REDEMPTIVE_THREAD` and `IMPLICATIONS` overrides below the guard were removed.
+
+### Fix 3 — Fallback path in buildContext uses CONTEXT_SECTIONS constant
+
+`src/utils/contextBuilder.js`
+
+The `buildContext` fallback (reached when assembled context is < 50 chars) used the string
+literal `[PASSAGE & MPT]` rather than `CONTEXT_SECTIONS.PASSAGE`. This violated the
+invariant from FUTURE.md Entry 2 (completed 2026-04-04): section labels must not appear as
+string literals in either `contextBuilder.js` or `AIPanel.jsx`. Fixed.
+
+FUTURE.md Entry 8 updated to document the data-loss dimension of the generate/draft handler
+pattern and to record that Fix 1 resolves the sub-pattern.
+
+---
+
 ## 2026-04-06 — UX restructuring: inline AI responses, AI drawer, auto-expand textareas, rich placeholders, draft buttons
 
 Five-part UX overhaul across SeriesPlanner, SermonWorkspace, StudyTab, and all supporting tabs. Goal: move AI output closer to the field that triggered it, reduce panel overhead for inline analysis, and replace generic placeholder copy with instructional guidance.

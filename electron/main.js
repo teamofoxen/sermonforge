@@ -157,7 +157,9 @@ async function initDatabase() {
             "INSERT INTO library_fts (id, title, passage, manuscript_text) VALUES (?, ?, ?, ?)",
             [row.id, row.title, row.passage, row.manuscript_text]
           );
-        } catch (_) {}
+        } catch (e) {
+          console.warn(`[FTS rebuild] Failed to index library row ${row.id}:`, e.message);
+        }
       }
       if (rows.length > 0) {
         saveDb();
@@ -681,7 +683,10 @@ ipcMain.handle("db-createSection", (_, data) => {
 
 ipcMain.handle("db-updateSection", (_, { id, fields }) => {
   const update = buildUpdate(fields, SECTION_COLUMNS);
-  if (!update) return;
+  if (!update) {
+    console.error("[db-updateSection] No valid fields to update", { id, attempted: Object.keys(fields) });
+    return { error: "No valid fields to update", attempted: Object.keys(fields) };
+  }
   db.run(`UPDATE series_sections SET ${update.setClauses} WHERE id = ?`, [...update.values, id]);
   saveDb();
 });
@@ -741,8 +746,15 @@ ipcMain.handle("db-deleteIllustration", (_, id) => {
 
 // ── Library item deletion ─────────────────────────────────────────────────────
 ipcMain.handle("db-deleteLibraryItem", (_, id) => {
-  db.run("DELETE FROM library WHERE id = ?", [id]);
-  db.run("DELETE FROM library_fts WHERE id = ?", [id]);
+  db.run("BEGIN");
+  try {
+    db.run("DELETE FROM library WHERE id = ?", [id]);
+    db.run("DELETE FROM library_fts WHERE id = ?", [id]);
+    db.run("COMMIT");
+  } catch (e) {
+    db.run("ROLLBACK");
+    throw e;
+  }
   saveDb();
 });
 
@@ -833,6 +845,10 @@ ipcMain.handle("library-import", async (event) => {
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send("library-import-progress", { done: imported, total, complete: false });
       }
+    }
+
+    if ((imported + errors) % 50 === 0) {
+      saveDb();
     }
   }
 

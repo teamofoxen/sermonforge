@@ -290,6 +290,46 @@ channels. The API key never touches the renderer.
       sermon slots. Saves to ~/OneDrive/SermonForge/StudyGuides/[title] — Study Guide.docx.
       Creates the StudyGuides directory if absent. Empty parts are omitted entirely.
 
+  "db-deleteLibraryItem"
+    receives: id string
+    returns:  undefined (throws on DB error)
+    — Deletes from both library and library_fts in a single transaction.
+
+  "db-getRecentSermons"
+    receives: limit number (default 3)
+    returns:  array of sermon rows (stage != 'archived' and != 'planning', ordered by updated_at)
+
+  "db-getSchemaVersion"
+    receives: nothing
+    returns:  { version: string } — reads schema_version from meta table
+
+  "app-get-version"
+    receives: nothing
+    returns:  { version: string } — reads from app.getVersion()
+
+  "feedback-submit"
+    receives: { category, currentView, schemaVersion, appVersion, submittedAt, ...category fields }
+    returns:  { success: true, filepath: string }
+            | { success: false, error: string }
+    — Writes a markdown feedback file to ~/OneDrive/SermonForge/Feedback/YYYY-MM-DD-HH-MM-category.md.
+      Creates the Feedback directory if absent.
+
+  "theology-status"
+    receives: nothing
+    returns:  { available: bool } — whether theology.db is present and loaded
+
+  "theology-search"
+    receives: { query: string, limit: number }
+    returns:  array of { id, author, work, text_chunk, score }
+    — LIKE-based search across author, work, and text columns; scored by field weight.
+      Returns [] if theology.db is unavailable.
+
+  "theology-get-chunks"
+    receives: { ids: string[], maxChars: number }
+    returns:  array of { id, author, work, text_chunk }
+    — Fetches specific theology chunks by id; maxChars clamped to 100–2000.
+      Returns [] if theology.db is unavailable.
+
 ---
 
 ## SERIES PLANNING SYSTEM
