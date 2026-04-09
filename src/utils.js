@@ -147,6 +147,16 @@ export function serializeFunctionalElements(data) {
   return JSON.stringify(data);
 }
 
+/**
+ * Auto-resize a textarea to fit its content, capped at 60vh.
+ * Wire to both onInput and ref callbacks: onInput={(e) => autoResize(e.target)} ref={(el) => autoResize(el)}
+ */
+export function autoResize(el) {
+  if (!el) return;
+  el.style.height = "auto";
+  el.style.height = Math.min(el.scrollHeight, window.innerHeight * 0.6) + "px";
+}
+
 export function formatDate(dateStr) {
   if (!dateStr) return "";
   try {

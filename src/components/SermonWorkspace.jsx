@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useDebounce } from "../utils/hooks";
 import { getSermonById, updateSermon, deleteSermon, getSeriesById, getSectionsBySeries, openInLogos } from "../db/database";
 import { updateMemory, extractOutlinePattern, extractPhrasePatterns } from "../utils/memory";
+import { autoResize } from "../utils";
 import DeleteButton from "./DeleteButton";
 import StudyTab from "./StudyTab";
 import OutlineTab from "./OutlineTab";
@@ -279,8 +280,10 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
                   className="field-textarea"
                   value={sermon.topic_theme || ""}
                   onChange={e => handleUpdate({ topic_theme: e.target.value })}
+                  onInput={(e) => autoResize(e.target)}
+                  ref={(el) => autoResize(el)}
                   placeholder="Topic or theme — doctrine, life situation, question, felt need..."
-                  rows={2}
+                  rows={1}
                 />
               </div>
               <div>
@@ -289,8 +292,10 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
                   className="field-textarea"
                   value={sermon.audience_assumptions || ""}
                   onChange={e => handleUpdate({ audience_assumptions: e.target.value })}
+                  onInput={(e) => autoResize(e.target)}
+                  ref={(el) => autoResize(el)}
                   placeholder="What do you know about who's in the room?"
-                  rows={2}
+                  rows={1}
                 />
               </div>
               <div>
@@ -299,8 +304,10 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
                   className="field-textarea"
                   value={sermon.background_noise || ""}
                   onChange={e => handleUpdate({ background_noise: e.target.value })}
+                  onInput={(e) => autoResize(e.target)}
+                  ref={(el) => autoResize(el)}
                   placeholder="What's in the air — news, community events, cultural moment?"
-                  rows={2}
+                  rows={1}
                 />
               </div>
             </div>

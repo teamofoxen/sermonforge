@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
-import { getOutline } from "../utils";
+import { getOutline, autoResize } from "../utils";
 import { STEPS, PHASES } from "../constants/steps";
 import { CONTEXT_SECTIONS } from "../constants/contextSchema";
 import { sendAIMessage } from "../utils/ai";
@@ -388,9 +388,11 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
             className="ai-input"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
+            onInput={(e) => autoResize(e.target)}
+            ref={(el) => autoResize(el)}
             onKeyDown={handleInputKeyDown}
             placeholder="Ask anything… (Enter to send, Shift+Enter for new line)"
-            rows={2}
+            rows={1}
             disabled={loading}
           />
           <button

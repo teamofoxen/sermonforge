@@ -7,17 +7,11 @@ import {
   getCalendarNotes, exportStudyGuide,
 } from "../db/database";
 import { getSeasonForDate, getUpcomingSundays, toDateString } from "../utils/churchCalendar";
-import { tryParse, formatDate } from "../utils";
+import { tryParse, formatDate, autoResize } from "../utils";
 import DeleteButton from "./DeleteButton";
 import { sendAIMessage } from "../utils/ai";
 import InlineAIResponse from "./InlineAIResponse";
 
-// Auto-resize a textarea to fit its content, capped at 60vh.
-function autoResize(el) {
-  if (!el) return;
-  el.style.height = "auto";
-  el.style.height = Math.min(el.scrollHeight, window.innerHeight * 0.6) + "px";
-}
 
 const CANON_OPTIONS = [
   { value: "", label: "— Select category —" },
@@ -1574,9 +1568,11 @@ function AIChatPanel({ messages, loading, input, onInputChange, onSubmit, placeh
             resize: "none", background: "var(--parchment-warm)", color: "var(--ink)",
             outline: "none", lineHeight: "1.5",
           }}
-          rows={3}
+          rows={2}
           value={input}
           onChange={(e) => onInputChange(e.target.value)}
+          onInput={(e) => autoResize(e.target)}
+          ref={(el) => autoResize(el)}
           placeholder={placeholder}
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSubmit(e); }

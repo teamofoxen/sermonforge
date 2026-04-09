@@ -2,6 +2,25 @@
 
 ---
 
+## 2026-04-08 — Auto-expanding textareas; consolidate autoResize utility
+
+**What changed:**
+- `autoResize` (grow textarea to fit content, capped at 60vh) extracted from per-file
+  local definitions into a shared export in `src/utils.js`. Removes duplication across
+  `StudyTab.jsx`, `DeliveryTab.jsx`, and `SeriesPlanner.jsx`.
+- `autoResize` wired to three previously-fixed Pastoral Intelligence textareas in
+  `SermonWorkspace.jsx` (topic_theme, audience_assumptions, background_noise). Reduced
+  initial height from `rows={2}` to `rows={1}` — they now start compact and grow as
+  content is added.
+- `autoResize` wired to the AI chat input in `AIPanel.jsx` (`rows={2}` → `rows={1}`).
+- `autoResize` wired to the chat input in `SeriesPlanner.jsx` `AIChatPanel`
+  (`rows={3}` → `rows={2}`).
+
+**Why:** Input boxes felt too constraining for real work (user feedback 2026-04-05).
+Auto-resize lets each field start small and expand naturally without truncating content.
+
+---
+
 ## 2026-04-08 — Audit: structured worksheet feature (3 fixes)
 
 Audited the structured exegesis worksheet feature. Three corrections made:

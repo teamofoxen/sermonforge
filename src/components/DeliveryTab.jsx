@@ -1,11 +1,5 @@
 import { useState } from "react";
-import { tryParse, getOutline } from "../utils";
-
-function autoResize(el) {
-  if (!el) return;
-  el.style.height = "auto";
-  el.style.height = Math.min(el.scrollHeight, window.innerHeight * 0.6) + "px";
-}
+import { tryParse, getOutline, autoResize } from "../utils";
 
 const DEFAULT_CHECKLIST = [
   "Review manuscript or notes",

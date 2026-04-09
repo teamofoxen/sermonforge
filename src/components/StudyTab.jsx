@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from "react";
-import { getOutline, serializeOutline, getFunctionalElements, serializeFunctionalElements } from "../utils";
+import { getOutline, serializeOutline, getFunctionalElements, serializeFunctionalElements, autoResize } from "../utils";
 import { STEPS, PHASES, PHASE_SEQUENCE, STEP_SEQUENCE } from "../constants/steps";
 import { sendAIMessage } from "../utils/ai";
 import {
@@ -15,12 +15,6 @@ import InlineAIResponse from "./InlineAIResponse";
 const STEP_LABELS = ["Exegesis", "MPT / MPS", "Outline", "Functional Elements"];
 const PHASE_LABELS = ["Observe", "Interpret", "Redemptive Thread", "Implications"];
 
-// Auto-resize a textarea to fit its content, capped at 60vh.
-function autoResize(el) {
-  if (!el) return;
-  el.style.height = "auto";
-  el.style.height = Math.min(el.scrollHeight, window.innerHeight * 0.6) + "px";
-}
 
 function CollapseArrow({ open }) {
   return (
