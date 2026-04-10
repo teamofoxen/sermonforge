@@ -35,9 +35,6 @@ Thumbs.db
 # Theology source texts — large data files, not source code
 texts/
 
-# Docs and scratch directories — not part of the codebase
-docs/
-
 # Generated / empty data directory
 src/data/
 

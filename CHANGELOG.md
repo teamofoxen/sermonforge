@@ -2,6 +2,113 @@
 
 ---
 
+## 2026-04-09 — Modular documentation refactor
+
+Replaced the monolithic `CLAUDE.md` (790 lines, loaded in full every session) with a
+modular structure to reduce per-task token cost while preserving all constraints.
+
+**Structure:**
+- `CLAUDE.md` rewritten as a navigation pointer only — lists which files to load per task
+  with "Also check" annotations for non-obvious cross-file dependencies
+- `CLAUDE_original.md` — original monolithic file retained for historical reference
+- `docs/CORE.md` — authority, project identity, non-negotiable architectural boundaries,
+  absolute invariants; always loaded; kept under 2k tokens
+- `docs/RULES.md` — development rules, guardrails, design system, git workflow
+- `docs/SYSTEMS/context-pipeline.md` — 7-tier context assembly pipeline
+- `docs/SYSTEMS/ai-panel.md` — AI panel behavior, system prompt assembly, Tune-Up Engine
+- `docs/SYSTEMS/series-planner.md` — Series Planner tabs, Study Guide export, calendar engine
+- `docs/SYSTEMS/sermon-workspace.md` — Study tab structure, Pastoral Intelligence card, save flow
+- `docs/SYSTEMS/database.md` — sql.js, migrations, debounces, SERMON_COLUMNS
+- `docs/SYSTEMS/ipc.md` — IPC architecture, boundaries, channel naming
+- `docs/REFERENCE/schema.md` — full database table definitions
+- `docs/REFERENCE/ipc-channels.md` — all IPC channel specifications
+- `docs/REFERENCE/project-structure.md` — file tree, tech stack, environment paths
+
+**Cross-system dependency guards** added in CLAUDE.md pointer table and as "Cross-System
+Dependencies" sections in `context-pipeline.md`, `database.md`, and `sermon-workspace.md`
+to mitigate the risk of loading the right file but missing a constraint in another.
+
+**Corrections made during refactor:**
+- `database.md` and CLAUDE.md now correctly describe `buildUpdate()` as throwing in dev /
+  warning in prod for unknown fields — the previous description ("silent failure") was wrong.
+- `docs/` removed from `.gitignore` (was previously excluded as a scratch directory).
+
+No code files changed.
+
+---
+
+## 2026-04-09 — Remove Logos integration; documentation consolidation
+
+Two related cleanups: the Logos integration was removed from the entire project, and
+the documentation set was consolidated from six markdown files down to three.
+
+**Logos removal.** The `logos4://` URL approach never navigated to the correct passage
+(root cause never determined), and the 2026-03-29 workaround was only copying the passage
+to the clipboard — a feature the OS already provides. The integration had become more
+noise than value. Removed:
+
+- `electron/main.js` — `open-logos` IPC handler, `buildLogosUrl()`, `BOOK_ABBREVS`,
+  unused `generateId()` helper, `shell` from the Electron import
+- `electron/preload.js` — `openInLogos` contextBridge exposure
+- `src/db/database.js` — `openInLogos` wrapper export
+- `src/components/SermonWorkspace.jsx` — import, `logosCopied` state, `handleOpenLogos`
+  handler, "Open in Logos" button, clickable-passage click handler
+- `src/styles/global.css` — `.topbar-series .passage-ref` cursor/hover styles (passage
+  reference is now static text, not a button)
+- `README.md` — `LOGOS_DATA_DIR` env var, Logos Integration feature bullet
+- `CLAUDE.md` — project overview bullet, `LOGOS_DATA_DIR` env var, "Logos URL builder"
+  mention in project structure, `open-logos` IPC channel documentation, KNOWN ISSUES #1
+
+CHANGELOG history mentioning Logos is retained (historical record).
+
+**Documentation consolidation.** The project had six markdown files (CLAUDE, CHANGELOG,
+DECISIONS, FUTURE, PRIORITIES, README) with overlapping and unclear roles. Several had
+become ad-hoc dumping grounds — decisions with no condition for when they became stale,
+deferred improvements with no trigger to surface them, a priorities list nobody read.
+
+- **Deleted `DECISIONS.md`** (was 16 ADRs). Load-bearing constraints were folded inline
+  into CLAUDE.md where they get read every session: sql.js environment constraint in
+  TECH STACK, FTS rationale in DATABASE SCHEMA, 500ms debounce + localStorage fragility
+  notes in GUARDRAILS, ESM/CJS boundary as DEVELOPMENT RULE #11, build automation as
+  DEVELOPMENT RULE #10.
+- **Deleted `FUTURE.md`** (was 8 deferred-improvement entries). Nothing surfaced these
+  entries — they were bridges to cross if/when encountered. Deleting them removes the
+  maintenance burden without losing anything actionable.
+- **Deleted `PRIORITIES.md`** (created earlier in the same session by extracting NEXT
+  PRIORITIES out of CLAUDE.md, then deleted when it became clear it had no purpose
+  beyond duplicating what's already tracked in CLAUDE.md's own NEXT PRIORITIES section).
+- **Updated CLAUDE.md header** to reference only CLAUDE.md + CHANGELOG.md as required
+  session reading.
+
+Remaining documentation: CLAUDE.md (project bible, source of truth), CHANGELOG.md
+(historical record), README.md (setup + launch).
+
+---
+
+## 2026-04-09 — PassagePopup: draggable, resizable; subtitle no longer sticks
+
+- Popup is now draggable by its header bar and resizable from the bottom-right corner
+  (`resize: both` on the container; drag tracked via mousedown/mousemove on the header).
+  This makes popup placement irrelevant — the pastor can move it wherever works.
+- Phase hint subtitles ("Observe the text…" etc.) moved out of the sticky div into normal
+  flow above it. The sticky div now contains only the Show Text button, aligned right.
+- Popup initial position logic retained from prior fix (above when natural, below when sticky).
+
+## 2026-04-09 — Fix PassagePopup regression: popup showing below instead of above
+
+Root cause: the PI card auto-collapse (introduced in ba6b132) shortened the card's height,
+which moved the Show Text button's natural (non-sticky) position up by ~140px. The original
+`topAbove >= 16` threshold in PassagePopup required 420px of clear space above the button —
+met with an expanded PI card (~360px natural Y) but not with a collapsed one (~200px natural Y).
+
+Fix: replaced the fixed threshold with a sticky-detection heuristic. If `rect.top < 120`,
+the button is in its sticky position (no room above) — show the popup below. Otherwise the
+button is in natural position — show the popup above, using available space dynamically
+(`maxH = min(wantedH, rect.top - 10)`). This restores above-the-button placement at natural
+position regardless of PI card height, and gracefully falls back to below when sticky.
+
+---
+
 ## 2026-04-08 — Cross-build integration audit (4 builds)
 
 Audited the seams between four recent builds: exegesis worksheets, passage popup,
