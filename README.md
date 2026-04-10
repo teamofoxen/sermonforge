@@ -7,7 +7,6 @@ A sermon preparation workspace for pastors. Built with Electron, React, Vite, an
 1. Ensure `.env` exists in the project root with:
    ```
    ANTHROPIC_API_KEY=your-key-here
-   LOGOS_DATA_DIR=C:\path\to\Logos\Data
    ```
 
 2. Install dependencies:
@@ -28,7 +27,6 @@ A sermon preparation workspace for pastors. Built with Electron, React, Vite, an
 - **Manuscript Tab** — full editor with Sermon Tune-Up Engine (AI)
 - **Delivery Tab** — pre-sermon checklist, timing notes, post-sermon reflection, full-screen delivery view
 - **AI Panel** — Claude-powered feedback for every stage via IPC (API key stays in main process)
-- **Logos Integration** — "Open in Logos" launches `logos4://bible/...` URIs
 - **Calendar** — visual sermon schedule
 - **Illustrations** — searchable illustration library
 - **Archive** — past sermons

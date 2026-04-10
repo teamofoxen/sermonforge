@@ -250,6 +250,8 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
         "You are a biblical scholar helping a pastor formulate the main point of a text. The MPT must be historically grounded, past tense, and accurately reflect the author's original intent."
       );
       if (resp?.trim()) onUpdate({ mpt: resp.trim() });
+    } catch (e) {
+      console.error("[generateMPT]", e);
     } finally {
       setDraftLoading(null);
     }
@@ -264,6 +266,8 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
         "You are a homiletics consultant helping a pastor bridge the MPT to a present-tense sermon claim. The MPS must grow directly from the MPT — not be imposed from outside."
       );
       if (resp?.trim()) onUpdate({ mps: resp.trim() });
+    } catch (e) {
+      console.error("[generateMPS]", e);
     } finally {
       setDraftLoading(null);
     }
@@ -278,6 +282,8 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
         "You are a sermon preparation consultant helping a pastor crystallize a sermon big idea."
       );
       if (resp?.trim()) onUpdate({ big_idea: resp.trim() });
+    } catch (e) {
+      console.error("[generateBigIdea]", e);
     } finally {
       setDraftLoading(null);
     }
@@ -427,8 +433,8 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
 
           {activeSubPhase === 1 && (
             <div className="sub-phase-body">
-              <div style={{ position: "sticky", top: 0, zIndex: 10, display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", background: "var(--parchment)", paddingTop: "6px", paddingBottom: "10px", marginBottom: "4px" }}>
-                <p className="sub-phase-hint" style={{ margin: 0 }}>Observe the text — what it says before what it means. Read and reread prayerfully.</p>
+              <p className="sub-phase-hint">Observe the text — what it says before what it means. Read and reread prayerfully.</p>
+              <div style={{ position: "sticky", top: 0, zIndex: 10, display: "flex", justifyContent: "flex-end", background: "var(--parchment)", paddingBottom: "6px", marginBottom: "4px" }}>
                 <button className="show-text-btn" onMouseEnter={(e) => setPassageAnchor(e.currentTarget)}>Show Text</button>
               </div>
               <StructuredWorksheet
@@ -467,8 +473,8 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
 
           {activeSubPhase === 2 && (
             <div className="sub-phase-body">
-              <div style={{ position: "sticky", top: 0, zIndex: 10, display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", background: "var(--parchment)", paddingTop: "6px", paddingBottom: "10px", marginBottom: "4px" }}>
-                <p className="sub-phase-hint" style={{ margin: 0 }}>Find the meaning of the text. Move from observation to interpretation.</p>
+              <p className="sub-phase-hint">Find the meaning of the text. Move from observation to interpretation.</p>
+              <div style={{ position: "sticky", top: 0, zIndex: 10, display: "flex", justifyContent: "flex-end", background: "var(--parchment)", paddingBottom: "6px", marginBottom: "4px" }}>
                 <button className="show-text-btn" onMouseEnter={(e) => setPassageAnchor(e.currentTarget)}>Show Text</button>
               </div>
               <StructuredWorksheet
@@ -507,8 +513,8 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
 
           {activeSubPhase === 3 && (
             <div className="sub-phase-body">
-              <div style={{ position: "sticky", top: 0, zIndex: 10, display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", background: "var(--parchment)", paddingTop: "6px", paddingBottom: "10px", marginBottom: "4px" }}>
-                <p className="sub-phase-hint" style={{ margin: 0 }}>Find the redemptive features. How does this text point to or depend on Christ?</p>
+              <p className="sub-phase-hint">Find the redemptive features. How does this text point to or depend on Christ?</p>
+              <div style={{ position: "sticky", top: 0, zIndex: 10, display: "flex", justifyContent: "flex-end", background: "var(--parchment)", paddingBottom: "6px", marginBottom: "4px" }}>
                 <button className="show-text-btn" onMouseEnter={(e) => setPassageAnchor(e.currentTarget)}>Show Text</button>
               </div>
               <StructuredWorksheet
@@ -540,6 +546,8 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                           const next = { ...redData, [REDEMPTIVE_SUMMARY_KEY]: resp.trim() };
                           onUpdate({ redemptive_thread: serializeStructuredField(next) });
                         }
+                      } catch (e) {
+                        console.error("[redemptive synthesize]", e);
                       } finally { setDraftLoading(null); }
                     }}
                     style={{ fontSize: "12px" }}
@@ -589,8 +597,8 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
 
           {activeSubPhase === 4 && (
             <div className="sub-phase-body">
-              <div style={{ position: "sticky", top: 0, zIndex: 10, display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", background: "var(--parchment)", paddingTop: "6px", paddingBottom: "10px", marginBottom: "4px" }}>
-                <p className="sub-phase-hint" style={{ margin: 0 }}>Concluding implications — how does this passage apply to us today?</p>
+              <p className="sub-phase-hint">Concluding implications — how does this passage apply to us today?</p>
+              <div style={{ position: "sticky", top: 0, zIndex: 10, display: "flex", justifyContent: "flex-end", background: "var(--parchment)", paddingBottom: "6px", marginBottom: "4px" }}>
                 <button className="show-text-btn" onMouseEnter={(e) => setPassageAnchor(e.currentTarget)}>Show Text</button>
               </div>
 
@@ -649,6 +657,8 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                           const next = { ...impData, [IMPLICATIONS_COMPILED_KEY]: resp.trim() };
                           onUpdate({ implications: serializeStructuredField(next) });
                         }
+                      } catch (e) {
+                        console.error("[implications compile]", e);
                       } finally { setDraftLoading(null); }
                     }}
                     style={{ fontSize: "12px" }}

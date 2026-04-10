@@ -38,5 +38,8 @@ texts/
 # Generated / empty data directory
 src/data/
 
+# User-generated feedback files
+Feedback/
+
 # Obsidian vault config — unrelated to the app
 .obsidian/

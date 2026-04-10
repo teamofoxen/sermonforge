@@ -1,7 +1,7 @@
 # CLAUDE.md — SermonForge Project Bible
 
 Read this file at the start of every session before touching any code.
-Also read CHANGELOG.md and DECISIONS.md before making any changes.
+Also read CHANGELOG.md before making any changes.
 
 ---
 
@@ -29,7 +29,6 @@ The core purpose is to give the pastor a single structured environment that:
 - Provides an AI assistant (Claude) that is context-aware at each prep step
 - Includes a Tune-Up Engine that audits completed manuscripts
 - Manages a preaching calendar, illustration library, and sermon archive
-- Connects to Logos Bible Software for passage navigation
 
 The user is not a developer. All tooling decisions must prioritize
 simplicity. Terminal usage should be minimized once the app is stable.
@@ -69,7 +68,7 @@ Reference and archive features (Illustrations, Sermon Library, Archive) are reso
 - Electron 31 — desktop shell
 - React 18 — UI framework
 - Vite 5 — dev server and bundler (config: vite.config.mjs)
-- sql.js — SQLite in WASM (NOT better-sqlite3 — see DECISIONS.md)
+- sql.js — SQLite in WASM (NOT better-sqlite3 — native compilation blocked: Node 24 + VS2026 environment; environment constraint, not permanent architectural preference)
 - @anthropic-ai/sdk — AI calls via Anthropic API
 - dotenv — environment variable loading
 - Node 24 — runtime
@@ -81,7 +80,6 @@ Reference and archive features (Illustrations, Sermon Library, Archive) are reso
 
 .env file lives at project root (never commit this file):
   ANTHROPIC_API_KEY=sk-ant-...
-  LOGOS_DATA_DIR=C:\Users\rossa\AppData\Local\Logos\Data\pktv5zta.nam
 
 User's OneDrive path: C:\Users\rossa\OneDrive
 Project root: C:\Users\rossa\OneDrive\SermonForge
@@ -101,8 +99,7 @@ SermonForge/
 ├── index.html             — Electron renderer entry point
 ├── .env                   — API keys and paths (never commit)
 ├── electron/
-│   ├── main.js            — Electron main process, IPC handlers,
-│   │                        DB init, Logos URL builder
+│   ├── main.js            — Electron main process, IPC handlers, DB init
 │   ├── ai.js              — Anthropic client + ai-message IPC handler
 │   └── preload.js         — contextBridge API exposed to renderer
 └── src/
@@ -244,6 +241,7 @@ Table: library
 
 Table: library_fts  — FTS4 virtual table (FTS5 attempted first)
   id, title, passage, manuscript_text
+  — keyword search chosen over vector embeddings: no embedding API in Anthropic, external model adds dependency/cost. Revisit if theme-based search becomes needed.
 
 Table: meta
   key   TEXT PRIMARY KEY
@@ -264,10 +262,6 @@ channels. The API key never touches the renderer.
   Database operations use named per-operation IPC channels (e.g. db-getAllSermons,
   db-getSermonById). All handlers are implemented in electron/main.js. No raw SQL
   is accepted from the renderer.
-
-  "open-logos"
-    receives: passage string (e.g. "Galatians 1:1-10")
-    returns:  { success: true } — copies passage to clipboard, opens Logos
 
   "library-status"
     receives: nothing
@@ -695,18 +689,6 @@ Study Guide export:
 
 ---
 
-## KNOWN ISSUES
-
-1. LOGOS NAVIGATION (WORKAROUND IN PLACE — NOT FULLY RESOLVED)
-   The logos4:// URL approach opens Logos but does not navigate to the
-   correct passage. Root cause not determined. Workaround implemented
-   2026-03-29: "Open in Logos" button now copies the passage text to the
-   clipboard and opens Logos via shell.openExternal("logos4:"). User
-   pastes in Logos manually. Button label confirms "✓ Copied — paste in
-   Logos" for 4 seconds. buildLogosUrl() and BOOK_ABBREVS retained in
-   main.js in case URL navigation is revisited.
-
----
 
 ## GIT WORKFLOW
 
@@ -762,6 +744,10 @@ When work is complete and stable:
     updated installer. Output goes to:
     C:\Users\rossa\OneDrive\SermonForgeBuilds\
     Do not wait to be asked — build is part of finishing a task.
+    Build notes: `base: "./"` in vite.config.mjs is required (Electron loads from file://, not http://).
+    electron-builder: sql-wasm.wasm must be in asarUnpack; .env must be in extraResources.
+11. `src/utils/churchCalendar.js` is ESM — it cannot be imported from `electron/main.js` (CommonJS).
+    Any main-process feature needing liturgical season logic must inline it.
 
 ---
 
@@ -780,6 +766,7 @@ When work is complete and stable:
 ### No Duplication
 - Reuse existing helpers; do not duplicate shared logic or constants
 - Check for an existing utility before writing a new one
+- `createOutlinePoint(text)` in `src/utils.js` is the only place outline points are created — it assigns the stable UUID that `functional_elements` keys depend on. Never construct `{id, text}` objects inline.
 
 ### Memory / AI Feedback Loop
 - `phrasePatterns` — pastor's own rhetorical patterns extracted from manuscript. Used in adaptive hints.
@@ -791,6 +778,8 @@ When work is complete and stable:
 ### Change Discipline
 - Make minimal, surgical changes
 - Do not introduce new patterns unnecessarily
+- The 500ms debounce on `saveDb()` is a deliberate trade-off, not a bug. Do not reduce it or add synchronous writes — sql.js serializes the entire DB on every write and doing so on every keystroke would make the UI sluggish.
+- Pastor memory in `localStorage` is intentional but fragile — it does not survive Electron major version upgrades. Do not move it to the DB without considering the IPC round-trip cost on every AI call.
 
 ### Pre-Completion Check
 Before finishing any change verify:
@@ -800,18 +789,3 @@ Before finishing any change verify:
 
 ---
 
-## NEXT PRIORITIES
-
-Series planning system is live including Book Study, Study Guide export, and contextual
-AI assist at every tab. Remaining planned work:
-
-Phase 2 (series planning — remaining):
-- Calendar notes UI (add/manage special dates from within the app)
-- Dashboard "Active Series" cards using new series fields
-  (series_motivation, redemptive_context, emerging_big_idea)
-
-Possible future work:
-- Illustration linking (mark an illustration as used in a specific sermon)
-- Full-text search across sermon content (manuscript, notes)
-- Custom app icon
-- Code signing certificate (removes Smart App Control friction on new machines)

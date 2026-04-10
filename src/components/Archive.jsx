@@ -7,11 +7,15 @@ export default function Archive({ onOpenSermon }) {
   const [sermons, setSermons] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     getAllSermons()
       .then((data) => setSermons(data.filter((s) => s.stage === "archived")))
-      .catch(console.error)
+      .catch((e) => {
+        console.error("[Archive] load failed:", e);
+        setLoadError(true);
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -47,6 +51,10 @@ export default function Archive({ onOpenSermon }) {
 
         {loading ? (
           <div style={{ color: "var(--ink-ghost)", fontStyle: "italic" }}>Loading…</div>
+        ) : loadError ? (
+          <div style={{ color: "var(--crimson-soft)", fontStyle: "italic", padding: "40px 0", textAlign: "center" }}>
+            Failed to load archived sermons. Check the console for details.
+          </div>
         ) : filtered.length === 0 ? (
           <div style={{ color: "var(--ink-ghost)", fontStyle: "italic", padding: "40px 0", textAlign: "center" }}>
             {search ? "No archived sermons match your search." : "No archived sermons yet."}

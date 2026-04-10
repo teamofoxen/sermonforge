@@ -51,9 +51,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // ── Dashboard ─────────────────────────────────────────────────────────────
   getRecentSermons: (limit) => ipcRenderer.invoke("db-getRecentSermons", limit),
 
-  // ── Logos ─────────────────────────────────────────────────────────────────
-  openInLogos: (passage) => ipcRenderer.invoke("open-logos", passage),
-
   // ── Export ───────────────────────────────────────────────────────────────────
   exportStudyGuide: (seriesId) => ipcRenderer.invoke("series-export-study-guide", seriesId),
 

@@ -195,13 +195,6 @@ body {
   font-family: 'JetBrains Mono', monospace;
   font-size: 11px;
   color: var(--gold);
-  cursor: pointer;
-  text-decoration: none;
-}
-
-.topbar-series .passage-ref:hover {
-  color: var(--gold-bright);
-  text-decoration: underline;
 }
 
 .topbar-title {
@@ -363,10 +356,10 @@ button {
 }
 
 .stage-planning { background: rgba(74,103,65,0.12); color: var(--sage); }
-.stage-study { background: rgba(214,122,0,0.12); color: #d67a00; }
+.stage-study { background: rgba(214,122,0,0.12); color: var(--stage-study); }
 .stage-outline { background: rgba(44,62,80,0.12); color: var(--slate); }
 .stage-writing { background: rgba(139,26,26,0.12); color: var(--crimson); }
-.stage-ready { background: rgba(34,139,34,0.12); color: #228b22; }
+.stage-ready { background: rgba(34,139,34,0.12); color: var(--stage-ready); }
 .stage-archived { background: rgba(168,153,138,0.15); color: var(--ink-ghost); }
 
 /* ── Cards ───────────────────────────────────────────────────────────────── */
@@ -1789,6 +1782,9 @@ button {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  resize: both;
+  min-width: 320px;
+  min-height: 160px;
 }
 
 .passage-popup-header {

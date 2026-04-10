@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell } = require("electron");
+const { app, BrowserWindow, ipcMain } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const os = require("os");
@@ -467,11 +467,6 @@ function buildFtsQuery(userQuery) {
     .filter(w => w.length > 2 && !stopWords.has(w));
   if (words.length === 0) return null;
   return [...new Set(words)].slice(0, 8).map(w => `"${w}"`).join(" OR ");
-}
-
-// ── Seed data ─────────────────────────────────────────────────────────────
-function generateId() {
-  return randomUUID();
 }
 
 // seedDatabase() removed — no longer needed (real data in place)
@@ -1005,18 +1000,6 @@ ipcMain.handle("theology-get-chunks", async (event, { ids, maxChars = 600 }) => 
     console.error("Theology get chunks error:", e.message);
     return [];
   }
-});
-
-ipcMain.handle('open-logos', async (event, passage) => {
-  const { clipboard } = require('electron');
-  clipboard.writeText(passage);
-  try {
-    await shell.openExternal('logos4:');
-  } catch (e) {
-    console.error("[Logos] shell.openExternal failed:", e.message);
-    return { success: false };
-  }
-  return { success: true };
 });
 
 // ── Study Guide Export ────────────────────────────────────────────────────────
@@ -1602,51 +1585,6 @@ ipcMain.handle('passage-fetch', async (_, passage) => {
 
   return result;
 });
-
-// ── Logos URL builder ────────────────────────────────────────────────────────
-const BOOK_ABBREVS = {
-  Genesis: "Gen", Exodus: "Exo", Leviticus: "Lev", Numbers: "Num",
-  Deuteronomy: "Deu", Joshua: "Jos", Judges: "Jdg", Ruth: "Rut",
-  "1 Samuel": "1Sa", "2 Samuel": "2Sa", "1 Kings": "1Ki", "2 Kings": "2Ki",
-  "1 Chronicles": "1Ch", "2 Chronicles": "2Ch", Ezra: "Ezr", Nehemiah: "Neh",
-  Esther: "Est", Job: "Job", Psalms: "Psa", Psalm: "Psa", Proverbs: "Pro",
-  Ecclesiastes: "Ecc", "Song of Solomon": "Sol", Isaiah: "Isa",
-  Jeremiah: "Jer", Lamentations: "Lam", Ezekiel: "Eze", Daniel: "Dan",
-  Hosea: "Hos", Joel: "Joe", Amos: "Amo", Obadiah: "Oba", Jonah: "Jon",
-  Micah: "Mic", Nahum: "Nah", Habakkuk: "Hab", Zephaniah: "Zep",
-  Haggai: "Hag", Zechariah: "Zec", Malachi: "Mal",
-  Matthew: "Mat", Mark: "Mar", Luke: "Luk", John: "Joh", Acts: "Act",
-  Romans: "Rom", "1 Corinthians": "1Co", "2 Corinthians": "2Co",
-  Galatians: "Gal", Ephesians: "Eph", Philippians: "Php", Colossians: "Col",
-  "1 Thessalonians": "1Th", "2 Thessalonians": "2Th", "1 Timothy": "1Ti",
-  "2 Timothy": "2Ti", Titus: "Tit", Philemon: "Phm", Hebrews: "Heb",
-  James: "Jas", "1 Peter": "1Pe", "2 Peter": "2Pe", "1 John": "1Jo",
-  "2 John": "2Jo", "3 John": "3Jo", Jude: "Jud", Revelation: "Rev",
-};
-
-function buildLogosUrl(passage) {
-  try {
-    const match = passage.match(
-      /^([\w\s]+?)\s+(\d+):(\d+)(?:-(\d+)(?::(\d+))?)?$/
-    );
-    if (!match) return `logos4://bible/${encodeURIComponent(passage)}`;
-
-    const [, book, chapter, verseStart, endChapter, verseEnd] = match;
-    const abbrev = BOOK_ABBREVS[book.trim()] || book.trim();
-
-    if (endChapter) {
-      if (verseEnd) {
-        // cross-chapter: e.g. Matthew 5:1-7:12 → Mat.5.1-Mat.7.12
-        return `logos4://bible/esv/${abbrev}.${chapter}.${verseStart}-${abbrev}.${endChapter}.${verseEnd}`;
-      }
-      // single-chapter range: e.g. Galatians 1:1-10 → Gal.1.1-Gal.1.10
-      return `logos4://bible/esv/${abbrev}.${chapter}.${verseStart}-${abbrev}.${chapter}.${endChapter}`;
-    }
-    return `logos4://bible/esv/${abbrev}.${chapter}.${verseStart}`;
-  } catch {
-    return `logos4://bible/${encodeURIComponent(passage)}`;
-  }
-}
 
 // ── App lifecycle ────────────────────────────────────────────────────────────
 app.whenReady().then(async () => {

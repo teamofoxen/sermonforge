@@ -931,6 +931,6 @@ export function buildContext({ sermon, step, libraryChunks = [], theologyChunks 
     normalized.mpt     && `MPT: ${normalized.mpt}`,
   ].filter(Boolean);
   return fallbackLines.length > 0
-    ? `[PASSAGE & MPT]\n${fallbackLines.join("\n")}`
+    ? `${CONTEXT_SECTIONS.PASSAGE}\n${fallbackLines.join("\n")}`
     : "";
 }

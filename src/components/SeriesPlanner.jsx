@@ -369,6 +369,8 @@ function BookStudyTab({ series, onChange, drawerOpen, onOpenDrawer, onCloseDrawe
         "You are helping a pastor crystallize a series big idea from their book study work."
       );
       if (resp?.trim()) onChange("emerging_big_idea", resp.trim());
+    } catch (e) {
+      console.error("[generateWorkingBigIdea]", e);
     } finally {
       setDraftLoading(false);
     }
@@ -520,6 +522,8 @@ function OverviewTab({ series, onChange, drawerOpen, onOpenDrawer, onCloseDrawer
         "You are a sermon series planning assistant. You help pastors craft focused, theologically precise series concepts."
       );
       if (resp?.trim()) onChange("big_idea", resp.trim());
+    } catch (e) {
+      console.error("[generateBigIdea]", e);
     } finally {
       setAiLoading(null);
     }
@@ -534,6 +538,8 @@ function OverviewTab({ series, onChange, drawerOpen, onOpenDrawer, onCloseDrawer
         "You are a biblical scholar and preaching consultant helping a pastor develop a sermon series."
       );
       if (resp?.trim()) onChange("overview", resp.trim());
+    } catch (e) {
+      console.error("[generateOverview]", e);
     } finally {
       setAiLoading(null);
     }
@@ -551,6 +557,9 @@ function OverviewTab({ series, onChange, drawerOpen, onOpenDrawer, onCloseDrawer
       const context = `Series: "${series.title}" | Passage: ${series.passage_range || "—"} | Big Idea: ${series.big_idea || "—"} | Canon: ${series.canon_category || "—"}`;
       const resp = await sendAIMessage(newMessages, `You are helping a pastor plan a sermon series. Current series context: ${context}. Answer questions about the passage, theme, structure, or anything related to planning this series.`);
       setAiMessages([...newMessages, { role: "assistant", content: resp }]);
+    } catch (e) {
+      console.error("[OverviewTab chat]", e);
+      setAiMessages([...newMessages, { role: "assistant", content: "Something went wrong. Please try again." }]);
     } finally {
       setChatLoading(false);
     }
@@ -739,6 +748,8 @@ function StructureTab({ series, sections, onChange, onSectionsChange, seriesId, 
         "You are a biblical scholar providing a structural outline of a biblical passage for sermon series planning."
       );
       if (resp?.trim()) onChange("structural_outline", resp.trim());
+    } catch (e) {
+      console.error("[generateOutline]", e);
     } finally {
       setAiLoading(null);
     }
@@ -784,6 +795,9 @@ function StructureTab({ series, sections, onChange, onSectionsChange, seriesId, 
       const context = `Series: "${series.title}" | Passage: ${series.passage_range || "—"}`;
       const resp = await sendAIMessage(newMessages, `You are helping a pastor plan the structure of a sermon series. Context: ${context}. Help with passage divisions, thematic organization, grammatical structure, and section planning.`);
       setAiMessages([...newMessages, { role: "assistant", content: resp }]);
+    } catch (e) {
+      console.error("[StructureTab chat]", e);
+      setAiMessages([...newMessages, { role: "assistant", content: "Something went wrong. Please try again." }]);
     } finally {
       setChatLoading(false);
     }
@@ -1005,6 +1019,9 @@ function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpen
       const context = `Series: "${series.title}" | Passage: ${series.passage_range || "—"} | Existing slots: ${sermons.map(s => s.passage || s.title).filter(Boolean).join(", ") || "none yet"}`;
       const resp = await sendAIMessage(newMessages, `You are helping a pastor divide a biblical book into sermon-sized units. Context: ${context}. Suggest natural passage breaks, sermon titles, and big ideas. Be specific about verse ranges.`);
       setAiMessages([...newMessages, { role: "assistant", content: resp }]);
+    } catch (e) {
+      console.error("[SlotsTab chat]", e);
+      setAiMessages([...newMessages, { role: "assistant", content: "Something went wrong. Please try again." }]);
     } finally {
       setChatLoading(false);
     }
@@ -1341,6 +1358,9 @@ function CalendarTab({ series, sections, sermons, calNotes, onChange, onSermonsC
         `You are helping a pastor schedule a sermon series. Series: "${series.title}" starting ${series.start_date || "TBD"}.\nCurrent schedule:\n${scheduleContext}${noteContext}\n\nAdvise on scheduling adjustments. If the pastor asks to skip a week or rearrange slots, explain what the adjusted schedule would look like (list it out). Do not modify anything — just advise clearly.`
       );
       setAiMessages([...newMessages, { role: "assistant", content: resp }]);
+    } catch (e) {
+      console.error("[CalendarTab chat]", e);
+      setAiMessages([...newMessages, { role: "assistant", content: "Something went wrong. Please try again." }]);
     } finally {
       setChatLoading(false);
     }

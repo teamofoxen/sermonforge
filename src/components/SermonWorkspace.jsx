@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 // useRef is used for pendingMessageId — a stable counter so repeated identical
 // prompts each produce a distinct object reference and always trigger the effect.
 import { useDebounce } from "../utils/hooks";
-import { getSermonById, updateSermon, deleteSermon, getSeriesById, getSectionsBySeries, openInLogos } from "../db/database";
+import { getSermonById, updateSermon, deleteSermon, getSeriesById, getSectionsBySeries } from "../db/database";
 import { updateMemory, extractOutlinePattern, extractPhrasePatterns } from "../utils/memory";
 import { autoResize } from "../utils";
 import DeleteButton from "./DeleteButton";
@@ -21,7 +21,6 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
   const [activeStep, setActiveStep] = useState(null);
   const [loading, setLoading] = useState(true);
   const [aiLoading, setAiLoading] = useState(false);
-  const [logosCopied, setLogosCopied] = useState(false);
   const [pendingMessage, setPendingMessage] = useState(null);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -129,17 +128,6 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
     onClose();
   }
 
-  const handleOpenLogos = async () => {
-    if (!sermon?.passage) return;
-    try {
-      await openInLogos(sermon.passage);
-      setLogosCopied(true);
-      setTimeout(() => setLogosCopied(false), 4000);
-    } catch (err) {
-      console.error('Logos launch failed:', err);
-    }
-  };
-
   function handleAI(prompt, systemPrompt, options = {}) {
     if (options.openDrawer) setDrawerOpen(true);
     pendingIdRef.current += 1;
@@ -196,13 +184,7 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
               )}
               {sermon.series_title && sermon.passage && <span> · </span>}
               {sermon.passage && (
-                <span
-                  className="passage-ref"
-                  onClick={handleOpenLogos}
-                  title="Open in Logos"
-                >
-                  {sermon.passage}
-                </span>
+                <span className="passage-ref">{sermon.passage}</span>
               )}
             </div>
             <div className="topbar-title">{sermon.title}</div>
@@ -212,16 +194,6 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
         <div className="topbar-right">
           <DeleteButton onDelete={handleDelete} />
 
-          {sermon.passage && (
-            <button
-              className="btn-ghost btn-sm"
-              onClick={handleOpenLogos}
-              title="Copy passage to clipboard and open Logos"
-              style={{ fontFamily: 'var(--font-mono, monospace)', fontSize: '12px' }}
-            >
-              {logosCopied ? '✓ Copied — paste in Logos' : 'Open in Logos'}
-            </button>
-          )}
           <button
             onClick={() => setShowHowItWorks(true)}
             style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ink-ghost)", fontSize: "12px", padding: "4px 8px", fontFamily: "'Crimson Pro', serif" }}

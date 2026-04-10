@@ -52,9 +52,6 @@ export const getRecentSermons   = (limit = 3)  => api.getRecentSermons(limit);
 // ── Bible passage viewer ──────────────────────────────────────────────────
 export const fetchPassage = (passage) => api.fetchPassage(passage);
 
-// ── Logos ─────────────────────────────────────────────────────────────────────
-export const openInLogos = (passage) => api.openInLogos(passage);
-
 // ── Export ────────────────────────────────────────────────────────────────────
 export const exportStudyGuide = (seriesId) => api.exportStudyGuide(seriesId);
 
