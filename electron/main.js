@@ -759,7 +759,7 @@ ipcMain.handle("db-getRecentSermons", (_, limit = 3) =>
     `SELECT s.*, sr.title as series_title, sr.color as series_color
      FROM sermons s
      LEFT JOIN series sr ON s.series_id = sr.id
-     WHERE s.stage != 'archived' AND s.stage != 'planning'
+     WHERE s.stage != 'archived'
      ORDER BY s.updated_at DESC, s.created_at DESC
      LIMIT ?`,
     [limit]
