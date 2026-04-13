@@ -37,8 +37,11 @@ every stage.*
   in `electron/main.js`. No SQL is accepted from the renderer.
 - **No direct `window.electronAPI` outside wrapper modules.** Components use `src/db/database.js`
   exports; they never call `window.electronAPI` directly.
-- **sql.js, not better-sqlite3.** Native compilation is blocked (Node 24 + VS2026 environment).
-  This is an environment constraint, not a permanent architectural preference.
+- **sql.js for sermonforge.db; better-sqlite3 + sqlite-vec for theology.db.** The main database
+  uses sql.js (WASM). Theology uses better-sqlite3 (native) with the sqlite-vec extension for
+  vector semantic search. Native modules must be rebuilt for Electron's ABI after install:
+  `npx @electron/rebuild -m node_modules/better-sqlite3`. Both native packages are in
+  `asarUnpack` in `package.json`.
 - **ESM/CJS boundary.** `src/utils/churchCalendar.js` is ESM and cannot be imported from
   `electron/main.js` (CommonJS). Any main-process feature needing liturgical season logic
   must inline it.

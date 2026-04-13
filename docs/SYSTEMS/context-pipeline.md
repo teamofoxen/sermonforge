@@ -48,6 +48,11 @@ Gates which tiers are active for the current step. Tier 7 / `pastoralContext` is
 regardless of step (gated by content, not step). Other tiers are activated based on what is
 relevant to the current preparation stage.
 
+**Theology toggle override:** When `theologyChunks` are present (user explicitly enabled the
+theology toggle), `buildTiers()` overrides `inc.theology = true` regardless of what
+`resolveIncludes` returns. The toggle is the user's explicit intent signal and bypasses
+step gating.
+
 ### 4. assembleContext(activeTiers)
 Formats active tiers into labeled sections in this order:
 ```

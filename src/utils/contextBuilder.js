@@ -426,6 +426,10 @@ function resolveIncludes(step) {
 export function buildTiers({ normalized, compressed, libraryChunks = [], theologyChunks = [], step }) {
   const inc = resolveIncludes(step);
 
+  // Theology toggle override: when chunks were fetched (user explicitly enabled
+  // the theology toggle), bypass step gating so they always reach context.
+  if (theologyChunks.length > 0) inc.theology = true;
+
   // Tier 1 — always included. Budget split 60/40 so both fields always survive.
   const t1PassageBudget = Math.floor(TIER_LIMITS.tier1 * 0.6);
   const t1MptBudget     = TIER_LIMITS.tier1 - t1PassageBudget;

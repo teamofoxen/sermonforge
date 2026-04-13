@@ -2,6 +2,132 @@
 
 ---
 
+## 2026-04-13 — feat: theology semantic search — better-sqlite3 + sqlite-vec + transformers.js
+
+Replaced sql.js with better-sqlite3 for theology.db to enable sqlite-vec vector search extension. Theology search now uses semantic (vector) search when embeddings are available, with automatic fallback to FTS4 when not. The main sermonforge.db remains on sql.js — zero risk to the core app.
+
+**Architecture:**
+- theology.db loaded via better-sqlite3 (native, read-only) with sqlite-vec extension
+- Vector embeddings stored in a `theology_vec` vec0 virtual table (384-dim, all-MiniLM-L6-v2)
+- Query-time embedding via @xenova/transformers, lazy-loaded on first semantic search
+- Automatic fallback to FTS4 if theology_vec has no embeddings or model fails to load
+
+**Changes:**
+- `electron/main.js` — theology loader rewritten for better-sqlite3 + sqlite-vec; `queryTheology()` simplified to `.all()` API; `ensureTheologyEmbedder()` added for lazy model loading; `theology-search` handler now prefers semantic search when vec0 is available; `theology-status` reports `semantic: true/false`
+- `package.json` — added better-sqlite3, sqlite-vec, @xenova/transformers; `asarUnpack` updated for native modules
+- `docs/CORE.md` — updated sql.js constraint to reflect dual-driver architecture
+- `build_theology_vectors.js` — one-time script (run via `npx electron build_theology_vectors.js`) to embed all 160k theology chunks into theology_vec
+
+**Setup:**
+1. `npm install`
+2. `npx @electron/rebuild -m node_modules/better-sqlite3`
+3. `npx electron build_theology_vectors.js` (30–60 min, one-time)
+
+---
+
+## 2026-04-13 — fix: theology search relevance — AND semantics, larger pool, full-text scoring
+
+Three root causes identified for "fear of the Lord" returning Confessions noise instead of doctrinal material:
+1. OR semantics made "lord" a flood term — every chunk with "O Lord" qualified, filling the 20-candidate pool entirely from Vol 01
+2. Candidate pool (limit × 4 = 20) too small — 651 Augustine chunks match "fear"+"lord"; FTS4's ranking exhausted Vol 01 before any other volume got a slot
+3. Scoring on FTS4 snippet (50 tokens) — snippet centered on whichever "lord" hit FTS4 chose, not the "fear of the Lord" phrase; exact-phrase chunks scored below "O Lord" chunks
+
+Fix: AND semantics (FTS4 space = AND, not " OR "), candidate pool raised to limit × 30, `substr(t.text, 1, 2000)` fetched alongside snippet and used for scoring only (snippet still sent to Claude). `full_text` stripped from returned results before leaving the handler.
+
+**Changes:**
+- `electron/main.js` — `theology-search` handler: OR → AND join, `limit * 4` → `limit * 30`, added `full_text` to SELECT for scoring, stripped from return
+
+---
+
+## 2026-04-13 — fix: theology chunks now reach Claude context at every step
+
+`resolveIncludes()` only allowed theology at `REDEMPTIVE_THREAD` and `manuscript` steps. When the user toggled theology on from any other step, chunks were fetched and scored correctly but discarded by `buildTiers()` before reaching Claude.
+
+Fix: `buildTiers()` now overrides `inc.theology = true` whenever `theologyChunks.length > 0`. The presence of chunks means the user explicitly enabled the theology toggle — that intent signal bypasses step gating. Also removed 4 debug `console.log` statements from `electron/main.js` and `AIPanel.jsx`.
+
+**Changes:**
+- `src/utils/contextBuilder.js` — theology toggle override in `buildTiers()`: `if (theologyChunks.length > 0) inc.theology = true`
+- `electron/main.js` — removed 3 debug logs from `theology-search` handler
+- `src/components/AIPanel.jsx` — removed 1 debug log from theology response path
+
+---
+
+## 2026-04-13 — fix: theology search — expand stop words to remove noise terms
+
+Common question verbs and prepositions ("say", "does", "about", "tell", "know", "like", etc.) were passing the stop word filter and matching editorial/introductory preamble text, causing all 5 returned chunks to be from Vol 01 rather than spanning theologically relevant content. Expanded `buildFtsQuery` stop words to strip these terms.
+
+**Changes:**
+- `electron/main.js` — `buildFtsQuery` stop words list expanded with ~25 additional terms
+
+---
+
+## 2026-04-13 — fix: theology search — author filtering via SQL WHERE instead of FTS column filter
+
+FTS4 column filters (`author:term`) silently return 0 rows when combined with OR expressions. Plain author-name terms in FTS MATCH return footnote references across other works, not actual author chunks. Fix: use a regular SQL `WHERE t.author = ?` clause on the joined theology table for author filtering, and FTS MATCH only for content terms.
+
+**Changes:**
+- `electron/main.js` — theology-search handler rewritten to two paths:
+  - Author detected: `WHERE theology_fts MATCH [content terms] AND t.author = [author name]`
+  - No author: `WHERE theology_fts MATCH [content terms]`
+  - `THEOLOGY_AUTHORS` map now used to resolve keyword → display name for the SQL WHERE
+
+---
+
+## 2026-04-13 — fix: theology search — FTS4 alias incompatibility
+
+FTS4 virtual tables do not support table aliases — `WHERE fts MATCH` and `snippet(fts, ...)` both throw "no such column". All references must use the literal table name.
+
+**Changes:**
+- `electron/main.js` — removed alias from `theology_fts` query; all references now use `theology_fts` directly (`FROM theology_fts`, `JOIN theology t ON theology_fts.rowid`, `WHERE theology_fts MATCH`, `snippet(theology_fts, ...)`)
+
+---
+
+## 2026-04-13 — fix: theology search — snippet() alias bug; add quote instruction
+
+**Changes:**
+- `electron/main.js` — fixed `snippet(theology_fts, ...)` → `snippet(fts, ...)` (alias must match) and `WHERE theology_fts MATCH` → `WHERE fts MATCH`; the previous form threw silently, returning empty results and suppressing source attribution
+- `src/components/AIPanel.jsx` — when theology chunks are present, appends a quote instruction to the system prompt asking Claude to include at least one direct quotation with source attribution
+
+---
+
+## 2026-04-13 — feat: theology search — phrase detection, fetch-more rerank, source attribution
+
+Three further improvements to theology search quality and transparency.
+
+**Changes:**
+- `electron/main.js`:
+  - Phrase detection: user-quoted substrings extracted as FTS4 phrase terms; adjacent content-word pairs in the query also promoted to phrases (e.g. "total depravity")
+  - Fetch-more rerank: fetches 4× the requested limit from FTS4, scores each candidate by term frequency across author + work + text_chunk in JS, returns the top `limit` results
+  - `scoreTheologyChunk()` helper added above the handler
+- `src/components/AIPanel.jsx`:
+  - Theology path now deduplicates hits by author+work and attaches them as `sources` on the assistant message object
+  - Sources rendered below each theology-backed response: "Sources consulted: Author — *Work* · …"
+
+---
+
+## 2026-04-13 — feat: theology search — stop words, snippet(), author detection
+
+Three search quality improvements on top of the FTS4 index.
+
+**Changes:**
+- `electron/main.js` — `theology-search` handler updated:
+  - Stop words stripped via existing `buildFtsQuery()` (no duplication)
+  - Known author names detected in query and converted to `author:"name"` FTS4 column constraints; author keywords removed from general content terms so they don't pollute matching
+  - `substr(t.text, 1, 600)` replaced with FTS4 `snippet()` — returns the most relevant excerpt (50 tokens) rather than always the first 600 chars
+  - `THEOLOGY_AUTHORS` map added above handler — maps lowercase keywords to author values in theology.db
+
+---
+
+## 2026-04-13 — feat: theology search — FTS4 index + min term length fix
+
+Replaced full-table LIKE scan with FTS4 full-text search for significantly faster theology queries. Short theological terms ("sin", "joy", "law", "God") now return results correctly.
+
+**Changes:**
+- `build_theology_fts.py` (new) — one-time script to add FTS4 virtual table (`theology_fts`) to `theology.db`; run once on the machine, not part of the app
+- `electron/main.js` — `theology-search` handler rewritten to use `theology_fts MATCH` query joined back to `theology` table; minimum term length lowered from 4 to 3 characters; max terms raised from 6 to 8
+
+---
+
 ## 2026-04-12 — fix: dashboard — exclude demo sermons from "Pick up where you left off"
 
 Demo sermons no longer appear in the recent-sermons section on the dashboard.

@@ -130,9 +130,17 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
         const history = [...messagesRef.current, userMsg].map(m => ({ role: m.role, content: m.content }));
         // Build system prompt here (theology path bypasses sendMessage) — no external
         // systemPrompt so there is no doubling risk.
-        const systemPrompt = buildSystemPrompt(step, sermon?.id);
+        // When library chunks are present, ask Claude to include at least one direct quote.
+        const basePrompt = buildSystemPrompt(step, sermon?.id);
+        const systemPrompt = theologyChunks.length > 0
+          ? basePrompt + "\n\nWhen theology library sources are provided in context, include at least one brief direct quotation with its source attribution."
+          : basePrompt;
         const response = await sendAIMessage(history, systemPrompt);
-        setMessages(prev => [...prev, { role: "assistant", content: response || "Something went wrong. Please try again." }]);
+        // Deduplicate sources by author+work for the attribution display
+        const sources = hits?.length
+          ? [...new Map(hits.map(h => [`${h.author}|||${h.work}`, { author: h.author, work: h.work }])).values()]
+          : [];
+        setMessages(prev => [...prev, { role: "assistant", content: response || "Something went wrong. Please try again.", sources }]);
         if (response) captureResponsePatterns(response, step);
       } catch (err) {
         setMessages(prev => [...prev, { role: "assistant", content: `Error: ${err.message}` }]);
@@ -341,6 +349,14 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
               {msg.role === "assistant"
                 ? <div className="ai-markdown"><ReactMarkdown>{msg.content}</ReactMarkdown></div>
                 : msg.content}
+              {msg.role === "assistant" && msg.sources?.length > 0 && (
+                <div style={{ marginTop: "8px", paddingTop: "8px", borderTop: "1px solid var(--parchment-deep)", fontSize: "11px", color: "var(--ink-ghost)" }}>
+                  <span style={{ fontWeight: 600 }}>Sources consulted: </span>
+                  {msg.sources.map((s, si) => (
+                    <span key={si}>{si > 0 ? " · " : ""}{s.author} — <em>{s.work}</em></span>
+                  ))}
+                </div>
+              )}
               {msg.role === "assistant" && <CopyButton text={msg.content} />}
             </div>
           );

@@ -11,11 +11,13 @@ const envPath = app.isPackaged
 require("dotenv").config({ path: envPath, override: true });
 
 const { registerAIHandlers } = require("./ai");
+const BetterSqlite3 = require("better-sqlite3");
+const sqliteVec = require("sqlite-vec");
 
 let db = null;
 let dbPath = null;
-let SQL = null;          // sql.js constructor — stored for lazy theology load
-let theologyDb = null;
+let SQL = null;          // sql.js constructor — used for main sermonforge.db
+let theologyDb = null;   // better-sqlite3 instance for theology.db (+ sqlite-vec)
 let mainWindow;
 let saveTimer = null;
 let _pendingWrite = false; // true between saveDb() and the debounce flush; used for crash-window warn
@@ -205,18 +207,42 @@ function saveDb() {
   }, 500);
 }
 
-// ── Lazy theology loader ─────────────────────────────────────────────────────
+// ── Lazy theology loader (better-sqlite3 + sqlite-vec) ──────────────────────
+let theologyVecAvailable = false;  // true when theology_vec table has embeddings
+let theologyEmbedder = null;       // lazy-loaded sentence-transformer pipeline
+
 async function ensureTheologyDbLoaded() {
   if (theologyDb) return;
-  if (!SQL || !dbPath) return;
+  if (!dbPath) return;
   const theologyDbFile = path.join(path.dirname(dbPath), "theology.db");
   if (!fs.existsSync(theologyDbFile)) return;
   try {
-    const buf = fs.readFileSync(theologyDbFile);
-    theologyDb = new SQL.Database(buf);
-    console.log("Theology DB loaded (lazy)");
+    theologyDb = new BetterSqlite3(theologyDbFile, { readonly: true });
+    sqliteVec.load(theologyDb);
+    // Check if vector embeddings have been built
+    try {
+      const { cnt } = theologyDb.prepare("SELECT COUNT(*) as cnt FROM theology_vec").get();
+      theologyVecAvailable = cnt > 0;
+    } catch (_) {
+      theologyVecAvailable = false;
+    }
+    console.log(`Theology DB loaded (better-sqlite3 + sqlite-vec, vectors: ${theologyVecAvailable})`);
   } catch (e) {
     console.error("Failed to load theology DB:", e.message);
+  }
+}
+
+async function ensureTheologyEmbedder() {
+  if (theologyEmbedder) return true;
+  try {
+    const { pipeline } = await import("@xenova/transformers");
+    theologyEmbedder = await pipeline("feature-extraction", "Xenova/all-MiniLM-L6-v2", {
+      quantized: true,
+    });
+    return true;
+  } catch (e) {
+    console.error("Failed to load embedding model:", e.message);
+    return false;
   }
 }
 
@@ -400,14 +426,9 @@ function runSql(sql, params = []) {
   saveDb();
 }
 
-// ── Theology query helper ────────────────────────────────────────────────────
+// ── Theology query helper (better-sqlite3) ──────────────────────────────────
 function queryTheology(sql, params = []) {
-  const stmt = theologyDb.prepare(sql);
-  stmt.bind(params);
-  const rows = [];
-  while (stmt.step()) rows.push(stmt.getAsObject());
-  stmt.free();
-  return rows;
+  return theologyDb.prepare(sql).all(...params);
 }
 
 // ── Library helpers ──────────────────────────────────────────────────────────
@@ -456,10 +477,14 @@ function buildFtsQuery(userQuery) {
   const stopWords = new Set([
     "a","an","the","i","me","my","to","of","in","on","for","and","or","is",
     "are","was","be","this","that","with","from","by","not","but","we","he",
-    "she","they","do","did","has","have","had","its","which","who","what",
+    "she","they","do","did","does","has","have","had","its","which","who","what",
     "when","how","can","will","would","could","should","may","might","put",
     "together","need","want","please","give","different","parts","sermon",
-    "sermons","three","outline","outlines","based","existing","new","using"
+    "sermons","three","outline","outlines","based","existing","new","using",
+    "say","says","said","about","tell","tells","think","thinks","know","knows",
+    "get","got","let","per","via","yet","ago","now","too","also","just","even",
+    "very","more","than","then","them","our","your","their","some","any","all",
+    "each","most","such","like","into","over","after","before","between","during"
   ]);
   const words = userQuery.toLowerCase()
     .replace(/[^a-zA-Z0-9\s]/g, " ")
@@ -1002,43 +1027,161 @@ ipcMain.handle("library-get-manuscripts", (event, { ids, truncate = false, maxCh
 
 ipcMain.handle("theology-status", async () => {
   await ensureTheologyDbLoaded();
-  return { available: theologyDb !== null };
+  return { available: theologyDb !== null, semantic: theologyVecAvailable };
 });
+
+// Known author keywords for theology-search author detection.
+// Maps a lowercase keyword to the author value stored in theology.db.
+const THEOLOGY_AUTHORS = {
+  augustine: "Augustine",
+  athanasius: "Athanasius",
+  basil: "Basil",
+  chrysostom: "John Chrysostom",
+  calvin: "John Calvin",
+  luther: "Martin Luther",
+  aquinas: "Thomas Aquinas",
+  jerome: "Jerome",
+  eusebius: "Eusebius",
+  gregory: "Gregory",
+  cyril: "Cyril",
+  hilary: "Hilary",
+};
+
+// Score a result chunk by counting how many distinct search terms appear in it.
+// Used to rerank FTS4 results by relevance after fetching a larger candidate set.
+function scoreTheologyChunk(chunk, terms) {
+  const haystack = `${chunk.author} ${chunk.work} ${chunk.full_text || chunk.text_chunk}`.toLowerCase();
+  return terms.reduce((score, term) => {
+    const bare = term.replace(/"/g, "");
+    const hits = (haystack.match(new RegExp(bare, "g")) || []).length;
+    return score + hits;
+  }, 0);
+}
 
 ipcMain.handle("theology-search", async (event, { query, limit = 5 }) => {
   await ensureTheologyDbLoaded();
   if (!theologyDb) return [];
   try {
     if (!query || !query.trim()) return [];
-    const terms = (query.replace(/[^a-zA-Z0-9\s]/g, " ").toLowerCase().match(/\b\w{4,}\b/g) || [])
-      .filter((w, i, a) => a.indexOf(w) === i)
-      .slice(0, 6);
-    if (!terms.length) return [];
 
-    // Score: author match = +5, work match = +3, text match = +1 (per term)
-    const scoreExpr = terms.map(() =>
-      `(CASE WHEN LOWER(author) LIKE ? THEN 5 ELSE 0 END) +
-       (CASE WHEN LOWER(work)   LIKE ? THEN 3 ELSE 0 END) +
-       (CASE WHEN LOWER(text)   LIKE ? THEN 1 ELSE 0 END)`
-    ).join(" + ");
+    const lower = query.toLowerCase();
 
-    const whereExpr = terms.map(() =>
-      "(LOWER(author) LIKE ? OR LOWER(work) LIKE ? OR LOWER(text) LIKE ?)"
-    ).join(" OR ");
+    // Detect author names in the query
+    const detectedAuthors = [];
+    let scrubbed = lower;
+    for (const [keyword] of Object.entries(THEOLOGY_AUTHORS)) {
+      if (lower.includes(keyword)) {
+        detectedAuthors.push(keyword);
+        scrubbed = scrubbed.replace(new RegExp(keyword, "g"), " ");
+      }
+    }
 
-    const lcTerms = terms.map(t => `%${t}%`);
-    const scoreParams = lcTerms.flatMap(lc => [lc, lc, lc]);
-    const whereParams = lcTerms.flatMap(lc => [lc, lc, lc]);
+    // ── Semantic search path (vec0) ────────────────────────────────────
+    // Preferred when theology_vec embeddings have been built.
+    // Falls through to FTS4 if embeddings are unavailable or model fails to load.
+    if (theologyVecAvailable) {
+      const ok = await ensureTheologyEmbedder();
+      if (ok) {
+        const output = await theologyEmbedder([query], { pooling: "mean", normalize: true });
+        const qVec = JSON.stringify(Array.from(output[0].data));
+        // Fetch more than needed so author filtering still returns enough results
+        const fetchLimit = detectedAuthors.length > 0 ? limit * 10 : limit;
 
-    return queryTheology(
-      `SELECT id, author, work, substr(text, 1, 600) as text_chunk,
-              (${scoreExpr}) as score
-       FROM theology
-       WHERE ${whereExpr}
-       ORDER BY score DESC
-       LIMIT ?`,
-      [...scoreParams, ...whereParams, limit]
-    );
+        let results = queryTheology(
+          `SELECT t.id, t.author, t.work,
+                  substr(t.text, 1, 600) as text_chunk
+           FROM (
+             SELECT rowid, distance FROM theology_vec
+             WHERE embedding MATCH ?
+             ORDER BY distance LIMIT ?
+           ) nn
+           JOIN theology t ON nn.rowid = t.rowid`,
+          [qVec, fetchLimit]
+        );
+
+        // Post-filter by author if specified
+        if (detectedAuthors.length > 0) {
+          const authorName = THEOLOGY_AUTHORS[detectedAuthors[0]];
+          results = results.filter(r => r.author === authorName).slice(0, limit);
+        } else {
+          results = results.slice(0, limit);
+        }
+
+        return results;
+      }
+    }
+
+    // ── FTS4 fallback path ─────────────────────────────────────────────
+    // Used when no vector embeddings exist or embedding model failed to load.
+
+    // Extract user-quoted phrases as FTS4 phrase terms, then remove from scrubbed
+    const phraseTerms = [];
+    const quoted = scrubbed.match(/"([^"]+)"/g);
+    if (quoted) {
+      quoted.forEach(p => {
+        phraseTerms.push(p);
+        scrubbed = scrubbed.replace(p, " ");
+      });
+    }
+
+    // Strip stop words and build individual content terms
+    const contentTermsStr = buildFtsQuery(scrubbed);
+    const contentTerms = contentTermsStr ? contentTermsStr.split(" OR ") : [];
+
+    // Detect adjacent content-word pairs as implicit phrase candidates
+    if (contentTerms.length >= 2) {
+      const words = scrubbed.replace(/[^a-zA-Z0-9\s]/g, " ").split(/\s+/).filter(Boolean);
+      const contentSet = new Set(contentTerms.map(t => t.replace(/"/g, "")));
+      for (let i = 0; i < words.length - 1; i++) {
+        if (contentSet.has(words[i]) && contentSet.has(words[i + 1])) {
+          phraseTerms.push(`"${words[i]} ${words[i + 1]}"`);
+        }
+      }
+    }
+
+    const contentParts = [...phraseTerms, ...contentTerms];
+    let candidates = [];
+
+    if (detectedAuthors.length > 0 && contentParts.length > 0) {
+      const authorName = THEOLOGY_AUTHORS[detectedAuthors[0]];
+      candidates = queryTheology(
+        `SELECT t.id, t.author, t.work,
+                snippet(theology_fts, "", "", "…", 3, 50) as text_chunk,
+                substr(t.text, 1, 2000) as full_text
+         FROM theology_fts
+         JOIN theology t ON theology_fts.rowid = t.rowid
+         WHERE theology_fts MATCH ?
+         AND t.author = ?
+         LIMIT ?`,
+        [contentParts.join(" "), authorName, limit * 30]
+      );
+    } else if (contentParts.length > 0) {
+      candidates = queryTheology(
+        `SELECT t.id, t.author, t.work,
+                snippet(theology_fts, "", "", "…", 3, 50) as text_chunk,
+                substr(t.text, 1, 2000) as full_text
+         FROM theology_fts
+         JOIN theology t ON theology_fts.rowid = t.rowid
+         WHERE theology_fts MATCH ?
+         LIMIT ?`,
+        [contentParts.join(" "), limit * 30]
+      );
+    } else {
+      return [];
+    }
+
+    const scoringTerms = [
+      ...detectedAuthors.map(a => `"${a}"`),
+      ...phraseTerms,
+      ...contentTerms,
+    ];
+    const results = candidates
+      .map(c => ({ ...c, _score: scoreTheologyChunk(c, scoringTerms) }))
+      .sort((a, b) => b._score - a._score)
+      .slice(0, limit)
+      // eslint-disable-next-line no-unused-vars
+      .map(({ _score, full_text, ...c }) => c);
+    return results;
   } catch (e) {
     console.error("Theology search error:", e.message);
     return [];
@@ -1658,5 +1801,6 @@ app.whenReady().then(async () => {
 
 app.on("window-all-closed", () => {
   if (db) flushDb();
+  if (theologyDb) { try { theologyDb.close(); } catch (_) {} }
   if (process.platform !== "darwin") app.quit();
 });
