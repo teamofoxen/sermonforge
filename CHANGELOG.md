@@ -2,6 +2,17 @@
 
 ---
 
+## 2026-04-12 — fix: design system — replace hardcoded hex colors in demo components
+
+Maintenance fix following Phase 2–4 audit. All hardcoded hex values in demo components now reference CSS variables.
+
+**Changes:**
+- `src/styles/global.css` — added `--tier7`, `--tier7-pale`, `--sage-pale`, `--slate-pale`, `--crimson-pale` to `:root`; dark-mode counterparts added to `[data-theme="dark"]`
+- `src/components/TierBadge.jsx` — replaced 5 hardcoded hex values (`#e8f0e7`, `#e4e9ef`, `#f5e4e4`, `#7b5ea7`, `#efe8f5`) with the new CSS variables
+- `src/components/ContextPreview.jsx` — replaced `#7b5ea7` with `var(--tier7)`
+
+---
+
 ## 2026-04-12 — feat: demo mode — phases 2, 3, 4
 
 Added a full demo mode suite layered on top of the Phase 1 demo series seed.
