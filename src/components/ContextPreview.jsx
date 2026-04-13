@@ -8,7 +8,7 @@ import { useDemo } from "../contexts/DemoContext";
 // Map section headers to tier info
 const SECTION_TIERS = {
   "[PASSAGE & MPT]":       { tier: 1, color: "var(--gold)",       label: "Tier 1 — Passage & MPT/MPS" },
-  "[THIS SERMON]":         { tier: 7, color: "#7b5ea7",            label: "Tier 7 — Pastoral Intelligence" },
+  "[THIS SERMON]":         { tier: 7, color: "var(--tier7)",        label: "Tier 7 — Pastoral Intelligence" },
   "[INTERPRETATION]":      { tier: 2, color: "var(--sage)",        label: "Tier 2 — Exegesis" },
   "[STRUCTURE]":           { tier: 3, color: "var(--slate)",       label: "Tier 3 — Outline & Functional Elements" },
   "[SERIES CONTEXT]":      { tier: 4, color: "var(--crimson)",     label: "Tier 4 — Series Context" },

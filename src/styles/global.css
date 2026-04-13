@@ -31,6 +31,11 @@
   --stage-study: #d67a00;
   --stage-ready: #228b22;
   --sidebar-bg: #1a1410;
+  --tier7: #7b5ea7;
+  --tier7-pale: #efe8f5;
+  --sage-pale: #e8f0e7;
+  --slate-pale: #e4e9ef;
+  --crimson-pale: #f5e4e4;
 }
 
 [data-theme="dark"] {
@@ -51,6 +56,11 @@
   --shadow-med: 0 4px 24px rgba(0,0,0,0.45);
   --shadow-deep: 0 8px 40px rgba(0,0,0,0.55);
   --sidebar-bg: #120f0d;
+  --tier7: #9b7ec8;
+  --tier7-pale: #2a1f3a;
+  --sage-pale: #1e2e1c;
+  --slate-pale: #1c2430;
+  --crimson-pale: #2e1414;
 }
 
 html, body, #root {
