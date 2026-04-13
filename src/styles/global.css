@@ -30,6 +30,27 @@
   --radius-lg: 8px;
   --stage-study: #d67a00;
   --stage-ready: #228b22;
+  --sidebar-bg: #1a1410;
+}
+
+[data-theme="dark"] {
+  --ink: #d8cfc5;
+  --ink-mid: #b8a898;
+  --ink-soft: #8a7a6c;
+  --ink-ghost: #5a4c42;
+  --parchment: #1a1614;
+  --parchment-warm: #201c18;
+  --parchment-deep: #2a2420;
+  --white: #242018;
+  --gold: #c8960f;
+  --gold-bright: #e0ae1a;
+  --gold-pale: #3a2e0a;
+  --crimson: #c0392b;
+  --crimson-soft: #e74c3c;
+  --shadow-soft: 0 2px 12px rgba(0,0,0,0.35);
+  --shadow-med: 0 4px 24px rgba(0,0,0,0.45);
+  --shadow-deep: 0 8px 40px rgba(0,0,0,0.55);
+  --sidebar-bg: #120f0d;
 }
 
 html, body, #root {
@@ -59,11 +80,11 @@ body {
 .sidebar {
   width: 260px;
   min-width: 260px;
-  background: var(--ink);
+  background: var(--sidebar-bg);
   display: flex;
   flex-direction: column;
   border-right: 1px solid transparent;
-  background-image: linear-gradient(to right, var(--ink) 259px, var(--gold) 259px, var(--gold-bright) 260px);
+  background-image: linear-gradient(to right, var(--sidebar-bg) 259px, var(--gold) 259px, var(--gold-bright) 260px);
   overflow: hidden;
 }
 

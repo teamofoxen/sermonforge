@@ -1,4 +1,4 @@
-import { useState, useCallback, Component } from "react";
+import { useState, useCallback, useEffect, Component } from "react";
 import { createSeries } from "./db/database";
 import Sidebar from "./components/Sidebar";
 import Dashboard from "./components/Dashboard";
@@ -50,6 +50,17 @@ class ErrorBoundary extends Component {
 }
 
 export default function App() {
+  const [theme, setTheme] = useState(() => localStorage.getItem("sf-theme") || "light");
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem("sf-theme", theme);
+  }, [theme]);
+
+  const toggleTheme = useCallback(() => {
+    setTheme(t => t === "light" ? "dark" : "light");
+  }, []);
+
   const [currentView, setCurrentView] = useState("dashboard");
   const [openSermonId, setOpenSermonId] = useState(null);
   const [openSeriesId, setOpenSeriesId] = useState(null);
@@ -108,7 +119,7 @@ export default function App() {
   return (
     <ErrorBoundary>
     <div className="app-shell">
-      <Sidebar currentView={currentView} onNavigate={navigate} onOpenSermon={openSermon} />
+      <Sidebar currentView={currentView} onNavigate={navigate} onOpenSermon={openSermon} theme={theme} onToggleTheme={toggleTheme} />
       <div className="main-content">
         {currentView === "dashboard" && (
           <Dashboard

@@ -37,7 +37,7 @@ const CHEVRON_UP = (
   </svg>
 );
 
-export default function Sidebar({ currentView, onNavigate, onOpenSermon }) {
+export default function Sidebar({ currentView, onNavigate, onOpenSermon, theme, onToggleTheme }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [recentSermons, setRecentSermons] = useState([]);
   const [showFeedback, setShowFeedback] = useState(false);
@@ -157,7 +157,25 @@ export default function Sidebar({ currentView, onNavigate, onOpenSermon }) {
       </nav>
 
       <div className="sidebar-footer">
-        <div>SermonForge v1.0</div>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <span>SermonForge v1.0</span>
+          <button
+            onClick={onToggleTheme}
+            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            style={{
+              background: "rgba(255,255,255,0.08)",
+              border: "1px solid rgba(212,160,23,0.2)",
+              borderRadius: 4,
+              padding: "3px 7px",
+              cursor: "pointer",
+              color: "var(--ink-ghost)",
+              fontSize: 13,
+              lineHeight: 1,
+            }}
+          >
+            {theme === "dark" ? "☀" : "☾"}
+          </button>
+        </div>
         <button
           onClick={() => setShowFeedback(true)}
           style={{
