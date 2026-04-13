@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-04-12 — fix: dashboard — exclude demo sermons from "Pick up where you left off"
+
+Demo sermons no longer appear in the recent-sermons section on the dashboard.
+
+**Changes:**
+- `electron/main.js` — added `AND (sr.id IS NULL OR sr.id NOT LIKE 'demo-%')` to the `db-getRecentSermons` query
+
+---
+
 ## 2026-04-12 — fix: design system — replace hardcoded hex colors in demo components
 
 Maintenance fix following Phase 2–4 audit. All hardcoded hex values in demo components now reference CSS variables.

@@ -760,6 +760,7 @@ ipcMain.handle("db-getRecentSermons", (_, limit = 3) =>
      FROM sermons s
      LEFT JOIN series sr ON s.series_id = sr.id
      WHERE s.stage != 'archived'
+       AND (sr.id IS NULL OR sr.id NOT LIKE 'demo-%')
      ORDER BY s.updated_at DESC, s.created_at DESC
      LIMIT ?`,
     [limit]
