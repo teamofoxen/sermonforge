@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { useDemo } from "../contexts/DemoContext";
+import TierBadge from "./TierBadge";
 import { getOutline, serializeOutline, getFunctionalElements, serializeFunctionalElements, autoResize } from "../utils";
 import { STEPS, PHASES, PHASE_SEQUENCE, STEP_SEQUENCE } from "../constants/steps";
 import { sendAIMessage } from "../utils/ai";
@@ -185,6 +187,7 @@ function StructuredWorksheet({ fields, data, onChange, legacyNotes }) {
 }
 
 export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChange, onTabChange }) {
+  const { demoMode } = useDemo();
   const [activeStep, setActiveStep] = useState(() => {
     const saved = localStorage.getItem(`sermonforge_study_step_${sermon.id}`);
     return saved ? parseInt(saved, 10) : 1;
@@ -421,6 +424,18 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
       </div>
 
       <SermonShapePreview sermon={sermon} outline={outline} funcData={funcData} />
+
+      {/* Demo pipeline map — shows which step feeds which tier */}
+      {demoMode && (
+        <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap", padding: "6px 20px 0", fontSize: "11px", fontFamily: "'Crimson Pro', serif", color: "var(--ink-ghost)" }}>
+          <span>Pipeline:</span>
+          <TierBadge tier={1} />  <span style={{ color: "var(--ink-ghost)" }}>passage · MPT · MPS</span>
+          <span style={{ color: "var(--parchment-deep)" }}>·</span>
+          <TierBadge tier={2} />  <span style={{ color: "var(--ink-ghost)" }}>all 4 exegesis phases</span>
+          <span style={{ color: "var(--parchment-deep)" }}>·</span>
+          <TierBadge tier={3} />  <span style={{ color: "var(--ink-ghost)" }}>outline · functional elements</span>
+        </div>
+      )}
 
       {/* ── Step 1: Exegesis ── */}
       {activeStep === 1 && (
@@ -735,7 +750,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
           <div className="mpt-mps-grid">
             <div className="field-group">
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "5px" }}>
-                <label className="field-label" style={{ marginBottom: 0 }}>Main Point of the Text (MPT)</label>
+                <label className="field-label" style={{ marginBottom: 0 }}>Main Point of the Text (MPT)  <TierBadge tier={1} /></label>
                 {(sermon.passage || Object.keys(obsData).some(k => k !== "legacy_notes" && obsData[k]?.trim())) && (
                   <button
                     className="btn-ghost btn-sm"
@@ -760,7 +775,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
             </div>
             <div className="field-group">
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "5px" }}>
-                <label className="field-label" style={{ marginBottom: 0 }}>Main Point of the Sermon (MPS)</label>
+                <label className="field-label" style={{ marginBottom: 0 }}>Main Point of the Sermon (MPS)  <TierBadge tier={1} /></label>
                 {sermon.mpt?.trim() && (
                   <button
                     className="btn-ghost btn-sm"

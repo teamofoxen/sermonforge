@@ -1,5 +1,7 @@
 import { useState, useCallback, useEffect, Component } from "react";
 import { createSeries } from "./db/database";
+import { DemoProvider } from "./contexts/DemoContext";
+import DemoSplash from "./components/DemoSplash";
 import Sidebar from "./components/Sidebar";
 import Dashboard from "./components/Dashboard";
 import SermonList from "./components/SermonList";
@@ -118,6 +120,8 @@ export default function App() {
 
   return (
     <ErrorBoundary>
+    <DemoProvider>
+    <DemoSplash />
     <div className="app-shell">
       <Sidebar currentView={currentView} onNavigate={navigate} onOpenSermon={openSermon} theme={theme} onToggleTheme={toggleTheme} />
       <div className="main-content">
@@ -171,6 +175,7 @@ export default function App() {
         )}
       </div>
     </div>
+    </DemoProvider>
     </ErrorBoundary>
   );
 }

@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useDemo } from "../contexts/DemoContext";
+import ContextPreview from "./ContextPreview";
 import ReactMarkdown from "react-markdown";
 import { getOutline, autoResize } from "../utils";
 import { STEPS, PHASES } from "../constants/steps";
@@ -15,6 +17,8 @@ import {
 } from "../db/database";
 
 export default function AIPanel({ sermon, activeTab, activeStep, externalMessage, onLoadingChange, loading }) {
+  const { demoMode } = useDemo();
+  const [showContextPreview, setShowContextPreview] = useState(false);
   const [messages, setMessages] = useState([]);
   const [libraryCount, setLibraryCount] = useState(0);
   const [theologyAvailable, setTheologyAvailable] = useState(false);
@@ -289,11 +293,34 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
             <div className="ai-panel-title">AI Assistant</div>
             <div className="ai-panel-subtitle">{tabLabels[activeTab] || "Workspace"}</div>
           </div>
-          {messages.length > 0 && (
-            <button className="ai-clear-btn" onClick={clearHistory}>Clear</button>
-          )}
+          <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+            {demoMode && (
+              <button
+                onClick={() => setShowContextPreview(v => !v)}
+                style={{
+                  background: showContextPreview ? "var(--gold-pale)" : "none",
+                  border: showContextPreview ? "1px solid var(--gold)" : "1px solid var(--parchment-deep)",
+                  borderRadius: "var(--radius)",
+                  cursor: "pointer",
+                  color: showContextPreview ? "var(--gold)" : "var(--ink-ghost)",
+                  fontSize: "11px", padding: "3px 8px",
+                  fontFamily: "'Crimson Pro', serif",
+                }}
+                title="Show what was assembled and sent to the AI"
+              >
+                {showContextPreview ? "Hide Context" : "Preview Context"}
+              </button>
+            )}
+            {messages.length > 0 && (
+              <button className="ai-clear-btn" onClick={clearHistory}>Clear</button>
+            )}
+          </div>
         </div>
       </div>
+
+      {showContextPreview && demoMode && (
+        <ContextPreview sermon={sermon} step={activeStep || activeTab} />
+      )}
 
       <div className="ai-panel-messages">
         {messages.length === 0 && !loading && (

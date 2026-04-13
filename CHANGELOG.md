@@ -2,6 +2,40 @@
 
 ---
 
+## 2026-04-12 — feat: demo mode — phases 2, 3, 4
+
+Added a full demo mode suite layered on top of the Phase 1 demo series seed.
+
+**Phase 2 — Context awareness**
+- `TierBadge` component: colour-coded pills (gold T1, sage T2, slate T3, crimson T4, purple T7, ghost "Series Only") appear on every field when demo mode is on; hover to read a plain-English description of that tier's role and budget
+- Demo toggle button in SermonWorkspace and SeriesPlanner topbars
+- Context completeness bar in SermonWorkspace: 5 tier dots (T1–T4, T7) show which tiers have content at a glance
+- Pipeline map row in StudyTab showing which steps feed which tiers
+- Tier 4 badge on Series Big Idea (Overview tab) and on `redemptive_context` / `series_motivation` (Book Study tab)
+- "Series Only" badge on `book_background`, `book_argument`, `book_structure`, `emerging_big_idea` — fields excluded from per-sermon context
+
+**Phase 3 — Context transparency**
+- `ContextPreview` component: calls `buildContext()` client-side and renders each assembled tier section with its label, colour, and character count
+- "Preview Context" toggle button in the AI panel header (only visible in demo mode)
+
+**Phase 4 — Guided experience**
+- `DemoSplash` modal: appears on first "See Demo" click, walks through the 4-step tour (Series Planner → Sermon Workspace → AI Panel → Study Guide); dismissible, stored in localStorage
+- `DemoContext`: React context wrapping the full app, persists demo mode and splash-seen state to localStorage
+
+**Changes:**
+- `src/contexts/DemoContext.jsx` — new; demo mode state
+- `src/components/TierBadge.jsx` — new; tier pill with tooltip
+- `src/components/DemoSplash.jsx` — new; first-time splash modal
+- `src/components/ContextPreview.jsx` — new; assembled context viewer
+- `src/App.jsx` — wrapped with DemoProvider and DemoSplash
+- `src/components/Dashboard.jsx` — calls enableDemoMode on See Demo click
+- `src/components/SermonWorkspace.jsx` — demo toggle, completeness bar, T7 badge on PI card
+- `src/components/StudyTab.jsx` — pipeline map row, T1 badges on MPT/MPS labels
+- `src/components/SeriesPlanner.jsx` — demo toggle, T4/excluded badges on book study and overview fields
+- `src/components/AIPanel.jsx` — Preview Context button and ContextPreview panel
+
+---
+
 ## 2026-04-12 — feat: demo series seed ("See Demo" button)
 
 Added a "See Demo" button to the dashboard header that seeds the database with a complete Sermon on the Mount series (6 sermons at varied stages: writing, outline, study, planning) and navigates directly to it. Idempotent — clicking again opens the existing demo series rather than duplicating it.

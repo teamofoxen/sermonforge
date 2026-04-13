@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { getAllSeries, getAllSermons, getRecentSermons, loadDemoSeries } from "../db/database";
+import { useDemo } from "../contexts/DemoContext";
 import NewSermonModal from "./NewSermonModal";
 import { formatDate, getOutline } from "../utils";
 import { sendAIMessage } from "../utils/ai";
 import { flattenExegesis } from "../utils/studyFields";
 
 export default function Dashboard({ onOpenSermon, onOpenSeries, onNewSeries, onNavigate }) {
+  const { enableDemoMode } = useDemo();
   const [activeSeries, setActiveSeries]   = useState([]);
   const [recentSermons, setRecentSermons] = useState([]);
   const [reorientSummaries, setReorientSummaries] = useState({});
@@ -109,6 +111,7 @@ export default function Dashboard({ onOpenSermon, onOpenSeries, onNewSeries, onN
   async function handleLoadDemo() {
     setDemoLoading(true);
     try {
+      enableDemoMode();
       const result = await loadDemoSeries();
       if (result?.seriesId && onOpenSeries) {
         onOpenSeries(result.seriesId);

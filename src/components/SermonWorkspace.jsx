@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useDemo } from "../contexts/DemoContext";
+import TierBadge from "./TierBadge";
 // useRef is used for pendingMessageId — a stable counter so repeated identical
 // prompts each produce a distinct object reference and always trigger the effect.
 import { useDebounce } from "../utils/hooks";
@@ -26,6 +28,7 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   // Pastoral Intelligence card — open when empty, collapsed when filled
   const [piOpen, setPiOpen] = useState(true);
+  const { demoMode, enableDemoMode, disableDemoMode } = useDemo();
   const pendingIdRef = useRef(0);
   // Mirrors sermon state synchronously so captureMemory never reads a stale closure.
   const sermonRef = useRef(null);
@@ -205,6 +208,21 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
             How this works
           </button>
           <button
+            onClick={() => demoMode ? disableDemoMode() : enableDemoMode()}
+            style={{
+              background: demoMode ? "var(--gold-pale)" : "none",
+              border: demoMode ? "1px solid var(--gold)" : "1px solid var(--parchment-deep)",
+              borderRadius: "var(--radius)",
+              cursor: "pointer",
+              color: demoMode ? "var(--gold)" : "var(--ink-ghost)",
+              fontSize: "11px", padding: "3px 10px",
+              fontFamily: "'Crimson Pro', serif", fontWeight: demoMode ? "700" : "400",
+            }}
+            title={demoMode ? "Turn off demo annotations" : "Turn on demo annotations"}
+          >
+            Demo
+          </button>
+          <button
             className="btn-ghost btn-sm"
             onClick={() => setDrawerOpen(v => !v)}
             style={{ fontSize: "13px", color: drawerOpen ? "var(--gold)" : "var(--ink-ghost)", borderColor: drawerOpen ? "var(--gold)" : undefined }}
@@ -227,6 +245,42 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
         ))}
       </div>
 
+      {/* Demo completeness bar */}
+      {demoMode && (() => {
+        const hasExegesis = !!(sermon.observations || sermon.interpretation || sermon.redemptive_thread || sermon.implications);
+        const hasOutline  = (() => { try { const o = JSON.parse(sermon.outline || "[]"); return Array.isArray(o) && o.length > 0; } catch { return false; } })();
+        const tiers = [
+          { n: 1, label: "T1 · Passage & MPT", filled: !!(sermon.passage || sermon.mpt || sermon.mps), color: "var(--gold)" },
+          { n: 2, label: "T2 · Exegesis",       filled: hasExegesis, color: "var(--sage)" },
+          { n: 3, label: "T3 · Structure",       filled: hasOutline, color: "var(--slate)" },
+          { n: 4, label: "T4 · Series",          filled: !!(sermon.series?.big_idea || sermon.series?.series_motivation || sermon.series?.redemptive_context), color: "var(--crimson)" },
+          { n: 7, label: "T7 · Pastoral",        filled: !!(sermon.topic_theme || sermon.audience_assumptions || sermon.background_noise), color: "#7b5ea7" },
+        ];
+        const filled = tiers.filter(t => t.filled).length;
+        return (
+          <div style={{ background: "var(--parchment-warm)", borderBottom: "1px solid var(--parchment-deep)", padding: "6px 20px", display: "flex", alignItems: "center", gap: "16px" }}>
+            <span style={{ fontSize: "11px", fontFamily: "'Crimson Pro', serif", color: "var(--ink-ghost)", flexShrink: 0 }}>Context: {filled}/{tiers.length} tiers</span>
+            <div style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap" }}>
+              {tiers.map(t => (
+                <span key={t.n} title={t.label} style={{
+                  display: "inline-flex", alignItems: "center", gap: "4px",
+                  fontSize: "11px", fontFamily: "'Crimson Pro', serif",
+                  color: t.filled ? t.color : "var(--ink-ghost)",
+                  opacity: t.filled ? 1 : 0.5,
+                }}>
+                  <span style={{
+                    width: "8px", height: "8px", borderRadius: "50%",
+                    background: t.filled ? t.color : "var(--parchment-deep)",
+                    border: `1px solid ${t.color}`, flexShrink: 0,
+                  }} />
+                  {t.label}
+                </span>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Body */}
       <div className="workspace-body">
         <div className="workspace-main">
@@ -242,6 +296,7 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
                 <span style={{ fontFamily: "'Playfair Display', serif", fontSize: "10px", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-ghost)", flexShrink: 0 }}>
                   Pastoral Context
                 </span>
+                <TierBadge tier={7} />
                 {!piOpen && (
                   <span style={{ fontSize: "12px", color: "var(--ink-soft)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {[
