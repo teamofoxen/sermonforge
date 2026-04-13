@@ -2,6 +2,21 @@
 
 ---
 
+## 2026-04-12 — feat: demo series seed ("See Demo" button)
+
+Added a "See Demo" button to the dashboard header that seeds the database with a complete Sermon on the Mount series (6 sermons at varied stages: writing, outline, study, planning) and navigates directly to it. Idempotent — clicking again opens the existing demo series rather than duplicating it.
+
+**Changes:**
+- `electron/demoData.js` — new file; full Sermon on the Mount dataset (series + 6 sermons) with all fields populated: exegesis phases (JSON), outline with functional elements, manuscript excerpt, Pastoral Intelligence fields, study guide notes
+- `electron/main.js` — added `db-loadDemoSeries` IPC handler; inserts demo data in a transaction, returns series ID
+- `electron/preload.js` — exposed `loadDemoSeries` via contextBridge
+- `src/db/database.js` — added `loadDemoSeries` wrapper export
+- `src/components/Dashboard.jsx` — added "See Demo" button in page header; calls `loadDemoSeries()` then navigates to series
+
+**Why:** To support showing the app to someone else with realistic, fully-populated content — so the full workflow (series planning through study guide) can be demonstrated without manually entering data. Phase 1 of a larger demo suite (Phases 2–4 will add context pipeline annotations, completeness indicators, and a guided tour).
+
+---
+
 ## 2026-04-12 — Fix: show planning-stage sermons on dashboard
 
 `getRecentSermons` was filtering out `stage = 'planning'` — a holdover from the old dashboard where planning-stage meant "not really started." New home screen should show all non-archived sermons regardless of stage.

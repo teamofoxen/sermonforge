@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getAllSeries, getAllSermons, getRecentSermons } from "../db/database";
+import { getAllSeries, getAllSermons, getRecentSermons, loadDemoSeries } from "../db/database";
 import NewSermonModal from "./NewSermonModal";
 import { formatDate, getOutline } from "../utils";
 import { sendAIMessage } from "../utils/ai";
@@ -12,6 +12,7 @@ export default function Dashboard({ onOpenSermon, onOpenSeries, onNewSeries, onN
   const [reorientLoading, setReorientLoading]     = useState({});
   const [showNewModal, setShowNewModal] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [demoLoading, setDemoLoading] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -105,6 +106,20 @@ export default function Dashboard({ onOpenSermon, onOpenSeries, onNewSeries, onN
     }
   }
 
+  async function handleLoadDemo() {
+    setDemoLoading(true);
+    try {
+      const result = await loadDemoSeries();
+      if (result?.seriesId && onOpenSeries) {
+        onOpenSeries(result.seriesId);
+      }
+    } catch (e) {
+      console.error("Failed to load demo series:", e);
+    } finally {
+      setDemoLoading(false);
+    }
+  }
+
   function dismissSummary(key) {
     setReorientSummaries((prev) => { const next = { ...prev }; delete next[key]; return next; });
   }
@@ -135,6 +150,15 @@ export default function Dashboard({ onOpenSermon, onOpenSeries, onNewSeries, onN
             <h1 className="page-title">Pick up where you left off</h1>
           </div>
           <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            <button
+              className="btn-ghost"
+              onClick={handleLoadDemo}
+              disabled={demoLoading}
+              title="Load a complete sample series to explore the app"
+              style={{ fontSize: "13px", color: "var(--ink-soft)" }}
+            >
+              {demoLoading ? "Loading…" : "See Demo"}
+            </button>
             <button className="btn-primary" onClick={onNewSeries}>+ New Series</button>
             <button className="btn-ghost" onClick={() => setShowNewModal(true)}>+ New Sermon</button>
           </div>

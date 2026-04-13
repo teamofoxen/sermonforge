@@ -766,6 +766,65 @@ ipcMain.handle("db-getRecentSermons", (_, limit = 3) =>
   )
 );
 
+// ── Demo series seed ──────────────────────────────────────────────────────────
+ipcMain.handle("db-loadDemoSeries", () => {
+  const { SERIES_ID, series, sermons } = require("./demoData");
+
+  // Idempotent: return existing series if already loaded
+  const existing = queryOne("SELECT id FROM series WHERE id = ?", [SERIES_ID]);
+  if (existing) return { seriesId: SERIES_ID, created: false };
+
+  db.run("BEGIN");
+  try {
+    // Insert series
+    db.run(
+      `INSERT INTO series (
+        id, title, color, description, year,
+        big_idea, overview, passage_range, start_date, end_date,
+        structural_outline, status, canon_category,
+        redemptive_context, book_background, book_argument,
+        book_structure, series_motivation, emerging_big_idea
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      [
+        series.id, series.title, series.color, series.description, series.year,
+        series.big_idea, series.overview, series.passage_range, series.start_date, series.end_date,
+        series.structural_outline, series.status, series.canon_category,
+        series.redemptive_context, series.book_background, series.book_argument,
+        series.book_structure, series.series_motivation, series.emerging_big_idea,
+      ]
+    );
+
+    // Insert sermons
+    for (const s of sermons) {
+      db.run(
+        `INSERT INTO sermons (
+          id, series_id, is_one_off, title, passage, date, stage,
+          big_idea, mpt, mps,
+          observations, interpretation, redemptive_thread, implications,
+          outline, functional_elements,
+          manuscript, delivery_notes, timing_notes,
+          topic_theme, audience_assumptions, background_noise, study_guide_note
+        ) VALUES (?,?,0,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        [
+          s.id, s.series_id, s.title, s.passage || "", s.date || "", s.stage || "planning",
+          s.big_idea || "", s.mpt || "", s.mps || "",
+          s.observations || "", s.interpretation || "", s.redemptive_thread || "", s.implications || "",
+          s.outline || "[]", s.functional_elements || "{}",
+          s.manuscript || "", s.delivery_notes || "", s.timing_notes || "",
+          s.topic_theme || "", s.audience_assumptions || "", s.background_noise || "", s.study_guide_note || "",
+        ]
+      );
+    }
+
+    db.run("COMMIT");
+  } catch (e) {
+    db.run("ROLLBACK");
+    throw e;
+  }
+  saveDb();
+  return { seriesId: SERIES_ID, created: true };
+});
+
 ipcMain.handle("library-status", () => {
   try {
     const row = queryOne("SELECT COUNT(*) as count, MAX(imported_at) as last_imported FROM library");
