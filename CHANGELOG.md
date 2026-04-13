@@ -2,6 +2,23 @@
 
 ---
 
+## 2026-04-12 — Dark mode
+
+Added full dark mode support with a sidebar toggle and localStorage persistence.
+
+**Changes:**
+- `src/styles/global.css` — added `--sidebar-bg` variable (decouples sidebar background
+  from `--ink` so the sidebar stays dark in both themes); added `[data-theme="dark"]` block
+  overriding all surface/text variables to a warm dark palette while preserving gold accents
+- `src/App.jsx` — theme state initialised from `localStorage`, applied as `data-theme`
+  on `<html>`, persists across sessions
+- `src/components/Sidebar.jsx` — toggle button (☾ / ☀) in sidebar footer
+
+**Open feedback items remaining:** New Sermon Modal (remove Preacher/Stage; editable title);
+Dashboard redesign (3 items).
+
+---
+
 ## 2026-04-09 — Modular documentation refactor
 
 Replaced the monolithic `CLAUDE.md` (790 lines, loaded in full every session) with a
