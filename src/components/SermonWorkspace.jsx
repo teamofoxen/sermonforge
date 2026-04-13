@@ -60,6 +60,9 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
         if (data.topic_theme?.trim() || data.audience_assumptions?.trim() || data.background_noise?.trim()) {
           setPiOpen(false);
         }
+        // Restore last active tab across restarts
+        const savedTab = localStorage.getItem(`sermonforge_sermon_tab_${sermonId}`);
+        if (savedTab && TABS.includes(savedTab)) setActiveTab(savedTab);
       } catch (e) {
         console.error("SermonWorkspace load error:", e);
       } finally {
@@ -121,6 +124,7 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
     captureMemory(sermonRef.current, { scanPhrases: true });
     setActiveTab(tab);
     setActiveStep(null);
+    localStorage.setItem(`sermonforge_sermon_tab_${sermonId}`, tab);
   }
 
   async function handleDelete() {

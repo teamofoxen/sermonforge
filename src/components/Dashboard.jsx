@@ -6,33 +6,30 @@ import { sendAIMessage } from "../utils/ai";
 import { flattenExegesis } from "../utils/studyFields";
 
 export default function Dashboard({ onOpenSermon, onOpenSeries, onNewSeries, onNavigate }) {
-  const [series, setSeries] = useState([]);
-  const [sermonsBySeries, setSermonsBySeries] = useState({});
+  const [activeSeries, setActiveSeries]   = useState([]);
   const [recentSermons, setRecentSermons] = useState([]);
   const [reorientSummaries, setReorientSummaries] = useState({});
-  const [reorientLoading, setReorientLoading] = useState({});
+  const [reorientLoading, setReorientLoading]     = useState({});
   const [showNewModal, setShowNewModal] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
       try {
-        const [seriesData, allSermons, recentData] = await Promise.all([
+        const [seriesData, recentData] = await Promise.all([
           getAllSeries(),
-          getAllSermons(),
-          getRecentSermons(3),
+          getRecentSermons(5),
         ]);
-        setSeries(seriesData);
+        // Show all non-complete series: active first, then planning
+        const nonComplete = seriesData
+          .filter((s) => s.status !== "complete")
+          .sort((a, b) => {
+            if (a.status === "active" && b.status !== "active") return -1;
+            if (a.status !== "active" && b.status === "active") return  1;
+            return 0;
+          });
+        setActiveSeries(nonComplete);
         setRecentSermons(recentData);
-
-        // Group sermons by series
-        const bySeries = {};
-        for (const sermon of allSermons) {
-          if (sermon.series_id) {
-            bySeries[sermon.series_id] = (bySeries[sermon.series_id] || 0) + 1;
-          }
-        }
-        setSermonsBySeries(bySeries);
       } catch (e) {
         console.error("Dashboard load error:", e);
       } finally {
@@ -42,17 +39,47 @@ export default function Dashboard({ onOpenSermon, onOpenSeries, onNewSeries, onN
     load();
   }, []);
 
-  async function handleReorient(sermon) {
-    setReorientLoading((prev) => ({ ...prev, [sermon.id]: true }));
+  async function handleReorientSeries(s) {
+    const key = `series_${s.id}`;
+    setReorientLoading((prev) => ({ ...prev, [key]: true }));
+
+    const parts = [];
+    parts.push(`Series: ${s.title}`);
+    if (s.passage_range)       parts.push(`Passage range: ${s.passage_range}`);
+    if (s.big_idea)            parts.push(`Big Idea: ${s.big_idea}`);
+    if (s.overview)            parts.push(`Overview: ${s.overview}`);
+    if (s.redemptive_context)  parts.push(`Redemptive context: ${s.redemptive_context}`);
+    if (s.series_motivation)   parts.push(`Why this congregation, why now: ${s.series_motivation}`);
+    if (s.book_argument)       parts.push(`Controlling argument: ${s.book_argument}`);
+    if (s.book_structure)      parts.push(`Book structure: ${s.book_structure}`);
+    if (s.emerging_big_idea)   parts.push(`Working big idea: ${s.emerging_big_idea}`);
+
+    const systemPrompt = `You are a brief reorientation assistant for a pastor returning to a series they are planning. Given the series' current state, write a focused 3–5 sentence summary that: (1) states clearly where they are in the planning process, (2) names the key theological work done so far using their own language where possible, (3) identifies the most natural next step. Write in second person. Keep it under 100 words. Be specific — no generic encouragement.`;
+
+    try {
+      const response = await sendAIMessage(
+        [{ role: "user", content: `Here is the current state of this series:\n\n${parts.join("\n\n")}` }],
+        systemPrompt
+      );
+      setReorientSummaries((prev) => ({ ...prev, [key]: response }));
+    } catch (e) {
+      setReorientSummaries((prev) => ({ ...prev, [key]: "Unable to generate summary. Please try again." }));
+    } finally {
+      setReorientLoading((prev) => ({ ...prev, [key]: false }));
+    }
+  }
+
+  async function handleReorientSermon(sermon) {
+    const key = `sermon_${sermon.id}`;
+    setReorientLoading((prev) => ({ ...prev, [key]: true }));
 
     const parts = [];
     parts.push(`Title: ${sermon.title}`);
-    if (sermon.passage) parts.push(`Passage: ${sermon.passage}`);
-    parts.push(`Stage: ${sermon.stage}`);
+    if (sermon.passage)      parts.push(`Passage: ${sermon.passage}`);
     if (sermon.series_title) parts.push(`Series: ${sermon.series_title}`);
-    if (sermon.big_idea) parts.push(`Big Idea: ${sermon.big_idea}`);
-    if (sermon.mpt) parts.push(`Main Point of the Text (MPT): ${sermon.mpt}`);
-    if (sermon.mps) parts.push(`Main Point of the Sermon (MPS): ${sermon.mps}`);
+    if (sermon.big_idea)     parts.push(`Big Idea: ${sermon.big_idea}`);
+    if (sermon.mpt)          parts.push(`Main Point of the Text (MPT): ${sermon.mpt}`);
+    if (sermon.mps)          parts.push(`Main Point of the Sermon (MPS): ${sermon.mps}`);
     const exegesis = flattenExegesis(sermon);
     if (exegesis) parts.push(exegesis);
     const outline = getOutline(sermon);
@@ -70,12 +97,16 @@ export default function Dashboard({ onOpenSermon, onOpenSeries, onNewSeries, onN
         [{ role: "user", content: `Here is the current state of this sermon:\n\n${parts.join("\n\n")}` }],
         systemPrompt
       );
-      setReorientSummaries((prev) => ({ ...prev, [sermon.id]: response }));
+      setReorientSummaries((prev) => ({ ...prev, [key]: response }));
     } catch (e) {
-      setReorientSummaries((prev) => ({ ...prev, [sermon.id]: "Unable to generate summary. Please try again." }));
+      setReorientSummaries((prev) => ({ ...prev, [key]: "Unable to generate summary. Please try again." }));
     } finally {
-      setReorientLoading((prev) => ({ ...prev, [sermon.id]: false }));
+      setReorientLoading((prev) => ({ ...prev, [key]: false }));
     }
+  }
+
+  function dismissSummary(key) {
+    setReorientSummaries((prev) => { const next = { ...prev }; delete next[key]; return next; });
   }
 
   if (loading) {
@@ -86,13 +117,22 @@ export default function Dashboard({ onOpenSermon, onOpenSeries, onNewSeries, onN
     );
   }
 
+  const sectionHeadingStyle = {
+    fontFamily: "'Playfair Display', serif",
+    fontSize: "16px",
+    fontWeight: "600",
+    color: "var(--ink-soft)",
+    letterSpacing: "0.04em",
+    textTransform: "uppercase",
+    marginBottom: "14px",
+  };
+
   return (
     <>
       <div className="page-header">
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
-            <h1 className="page-title">Dashboard</h1>
-            <p className="page-subtitle">Active and upcoming series</p>
+            <h1 className="page-title">Pick up where you left off</h1>
           </div>
           <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
             <button className="btn-primary" onClick={onNewSeries}>+ New Series</button>
@@ -103,233 +143,151 @@ export default function Dashboard({ onOpenSermon, onOpenSeries, onNewSeries, onN
 
       <div className="page-body">
 
-        <div style={{ display: "grid", gridTemplateColumns: "1.5fr 1fr", gap: "24px", marginBottom: "28px" }}>
-
-          {/* Series Pipeline */}
-          <div className="card">
-            <div className="card-header">
-              <h2 className="card-title">Series Pipeline</h2>
-              <button className="btn-ghost btn-sm" onClick={() => onNavigate("planning")}>Manage</button>
-            </div>
-            {series.length === 0 ? (
-              <p style={{ color: "var(--ink-ghost)", fontStyle: "italic", fontSize: "14px" }}>
-                No series yet. Start one in Planning.
-              </p>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-                {[
-                  { status: "active", label: "Preaching Now" },
-                  { status: "planning", label: "In Planning" },
-                  { status: "complete", label: "Complete" },
-                ].map(({ status, label }) => {
-                  const group = series.filter((s) => s.status === status);
-                  if (group.length === 0) return null;
-                  return (
-                    <div key={status}>
-                      <div style={{
-                        fontSize: "10px", fontWeight: "700", letterSpacing: "0.1em",
-                        textTransform: "uppercase", color: "var(--ink-ghost)", marginBottom: "8px",
-                      }}>
-                        {label}
-                      </div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
-                        {group.map((s) => (
-                          <div
-                            key={s.id}
-                            onClick={() => onOpenSeries && onOpenSeries(s.id)}
-                            style={{
-                              display: "flex", alignItems: "center", gap: "10px",
-                              padding: "9px 11px", borderRadius: "var(--radius)",
-                              background: "var(--parchment-warm)",
-                              border: "1px solid var(--parchment-deep)",
-                              cursor: "pointer",
-                              transition: "background 0.15s",
-                            }}
-                            onMouseEnter={(e) => e.currentTarget.style.background = "var(--parchment-deep)"}
-                            onMouseLeave={(e) => e.currentTarget.style.background = "var(--parchment-warm)"}
-                          >
-                            {/* Color bar */}
-                            <div style={{
-                              width: "3px", borderRadius: "2px", alignSelf: "stretch",
-                              background: `var(--${s.color || "gold"})`, flexShrink: 0,
-                            }} />
-                            {/* Title + passage */}
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{
-                                fontFamily: "'Playfair Display', serif", fontSize: "14px",
-                                fontWeight: "600", color: "var(--ink)",
-                                whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-                              }}>
-                                {s.title}
-                              </div>
-                              {s.passage_range && (
-                                <div style={{
-                                  fontFamily: "'JetBrains Mono', monospace", fontSize: "11px",
-                                  color: "var(--ink-soft)", marginTop: "2px",
-                                }}>
-                                  {s.passage_range}
-                                </div>
-                              )}
-                            </div>
-                            {/* Meta */}
-                            <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
-                              {s.canon_category && (
-                                <span style={{
-                                  fontSize: "10px", padding: "2px 7px", borderRadius: "10px",
-                                  background: "var(--parchment-deep)", color: "var(--ink-soft)",
-                                  fontWeight: "700", textTransform: "uppercase", letterSpacing: "0.05em",
-                                }}>
-                                  {s.canon_category}
-                                </span>
-                              )}
-                              <span style={{ fontSize: "12px", color: "var(--ink-ghost)", whiteSpace: "nowrap" }}>
-                                {sermonsBySeries[s.id] || 0} sermons
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Biblical Coverage */}
-          <div className="card">
-            <div className="card-header">
-              <h2 className="card-title">Biblical Coverage</h2>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-              {[
-                { key: "ot", label: "Old Testament", color: "var(--gold)" },
-                { key: "nt", label: "New Testament", color: "var(--slate)" },
-                { key: "wisdom", label: "Wisdom Literature", color: "var(--sage)" },
-                { key: "prophetic", label: "Prophetic Books", color: "var(--crimson)" },
-              ].map(({ key, label, color }) => {
-                const matchingSeries = series.filter((s) => s.canon_category === key);
-                const seriesCount = matchingSeries.length;
-                const sermonCount = matchingSeries.reduce(
-                  (sum, s) => sum + (sermonsBySeries[s.id] || 0), 0
-                );
+        {/* Continue Series Planning */}
+        {activeSeries.length > 0 && (
+          <div style={{ marginBottom: "32px" }}>
+            <h2 style={sectionHeadingStyle}>Continue Series Planning</h2>
+            <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min(activeSeries.length, 3)}, 1fr)`, gap: "16px" }}>
+              {activeSeries.map((s) => {
+                const key = `series_${s.id}`;
                 return (
-                  <div key={key} style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                    <div style={{
-                      width: "3px", borderRadius: "2px", height: "36px",
-                      background: color, flexShrink: 0,
-                    }} />
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: "13px", fontWeight: "600", color: "var(--ink-mid)", fontFamily: "'Crimson Pro', serif" }}>
-                        {label}
-                      </div>
-                      <div style={{ fontSize: "12px", color: "var(--ink-ghost)", marginTop: "2px" }}>
-                        {seriesCount === 0
-                          ? "No series"
-                          : `${seriesCount} series · ${sermonCount} sermon${sermonCount !== 1 ? "s" : ""}`}
+                  <div key={s.id} className="card" style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                    {/* Color bar + title */}
+                    <div style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
+                      <div style={{
+                        width: "3px", borderRadius: "2px", alignSelf: "stretch",
+                        background: `var(--${s.color || "gold"})`, flexShrink: 0,
+                      }} />
+                      <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "15px", fontWeight: "600", color: "var(--ink)", lineHeight: "1.3" }}>
+                        {s.title}
                       </div>
                     </div>
+
+                    {/* Passage range */}
+                    {s.passage_range && (
+                      <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "12px", color: "var(--ink-soft)" }}>
+                        {s.passage_range}
+                      </div>
+                    )}
+
+                    {/* Buttons */}
+                    <div style={{ display: "flex", gap: "8px", marginTop: "2px" }}>
+                      <button
+                        className="btn-primary btn-sm"
+                        onClick={() => onOpenSeries && onOpenSeries(s.id)}
+                      >
+                        Open
+                      </button>
+                      <button
+                        className="btn-ghost btn-sm"
+                        onClick={() => handleReorientSeries(s)}
+                        disabled={reorientLoading[key]}
+                      >
+                        {reorientLoading[key] ? "Thinking…" : "Reorient me"}
+                      </button>
+                    </div>
+
+                    {/* AI summary */}
+                    {reorientSummaries[key] && (
+                      <div style={{
+                        marginTop: "4px", padding: "12px 14px",
+                        background: "var(--parchment-warm)", borderRadius: "var(--radius)",
+                        borderLeft: "3px solid var(--gold)", fontSize: "14px",
+                        lineHeight: "1.6", color: "var(--ink-mid)", fontStyle: "italic",
+                        position: "relative",
+                      }}>
+                        <button
+                          onClick={() => dismissSummary(key)}
+                          style={{ position: "absolute", top: "6px", right: "8px", background: "none", border: "none", cursor: "pointer", color: "var(--ink-ghost)", fontSize: "14px", lineHeight: "1", padding: "2px 4px" }}
+                          title="Dismiss"
+                        >×</button>
+                        {reorientSummaries[key]}
+                      </div>
+                    )}
                   </div>
                 );
               })}
-              {series.length > 0 && (
-                <div style={{
-                  marginTop: "4px", paddingTop: "12px",
-                  borderTop: "1px solid var(--parchment-deep)",
-                  fontSize: "12px", color: "var(--ink-ghost)",
-                }}>
-                  {series.filter(s => !s.canon_category).length > 0 && (
-                    <span>{series.filter(s => !s.canon_category).length} series uncategorized</span>
-                  )}
-                </div>
-              )}
             </div>
           </div>
+        )}
 
-        </div>
-
-        {/* Continue Where You Left Off */}
+        {/* Continue Sermon Prep */}
         {recentSermons.length > 0 && (
           <div style={{ marginBottom: "28px" }}>
-            <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "16px", fontWeight: "600", color: "var(--ink-soft)", letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: "14px" }}>
-              Continue Where You Left Off
-            </h2>
-            <div style={{ display: "grid", gridTemplateColumns: `repeat(${recentSermons.length}, 1fr)`, gap: "16px" }}>
-              {recentSermons.map((sermon) => (
-                <div key={sermon.id} className="card" style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                  {/* Title + badge */}
-                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "8px" }}>
+            <h2 style={sectionHeadingStyle}>Continue Sermon Prep</h2>
+            <div style={{ display: "grid", gridTemplateColumns: `repeat(${Math.min(recentSermons.length, 3)}, 1fr)`, gap: "16px" }}>
+              {recentSermons.map((sermon) => {
+                const key = `sermon_${sermon.id}`;
+                return (
+                  <div key={sermon.id} className="card" style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                    {/* Title */}
                     <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "15px", fontWeight: "600", color: "var(--ink)", lineHeight: "1.3" }}>
                       {sermon.title}
                     </div>
-                    <span className={`stage-badge stage-${sermon.stage}`} style={{ flexShrink: 0 }}>{sermon.stage}</span>
-                  </div>
 
-                  {/* Passage */}
-                  {sermon.passage && (
-                    <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "12px", color: "var(--ink-soft)" }}>
-                      {sermon.passage}
+                    {/* Passage */}
+                    {sermon.passage && (
+                      <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "12px", color: "var(--ink-soft)" }}>
+                        {sermon.passage}
+                      </div>
+                    )}
+
+                    {/* Series + last updated */}
+                    <div style={{ fontSize: "12px", color: "var(--ink-ghost)" }}>
+                      {sermon.series_title && <span>{sermon.series_title} · </span>}
+                      <span>Updated {sermon.updated_at ? formatDate(sermon.updated_at.split("T")[0].split(" ")[0]) : "—"}</span>
                     </div>
-                  )}
 
-                  {/* Series + last updated */}
-                  <div style={{ fontSize: "12px", color: "var(--ink-ghost)" }}>
-                    {sermon.series_title && <span>{sermon.series_title} · </span>}
-                    <span>Updated {sermon.updated_at ? formatDate(sermon.updated_at.split("T")[0].split(" ")[0]) : "—"}</span>
-                  </div>
-
-                  {/* Buttons */}
-                  <div style={{ display: "flex", gap: "8px", marginTop: "2px" }}>
-                    <button
-                      className="btn-primary btn-sm"
-                      onClick={() => onOpenSermon(sermon.id)}
-                    >
-                      Open
-                    </button>
-                    <button
-                      className="btn-ghost btn-sm"
-                      onClick={() => handleReorient(sermon)}
-                      disabled={reorientLoading[sermon.id]}
-                    >
-                      {reorientLoading[sermon.id] ? "Thinking…" : "Reorient me"}
-                    </button>
-                  </div>
-
-                  {/* AI summary */}
-                  {reorientSummaries[sermon.id] && (
-                    <div style={{
-                      marginTop: "4px",
-                      padding: "12px 14px",
-                      background: "var(--parchment-warm)",
-                      borderRadius: "var(--radius)",
-                      borderLeft: "3px solid var(--gold)",
-                      fontSize: "14px",
-                      lineHeight: "1.6",
-                      color: "var(--ink-mid)",
-                      fontStyle: "italic",
-                      position: "relative",
-                    }}>
+                    {/* Buttons */}
+                    <div style={{ display: "flex", gap: "8px", marginTop: "2px" }}>
                       <button
-                        onClick={() => setReorientSummaries((prev) => { const next = { ...prev }; delete next[sermon.id]; return next; })}
-                        style={{
-                          position: "absolute",
-                          top: "6px",
-                          right: "8px",
-                          background: "none",
-                          border: "none",
-                          cursor: "pointer",
-                          color: "var(--ink-ghost)",
-                          fontSize: "14px",
-                          lineHeight: "1",
-                          padding: "2px 4px",
-                        }}
-                        title="Dismiss"
-                      >×</button>
-                      {reorientSummaries[sermon.id]}
+                        className="btn-primary btn-sm"
+                        onClick={() => onOpenSermon(sermon.id)}
+                      >
+                        Open
+                      </button>
+                      <button
+                        className="btn-ghost btn-sm"
+                        onClick={() => handleReorientSermon(sermon)}
+                        disabled={reorientLoading[key]}
+                      >
+                        {reorientLoading[key] ? "Thinking…" : "Reorient me"}
+                      </button>
                     </div>
-                  )}
-                </div>
-              ))}
+
+                    {/* AI summary */}
+                    {reorientSummaries[key] && (
+                      <div style={{
+                        marginTop: "4px", padding: "12px 14px",
+                        background: "var(--parchment-warm)", borderRadius: "var(--radius)",
+                        borderLeft: "3px solid var(--gold)", fontSize: "14px",
+                        lineHeight: "1.6", color: "var(--ink-mid)", fontStyle: "italic",
+                        position: "relative",
+                      }}>
+                        <button
+                          onClick={() => dismissSummary(key)}
+                          style={{ position: "absolute", top: "6px", right: "8px", background: "none", border: "none", cursor: "pointer", color: "var(--ink-ghost)", fontSize: "14px", lineHeight: "1", padding: "2px 4px" }}
+                          title="Dismiss"
+                        >×</button>
+                        {reorientSummaries[key]}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Empty state */}
+        {activeSeries.length === 0 && recentSermons.length === 0 && (
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "300px", gap: "16px" }}>
+            <p style={{ color: "var(--ink-ghost)", fontStyle: "italic", fontSize: "15px" }}>
+              Nothing in progress yet.
+            </p>
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button className="btn-primary" onClick={onNewSeries}>Start a series</button>
+              <button className="btn-ghost" onClick={() => setShowNewModal(true)}>Start a sermon</button>
             </div>
           </div>
         )}

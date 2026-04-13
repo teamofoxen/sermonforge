@@ -2,6 +2,21 @@
 
 ---
 
+## 2026-04-12 — Dashboard redesign: app home screen as re-entry point
+
+Replaced the dashboard's status-monitoring layout (Series Pipeline, Biblical Coverage) with a focused re-entry experience oriented around active work.
+
+**Changes:**
+- `src/components/Dashboard.jsx` — full rewrite: two sections ("Continue Series Planning" and "Continue Sermon Prep"), each with Reorient Me AI summaries; stage badges removed from cards; Biblical Coverage and Series Pipeline cards removed; empty state added
+- `src/components/SermonWorkspace.jsx` — last active tab now persisted to localStorage per sermon (`sermonforge_sermon_tab_<id>`); restored on mount so Open takes you back to where you were
+- `src/components/StudyTab.jsx` — last active step and subphase persisted to localStorage per sermon; lazy useState init so state is correct from first render
+
+**Why:** Dashboard had no clear purpose as a monitoring tool (stock-ticker problem). Re-framed as "the app home screen that already knows why you're here" — orients the pastor back into active work rather than displaying aggregate statistics.
+
+**Open feedback items remaining:** New Sermon Modal (remove Preacher/Stage; editable title).
+
+---
+
 ## 2026-04-12 — Dark mode
 
 Added full dark mode support with a sidebar toggle and localStorage persistence.

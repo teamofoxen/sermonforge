@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { getOutline, serializeOutline, getFunctionalElements, serializeFunctionalElements, autoResize } from "../utils";
 import { STEPS, PHASES, PHASE_SEQUENCE, STEP_SEQUENCE } from "../constants/steps";
 import { sendAIMessage } from "../utils/ai";
@@ -185,8 +185,19 @@ function StructuredWorksheet({ fields, data, onChange, legacyNotes }) {
 }
 
 export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChange, onTabChange }) {
-  const [activeStep, setActiveStep] = useState(1);
-  const [activeSubPhase, setActiveSubPhase] = useState(1);
+  const [activeStep, setActiveStep] = useState(() => {
+    const saved = localStorage.getItem(`sermonforge_study_step_${sermon.id}`);
+    return saved ? parseInt(saved, 10) : 1;
+  });
+  const [activeSubPhase, setActiveSubPhase] = useState(() => {
+    const saved = localStorage.getItem(`sermonforge_study_subphase_${sermon.id}`);
+    return saved ? parseInt(saved, 10) : 1;
+  });
+
+  useEffect(() => {
+    localStorage.setItem(`sermonforge_study_step_${sermon.id}`, activeStep);
+    localStorage.setItem(`sermonforge_study_subphase_${sermon.id}`, activeSubPhase);
+  }, [activeStep, activeSubPhase, sermon.id]);
   const [summaries, setSummaries] = useState({});
   const [summaryLoading, setSummaryLoading] = useState(null);
   const [funcData, setFuncData] = useState(() => getFunctionalElements(sermon));
