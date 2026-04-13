@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-04-12 — Fix: show planning-stage sermons on dashboard
+
+`getRecentSermons` was filtering out `stage = 'planning'` — a holdover from the old dashboard where planning-stage meant "not really started." New home screen should show all non-archived sermons regardless of stage.
+
+**Changes:**
+- `electron/main.js` — removed `AND s.stage != 'planning'` from `db-getRecentSermons` query
+
+---
+
 ## 2026-04-12 — Dashboard redesign: app home screen as re-entry point
 
 Replaced the dashboard's status-monitoring layout (Series Pipeline, Biblical Coverage) with a focused re-entry experience oriented around active work.
