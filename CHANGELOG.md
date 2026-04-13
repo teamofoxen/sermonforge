@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-04-13 — fix: reset theology globals on app close
+
+`window-all-closed` handler now resets `theologyDb`, `theologyVecAvailable`, and `theologyEmbedder` to `null`/`false` after closing theology.db. No-op on current Windows builds (process exits immediately), but eliminates latent stale-state risk if macOS support or window-relaunch is ever added.
+
+- `electron/main.js` — added three reset lines after `theologyDb.close()`
+
+---
+
 ## 2026-04-13 — feat: theology semantic search — better-sqlite3 + sqlite-vec + transformers.js
 
 Replaced sql.js with better-sqlite3 for theology.db to enable sqlite-vec vector search extension. Theology search now uses semantic (vector) search when embeddings are available, with automatic fallback to FTS4 when not. The main sermonforge.db remains on sql.js — zero risk to the core app.

@@ -1802,5 +1802,8 @@ app.whenReady().then(async () => {
 app.on("window-all-closed", () => {
   if (db) flushDb();
   if (theologyDb) { try { theologyDb.close(); } catch (_) {} }
+  theologyDb = null;
+  theologyVecAvailable = false;
+  theologyEmbedder = null;
   if (process.platform !== "darwin") app.quit();
 });
