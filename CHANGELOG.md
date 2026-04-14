@@ -2,6 +2,33 @@
 
 ---
 
+## 2026-04-14 — feat: theology search on dashboard
+
+Added a standalone theology search widget to the Dashboard.
+
+### What changed
+
+**`src/components/Dashboard.jsx`**
+- Imports `getTheologyStatus` and `searchTheologyLibrary` from `src/db/database.js`.
+- On mount, checks theology availability and conditionally renders the search section.
+- `handleTheologySearch`: calls `searchTheologyLibrary(query, 8)`, formats chunks, then
+  calls `sendAIMessage` with the same isolated system prompt used in AIPanel's theology
+  path — no sermon workflow context, no stage rules, no context tiers. The dashboard has
+  no current sermon so isolation is total and intentional.
+- `handleTheologyClear`: resets query, result, and conversation history.
+- UI: search input (Enter key supported), Search/Clear buttons, result card with source
+  attribution badges. Only renders when `theologyAvailable` is true.
+
+### Context isolation rationale
+
+The full sermon system prompt's MESSAGE CONTEXT RULES are designed for sermon prep stages
+(they expect MPT/MPS and misbehave when absent). On the dashboard there is no sermon, so
+the theology search uses only the stripped-down research prompt — same as when hits are
+found in AIPanel. No context builder is invoked, no stage is passed, and no sermon fields
+are included in the user message.
+
+---
+
 ## 2026-04-14 — fix: log inner FTS failure during semantic search; deploy theology.db
 
 Two changes to complete the theology search system:

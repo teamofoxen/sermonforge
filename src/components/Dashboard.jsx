@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getAllSeries, getAllSermons, getRecentSermons, loadDemoSeries } from "../db/database";
+import { getAllSeries, getAllSermons, getRecentSermons, loadDemoSeries, getTheologyStatus, searchTheologyLibrary } from "../db/database";
 import { useDemo } from "../contexts/DemoContext";
 import NewSermonModal from "./NewSermonModal";
 import { formatDate, getOutline } from "../utils";
@@ -15,6 +15,15 @@ export default function Dashboard({ onOpenSermon, onOpenSeries, onNewSeries, onN
   const [showNewModal, setShowNewModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [demoLoading, setDemoLoading] = useState(false);
+  const [theologyAvailable, setTheologyAvailable] = useState(false);
+  const [theologyQuery, setTheologyQuery] = useState("");
+  const [theologyLoading, setTheologyLoading] = useState(false);
+  const [theologyResult, setTheologyResult] = useState(null); // { answer, sources, noHits }
+  const [theologyMessages, setTheologyMessages] = useState([]);
+
+  useEffect(() => {
+    getTheologyStatus().then(s => setTheologyAvailable(s?.available ?? false)).catch(() => {});
+  }, []);
 
   useEffect(() => {
     async function load() {
@@ -106,6 +115,61 @@ export default function Dashboard({ onOpenSermon, onOpenSeries, onNewSeries, onN
     } finally {
       setReorientLoading((prev) => ({ ...prev, [key]: false }));
     }
+  }
+
+  async function handleTheologySearch() {
+    const text = theologyQuery.trim();
+    if (!text || theologyLoading) return;
+
+    setTheologyLoading(true);
+    setTheologyResult(null);
+
+    // Isolated system prompt — no sermon workflow context, no stage rules, no context tiers.
+    // This is intentional: the full sermon system prompt's MESSAGE CONTEXT RULES are designed
+    // for sermon prep stages and conflict with free-form theology research (they expect
+    // MPT/MPS and can refuse or misbehave when absent). Theology search on the dashboard has
+    // no current sermon, so the isolation is total.
+    const systemPrompt = `You are a theology research assistant for a pastor. Answer the question using the sources provided.
+
+- Ground your answer in the provided sources.
+- Include at least one direct quotation with its source attribution (format: [Author — Work]).
+- If multiple sources speak to the question, reference more than one.
+- Be concise and direct.
+- If the sources do not directly address the question, say so clearly rather than substituting general knowledge.`;
+
+    try {
+      const hits = await searchTheologyLibrary(text, 8);
+      const chunks = hits?.map(h => `[${h.author} — ${h.work}]\n${h.text_chunk}`) || [];
+
+      if (chunks.length === 0) {
+        setTheologyResult({ answer: null, sources: [], noHits: true });
+        return;
+      }
+
+      const userContent = `SOURCES:\n${chunks.join("\n\n")}\n\nQUESTION:\n${text}`;
+      const newMessages = [...theologyMessages, { role: "user", content: userContent }];
+      setTheologyMessages(newMessages);
+
+      const response = await sendAIMessage(
+        newMessages.map(m => ({ role: m.role, content: m.content })),
+        systemPrompt
+      );
+
+      const sources = [...new Map(hits.map(h => [`${h.author}|||${h.work}`, { author: h.author, work: h.work }])).values()];
+      const assistantMsg = { role: "assistant", content: response || "Something went wrong. Please try again.", sources };
+      setTheologyMessages(prev => [...prev, assistantMsg]);
+      setTheologyResult({ answer: response, sources, noHits: false });
+    } catch (err) {
+      setTheologyResult({ answer: `Error: ${err.message}`, sources: [], noHits: false });
+    } finally {
+      setTheologyLoading(false);
+    }
+  }
+
+  function handleTheologyClear() {
+    setTheologyQuery("");
+    setTheologyResult(null);
+    setTheologyMessages([]);
   }
 
   async function handleLoadDemo() {
@@ -303,6 +367,66 @@ export default function Dashboard({ onOpenSermon, onOpenSeries, onNewSeries, onN
                 );
               })}
             </div>
+          </div>
+        )}
+
+        {/* Theology Search */}
+        {theologyAvailable && (
+          <div style={{ marginBottom: "28px" }}>
+            <h2 style={sectionHeadingStyle}>Search Theology Library</h2>
+            <div style={{ display: "flex", gap: "8px", marginBottom: "12px" }}>
+              <input
+                type="text"
+                value={theologyQuery}
+                onChange={e => setTheologyQuery(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter") handleTheologySearch(); }}
+                placeholder="Search patristics, Reformed theology, commentaries…"
+                style={{
+                  flex: 1, padding: "8px 12px",
+                  border: "1px solid var(--parchment-deep)", borderRadius: "var(--radius)",
+                  fontFamily: "'Crimson Pro', serif", fontSize: "15px",
+                  background: "var(--white)", color: "var(--ink)",
+                  outline: "none",
+                }}
+              />
+              <button
+                className="btn-primary"
+                onClick={handleTheologySearch}
+                disabled={theologyLoading || !theologyQuery.trim()}
+              >
+                {theologyLoading ? "Searching…" : "Search"}
+              </button>
+              {(theologyResult || theologyMessages.length > 0) && (
+                <button className="btn-ghost" onClick={handleTheologyClear}>Clear</button>
+              )}
+            </div>
+
+            {theologyResult?.noHits && (
+              <div style={{ color: "var(--ink-ghost)", fontStyle: "italic", fontSize: "14px" }}>
+                No matching sources found in the theology library.
+              </div>
+            )}
+
+            {theologyResult?.answer && (
+              <div className="card" style={{ padding: "16px 18px", gap: "10px", display: "flex", flexDirection: "column" }}>
+                <div style={{ fontSize: "15px", lineHeight: "1.7", color: "var(--ink)", whiteSpace: "pre-wrap" }}>
+                  {theologyResult.answer}
+                </div>
+                {theologyResult.sources?.length > 0 && (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "4px" }}>
+                    {theologyResult.sources.map((s, i) => (
+                      <span key={i} style={{
+                        fontSize: "11px", padding: "2px 8px",
+                        background: "var(--parchment-warm)", border: "1px solid var(--parchment-deep)",
+                        borderRadius: "10px", color: "var(--ink-soft)", fontFamily: "'Crimson Pro', serif",
+                      }}>
+                        {s.author} — {s.work}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
