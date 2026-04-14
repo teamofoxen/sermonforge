@@ -1612,7 +1612,7 @@ const CATEGORY_LABELS = {
   copy:    "Content/Copy",
 };
 
-ipcMain.handle("feedback-submit", (_, payload) => {
+ipcMain.handle("feedback-submit", async (_, payload) => {
   try {
     const {
       category, currentView, schemaVersion, appVersion, submittedAt,
@@ -1702,21 +1702,35 @@ ipcMain.handle("feedback-submit", (_, payload) => {
       }
     }
 
-    const feedbackDir = "C:\\SermonForge\\exports\\Feedback";
-    if (!fs.existsSync(feedbackDir)) {
-      fs.mkdirSync(feedbackDir, { recursive: true });
+    const token = process.env.GITHUB_FEEDBACK_TOKEN;
+    if (!token) {
+      console.error("[feedback-submit] GITHUB_FEEDBACK_TOKEN not set in .env");
+      return { success: false, error: "Feedback token not configured." };
     }
 
-    // Filename: YYYY-MM-DD-HH-MM-category.md
-    const dt = new Date(submittedAt);
-    const pad = (n) => String(n).padStart(2, "0");
-    const datePart = `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
-    const timePart = `${pad(dt.getHours())}-${pad(dt.getMinutes())}`;
-    const filename = `${datePart}-${timePart}-${category}.md`;
-    const filepath = path.join(feedbackDir, filename);
+    const title = `[${categoryLabel}] ${currentView || "unknown"} — ${submittedAt.slice(0, 10)}`;
+    const body = lines.join("\n");
 
-    fs.writeFileSync(filepath, lines.join("\n"), "utf8");
-    return { success: true, filepath };
+    const response = await fetch("https://api.github.com/repos/teamofoxen/sermonforge/issues", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ title, body, labels: [category] }),
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      console.error("[feedback-submit] GitHub API error:", response.status, text);
+      return { success: false, error: `GitHub returned ${response.status}.` };
+    }
+
+    const issue = await response.json();
+    console.log("[feedback-submit] Issue created:", issue.html_url);
+    return { success: true, url: issue.html_url };
   } catch (e) {
     console.error("[feedback-submit]", e);
     return { success: false, error: e.message };

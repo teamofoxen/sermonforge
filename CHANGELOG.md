@@ -2,6 +2,23 @@
 
 ---
 
+## 2026-04-14 — feat: feedback routed to GitHub Issues
+
+**`electron/main.js` — `feedback-submit` handler**
+- Handler is now `async`.
+- Replaced hardcoded local file write (`C:\SermonForge\exports\Feedback`) with a
+  `fetch` POST to the GitHub Issues API (`teamofoxen/sermonforge`).
+- Issue title format: `[Category] currentView — YYYY-MM-DD`.
+- Labels (`bug`, `ux`, `ai`, `feature`, `copy`) applied automatically per category.
+- Token read from `GITHUB_FEEDBACK_TOKEN` in `.env`. Returns a clear error if token
+  is missing rather than failing silently.
+- Logs the created issue URL to console on success.
+
+**GitHub repo**
+- Created labels `ux`, `ai`, `feature`, `copy` via API (`bug` already existed).
+
+---
+
 ## 2026-04-14 — fix: theology-search hardening + electron verification hook
 
 Four surgical fixes to the `theology-search` IPC handler in `electron/main.js`, plus
