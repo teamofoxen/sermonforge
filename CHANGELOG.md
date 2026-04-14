@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-04-14 — chore: move build output to C:\Projects\SermonForgeBuilds
+
+Changed `directories.output` in `package.json` from `C:/SermonForge/builds` to
+`C:/Projects/SermonForgeBuilds` — sibling of the project folder, easy to find,
+not in AppData or OneDrive. Updated `docs/RULES.md` to match.
+
+---
+
 ## 2026-04-14 — feat: theology search on dashboard
 
 Added a standalone theology search widget to the Dashboard.

@@ -29,7 +29,7 @@
 6. Never mark an issue as fixed without verifying it actually works.
 7. This is a Windows app on OneDrive — always use `path.join()`, never hardcode path separators.
 8. After completing any set of changes, run `npm run build` to produce an updated installer.
-   Output goes to `C:\Users\rossa\OneDrive\SermonForgeBuilds\`. Do not wait to be asked —
+   Output goes to `C:\Projects\SermonForgeBuilds\`. Do not wait to be asked —
    build is part of finishing a task.
    - `base: "./"` in `vite.config.mjs` is required (Electron loads from `file://`, not `http://`).
    - electron-builder: `sql-wasm.wasm` must be in `asarUnpack`; `.env` must be in `extraResources`.

@@ -54,7 +54,7 @@
       }
     ],
     "directories": {
-      "output": "C:/SermonForge/builds"
+      "output": "C:/Projects/SermonForgeBuilds"
     },
     "win": {
       "target": [
