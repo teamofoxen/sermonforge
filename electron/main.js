@@ -1160,8 +1160,8 @@ ipcMain.handle("theology-search", async (event, { query, limit = 5 }) => {
                 .slice(0, limit)
                 // eslint-disable-next-line no-unused-vars
                 .map(({ _score, full_text, ...c }) => c);
-            } catch (_) {
-              // FTS unavailable or query failed — semantic results are sufficient
+            } catch (err) {
+              console.warn("Inner FTS query failed during semantic search:", err.message);
             }
           }
 

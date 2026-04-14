@@ -2,6 +2,26 @@
 
 ---
 
+## 2026-04-14 — fix: log inner FTS failure during semantic search; deploy theology.db
+
+Two changes to complete the theology search system:
+
+1. **Silent catch removed** (`electron/main.js:1163`): The inner FTS sub-query inside the
+   semantic search block had a bare `catch (_) {}` with no logging. Replaced with
+   `catch (err) { console.warn(...) }` so failures surface in the log rather than
+   disappearing silently. Control flow and fallback behavior are unchanged — if this
+   FTS sub-query fails, semantic results still proceed as before.
+
+2. **theology.db deployed to runtime path**: Diagnostic confirmed that `C:\SermonForge\data\`
+   had never been created since the OneDrive migration (2026-04-13). theology.db existed only
+   at `C:\Projects\SermonForge\theology.db` (dev source). Copied to
+   `C:\SermonForge\data\theology.db` (519,266,304 bytes). The app now finds theology.db on
+   startup and both FTS and vector search initialize correctly.
+
+- `electron/main.js` — silent catch → console.warn
+
+---
+
 ## 2026-04-13 — chore: remove OneDrive dependencies from all runtime paths
 
 Project moved from OneDrive to `C:\Projects\SermonForge`. Updated all runtime file paths
