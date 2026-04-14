@@ -1071,13 +1071,17 @@ const THEOLOGY_AUTHORS = {
   hilary: "Hilary",
 };
 
+function escapeRegex(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 // Score a result chunk by counting how many distinct search terms appear in it.
 // Used to rerank FTS4 results by relevance after fetching a larger candidate set.
 function scoreTheologyChunk(chunk, terms) {
   const haystack = `${chunk.author} ${chunk.work} ${chunk.full_text || chunk.text_chunk}`.toLowerCase();
   return terms.reduce((score, term) => {
     const bare = term.replace(/"/g, "");
-    const hits = (haystack.match(new RegExp(bare, "g")) || []).length;
+    const hits = (haystack.match(new RegExp(escapeRegex(bare), "g")) || []).length;
     return score + hits;
   }, 0);
 }
@@ -1098,15 +1102,15 @@ ipcMain.handle("theology-search", async (event, { query, limit = 5 }) => {
     const detectedAuthors = [];
     let scrubbed = lower;
     for (const [keyword] of Object.entries(THEOLOGY_AUTHORS)) {
-      if (lower.includes(keyword)) {
+      if (new RegExp(`\\b${keyword}\\b`).test(lower)) {
         detectedAuthors.push(keyword);
-        scrubbed = scrubbed.replace(new RegExp(keyword, "g"), " ");
+        scrubbed = scrubbed.replace(new RegExp(`\\b${keyword}\\b`, "g"), " ");
       }
     }
 
     // ── Build FTS query parts (used by both semantic hybrid and pure FTS path) ──
     // Extract user-quoted phrases as FTS4 phrase terms
-    const phraseTerms = [];
+    let phraseTerms = [];
     const quoted = scrubbed.match(/"([^"]+)"/g);
     if (quoted) {
       quoted.forEach(p => {
@@ -1135,6 +1139,8 @@ ipcMain.handle("theology-search", async (event, { query, limit = 5 }) => {
       }
     }
 
+    phraseTerms = [...new Set(phraseTerms)];
+
     const contentParts = [...phraseTerms, ...contentTerms];
 
     // ── Semantic search path (vec0) ────────────────────────────────────
@@ -1142,10 +1148,6 @@ ipcMain.handle("theology-search", async (event, { query, limit = 5 }) => {
     // then merge results. FTS finds exact phrase matches the vector model may miss.
     // Wrapped in its own try/catch so any failure falls through to the FTS-only
     // path below rather than propagating to the outer catch and returning [].
-
-    // DIAGNOSTIC MODE (DO NOT ENABLE IN PRODUCTION)
-    // If enabled, disables FTS fallback and forces vector-only execution
-    // Used to validate vector system independently
 
     if (theologyVecAvailable) {
       console.log("[VECTOR] Semantic search activated");

@@ -2,6 +2,45 @@
 
 ---
 
+## 2026-04-14 — fix: theology-search hardening + electron verification hook
+
+Four surgical fixes to the `theology-search` IPC handler in `electron/main.js`, plus
+a project-scoped `PostToolUse` hook that enforces `node --check` on main-process code.
+
+**`electron/main.js` — `theology-search` handler**
+- Author keyword detection now uses word boundaries (`\bkeyword\b`) for both the
+  match test and the scrub-replace. Prevents "calvinism" matching "calvin",
+  "lutheran" matching "luther", etc. Previously any substring occurrence wrongly
+  triggered an author filter.
+- `scoreTheologyChunk` now escapes the search term before constructing the
+  scoring regex. Added small `escapeRegex(str)` helper. Previously a term
+  containing regex metacharacters (e.g. quoted phrase with `.` or `(`) could
+  produce an invalid regex or spurious matches.
+- `phraseTerms` is deduplicated (`[...new Set(phraseTerms)]`) after the
+  implicit-phrase generation loop. Declaration changed from `const` to `let`.
+  The loop could previously push the same phrase twice for symmetric word-pair
+  patterns; FTS queries and score weighting now see each phrase once.
+- Removed a stale "DIAGNOSTIC MODE (DO NOT ENABLE IN PRODUCTION)" comment block
+  whose referenced diagnostic mode does not exist in the code.
+
+Return shapes, SQL, semantic/FTS merge logic, the author post-filter, and the
+outer try/catch are all unchanged.
+
+**`.claude/settings.json` (new, project-scoped)**
+- Added `PostToolUse` hook on `Edit|Write` that runs `node --check` on any
+  `electron/**/*.js` file after Claude edits it. Exits 2 on parse failure so the
+  syntax error surfaces to Claude as a blocking system reminder.
+- Uses `sed` (no jq dependency) to extract `file_path` from hook stdin; filters
+  via `case` glob (handles both forward and backward slashes). Non-matching
+  paths exit in microseconds.
+- Installed to close a verification gap: prior session skipped verification on
+  an `electron/main.js` edit citing "not observable in browser preview" —
+  which is not a valid skip reason for main-process code. Hook enforces a
+  minimum parse check; logic-level verification (read-back, behavior tests)
+  still recommended for non-trivial changes.
+
+---
+
 ## 2026-04-14 — docs: bring documentation and logging into alignment with current system
 
 Targeted fixes from the 2026-04-14 full system audit. Documentation and a single

@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=$(sed -n 's/.*\"file_path\":\"\\([^\"]*\\)\".*/\\1/p' | head -1); case \"$f\" in */electron/*.js|*\\\\electron\\\\*.js) node --check \"$f\" >&2 || exit 2 ;; esac"
+          }
+        ]
+      }
+    ]
+  }
+}
