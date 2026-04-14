@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import ReactMarkdown from "react-markdown";
 import { getAllSeries, getAllSermons, getRecentSermons, loadDemoSeries, getTheologyStatus, searchTheologyLibrary } from "../db/database";
 import { useDemo } from "../contexts/DemoContext";
 import NewSermonModal from "./NewSermonModal";
@@ -408,20 +409,15 @@ export default function Dashboard({ onOpenSermon, onOpenSeries, onNewSeries, onN
             )}
 
             {theologyResult?.answer && (
-              <div className="card" style={{ padding: "16px 18px", gap: "10px", display: "flex", flexDirection: "column" }}>
-                <div style={{ fontSize: "15px", lineHeight: "1.7", color: "var(--ink)", whiteSpace: "pre-wrap" }}>
-                  {theologyResult.answer}
+              <div className="card" style={{ padding: "16px 18px" }}>
+                <div className="ai-markdown">
+                  <ReactMarkdown>{theologyResult.answer}</ReactMarkdown>
                 </div>
                 {theologyResult.sources?.length > 0 && (
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "6px", marginTop: "4px" }}>
+                  <div style={{ marginTop: "8px", paddingTop: "8px", borderTop: "1px solid var(--parchment-deep)", fontSize: "11px", color: "var(--ink-ghost)" }}>
+                    <span style={{ fontWeight: 600 }}>Sources consulted: </span>
                     {theologyResult.sources.map((s, i) => (
-                      <span key={i} style={{
-                        fontSize: "11px", padding: "2px 8px",
-                        background: "var(--parchment-warm)", border: "1px solid var(--parchment-deep)",
-                        borderRadius: "10px", color: "var(--ink-soft)", fontFamily: "'Crimson Pro', serif",
-                      }}>
-                        {s.author} — {s.work}
-                      </span>
+                      <span key={i}>{i > 0 ? " · " : ""}{s.author} — <em>{s.work}</em></span>
                     ))}
                   </div>
                 )}
