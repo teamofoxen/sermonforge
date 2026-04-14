@@ -13,6 +13,7 @@ import { tryParse, formatDate, autoResize } from "../utils";
 import DeleteButton from "./DeleteButton";
 import { sendAIMessage } from "../utils/ai";
 import InlineAIResponse from "./InlineAIResponse";
+import ReactMarkdown from "react-markdown";
 
 
 const CANON_OPTIONS = [
@@ -1596,11 +1597,13 @@ function AIChatPanel({ messages, loading, input, onInputChange, onSubmit, placeh
             border: msg.role === "assistant" ? "1px solid var(--parchment-deep)" : "none",
             fontSize: "14px",
             lineHeight: "1.6",
-            color: "var(--ink-mid)",
-            whiteSpace: "pre-wrap",
+            color: msg.role === "assistant" ? "var(--ink)" : "var(--ink-mid)",
+            whiteSpace: msg.role === "user" ? "pre-wrap" : undefined,
             position: "relative",
           }}>
-            {msg.content}
+            {msg.role === "assistant"
+              ? <div className="ai-markdown"><ReactMarkdown>{msg.content}</ReactMarkdown></div>
+              : msg.content}
             {msg.role === "assistant" && <CopyButton text={msg.content} />}
           </div>
         ))}

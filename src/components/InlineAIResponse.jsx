@@ -1,4 +1,5 @@
 import { useState } from "react";
+import ReactMarkdown from "react-markdown";
 
 /**
  * InlineAIResponse — appears directly below the field that triggered an AI request.
@@ -24,7 +25,7 @@ export default function InlineAIResponse({ fieldName, response, loading, onDismi
         </div>
       ) : (
         <>
-          <div className="inline-ai-text">{response}</div>
+          <div className="ai-markdown" style={{ marginBottom: "10px" }}><ReactMarkdown>{response}</ReactMarkdown></div>
           <div className="inline-ai-actions">
             <InlineCopyButton text={response} />
             <button className="inline-ai-dismiss" onClick={onDismiss}>✕ Dismiss</button>

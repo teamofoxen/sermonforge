@@ -2,6 +2,24 @@
 
 ---
 
+## 2026-04-14 — feat: uniform AI response formatting across all panels
+
+Applied the canonical `.ai-markdown` + ReactMarkdown formatting (Crimson Pro 14px, 1.6 line-height, Playfair Display headings, markdown rendering) to the two locations that were still using plain text.
+
+**`src/components/SeriesPlanner.jsx` — `AIChatPanel`**
+- Added `import ReactMarkdown from "react-markdown"`.
+- Assistant messages now render via `<div className="ai-markdown"><ReactMarkdown>` instead of plain `{msg.content}`.
+- `color` changed to `var(--ink)` for assistant (was `var(--ink-mid)` for all messages).
+- `whiteSpace: pre-wrap` now only applied to user messages (ReactMarkdown handles its own whitespace for assistant).
+
+**`src/components/InlineAIResponse.jsx`**
+- Added `import ReactMarkdown from "react-markdown"`.
+- Response text now renders via `<div className="ai-markdown"><ReactMarkdown>` instead of `<div className="inline-ai-text">`.
+- The `.inline-ai-response` container and all action/copy/dismiss elements are unchanged.
+- `marginBottom: 10px` preserved inline to maintain spacing to the action row.
+
+---
+
 ## 2026-04-14 — feat: feedback routed to GitHub Issues
 
 **`electron/main.js` — `feedback-submit` handler**
