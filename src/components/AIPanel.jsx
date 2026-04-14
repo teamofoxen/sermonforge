@@ -120,21 +120,39 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
       try {
         const hits = await searchTheologyLibrary(text, 8);
         const theologyChunks = hits?.map(h => `[${h.author} — ${h.work}]\n${h.text_chunk}`) || [];
-        const context = buildContext({ sermon, step, theologyChunks });
-        // Only prepend CONTEXT block when there is actual context to include (L-3).
-        const userContent = context
-          ? `CONTEXT:\n${context}\n\nUSER REQUEST:\n${text}`
-          : text;
+
+        let userContent;
+        let systemPrompt;
+
+        if (theologyChunks.length > 0) {
+          // When sources are found, bypass all sermon workflow context. The full
+          // system prompt's MESSAGE CONTEXT RULES are designed for sermon prep
+          // stages and actively conflict with free-form theology research —
+          // they cause refusals when MPT/MPS are absent and bury the source
+          // chunks under unrelated context tiers.
+          // Instead: a stripped-down research prompt + sources-only message.
+          const sourcesBlock = theologyChunks.join("\n\n");
+          const passageLine = sermon?.passage ? `\nPASSAGE: ${sermon.passage}\n` : "";
+          userContent = `SOURCES:\n${sourcesBlock}${passageLine}\nQUESTION:\n${text}`;
+          systemPrompt = `You are a theology research assistant for a pastor. Answer the question using the sources provided.
+
+- Ground your answer in the provided sources.
+- Include at least one direct quotation with its source attribution (format: [Author — Work]).
+- If multiple sources speak to the question, reference more than one.
+- Be concise and direct.
+- If the sources do not directly address the question, say so clearly rather than substituting general knowledge.`;
+        } else {
+          // No hits — fall back to standard context-based path.
+          const context = buildContext({ sermon, step });
+          userContent = context
+            ? `CONTEXT:\n${context}\n\nUSER REQUEST:\n${text}`
+            : text;
+          systemPrompt = buildSystemPrompt(step, sermon?.id);
+        }
+
         const userMsg = { role: "user", content: userContent };
         setMessages(prev => [...prev, userMsg]);
         const history = [...messagesRef.current, userMsg].map(m => ({ role: m.role, content: m.content }));
-        // Build system prompt here (theology path bypasses sendMessage) — no external
-        // systemPrompt so there is no doubling risk.
-        // When library chunks are present, ask Claude to include at least one direct quote.
-        const basePrompt = buildSystemPrompt(step, sermon?.id);
-        const systemPrompt = theologyChunks.length > 0
-          ? basePrompt + "\n\nWhen theology library sources are provided in context, include at least one brief direct quotation with its source attribution."
-          : basePrompt;
         const response = await sendAIMessage(history, systemPrompt);
         // Deduplicate sources by author+work for the attribution display
         const sources = hits?.length

@@ -1112,81 +1112,88 @@ ipcMain.handle("theology-search", async (event, { query, limit = 5 }) => {
     // ── Semantic search path (vec0) ────────────────────────────────────
     // When vectors are available, run semantic search AND FTS in parallel,
     // then merge results. FTS finds exact phrase matches the vector model may miss.
+    // Wrapped in its own try/catch so any failure falls through to the FTS-only
+    // path below rather than propagating to the outer catch and returning [].
     if (theologyVecAvailable) {
-      const ok = await ensureTheologyEmbedder();
-      if (ok) {
-        const output = await theologyEmbedder([query], { pooling: "mean", normalize: true });
-        const qVec = JSON.stringify(Array.from(output[0].data));
-        const fetchLimit = detectedAuthors.length > 0 ? limit * 10 : limit * 4;
+      try {
+        const ok = await ensureTheologyEmbedder();
+        if (ok) {
+          const output = await theologyEmbedder([query], { pooling: "mean", normalize: true });
+          const qVec = JSON.stringify(Array.from(output[0].data));
+          const fetchLimit = detectedAuthors.length > 0 ? limit * 10 : limit * 4;
 
-        let vecResults = queryTheology(
-          `SELECT t.id, t.author, t.work,
-                  substr(t.text, 1, 2000) as text_chunk
-           FROM (
-             SELECT rowid, distance FROM theology_vec
-             WHERE embedding MATCH ?
-             ORDER BY distance LIMIT ?
-           ) nn
-           JOIN theology t ON nn.rowid = t.rowid`,
-          [qVec, fetchLimit]
-        );
+          let vecResults = queryTheology(
+            `SELECT t.id, t.author, t.work,
+                    substr(t.text, 1, 2000) as text_chunk
+             FROM (
+               SELECT rowid, distance FROM theology_vec
+               WHERE embedding MATCH ?
+               ORDER BY distance LIMIT ?
+             ) nn
+             JOIN theology t ON nn.rowid = t.rowid`,
+            [qVec, fetchLimit]
+          );
 
-        // Run FTS alongside semantic to catch exact phrase matches
-        let ftsResults = [];
-        if (contentParts.length > 0) {
-          try {
-            const authorName = detectedAuthors.length > 0 ? THEOLOGY_AUTHORS[detectedAuthors[0]] : null;
-            const ftsQuery = authorName
-              ? `SELECT t.id, t.author, t.work,
-                        substr(t.text, 1, 2000) as text_chunk,
-                        substr(t.text, 1, 2000) as full_text
-                 FROM theology_fts
-                 JOIN theology t ON theology_fts.rowid = t.rowid
-                 WHERE theology_fts MATCH ?
-                 AND t.author = ?
-                 LIMIT ?`
-              : `SELECT t.id, t.author, t.work,
-                        substr(t.text, 1, 2000) as text_chunk,
-                        substr(t.text, 1, 2000) as full_text
-                 FROM theology_fts
-                 JOIN theology t ON theology_fts.rowid = t.rowid
-                 WHERE theology_fts MATCH ?
-                 LIMIT ?`;
-            const ftsParams = authorName
-              ? [contentParts.join(" "), authorName, limit * 10]
-              : [contentParts.join(" "), limit * 10];
-            const scoringTerms = [...phraseTerms, ...contentTerms];
-            ftsResults = queryTheology(ftsQuery, ftsParams)
-              .map(c => ({ ...c, _score: scoreTheologyChunk(c, scoringTerms) }))
-              .sort((a, b) => b._score - a._score)
-              .slice(0, limit)
-              // eslint-disable-next-line no-unused-vars
-              .map(({ _score, full_text, ...c }) => c);
-          } catch (_) {
-            // FTS unavailable or query failed — semantic results are sufficient
+          // Run FTS alongside semantic to catch exact phrase matches
+          let ftsResults = [];
+          if (contentParts.length > 0) {
+            try {
+              const authorName = detectedAuthors.length > 0 ? THEOLOGY_AUTHORS[detectedAuthors[0]] : null;
+              const ftsQuery = authorName
+                ? `SELECT t.id, t.author, t.work,
+                          substr(t.text, 1, 2000) as text_chunk,
+                          substr(t.text, 1, 2000) as full_text
+                   FROM theology_fts
+                   JOIN theology t ON theology_fts.rowid = t.rowid
+                   WHERE theology_fts MATCH ?
+                   AND t.author = ?
+                   LIMIT ?`
+                : `SELECT t.id, t.author, t.work,
+                          substr(t.text, 1, 2000) as text_chunk,
+                          substr(t.text, 1, 2000) as full_text
+                   FROM theology_fts
+                   JOIN theology t ON theology_fts.rowid = t.rowid
+                   WHERE theology_fts MATCH ?
+                   LIMIT ?`;
+              const ftsParams = authorName
+                ? [contentParts.join(" "), authorName, limit * 10]
+                : [contentParts.join(" "), limit * 10];
+              const scoringTerms = [...phraseTerms, ...contentTerms];
+              ftsResults = queryTheology(ftsQuery, ftsParams)
+                .map(c => ({ ...c, _score: scoreTheologyChunk(c, scoringTerms) }))
+                .sort((a, b) => b._score - a._score)
+                .slice(0, limit)
+                // eslint-disable-next-line no-unused-vars
+                .map(({ _score, full_text, ...c }) => c);
+            } catch (_) {
+              // FTS unavailable or query failed — semantic results are sufficient
+            }
           }
-        }
 
-        // Post-filter semantic results by author if specified
-        if (detectedAuthors.length > 0) {
-          const authorName = THEOLOGY_AUTHORS[detectedAuthors[0]];
-          vecResults = vecResults.filter(r => r.author === authorName);
-        }
-
-        // FTS phrase matches rank first — exact phrase hits beat semantic approximations.
-        // Semantic results fill remaining slots. This ensures "fear of the lord" verbatim
-        // in the text wins over a semantically adjacent passage that doesn't say it.
-        const seen = new Set(ftsResults.map(r => r.id));
-        const merged = [...ftsResults];
-        for (const r of vecResults) {
-          if (!seen.has(r.id)) {
-            merged.push(r);
-            seen.add(r.id);
+          // Post-filter semantic results by author if specified
+          if (detectedAuthors.length > 0) {
+            const authorName = THEOLOGY_AUTHORS[detectedAuthors[0]];
+            vecResults = vecResults.filter(r => r.author === authorName);
           }
-          if (merged.length >= limit) break;
-        }
 
-        return merged.slice(0, limit);
+          // FTS phrase matches rank first — exact phrase hits beat semantic approximations.
+          // Semantic results fill remaining slots. This ensures "fear of the lord" verbatim
+          // in the text wins over a semantically adjacent passage that doesn't say it.
+          const seen = new Set(ftsResults.map(r => r.id));
+          const merged = [...ftsResults];
+          for (const r of vecResults) {
+            if (!seen.has(r.id)) {
+              merged.push(r);
+              seen.add(r.id);
+            }
+            if (merged.length >= limit) break;
+          }
+
+          return merged.slice(0, limit);
+        }
+      } catch (semanticErr) {
+        console.error("Theology semantic search failed, falling back to FTS:", semanticErr.message);
+        // fall through to FTS-only path below
       }
     }
 
@@ -1198,7 +1205,7 @@ ipcMain.handle("theology-search", async (event, { query, limit = 5 }) => {
       const authorName = THEOLOGY_AUTHORS[detectedAuthors[0]];
       candidates = queryTheology(
         `SELECT t.id, t.author, t.work,
-                snippet(theology_fts, "", "", "…", 3, 50) as text_chunk,
+                snippet(theology_fts, '', '', '…', 3, 50) as text_chunk,
                 substr(t.text, 1, 2000) as full_text
          FROM theology_fts
          JOIN theology t ON theology_fts.rowid = t.rowid
@@ -1210,7 +1217,7 @@ ipcMain.handle("theology-search", async (event, { query, limit = 5 }) => {
     } else if (contentParts.length > 0) {
       candidates = queryTheology(
         `SELECT t.id, t.author, t.work,
-                snippet(theology_fts, "", "", "…", 3, 50) as text_chunk,
+                snippet(theology_fts, '', '', '…', 3, 50) as text_chunk,
                 substr(t.text, 1, 2000) as full_text
          FROM theology_fts
          JOIN theology t ON theology_fts.rowid = t.rowid
@@ -1235,7 +1242,7 @@ ipcMain.handle("theology-search", async (event, { query, limit = 5 }) => {
       .map(({ _score, full_text, ...c }) => c);
     return results;
   } catch (e) {
-    console.error("Theology search error:", e.message);
+    console.error("Theology search error:", e.message, e.stack);
     return [];
   }
 });

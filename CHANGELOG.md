@@ -2,6 +2,32 @@
 
 ---
 
+## 2026-04-13 — fix: theology search — FTS crash, silent fallback failure, system prompt isolation
+
+Three fixes that together make theology search actually work end-to-end:
+
+1. **Root cause fix — `snippet()` quote bug**: The FTS fallback used `""` (double quotes) for
+   the snippet start/end markers. SQLite interprets double quotes as column identifiers, not
+   string literals — causing "no such column: ''" and crashing every search that reached the
+   FTS path. Changed to `''` (single quotes). This bug has been present since FTS was added
+   and silently returned 0 results on every query.
+
+2. **Semantic path failure now falls through to FTS**: Previously, any error in the vector/
+   embedding path was caught by the outer try/catch and returned `[]`, bypassing FTS entirely.
+   The semantic block is now wrapped in its own try/catch so failures fall through to the FTS
+   fallback rather than short-circuiting the whole handler.
+
+3. **Theology system prompt isolation**: When search hits are found, the full sermon workflow
+   system prompt is no longer used. A stripped-down research prompt replaces it, and the user
+   message contains only the source chunks + passage (if any) + question. The workflow prompt's
+   MESSAGE CONTEXT RULES were causing refusals and burying source chunks under unrelated sermon
+   context tiers.
+
+- `electron/main.js` — snippet quote fix; semantic path try/catch
+- `src/components/AIPanel.jsx` — theology path system prompt and message format
+
+---
+
 ## 2026-04-13 — fix: theology search — FTS results rank first, limit raised to 8
 
 Fixed a bug in the hybrid merge: semantic results were filling all slots before FTS
