@@ -10,6 +10,14 @@ not in AppData or OneDrive. Updated `docs/RULES.md` to match.
 
 ---
 
+## 2026-04-14 — fix: match theology search result rendering to AI panel
+
+Dashboard theology results now use `ReactMarkdown` inside `className="ai-markdown"`
+and the same "Sources consulted: Author — *Work* · ..." inline attribution style
+with a border-top separator. Removed `whiteSpace: pre-wrap` and the pill badges.
+
+---
+
 ## 2026-04-14 — feat: theology search on dashboard
 
 Added a standalone theology search widget to the Dashboard.
