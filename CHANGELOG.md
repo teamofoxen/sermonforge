@@ -2,6 +2,24 @@
 
 ---
 
+## 2026-04-13 — chore: remove OneDrive dependencies from all runtime paths
+
+Project moved from OneDrive to `C:\Projects\SermonForge`. Updated all runtime file paths
+to use a local `C:\SermonForge\` root; OneDrive is no longer required to run the app.
+
+- **Database**: `C:\SermonForge\data\sermonforge.db` (previously `OneDrive\SermonForge\sermonforge.db` with fallback to `userData`)
+- **Study Guides export**: `C:\SermonForge\exports\StudyGuides\`
+- **Feedback export**: `C:\SermonForge\exports\Feedback\`
+- **Build output**: `C:\SermonForge\builds\`
+- `LIBRARY_PATH` (sermon file library) left unchanged — still points to `OneDrive\Ministry\Preaching\Sermon Library`
+
+All data directories are created on first use via `mkdirSync({ recursive: true })`.
+
+- `electron/main.js` — DB path, StudyGuides path, Feedback path
+- `package.json` — electron-builder output directory
+
+---
+
 ## 2026-04-13 — fix: theology search — FTS crash, silent fallback failure, system prompt isolation
 
 Three fixes that together make theology search actually work end-to-end:

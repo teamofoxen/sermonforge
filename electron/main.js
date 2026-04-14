@@ -34,14 +34,9 @@ async function initDatabase() {
   });
 
   // Determine DB path
-  const oneDrivePath = path.join(os.homedir(), "OneDrive", "SermonForge");
-  if (fs.existsSync(oneDrivePath)) {
-    dbPath = path.join(oneDrivePath, "sermonforge.db");
-  } else {
-    const userData = app.getPath("userData");
-    if (!fs.existsSync(userData)) fs.mkdirSync(userData, { recursive: true });
-    dbPath = path.join(userData, "sermonforge.db");
-  }
+  const dataDir = "C:\\SermonForge\\data";
+  if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+  dbPath = path.join(dataDir, "sermonforge.db");
 
   // Load existing DB or create new one
   if (fs.existsSync(dbPath)) {
@@ -1531,7 +1526,7 @@ ipcMain.handle("series-export-study-guide", async (_, seriesId) => {
 
     const doc = buildStudyGuideDoc(series, sections, sermons);
 
-    const studyGuidesDir = path.join(os.homedir(), "OneDrive", "SermonForge", "StudyGuides");
+    const studyGuidesDir = "C:\\SermonForge\\exports\\StudyGuides";
     if (!fs.existsSync(studyGuidesDir)) {
       fs.mkdirSync(studyGuidesDir, { recursive: true });
     }
@@ -1658,7 +1653,7 @@ ipcMain.handle("feedback-submit", (_, payload) => {
       }
     }
 
-    const feedbackDir = path.join(os.homedir(), "OneDrive", "SermonForge", "Feedback");
+    const feedbackDir = "C:\\SermonForge\\exports\\Feedback";
     if (!fs.existsSync(feedbackDir)) {
       fs.mkdirSync(feedbackDir, { recursive: true });
     }
