@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-04-14 — chore: delete CLAUDE_original.md
+
+Removed the original monolithic CLAUDE.md (790 lines). It was retained as a safety net
+when the docs/ structure was introduced, in case anything was dropped in the trim. That
+risk has passed — the docs/ structure is established and proven. Git history preserves
+the original if ever needed.
+
+---
+
 ## 2026-04-14 — feat: uniform AI response formatting across all panels
 
 Applied the canonical `.ai-markdown` + ReactMarkdown formatting (Crimson Pro 14px, 1.6 line-height, Playfair Display headings, markdown rendering) to the two locations that were still using plain text.
