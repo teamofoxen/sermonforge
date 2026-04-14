@@ -247,7 +247,7 @@ const TIER_LIMITS = Object.freeze({
   tier2: 2500,
   tier3: 2500,
   tier4: 1200,
-  tier5: 3000,
+  tier5: 8000,
 });
 
 /**
@@ -315,7 +315,7 @@ function trimFunctionalElements(obj, budget) {
 
 // Maximum characters a single tier-5 chunk may contribute.
 // Enforces source diversity — no one chunk can dominate the 3000-char budget.
-const TIER5_CHUNK_CAP = 1200;
+const TIER5_CHUNK_CAP = 2000;
 
 /**
  * Greedily pick chunks from two pre-ranked arrays until the combined

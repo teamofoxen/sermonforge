@@ -2,6 +2,33 @@
 
 ---
 
+## 2026-04-13 — fix: theology search — larger context budgets
+
+Raised all theology context limits so chunks aren't truncated before reaching the model:
+
+- `TIER_LIMITS.tier5`: 3000 → 8000 chars (total budget for library + theology in context)
+- `TIER5_CHUNK_CAP`: 1200 → 2000 chars (per-chunk cap)
+- `substr(t.text, 1, ...)` in search handler: 1200 → 2000 chars (matches cap)
+
+- `src/utils/contextBuilder.js` — tier5 limit and chunk cap
+- `electron/main.js` — search handler substr
+
+---
+
+## 2026-04-13 — fix: theology search — hybrid semantic+FTS, phrase spanning, longer chunks
+
+Three fixes to theology search quality:
+
+1. **Hybrid search**: When vector embeddings are available, FTS4 now runs alongside semantic search instead of being bypassed. Results are merged (semantic first, then FTS additions). FTS catches exact phrase matches the MiniLM vector model misses.
+
+2. **Phrase spanning**: The implicit phrase detector now bridges stop-word gaps of up to 3 words. "Fear of the Lord" stays intact as a phrase query (`"fear of the lord"`) instead of fragmenting into `"fear" OR "lord"` and matching every passage that mentions "Lord."
+
+3. **Text truncation**: Semantic path now returns `substr(t.text, 1, 1200)` (was 600), matching the context builder's `TIER5_CHUNK_CAP`. Avoids cutting off the substantive part of a chunk.
+
+- `electron/main.js` — `theology-search` handler rewritten
+
+---
+
 ## 2026-04-13 — fix: reset theology globals on app close
 
 `window-all-closed` handler now resets `theologyDb`, `theologyVecAvailable`, and `theologyEmbedder` to `null`/`false` after closing theology.db. No-op on current Windows builds (process exits immediately), but eliminates latent stale-state risk if macOS support or window-relaunch is ever added.

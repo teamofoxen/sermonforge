@@ -1076,45 +1076,8 @@ ipcMain.handle("theology-search", async (event, { query, limit = 5 }) => {
       }
     }
 
-    // ── Semantic search path (vec0) ────────────────────────────────────
-    // Preferred when theology_vec embeddings have been built.
-    // Falls through to FTS4 if embeddings are unavailable or model fails to load.
-    if (theologyVecAvailable) {
-      const ok = await ensureTheologyEmbedder();
-      if (ok) {
-        const output = await theologyEmbedder([query], { pooling: "mean", normalize: true });
-        const qVec = JSON.stringify(Array.from(output[0].data));
-        // Fetch more than needed so author filtering still returns enough results
-        const fetchLimit = detectedAuthors.length > 0 ? limit * 10 : limit;
-
-        let results = queryTheology(
-          `SELECT t.id, t.author, t.work,
-                  substr(t.text, 1, 600) as text_chunk
-           FROM (
-             SELECT rowid, distance FROM theology_vec
-             WHERE embedding MATCH ?
-             ORDER BY distance LIMIT ?
-           ) nn
-           JOIN theology t ON nn.rowid = t.rowid`,
-          [qVec, fetchLimit]
-        );
-
-        // Post-filter by author if specified
-        if (detectedAuthors.length > 0) {
-          const authorName = THEOLOGY_AUTHORS[detectedAuthors[0]];
-          results = results.filter(r => r.author === authorName).slice(0, limit);
-        } else {
-          results = results.slice(0, limit);
-        }
-
-        return results;
-      }
-    }
-
-    // ── FTS4 fallback path ─────────────────────────────────────────────
-    // Used when no vector embeddings exist or embedding model failed to load.
-
-    // Extract user-quoted phrases as FTS4 phrase terms, then remove from scrubbed
+    // ── Build FTS query parts (used by both semantic hybrid and pure FTS path) ──
+    // Extract user-quoted phrases as FTS4 phrase terms
     const phraseTerms = [];
     const quoted = scrubbed.match(/"([^"]+)"/g);
     if (quoted) {
@@ -1128,18 +1091,106 @@ ipcMain.handle("theology-search", async (event, { query, limit = 5 }) => {
     const contentTermsStr = buildFtsQuery(scrubbed);
     const contentTerms = contentTermsStr ? contentTermsStr.split(" OR ") : [];
 
-    // Detect adjacent content-word pairs as implicit phrase candidates
+    // Detect content-word pairs separated by up to 3 stop words as implicit phrases.
+    // Bridges gaps like "fear of the lord" → "fear of the lord" (not just "fear" OR "lord").
     if (contentTerms.length >= 2) {
-      const words = scrubbed.replace(/[^a-zA-Z0-9\s]/g, " ").split(/\s+/).filter(Boolean);
+      const rawWords = scrubbed.replace(/[^a-zA-Z0-9\s]/g, " ").split(/\s+/).filter(Boolean);
       const contentSet = new Set(contentTerms.map(t => t.replace(/"/g, "")));
-      for (let i = 0; i < words.length - 1; i++) {
-        if (contentSet.has(words[i]) && contentSet.has(words[i + 1])) {
-          phraseTerms.push(`"${words[i]} ${words[i + 1]}"`);
+      for (let i = 0; i < rawWords.length - 1; i++) {
+        if (!contentSet.has(rawWords[i])) continue;
+        for (let j = i + 1; j <= Math.min(i + 4, rawWords.length - 1); j++) {
+          if (contentSet.has(rawWords[j])) {
+            phraseTerms.push(`"${rawWords.slice(i, j + 1).join(" ")}"`);
+            break;
+          }
         }
       }
     }
 
     const contentParts = [...phraseTerms, ...contentTerms];
+
+    // ── Semantic search path (vec0) ────────────────────────────────────
+    // When vectors are available, run semantic search AND FTS in parallel,
+    // then merge results. FTS finds exact phrase matches the vector model may miss.
+    if (theologyVecAvailable) {
+      const ok = await ensureTheologyEmbedder();
+      if (ok) {
+        const output = await theologyEmbedder([query], { pooling: "mean", normalize: true });
+        const qVec = JSON.stringify(Array.from(output[0].data));
+        const fetchLimit = detectedAuthors.length > 0 ? limit * 10 : limit * 4;
+
+        let vecResults = queryTheology(
+          `SELECT t.id, t.author, t.work,
+                  substr(t.text, 1, 2000) as text_chunk
+           FROM (
+             SELECT rowid, distance FROM theology_vec
+             WHERE embedding MATCH ?
+             ORDER BY distance LIMIT ?
+           ) nn
+           JOIN theology t ON nn.rowid = t.rowid`,
+          [qVec, fetchLimit]
+        );
+
+        // Run FTS alongside semantic to catch exact phrase matches
+        let ftsResults = [];
+        if (contentParts.length > 0) {
+          try {
+            const authorName = detectedAuthors.length > 0 ? THEOLOGY_AUTHORS[detectedAuthors[0]] : null;
+            const ftsQuery = authorName
+              ? `SELECT t.id, t.author, t.work,
+                        substr(t.text, 1, 2000) as text_chunk,
+                        substr(t.text, 1, 2000) as full_text
+                 FROM theology_fts
+                 JOIN theology t ON theology_fts.rowid = t.rowid
+                 WHERE theology_fts MATCH ?
+                 AND t.author = ?
+                 LIMIT ?`
+              : `SELECT t.id, t.author, t.work,
+                        substr(t.text, 1, 2000) as text_chunk,
+                        substr(t.text, 1, 2000) as full_text
+                 FROM theology_fts
+                 JOIN theology t ON theology_fts.rowid = t.rowid
+                 WHERE theology_fts MATCH ?
+                 LIMIT ?`;
+            const ftsParams = authorName
+              ? [contentParts.join(" "), authorName, limit * 10]
+              : [contentParts.join(" "), limit * 10];
+            const scoringTerms = [...phraseTerms, ...contentTerms];
+            ftsResults = queryTheology(ftsQuery, ftsParams)
+              .map(c => ({ ...c, _score: scoreTheologyChunk(c, scoringTerms) }))
+              .sort((a, b) => b._score - a._score)
+              .slice(0, limit)
+              // eslint-disable-next-line no-unused-vars
+              .map(({ _score, full_text, ...c }) => c);
+          } catch (_) {
+            // FTS unavailable or query failed — semantic results are sufficient
+          }
+        }
+
+        // Post-filter semantic results by author if specified
+        if (detectedAuthors.length > 0) {
+          const authorName = THEOLOGY_AUTHORS[detectedAuthors[0]];
+          vecResults = vecResults.filter(r => r.author === authorName);
+        }
+        vecResults = vecResults.slice(0, limit);
+
+        // Merge: semantic results first, then FTS additions not already present
+        const seen = new Set(vecResults.map(r => r.id));
+        const merged = [...vecResults];
+        for (const r of ftsResults) {
+          if (!seen.has(r.id)) {
+            merged.push(r);
+            seen.add(r.id);
+          }
+          if (merged.length >= limit * 2) break;
+        }
+
+        return merged.slice(0, limit);
+      }
+    }
+
+    // ── FTS4 fallback path ─────────────────────────────────────────────
+    // Used when no vector embeddings exist or embedding model failed to load.
     let candidates = [];
 
     if (detectedAuthors.length > 0 && contentParts.length > 0) {
