@@ -33,4 +33,10 @@ A sermon preparation workspace for pastors. Built with Electron, React, Vite, an
 
 ## Database
 
-SQLite file stored at `~/OneDrive/SermonForge/sermonforge.db` (falls back to Electron's userData directory). Seeded with sample sermons and illustrations on first launch.
+Local-first SQLite storage. No dependency on OneDrive for the database.
+
+- Main application database: `C:\SermonForge\data\sermonforge.db` (sql.js)
+- Theology corpus: `C:\SermonForge\data\theology.db` (better-sqlite3 + sqlite-vec)
+
+The data directory is created on first launch. Seeded with sample sermons and
+illustrations on first launch.

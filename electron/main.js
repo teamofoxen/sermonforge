@@ -193,7 +193,7 @@ function flushDb() {
 function saveDb() {
   // ACCEPTED RISK: 500ms crash window. Any mutation between saveDb() and the
   // debounce firing could be lost if the process terminates in this window.
-  // Acceptable for a single-user desktop app; OneDrive provides backup safety net.
+  // Acceptable for a single-user desktop app with local storage.
   _pendingWrite = true;
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
@@ -203,6 +203,8 @@ function saveDb() {
 }
 
 // ── Lazy theology loader (better-sqlite3 + sqlite-vec) ──────────────────────
+// theology.db is managed exclusively by better-sqlite3 due to sqlite-vec dependency.
+// DO NOT access via sql.js.
 let theologyVecAvailable = false;  // true when theology_vec table has embeddings
 let theologyEmbedder = null;       // lazy-loaded sentence-transformer pipeline
 
@@ -210,15 +212,33 @@ async function ensureTheologyDbLoaded() {
   if (theologyDb) return;
   if (!dbPath) return;
   const theologyDbFile = path.join(path.dirname(dbPath), "theology.db");
-  if (!fs.existsSync(theologyDbFile)) return;
+  console.log(`[THEOLOGY DB] Path resolved: ${theologyDbFile}`);
+  if (!fs.existsSync(theologyDbFile)) {
+    console.error(`[THEOLOGY DB] Missing at expected path: ${theologyDbFile}`);
+    return;
+  }
   try {
     theologyDb = new BetterSqlite3(theologyDbFile, { readonly: true });
-    sqliteVec.load(theologyDb);
+    console.log("[THEOLOGY DB] Loaded successfully");
+    try {
+      sqliteVec.load(theologyDb);
+      console.log("[VECTOR] sqlite-vec extension loaded");
+    } catch (vecErr) {
+      console.error(`[VECTOR] Failed to load sqlite-vec: ${vecErr.message}`);
+      // theologyDb is open but vec queries will fail — FTS-only path will still work
+    }
     // Check if vector embeddings have been built
     try {
       const { cnt } = theologyDb.prepare("SELECT COUNT(*) as cnt FROM theology_vec").get();
-      theologyVecAvailable = cnt > 0;
-    } catch (_) {
+      console.log(`[VECTOR] Embeddings available: ${cnt}`);
+      if (cnt > 0) {
+        theologyVecAvailable = true;
+      } else {
+        console.warn("[VECTOR] No embeddings found — vector search disabled");
+        theologyVecAvailable = false;
+      }
+    } catch (e) {
+      console.warn("[VECTOR] theology_vec probe failed:", e.message);
       theologyVecAvailable = false;
     }
     console.log(`Theology DB loaded (better-sqlite3 + sqlite-vec, vectors: ${theologyVecAvailable})`);
@@ -229,14 +249,19 @@ async function ensureTheologyDbLoaded() {
 
 async function ensureTheologyEmbedder() {
   if (theologyEmbedder) return true;
+  console.log("[VECTOR] Loading embedding model...");
   try {
     const { pipeline } = await import("@xenova/transformers");
     theologyEmbedder = await pipeline("feature-extraction", "Xenova/all-MiniLM-L6-v2", {
       quantized: true,
     });
+    console.log("[VECTOR] Embedding model loaded");
+    console.log("[VECTOR] Model loaded (may require internet on first run; cached after)");
+    console.log(`[VECTOR] Embedder available: ${!!theologyEmbedder}`);
     return true;
   } catch (e) {
-    console.error("Failed to load embedding model:", e.message);
+    console.error("[VECTOR] Embedding model failed to load:", e.message);
+    console.log(`[VECTOR] Embedder available: ${!!theologyEmbedder}`);
     return false;
   }
 }
@@ -422,6 +447,10 @@ function runSql(sql, params = []) {
 }
 
 // ── Theology query helper (better-sqlite3) ──────────────────────────────────
+// theology.db uses better-sqlite3 + sqlite-vec.
+// sermonforge.db uses sql.js.
+// These systems are intentionally separate.
+// DO NOT mix query patterns or connections.
 function queryTheology(sql, params = []) {
   return theologyDb.prepare(sql).all(...params);
 }
@@ -1055,7 +1084,11 @@ function scoreTheologyChunk(chunk, terms) {
 
 ipcMain.handle("theology-search", async (event, { query, limit = 5 }) => {
   await ensureTheologyDbLoaded();
-  if (!theologyDb) return [];
+  if (!theologyDb) {
+    console.warn("[THEOLOGY DB] Not loaded at query time");
+    return [];
+  }
+  console.log(`[VECTOR] Available at query start: ${theologyVecAvailable}`);
   try {
     if (!query || !query.trim()) return [];
 
@@ -1109,7 +1142,13 @@ ipcMain.handle("theology-search", async (event, { query, limit = 5 }) => {
     // then merge results. FTS finds exact phrase matches the vector model may miss.
     // Wrapped in its own try/catch so any failure falls through to the FTS-only
     // path below rather than propagating to the outer catch and returning [].
+
+    // DIAGNOSTIC MODE (DO NOT ENABLE IN PRODUCTION)
+    // If enabled, disables FTS fallback and forces vector-only execution
+    // Used to validate vector system independently
+
     if (theologyVecAvailable) {
+      console.log("[VECTOR] Semantic search activated");
       try {
         const ok = await ensureTheologyEmbedder();
         if (ok) {
@@ -1117,6 +1156,8 @@ ipcMain.handle("theology-search", async (event, { query, limit = 5 }) => {
           const qVec = JSON.stringify(Array.from(output[0].data));
           const fetchLimit = detectedAuthors.length > 0 ? limit * 10 : limit * 4;
 
+          console.log("[VECTOR] Running KNN query");
+          const _vecStart = Date.now();
           let vecResults = queryTheology(
             `SELECT t.id, t.author, t.work,
                     substr(t.text, 1, 2000) as text_chunk
@@ -1128,6 +1169,8 @@ ipcMain.handle("theology-search", async (event, { query, limit = 5 }) => {
              JOIN theology t ON nn.rowid = t.rowid`,
             [qVec, fetchLimit]
           );
+          console.log(`[VECTOR] Query time: ${Date.now() - _vecStart} ms`);
+          console.log(`[VECTOR] Results returned: ${vecResults.length}`);
 
           // Run FTS alongside semantic to catch exact phrase matches
           let ftsResults = [];
@@ -1194,6 +1237,10 @@ ipcMain.handle("theology-search", async (event, { query, limit = 5 }) => {
 
     // ── FTS4 fallback path ─────────────────────────────────────────────
     // Used when no vector embeddings exist or embedding model failed to load.
+    if (!theologyVecAvailable) {
+      console.warn("[VECTOR] Skipping semantic search — not available");
+    }
+    console.log("[FTS] Fallback search activated");
     let candidates = [];
 
     if (detectedAuthors.length > 0 && contentParts.length > 0) {

@@ -155,7 +155,7 @@ Guidelines:
             <h1 className="page-title">Sermon Library</h1>
             <p className="page-subtitle">
               {status.count > 0
-                ? `${status.count} sermons indexed from your OneDrive library`
+                ? `${status.count} sermons indexed from your library`
                 : "Import your sermon library to enable AI-powered search and synthesis"}
             </p>
           </div>

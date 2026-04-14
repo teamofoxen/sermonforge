@@ -7,14 +7,22 @@
 
 ## Runtime
 
-**sql.js** (SQLite compiled to WASM) is used instead of better-sqlite3.
-**Why:** Native module compilation is blocked by the Node 24 + VS2026 environment.
-This is an environment constraint, not a permanent architectural preference. If the
-environment changes, revisiting better-sqlite3 is reasonable.
+SermonForge uses a **dual-driver** architecture:
 
-The DB is serialized to disk after writes. This is a whole-file operation — every write
-serializes the entire database. This is why the `saveDb()` debounce is 500ms and must not
-be reduced. See `docs/CORE.md`.
+- **`sermonforge.db` → sql.js (WASM).** The main application database (sermons,
+  series, sections, calendar notes, illustrations, library, FTS) runs on sql.js.
+  Historical reason: native module compilation was blocked by the Node 24 + VS2026
+  environment when this driver was chosen. sql.js serializes the entire database
+  to disk on each write, which is why the `saveDb()` debounce is 500ms and must
+  not be reduced. See `docs/CORE.md`.
+- **`theology.db` → better-sqlite3 + sqlite-vec.** The theology corpus runs on
+  the native driver because it depends on the `sqlite-vec` extension for vector
+  semantic search. Native modules must be rebuilt for Electron's ABI after
+  install: `npx @electron/rebuild -m node_modules/better-sqlite3`. Both native
+  packages are listed in `asarUnpack` in `package.json`.
+
+The two drivers are intentionally isolated — sermonforge.db is never touched by
+better-sqlite3, and theology.db is never touched by sql.js.
 
 ---
 
@@ -49,11 +57,27 @@ When adding new fields to the `sermons` table, they must also be added to `SERMO
 
 ## Full-Text Search
 
-`library_fts` is an FTS4 virtual table (not FTS5).
+`library_fts` (on sermonforge.db) is an FTS4 virtual table (not FTS5).
 **Why FTS4:** FTS5 was attempted first but encountered compatibility issues. FTS4 is stable.
-**Why keyword search instead of vector embeddings:** The Anthropic API provides no embedding
-endpoint, and adding an external embedding model would introduce a dependency and cost.
-Revisit if theme-based search (vs. keyword search) becomes a requirement.
+
+The main sermon library remains FTS-only (keyword search over title, passage, and
+manuscript text). This is appropriate for the pastor's own prior manuscripts, where
+exact-phrase and book-name lookups are the primary retrieval need.
+
+## Theology Search (vector + FTS hybrid)
+
+`theology.db` uses hybrid retrieval:
+
+- **Vector search via `sqlite-vec`** against a `theology_vec` vec0 virtual table
+  (384-dim). Query embeddings are generated locally using `@xenova/transformers`
+  with the `Xenova/all-MiniLM-L6-v2` model (quantized). The model is lazy-loaded
+  on first semantic search; subsequent queries reuse the loaded pipeline.
+- **FTS4 (`theology_fts`)** runs alongside vector search. Exact phrase matches
+  from FTS are ranked first; semantic results fill remaining slots.
+- **Automatic fallback to FTS-only** when the vector table has no embeddings or
+  when the embedding model fails to load.
+
+No external embedding API is used — embeddings are computed on-device.
 
 ---
 
@@ -70,8 +94,19 @@ Both debounces are deliberate trade-offs, not bugs. Do not reduce them.
 
 ## Storage Path
 
-Database file: `C:\Users\rossa\OneDrive\SermonForge\sermonforge.db`
-Backed up automatically via OneDrive sync.
+Databases are stored locally under `C:\SermonForge\data\`:
+
+- `C:\SermonForge\data\sermonforge.db` — main application database (sql.js)
+- `C:\SermonForge\data\theology.db` — theology corpus (better-sqlite3 + sqlite-vec)
+
+The data directory is created on first use via `mkdirSync({ recursive: true })`.
+
+Exports are written to `C:\SermonForge\exports\` (Study Guides, Feedback).
+
+OneDrive is **not** used for the application databases. OneDrive is used only for
+the pastor's external sermon file library (`LIBRARY_PATH` —
+`~/OneDrive/Ministry/Preaching/Sermon Library`) and for the user's own backup
+choices for exported files. The app runs correctly without OneDrive.
 
 ---
 

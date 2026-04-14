@@ -2,6 +2,45 @@
 
 ---
 
+## 2026-04-14 — docs: bring documentation and logging into alignment with current system
+
+Targeted fixes from the 2026-04-14 full system audit. Documentation and a single
+silent-catch site were out of alignment with the actual runtime after the OneDrive
+removal (2026-04-13) and theology vector-search rollout. No logic or architectural
+changes; one logging line added.
+
+**`docs/SYSTEMS/database.md`**
+- Runtime section rewritten for the dual-driver architecture (`sermonforge.db → sql.js`,
+  `theology.db → better-sqlite3 + sqlite-vec`), including the `@electron/rebuild`
+  note and `asarUnpack` pointer.
+- Removed the outdated "Why keyword search instead of vector embeddings" paragraph.
+- Added a "Theology Search (vector + FTS hybrid)" section describing `sqlite-vec`,
+  `Xenova/all-MiniLM-L6-v2` local embeddings, FTS-first ranking, and FTS-only fallback.
+- Storage Path section updated: both DBs live under `C:\SermonForge\data\`; OneDrive
+  is used only for `LIBRARY_PATH` and user-chosen export backups.
+
+**`docs/CORE.md`**
+- Project Identity paragraph updated: application databases are local; OneDrive is
+  optional and only relevant to sermon library files.
+
+**`electron/main.js`**
+- `theology_vec` probe: bare `catch (_) {}` replaced with
+  `catch (e) { console.warn("[VECTOR] theology_vec probe failed:", e.message); ... }`.
+  Control flow unchanged — `theologyVecAvailable = false` still runs; integrity
+  errors now surface in logs instead of vanishing.
+- `saveDb()` comment: removed the stale "OneDrive provides backup safety net"
+  phrasing; now says "local storage."
+
+**`README.md`**
+- Database section replaced with the correct `C:\SermonForge\data\` paths for both
+  DBs; states local-first storage with no OneDrive dependency.
+
+**`src/components/Library.jsx`**
+- Subtitle text: "indexed from your OneDrive library" → "indexed from your library"
+  (string literal only; no logic change).
+
+---
+
 ## 2026-04-14 — chore: move build output to C:\Projects\SermonForgeBuilds
 
 Changed `directories.output` in `package.json` from `C:/SermonForge/builds` to

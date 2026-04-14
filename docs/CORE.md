@@ -10,9 +10,10 @@
 ## Project Identity
 
 SermonForge is a **local-first Electron desktop app** for a pastor who preaches ~42 weeks/year.
-All data lives on the user's machine, backed up automatically via OneDrive. There is no backend,
-no server, no web deployment. The user is not a developer; all tooling decisions must prioritize
-simplicity.
+All application data lives locally on the user's machine (`C:\SermonForge\data\`). Sermon
+library files may reside in OneDrive for backup, but application databases are stored locally
+and the app runs correctly without OneDrive. There is no backend, no server, no web deployment.
+The user is not a developer; all tooling decisions must prioritize simplicity.
 
 **The series is the primary unit of pastoral work. The sermon is an instance within it.** The
 Dashboard is a series planning room. The Sermon Workspace exists within the context of a series.
