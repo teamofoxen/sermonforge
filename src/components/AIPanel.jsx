@@ -118,7 +118,7 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
     if (theologyEnabled && theologyAvailable) {
       onLoadingChange?.(true);
       try {
-        const hits = await searchTheologyLibrary(text, 5);
+        const hits = await searchTheologyLibrary(text, 8);
         const theologyChunks = hits?.map(h => `[${h.author} — ${h.work}]\n${h.text_chunk}`) || [];
         const context = buildContext({ sermon, step, theologyChunks });
         // Only prepend CONTEXT block when there is actual context to include (L-3).

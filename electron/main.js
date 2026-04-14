@@ -1172,17 +1172,18 @@ ipcMain.handle("theology-search", async (event, { query, limit = 5 }) => {
           const authorName = THEOLOGY_AUTHORS[detectedAuthors[0]];
           vecResults = vecResults.filter(r => r.author === authorName);
         }
-        vecResults = vecResults.slice(0, limit);
 
-        // Merge: semantic results first, then FTS additions not already present
-        const seen = new Set(vecResults.map(r => r.id));
-        const merged = [...vecResults];
-        for (const r of ftsResults) {
+        // FTS phrase matches rank first — exact phrase hits beat semantic approximations.
+        // Semantic results fill remaining slots. This ensures "fear of the lord" verbatim
+        // in the text wins over a semantically adjacent passage that doesn't say it.
+        const seen = new Set(ftsResults.map(r => r.id));
+        const merged = [...ftsResults];
+        for (const r of vecResults) {
           if (!seen.has(r.id)) {
             merged.push(r);
             seen.add(r.id);
           }
-          if (merged.length >= limit * 2) break;
+          if (merged.length >= limit) break;
         }
 
         return merged.slice(0, limit);

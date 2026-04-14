@@ -2,6 +2,17 @@
 
 ---
 
+## 2026-04-13 — fix: theology search — FTS results rank first, limit raised to 8
+
+Fixed a bug in the hybrid merge: semantic results were filling all slots before FTS
+results could enter. FTS exact-phrase matches now rank first; semantic fills remaining
+slots. Retrieval limit raised from 5 to 8 to give more room for both.
+
+- `electron/main.js` — merge order inverted
+- `src/components/AIPanel.jsx` — limit 5 → 8
+
+---
+
 ## 2026-04-13 — fix: theology search — larger context budgets
 
 Raised all theology context limits so chunks aren't truncated before reaching the model:
