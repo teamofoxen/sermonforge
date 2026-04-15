@@ -2,6 +2,27 @@
 
 ---
 
+## 2026-04-15 — feat: Study workflow logic and handoff improvements
+
+Five fixes to tighten the Study → Outline → Manuscript logic chain:
+
+**`src/components/StudyTab.jsx`**
+- `generateMPS()` now includes redemptive thread and implications in the prompt. The MPS is the present-tense congregational claim — it should be informed by the theological and applicational weight the pastor surfaced, not just the MPT in isolation.
+- Big Idea banner added to Steps 3 and 4: when `sermon.big_idea` is set, it displays as a persistent dark reference bar above the outline/functional elements so the controlling idea stays visible while working.
+
+**`src/components/OutlineTab.jsx`**
+- Added `handleSuggestOutline()` — parses all four exegesis columns from the `sermon` prop and generates a draft outline, matching the capability already in Study Step 3.
+- `onTabChange` prop accepted; "Continue to Manuscript →" button added when outline has points, completing the Study → Outline Tab → Manuscript path.
+- "Suggest Outline" button now shows alongside "Review Outline".
+
+**`src/components/SermonWorkspace.jsx`**
+- Passes `onTabChange={handleTabChange}` to `OutlineTab`.
+
+**`src/utils/studyFields.js`**
+- `basic_outline` field hint updated to explicitly name it as a text outline and connect it forward: "It will later inform your sermon outline in Step 3."
+
+---
+
 ## 2026-04-15 — feat: outline builder intelligence upgrade
 
 Four improvements to the Quick Outline Builder (Study tab Step 3 and standalone Outline tab):

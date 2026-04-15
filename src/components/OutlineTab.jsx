@@ -1,13 +1,19 @@
 import { useState } from "react";
-import { getOutline, serializeOutline, getFunctionalElements, serializeFunctionalElements } from "../utils";
+import { getOutline, serializeOutline, getFunctionalElements, serializeFunctionalElements, createOutlinePoint } from "../utils";
 import { sendAIMessage } from "../utils/ai";
+import {
+  parseStructuredField, flattenToText,
+  OBSERVE_FIELDS, INTERPRET_FIELDS, REDEMPTIVE_FIELDS,
+  IMPLICATIONS_THEOLOGICAL, IMPLICATIONS_PERSONAL,
+} from "../utils/studyFields";
 import OutlineBuilder from "./OutlineBuilder";
 import InlineAIResponse from "./InlineAIResponse";
 
-export default function OutlineTab({ sermon, onUpdate }) {
+export default function OutlineTab({ sermon, onUpdate, onTabChange }) {
   const outline = getOutline(sermon);
   const [reviewResponse, setReviewResponse] = useState(null);
   const [reviewLoading, setReviewLoading] = useState(false);
+  const [suggestLoading, setSuggestLoading] = useState(false);
 
   function handleOutlineChange(newOutline) {
     onUpdate({ outline: serializeOutline(newOutline) });
@@ -17,6 +23,39 @@ export default function OutlineTab({ sermon, onUpdate }) {
     const cleaned = { ...getFunctionalElements(sermon) };
     delete cleaned[pointId];
     onUpdate({ functional_elements: serializeFunctionalElements(cleaned) });
+  }
+
+  async function handleSuggestOutline() {
+    if (suggestLoading || reviewLoading) return;
+    setSuggestLoading(true);
+    try {
+      const obsData  = parseStructuredField(sermon.observations);
+      const intData  = parseStructuredField(sermon.interpretation);
+      const redData  = parseStructuredField(sermon.redemptive_thread);
+      const impData  = parseStructuredField(sermon.implications);
+      const exegesisContext = [
+        `Passage: ${sermon.passage || "unknown"}`,
+        `MPT: ${sermon.mpt || "(none)"}`,
+        `MPS: ${sermon.mps || "(none)"}`,
+        `\nObservations:\n${flattenToText(obsData, OBSERVE_FIELDS) || "(none)"}`,
+        `\nInterpretation:\n${flattenToText(intData, INTERPRET_FIELDS) || "(none)"}`,
+        `\nRedemptive Thread:\n${flattenToText(redData, REDEMPTIVE_FIELDS) || "(none)"}`,
+        `\nImplications:\n${flattenToText(impData, [...IMPLICATIONS_THEOLOGICAL, ...IMPLICATIONS_PERSONAL]) || "(none)"}`,
+      ].join("\n");
+      const resp = await sendAIMessage(
+        [{ role: "user", content: `${exegesisContext}\n\nPropose a sermon outline. Return only a numbered list of 3–4 points. Each point must be a single declarative sentence that derives from the text's own logic and ladders up to the MPS.` }],
+        "You are a homiletics consultant helping a pastor structure a sermon. The outline must emerge from the text's argument — not be imposed on it. Each point is a standalone claim the congregation can grasp and remember."
+      );
+      if (!resp?.trim()) return;
+      const lines = resp.trim().split("\n").filter(l => /^\d+[\.\)]/.test(l.trim()));
+      if (lines.length === 0) return;
+      const newPoints = lines.map(l => createOutlinePoint(l.replace(/^\d+[\.\)]\s*/, "").trim()));
+      onUpdate({ outline: serializeOutline([...outline, ...newPoints]) });
+    } catch (e) {
+      console.error("[OutlineTab suggestOutline]", e);
+    } finally {
+      setSuggestLoading(false);
+    }
   }
 
   async function handleReviewOutline() {
@@ -72,17 +111,24 @@ export default function OutlineTab({ sermon, onUpdate }) {
           </p>
         )}
         <OutlineBuilder outline={outline} onUpdate={handleOutlineChange} onRemove={handleOutlineRemove} />
-        {outline.length > 0 && (
-          <div style={{ marginTop: "12px" }}>
+        <div style={{ marginTop: "12px", display: "flex", gap: "10px", alignItems: "center" }}>
+          <button
+            className="btn-ghost btn-sm"
+            disabled={suggestLoading || reviewLoading}
+            onClick={handleSuggestOutline}
+          >
+            {suggestLoading ? "Generating…" : "Suggest Outline"}
+          </button>
+          {outline.length > 0 && (
             <button
               className="btn-ghost btn-sm"
-              disabled={reviewLoading}
+              disabled={reviewLoading || suggestLoading}
               onClick={handleReviewOutline}
             >
               {reviewLoading ? "Reviewing…" : "Review Outline"}
             </button>
-          </div>
-        )}
+          )}
+        </div>
         <InlineAIResponse
           fieldName="Outline Review"
           response={reviewResponse}
@@ -90,6 +136,14 @@ export default function OutlineTab({ sermon, onUpdate }) {
           onDismiss={() => setReviewResponse(null)}
         />
       </div>
+
+      {outline.length > 0 && (
+        <div className="step-advance">
+          <button className="btn-primary btn-sm" onClick={() => onTabChange?.("manuscript")}>
+            Continue to Manuscript →
+          </button>
+        </div>
+      )}
     </div>
   );
 }

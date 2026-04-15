@@ -16,7 +16,7 @@ export const OBSERVE_FIELDS = [
   { key: "characters",    label: "Main Characters",            hint: "Who are the main characters? What roles do they play?" },
   { key: "big_ideas",     label: "Big Ideas",                  hint: "What are the major themes or ideas surfacing in this passage?" },
   { key: "obvious_point", label: "Obvious Point",              hint: "Is there an obvious point to the story or passage? State it plainly." },
-  { key: "basic_outline", label: "Basic Outline",              hint: "Begin forming a basic outline based on the text. (Not a sermon outline — a text outline.)" },
+  { key: "basic_outline", label: "Basic Outline",              hint: "Begin forming a basic outline based on the text. This is a text outline — the argument structure of the passage itself. It will later inform your sermon outline in Step 3." },
   { key: "applications",  label: "Possible Applications",      hint: "Write down any possible applications that surface from your study here." },
 ];
 

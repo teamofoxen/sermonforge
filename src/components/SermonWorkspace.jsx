@@ -391,7 +391,7 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
             />
           )}
           {activeTab === "outline" && (
-            <OutlineTab sermon={sermon} onUpdate={handleUpdate} />
+            <OutlineTab sermon={sermon} onUpdate={handleUpdate} onTabChange={handleTabChange} />
           )}
           {activeTab === "manuscript" && (
             <ManuscriptTab

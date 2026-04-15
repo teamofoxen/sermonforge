@@ -275,9 +275,11 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
     if (draftLoading || !sermon.mpt?.trim()) return;
     setDraftLoading("mps");
     try {
+      const redThread = formatPhaseText(redData, REDEMPTIVE_FIELDS);
+      const implications = formatPhaseText(impData, [...IMPLICATIONS_THEOLOGICAL, ...IMPLICATIONS_PERSONAL]);
       const resp = await sendAIMessage(
-        [{ role: "user", content: `Passage: ${sermon.passage || "unknown"}\n\nMPT: ${sermon.mpt}\n\nDraft a Main Point of the Sermon (MPS) that flows organically from this MPT. The MPS is a single sentence in present tense stating what this text says to this congregation today. Return only the sentence.` }],
-        "You are a homiletics consultant helping a pastor bridge the MPT to a present-tense sermon claim. The MPS must grow directly from the MPT — not be imposed from outside."
+        [{ role: "user", content: `Passage: ${sermon.passage || "unknown"}\n\nMPT: ${sermon.mpt}\n\nRedemptive Thread:\n${redThread || "(none)"}\n\nImplications:\n${implications || "(none)"}\n\nDraft a Main Point of the Sermon (MPS) that flows organically from this MPT and is informed by the redemptive thread and implications above. The MPS is a single sentence in present tense stating what this text says to this congregation today. Return only the sentence.` }],
+        "You are a homiletics consultant helping a pastor bridge the MPT to a present-tense sermon claim. The MPS must grow directly from the MPT — not be imposed from outside — and should reflect the theological and applicational weight the pastor has already surfaced."
       );
       if (resp?.trim()) onUpdate({ mps: resp.trim() });
     } catch (e) {
@@ -903,6 +905,13 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
         <div className="study-step-active">
           <SummaryBlock summaryKey="s3" {...summaryProps} />
 
+          {sermon.big_idea?.trim() && (
+            <div style={{ padding: "10px 14px", marginBottom: "14px", background: "var(--ink)", borderRadius: "var(--radius)", display: "flex", alignItems: "baseline", gap: "10px" }}>
+              <span style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--gold)", flexShrink: 0 }}>Big Idea</span>
+              <span style={{ fontSize: "14px", fontFamily: "'Playfair Display', serif", fontStyle: "italic", color: "var(--parchment-warm)" }}>{sermon.big_idea}</span>
+            </div>
+          )}
+
           <OutlineBuilder
             outline={outline}
             onUpdate={(newOutline) => onUpdate({ outline: serializeOutline(newOutline) })}
@@ -960,6 +969,13 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
       {activeStep === 4 && (
         <div className="study-step-active">
           <SummaryBlock summaryKey="s4" {...summaryProps} />
+
+          {sermon.big_idea?.trim() && (
+            <div style={{ padding: "10px 14px", marginBottom: "14px", background: "var(--ink)", borderRadius: "var(--radius)", display: "flex", alignItems: "baseline", gap: "10px" }}>
+              <span style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--gold)", flexShrink: 0 }}>Big Idea</span>
+              <span style={{ fontSize: "14px", fontFamily: "'Playfair Display', serif", fontStyle: "italic", color: "var(--parchment-warm)" }}>{sermon.big_idea}</span>
+            </div>
+          )}
 
           {outline.map((pt, i) => (
             <FuncElem key={pt.id} pointText={pt.text} pointId={pt.id} displayIndex={i} funcData={funcData} onUpdate={updateFuncData} />
