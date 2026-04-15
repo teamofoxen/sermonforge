@@ -1,8 +1,13 @@
+import { useState } from "react";
 import { getOutline, serializeOutline, getFunctionalElements, serializeFunctionalElements } from "../utils";
+import { sendAIMessage } from "../utils/ai";
 import OutlineBuilder from "./OutlineBuilder";
+import InlineAIResponse from "./InlineAIResponse";
 
 export default function OutlineTab({ sermon, onUpdate }) {
   const outline = getOutline(sermon);
+  const [reviewResponse, setReviewResponse] = useState(null);
+  const [reviewLoading, setReviewLoading] = useState(false);
 
   function handleOutlineChange(newOutline) {
     onUpdate({ outline: serializeOutline(newOutline) });
@@ -12,6 +17,24 @@ export default function OutlineTab({ sermon, onUpdate }) {
     const cleaned = { ...getFunctionalElements(sermon) };
     delete cleaned[pointId];
     onUpdate({ functional_elements: serializeFunctionalElements(cleaned) });
+  }
+
+  async function handleReviewOutline() {
+    if (reviewLoading || outline.length === 0) return;
+    setReviewLoading(true);
+    setReviewResponse(null);
+    try {
+      const pts = outline.map((p, i) => `${i + 1}. ${p.text}`).join("\n");
+      const resp = await sendAIMessage(
+        [{ role: "user", content: `Passage: ${sermon.passage || "unknown"}.\nMPT: ${sermon.mpt || "(none)"}.\nMPS: ${sermon.mps || "(none)"}.\n\nOutline:\n${pts}` }],
+        `Review this sermon outline. Evaluate: Do the points derive from the text? Do they ladder up to the MPS? Is the progression clear and complete? Does tension resolve in the gospel? Suggest the minimum changes needed.`
+      );
+      setReviewResponse(resp);
+    } catch (e) {
+      setReviewResponse(`Error: ${e.message}`);
+    } finally {
+      setReviewLoading(false);
+    }
   }
 
   return (
@@ -49,6 +72,23 @@ export default function OutlineTab({ sermon, onUpdate }) {
           </p>
         )}
         <OutlineBuilder outline={outline} onUpdate={handleOutlineChange} onRemove={handleOutlineRemove} />
+        {outline.length > 0 && (
+          <div style={{ marginTop: "12px" }}>
+            <button
+              className="btn-ghost btn-sm"
+              disabled={reviewLoading}
+              onClick={handleReviewOutline}
+            >
+              {reviewLoading ? "Reviewing…" : "Review Outline"}
+            </button>
+          </div>
+        )}
+        <InlineAIResponse
+          fieldName="Outline Review"
+          response={reviewResponse}
+          loading={reviewLoading}
+          onDismiss={() => setReviewResponse(null)}
+        />
       </div>
     </div>
   );

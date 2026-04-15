@@ -2,6 +2,23 @@
 
 ---
 
+## 2026-04-15 — feat: outline builder intelligence upgrade
+
+Four improvements to the Quick Outline Builder (Study tab Step 3 and standalone Outline tab):
+
+**`src/components/StudyTab.jsx`**
+- Added `suggestOutline()` — generates a draft outline from passage + MPT/MPS + all four exegesis phases. Parses the numbered list response and appends points to the outline via `createOutlinePoint()`. "Suggest Outline" button appears alongside "Review Outline" in Step 3.
+- Added `createOutlinePoint` to imports from `../utils`.
+- Enriched "Review Outline" prompt — now sends observations, interpretation, redemptive thread, and implications alongside passage/MPT/MPS so the AI can evaluate text-logic derivation, not just MPS ladder.
+- Improved s3 summary (`generateSummary("s3", ...)`) — previously only synthesized MPT/MPS in 2–3 sentences. Now passes the full exegetical work and returns 3–5 specific bullets covering textual logic, theological moves, Christ-connection, and application pressures the outline must account for.
+
+**`src/components/OutlineTab.jsx`**
+- Added local `reviewResponse`/`reviewLoading` state plus `handleReviewOutline()` function.
+- Added `sendAIMessage` and `InlineAIResponse` imports.
+- "Review Outline" button appears in the card when outline has points; response renders via `InlineAIResponse`. Evaluation uses passage + MPT/MPS + outline (exegesis data not available in this component).
+
+---
+
 ## 2026-04-15 — chore: move database location into project directory
 
 **`electron/main.js`**

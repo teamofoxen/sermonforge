@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useDemo } from "../contexts/DemoContext";
 import TierBadge from "./TierBadge";
-import { getOutline, serializeOutline, getFunctionalElements, serializeFunctionalElements, autoResize } from "../utils";
+import { getOutline, serializeOutline, getFunctionalElements, serializeFunctionalElements, autoResize, createOutlinePoint } from "../utils";
 import { STEPS, PHASES, PHASE_SEQUENCE, STEP_SEQUENCE } from "../constants/steps";
 import { sendAIMessage } from "../utils/ai";
 import {
@@ -287,6 +287,35 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
     }
   }
 
+  async function suggestOutline() {
+    if (draftLoading) return;
+    setDraftLoading("outline");
+    try {
+      const exegesisContext = [
+        `Passage: ${sermon.passage || "unknown"}`,
+        `MPT: ${sermon.mpt || "(none)"}`,
+        `MPS: ${sermon.mps || "(none)"}`,
+        `\nObservations:\n${formatPhaseText(obsData, OBSERVE_FIELDS)}`,
+        `\nInterpretation:\n${formatPhaseText(intData, INTERPRET_FIELDS)}`,
+        `\nRedemptive Thread:\n${formatPhaseText(redData, REDEMPTIVE_FIELDS)}`,
+        `\nImplications:\n${formatPhaseText(impData, [...IMPLICATIONS_THEOLOGICAL, ...IMPLICATIONS_PERSONAL])}`,
+      ].join("\n");
+      const resp = await sendAIMessage(
+        [{ role: "user", content: `${exegesisContext}\n\nPropose a sermon outline. Return only a numbered list of 3–4 points. Each point must be a single declarative sentence that derives from the text's own logic and ladders up to the MPS.` }],
+        "You are a homiletics consultant helping a pastor structure a sermon. The outline must emerge from the text's argument — not be imposed on it. Each point is a standalone claim the congregation can grasp and remember."
+      );
+      if (!resp?.trim()) return;
+      const lines = resp.trim().split("\n").filter(l => /^\d+[\.\)]/.test(l.trim()));
+      if (lines.length === 0) return;
+      const newPoints = lines.map(l => createOutlinePoint(l.replace(/^\d+[\.\)]\s*/, "").trim()));
+      onUpdate({ outline: serializeOutline([...outline, ...newPoints]) });
+    } catch (e) {
+      console.error("[suggestOutline]", e);
+    } finally {
+      setDraftLoading(null);
+    }
+  }
+
   async function generateBigIdea() {
     if (draftLoading) return;
     setDraftLoading("big_idea");
@@ -367,8 +396,8 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
     if (next === 3) {
       generateSummary(
         "s3",
-        `MPT: ${sermon.mpt || "(none)"}\nMPS: ${sermon.mps || "(none)"}`,
-        `Brief a preacher before they build their sermon outline. In 2–3 sentences summarize their MPT and MPS, capturing the theological core their outline must carry.`
+        `Passage: ${sermon.passage || "unknown"}\nMPT: ${sermon.mpt || "(none)"}\nMPS: ${sermon.mps || "(none)"}\n\nObservations:\n${formatPhaseText(obsData, OBSERVE_FIELDS)}\n\nInterpretation:\n${formatPhaseText(intData, INTERPRET_FIELDS)}\n\nRedemptive Thread:\n${formatPhaseText(redData, REDEMPTIVE_FIELDS)}\n\nImplications:\n${formatPhaseText(impData, [...IMPLICATIONS_THEOLOGICAL, ...IMPLICATIONS_PERSONAL])}`,
+        `Brief a preacher before they build their sermon outline. In 3–5 bullet points, surface: the textual logic their outline must follow, the theological moves the exegesis demands, the Christ-connection to land, and any application pressures that must be accounted for. Be specific to their work — not generic homiletics advice.`
       );
     } else if (next === 4) {
       const pts = getOutline(sermon).map((p, i) => `${i + 1}. ${p.text}`).join("\n");
@@ -883,13 +912,26 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
           <div style={{ marginTop: "12px", display: "flex", gap: "10px", alignItems: "center" }}>
             <button
               className="btn-ghost btn-sm"
-              disabled={inlineLoading !== null}
+              disabled={draftLoading !== null || inlineLoading !== null}
+              onClick={suggestOutline}
+            >
+              {draftLoading === "outline" ? "Generating…" : "Suggest Outline"}
+            </button>
+            <button
+              className="btn-ghost btn-sm"
+              disabled={inlineLoading !== null || draftLoading !== null}
               onClick={() => {
                 const pts = outline.map((p, i) => `${i + 1}. ${p.text}`).join("\n");
+                const exegesisContext = [
+                  `Observations:\n${formatPhaseText(obsData, OBSERVE_FIELDS)}`,
+                  `Interpretation:\n${formatPhaseText(intData, INTERPRET_FIELDS)}`,
+                  `Redemptive Thread:\n${formatPhaseText(redData, REDEMPTIVE_FIELDS)}`,
+                  `Implications:\n${formatPhaseText(impData, [...IMPLICATIONS_THEOLOGICAL, ...IMPLICATIONS_PERSONAL])}`,
+                ].join("\n\n");
                 fetchInline(
                   "outline-review",
-                  `Passage: ${sermon.passage || "unknown"}.\nMPT: ${sermon.mpt || "(none)"}.\nMPS: ${sermon.mps || "(none)"}.\n\nOutline:\n${pts || "(no points yet)"}`,
-                  `Review this sermon outline. Evaluate: Do the points derive from the text? Do they ladder up to the MPS? Is the progression clear? Does tension resolve in the gospel? Suggest the minimum changes needed.`
+                  `Passage: ${sermon.passage || "unknown"}.\nMPT: ${sermon.mpt || "(none)"}.\nMPS: ${sermon.mps || "(none)"}.\n\n${exegesisContext}\n\nOutline:\n${pts || "(no points yet)"}`,
+                  `Review this sermon outline against the exegetical work above. Evaluate: Do the points derive from the text's own argument? Do they ladder to the MPS? Is the progression clear and complete? Does tension resolve in the gospel? Suggest the minimum changes needed.`
                 );
               }}
             >
