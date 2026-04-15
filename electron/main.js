@@ -34,7 +34,7 @@ async function initDatabase() {
   });
 
   // Determine DB path
-  const dataDir = "C:\\SermonForge\\data";
+  const dataDir = "C:\\Projects\\SermonForge\\data";
   if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
   dbPath = path.join(dataDir, "sermonforge.db");
 

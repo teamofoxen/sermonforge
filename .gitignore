@@ -19,7 +19,7 @@ release/
 *.dmg
 *.AppImage
 
-# Database — lives on OneDrive, not in git
+# Database — lives in data/ alongside the project, not in git
 *.db
 *.db-journal
 

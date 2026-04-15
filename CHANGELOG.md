@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-04-15 — chore: move database location into project directory
+
+**`electron/main.js`**
+- Changed `dataDir` from `C:\SermonForge\data` to `C:\Projects\SermonForge\data` — databases now live alongside the codebase.
+
+**`.gitignore`**
+- Updated comment on `*.db` exclusion to reflect new data location.
+
+---
+
 ## 2026-04-15 — feat: rename Tune-Up button and add toolbar tooltips
 
 **`src/components/ManuscriptTab.jsx`**
