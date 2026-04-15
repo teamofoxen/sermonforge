@@ -2,6 +2,17 @@
 
 ---
 
+## 2026-04-15 — feat: rename Tune-Up button and add toolbar tooltips
+
+**`src/components/ManuscriptTab.jsx`**
+- Renamed "Run Tune-Up Engine" button label → "Final Tune-Up" (function and system prompt unchanged).
+- Added `has-tooltip` class and `data-tooltip` attribute to all four toolbar buttons: Build Manuscript Framework, Flow Coach, Ear Check, Final Tune-Up. Each tooltip is 2–3 sentences describing what the tool does and when to use it.
+
+**`src/styles/global.css`**
+- Added `.has-tooltip` / `.has-tooltip::after` CSS tooltip rules. Tooltip appears above the button on hover, fades in at 0.15s, uses `var(--ink)` background with `var(--parchment-warm)` text, wraps at 260px. No JavaScript or new dependencies.
+
+---
+
 ## 2026-04-15 — feat: Flow Coach and Ear Check on Manuscript tab
 
 Replaced the earlier Transition Coach with **Flow Coach** (renamed and expanded) and added **Ear Check** as a new diagnostic tool. Toolbar order is now: Build Manuscript Framework → Flow Coach → Ear Check → Run Tune-Up Engine.

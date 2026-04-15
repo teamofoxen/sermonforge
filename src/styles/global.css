@@ -970,6 +970,38 @@ button {
   border-radius: var(--radius);
 }
 
+/* ── Tooltips ────────────────────────────────────────────────────────────── */
+.has-tooltip {
+  position: relative;
+}
+.has-tooltip::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 260px;
+  padding: 8px 11px;
+  background: var(--ink);
+  color: var(--parchment-warm);
+  font-size: 12px;
+  line-height: 1.5;
+  border-radius: var(--radius);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  z-index: 100;
+  white-space: normal;
+  text-align: left;
+  font-family: var(--font-ui, sans-serif);
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.has-tooltip:hover::after {
+  opacity: 1;
+}
+
 .word-count {
   font-family: 'JetBrains Mono', monospace;
   font-size: 12px;

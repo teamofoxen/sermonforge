@@ -134,7 +134,8 @@ export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading, onOpe
           {words.toLocaleString()} words · ~{minutes} min
         </div>
         <button
-          className="btn-ghost btn-sm"
+          className="btn-ghost btn-sm has-tooltip"
+          data-tooltip="Generates a structured writing template from your outline, passage, MPT, and MPS. Use it to scaffold a blank manuscript or reset the structure before you begin writing. Any existing content will be replaced."
           onClick={() => {
             if (sermon.manuscript?.trim() && !confirm("Replace the current manuscript with a generated framework? This cannot be undone.")) return;
             onUpdate({ manuscript: buildTemplate(sermon) });
@@ -143,25 +144,28 @@ export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading, onOpe
           Build Manuscript Framework
         </button>
         <button
-          className="btn-ghost btn-sm"
+          className="btn-ghost btn-sm has-tooltip"
+          data-tooltip="A step-by-step coaching session that walks through what each movement in your sermon needs to accomplish — intro, transitions, and conclusion. Doesn't write anything; coaches direction only and works at your pace."
           onClick={runFlowCoach}
           disabled={aiLoading || !sermon.manuscript}
         >
           Flow Coach
         </button>
         <button
-          className="btn-ghost btn-sm"
+          className="btn-ghost btn-sm has-tooltip"
+          data-tooltip="Scans your manuscript for passages that will lose listeners when heard aloud. Flags structural orphans and speakability problems with a diagnosis and a direction — no rewrites."
           onClick={runEarCheck}
           disabled={aiLoading || !sermon.manuscript}
         >
           Ear Check
         </button>
         <button
-          className="btn-primary btn-sm"
+          className="btn-primary btn-sm has-tooltip"
+          data-tooltip="A full editorial evaluation covering structure, text alignment, functional balance, and redemptive logic. Produces a Sermon Snapshot, Alignment Map, and Patch Plan with specific, located edit instructions."
           onClick={runTuneUp}
           disabled={aiLoading || !sermon.manuscript}
         >
-          {aiLoading ? "Running…" : "Run Tune-Up Engine"}
+          {aiLoading ? "Running…" : "Final Tune-Up"}
         </button>
       </div>
 
