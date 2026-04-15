@@ -1027,7 +1027,7 @@ function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpen
     });
     onSermonsChange(prev => [...prev, {
       id, series_id: seriesId, section_id: sectionId,
-      title: "", passage: "", big_idea: "", date: "", stage: "planning",
+      title: "", passage: "", date: "", stage: "planning",
     }]);
   }
 
@@ -1262,16 +1262,6 @@ function SlotRow({ slot, index, onChange, onDelete, onOpenSermon, seriesId, seri
               value={slot.title || ""}
               onChange={(e) => onChange(slot.id, "title", e.target.value)}
               placeholder="e.g. Through the Eyes of Luke"
-              onClick={(e) => e.stopPropagation()}
-            />
-          </div>
-          <div style={{ gridColumn: "1 / -1" }}>
-            <label style={labelStyle}>Big Idea (working)</label>
-            <input
-              style={inputStyle}
-              value={slot.big_idea || ""}
-              onChange={(e) => onChange(slot.id, "big_idea", e.target.value)}
-              placeholder="The central truth of this sermon"
               onClick={(e) => e.stopPropagation()}
             />
           </div>
@@ -1934,7 +1924,7 @@ function StudyGuideModal({ series, sections, sermons, onClose }) {
         background: "var(--white)", border: "1px solid var(--parchment-deep)",
         borderRadius: "var(--radius)",
       }}>
-        <div style={{ display: "flex", alignItems: "flex-start", gap: "10px", marginBottom: (sermon.big_idea || sermon.study_guide_note) ? "10px" : 0 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: "10px", marginBottom: sermon.study_guide_note ? "10px" : 0 }}>
           <span style={{ fontSize: "12px", color: "var(--ink-ghost)", width: "18px", flexShrink: 0, marginTop: "2px" }}>{index + 1}</span>
           <div style={{ flex: 1 }}>
             <div style={{ display: "flex", alignItems: "baseline", gap: "8px", flexWrap: "wrap" }}>
@@ -1968,16 +1958,6 @@ function StudyGuideModal({ series, sections, sermons, onClose }) {
             </div>
           </div>
         </div>
-        {sermon.big_idea && (
-          <div style={{ paddingLeft: "28px", marginBottom: "6px" }}>
-            <span style={{ fontSize: "11px", fontWeight: "600", color: "var(--ink-ghost)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-              Big Idea:{" "}
-            </span>
-            <span style={{ fontSize: "13px", fontFamily: "'Crimson Pro', serif", color: "var(--ink-soft)", fontStyle: "italic" }}>
-              {sermon.big_idea}
-            </span>
-          </div>
-        )}
         {sermon.study_guide_note && (
           <div style={{ paddingLeft: "28px" }}>
             <p style={{ fontSize: "14px", fontFamily: "'Crimson Pro', serif", color: "var(--ink)", lineHeight: "1.6", margin: 0 }}>

@@ -318,22 +318,6 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
     }
   }
 
-  async function generateBigIdea() {
-    if (draftLoading) return;
-    setDraftLoading("big_idea");
-    try {
-      const resp = await sendAIMessage(
-        [{ role: "user", content: `Passage: ${sermon.passage || "unknown"}\n\nMPT: ${sermon.mpt || "(none)"}\nMPS: ${sermon.mps || "(none)"}\n\nDraft a one-sentence sermon big idea that captures the central truth of this sermon. Make it sharp and memorable. Return only the sentence.` }],
-        "You are a sermon preparation consultant helping a pastor crystallize a sermon big idea."
-      );
-      if (resp?.trim()) onUpdate({ big_idea: resp.trim() });
-    } catch (e) {
-      console.error("[generateBigIdea]", e);
-    } finally {
-      setDraftLoading(null);
-    }
-  }
-
   async function generateSummary(key, userPrompt, systemPrompt) {
     setSummaryLoading(key);
     try {
@@ -869,29 +853,6 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
             onDismiss={() => dismissInline("mpt-mps-chain")}
           />
 
-          {/* Sermon Big Idea draft — only when MPT or MPS exist */}
-          {(sermon.mpt?.trim() || sermon.mps?.trim()) && (
-            <div style={{ marginTop: "16px", padding: "14px 16px", background: "var(--parchment-warm)", border: "1px solid var(--parchment-deep)", borderRadius: "var(--radius)" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
-                <label className="field-label" style={{ marginBottom: 0 }}>Sermon Big Idea</label>
-                <button
-                  className="btn-ghost btn-sm"
-                  onClick={generateBigIdea}
-                  disabled={draftLoading !== null}
-                  style={{ fontSize: "12px" }}
-                >
-                  {draftLoading === "big_idea" ? "Drafting…" : "Draft →"}
-                </button>
-              </div>
-              <input
-                style={{ width: "100%", border: "1px solid var(--parchment-deep)", borderRadius: "var(--radius)", padding: "8px 10px", fontSize: "14px", fontFamily: "'Crimson Pro', serif", background: "var(--white)", color: "var(--ink)", outline: "none" }}
-                value={sermon.big_idea || ""}
-                onChange={(e) => onUpdate({ big_idea: e.target.value })}
-                placeholder="The controlling idea of this sermon in one sentence."
-              />
-            </div>
-          )}
-
           <div className="step-advance">
             <button className="btn-primary btn-sm" onClick={advanceStep}>
               {`Continue to ${STEP_LABELS[2]} →`}
@@ -905,14 +866,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
         <div className="study-step-active">
           <SummaryBlock summaryKey="s3" {...summaryProps} />
 
-          {sermon.big_idea?.trim() && (
-            <div style={{ padding: "10px 14px", marginBottom: "14px", background: "var(--ink)", borderRadius: "var(--radius)", display: "flex", alignItems: "baseline", gap: "10px" }}>
-              <span style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--gold)", flexShrink: 0 }}>Big Idea</span>
-              <span style={{ fontSize: "14px", fontFamily: "'Playfair Display', serif", fontStyle: "italic", color: "var(--parchment-warm)" }}>{sermon.big_idea}</span>
-            </div>
-          )}
-
-          <OutlineBuilder
+<OutlineBuilder
             outline={outline}
             onUpdate={(newOutline) => onUpdate({ outline: serializeOutline(newOutline) })}
             onRemove={handleOutlineRemove}
@@ -970,14 +924,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
         <div className="study-step-active">
           <SummaryBlock summaryKey="s4" {...summaryProps} />
 
-          {sermon.big_idea?.trim() && (
-            <div style={{ padding: "10px 14px", marginBottom: "14px", background: "var(--ink)", borderRadius: "var(--radius)", display: "flex", alignItems: "baseline", gap: "10px" }}>
-              <span style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--gold)", flexShrink: 0 }}>Big Idea</span>
-              <span style={{ fontSize: "14px", fontFamily: "'Playfair Display', serif", fontStyle: "italic", color: "var(--parchment-warm)" }}>{sermon.big_idea}</span>
-            </div>
-          )}
-
-          {outline.map((pt, i) => (
+{outline.map((pt, i) => (
             <FuncElem key={pt.id} pointText={pt.text} pointId={pt.id} displayIndex={i} funcData={funcData} onUpdate={updateFuncData} />
           ))}
 

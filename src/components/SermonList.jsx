@@ -96,9 +96,7 @@ export default function SermonList({ onOpenSermon }) {
                 {sermon.series_title && (
                   <div className="sermon-card-series">{sermon.series_title}</div>
                 )}
-                {sermon.big_idea && (
-                  <div className="sermon-card-idea">{sermon.big_idea}</div>
-                )}
+
                 <div className="sermon-card-footer">
                   <span>{formatDate(sermon.date)}</span>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>

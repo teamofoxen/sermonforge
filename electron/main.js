@@ -555,7 +555,7 @@ registerAIHandlers(ipcMain);
 
 // ── Column allowlists — only these field names are accepted in update operations ─
 const SERMON_COLUMNS = new Set([
-  "title", "passage", "date", "preacher", "stage", "big_idea", "mpt", "mps",
+  "title", "passage", "date", "preacher", "stage", "mpt", "mps",
   "observations", "interpretation", "redemptive_thread", "implications",
   "outline", "manuscript", "delivery_notes", "timing_notes", "post_sermon",
   "functional_elements", "checklist", "series_id", "section_id", "is_one_off",
@@ -616,8 +616,8 @@ ipcMain.handle("db-createSermon", (_, data) => {
   db.run(
     `INSERT INTO sermons
        (id, series_id, section_id, is_one_off, title, passage, date, preacher,
-        stage, big_idea, mpt, mps, observations, outline, manuscript)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, '', '', '', '', '[]', '')`,
+        stage, mpt, mps, observations, outline, manuscript)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, '', '', '', '[]', '')`,
     [id, data.series_id || null, data.section_id || null, data.is_one_off ? 1 : 0,
      data.title, data.passage || "", data.date || "", data.preacher || "",
      data.stage || "planning"]

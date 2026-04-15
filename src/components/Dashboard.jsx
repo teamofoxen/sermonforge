@@ -90,7 +90,6 @@ export default function Dashboard({ onOpenSermon, onOpenSeries, onNewSeries, onN
     parts.push(`Title: ${sermon.title}`);
     if (sermon.passage)      parts.push(`Passage: ${sermon.passage}`);
     if (sermon.series_title) parts.push(`Series: ${sermon.series_title}`);
-    if (sermon.big_idea)     parts.push(`Big Idea: ${sermon.big_idea}`);
     if (sermon.mpt)          parts.push(`Main Point of the Text (MPT): ${sermon.mpt}`);
     if (sermon.mps)          parts.push(`Main Point of the Sermon (MPS): ${sermon.mps}`);
     const exegesis = flattenExegesis(sermon);

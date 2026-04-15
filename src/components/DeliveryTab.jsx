@@ -25,9 +25,7 @@ function DeliveryOverlay({ sermon, onClose }) {
           <div className="delivery-passage-ref">{sermon.passage}</div>
         )}
         <div className="delivery-title">{sermon?.title || "Untitled Sermon"}</div>
-        {sermon?.big_idea && (
-          <div className="delivery-big-idea">{sermon.big_idea}</div>
-        )}
+
       </div>
       {outline.length > 0 && (
         <ol className="delivery-points">

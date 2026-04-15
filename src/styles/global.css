@@ -474,18 +474,6 @@ button {
   margin-bottom: 8px;
 }
 
-.sermon-card-idea {
-  font-style: italic;
-  font-size: 14px;
-  color: var(--ink-soft);
-  line-height: 1.5;
-  margin-bottom: 12px;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
 .sermon-card-footer {
   display: flex;
   align-items: center;
@@ -1353,17 +1341,6 @@ button {
   color: var(--white);
   line-height: 1.2;
   margin-bottom: 20px;
-}
-
-.delivery-big-idea {
-  font-family: 'Playfair Display', serif;
-  font-style: italic;
-  font-size: 22px;
-  color: var(--gold-bright);
-  line-height: 1.5;
-  border-left: 3px solid var(--gold);
-  padding-left: 20px;
-  max-width: 700px;
 }
 
 .delivery-points {
