@@ -767,7 +767,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
             <button className="btn-primary btn-sm" onClick={advanceSubPhase}>
               {activeSubPhase < 4
                 ? `Continue to ${PHASE_LABELS[activeSubPhase]} →`
-                : "Continue to MPT / MPS →"}
+                : `Continue to ${STEP_LABELS[1]} →`}
             </button>
           </div>
         </div>
@@ -894,7 +894,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
 
           <div className="step-advance">
             <button className="btn-primary btn-sm" onClick={advanceStep}>
-              Continue to Outline →
+              {`Continue to ${STEP_LABELS[2]} →`}
             </button>
           </div>
         </div>
@@ -958,7 +958,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
           {outline.length > 0 && (
             <div className="step-advance">
               <button className="btn-primary btn-sm" onClick={advanceStep}>
-                Continue to Functional Elements →
+              {`Continue to ${STEP_LABELS[3]} →`}
               </button>
             </div>
           )}
