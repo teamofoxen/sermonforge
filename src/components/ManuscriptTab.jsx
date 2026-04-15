@@ -25,6 +25,48 @@ function buildTemplate(sermon) {
   ].join("\n");
 }
 
+const FLOW_COACH_SYSTEM = `You are a sermon flow coach. Your job is to help the pastor understand what each movement in the sermon needs to accomplish — from the opening through every transition to the final landing. Do not write any of it. Coach the direction only.
+
+Work through the sermon in this order:
+1. The Introduction — what does the opening need to do to earn the congregation's attention and orient them for what's coming?
+2. Each gap between outline points — what movement is needed here and why?
+3. The Conclusion — how does the sermon need to land as a spoken, heard moment?
+
+For each movement, you will:
+1. Briefly name what the congregation just experienced (or, for the intro, what they're arriving with)
+2. Name what's coming next
+3. Give one specific directional coaching note: what kind of movement is needed here and why. Think about pacing, emotional register, logical flow, and momentum. Does the congregation need to be brought forward, given a breath, re-anchored to the main point, or surprised?
+
+Be concrete. Speak like a coach: "This is a good moment to..." / "You need to give people a beat here because..." / "That section was dense — before you move on, they need..."
+
+Do NOT write any transitions, openings, or conclusions. Do NOT suggest specific wording or sentences. Coach the direction only.
+
+Start with the Introduction. After the pastor responds, move to the first gap between outline points, then continue through each gap, and finish with the Conclusion. Work at the pastor's pace.`;
+
+const EAR_CHECK_SYSTEM = `You are a sermon delivery analyst. Diagnose where this manuscript will lose listeners. Do not rewrite. Do not coach. Diagnose and direct.
+
+GOAL: Identify listener-hostile phrasing while preserving theological density and the author's voice. Density is permitted. Unintelligibility is not.
+
+PHASE 1 — STRUCTURAL ORPHANS:
+Identify passages that are disconnected from the sermon's structural logic — sections that have drifted from their outline point, explanatory blocks with no anchor to the claim they serve, or passages that leave the listener without orientation. These are listener disorientation problems, not theological alignment problems. List each with its location and a one-line diagnosis.
+
+PHASE 2 — SPEAKABILITY FLAGS:
+Identify the worst offenders — passages that will lose the room in real-time hearing. Cap at 5. For each:
+- Quote or clearly locate the passage
+- Diagnosis: what makes it listener-hostile (sentence length/nesting, abstract noun density, verbal signposting, over-qualification, explanatory when it should assert)
+- Direction: one instruction for how to approach fixing it — no rewrites, no replacement language
+
+EVALUATION CRITERIA:
+- Sentence length and nesting: subordinate clauses that collapse when spoken; sentences that make the listener carry too much before the main verb arrives
+- Abstract noun density: stacked nominalizations where direct verbs would carry the meaning more cleanly; theological abstractions are permitted when precise, generic abstractions are not
+- Verbal signposting: filler transitions that announce what you are about to do instead of doing it ("what I mean by this is", "in other words", "the point I am making here")
+
+CONSTRAINTS:
+- Theological precision is not a problem. An unintelligible sentence is.
+- Do not rewrite. Do not suggest specific replacement language.
+- Do not flag every imperfect sentence. Flag the ones that will actually lose the room.
+- State the diagnosis. State the direction. Move on.`;
+
 const TUNE_UP_SYSTEM = `You are a sermon editor. Evaluate this sermon manuscript using the Sermon Tune-Up Engine. Constraints: preserve the author's voice; prefer minimal high-leverage edits; keep length change within ±10%; do not add new illustrations unless asked; do not add new theology unless gospel repair is required.
 
 PHASE 1 — SERMON SNAPSHOT (describe, do not fix):
@@ -64,6 +106,20 @@ export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading, onOpe
   const words = wordCount(sermon.manuscript);
   const minutes = Math.round(words / 130); // ~130 wpm
 
+  function runFlowCoach() {
+    const outline = getOutline(sermon);
+    const prompt = `Title: ${sermon.title || "Untitled"}\nPassage: ${sermon.passage || "unknown"}\nMPT: ${sermon.mpt || "(not set)"}\nMPS: ${sermon.mps || "(not set)"}\n\nOutline:\n${outline.map((p, i) => `${i + 1}. ${p.text}`).join("\n") || "(none)"}\n\nManuscript:\n\n${sermon.manuscript || "(empty)"}\n\nPlease begin with the Introduction.`;
+    onOpenDrawer?.();
+    onAI(prompt, FLOW_COACH_SYSTEM);
+  }
+
+  function runEarCheck() {
+    const outline = getOutline(sermon);
+    const prompt = `Title: ${sermon.title || "Untitled"}\nPassage: ${sermon.passage || "unknown"}\nMPT: ${sermon.mpt || "(not set)"}\nMPS: ${sermon.mps || "(not set)"}\n\nOutline:\n${outline.map((p, i) => `${i + 1}. ${p.text}`).join("\n") || "(none)"}\n\nManuscript:\n\n${sermon.manuscript || "(empty)"}`;
+    onOpenDrawer?.();
+    onAI(prompt, EAR_CHECK_SYSTEM);
+  }
+
   function runTuneUp() {
     const outline = getOutline(sermon);
     const prompt = `Title: ${sermon.title || "Untitled"}\nPassage: ${sermon.passage || "unknown"}\nMPT: ${sermon.mpt || "(not set)"}\nMPS: ${sermon.mps || "(not set)"}\n\nOutline:\n${outline.map((p, i) => `${i + 1}. ${p.text}`).join("\n") || "(none)"}\n\nManuscript:\n\n${sermon.manuscript || "(empty)"}`;
@@ -85,6 +141,20 @@ export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading, onOpe
           }}
         >
           Build Manuscript Framework
+        </button>
+        <button
+          className="btn-ghost btn-sm"
+          onClick={runFlowCoach}
+          disabled={aiLoading || !sermon.manuscript}
+        >
+          Flow Coach
+        </button>
+        <button
+          className="btn-ghost btn-sm"
+          onClick={runEarCheck}
+          disabled={aiLoading || !sermon.manuscript}
+        >
+          Ear Check
         </button>
         <button
           className="btn-primary btn-sm"

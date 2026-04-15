@@ -2,6 +2,26 @@
 
 ---
 
+## 2026-04-15 — feat: Flow Coach and Ear Check on Manuscript tab
+
+Replaced the earlier Transition Coach with **Flow Coach** (renamed and expanded) and added **Ear Check** as a new diagnostic tool. Toolbar order is now: Build Manuscript Framework → Flow Coach → Ear Check → Run Tune-Up Engine.
+
+**`src/components/ManuscriptTab.jsx`**
+
+**Flow Coach** (replaces Transition Coach):
+- Renamed `TRANSITION_COACH_SYSTEM` → `FLOW_COACH_SYSTEM` with expanded scope: now coaches intro → each point-to-point gap → conclusion landing, conversationally at the pastor's pace.
+- Renamed `runTransitionCoach()` → `runFlowCoach()`; updated initial prompt directive to begin with the Introduction rather than the first point gap.
+- Removed the `outline.length < 2` disable guard — Flow Coach is valid even without outline points since intro and conclusion are always coachable moments.
+
+**Ear Check** (new):
+- Added `EAR_CHECK_SYSTEM`: two-phase diagnostic. Phase 1 flags structural orphans (passages disconnected from their outline point, causing listener disorientation). Phase 2 flags up to 5 speakability offenders with diagnosis and direction — no rewrites, no replacement language.
+- Added `runEarCheck()` function; sends title, passage, MPT, MPS, outline, and manuscript.
+- Button disabled when manuscript is empty.
+
+**Why:** Flow Coach needed to cover the intro and conclusion — the gaps at either end of the sermon are as important as the gaps between points. Ear Check fills a gap neither Tune-Up nor Flow Coach covers: listener-hostile phrasing (sentence nesting, abstract noun density, verbal signposting). Ear Check is deliberately diagnostic-only to preserve the author's voice while flagging what will lose the room.
+
+---
+
 ## 2026-04-14 — chore: delete CLAUDE_original.md
 
 Removed the original monolithic CLAUDE.md (790 lines). It was retained as a safety net
