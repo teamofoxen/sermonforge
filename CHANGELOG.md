@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-04-15 — fix: prevent duplicate outline points on repeated Suggest Outline clicks
+
+**`src/components/OutlineTab.jsx`**, **`src/components/StudyTab.jsx`**
+- `handleSuggestOutline()` and `suggestOutline()` both appended AI-generated points to the existing outline unconditionally. A second click would stack duplicates. Both now replace the outline with the new suggestion instead of appending. Behaviour on an empty outline is unchanged.
+
+---
+
 ## 2026-04-15 — feat: Study workflow logic and handoff improvements
 
 Five fixes to tighten the Study → Outline → Manuscript logic chain:

@@ -310,7 +310,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
       const lines = resp.trim().split("\n").filter(l => /^\d+[\.\)]/.test(l.trim()));
       if (lines.length === 0) return;
       const newPoints = lines.map(l => createOutlinePoint(l.replace(/^\d+[\.\)]\s*/, "").trim()));
-      onUpdate({ outline: serializeOutline([...outline, ...newPoints]) });
+      onUpdate({ outline: serializeOutline(newPoints) });
     } catch (e) {
       console.error("[suggestOutline]", e);
     } finally {

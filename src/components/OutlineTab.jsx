@@ -50,7 +50,7 @@ export default function OutlineTab({ sermon, onUpdate, onTabChange }) {
       const lines = resp.trim().split("\n").filter(l => /^\d+[\.\)]/.test(l.trim()));
       if (lines.length === 0) return;
       const newPoints = lines.map(l => createOutlinePoint(l.replace(/^\d+[\.\)]\s*/, "").trim()));
-      onUpdate({ outline: serializeOutline([...outline, ...newPoints]) });
+      onUpdate({ outline: serializeOutline(newPoints) });
     } catch (e) {
       console.error("[OutlineTab suggestOutline]", e);
     } finally {
