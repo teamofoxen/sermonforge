@@ -38,6 +38,33 @@ build. **Do not load CHANGELOG.md by default on every session.**
 
 ---
 
+## CHANGELOG Rules
+
+When updating CHANGELOG.md:
+
+- MAX 5 bullet points
+- Each bullet must be one sentence
+- Only include changes from the current session
+- Do NOT restate or summarize previous entries
+- Do NOT explain rationale or intent
+- Do NOT mention unchanged files
+- Total output must remain under 120 words
+
+Required format:
+
+## [Unreleased]
+- change
+- change
+- change
+
+Enforcement:
+
+- If these constraints are violated, the output is incorrect
+- Prioritize brevity over completeness
+- Do not expand scope beyond explicitly requested changes
+
+---
+
 ## Authority
 
 If code and these documents diverge, the code is considered incorrect unless an explicit
