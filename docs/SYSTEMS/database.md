@@ -28,7 +28,7 @@ better-sqlite3, and theology.db is never touched by sql.js.
 
 ## Schema Version
 
-Current schema version: **7**
+Current schema version: **8**
 
 The version is stored in the `meta` table under key `schema_version`.
 Read via IPC `"db-getSchemaVersion"`.

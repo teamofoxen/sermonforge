@@ -2,6 +2,36 @@
 
 ---
 
+## 2026-04-15 — feat: Contour-Mapped Compression (CMC) — Preaching Without Notes
+
+**`src/components/DeliveryTab.jsx`** (rewritten), **`src/styles/global.css`**, **`src/components/SermonWorkspace.jsx`**, **`electron/main.js`**
+
+Replaced the placeholder delivery tab with the CMC engine — a Spurgeon/MLJ-tradition without-notes preparation tool that compresses a completed manuscript into Preaching Memory Blocks (PMBs).
+
+**Architecture:**
+- Three-phase AI prompt: Structural Analysis (Tune-Up lens) → Movement Mapping (Flow Coach lens) → Danger Zone Identification (Ear Check lens) → compression into PMBs
+- Segments the manuscript by rhetorical movement, not paragraphs or headings
+- Compression constraints are non-negotiable: `trigger_phrase` ≤5 words, `core_claim` ≤1 sentence, `memory_hooks` exactly 2 phrases, `imagery` 1 image, `transition_out` 1 sentence (verbatim)
+- `trigger_phrase` and `transition_out` are verbatim memory items; all other fields are internalized, not recited
+
+**Schema (v8):**
+- New `preaching_blocks TEXT DEFAULT 'null'` column on `sermons` table (migration v8)
+- Added `preaching_blocks` to `SERMON_COLUMNS` allowlist
+- Top-level `spine` field holds the MPS — the one sentence the preacher returns to when lost
+
+**UI:**
+- Generate button builds context from passage, MPT, MPS, exegesis, outline, and full manuscript
+- Generated PMBs are immediately editable; blocks persist to DB
+- `Regenerate` button replaces blocks if manuscript changes
+- Danger zones rendered in crimson; trigger phrase prominent with underline
+
+**Removed:**
+- `DeliveryOverlay` component and all delivery overlay CSS — delivery view removed as impractical for pulpit use
+- `.btn-deliver` CSS (no longer referenced)
+- Pre-sermon checklist, timing notes, post-sermon reflection, delivery notes UI panels
+
+---
+
 ## 2026-04-15 — fix: prevent duplicate outline points on repeated Suggest Outline clicks
 
 **`src/components/OutlineTab.jsx`**, **`src/components/StudyTab.jsx`**

@@ -422,6 +422,13 @@ function runMigrations() {
     db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '7')");
     version = 7;
   }
+
+  if (version < 8) {
+    // v8: preaching_blocks — CMC (Contour-Mapped Compression) without-notes output
+    try { db.run("ALTER TABLE sermons ADD COLUMN preaching_blocks TEXT DEFAULT 'null'"); } catch (_) {}
+    db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '8')");
+    version = 8;
+  }
 }
 
 // ── Query helpers ────────────────────────────────────────────────────────────
@@ -560,6 +567,7 @@ const SERMON_COLUMNS = new Set([
   "outline", "manuscript", "delivery_notes", "timing_notes", "post_sermon",
   "functional_elements", "checklist", "series_id", "section_id", "is_one_off",
   "topic_theme", "audience_assumptions", "background_noise", "study_guide_note",
+  "preaching_blocks",
 ]);
 
 const SERIES_COLUMNS = new Set([

@@ -343,17 +343,6 @@ button {
 }
 
 
-.btn-deliver {
-  background: var(--crimson);
-  color: white;
-  padding: 7px 16px;
-  border-radius: var(--radius);
-  font-size: 14px;
-}
-
-.btn-deliver:hover {
-  background: var(--crimson-soft);
-}
 
 /* ── Stage dropdown ──────────────────────────────────────────────────────── */
 .stage-select {
@@ -996,38 +985,6 @@ button {
   color: var(--ink-ghost);
 }
 
-/* ── Delivery tab ────────────────────────────────────────────────────────── */
-.checklist {
-  list-style: none;
-  margin-bottom: 20px;
-}
-
-.checklist-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--parchment-warm);
-  font-size: 15px;
-  color: var(--ink-mid);
-  cursor: pointer;
-}
-
-.checklist-item:last-child {
-  border-bottom: none;
-}
-
-.checklist-item input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  cursor: pointer;
-  accent-color: var(--gold);
-}
-
-.checklist-item.checked {
-  text-decoration: line-through;
-  color: var(--ink-ghost);
-}
 
 /* ── AI Panel ────────────────────────────────────────────────────────────── */
 .ai-panel {
@@ -1310,86 +1267,160 @@ button {
   cursor: default;
 }
 
-/* ── Delivery overlay ────────────────────────────────────────────────────── */
-.delivery-overlay {
-  position: fixed;
-  inset: 0;
-  background: var(--ink);
-  z-index: 1000;
+/* ── Preaching Without Notes (CMC) ───────────────────────────────────────── */
+.pmb-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+}
+
+.pmb-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+
+.pmb-subtitle {
+  font-family: 'Crimson Pro', serif;
+  font-size: 15px;
+  color: var(--ink-ghost);
+  font-style: italic;
+}
+
+.pmb-error {
+  background: #fff0f0;
+  border: 1px solid var(--crimson-soft);
+  color: var(--crimson);
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.pmb-spine-card {
+  margin-bottom: 20px;
+  padding: 16px 20px;
+}
+
+.pmb-label {
+  display: block;
+  font-family: 'Crimson Pro', serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-ghost);
+  margin-bottom: 6px;
+}
+
+.pmb-label--spine {
+  color: var(--gold);
+}
+
+.pmb-label--trigger {
+  color: var(--ink-mid);
+}
+
+.pmb-label--danger {
+  color: var(--crimson-soft);
+}
+
+.pmb-spine-input {
+  width: 100%;
+  font-family: 'Playfair Display', serif;
+  font-size: 16px;
+  font-style: italic;
+  color: var(--ink);
+  border: none;
+  background: transparent;
+  outline: none;
+  padding: 0;
+}
+
+.pmb-blocks {
   display: flex;
   flex-direction: column;
-  padding: 60px 80px;
-  overflow-y: auto;
+  gap: 12px;
 }
 
-.delivery-overlay-header {
-  margin-bottom: 40px;
+.pmb-card {
+  padding: 16px 20px;
 }
 
-.delivery-passage-ref {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 14px;
-  color: var(--gold);
-  margin-bottom: 12px;
-  letter-spacing: 0.08em;
-}
-
-.delivery-title {
-  font-family: 'Playfair Display', serif;
-  font-size: 42px;
-  font-weight: 700;
-  color: var(--white);
-  line-height: 1.2;
-  margin-bottom: 20px;
-}
-
-.delivery-points {
-  margin-top: 48px;
-  list-style: none;
-}
-
-.delivery-point {
+.pmb-card-header {
   display: flex;
-  gap: 20px;
-  margin-bottom: 28px;
-  align-items: flex-start;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
 }
 
-.delivery-point-num {
-  font-family: 'Playfair Display', serif;
-  font-size: 32px;
+.pmb-id {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
   color: var(--gold);
-  opacity: 0.5;
-  line-height: 1;
-  width: 40px;
+  background: var(--gold-pale);
+  border: 1px solid var(--gold);
+  border-radius: 4px;
+  padding: 2px 8px;
   flex-shrink: 0;
-  text-align: right;
 }
 
-.delivery-point-text {
-  font-family: 'Playfair Display', serif;
-  font-size: 26px;
-  color: var(--white);
-  line-height: 1.35;
-}
-
-.delivery-close {
-  position: fixed;
-  top: 20px;
-  right: 24px;
-  background: rgba(255,255,255,0.1);
-  border: 1px solid rgba(255,255,255,0.2);
-  color: rgba(255,255,255,0.7);
-  padding: 8px 16px;
-  border-radius: var(--radius);
-  font-size: 13px;
-  cursor: pointer;
+.pmb-movement-select {
   font-family: 'Crimson Pro', serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-mid);
+  background: var(--parchment-warm);
+  border: 1px solid var(--parchment-deep);
+  border-radius: var(--radius);
+  padding: 3px 8px;
+  cursor: pointer;
 }
 
-.delivery-close:hover {
-  background: rgba(255,255,255,0.15);
-  color: white;
+.pmb-trigger-row {
+  margin-bottom: 12px;
+}
+
+.pmb-trigger-input {
+  width: 100%;
+  font-family: 'Playfair Display', serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ink);
+  border: none;
+  border-bottom: 2px solid var(--parchment-deep);
+  background: transparent;
+  outline: none;
+  padding: 4px 0;
+  transition: border-color 0.15s;
+}
+
+.pmb-trigger-input:focus {
+  border-bottom-color: var(--gold);
+}
+
+.pmb-field {
+  margin-bottom: 10px;
+}
+
+.pmb-two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.pmb-danger-textarea {
+  border-color: var(--crimson-soft);
+  color: var(--crimson);
+}
+
+.pmb-danger-textarea:focus {
+  border-color: var(--crimson);
+  box-shadow: 0 0 0 2px rgba(139, 26, 26, 0.08);
 }
 
 /* ── Modal ───────────────────────────────────────────────────────────────── */

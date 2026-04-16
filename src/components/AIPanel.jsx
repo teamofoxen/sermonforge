@@ -789,7 +789,7 @@ function getReviewPrompt(tab, sermon, activeStep) {
   if (tab === "delivery") {
     return {
       system: "Review this from a preaching coach's perspective.",
-      prompt: `Review the delivery notes and pre-sermon preparation for ${passage}.\n\nDelivery notes: ${sermon?.delivery_notes || "(none)"}\nTiming notes: ${sermon?.timing_notes || "(none)"}\n\nWhat should this preacher be thinking about for effective delivery?`,
+      prompt: `Based on the sermon outline and manuscript for ${passage}, what should this preacher be thinking about for effective delivery?`,
     };
   }
 
