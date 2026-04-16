@@ -2,6 +2,28 @@
 
 ---
 
+## 2026-04-15 — feat: Delivery tab — Manuscript and Outline panels
+
+**`src/components/DeliveryTab.jsx`** (expanded), **`src/styles/global.css`**, **`electron/main.js`**
+
+Added Manuscript and Outline delivery panels alongside the existing Without Notes (CMC) panel. Delivery tab now has three panels navigated by a tab switcher.
+
+**Manuscript panel:**
+- Two-phase AI prompt: Flow Coach rhetorical analysis informs where lines break and bullets land; delivery editor formats prose for spoken delivery
+- Bullets are the default; non-bulleted flowing lines reserved for rhetorical weight only
+- Scripture in italic stacked lines; section labels from the actual outline record
+- Stored in new `manuscript_delivery` field (schema v9); Regenerate button if manuscript changes
+
+**Outline panel:**
+- Template render from existing outline + functional elements — no AI, no storage
+- Shows passage, title, MPS header; each point with Explanation/Illustration/Application beneath
+
+**Shared:**
+- Three-tab switcher (Manuscript | Outline | Without Notes) replaces single-panel layout
+- Shared `delivery-panel-*` CSS classes replace duplicated PMB header styles
+
+---
+
 ## 2026-04-15 — feat: Contour-Mapped Compression (CMC) — Preaching Without Notes
 
 **`src/components/DeliveryTab.jsx`** (rewritten), **`src/styles/global.css`**, **`src/components/SermonWorkspace.jsx`**, **`electron/main.js`**

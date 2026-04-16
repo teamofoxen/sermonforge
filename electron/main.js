@@ -429,6 +429,13 @@ function runMigrations() {
     db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '8')");
     version = 8;
   }
+
+  if (version < 9) {
+    // v9: manuscript_delivery — AI-formatted delivery manuscript
+    try { db.run("ALTER TABLE sermons ADD COLUMN manuscript_delivery TEXT DEFAULT 'null'"); } catch (_) {}
+    db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '9')");
+    version = 9;
+  }
 }
 
 // ── Query helpers ────────────────────────────────────────────────────────────
@@ -567,7 +574,7 @@ const SERMON_COLUMNS = new Set([
   "outline", "manuscript", "delivery_notes", "timing_notes", "post_sermon",
   "functional_elements", "checklist", "series_id", "section_id", "is_one_off",
   "topic_theme", "audience_assumptions", "background_noise", "study_guide_note",
-  "preaching_blocks",
+  "preaching_blocks", "manuscript_delivery",
 ]);
 
 const SERIES_COLUMNS = new Set([

@@ -1,7 +1,245 @@
 import { useState } from "react";
-import { getOutline, tryParse, autoResize } from "../utils";
+import { getOutline, getFunctionalElements, tryParse, autoResize } from "../utils";
 import { summarizeExegesis } from "../utils/contextBuilder";
 import { sendAIMessage } from "../utils/ai";
+
+// ── Panel constants ───────────────────────────────────────────────────────────
+
+const PANELS = ["manuscript", "outline", "without-notes"];
+const PANEL_LABELS = { "manuscript": "Manuscript", "outline": "Outline", "without-notes": "Without Notes" };
+
+// ── Manuscript delivery ───────────────────────────────────────────────────────
+
+const MANUSCRIPT_DELIVERY_SYSTEM = `You are a sermon delivery editor. Your only jurisdiction is visual presentation — content is completely frozen.
+
+PHASE 1 — RHETORICAL ANALYSIS (internal — do not output this phase)
+Read the full manuscript alongside the provided outline. Understand what each section is doing to the listener at each moment — pacing, emotional register, logical flow, momentum. This understanding informs where lines break, where bullets land, and which statements earn non-bulleted treatment.
+
+PHASE 2 — DELIVERY FORMATTING
+Apply these rules exactly:
+
+CONTENT (non-negotiable): Do not change any wording, meaning, or sentence structure. Keep all abbreviations exactly as written. No additions. No removals. No paraphrasing.
+
+BULLETS: Bullets are the default formatting unit. Use them for most content — narrative sequences, explanations, enumerated lists, parallel structures, application moves.
+
+NON-BULLETED LINES: Reserve for rhetorical weight only — pivots, landings, the statements that must stand alone. These should be rare. Their sparseness is what gives them force.
+
+LINE BREAKS: Each line is one spoken phrase or clause. Break at natural spoken pauses.
+
+SECTION LABELS: Use the exact outline point titles provided. Format as: **[ POINT TITLE ]**
+Label functional elements where present: **[ Explanation ]** **[ Illustration ]** **[ Application ]**
+
+SCRIPTURE: Italic stacked lines, mixed case. Reference on its own line at the end: — Book Chapter:Verse
+
+BOLD: Key phrases only. Sparse.
+
+DIVIDERS: ——— between major sections.
+
+OUTPUT: Return the fully formatted manuscript only. Use markdown conventions: ** for bold, * for italic, - for bullet items. No commentary, no preamble.`;
+
+function buildManuscriptDeliveryContext(sermon) {
+  const outline = getOutline(sermon);
+  const fe = getFunctionalElements(sermon);
+
+  const parts = [
+    `TITLE: ${sermon.title || "Untitled"}`,
+    `PASSAGE: ${sermon.passage || "(not set)"}`,
+    `MPS: ${sermon.mps || "(not set)"}`,
+  ];
+
+  if (outline.length > 0) {
+    const outlineText = outline.map((p, i) => {
+      const elements = fe[p.id] || {};
+      let text = `${i + 1}. ${p.text}`;
+      if (elements.explanation) text += "\n   - Explanation";
+      if (elements.illustration) text += "\n   - Illustration";
+      if (elements.application) text += "\n   - Application";
+      return text;
+    }).join("\n");
+    parts.push(`\nOUTLINE:\n${outlineText}`);
+  }
+
+  parts.push(`\nMANUSCRIPT:\n\n${sermon.manuscript || "(empty)"}`);
+
+  return parts.join("\n");
+}
+
+function renderDeliveryMarkdown(text) {
+  if (!text) return "";
+  const lines = text.split("\n");
+  const out = [];
+  let inList = false;
+
+  for (const raw of lines) {
+    const trimmed = raw.trim();
+
+    if (trimmed === "———" || trimmed === "---") {
+      if (inList) { out.push("</ul>"); inList = false; }
+      out.push('<hr class="msd-divider">');
+      continue;
+    }
+
+    // Process inline markdown
+    let line = raw
+      .replace(/\*\*\[\s*([^\]]+)\s*\]\*\*/g, '<span class="msd-section-label">$1</span>')
+      .replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>")
+      .replace(/\*([^*\n]+)\*/g, "<em>$1</em>");
+
+    if (/^- /.test(raw)) {
+      if (!inList) { out.push('<ul class="msd-bullets">'); inList = true; }
+      out.push(`<li>${line.replace(/^- /, "")}</li>`);
+    } else {
+      if (inList) { out.push("</ul>"); inList = false; }
+      if (trimmed === "") {
+        out.push('<div class="msd-gap"></div>');
+      } else {
+        out.push(`<div class="msd-line">${line}</div>`);
+      }
+    }
+  }
+
+  if (inList) out.push("</ul>");
+  return out.join("\n");
+}
+
+function ManuscriptPanel({ sermon, onUpdate }) {
+  const [generating, setGenerating] = useState(false);
+  const [error, setError] = useState(null);
+
+  const stored = tryParse(sermon.manuscript_delivery, null);
+  const content = typeof stored === "string" ? stored : null;
+
+  async function generate() {
+    if (!sermon.manuscript?.trim()) {
+      setError("A completed manuscript is required.");
+      return;
+    }
+    setGenerating(true);
+    setError(null);
+
+    try {
+      const context = buildManuscriptDeliveryContext(sermon);
+      const response = await sendAIMessage(
+        [{ role: "user", content: `${context}\n\nFormat the manuscript for delivery.` }],
+        MANUSCRIPT_DELIVERY_SYSTEM
+      );
+
+      const cleaned = response
+        .replace(/^```(?:markdown|text)?\n?/m, "")
+        .replace(/\n?```$/m, "")
+        .trim();
+
+      onUpdate({ manuscript_delivery: JSON.stringify(cleaned) });
+    } catch (err) {
+      console.error("[ManuscriptDelivery] generation failed:", err);
+      setError("Generation failed. Check that the manuscript is complete and try again.");
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  return (
+    <>
+      <div className="delivery-panel-header">
+        <div>
+          <h2 className="delivery-panel-title">Delivery Manuscript</h2>
+          <p className="delivery-panel-subtitle">Formatted for reading aloud. Content unchanged.</p>
+        </div>
+        <button className="btn-primary" onClick={generate} disabled={generating}>
+          {generating ? "Formatting…" : content ? "Regenerate" : "Format Manuscript"}
+        </button>
+      </div>
+
+      {error && <div className="pmb-error">{error}</div>}
+
+      {content && (
+        <div
+          className="msd-body"
+          dangerouslySetInnerHTML={{ __html: renderDeliveryMarkdown(content) }}
+        />
+      )}
+    </>
+  );
+}
+
+// ── Outline delivery ──────────────────────────────────────────────────────────
+
+function OutlinePanel({ sermon }) {
+  const outline = getOutline(sermon);
+  const fe = getFunctionalElements(sermon);
+
+  if (outline.length === 0) {
+    return (
+      <div className="delivery-panel-empty">
+        No outline points yet. Build your outline first.
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="delivery-panel-header">
+        <div>
+          <h2 className="delivery-panel-title">Preaching Outline</h2>
+          <p className="delivery-panel-subtitle">Points, structure, and supporting material.</p>
+        </div>
+      </div>
+
+      <div className="outline-delivery">
+        {sermon.passage && (
+          <div className="outline-delivery-passage">{sermon.passage}</div>
+        )}
+        {sermon.title && (
+          <h2 className="outline-delivery-title">{sermon.title}</h2>
+        )}
+        {sermon.mps && (
+          <div className="outline-delivery-mps">{sermon.mps}</div>
+        )}
+
+        <div className="outline-delivery-points">
+          {outline.map((point, i) => {
+            const elements = fe[point.id] || {};
+            const hasElements = elements.explanation || elements.illustration || elements.application;
+
+            return (
+              <div key={point.id} className="outline-delivery-point">
+                <div className="outline-delivery-point-num">{i + 1}</div>
+                <div className="outline-delivery-point-body">
+                  <div className="outline-delivery-point-text">{point.text}</div>
+
+                  {hasElements && (
+                    <div className="outline-delivery-elements">
+                      {elements.explanation && (
+                        <div className="outline-delivery-element">
+                          <span className="outline-delivery-element-label">Explanation</span>
+                          <p className="outline-delivery-element-text">{elements.explanation}</p>
+                        </div>
+                      )}
+                      {elements.illustration && (
+                        <div className="outline-delivery-element">
+                          <span className="outline-delivery-element-label">Illustration</span>
+                          <p className="outline-delivery-element-text">{elements.illustration}</p>
+                        </div>
+                      )}
+                      {elements.application && (
+                        <div className="outline-delivery-element">
+                          <span className="outline-delivery-element-label">Application</span>
+                          <p className="outline-delivery-element-text">{elements.application}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ── Without Notes (CMC) ───────────────────────────────────────────────────────
 
 const MOVEMENT_TYPES = [
   "Hook", "Set tension", "Expose", "Explain", "Illustrate",
@@ -179,7 +417,7 @@ function PmbCard({ block, index, onChange }) {
   );
 }
 
-export default function DeliveryTab({ sermon, onUpdate }) {
+function WithoutNotesPanel({ sermon, onUpdate }) {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState(null);
 
@@ -232,10 +470,10 @@ export default function DeliveryTab({ sermon, onUpdate }) {
 
   return (
     <>
-      <div className="pmb-header">
+      <div className="delivery-panel-header">
         <div>
-          <h2 className="pmb-title">Preaching Without Notes</h2>
-          <p className="pmb-subtitle">Steel frame. Same shape. Just lighter.</p>
+          <h2 className="delivery-panel-title">Preaching Without Notes</h2>
+          <p className="delivery-panel-subtitle">Steel frame. Same shape. Just lighter.</p>
         </div>
         <button className="btn-primary" onClick={generate} disabled={generating}>
           {generating ? "Generating…" : blocks.length > 0 ? "Regenerate" : "Generate Preaching Blocks"}
@@ -262,6 +500,40 @@ export default function DeliveryTab({ sermon, onUpdate }) {
           </div>
         </>
       )}
+    </>
+  );
+}
+
+// ── Main tab ──────────────────────────────────────────────────────────────────
+
+export default function DeliveryTab({ sermon, onUpdate }) {
+  const [activePanel, setActivePanel] = useState("manuscript");
+
+  return (
+    <>
+      <div className="delivery-tabs">
+        {PANELS.map((p) => (
+          <button
+            key={p}
+            className={`delivery-tab-btn${activePanel === p ? " active" : ""}`}
+            onClick={() => setActivePanel(p)}
+          >
+            {PANEL_LABELS[p]}
+          </button>
+        ))}
+      </div>
+
+      <div className="delivery-panel-body">
+        {activePanel === "manuscript" && (
+          <ManuscriptPanel sermon={sermon} onUpdate={onUpdate} />
+        )}
+        {activePanel === "outline" && (
+          <OutlinePanel sermon={sermon} />
+        )}
+        {activePanel === "without-notes" && (
+          <WithoutNotesPanel sermon={sermon} onUpdate={onUpdate} />
+        )}
+      </div>
     </>
   );
 }
