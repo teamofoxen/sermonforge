@@ -988,6 +988,7 @@ button {
 
 /* ── AI Panel ────────────────────────────────────────────────────────────── */
 .ai-panel {
+  position: relative;
   width: 320px;
   min-width: 320px;
   background: var(--white);

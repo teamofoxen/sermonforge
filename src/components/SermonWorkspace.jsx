@@ -422,6 +422,7 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
         externalMessage={pendingMessage}
         onLoadingChange={setAiLoading}
         loading={aiLoading}
+        onUpdate={handleUpdate}
       />
     </div>
     {showHowItWorks && <SermonHowItWorksModal onClose={() => setShowHowItWorks(false)} />}

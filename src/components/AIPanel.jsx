@@ -15,8 +15,20 @@ import {
   getTheologyStatus,
   searchTheologyLibrary,
 } from "../db/database";
+import {
+  OBSERVE_FIELDS,
+  INTERPRET_FIELDS,
+  REDEMPTIVE_FIELDS,
+  REDEMPTIVE_SUMMARY_KEY,
+  IMPLICATIONS_THEOLOGICAL,
+  IMPLICATIONS_PERSONAL,
+  IMPLICATIONS_UNBELIEVER_KEY,
+  IMPLICATIONS_COMPILED_KEY,
+  parseStructuredField,
+  serializeStructuredField,
+} from "../utils/studyFields";
 
-export default function AIPanel({ sermon, activeTab, activeStep, externalMessage, onLoadingChange, loading }) {
+export default function AIPanel({ sermon, activeTab, activeStep, externalMessage, onLoadingChange, loading, onUpdate }) {
   const { demoMode } = useDemo();
   const [showContextPreview, setShowContextPreview] = useState(false);
   const [messages, setMessages] = useState([]);
@@ -24,6 +36,8 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
   const [theologyAvailable, setTheologyAvailable] = useState(false);
   const [theologyEnabled, setTheologyEnabled] = useState(false);
   const [inputText, setInputText] = useState("");
+  const [incorporateLoading, setIncorporateLoading] = useState(false);
+  const [diffData, setDiffData] = useState(null);
   const messagesEndRef = useRef(null);
   const latestAssistantRef = useRef(null);
   const prevCountRef = useRef(0);
@@ -74,7 +88,7 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
     }
   }, [externalMessage]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const sendMessage = useCallback(async (userText, systemPrompt, step, sermonId) => {
+  const sendMessage = useCallback(async (userText, systemPrompt, step, sermonId, meta = {}) => {
     if (!userText?.trim()) return;
     const userMsg = { role: "user", content: userText };
     setMessages((prev) => [...prev, userMsg]);
@@ -89,7 +103,7 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
         ? `${base}\n\nThe following task takes priority over all adaptive guidance above.\n\nTASK:\n${systemPrompt}`
         : base;
       const response = await sendAIMessage(history, finalSystemPrompt);
-      setMessages((prev) => [...prev, { role: "assistant", content: response || "Something went wrong. Please try again." }]);
+      setMessages((prev) => [...prev, { role: "assistant", content: response || "Something went wrong. Please try again.", ...meta }]);
       if (response) captureResponsePatterns(response, step);
     } catch (err) {
       setMessages((prev) => [
@@ -308,6 +322,45 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
     );
   }
 
+  async function handleIncorporate(reviewContent, reviewStep) {
+    const config = getStepFieldConfig(reviewStep);
+    if (!config || !onUpdate) return;
+
+    setIncorporateLoading(true);
+    try {
+      const current = getCurrentFieldData(config, sermon);
+      const prompt = buildIncorporatePrompt(config, current, reviewContent);
+      const systemPrompt = `You are revising sermon preparation content based on AI review feedback. Return only a raw JSON object — no markdown fences, no commentary. Include every original key in your response, even unchanged ones. Preserve the pastor's voice. Apply only changes directly supported by the review feedback.`;
+      const response = await sendAIMessage([{ role: "user", content: prompt }], systemPrompt);
+
+      // Strip any markdown code fences the model may have added
+      const cleaned = response?.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+      let proposed;
+      try { proposed = JSON.parse(cleaned); } catch { proposed = null; }
+
+      if (!proposed || typeof proposed !== "object") {
+        setMessages(prev => [...prev, { role: "assistant", content: "Couldn't parse the revised content. Try again or paste the feedback manually." }]);
+        return;
+      }
+      setDiffData({ config, current, proposed });
+    } catch (err) {
+      setMessages(prev => [...prev, { role: "assistant", content: `Incorporate error: ${err.message}` }]);
+    } finally {
+      setIncorporateLoading(false);
+    }
+  }
+
+  function handleAcceptDiff() {
+    if (!diffData || !onUpdate) return;
+    const { config, proposed } = diffData;
+    if (config.type === "mpt_mps") {
+      onUpdate({ mpt: proposed.mpt ?? sermon?.mpt ?? "", mps: proposed.mps ?? sermon?.mps ?? "" });
+    } else {
+      onUpdate({ [config.column]: serializeStructuredField(proposed) });
+    }
+    setDiffData(null);
+  }
+
   const tabLabels = { study: "Study", outline: "Outline", manuscript: "Manuscript", delivery: "Delivery" };
   const suggestions = getSuggestions(activeTab, sermon, libraryCount, activeStep);
 
@@ -375,7 +428,17 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
                   ))}
                 </div>
               )}
-              {msg.role === "assistant" && <CopyButton text={msg.content} />}
+              {msg.role === "assistant" && (
+                <div style={{ display: "flex", gap: "6px" }}>
+                  <CopyButton text={msg.content} />
+                  {msg.isReview && onUpdate && (
+                    <IncorporateButton
+                      disabled={incorporateLoading || loading}
+                      onClick={() => handleIncorporate(msg.content, msg.reviewStep)}
+                    />
+                  )}
+                </div>
+              )}
             </div>
           );
         })}
@@ -412,7 +475,9 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
           style={{ width: "100%", marginBottom: "10px" }}
           onClick={() => {
             const { prompt, system } = getReviewPrompt(activeTab, sermon, activeStep);
-            sendMessage(prompt, system, activeStep || activeTab, sermon?.id);
+            const step = activeStep || activeTab;
+            const reviewMeta = getStepFieldConfig(step) ? { isReview: true, reviewStep: step } : {};
+            sendMessage(prompt, system, step, sermon?.id, reviewMeta);
           }}
           disabled={loading}
         >
@@ -466,6 +531,22 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
           </button>
         </div>
       </div>
+
+      {incorporateLoading && (
+        <div style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10, borderRadius: "var(--radius)", fontSize: "13px", color: "var(--ink-soft)" }}>
+          Generating revision…
+        </div>
+      )}
+
+      {diffData && (
+        <DiffModal
+          config={diffData.config}
+          current={diffData.current}
+          proposed={diffData.proposed}
+          onAccept={handleAcceptDiff}
+          onDiscard={() => setDiffData(null)}
+        />
+      )}
     </aside>
   );
 }
@@ -490,6 +571,128 @@ function CopyButton({ text }) {
     >
       {copied ? "✓ Copied" : "Copy"}
     </button>
+  );
+}
+
+// ── Incorporate → helpers ──────────────────────────────────────────────────────
+
+function IncorporateButton({ onClick, disabled }) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className="ai-copy-btn"
+      title="Incorporate this feedback into the field"
+      style={{ opacity: disabled ? 0.5 : 1 }}
+    >
+      Incorporate →
+    </button>
+  );
+}
+
+// Maps a review step to its target field configuration.
+function getStepFieldConfig(step) {
+  switch (step) {
+    case PHASES.OBSERVE:
+      return { type: "json", column: "observations", label: "Observations", fieldDefs: OBSERVE_FIELDS };
+    case PHASES.INTERPRET:
+      return { type: "json", column: "interpretation", label: "Interpretation", fieldDefs: INTERPRET_FIELDS };
+    case PHASES.REDEMPTIVE_THREAD:
+      return {
+        type: "json", column: "redemptive_thread", label: "Redemptive Thread",
+        fieldDefs: [...REDEMPTIVE_FIELDS, { key: REDEMPTIVE_SUMMARY_KEY, label: "Summary" }],
+      };
+    case PHASES.IMPLICATIONS:
+      return {
+        type: "json", column: "implications", label: "Implications",
+        fieldDefs: [
+          ...IMPLICATIONS_THEOLOGICAL, ...IMPLICATIONS_PERSONAL,
+          { key: IMPLICATIONS_UNBELIEVER_KEY, label: "Implications for Unbelievers" },
+          { key: IMPLICATIONS_COMPILED_KEY, label: "Compiled Implications" },
+        ],
+      };
+    case STEPS.MPT_MPS:
+      return {
+        type: "mpt_mps", label: "MPT / MPS",
+        fieldDefs: [{ key: "mpt", label: "MPT" }, { key: "mps", label: "MPS" }],
+      };
+    default:
+      return null;
+  }
+}
+
+function getCurrentFieldData(config, sermon) {
+  if (config.type === "mpt_mps") {
+    return { mpt: sermon?.mpt || "", mps: sermon?.mps || "" };
+  }
+  return parseStructuredField(sermon?.[config.column]);
+}
+
+function buildIncorporatePrompt(config, current, reviewContent) {
+  const keys = config.fieldDefs.map(f => f.key);
+  const currentLabeled = config.fieldDefs
+    .map(f => `${f.label}: ${current[f.key] || "(empty)"}`)
+    .join("\n");
+
+  return `Current content for ${config.label}:\n${currentLabeled}\n\nReview feedback:\n${reviewContent}\n\nBased on this feedback, produce a revised version of the content above.\nReturn a JSON object with these exact keys: ${JSON.stringify(keys)}\nInclude all keys — use the original value for anything you are not changing.`;
+}
+
+function DiffModal({ config, current, proposed, onAccept, onDiscard }) {
+  const changed = config.fieldDefs.filter(f => {
+    const oldVal = (current[f.key] || "").trim();
+    const newVal = (proposed[f.key] || "").trim();
+    return oldVal !== newVal;
+  });
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 200,
+      display: "flex", alignItems: "center", justifyContent: "center", padding: "16px",
+    }}>
+      <div style={{
+        background: "var(--white)", borderRadius: "var(--radius)", width: "min(680px, 100%)",
+        maxHeight: "80vh", display: "flex", flexDirection: "column",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.18)", overflow: "hidden",
+      }}>
+        <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--parchment-deep)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontWeight: 600, fontSize: "14px" }}>Proposed revisions — {config.label}</span>
+          <button onClick={onDiscard} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "16px", color: "var(--ink-ghost)" }}>✕</button>
+        </div>
+
+        <div style={{ overflowY: "auto", padding: "16px 20px", flex: 1 }}>
+          {changed.length === 0 ? (
+            <p style={{ color: "var(--ink-soft)", fontSize: "13px" }}>No changes proposed — the AI found nothing to revise.</p>
+          ) : (
+            changed.map(f => (
+              <div key={f.key} style={{ marginBottom: "20px" }}>
+                <div style={{ fontWeight: 600, fontSize: "12px", color: "var(--ink-soft)", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.05em" }}>{f.label}</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                  <div>
+                    <div style={{ fontSize: "10px", color: "var(--ink-ghost)", marginBottom: "3px" }}>BEFORE</div>
+                    <div style={{ background: "var(--parchment)", borderRadius: "4px", padding: "8px 10px", fontSize: "13px", color: "var(--ink-soft)", whiteSpace: "pre-wrap", minHeight: "40px" }}>
+                      {current[f.key] || <em style={{ opacity: 0.5 }}>empty</em>}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: "10px", color: "var(--ink-ghost)", marginBottom: "3px" }}>AFTER</div>
+                    <div style={{ background: "#f0faf0", border: "1px solid #b6ddb6", borderRadius: "4px", padding: "8px 10px", fontSize: "13px", color: "var(--ink)", whiteSpace: "pre-wrap", minHeight: "40px" }}>
+                      {proposed[f.key] || <em style={{ opacity: 0.5 }}>empty</em>}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        <div style={{ padding: "12px 20px", borderTop: "1px solid var(--parchment-deep)", display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+          <button className="btn-ghost" onClick={onDiscard}>Discard</button>
+          {changed.length > 0 && (
+            <button className="btn-primary" onClick={onAccept}>Accept All</button>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
