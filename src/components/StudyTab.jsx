@@ -474,10 +474,10 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
 
           {activeSubPhase === 1 && (
             <div className="sub-phase-body">
-              <p className="sub-phase-hint">Observe the text — what it says before what it means. Read and reread prayerfully.</p>
               <div style={{ position: "sticky", top: 0, zIndex: 10, display: "flex", justifyContent: "flex-end", background: "var(--parchment)", paddingBottom: "6px", marginBottom: "4px" }}>
                 <button className="show-text-btn" onMouseEnter={(e) => setPassageAnchor(e.currentTarget)}>Show Text</button>
               </div>
+              <p className="sub-phase-hint">Observe the text — what it says before what it means. Read and reread prayerfully.</p>
               <StructuredWorksheet
                 fields={OBSERVE_FIELDS}
                 data={obsData}
@@ -514,10 +514,10 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
 
           {activeSubPhase === 2 && (
             <div className="sub-phase-body">
-              <p className="sub-phase-hint">Find the meaning of the text. Move from observation to interpretation.</p>
               <div style={{ position: "sticky", top: 0, zIndex: 10, display: "flex", justifyContent: "flex-end", background: "var(--parchment)", paddingBottom: "6px", marginBottom: "4px" }}>
                 <button className="show-text-btn" onMouseEnter={(e) => setPassageAnchor(e.currentTarget)}>Show Text</button>
               </div>
+              <p className="sub-phase-hint">Find the meaning of the text. Move from observation to interpretation.</p>
               <StructuredWorksheet
                 fields={INTERPRET_FIELDS}
                 data={intData}
@@ -554,10 +554,10 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
 
           {activeSubPhase === 3 && (
             <div className="sub-phase-body">
-              <p className="sub-phase-hint">Find the redemptive features. How does this text point to or depend on Christ?</p>
               <div style={{ position: "sticky", top: 0, zIndex: 10, display: "flex", justifyContent: "flex-end", background: "var(--parchment)", paddingBottom: "6px", marginBottom: "4px" }}>
                 <button className="show-text-btn" onMouseEnter={(e) => setPassageAnchor(e.currentTarget)}>Show Text</button>
               </div>
+              <p className="sub-phase-hint">Find the redemptive features. How does this text point to or depend on Christ?</p>
               <StructuredWorksheet
                 fields={REDEMPTIVE_FIELDS}
                 data={redData}
@@ -638,10 +638,10 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
 
           {activeSubPhase === 4 && (
             <div className="sub-phase-body">
-              <p className="sub-phase-hint">Concluding implications — how does this passage apply to us today?</p>
               <div style={{ position: "sticky", top: 0, zIndex: 10, display: "flex", justifyContent: "flex-end", background: "var(--parchment)", paddingBottom: "6px", marginBottom: "4px" }}>
                 <button className="show-text-btn" onMouseEnter={(e) => setPassageAnchor(e.currentTarget)}>Show Text</button>
               </div>
+              <p className="sub-phase-hint">Concluding implications — how does this passage apply to us today?</p>
 
               <div className="worksheet-group-header">Theological Significance</div>
               <StructuredWorksheet
