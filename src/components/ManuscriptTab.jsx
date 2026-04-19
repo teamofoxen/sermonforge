@@ -43,23 +43,17 @@ Voice rules: write at a normal spoken register, not generically "preachery". Gro
 
 When writing a section: produce a full draft, not an outline or a list of suggestions. The pastor can edit from a draft; they can't preach a bulleted plan.`;
 
-const FLOW_COACH_SYSTEM = `You are a sermon flow coach. Your job is to help the pastor understand what each movement in the sermon needs to accomplish — from the opening through every transition to the final landing. Do not write any of it. Coach the direction only.
+const FLOW_COACH_SYSTEM = `You are a sermon flow coach working through a fixed worklist. One step at a time.
 
-Work through the sermon in this order:
-1. The Introduction — what does the opening need to do to earn the congregation's attention and orient them for what's coming?
-2. Each gap between outline points — what movement is needed here and why?
-3. The Conclusion — how does the sermon need to land as a spoken, heard moment?
-
-For each movement, you will:
-1. Briefly name what the congregation just experienced (or, for the intro, what they're arriving with)
-2. Name what's coming next
-3. Give one specific directional coaching note: what kind of movement is needed here and why. Think about pacing, emotional register, logical flow, and momentum. Does the congregation need to be brought forward, given a breath, re-anchored to the main point, or surprised?
-
-Be concrete. Speak like a coach: "This is a good moment to..." / "You need to give people a beat here because..." / "That section was dense — before you move on, they need..."
-
-Do NOT write any transitions, openings, or conclusions. Do NOT suggest specific wording or sentences. Coach the direction only.
-
-Start with the Introduction. After the pastor responds, move to the first gap between outline points, then continue through each gap, and finish with the Conclusion. Work at the pastor's pace.`;
+RULES:
+- Work only through the worklist provided in the prompt. Do not reorder, skip, or add steps.
+- One step per response. State which step you are on (e.g. "Step 2 of 5").
+- Be brief. 2–4 bullet points. No paragraphs.
+- Describe what the movement needs to accomplish for the listener — pacing, emotional register, logical flow, momentum. Be specific to this sermon.
+- Do NOT write any content. No sentences, no transitions, no wording suggestions. Direction only.
+- End every response with: "Ready for the next step?"
+- When the pastor signals readiness (any affirmative), move to the next step on the worklist.
+- When all steps are done, say so briefly.`;
 
 const EAR_CHECK_SYSTEM = `You are a sermon delivery analyst. Diagnose where this manuscript will lose listeners. Do not rewrite. Do not coach. Diagnose and direct.
 
@@ -185,7 +179,13 @@ export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading, onOpe
 
   function runFlowCoach() {
     const outline = getOutline(sermon);
-    const prompt = `Title: ${sermon.title || "Untitled"}\nPassage: ${sermon.passage || "unknown"}\nMPT: ${sermon.mpt || "(not set)"}\nMPS: ${sermon.mps || "(not set)"}\n\nOutline:\n${outline.map((p, i) => `${i + 1}. ${p.text}`).join("\n") || "(none)"}\n\nManuscript:\n\n${sermon.manuscript || "(empty)"}\n\nPlease begin with the Introduction.`;
+    const steps = ["Introduction"];
+    for (let i = 0; i < outline.length - 1; i++) {
+      steps.push(`Gap: "${outline[i].text}" → "${outline[i + 1].text}"`);
+    }
+    steps.push("Conclusion");
+    const worklist = steps.map((s, i) => `${i + 1}. ${s}`).join("\n");
+    const prompt = `Title: ${sermon.title || "Untitled"}\nPassage: ${sermon.passage || "unknown"}\nMPT: ${sermon.mpt || "(not set)"}\nMPS: ${sermon.mps || "(not set)"}\n\nOutline:\n${outline.map((p, i) => `${i + 1}. ${p.text}`).join("\n") || "(none)"}\n\nManuscript:\n\n${sermon.manuscript || "(empty)"}\n\nWorklist (${steps.length} steps):\n${worklist}\n\nBegin with Step 1.`;
     onOpenDrawer?.();
     onAI(prompt, FLOW_COACH_SYSTEM);
   }
@@ -289,19 +289,6 @@ export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading, onOpe
                   <div className="ai-markdown" style={{ fontSize: "15px", fontFamily: "'Crimson Pro', serif", lineHeight: "1.7" }}>
                     <ReactMarkdown>{msg.content}</ReactMarkdown>
                   </div>
-                  <button
-                    className="btn-ghost btn-sm"
-                    style={{ fontSize: "12px", marginTop: "6px" }}
-                    onClick={() => {
-                      const current = sermon.manuscript || "";
-                      const appended = current.trimEnd()
-                        ? current.trimEnd() + "\n\n" + msg.content
-                        : msg.content;
-                      onUpdate({ manuscript: appended });
-                    }}
-                  >
-                    ↓ Apply to manuscript
-                  </button>
                 </div>
               );
             })}
