@@ -2029,28 +2029,15 @@ async function fetchEsvText(passage) {
 }
 
 ipcMain.handle('passage-fetch', async (_, passage) => {
-  const apiKey = process.env.BIBLE_API_KEY;
-  const osisId = passageToOsisId(passage);
-  const catalog = await getBibleCatalog();
   const result = { esv: null, niv: null, msg: null, esvPending: false };
 
-  const catalogErr = catalog.error || null;
-
-  await Promise.all([
-    fetchEsvText(passage)
-      .then(t => { if (t === null) result.esvPending = true; else result.esv = t; })
-      .catch(e => { result.esvError = e.message; }),
-    apiKey && catalog.niv && osisId
-      ? fetchApiBibleText(catalog.niv, osisId, apiKey)
-          .then(t => { result.niv = t; })
-          .catch(e => { result.nivError = e.message; })
-      : Promise.resolve().then(() => { result.nivError = catalogErr || (!osisId ? 'Could not parse passage reference' : 'NIV not in your API.Bible catalog'); }),
-    apiKey && catalog.msg && osisId
-      ? fetchApiBibleText(catalog.msg, osisId, apiKey)
-          .then(t => { result.msg = t; })
-          .catch(e => { result.msgError = e.message; })
-      : Promise.resolve().then(() => { result.msgError = catalogErr || (!osisId ? 'Could not parse passage reference' : 'MSG not in your API.Bible catalog'); }),
-  ]);
+  try {
+    const t = await fetchEsvText(passage);
+    if (t === null) result.esvPending = true;
+    else result.esv = t;
+  } catch (e) {
+    result.esvError = e.message;
+  }
 
   return result;
 });

@@ -18,7 +18,7 @@ const TABS = ["study", "outline", "manuscript", "delivery"];
 const TAB_LABELS = { study: "Study", outline: "Blueprint", manuscript: "Manuscript", delivery: "Delivery" };
 
 
-export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
+export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onPassageChange }) {
   const [sermon, setSermon] = useState(null);
   const [activeTab, setActiveTab] = useState("study");
   const [activeStep, setActiveStep] = useState(null);
@@ -75,6 +75,11 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
     }
     load();
   }, [sermonId]);
+
+  useEffect(() => {
+    onPassageChange?.(sermon?.passage || null);
+    return () => onPassageChange?.(null);
+  }, [sermon?.passage, onPassageChange]);
 
   function captureMemory(s, { scanPhrases = false } = {}) {
     if (!s) return;

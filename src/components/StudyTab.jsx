@@ -15,7 +15,6 @@ import {
 import OutlineBuilder from "./OutlineBuilder";
 import InlineAIResponse from "./InlineAIResponse";
 import { OUTLINE_SYSTEM, outlineHasNumberedList, extractOutlineWithExplanations } from "../utils/outlineChat";
-import PassagePopup from "./PassagePopup";
 import { fetchPassage } from "../db/database";
 
 const STEP_LABELS = ["Exegesis", "MPT / MPS", "Outline", "Functional Elements"];
@@ -273,9 +272,6 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
   const [feChatInput, setFeChatInput] = useState("");
   const [feChatLoading, setFeChatLoading] = useState(false);
   const [scripturePopulating, setScripturePopulating] = useState(false);
-
-  // Passage popup anchor — DOM element of the triggering button, or null when closed
-  const [passageAnchor, setPassageAnchor] = useState(null);
 
   const outline = getOutline(sermon);
 
@@ -661,9 +657,6 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
 
           {activeSubPhase === 1 && (
             <div className="sub-phase-body">
-              <div style={{ position: "sticky", top: 0, zIndex: 10, display: "flex", justifyContent: "flex-end", background: "var(--parchment)", paddingBottom: "6px", marginBottom: "4px" }}>
-                <button className="show-text-btn" onMouseEnter={(e) => setPassageAnchor(e.currentTarget)}>Show Text</button>
-              </div>
               <p className="sub-phase-hint">Observe the text — what it says before what it means. Read and reread prayerfully.</p>
               <StructuredWorksheet
                 fields={OBSERVE_FIELDS}
@@ -701,9 +694,6 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
 
           {activeSubPhase === 2 && (
             <div className="sub-phase-body">
-              <div style={{ position: "sticky", top: 0, zIndex: 10, display: "flex", justifyContent: "flex-end", background: "var(--parchment)", paddingBottom: "6px", marginBottom: "4px" }}>
-                <button className="show-text-btn" onMouseEnter={(e) => setPassageAnchor(e.currentTarget)}>Show Text</button>
-              </div>
               <p className="sub-phase-hint">Find the meaning of the text. Move from observation to interpretation.</p>
               <StructuredWorksheet
                 fields={INTERPRET_FIELDS}
@@ -741,9 +731,6 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
 
           {activeSubPhase === 3 && (
             <div className="sub-phase-body">
-              <div style={{ position: "sticky", top: 0, zIndex: 10, display: "flex", justifyContent: "flex-end", background: "var(--parchment)", paddingBottom: "6px", marginBottom: "4px" }}>
-                <button className="show-text-btn" onMouseEnter={(e) => setPassageAnchor(e.currentTarget)}>Show Text</button>
-              </div>
               <p className="sub-phase-hint">Find the redemptive features. How does this text point to or depend on Christ?</p>
               <StructuredWorksheet
                 fields={REDEMPTIVE_FIELDS}
@@ -825,9 +812,6 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
 
           {activeSubPhase === 4 && (
             <div className="sub-phase-body">
-              <div style={{ position: "sticky", top: 0, zIndex: 10, display: "flex", justifyContent: "flex-end", background: "var(--parchment)", paddingBottom: "6px", marginBottom: "4px" }}>
-                <button className="show-text-btn" onMouseEnter={(e) => setPassageAnchor(e.currentTarget)}>Show Text</button>
-              </div>
               <p className="sub-phase-hint">Concluding implications — how does this passage apply to us today?</p>
 
               <div className="worksheet-group-header">Theological Significance</div>
@@ -1358,14 +1342,6 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
             </button>
           </div>
         </div>
-      )}
-
-      {passageAnchor && (
-        <PassagePopup
-          passage={sermon.passage}
-          anchorEl={passageAnchor}
-          onClose={() => setPassageAnchor(null)}
-        />
       )}
 
     </div>

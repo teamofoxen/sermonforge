@@ -12,6 +12,7 @@ import Library from "./components/Library";
 import Planning from "./components/Planning";
 import SeriesPlanner from "./components/SeriesPlanner";
 import SermonWorkspace from "./components/SermonWorkspace";
+import PassagePopup from "./components/PassagePopup";
 
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -69,6 +70,8 @@ export default function App() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [returnDestination, setReturnDestination] = useState("dashboard");
   const [returnSeriesId, setReturnSeriesId] = useState(null);
+  const [currentPassage, setCurrentPassage] = useState(null);
+  const [showPassageModal, setShowPassageModal] = useState(false);
 
   const openSermon = useCallback((id, origin = "dashboard", seriesId = null) => {
     setOpenSermonId(id);
@@ -83,6 +86,8 @@ export default function App() {
     setOpenSermonId(null);
     setReturnDestination("dashboard");
     setReturnSeriesId(null);
+    setCurrentPassage(null);
+    setShowPassageModal(false);
     setRefreshKey(k => k + 1);
     if (dest === "series-planner" && sid) {
       setOpenSeriesId(sid);
@@ -114,7 +119,11 @@ export default function App() {
 
   const navigate = useCallback((view) => {
     setCurrentView(view);
-    if (view !== "workspace") setOpenSermonId(null);
+    if (view !== "workspace") {
+      setOpenSermonId(null);
+      setCurrentPassage(null);
+      setShowPassageModal(false);
+    }
     if (view !== "series-planner") setOpenSeriesId(null);
   }, []);
 
@@ -123,7 +132,15 @@ export default function App() {
     <DemoProvider>
     <DemoSplash />
     <div className="app-shell">
-      <Sidebar currentView={currentView} onNavigate={navigate} onOpenSermon={openSermon} theme={theme} onToggleTheme={toggleTheme} />
+      <Sidebar
+        currentView={currentView}
+        onNavigate={navigate}
+        onOpenSermon={openSermon}
+        theme={theme}
+        onToggleTheme={toggleTheme}
+        currentPassage={currentPassage}
+        onShowPassage={() => setShowPassageModal(true)}
+      />
       <div className="main-content">
         {currentView === "dashboard" && (
           <Dashboard
@@ -171,9 +188,15 @@ export default function App() {
             sermonId={openSermonId}
             onClose={closeWorkspace}
             onOpenSeries={openPlanner}
+            onPassageChange={setCurrentPassage}
           />
         )}
       </div>
+      <PassagePopup
+        passage={currentPassage}
+        isOpen={showPassageModal}
+        onClose={() => setShowPassageModal(false)}
+      />
     </div>
     </DemoProvider>
     </ErrorBoundary>
