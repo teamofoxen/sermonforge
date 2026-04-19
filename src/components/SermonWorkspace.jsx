@@ -15,6 +15,7 @@ import DeliveryTab from "./DeliveryTab";
 import AIPanel from "./AIPanel";
 
 const TABS = ["study", "outline", "manuscript", "delivery"];
+const TAB_LABELS = { study: "Study", outline: "Blueprint", manuscript: "Manuscript", delivery: "Delivery" };
 
 
 export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
@@ -240,7 +241,7 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
             className={`stage-tab ${activeTab === tab ? "active" : ""}`}
             onClick={() => handleTabChange(tab)}
           >
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+            {TAB_LABELS[tab]}
           </button>
         ))}
       </div>

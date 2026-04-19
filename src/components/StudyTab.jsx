@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import { useDemo } from "../contexts/DemoContext";
 import TierBadge from "./TierBadge";
-import { getOutline, serializeOutline, getFunctionalElements, serializeFunctionalElements, autoResize, createOutlinePoint } from "../utils";
+import { getOutline, serializeOutline, getFunctionalElements, serializeFunctionalElements, autoResize } from "../utils";
 import { STEPS, PHASES, PHASE_SEQUENCE, STEP_SEQUENCE } from "../constants/steps";
 import { sendAIMessage } from "../utils/ai";
 import {
@@ -14,6 +14,7 @@ import {
 } from "../utils/studyFields";
 import OutlineBuilder from "./OutlineBuilder";
 import InlineAIResponse from "./InlineAIResponse";
+import { OUTLINE_SYSTEM, outlineHasNumberedList, extractOutlineWithExplanations } from "../utils/outlineChat";
 import PassagePopup from "./PassagePopup";
 
 const STEP_LABELS = ["Exegesis", "MPT / MPS", "Outline", "Functional Elements"];
@@ -94,7 +95,7 @@ function SermonShapePreview({ sermon, outline, funcData }) {
   );
 }
 
-function FuncElem({ pointText, pointId, displayIndex, funcData, onUpdate }) {
+function FuncElem({ pointText, pointId, displayIndex, funcData, onUpdate, onUpdateText }) {
   const [open, setOpen] = useState(false);
   const data = funcData[pointId] || { explanation: "", application: "", illustration: "" };
 
@@ -113,6 +114,18 @@ function FuncElem({ pointText, pointId, displayIndex, funcData, onUpdate }) {
       </div>
       {open && (
         <div className="func-elem-body">
+          <div>
+            <div className="func-field-label">Outline Point</div>
+            <textarea
+              className="field-textarea"
+              style={{ minHeight: "unset", fontSize: "14px", fontStyle: "italic" }}
+              value={pointText}
+              onChange={(e) => onUpdateText?.(pointId, e.target.value)}
+              onInput={(e) => autoResize(e.target)}
+              ref={(el) => autoResize(el)}
+              rows={1}
+            />
+          </div>
           <div>
             <div className="func-field-label">Explanation <span style={{ color: "var(--gold)", fontFamily: "'JetBrains Mono', monospace", fontSize: "11px" }}>(E)</span></div>
             <textarea
@@ -223,6 +236,11 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
   const [mpsChat, setMpsChat] = useState([]); // [{role, content}]
   const [mpsChatInput, setMpsChatInput] = useState("");
   const [mpsChatLoading, setMpsChatLoading] = useState(false);
+
+  // Outline conversational refinement
+  const [outlineChat, setOutlineChat] = useState([]);
+  const [outlineChatInput, setOutlineChatInput] = useState("");
+  const [outlineChatLoading, setOutlineChatLoading] = useState(false);
 
   // Passage popup anchor — DOM element of the triggering button, or null when closed
   const [passageAnchor, setPassageAnchor] = useState(null);
@@ -339,8 +357,9 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
   }
 
   async function suggestOutline() {
-    if (draftLoading) return;
+    if (draftLoading || outlineChatLoading) return;
     setDraftLoading("outline");
+    setOutlineChat([]);
     try {
       const exegesisContext = [
         `Passage: ${sermon.passage || "unknown"}`,
@@ -352,18 +371,43 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
         `\nImplications:\n${formatPhaseText(impData, [...IMPLICATIONS_THEOLOGICAL, ...IMPLICATIONS_PERSONAL])}`,
       ].join("\n");
       const resp = await sendAIMessage(
-        [{ role: "user", content: `${exegesisContext}\n\nPropose a sermon outline. Return only a numbered list of 3–4 points. Each point must be a single declarative sentence that derives from the text's own logic and ladders up to the MPS. If the MPS is built as a causal chain — where each clause leads to the next — treat those movements as the natural scaffold for the outline points. Each point should carry one movement of that chain forward, so that the outline is the MPS unpacked, not a separate structure imposed alongside it.` }],
-        "You are a homiletics consultant helping a pastor structure a sermon. The outline must emerge from the text's argument — not be imposed on it. Each point is a standalone claim the congregation can grasp and remember. When the MPS has a clear causal or sequential structure, the outline points should map to its movements — the outline is the MPS opened up, each point developing one step in the chain."
+        [{ role: "user", content: `${exegesisContext}\n\nPropose a sermon outline.` }],
+        OUTLINE_SYSTEM
       );
-      if (!resp?.trim()) return;
-      const lines = resp.trim().split("\n").filter(l => /^\d+[\.\)]/.test(l.trim()));
-      if (lines.length === 0) return;
-      const newPoints = lines.map(l => createOutlinePoint(l.replace(/^\d+[\.\)]\s*/, "").trim()));
-      onUpdate({ outline: serializeOutline(newPoints) });
+      if (resp?.trim()) setOutlineChat([{ role: "assistant", content: resp.trim() }]);
     } catch (e) {
       console.error("[suggestOutline]", e);
     } finally {
       setDraftLoading(null);
+    }
+  }
+
+  async function sendOutlineChat() {
+    const input = outlineChatInput.trim();
+    if (!input || outlineChatLoading) return;
+    const contextPrefix = [
+      `Passage: ${sermon.passage || "unknown"}`,
+      `MPT: ${sermon.mpt || "(none)"}`,
+      `MPS: ${sermon.mps || "(none)"}`,
+      outline.length > 0
+        ? `Current outline:\n${outline.map((p, i) => `${i + 1}. ${p.text}`).join("\n")}`
+        : null,
+    ].filter(Boolean).join("\n") + "\n\n---\n\n";
+    const newUserMsg = { role: "user", content: input };
+    const history = [...outlineChat, newUserMsg];
+    setOutlineChat(history);
+    setOutlineChatInput("");
+    setOutlineChatLoading(true);
+    try {
+      const messages = history.map((m, i) =>
+        i === history.length - 1 ? { ...m, content: contextPrefix + m.content } : m
+      );
+      const resp = await sendAIMessage(messages, OUTLINE_SYSTEM);
+      if (resp?.trim()) setOutlineChat(prev => [...prev, { role: "assistant", content: resp.trim() }]);
+    } catch (e) {
+      setOutlineChat(prev => [...prev, { role: "assistant", content: `Error: ${e.message}` }]);
+    } finally {
+      setOutlineChatLoading(false);
     }
   }
 
@@ -988,14 +1032,14 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
           <div style={{ marginTop: "12px", display: "flex", gap: "10px", alignItems: "center" }}>
             <button
               className="btn-ghost btn-sm"
-              disabled={draftLoading !== null || inlineLoading !== null}
+              disabled={draftLoading !== null || outlineChatLoading || inlineLoading !== null}
               onClick={suggestOutline}
             >
               {draftLoading === "outline" ? "Generating…" : "Suggest Outline"}
             </button>
             <button
               className="btn-ghost btn-sm"
-              disabled={inlineLoading !== null || draftLoading !== null}
+              disabled={inlineLoading !== null || draftLoading !== null || outlineChatLoading}
               onClick={() => {
                 const pts = outline.map((p, i) => `${i + 1}. ${p.text}`).join("\n");
                 const exegesisContext = [
@@ -1022,6 +1066,76 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
             onDismiss={() => dismissInline("outline-review")}
           />
 
+          {(outlineChat.length > 0 || draftLoading === "outline") && (
+            <div className="mps-chat" style={{ marginTop: "16px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
+                <span className="field-label" style={{ marginBottom: 0, color: "var(--ink-ghost)", fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.06em" }}>Refine Outline with AI</span>
+                {outlineChat.length > 0 && (
+                  <button className="inline-ai-dismiss" onClick={() => setOutlineChat([])}>Clear</button>
+                )}
+              </div>
+              {outlineChat.map((msg, i) => {
+                if (msg.role === "user") {
+                  return (
+                    <div key={i} style={{ textAlign: "right", marginBottom: "6px" }}>
+                      <span style={{ background: "var(--surface-2)", borderRadius: "8px", padding: "6px 10px", fontSize: "13px", display: "inline-block", maxWidth: "85%", textAlign: "left" }}>{msg.content}</span>
+                    </div>
+                  );
+                }
+                const extracted = outlineHasNumberedList(msg.content) ? extractOutlineWithExplanations(msg.content) : null;
+                return (
+                  <div key={i} className="inline-ai-response" style={{ marginBottom: "8px" }}>
+                    <div className="ai-markdown" style={{ marginBottom: extracted ? "8px" : "0" }}>
+                      <ReactMarkdown>{msg.content}</ReactMarkdown>
+                    </div>
+                    {extracted && (
+                      <button
+                        className="btn-ghost btn-sm"
+                        style={{ fontSize: "12px" }}
+                        onClick={() => {
+                          const existing = getFunctionalElements(sermon);
+                          onUpdate({
+                            outline: serializeOutline(extracted.points),
+                            functional_elements: serializeFunctionalElements({ ...existing, ...extracted.explanations }),
+                          });
+                        }}
+                      >
+                        → Apply to Outline
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+              {outlineChatLoading && (
+                <div className="inline-ai-response" style={{ marginBottom: "8px" }}>
+                  <div className="ai-loading" style={{ padding: "6px 0" }}>
+                    <div className="ai-loading-dot" /><div className="ai-loading-dot" /><div className="ai-loading-dot" />
+                  </div>
+                </div>
+              )}
+              <div style={{ display: "flex", gap: "8px", marginTop: "4px" }}>
+                <textarea
+                  className="field-textarea"
+                  rows={2}
+                  style={{ flex: 1, minHeight: "unset", fontSize: "13px", resize: "none" }}
+                  placeholder="Make these more diagnostic. Sharpen MP2…"
+                  value={outlineChatInput}
+                  onChange={e => setOutlineChatInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendOutlineChat(); } }}
+                  disabled={outlineChatLoading}
+                />
+                <button
+                  className="btn-ghost btn-sm"
+                  style={{ alignSelf: "flex-end", fontSize: "12px", whiteSpace: "nowrap" }}
+                  onClick={sendOutlineChat}
+                  disabled={outlineChatLoading || !outlineChatInput.trim()}
+                >
+                  Ask →
+                </button>
+              </div>
+            </div>
+          )}
+
           {outline.length > 0 && (
             <div className="step-advance">
               <button className="btn-primary btn-sm" onClick={advanceStep}>
@@ -1038,7 +1152,18 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
           <SummaryBlock summaryKey="s4" {...summaryProps} />
 
 {outline.map((pt, i) => (
-            <FuncElem key={pt.id} pointText={pt.text} pointId={pt.id} displayIndex={i} funcData={funcData} onUpdate={updateFuncData} />
+            <FuncElem
+              key={pt.id}
+              pointText={pt.text}
+              pointId={pt.id}
+              displayIndex={i}
+              funcData={funcData}
+              onUpdate={updateFuncData}
+              onUpdateText={(id, text) => {
+                const updated = outline.map(p => p.id === id ? { ...p, text } : p);
+                onUpdate({ outline: serializeOutline(updated) });
+              }}
+            />
           ))}
 
           <div style={{ marginTop: "12px" }}>

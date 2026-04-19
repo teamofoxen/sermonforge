@@ -1,6 +1,6 @@
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { getOutline, serializeOutline, getFunctionalElements, serializeFunctionalElements, createOutlinePoint } from "../utils";
+import { getOutline, serializeOutline, getFunctionalElements, serializeFunctionalElements } from "../utils";
 import { sendAIMessage } from "../utils/ai";
 import {
   parseStructuredField, flattenToText,
@@ -9,6 +9,7 @@ import {
 } from "../utils/studyFields";
 import OutlineBuilder from "./OutlineBuilder";
 import InlineAIResponse from "./InlineAIResponse";
+import { OUTLINE_SYSTEM, outlineHasNumberedList, extractOutlineWithExplanations } from "../utils/outlineChat";
 
 function mpsExtractStem(mps) {
   if (!mps) return null;
@@ -22,20 +23,6 @@ function mpsExtractStem(mps) {
   return cut >= 0 ? candidate.slice(cut + 2).trim() : candidate.trim();
 }
 
-function extractOutlinePoints(text) {
-  const lines = text.split("\n").filter(l => /^\d+[\.\)]/.test(l.trim()));
-  return lines.map(l => createOutlinePoint(l.replace(/^\d+[\.\)]\s*/, "").trim()));
-}
-
-function hasNumberedList(text) {
-  return text.split("\n").some(l => /^\d+[\.\)]/.test(l.trim()));
-}
-
-const OUTLINE_SYSTEM = `You are a homiletics consultant helping a pastor build a sermon outline. The outline must emerge from the text's argument and the MPS's claim — not be imposed on them.
-
-Default approach — imperative: the MPS declares a theological reality; each outline point is the congregational response to that reality — a complete imperative sentence naming what the text demands of the listener. Points are diagnostic before prescriptive (look beneath behavior to its source), derive from the text's own logic, and do not restate the MPS or moralize.
-
-The pastor may ask you to adjust the approach or wording. When suggesting an outline, return a numbered list of 3–4 complete sentences.`;
 
 export default function OutlineTab({ sermon, onUpdate, onTabChange }) {
   const outline = getOutline(sermon);
@@ -136,6 +123,10 @@ export default function OutlineTab({ sermon, onUpdate, onTabChange }) {
 
   return (
     <div>
+      <div style={{ marginBottom: "20px", fontSize: "13px", color: "var(--ink-ghost)", fontStyle: "italic" }}>
+        The Blueprint is your sermon's load-bearing structure — the MPS and outline in one view. Do the outline work in Study → Step 3, then return here to review the full shape before moving to Manuscript.
+      </div>
+
       {/* Reference — passage, MPT, MPS */}
       {(sermon.passage || sermon.mpt || sermon.mps) && (
         <div className="card" style={{ marginBottom: "20px" }}>
@@ -224,17 +215,23 @@ export default function OutlineTab({ sermon, onUpdate, onTabChange }) {
                 </div>
               );
             }
-            const points = hasNumberedList(msg.content) ? extractOutlinePoints(msg.content) : null;
+            const extracted = outlineHasNumberedList(msg.content) ? extractOutlineWithExplanations(msg.content) : null;
             return (
               <div key={i} className="inline-ai-response" style={{ marginBottom: "8px" }}>
-                <div className="ai-markdown" style={{ marginBottom: points ? "8px" : "0" }}>
+                <div className="ai-markdown" style={{ marginBottom: extracted ? "8px" : "0" }}>
                   <ReactMarkdown>{msg.content}</ReactMarkdown>
                 </div>
-                {points && (
+                {extracted && (
                   <button
                     className="btn-ghost btn-sm"
                     style={{ fontSize: "12px" }}
-                    onClick={() => onUpdate({ outline: serializeOutline(points) })}
+                    onClick={() => {
+                      const existing = getFunctionalElements(sermon);
+                      onUpdate({
+                        outline: serializeOutline(extracted.points),
+                        functional_elements: serializeFunctionalElements({ ...existing, ...extracted.explanations }),
+                      });
+                    }}
                   >
                     → Apply to Outline
                   </button>
@@ -242,7 +239,7 @@ export default function OutlineTab({ sermon, onUpdate, onTabChange }) {
               </div>
             );
           })}
-          {outlineChatLoading && (
+          {(outlineChatLoading || suggestLoading) && (
             <div className="inline-ai-response" style={{ marginBottom: "8px" }}>
               <div className="ai-loading" style={{ padding: "6px 0" }}>
                 <div className="ai-loading-dot" /><div className="ai-loading-dot" /><div className="ai-loading-dot" />
