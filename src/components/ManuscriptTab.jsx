@@ -1,12 +1,20 @@
 import { useEffect, useRef } from "react";
-import { getOutline } from "../utils";
+import { getOutline, getFunctionalElements } from "../utils";
 
 function buildTemplate(sermon) {
   const outline = getOutline(sermon);
+  const fe = getFunctionalElements(sermon);
+
   const bodyPoints = outline.length
-    ? outline.map((pt, i) =>
-        `Point ${i + 1}: ${pt.text}\nExplanation:\nApplication:\nIllustration:`
-      ).join("\n\n")
+    ? outline.map((pt, i) => {
+        const d = fe[pt.id] || {};
+        const lines = [`Point ${i + 1}: ${pt.text}`];
+        if (d.scripture) lines.push(`\n${d.scripture}`);
+        lines.push(`\nExplanation:\n${d.explanation || ""}`);
+        lines.push(`\nApplication:\n${d.application || ""}`);
+        lines.push(`\nIllustration:\n${d.illustration || ""}`);
+        return lines.join("\n");
+      }).join("\n\n")
     : null;
 
   return [

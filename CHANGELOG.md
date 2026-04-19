@@ -2,6 +2,12 @@
 
 ---
 
+## 2026-04-19 — feat: Manuscript framework pre-fills from functional elements
+
+- `buildTemplate` now reads scripture, explanation, application, and illustration from each point's FE data so "Build Manuscript Framework" seeds the manuscript with the pastor's existing work.
+
+---
+
 ## 2026-04-19 — feat: Populate Scripture button auto-fetches ESV text per outline point
 
 - Added "Populate Scripture (ESV)" button to Step 4; AI maps each outline point to its verse range, then ESV text is fetched and written into each card automatically.
