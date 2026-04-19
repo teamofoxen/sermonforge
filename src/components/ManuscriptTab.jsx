@@ -53,7 +53,9 @@ RULES:
 - Do NOT write any content. No sentences, no transitions, no wording suggestions. Direction only.
 - End every response with: "Ready for the next step?"
 - When the pastor signals readiness (any affirmative), move to the next step on the worklist.
-- When all steps are done, say so briefly.`;
+- When all steps are done, say so briefly.
+- If the pastor asks a question mid-session, answer it briefly and return to the current step. Do not abandon the worklist.
+- Do not add steps, reframe the sequence, or summarize past steps unprompted.`;
 
 const EAR_CHECK_SYSTEM = `You are a sermon delivery analyst. Diagnose where this manuscript will lose listeners. Do not rewrite. Do not coach. Diagnose and direct.
 
