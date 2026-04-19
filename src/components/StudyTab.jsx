@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import ReactMarkdown from "react-markdown";
 import { useDemo } from "../contexts/DemoContext";
 import TierBadge from "./TierBadge";
 import { getOutline, serializeOutline, getFunctionalElements, serializeFunctionalElements, autoResize, createOutlinePoint } from "../utils";
@@ -201,6 +202,12 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
     localStorage.setItem(`sermonforge_study_step_${sermon.id}`, activeStep);
     localStorage.setItem(`sermonforge_study_subphase_${sermon.id}`, activeSubPhase);
   }, [activeStep, activeSubPhase, sermon.id]);
+
+  useEffect(() => {
+    setMpsChat([]);
+    setMpsChatInput("");
+    setMpsChatLoading(false);
+  }, [sermon.id]);
   const [summaries, setSummaries] = useState({});
   const [summaryLoading, setSummaryLoading] = useState(null);
   const [funcData, setFuncData] = useState(() => getFunctionalElements(sermon));
@@ -211,6 +218,11 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
 
   // Draft-generation loading flags
   const [draftLoading, setDraftLoading] = useState(null); // "mpt" | "mps" | "big_idea"
+
+  // MPS conversational refinement
+  const [mpsChat, setMpsChat] = useState([]); // [{role, content}]
+  const [mpsChatInput, setMpsChatInput] = useState("");
+  const [mpsChatLoading, setMpsChatLoading] = useState(false);
 
   // Passage popup anchor — DOM element of the triggering button, or null when closed
   const [passageAnchor, setPassageAnchor] = useState(null);
@@ -277,15 +289,50 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
     try {
       const redThread = formatPhaseText(redData, REDEMPTIVE_FIELDS);
       const implications = formatPhaseText(impData, [...IMPLICATIONS_THEOLOGICAL, ...IMPLICATIONS_PERSONAL]);
+      const piParts = [
+        sermon.topic_theme?.trim() && `Topic/Theme: ${sermon.topic_theme.trim()}`,
+        sermon.audience_assumptions?.trim() && `Audience: ${sermon.audience_assumptions.trim()}`,
+        sermon.background_noise?.trim() && `Background noise: ${sermon.background_noise.trim()}`,
+      ].filter(Boolean);
+      const piBlock = piParts.length > 0 ? `\n\nPastoral Context:\n${piParts.join("\n")}` : "";
       const resp = await sendAIMessage(
-        [{ role: "user", content: `Passage: ${sermon.passage || "unknown"}\n\nMPT: ${sermon.mpt}\n\nRedemptive Thread:\n${redThread || "(none)"}\n\nImplications:\n${implications || "(none)"}\n\nDraft a Main Point of the Sermon (MPS) that flows organically from this MPT and is informed by the redemptive thread and implications above. The MPS is a single sentence in present tense stating what this text says to this congregation today. Return only the sentence.` }],
-        "You are a homiletics consultant helping a pastor bridge the MPT to a present-tense sermon claim. The MPS must grow directly from the MPT — not be imposed from outside — and should reflect the theological and applicational weight the pastor has already surfaced."
+        [{ role: "user", content: `Passage: ${sermon.passage || "unknown"}\n\nMPT: ${sermon.mpt}\n\nRedemptive Thread:\n${redThread || "(none)"}\n\nImplications:\n${implications || "(none)"}${piBlock}\n\nDraft a Main Point of the Sermon (MPS) that flows organically from this MPT and is informed by the redemptive thread and implications above. The MPS is a single sentence in present tense stating what this text says to this congregation today.${piParts.length > 0 ? " Use the pastoral context to determine the angle of entry, tone, and emphasis — not to change the theology, but to aim the claim at who is actually in the room." : ""} Return only the sentence.` }],
+        "You are a homiletics consultant helping a pastor bridge the MPT to a present-tense sermon claim. The MPS must grow directly from the MPT — not be imposed from outside — and should reflect the theological and applicational weight the pastor has already surfaced. When pastoral context is provided (audience, topic, background noise), use it to shape the angle and emphasis of the MPS so it lands for this specific congregation on this specific Sunday."
       );
       if (resp?.trim()) onUpdate({ mps: resp.trim() });
     } catch (e) {
       console.error("[generateMPS]", e);
     } finally {
       setDraftLoading(null);
+    }
+  }
+
+  async function sendMpsChat() {
+    const input = mpsChatInput.trim();
+    if (!input || mpsChatLoading) return;
+    const piParts = [
+      sermon.topic_theme?.trim() && `Topic/Theme: ${sermon.topic_theme.trim()}`,
+      sermon.audience_assumptions?.trim() && `Audience: ${sermon.audience_assumptions.trim()}`,
+      sermon.background_noise?.trim() && `Background noise: ${sermon.background_noise.trim()}`,
+    ].filter(Boolean);
+    const piBlock = piParts.length > 0 ? `\n\nPastoral Context:\n${piParts.join("\n")}` : "";
+    const systemContext = `You are a homiletics consultant refining an MPS (Main Point of the Sermon) with a pastor. The MPS must remain a single present-tense sentence that grows from the MPT. When pastoral context is provided, use it to shape angle and emphasis. Respond concisely. If suggesting a revised MPS, present it on its own line prefixed with "Revised MPS:" so the pastor can apply it directly.`;
+    const contextPrefix = `Passage: ${sermon.passage || "unknown"}\nMPT: ${sermon.mpt || "(none)"}\nCurrent MPS: ${sermon.mps || "(none)"}${piBlock}\n\n---\n\n`;
+    const newUserMsg = { role: "user", content: input };
+    const history = [...mpsChat, newUserMsg];
+    setMpsChat(history);
+    setMpsChatInput("");
+    setMpsChatLoading(true);
+    try {
+      const messages = history.map((m, i) =>
+        i === history.length - 1 ? { ...m, content: contextPrefix + m.content } : m
+      );
+      const resp = await sendAIMessage(messages, systemContext);
+      if (resp?.trim()) setMpsChat(prev => [...prev, { role: "assistant", content: resp.trim() }]);
+    } catch (e) {
+      setMpsChat(prev => [...prev, { role: "assistant", content: `Error: ${e.message}` }]);
+    } finally {
+      setMpsChatLoading(false);
     }
   }
 
@@ -852,6 +899,70 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
             loading={inlineLoading === "mpt-mps-chain"}
             onDismiss={() => dismissInline("mpt-mps-chain")}
           />
+
+          {sermon.mps?.trim() && (
+            <div className="mps-chat" style={{ marginTop: "16px" }}>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
+                <span className="field-label" style={{ marginBottom: 0, color: "var(--ink-ghost)", fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.06em" }}>Refine MPS with AI</span>
+                {mpsChat.length > 0 && (
+                  <button className="inline-ai-dismiss" onClick={() => setMpsChat([])}>Clear</button>
+                )}
+              </div>
+              {mpsChat.map((msg, i) => {
+                if (msg.role === "user") {
+                  return (
+                    <div key={i} style={{ textAlign: "right", marginBottom: "6px" }}>
+                      <span style={{ background: "var(--surface-2)", borderRadius: "8px", padding: "6px 10px", fontSize: "13px", display: "inline-block", maxWidth: "85%", textAlign: "left" }}>{msg.content}</span>
+                    </div>
+                  );
+                }
+                const revisedMatch = msg.content.match(/Revised MPS:\s*(.+?)(?:\n|$)/);
+                return (
+                  <div key={i} className="inline-ai-response" style={{ marginBottom: "8px" }}>
+                    <div className="ai-markdown" style={{ marginBottom: revisedMatch ? "8px" : "0" }}>
+                      <ReactMarkdown>{msg.content}</ReactMarkdown>
+                    </div>
+                    {revisedMatch && (
+                      <button
+                        className="btn-ghost btn-sm"
+                        style={{ fontSize: "12px" }}
+                        onClick={() => onUpdate({ mps: revisedMatch[1].trim() })}
+                      >
+                        → Apply to MPS
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+              {mpsChatLoading && (
+                <div className="inline-ai-response" style={{ marginBottom: "8px" }}>
+                  <div className="ai-loading" style={{ padding: "6px 0" }}>
+                    <div className="ai-loading-dot" /><div className="ai-loading-dot" /><div className="ai-loading-dot" />
+                  </div>
+                </div>
+              )}
+              <div style={{ display: "flex", gap: "8px", marginTop: "4px" }}>
+                <textarea
+                  className="field-textarea"
+                  rows={2}
+                  style={{ flex: 1, minHeight: "unset", fontSize: "13px", resize: "none" }}
+                  placeholder="Too abstract. Lean harder into the doubt angle…"
+                  value={mpsChatInput}
+                  onChange={e => setMpsChatInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMpsChat(); } }}
+                  disabled={mpsChatLoading}
+                />
+                <button
+                  className="btn-ghost btn-sm"
+                  style={{ alignSelf: "flex-end", fontSize: "12px", whiteSpace: "nowrap" }}
+                  onClick={sendMpsChat}
+                  disabled={mpsChatLoading || !mpsChatInput.trim()}
+                >
+                  Ask →
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="step-advance">
             <button className="btn-primary btn-sm" onClick={advanceStep}>
