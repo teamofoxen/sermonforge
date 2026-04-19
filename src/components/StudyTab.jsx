@@ -289,15 +289,17 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
     try {
       const redThread = formatPhaseText(redData, REDEMPTIVE_FIELDS);
       const implications = formatPhaseText(impData, [...IMPLICATIONS_THEOLOGICAL, ...IMPLICATIONS_PERSONAL]);
-      const piParts = [
-        sermon.topic_theme?.trim() && `Topic/Theme: ${sermon.topic_theme.trim()}`,
-        sermon.audience_assumptions?.trim() && `Audience: ${sermon.audience_assumptions.trim()}`,
-        sermon.background_noise?.trim() && `Background noise: ${sermon.background_noise.trim()}`,
-      ].filter(Boolean);
-      const piBlock = piParts.length > 0 ? `\n\nPastoral Context:\n${piParts.join("\n")}` : "";
+      const hasBackground = sermon.background_noise?.trim();
+      const hasAudience = sermon.audience_assumptions?.trim();
+      const hasTheme = sermon.topic_theme?.trim();
+      const piBlock = (hasBackground || hasAudience || hasTheme) ? `\n\nPastoral Context:\n${[
+        hasBackground && `Cultural background (the world the congregation lives in): ${hasBackground}`,
+        hasAudience && `This specific audience (who is in the room): ${hasAudience}`,
+        hasTheme && `Sermon theme/territory: ${hasTheme}`,
+      ].filter(Boolean).join("\n")}` : "";
       const resp = await sendAIMessage(
-        [{ role: "user", content: `Passage: ${sermon.passage || "unknown"}\n\nMPT: ${sermon.mpt}\n\nRedemptive Thread:\n${redThread || "(none)"}\n\nImplications:\n${implications || "(none)"}${piBlock}\n\nDraft a Main Point of the Sermon (MPS) that flows organically from this MPT and is informed by the redemptive thread and implications above. The MPS is a single sentence in present tense stating what this text says to this congregation today. If the MPT contains multiple interlocking movements or tensions, preserve that weight — do not collapse them into a single cause-effect statement.${piParts.length > 0 ? " Use the pastoral context to determine the angle of entry, tone, and emphasis — not to change the theology, but to aim the claim at who is actually in the room." : ""} Return only the sentence.` }],
-        "You are a homiletics consultant helping a pastor bridge the MPT to a present-tense sermon claim. The MPS must grow directly from the MPT — not be imposed from outside — and should reflect the theological and applicational weight the pastor has already surfaced. Resist the pull to reduce a rich argument to a single cause-effect transaction; if the text has structural complexity, the MPS should carry it. When pastoral context is provided (audience, topic, background noise), use it to shape the angle and emphasis of the MPS so it lands for this specific congregation on this specific Sunday."
+        [{ role: "user", content: `Passage: ${sermon.passage || "unknown"}\n\nMPT: ${sermon.mpt}\n\nRedemptive Thread:\n${redThread || "(none)"}\n\nImplications:\n${implications || "(none)"}${piBlock}\n\nDraft a Main Point of the Sermon (MPS) that flows organically from this MPT and is informed by the redemptive thread and implications above. The MPS is a single sentence in present tense.${piBlock ? " The MPS must move through three concentric circles in this order: (1) enter the cultural world described in the background — start where the congregation actually lives, name what they know and feel; (2) narrow to this specific audience and what they carry into the room; (3) land the text's theological claim on that ground. Do not start with the theological answer — earn it by entering their world first. Preserve the MPT's structural weight; do not collapse multiple movements into a single cause-effect statement." : " If the MPT contains multiple interlocking movements or tensions, preserve that weight — do not collapse them into a single cause-effect statement."} Return only the sentence.` }],
+        "You are a homiletics consultant helping a pastor bridge the MPT to a present-tense sermon claim. The MPS must grow directly from the MPT — not be imposed from outside. Resist the pull to open with the theological answer; when pastoral context is present, the MPS should enter the congregation's cultural world first, narrow to who is in the room, then land the text's claim — moving from the outside in. If the text has structural complexity, the MPS should carry it rather than reducing it to a transaction."
       );
       if (resp?.trim()) onUpdate({ mps: resp.trim() });
     } catch (e) {
@@ -311,12 +313,12 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
     const input = mpsChatInput.trim();
     if (!input || mpsChatLoading) return;
     const piParts = [
-      sermon.topic_theme?.trim() && `Topic/Theme: ${sermon.topic_theme.trim()}`,
-      sermon.audience_assumptions?.trim() && `Audience: ${sermon.audience_assumptions.trim()}`,
-      sermon.background_noise?.trim() && `Background noise: ${sermon.background_noise.trim()}`,
+      sermon.background_noise?.trim() && `Cultural background (the world the congregation lives in): ${sermon.background_noise.trim()}`,
+      sermon.audience_assumptions?.trim() && `This specific audience (who is in the room): ${sermon.audience_assumptions.trim()}`,
+      sermon.topic_theme?.trim() && `Sermon theme/territory: ${sermon.topic_theme.trim()}`,
     ].filter(Boolean);
-    const piBlock = piParts.length > 0 ? `\n\nPastoral Context:\n${piParts.join("\n")}` : "";
-    const systemContext = `You are a homiletics consultant refining an MPS (Main Point of the Sermon) with a pastor. The MPS must remain a single present-tense sentence that grows from the MPT. When pastoral context is provided, use it to shape angle and emphasis. Respond concisely. If suggesting a revised MPS, present it on its own line prefixed with "Revised MPS:" so the pastor can apply it directly.`;
+    const piBlock = piParts.length > 0 ? `\n\nPastoral Context (concentric — background → audience → theme):\n${piParts.join("\n")}` : "";
+    const systemContext = `You are a homiletics consultant refining an MPS (Main Point of the Sermon) with a pastor. The MPS must remain a single present-tense sentence that grows from the MPT. When pastoral context is provided, the MPS should move from the outside in: enter the cultural world first, narrow to this specific audience, then land the theological claim. Do not open with the theological answer — earn it. Respond concisely. If suggesting a revised MPS, present it on its own line prefixed with "Revised MPS:" so the pastor can apply it directly.`;
     const contextPrefix = `Passage: ${sermon.passage || "unknown"}\nMPT: ${sermon.mpt || "(none)"}\nCurrent MPS: ${sermon.mps || "(none)"}${piBlock}\n\n---\n\n`;
     const newUserMsg = { role: "user", content: input };
     const history = [...mpsChat, newUserMsg];
