@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-04-19 — feat: Ear Check routed to inline chat with Implement Suggestions
+
+- Ear Check now runs in the Write with AI panel (tagged `isEarCheck`) instead of the drawer.
+- Ear Check responses show "Implement Suggestions" instead of "Apply to manuscript" — triggers a second AI call that applies only the flagged edits to the manuscript.
+
+---
+
 ## 2026-04-19 — feat: inline Write with AI chat on Manuscript tab
 
 - Added always-visible chat panel below the manuscript textarea with passage, MPS, outline, and functional elements sent as context on every turn.

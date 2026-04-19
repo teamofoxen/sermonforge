@@ -35,7 +35,7 @@ function buildTemplate(sermon) {
   ].join("\n");
 }
 
-const MANUSCRIPT_CHAT_SYSTEM = `You are a sermon writing assistant and flow coach in the same conversation.
+const MANUSCRIPT_CHAT_SYSTEM = `You are a sermon writing assistant, flow coach, and delivery analyst in the same conversation.
 
 WHEN COACHING (the pastor asks what a section needs to accomplish, how it should move, what's missing):
 Work through the sermon movements — intro, each point, transitions, conclusion. Name what each section needs to do to the listener: pacing, emotional register, logical flow, momentum. Be concrete. Speak like a coach.
@@ -44,7 +44,11 @@ WHEN WRITING (the pastor asks you to write, draft, or give them an intro, transi
 Produce a full draft — not an outline, not suggestions, not bullet points. The pastor edits from a draft; they can't preach a plan.
 Voice: spoken register, not generically "preachery". Ground everything in the passage and MPS. Theological weight without sounding academic.
 
-You do both in the same thread. If the pastor moves from "what does my intro need?" to "now write it" — follow them.`;
+WHEN DOING AN EAR CHECK (the pastor asks for an Ear Check or to diagnose listener-hostile phrasing):
+PHASE 1 — STRUCTURAL ORPHANS: Identify passages disconnected from the sermon's structural logic — drifted sections, explanatory blocks with no anchor. List each with location and one-line diagnosis.
+PHASE 2 — SPEAKABILITY FLAGS: The 5 worst offenders. For each: quote or locate it, diagnose what makes it listener-hostile (sentence nesting, abstract noun density, verbal signposting), give one direction for fixing it. Do not rewrite.
+
+You do all three in the same thread. Follow the pastor wherever they go.`;
 
 const EAR_CHECK_SYSTEM = `You are a sermon delivery analyst. Diagnose where this manuscript will lose listeners. Do not rewrite. Do not coach. Diagnose and direct.
 
@@ -101,6 +105,7 @@ export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading, onOpe
   const [msChat, setMsChat] = useState([]);
   const [msChatInput, setMsChatInput] = useState("");
   const [msChatLoading, setMsChatLoading] = useState(false);
+  const [implementLoading, setImplementLoading] = useState(false);
   const msChatEndRef = useRef(null);
 
   useEffect(() => {
@@ -136,7 +141,23 @@ export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading, onOpe
     return parts.join("\n");
   }
 
-  async function sendMsChat(overrideText = null) {
+  async function implementEarCheck(diagnosisText) {
+    if (!sermon.manuscript?.trim() || implementLoading) return;
+    setImplementLoading(true);
+    try {
+      const resp = await sendAIMessage(
+        [{ role: "user", content: `Ear Check diagnosis:\n${diagnosisText}\n\nManuscript:\n${sermon.manuscript}\n\nApply only the edits described in the diagnosis. Return the full revised manuscript only — no commentary, no preamble, no code fences.` }],
+        `You are a sermon manuscript editor. Apply the specific edits described in the Ear Check diagnosis to the manuscript. Make only those changes — do not rewrite sections that were not flagged. Preserve the author's voice and every sentence that was not diagnosed. Return the complete revised manuscript.`
+      );
+      if (resp?.trim()) onUpdate({ manuscript: resp.trim() });
+    } catch (e) {
+      console.error("[implementEarCheck]", e);
+    } finally {
+      setImplementLoading(false);
+    }
+  }
+
+  async function sendMsChat(overrideText = null, responseMeta = {}) {
     const input = (overrideText ?? msChatInput).trim();
     if (!input || msChatLoading) return;
     const contextPrefix = buildMsContext() + "\n\n---\n\n";
@@ -150,7 +171,7 @@ export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading, onOpe
         i === history.length - 1 ? { ...m, content: contextPrefix + m.content } : m
       );
       const resp = await sendAIMessage(messages, MANUSCRIPT_CHAT_SYSTEM);
-      if (resp?.trim()) setMsChat(prev => [...prev, { role: "assistant", content: resp.trim() }]);
+      if (resp?.trim()) setMsChat(prev => [...prev, { role: "assistant", content: resp.trim(), ...responseMeta }]);
     } catch (e) {
       setMsChat(prev => [...prev, { role: "assistant", content: `Error: ${e.message}` }]);
     } finally {
@@ -175,10 +196,7 @@ export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading, onOpe
   }
 
   function runEarCheck() {
-    const outline = getOutline(sermon);
-    const prompt = `Title: ${sermon.title || "Untitled"}\nPassage: ${sermon.passage || "unknown"}\nMPT: ${sermon.mpt || "(not set)"}\nMPS: ${sermon.mps || "(not set)"}\n\nOutline:\n${outline.map((p, i) => `${i + 1}. ${p.text}`).join("\n") || "(none)"}\n\nManuscript:\n\n${sermon.manuscript || "(empty)"}`;
-    onOpenDrawer?.();
-    onAI(prompt, EAR_CHECK_SYSTEM);
+    sendMsChat("Run an Ear Check on this manuscript. Diagnose where it will lose listeners — structural orphans and speakability problems. Flag the worst offenders with a diagnosis and direction for each.", { isEarCheck: true });
   }
 
   function runTuneUp() {
@@ -273,19 +291,29 @@ export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading, onOpe
                   <div className="ai-markdown" style={{ fontSize: "15px", fontFamily: "'Crimson Pro', serif", lineHeight: "1.7" }}>
                     <ReactMarkdown>{msg.content}</ReactMarkdown>
                   </div>
-                  <button
-                    className="btn-ghost btn-sm"
-                    style={{ fontSize: "12px", marginTop: "6px" }}
-                    onClick={() => {
-                      const current = sermon.manuscript || "";
-                      const appended = current.trimEnd()
-                        ? current.trimEnd() + "\n\n" + msg.content
-                        : msg.content;
-                      onUpdate({ manuscript: appended });
-                    }}
-                  >
-                    ↓ Apply to manuscript
-                  </button>
+                  <div style={{ display: "flex", gap: "8px", marginTop: "6px" }}>
+                    {msg.isEarCheck ? (
+                      <button
+                        className="btn-ghost btn-sm"
+                        style={{ fontSize: "12px" }}
+                        disabled={implementLoading || !sermon.manuscript?.trim()}
+                        onClick={() => implementEarCheck(msg.content)}
+                      >
+                        {implementLoading ? "Applying…" : "Implement Suggestions"}
+                      </button>
+                    ) : (
+                      <button
+                        className="btn-ghost btn-sm"
+                        style={{ fontSize: "12px" }}
+                        onClick={() => {
+                          const current = sermon.manuscript || "";
+                          onUpdate({ manuscript: current.trimEnd() ? current.trimEnd() + "\n\n" + msg.content : msg.content });
+                        }}
+                      >
+                        ↓ Apply to manuscript
+                      </button>
+                    )}
+                  </div>
                 </div>
               );
             })}
