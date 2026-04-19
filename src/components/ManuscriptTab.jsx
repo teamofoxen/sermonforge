@@ -1,7 +1,4 @@
-import { useState, useEffect, useRef } from "react";
-import ReactMarkdown from "react-markdown";
 import { getOutline, getFunctionalElements, serializeOutline, serializeFunctionalElements, autoResize, parseManuscript, assembleManuscriptText } from "../utils";
-import { sendAIMessage } from "../utils/ai";
 
 function countWords(sermon) {
   const ms = parseManuscript(sermon.manuscript);
@@ -21,14 +18,6 @@ function countWords(sermon) {
 }
 
 // ── System prompts ─────────────────────────────────────────────────────────────
-
-const MANUSCRIPT_CHAT_SYSTEM = `You are a sermon writing assistant. Help the pastor draft, develop, and refine their manuscript.
-
-The pastor may ask you to write introductions, conclusions, transitions, body sections, illustrations, or application content. Write it — don't coach around it.
-
-Voice rules: write at a normal spoken register, not generically "preachery". Ground everything in the passage and the MPS. Preserve the theological weight without sounding academic. If the pastor gives you a fragment or a direction, work with it.
-
-When writing a section: produce a full draft, not an outline or a list of suggestions. The pastor can edit from a draft; they can't preach a bulleted plan.`;
 
 const FLOW_COACH_SYSTEM = `You are a sermon flow coach working through a fixed worklist. One step at a time.
 
@@ -130,15 +119,6 @@ function TransitionField({ label, value, onChange }) {
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading, onOpenDrawer }) {
-  const [msChat, setMsChat] = useState([]);
-  const [msChatInput, setMsChatInput] = useState("");
-  const [msChatLoading, setMsChatLoading] = useState(false);
-  const msChatEndRef = useRef(null);
-
-  useEffect(() => {
-    if (msChatEndRef.current) msChatEndRef.current.scrollIntoView({ behavior: "smooth" });
-  }, [msChat, msChatLoading]);
-
   const ms = parseManuscript(sermon.manuscript);
   const outline = getOutline(sermon);
   const fes = getFunctionalElements(sermon);
@@ -162,37 +142,6 @@ export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading, onOpe
   function updatePointText(pointId, text) {
     const updated = outline.map(p => p.id === pointId ? { ...p, text } : p);
     onUpdate({ outline: serializeOutline(updated) });
-  }
-
-  function buildMsContext() {
-    return [
-      `Passage: ${sermon.passage || "(not set)"}`,
-      `MPT: ${sermon.mpt || "(none)"}`,
-      `MPS: ${sermon.mps || "(none)"}`,
-      `\nManuscript:\n${assembleManuscriptText(sermon)}`,
-    ].join("\n");
-  }
-
-  async function sendMsChat() {
-    const input = msChatInput.trim();
-    if (!input || msChatLoading) return;
-    const contextPrefix = buildMsContext() + "\n\n---\n\n";
-    const newUserMsg = { role: "user", content: input };
-    const history = [...msChat, newUserMsg];
-    setMsChat(history);
-    setMsChatInput("");
-    setMsChatLoading(true);
-    try {
-      const messages = history.map((m, i) =>
-        i === history.length - 1 ? { ...m, content: contextPrefix + m.content } : m
-      );
-      const resp = await sendAIMessage(messages, MANUSCRIPT_CHAT_SYSTEM);
-      if (resp?.trim()) setMsChat(prev => [...prev, { role: "assistant", content: resp.trim() }]);
-    } catch (e) {
-      setMsChat(prev => [...prev, { role: "assistant", content: `Error: ${e.message}` }]);
-    } finally {
-      setMsChatLoading(false);
-    }
   }
 
   function runFlowCoach() {
@@ -372,65 +321,6 @@ export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading, onOpe
         />
       </div>
 
-      {/* Inline Write with AI chat */}
-      <div style={{ marginTop: "20px", border: "1px solid var(--parchment-deep)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
-        <div style={{ padding: "10px 16px", background: "var(--parchment)", borderBottom: "1px solid var(--parchment-deep)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--ink-ghost)" }}>Write with AI</span>
-          {msChat.length > 0 && (
-            <button className="inline-ai-dismiss" onClick={() => setMsChat([])}>Clear</button>
-          )}
-        </div>
-
-        {msChat.length > 0 && (
-          <div style={{ padding: "12px 16px", maxHeight: "480px", overflowY: "auto", background: "var(--white)" }}>
-            {msChat.map((msg, i) => {
-              if (msg.role === "user") {
-                return (
-                  <div key={i} style={{ textAlign: "right", marginBottom: "10px" }}>
-                    <span style={{ background: "var(--surface-2)", borderRadius: "8px", padding: "7px 12px", fontSize: "13px", display: "inline-block", maxWidth: "80%", textAlign: "left" }}>
-                      {msg.content}
-                    </span>
-                  </div>
-                );
-              }
-              return (
-                <div key={i} style={{ marginBottom: "14px" }}>
-                  <div className="ai-markdown" style={{ fontSize: "15px", fontFamily: "'Crimson Pro', serif", lineHeight: "1.7" }}>
-                    <ReactMarkdown>{msg.content}</ReactMarkdown>
-                  </div>
-                </div>
-              );
-            })}
-            {msChatLoading && (
-              <div className="ai-loading" style={{ padding: "6px 0" }}>
-                <div className="ai-loading-dot" /><div className="ai-loading-dot" /><div className="ai-loading-dot" />
-              </div>
-            )}
-            <div ref={msChatEndRef} />
-          </div>
-        )}
-
-        <div style={{ padding: "10px 12px", background: "var(--white)", borderTop: msChat.length > 0 ? "1px solid var(--parchment-deep)" : "none", display: "flex", gap: "8px" }}>
-          <textarea
-            className="field-textarea"
-            rows={2}
-            style={{ flex: 1, minHeight: "unset", fontSize: "13px", resize: "none", border: "none", background: "transparent", padding: "4px 0" }}
-            placeholder="Write me an opener. Draft a transition to Point 2. Give me an illustration for the conclusion…"
-            value={msChatInput}
-            onChange={e => setMsChatInput(e.target.value)}
-            onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMsChat(); } }}
-            disabled={msChatLoading}
-          />
-          <button
-            className="btn-ghost btn-sm"
-            style={{ alignSelf: "flex-end", fontSize: "12px", whiteSpace: "nowrap" }}
-            onClick={sendMsChat}
-            disabled={msChatLoading || !msChatInput.trim()}
-          >
-            Ask →
-          </button>
-        </div>
-      </div>
     </div>
   );
 }

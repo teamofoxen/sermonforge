@@ -2,6 +2,12 @@
 
 ---
 
+## 2026-04-19 — chore: remove inline Write with AI panel from Manuscript tab
+
+- Deleted the bottom-of-page Write with AI chat in [ManuscriptTab.jsx](src/components/ManuscriptTab.jsx), along with its state, send handler, system prompt, and now-unused imports (`useState`, `useEffect`, `useRef`, `ReactMarkdown`, `sendAIMessage`).
+
+---
+
 ## 2026-04-19 — fix: remove volatile model cache from build package
 
 - Moved `@xenova/transformers` model weights to `resources/models/` so they ship as a stable `extraResources` bundle instead of from the volatile `.cache` inside `node_modules`.
