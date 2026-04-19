@@ -432,7 +432,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
       generateSummary(
         "s3",
         `Passage: ${sermon.passage || "unknown"}\nMPT: ${sermon.mpt || "(none)"}\nMPS: ${sermon.mps || "(none)"}\n\nObservations:\n${formatPhaseText(obsData, OBSERVE_FIELDS)}\n\nInterpretation:\n${formatPhaseText(intData, INTERPRET_FIELDS)}\n\nRedemptive Thread:\n${formatPhaseText(redData, REDEMPTIVE_FIELDS)}\n\nImplications:\n${formatPhaseText(impData, [...IMPLICATIONS_THEOLOGICAL, ...IMPLICATIONS_PERSONAL])}`,
-        `Brief a preacher before they build their sermon outline. In 3–5 bullet points, surface: the textual logic their outline must follow, the theological moves the exegesis demands, the Christ-connection to land, and any application pressures that must be accounted for. Be specific to their work — not generic homiletics advice.`
+        `Brief a preacher before they build their sermon outline. Return exactly 3–5 bullet points. Each bullet is one sentence. No sub-bullets, no headers, no explanatory prose. Surface only what is most load-bearing: the logic the outline must follow, the theological move the text demands, and any application pressure that cannot be ignored. Specific to this passage — no generic homiletics advice.`
       );
     } else if (next === 4) {
       const pts = getOutline(sermon).map((p, i) => `${i + 1}. ${p.text}`).join("\n");
