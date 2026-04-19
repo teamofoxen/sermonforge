@@ -20,6 +20,14 @@ import PassagePopup from "./PassagePopup";
 const STEP_LABELS = ["Exegesis", "MPT / MPS", "Outline", "Functional Elements"];
 const PHASE_LABELS = ["Observe", "Interpret", "Redemptive Thread", "Implications"];
 
+const FE_CHAT_SYSTEM = `You are a homiletics consultant helping a pastor develop functional elements for each sermon point — Explanation (E), Application (A), and Illustration (I).
+
+Explanation: How does this point emerge from the text? Ground it exegetically. Name the theological logic that makes the point both true and necessary.
+Application: What does this point ask of the congregation? Make it concrete and gospel-rooted — not behavior management but a response to what God has done.
+Illustration: What story, image, or example makes this point land in lived experience?
+
+When asked about a specific point, give focused, concrete suggestions. Do not pad. Do not lecture about functional element theory — just help develop the actual content.`;
+
 
 function CollapseArrow({ open }) {
   return (
@@ -96,8 +104,8 @@ function SermonShapePreview({ sermon, outline, funcData }) {
 }
 
 function FuncElem({ pointText, pointId, displayIndex, funcData, onUpdate, onUpdateText }) {
-  const [open, setOpen] = useState(false);
   const data = funcData[pointId] || { explanation: "", application: "", illustration: "" };
+  const [open, setOpen] = useState(() => !!(data.explanation || data.application || data.illustration));
 
   function update(field, val) {
     onUpdate(pointId, { ...data, [field]: val });
@@ -106,10 +114,17 @@ function FuncElem({ pointText, pointId, displayIndex, funcData, onUpdate, onUpda
   return (
     <div className="func-elem">
       <div className="func-elem-header" onClick={() => setOpen((v) => !v)}>
-        <span className="func-elem-title">
-          <span style={{ color: "var(--gold)", fontFamily: "'JetBrains Mono', monospace", fontSize: "12px", marginRight: "8px" }}>{displayIndex + 1}.</span>
-          {pointText || `Point ${displayIndex + 1}`}
-        </span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <span className="func-elem-title">
+            <span style={{ color: "var(--gold)", fontFamily: "'JetBrains Mono', monospace", fontSize: "12px", marginRight: "8px" }}>{displayIndex + 1}.</span>
+            {pointText || `Point ${displayIndex + 1}`}
+          </span>
+          {!open && data.explanation && (
+            <div style={{ fontSize: "12px", color: "var(--ink-ghost)", marginTop: "3px", paddingLeft: "22px", fontStyle: "italic", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {data.explanation.length > 90 ? data.explanation.slice(0, 90) + "…" : data.explanation}
+            </div>
+          )}
+        </div>
         <CollapseArrow open={open} />
       </div>
       {open && (
@@ -241,6 +256,11 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
   const [outlineChat, setOutlineChat] = useState([]);
   const [outlineChatInput, setOutlineChatInput] = useState("");
   const [outlineChatLoading, setOutlineChatLoading] = useState(false);
+
+  // Functional elements conversational refinement
+  const [feChat, setFeChat] = useState([]);
+  const [feChatInput, setFeChatInput] = useState("");
+  const [feChatLoading, setFeChatLoading] = useState(false);
 
   // Passage popup anchor — DOM element of the triggering button, or null when closed
   const [passageAnchor, setPassageAnchor] = useState(null);
@@ -510,6 +530,41 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
     delete cleaned[pointId];
     setFuncData(cleaned);
     onUpdate({ functional_elements: serializeFunctionalElements(cleaned) });
+  }
+
+  async function sendFeChat() {
+    const input = feChatInput.trim();
+    if (!input || feChatLoading) return;
+    const allPoints = outline.map((pt, i) => {
+      const d = funcData[pt.id] || {};
+      return [
+        `Point ${i + 1}: ${pt.text}`,
+        d.explanation && `  Explanation: ${d.explanation}`,
+        d.application && `  Application: ${d.application}`,
+        d.illustration && `  Illustration: ${d.illustration}`,
+      ].filter(Boolean).join("\n");
+    }).join("\n\n");
+    const contextPrefix = [
+      `Passage: ${sermon.passage || "unknown"}`,
+      `MPS: ${sermon.mps || "(none)"}`,
+      allPoints ? `\nOutline & current functional elements:\n${allPoints}` : null,
+    ].filter(Boolean).join("\n") + "\n\n---\n\n";
+    const newUserMsg = { role: "user", content: input };
+    const history = [...feChat, newUserMsg];
+    setFeChat(history);
+    setFeChatInput("");
+    setFeChatLoading(true);
+    try {
+      const messages = history.map((m, i) =>
+        i === history.length - 1 ? { ...m, content: contextPrefix + m.content } : m
+      );
+      const resp = await sendAIMessage(messages, FE_CHAT_SYSTEM);
+      if (resp?.trim()) setFeChat(prev => [...prev, { role: "assistant", content: resp.trim() }]);
+    } catch (e) {
+      setFeChat(prev => [...prev, { role: "assistant", content: `Error: ${e.message}` }]);
+    } finally {
+      setFeChatLoading(false);
+    }
   }
 
   const summaryProps = { summaries, summaryLoading };
@@ -1192,6 +1247,59 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
             loading={inlineLoading === "eai-review"}
             onDismiss={() => dismissInline("eai-review")}
           />
+
+          {/* AI chat for developing functional elements */}
+          <div className="mps-chat" style={{ marginTop: "16px" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
+              <span className="field-label" style={{ marginBottom: 0, color: "var(--ink-ghost)", fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.06em" }}>Develop with AI</span>
+              {feChat.length > 0 && (
+                <button className="inline-ai-dismiss" onClick={() => setFeChat([])}>Clear</button>
+              )}
+            </div>
+            {feChat.map((msg, i) => {
+              if (msg.role === "user") {
+                return (
+                  <div key={i} style={{ textAlign: "right", marginBottom: "6px" }}>
+                    <span style={{ background: "var(--surface-2)", borderRadius: "8px", padding: "6px 10px", fontSize: "13px", display: "inline-block", maxWidth: "85%", textAlign: "left" }}>{msg.content}</span>
+                  </div>
+                );
+              }
+              return (
+                <div key={i} className="inline-ai-response" style={{ marginBottom: "8px" }}>
+                  <div className="ai-markdown">
+                    <ReactMarkdown>{msg.content}</ReactMarkdown>
+                  </div>
+                </div>
+              );
+            })}
+            {feChatLoading && (
+              <div className="inline-ai-response" style={{ marginBottom: "8px" }}>
+                <div className="ai-loading" style={{ padding: "6px 0" }}>
+                  <div className="ai-loading-dot" /><div className="ai-loading-dot" /><div className="ai-loading-dot" />
+                </div>
+              </div>
+            )}
+            <div style={{ display: "flex", gap: "8px", marginTop: "4px" }}>
+              <textarea
+                className="field-textarea"
+                rows={2}
+                style={{ flex: 1, minHeight: "unset", fontSize: "13px", resize: "none" }}
+                placeholder="Help me develop Point 2's application. Suggest an illustration for Point 1…"
+                value={feChatInput}
+                onChange={e => setFeChatInput(e.target.value)}
+                onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendFeChat(); } }}
+                disabled={feChatLoading}
+              />
+              <button
+                className="btn-ghost btn-sm"
+                style={{ alignSelf: "flex-end", fontSize: "12px", whiteSpace: "nowrap" }}
+                onClick={sendFeChat}
+                disabled={feChatLoading || !feChatInput.trim()}
+              >
+                Ask →
+              </button>
+            </div>
+          </div>
 
           <div className="step-advance">
             <button className="btn-primary btn-sm" onClick={() => onTabChange?.("outline")}>

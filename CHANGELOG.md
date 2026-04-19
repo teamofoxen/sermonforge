@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-04-19 — feat: Functional Elements step — auto-open cards and AI chat
+
+- `FuncElem` cards now auto-open when they have pre-filled content (e.g. because-clauses seeded from outline chat).
+- Collapsed `FuncElem` header shows a truncated explanation preview so pre-filled content is visible at a glance.
+- Added persistent AI chat to Step 4 with `FE_CHAT_SYSTEM` prompt focused on developing Explanation, Application, and Illustration per point.
+
+---
+
 ## 2026-04-15 — feat: Delivery tab — Manuscript and Outline panels
 
 **`src/components/DeliveryTab.jsx`** (expanded), **`src/styles/global.css`**, **`electron/main.js`**
