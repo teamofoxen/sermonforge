@@ -171,7 +171,7 @@ async function initDatabase() {
   saveDb();
 }
 
-function flushDb() {
+async function flushDb() {
   if (!db || !dbPath) return;
   // If _pendingWrite is still true here, flushDb was called externally (e.g. quit handler)
   // while a debounced write was still queued. The 500ms crash window was open.
@@ -184,10 +184,11 @@ function flushDb() {
   }
   try {
     const data = db.export();
-    fs.writeFileSync(dbPath, Buffer.from(data));
+    await fs.promises.writeFile(dbPath, Buffer.from(data));
     _pendingWrite = false;
   } catch (e) {
     console.error("Failed to save DB:", e.message);
+    mainWindow?.webContents?.send("db-write-error", e.message);
   }
 }
 
@@ -197,9 +198,9 @@ function saveDb() {
   // Acceptable for a single-user desktop app with local storage.
   _pendingWrite = true;
   if (saveTimer) clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
+  saveTimer = setTimeout(async () => {
     _pendingWrite = false; // cleared before flush so flushDb's external-call check is correct
-    flushDb();
+    await flushDb();
   }, 500);
 }
 
@@ -252,7 +253,12 @@ async function ensureTheologyEmbedder() {
   if (theologyEmbedder) return true;
   console.log("[VECTOR] Loading embedding model...");
   try {
-    const { pipeline } = await import("@xenova/transformers");
+    const { pipeline, env } = await import("@xenova/transformers");
+    const modelDir = app.isPackaged
+      ? path.join(process.resourcesPath, "models")
+      : path.join(__dirname, "../resources/models");
+    env.cacheDir = modelDir;
+    env.allowRemoteModels = false;
     theologyEmbedder = await pipeline("feature-extraction", "Xenova/all-MiniLM-L6-v2", {
       quantized: true,
     });

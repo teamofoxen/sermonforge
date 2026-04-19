@@ -40,7 +40,8 @@
     "files": [
       "dist/**/*",
       "electron/**/*",
-      "node_modules/**/*"
+      "node_modules/**/*",
+      "!node_modules/@xenova/transformers/.cache/**"
     ],
     "asarUnpack": [
       "node_modules/sql.js/dist/sql-wasm.wasm",
@@ -51,6 +52,10 @@
       {
         "from": ".env",
         "to": ".env"
+      },
+      {
+        "from": "resources/models",
+        "to": "models"
       }
     ],
     "directories": {

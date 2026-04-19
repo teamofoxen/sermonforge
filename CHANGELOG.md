@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-04-19 — fix: remove volatile model cache from build package
+
+- Moved `@xenova/transformers` model weights to `resources/models/` so they ship as a stable `extraResources` bundle instead of from the volatile `.cache` inside `node_modules`.
+- `ensureTheologyEmbedder()` now sets `env.cacheDir` and `env.allowRemoteModels = false` to load from the committed model path (dev or packaged).
+- Excluded `node_modules/@xenova/transformers/.cache/**` from the electron-builder files glob to stop build size growing with each ingestion run.
+
+---
+
 ## 2026-04-19 — chore: sweep-the-multiverse audit fixes
 
 - Both docx export handlers in `electron/main.js` now use `fs.promises.writeFile` instead of `fs.writeFileSync`, eliminating main-process blocking during Study Guide and PMB exports.
