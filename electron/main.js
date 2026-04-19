@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require("electron");
+const { app, BrowserWindow, ipcMain, shell } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const os = require("os");
@@ -1605,6 +1605,133 @@ ipcMain.handle("series-export-study-guide", async (_, seriesId) => {
     return { success: true, filepath };
   } catch (e) {
     console.error("[series-export-study-guide]", e);
+    return { success: false, error: e.message };
+  }
+});
+
+ipcMain.handle("sermon-export-pmb", async (_, { blocks, spine, title, passage, mps }) => {
+  try {
+    const { Document, Paragraph, TextRun, HeadingLevel } = require("docx");
+    const { Packer } = require("docx");
+
+    const children = [];
+
+    function divider() {
+      return new Paragraph({
+        spacing: { before: 200, after: 200 },
+        children: [new TextRun({ text: "————————————————————", color: "AAAAAA" })],
+      });
+    }
+
+    // Title block
+    if (title || passage) {
+      children.push(new Paragraph({
+        heading: HeadingLevel.HEADING_1,
+        spacing: { before: 0, after: 80 },
+        children: [new TextRun({ text: title || passage || "Preaching Blocks", bold: true })],
+      }));
+    }
+    if (passage && title) {
+      children.push(new Paragraph({
+        spacing: { after: 80 },
+        children: [new TextRun({ text: passage, color: "666666" })],
+      }));
+    }
+    if (mps) {
+      children.push(new Paragraph({
+        spacing: { after: 240 },
+        children: [new TextRun({ text: `MPS: ${mps}` })],
+      }));
+    }
+
+    // Spine
+    if (spine) {
+      children.push(new Paragraph({
+        spacing: { before: 0, after: 40 },
+        children: [new TextRun({ text: "SPINE", bold: true, allCaps: true, color: "888888", size: 32 })],
+      }));
+      children.push(new Paragraph({
+        spacing: { after: 320 },
+        children: [new TextRun({ text: spine, bold: true, size: 52 })],
+      }));
+    }
+
+    function bullet(text) {
+      return new Paragraph({
+        bullet: { level: 0 },
+        spacing: { after: 100 },
+        children: [new TextRun({ text })],
+      });
+    }
+
+    // Blocks
+    (blocks || []).forEach((block, i) => {
+      if (i > 0) children.push(divider());
+
+      // Block header: ID + movement
+      children.push(new Paragraph({
+        heading: HeadingLevel.HEADING_2,
+        spacing: { before: 160, after: 80 },
+        children: [
+          new TextRun({ text: `${block.id}  `, bold: true }),
+          new TextRun({ text: (block.movement || "").toUpperCase(), color: "888888", allCaps: true }),
+        ],
+      }));
+
+      // Outline point + scripture — orientation anchors, no label
+      if (block.outline_point) {
+        children.push(new Paragraph({
+          spacing: { after: 40 },
+          children: [new TextRun({ text: block.outline_point, bold: true })],
+        }));
+      }
+      if (block.scripture) {
+        children.push(new Paragraph({
+          spacing: { after: 120 },
+          children: [new TextRun({ text: block.scripture, color: "555555" })],
+        }));
+      }
+
+      // Trigger phrase — the ignition key
+      children.push(new Paragraph({
+        spacing: { before: 80, after: 160 },
+        children: [new TextRun({ text: block.trigger_phrase || "", bold: true, size: 56 })],
+      }));
+
+      // All supporting bullets — no labels, just scan order
+      children.push(bullet(block.core_claim || ""));
+      (block.memory_hooks || []).forEach(h => children.push(bullet(h)));
+      if (block.imagery) children.push(bullet(block.imagery));
+
+      // Transition out — plain line at the bottom, set apart
+      if (block.transition_out) {
+        children.push(new Paragraph({
+          spacing: { before: 120, after: 40 },
+          children: [new TextRun({ text: `→ ${block.transition_out}`, color: "555555" })],
+        }));
+      }
+    });
+
+    const doc = new Document({
+      styles: {
+        default: { document: { run: { size: 40 } } },
+      },
+      sections: [{ properties: {}, children }],
+    });
+
+    const exportDir = "C:\\SermonForge\\exports\\PreachingBlocks";
+    if (!fs.existsSync(exportDir)) fs.mkdirSync(exportDir, { recursive: true });
+
+    const safeTitle = (title || passage || "Sermon").replace(/[<>:"/\\|?*\n\r\t]/g, "—").trim();
+    const filepath = path.join(exportDir, `${safeTitle} — Preaching Blocks.docx`);
+
+    const buffer = await Packer.toBuffer(doc);
+    fs.writeFileSync(filepath, buffer);
+    shell.openPath(filepath);
+
+    return { success: true, filepath };
+  } catch (e) {
+    console.error("[sermon-export-pmb]", e);
     return { success: false, error: e.message };
   }
 });

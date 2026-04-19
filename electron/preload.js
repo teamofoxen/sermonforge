@@ -53,6 +53,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // ── Export ───────────────────────────────────────────────────────────────────
   exportStudyGuide: (seriesId) => ipcRenderer.invoke("series-export-study-guide", seriesId),
+  exportPmb: (data) => ipcRenderer.invoke("sermon-export-pmb", data),
 
   // ── Bible passage ─────────────────────────────────────────────────────────
   fetchPassage: (passage) => ipcRenderer.invoke('passage-fetch', passage),

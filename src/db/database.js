@@ -54,6 +54,7 @@ export const fetchPassage = (passage) => api.fetchPassage(passage);
 
 // ── Export ────────────────────────────────────────────────────────────────────
 export const exportStudyGuide = (seriesId) => api.exportStudyGuide(seriesId);
+export const exportPmb = (data) => api.exportPmb(data);
 
 // ── Demo ──────────────────────────────────────────────────────────────────────
 export const loadDemoSeries = () => api.loadDemoSeries();

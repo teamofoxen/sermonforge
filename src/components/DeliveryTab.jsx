@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { getOutline, getFunctionalElements, tryParse, autoResize } from "../utils";
+import { getOutline, getFunctionalElements, tryParse, autoResize, assembleManuscriptText } from "../utils";
 import { summarizeExegesis } from "../utils/contextBuilder";
 import { sendAIMessage } from "../utils/ai";
+import { exportPmb } from "../db/database";
 
 // ── Panel constants ───────────────────────────────────────────────────────────
 
@@ -59,7 +60,7 @@ function buildManuscriptDeliveryContext(sermon) {
     parts.push(`\nOUTLINE:\n${outlineText}`);
   }
 
-  parts.push(`\nMANUSCRIPT:\n\n${sermon.manuscript || "(empty)"}`);
+  parts.push(`\nMANUSCRIPT:\n\n${assembleManuscriptText(sermon) || "(empty)"}`);
 
   return parts.join("\n");
 }
@@ -110,7 +111,7 @@ function ManuscriptPanel({ sermon, onUpdate }) {
   const content = typeof stored === "string" ? stored : null;
 
   async function generate() {
-    if (!sermon.manuscript?.trim()) {
+    if (!assembleManuscriptText(sermon).trim()) {
       setError("A completed manuscript is required.");
       return;
     }
@@ -266,6 +267,8 @@ PHASE 3 — DANGER ZONE IDENTIFICATION
 Within each identified movement, flag what will betray delivery: where will the preacher over-explain or rabbit trail? Where will the congregation lose the thread? Where is a critical moment buried or under-resourced?
 
 COMPRESSION — strict constraints, non-negotiable:
+- outline_point: copy the exact outline point text from the OUTLINE provided above. Null for intro/conclusion blocks that don't belong to a point.
+- scripture: copy the exact scripture reference or text from the OUTLINE provided above — verbatim, no changes, no additions. If no scripture is listed for the corresponding outline point, use null. Do not generate, infer, abbreviate, or rephrase any scripture.
 - core_claim: 1 sentence maximum. If this section fails, what fails?
 - trigger_phrase: 5 words maximum. Memorized verbatim. The ignition key.
 - memory_hooks: exactly 2 short phrases. Conceptual handholds — not sentences.
@@ -284,6 +287,8 @@ OUTPUT: Return ONLY valid JSON. No explanation, no markdown, no code fences.
   "blocks": [
     {
       "id": "B1",
+      "outline_point": "<exact outline point text, or null>",
+      "scripture": "<key verse or passage, or null>",
       "movement": "<valid movement type>",
       "core_claim": "<1 sentence max>",
       "trigger_phrase": "<5 words max>",
@@ -306,14 +311,21 @@ function buildCMCContext(sermon) {
   ];
 
   if (outline.length > 0) {
-    parts.push(`\nOUTLINE:\n${outline.map((p, i) => `${i + 1}. ${p.text}`).join("\n")}`);
+    const fe = getFunctionalElements(sermon);
+    const outlineText = outline.map((p, i) => {
+      const d = fe[p.id] || {};
+      let line = `${i + 1}. ${p.text}`;
+      if (d.scripture) line += `\n   Scripture: ${d.scripture}`;
+      return line;
+    }).join("\n");
+    parts.push(`\nOUTLINE:\n${outlineText}`);
   }
 
   if (exegesis) {
     parts.push(`\nEXEGESIS:\n${exegesis}`);
   }
 
-  parts.push(`\nMANUSCRIPT:\n\n${sermon.manuscript || "(empty)"}`);
+  parts.push(`\nMANUSCRIPT:\n\n${assembleManuscriptText(sermon) || "(empty)"}`);
 
   return parts.join("\n");
 }
@@ -337,6 +349,20 @@ function PmbCard({ block, index, onChange }) {
           ))}
         </select>
       </div>
+
+      {block.outline_point && (
+        <div className="pmb-field">
+          <label className="pmb-label">Outline Point</label>
+          <div className="pmb-outline-point">{block.outline_point}</div>
+        </div>
+      )}
+
+      {block.scripture && (
+        <div className="pmb-field">
+          <label className="pmb-label">Scripture</label>
+          <div className="pmb-scripture">{block.scripture}</div>
+        </div>
+      )}
 
       <div className="pmb-trigger-row">
         <label className="pmb-label pmb-label--trigger">Trigger Phrase</label>
@@ -400,25 +426,13 @@ function PmbCard({ block, index, onChange }) {
         />
       </div>
 
-      {block.danger_zones?.length > 0 && (
-        <div className="pmb-field">
-          <label className="pmb-label pmb-label--danger">Danger Zones</label>
-          <textarea
-            className="field-textarea pmb-danger-textarea"
-            rows={2}
-            value={block.danger_zones.join("\n")}
-            onChange={(e) => set("danger_zones", e.target.value.split("\n").filter(Boolean))}
-            onInput={(e) => autoResize(e.target)}
-            ref={(el) => autoResize(el)}
-          />
-        </div>
-      )}
     </div>
   );
 }
 
 function WithoutNotesPanel({ sermon, onUpdate }) {
   const [generating, setGenerating] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [error, setError] = useState(null);
 
   const data = tryParse(sermon.preaching_blocks, null);
@@ -426,7 +440,7 @@ function WithoutNotesPanel({ sermon, onUpdate }) {
   const spine = data?.spine || "";
 
   async function generate() {
-    if (!sermon.manuscript?.trim()) {
+    if (!assembleManuscriptText(sermon).trim()) {
       setError("A completed manuscript is required to generate preaching blocks.");
       return;
     }
@@ -468,6 +482,26 @@ function WithoutNotesPanel({ sermon, onUpdate }) {
     onUpdate({ preaching_blocks: JSON.stringify({ ...data, spine: value }) });
   }
 
+  async function handleExport() {
+    if (!blocks.length || exporting) return;
+    setExporting(true);
+    setError(null);
+    try {
+      const result = await exportPmb({
+        blocks,
+        spine,
+        title: sermon.title || "",
+        passage: sermon.passage || "",
+        mps: sermon.mps || "",
+      });
+      if (!result.success) setError(result.error || "Export failed.");
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setExporting(false);
+    }
+  }
+
   return (
     <>
       <div className="delivery-panel-header">
@@ -475,9 +509,16 @@ function WithoutNotesPanel({ sermon, onUpdate }) {
           <h2 className="delivery-panel-title">Preaching Without Notes</h2>
           <p className="delivery-panel-subtitle">Steel frame. Same shape. Just lighter.</p>
         </div>
-        <button className="btn-primary" onClick={generate} disabled={generating}>
-          {generating ? "Generating…" : blocks.length > 0 ? "Regenerate" : "Generate Preaching Blocks"}
-        </button>
+        <div style={{ display: "flex", gap: "8px" }}>
+          {blocks.length > 0 && (
+            <button className="btn-ghost" onClick={handleExport} disabled={exporting}>
+              {exporting ? "Exporting…" : "Export to Word"}
+            </button>
+          )}
+          <button className="btn-primary" onClick={generate} disabled={generating}>
+            {generating ? "Generating…" : blocks.length > 0 ? "Regenerate" : "Generate Preaching Blocks"}
+          </button>
+        </div>
       </div>
 
       {error && <div className="pmb-error">{error}</div>}
