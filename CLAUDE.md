@@ -70,3 +70,39 @@ Enforcement:
 If code and these documents diverge, the code is considered incorrect unless an explicit
 rationale exists. `CLAUDE_original.md` is the original monolithic version — retained for
 historical reference; do not use it as a working guide.
+
+---
+
+## Execution Gates
+
+All code changes must pass mandatory sweep checks before proceeding.
+
+### Required Sequence After ANY Code Change
+
+1. Run /sweep-the-room
+   - If STATUS = MESSY → STOP
+   - Fix issues before continuing
+
+2. Run /sweep-the-house
+   - If STATUS = FAIL → STOP
+   - If STATUS = WARN → STOP and ask
+   - Fix issues before continuing
+
+3. Only after both pass:
+   - Continue work OR
+   - Run /end-session
+
+### Hard Rules
+
+- No skipping sweep steps
+- No continuing work while in a failing state
+- No commits or pushes before passing both sweeps
+- No explanations or further changes until current state is CLEAN
+
+### Enforcement
+
+If a sweep fails:
+- Immediately stop
+- Do not proceed
+- Do not suggest next steps
+- Fix only the failing issues
