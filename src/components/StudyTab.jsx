@@ -104,8 +104,8 @@ function SermonShapePreview({ sermon, outline, funcData }) {
 }
 
 function FuncElem({ pointText, pointId, displayIndex, funcData, onUpdate, onUpdateText }) {
-  const data = funcData[pointId] || { explanation: "", application: "", illustration: "" };
-  const [open, setOpen] = useState(() => !!(data.explanation || data.application || data.illustration));
+  const data = funcData[pointId] || { explanation: "", application: "", illustration: "", scripture: "" };
+  const [open, setOpen] = useState(() => !!(data.explanation || data.application || data.illustration || data.scripture));
 
   function update(field, val) {
     onUpdate(pointId, { ...data, [field]: val });
@@ -115,10 +115,20 @@ function FuncElem({ pointText, pointId, displayIndex, funcData, onUpdate, onUpda
     <div className="func-elem">
       <div className="func-elem-header" onClick={() => setOpen((v) => !v)}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <span className="func-elem-title">
-            <span style={{ color: "var(--gold)", fontFamily: "'JetBrains Mono', monospace", fontSize: "12px", marginRight: "8px" }}>{displayIndex + 1}.</span>
-            {pointText || `Point ${displayIndex + 1}`}
-          </span>
+          <div style={{ display: "flex", alignItems: "center" }}>
+            <span style={{ color: "var(--gold)", fontFamily: "'JetBrains Mono', monospace", fontSize: "12px", marginRight: "8px", flexShrink: 0 }}>{displayIndex + 1}.</span>
+            <input
+              value={pointText || ""}
+              onChange={(e) => onUpdateText?.(pointId, e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                flex: 1, background: "none", border: "none", outline: "none",
+                fontFamily: "inherit", fontSize: "14px", fontWeight: 600,
+                color: "var(--ink-mid)", cursor: "text", padding: 0, minWidth: 0,
+              }}
+              placeholder={`Point ${displayIndex + 1}`}
+            />
+          </div>
           {!open && data.explanation && (
             <div style={{ fontSize: "12px", color: "var(--ink-ghost)", marginTop: "3px", paddingLeft: "22px", fontStyle: "italic", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {data.explanation.length > 90 ? data.explanation.slice(0, 90) + "…" : data.explanation}
@@ -130,15 +140,15 @@ function FuncElem({ pointText, pointId, displayIndex, funcData, onUpdate, onUpda
       {open && (
         <div className="func-elem-body">
           <div>
-            <div className="func-field-label">Outline Point</div>
+            <div className="func-field-label">Scripture <span style={{ color: "var(--slate, #5a7a8a)", fontFamily: "'JetBrains Mono', monospace", fontSize: "11px" }}>(ESV)</span></div>
             <textarea
               className="field-textarea"
-              style={{ minHeight: "unset", fontSize: "14px", fontStyle: "italic" }}
-              value={pointText}
-              onChange={(e) => onUpdateText?.(pointId, e.target.value)}
+              style={{ minHeight: "60px", fontFamily: "'Crimson Pro', serif", fontSize: "15px", fontStyle: "italic" }}
+              value={data.scripture}
+              onChange={(e) => update("scripture", e.target.value)}
               onInput={(e) => autoResize(e.target)}
               ref={(el) => autoResize(el)}
-              rows={1}
+              placeholder="Paste the passage text for this point (ESV)."
             />
           </div>
           <div>
@@ -238,7 +248,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
   }, [sermon.id]);
   const [summaries, setSummaries] = useState({});
   const [summaryLoading, setSummaryLoading] = useState(null);
-  const [funcData, setFuncData] = useState(() => getFunctionalElements(sermon));
+  const funcData = getFunctionalElements(sermon);
 
   // Inline AI response state — keyed by section name
   const [inlineResponses, setInlineResponses] = useState({});
@@ -520,15 +530,12 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
   }
 
   function updateFuncData(pointId, data) {
-    const next = { ...funcData, [pointId]: data };
-    setFuncData(next);
-    onUpdate({ functional_elements: serializeFunctionalElements(next) });
+    onUpdate({ functional_elements: serializeFunctionalElements({ ...funcData, [pointId]: data }) });
   }
 
   function handleOutlineRemove(pointId) {
     const cleaned = { ...funcData };
     delete cleaned[pointId];
-    setFuncData(cleaned);
     onUpdate({ functional_elements: serializeFunctionalElements(cleaned) });
   }
 

@@ -130,6 +130,7 @@ export function getFunctionalElements(sermon) {
       explanation:  typeof val.explanation  === 'string' ? val.explanation  : '',
       application:  typeof val.application  === 'string' ? val.application  : '',
       illustration: typeof val.illustration === 'string' ? val.illustration : '',
+      scripture:    typeof val.scripture    === 'string' ? val.scripture    : '',
     };
   }
   return result;

@@ -26,6 +26,7 @@ function mpsExtractStem(mps) {
 
 export default function OutlineTab({ sermon, onUpdate, onTabChange }) {
   const outline = getOutline(sermon);
+  const fe = getFunctionalElements(sermon);
   const mpsStem = mpsExtractStem(sermon.mps);
   const [reviewResponse, setReviewResponse] = useState(null);
   const [reviewLoading, setReviewLoading] = useState(false);
@@ -147,12 +148,22 @@ export default function OutlineTab({ sermon, onUpdate, onTabChange }) {
               <span style={{ fontSize: "15px", fontStyle: "italic", color: "var(--ink)" }}>{sermon.mps}</span>
               {mpsStem && outline.length > 0 && (
                 <div style={{ marginTop: "10px", paddingLeft: "16px", borderLeft: "2px solid var(--border)" }}>
-                  {outline.map((p, i) => (
-                    <div key={p.id} style={{ fontSize: "14px", color: "var(--ink-mid)", marginBottom: "6px", lineHeight: "1.5" }}>
-                      <span style={{ color: "var(--ink-ghost)", marginRight: "6px" }}>{i + 1}.</span>
-                      {p.text}
-                    </div>
-                  ))}
+                  {outline.map((p, i) => {
+                    const scripture = fe[p.id]?.scripture;
+                    return (
+                      <div key={p.id} style={{ marginBottom: "10px" }}>
+                        <div style={{ fontSize: "14px", color: "var(--ink-mid)", lineHeight: "1.5" }}>
+                          <span style={{ color: "var(--ink-ghost)", marginRight: "6px" }}>{i + 1}.</span>
+                          {p.text}
+                        </div>
+                        {scripture && (
+                          <div style={{ paddingLeft: "20px", marginTop: "4px", fontSize: "13px", fontFamily: "'Crimson Pro', serif", fontStyle: "italic", color: "var(--ink-soft)", lineHeight: "1.6" }}>
+                            {scripture}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-04-19 — fix+feat: Functional Elements — editable titles, scripture field, because-clause fix
+
+- Fixed stale `funcData` state so because-clauses from outline chat now carry through to Step 4 immediately.
+- Removed redundant "Outline Point" body field; point title in card header is now a direct editable input.
+- Added Scripture (ESV) textarea to each FuncElem card, stored in `functional_elements` JSON.
+- Blueprint tab now renders scripture text under each outline point in the MPS card.
+
+---
+
 ## 2026-04-19 — feat: Functional Elements step — auto-open cards and AI chat
 
 - `FuncElem` cards now auto-open when they have pre-filled content (e.g. because-clauses seeded from outline chat).
