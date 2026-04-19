@@ -3,7 +3,7 @@ import ReactMarkdown from "react-markdown";
 import { getAllSeries, getAllSermons, getRecentSermons, loadDemoSeries, getTheologyStatus, searchTheologyLibrary } from "../db/database";
 import { useDemo } from "../contexts/DemoContext";
 import NewSermonModal from "./NewSermonModal";
-import { formatDate, getOutline } from "../utils";
+import { formatDate, getOutline, assembleManuscriptText } from "../utils";
 import { sendAIMessage } from "../utils/ai";
 import { flattenExegesis } from "../utils/studyFields";
 
@@ -98,8 +98,9 @@ export default function Dashboard({ onOpenSermon, onOpenSeries, onNewSeries, onN
     if (outline.length > 0) {
       parts.push(`Outline:\n${outline.map((p, i) => `  ${i + 1}. ${p.text}`).join("\n")}`);
     }
-    if (sermon.manuscript) {
-      parts.push(`Manuscript (opening):\n${sermon.manuscript.slice(0, 600)}`);
+    const manuscriptText = assembleManuscriptText(sermon);
+    if (manuscriptText.replace(/[A-Z\s\-:]/g, "").length > 0) {
+      parts.push(`Manuscript (opening):\n${manuscriptText.slice(0, 600)}`);
     }
 
     const systemPrompt = `You are a brief reorientation assistant for a pastor returning to a sermon in progress. Given the sermon's current state, write a focused 3–5 sentence summary that: (1) states clearly where they are in the prep process, (2) names the key theological work done so far using their own language where possible, (3) identifies the most natural next step. Write in second person. Keep it under 100 words. Be specific — no generic encouragement.`;

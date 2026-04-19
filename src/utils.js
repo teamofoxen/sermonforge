@@ -148,6 +148,53 @@ export function serializeFunctionalElements(data) {
   return JSON.stringify(data);
 }
 
+// ── Manuscript JSON helpers ────────────────────────────────────────────────────
+
+export function parseManuscript(raw) {
+  if (!raw) return { introduction: { opener: "", scripture_reading: "", expectation: "" }, transitions: {}, conclusion: { response: "" } };
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object" && "introduction" in parsed) return parsed;
+  } catch {}
+  return { introduction: { opener: "", scripture_reading: "", expectation: "" }, transitions: {}, conclusion: { response: "" } };
+}
+
+/**
+ * Reassemble manuscript sections into a single readable text string for AI prompts and exports.
+ */
+export function assembleManuscriptText(sermon) {
+  const ms = parseManuscript(sermon.manuscript);
+  const outline = getOutline(sermon);
+  const fes = getFunctionalElements(sermon);
+  const parts = [];
+
+  parts.push("INTRODUCTION");
+  if (sermon.title) parts.push(`Title: ${sermon.title}`);
+  if (sermon.mpt) parts.push(`Main Point of the Text: ${sermon.mpt}`);
+  if (sermon.mps) parts.push(`Main Point of the Sermon: ${sermon.mps}`);
+  if (ms.introduction?.opener) parts.push(`\nOpener:\n${ms.introduction.opener}`);
+  if (ms.introduction?.scripture_reading) parts.push(`\nScripture Reading:\n${ms.introduction.scripture_reading}`);
+  if (ms.introduction?.expectation) parts.push(`\nExpectation:\n${ms.introduction.expectation}`);
+
+  outline.forEach((pt, i) => {
+    const fe = fes[pt.id] || {};
+    const trans = (ms.transitions || {})[pt.id];
+    if (trans) parts.push(`\n--- TRANSITION ---\n${trans}`);
+    parts.push(`\nPOINT ${i + 1}: ${pt.text}`);
+    if (fe.scripture) parts.push(`Scripture: ${fe.scripture}`);
+    if (fe.explanation) parts.push(`\nExplanation:\n${fe.explanation}`);
+    if (fe.application) parts.push(`\nApplication:\n${fe.application}`);
+    if (fe.illustration) parts.push(`\nIllustration:\n${fe.illustration}`);
+  });
+
+  const concTrans = (ms.transitions || {}).conclusion;
+  if (concTrans) parts.push(`\n--- TRANSITION ---\n${concTrans}`);
+  parts.push("\nCONCLUSION");
+  if (ms.conclusion?.response) parts.push(`Response:\n${ms.conclusion.response}`);
+
+  return parts.join("\n");
+}
+
 /**
  * Auto-resize a textarea to fit its content, capped at 60vh.
  * Wire to both onInput and ref callbacks: onInput={(e) => autoResize(e.target)} ref={(el) => autoResize(el)}
