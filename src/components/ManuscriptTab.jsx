@@ -269,10 +269,23 @@ export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading, onOpe
                 );
               }
               return (
-                <div key={i} style={{ marginBottom: "10px" }}>
+                <div key={i} style={{ marginBottom: "14px" }}>
                   <div className="ai-markdown" style={{ fontSize: "15px", fontFamily: "'Crimson Pro', serif", lineHeight: "1.7" }}>
                     <ReactMarkdown>{msg.content}</ReactMarkdown>
                   </div>
+                  <button
+                    className="btn-ghost btn-sm"
+                    style={{ fontSize: "12px", marginTop: "6px" }}
+                    onClick={() => {
+                      const current = sermon.manuscript || "";
+                      const appended = current.trimEnd()
+                        ? current.trimEnd() + "\n\n" + msg.content
+                        : msg.content;
+                      onUpdate({ manuscript: appended });
+                    }}
+                  >
+                    ↓ Apply to manuscript
+                  </button>
                 </div>
               );
             })}
