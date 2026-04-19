@@ -1,39 +1,74 @@
 import { useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
-import { getOutline, getFunctionalElements } from "../utils";
+import { getOutline, getFunctionalElements, serializeOutline, serializeFunctionalElements, autoResize } from "../utils";
 import { sendAIMessage } from "../utils/ai";
 
-function buildTemplate(sermon) {
-  const outline = getOutline(sermon);
-  const fe = getFunctionalElements(sermon);
+// ── Manuscript JSON helpers ────────────────────────────────────────────────────
 
-  const bodyPoints = outline.length
-    ? outline.map((pt, i) => {
-        const d = fe[pt.id] || {};
-        const lines = [`Point ${i + 1}: ${pt.text}`];
-        if (d.scripture) lines.push(`\n${d.scripture}`);
-        lines.push(`\nExplanation:\n${d.explanation || ""}`);
-        lines.push(`\nApplication:\n${d.application || ""}`);
-        lines.push(`\nIllustration:\n${d.illustration || ""}`);
-        return lines.join("\n");
-      }).join("\n\n")
-    : null;
-
-  return [
-    "Introduction",
-    `Opener:`,
-    `Main Point of the Text: ${sermon.mpt || ""}`,
-    `Scripture Reading: ${sermon.passage || ""}`,
-    `Main Point of the Sermon: ${sermon.mps || ""}`,
-    `Expectation:`,
-    `Title:`,
-    "",
-    ...(bodyPoints ? ["Body", "", bodyPoints, ""] : []),
-    "Conclusion",
-    "Recap:",
-    "Response:",
-  ].join("\n");
+function emptyManuscript() {
+  return { introduction: { opener: "", scripture_reading: "", expectation: "" }, transitions: {}, conclusion: { response: "" } };
 }
+
+function parseManuscript(raw) {
+  if (!raw) return emptyManuscript();
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object" && "introduction" in parsed) return parsed;
+  } catch {}
+  return emptyManuscript();
+}
+
+function assembleManuscriptText(sermon) {
+  const ms = parseManuscript(sermon.manuscript);
+  const outline = getOutline(sermon);
+  const fes = getFunctionalElements(sermon);
+  const parts = [];
+
+  parts.push("INTRODUCTION");
+  if (sermon.title) parts.push(`Title: ${sermon.title}`);
+  if (sermon.mpt) parts.push(`Main Point of the Text: ${sermon.mpt}`);
+  if (sermon.mps) parts.push(`Main Point of the Sermon: ${sermon.mps}`);
+  if (ms.introduction?.opener) parts.push(`\nOpener:\n${ms.introduction.opener}`);
+  if (ms.introduction?.scripture_reading) parts.push(`\nScripture Reading:\n${ms.introduction.scripture_reading}`);
+  if (ms.introduction?.expectation) parts.push(`\nExpectation:\n${ms.introduction.expectation}`);
+
+  outline.forEach((pt, i) => {
+    const fe = fes[pt.id] || {};
+    const trans = (ms.transitions || {})[pt.id];
+    if (trans) parts.push(`\n--- TRANSITION ---\n${trans}`);
+    parts.push(`\nPOINT ${i + 1}: ${pt.text}`);
+    if (fe.scripture) parts.push(`Scripture: ${fe.scripture}`);
+    if (fe.explanation) parts.push(`\nExplanation:\n${fe.explanation}`);
+    if (fe.application) parts.push(`\nApplication:\n${fe.application}`);
+    if (fe.illustration) parts.push(`\nIllustration:\n${fe.illustration}`);
+  });
+
+  const concTrans = (ms.transitions || {}).conclusion;
+  if (concTrans) parts.push(`\n--- TRANSITION ---\n${concTrans}`);
+  parts.push("\nCONCLUSION");
+  if (ms.conclusion?.response) parts.push(`Response:\n${ms.conclusion.response}`);
+
+  return parts.join("\n");
+}
+
+function countWords(sermon) {
+  const ms = parseManuscript(sermon.manuscript);
+  const outline = getOutline(sermon);
+  const fes = getFunctionalElements(sermon);
+  const texts = [
+    sermon.title, sermon.mpt, sermon.mps,
+    ms.introduction?.opener, ms.introduction?.scripture_reading, ms.introduction?.expectation,
+    ...Object.values(ms.transitions || {}),
+    ms.conclusion?.response,
+    ...outline.flatMap(pt => {
+      const fe = fes[pt.id] || {};
+      return [pt.text, fe.scripture, fe.explanation, fe.application, fe.illustration];
+    }),
+  ];
+  return texts.filter(Boolean).join(" ").trim().split(/\s+/).filter(Boolean).length;
+}
+
+// ── System prompts ─────────────────────────────────────────────────────────────
 
 const MANUSCRIPT_CHAT_SYSTEM = `You are a sermon writing assistant. Help the pastor draft, develop, and refine their manuscript.
 
@@ -100,13 +135,49 @@ Name 1-2 root causes. List Top 5 Fixes.
 PHASE 3 — PATCH PLAN:
 Bullet list of exact edits (what/where/why). Mark inline as [ADD: ...], [CUT: ...], [REPLACE: old → new], [MOVE: ... to ...].`;
 
-function wordCount(text) {
-  if (!text) return 0;
-  return text.trim().split(/\s+/).filter(Boolean).length;
+// ── Sub-components ─────────────────────────────────────────────────────────────
+
+function SectionField({ label, value, onChange, hint, rows = 2 }) {
+  return (
+    <div style={{ marginBottom: "16px" }}>
+      <div className="field-label" style={{ marginBottom: "4px", display: "flex", alignItems: "baseline", gap: "8px" }}>
+        {label}
+        {hint && <span style={{ fontSize: "11px", color: "var(--ink-ghost)", fontWeight: "normal" }}>{hint}</span>}
+      </div>
+      <textarea
+        className="field-textarea"
+        rows={rows}
+        value={value}
+        onChange={onChange}
+        onInput={e => autoResize(e.target)}
+        ref={el => autoResize(el)}
+        style={{ resize: "none" }}
+      />
+    </div>
+  );
 }
 
+function TransitionField({ label, value, onChange }) {
+  return (
+    <div style={{ padding: "6px 4px", margin: "4px 0" }}>
+      <div style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.07em", color: "var(--ink-ghost)", marginBottom: "5px" }}>{label}</div>
+      <textarea
+        className="field-textarea"
+        rows={2}
+        value={value}
+        onChange={onChange}
+        onInput={e => autoResize(e.target)}
+        ref={el => autoResize(el)}
+        placeholder="Bridge from the previous section…"
+        style={{ resize: "none", background: "var(--parchment-warm)", fontSize: "14px" }}
+      />
+    </div>
+  );
+}
+
+// ── Main component ─────────────────────────────────────────────────────────────
+
 export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading, onOpenDrawer }) {
-  const templateInjectedRef = useRef(false);
   const [msChat, setMsChat] = useState([]);
   const [msChatInput, setMsChatInput] = useState("");
   const [msChatLoading, setMsChatLoading] = useState(false);
@@ -116,33 +187,38 @@ export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading, onOpe
     if (msChatEndRef.current) msChatEndRef.current.scrollIntoView({ behavior: "smooth" });
   }, [msChat, msChatLoading]);
 
+  const ms = parseManuscript(sermon.manuscript);
+  const outline = getOutline(sermon);
+  const fes = getFunctionalElements(sermon);
+
+  function updateMs(section, field, value) {
+    const current = parseManuscript(sermon.manuscript);
+    let updated;
+    if (section === "transitions") {
+      updated = { ...current, transitions: { ...current.transitions, [field]: value } };
+    } else {
+      updated = { ...current, [section]: { ...current[section], [field]: value } };
+    }
+    onUpdate({ manuscript: JSON.stringify(updated) });
+  }
+
+  function updateFE(pointId, field, value) {
+    const updated = { ...fes, [pointId]: { ...(fes[pointId] || {}), [field]: value } };
+    onUpdate({ functional_elements: serializeFunctionalElements(updated) });
+  }
+
+  function updatePointText(pointId, text) {
+    const updated = outline.map(p => p.id === pointId ? { ...p, text } : p);
+    onUpdate({ outline: serializeOutline(updated) });
+  }
+
   function buildMsContext() {
-    const outline = getOutline(sermon);
-    const fe = getFunctionalElements(sermon);
-    const parts = [
+    return [
       `Passage: ${sermon.passage || "(not set)"}`,
       `MPT: ${sermon.mpt || "(none)"}`,
       `MPS: ${sermon.mps || "(none)"}`,
-    ];
-    if (outline.length > 0) {
-      const outlineText = outline.map((p, i) => {
-        const d = fe[p.id] || {};
-        const lines = [`${i + 1}. ${p.text}`];
-        if (d.scripture) lines.push(`   Scripture: ${d.scripture}`);
-        if (d.explanation) lines.push(`   Explanation: ${d.explanation}`);
-        if (d.application) lines.push(`   Application: ${d.application}`);
-        if (d.illustration) lines.push(`   Illustration: ${d.illustration}`);
-        return lines.join("\n");
-      }).join("\n\n");
-      parts.push(`\nOutline & functional elements:\n${outlineText}`);
-    }
-    if (sermon.manuscript?.trim()) {
-      const ms = sermon.manuscript.length > 3000
-        ? sermon.manuscript.slice(0, 3000) + "\n\n[…manuscript continues…]"
-        : sermon.manuscript;
-      parts.push(`\nManuscript so far:\n${ms}`);
-    }
-    return parts.join("\n");
+      `\nManuscript:\n${assembleManuscriptText(sermon)}`,
+    ].join("\n");
   }
 
   async function sendMsChat() {
@@ -167,103 +243,184 @@ export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading, onOpe
     }
   }
 
-  useEffect(() => {
-    if (!templateInjectedRef.current && !sermon.manuscript?.trim()) {
-      templateInjectedRef.current = true;
-      onUpdate({ manuscript: buildTemplate(sermon) });
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const words = wordCount(sermon.manuscript);
-  const minutes = Math.round(words / 130); // ~130 wpm
-
   function runFlowCoach() {
-    const outline = getOutline(sermon);
     const steps = ["Introduction"];
     for (let i = 0; i < outline.length - 1; i++) {
       steps.push(`Gap: "${outline[i].text}" → "${outline[i + 1].text}"`);
     }
     steps.push("Conclusion");
     const worklist = steps.map((s, i) => `${i + 1}. ${s}`).join("\n");
-    const prompt = `Title: ${sermon.title || "Untitled"}\nPassage: ${sermon.passage || "unknown"}\nMPT: ${sermon.mpt || "(not set)"}\nMPS: ${sermon.mps || "(not set)"}\n\nOutline:\n${outline.map((p, i) => `${i + 1}. ${p.text}`).join("\n") || "(none)"}\n\nManuscript:\n\n${sermon.manuscript || "(empty)"}\n\nWorklist (${steps.length} steps):\n${worklist}\n\nBegin with Step 1.`;
+    const manuscript = assembleManuscriptText(sermon);
+    const prompt = `Title: ${sermon.title || "Untitled"}\nPassage: ${sermon.passage || "unknown"}\nMPT: ${sermon.mpt || "(not set)"}\nMPS: ${sermon.mps || "(not set)"}\n\nManuscript:\n\n${manuscript}\n\nWorklist (${steps.length} steps):\n${worklist}\n\nBegin with Step 1.`;
     onOpenDrawer?.();
     onAI(prompt, FLOW_COACH_SYSTEM);
   }
 
   function runEarCheck() {
-    const outline = getOutline(sermon);
-    const prompt = `Title: ${sermon.title || "Untitled"}\nPassage: ${sermon.passage || "unknown"}\nMPT: ${sermon.mpt || "(not set)"}\nMPS: ${sermon.mps || "(not set)"}\n\nOutline:\n${outline.map((p, i) => `${i + 1}. ${p.text}`).join("\n") || "(none)"}\n\nManuscript:\n\n${sermon.manuscript || "(empty)"}`;
+    const manuscript = assembleManuscriptText(sermon);
+    const prompt = `Title: ${sermon.title || "Untitled"}\nPassage: ${sermon.passage || "unknown"}\nMPT: ${sermon.mpt || "(not set)"}\nMPS: ${sermon.mps || "(not set)"}\n\nManuscript:\n\n${manuscript}`;
     onOpenDrawer?.();
     onAI(prompt, EAR_CHECK_SYSTEM);
   }
 
   function runTuneUp() {
-    const outline = getOutline(sermon);
-    const prompt = `Title: ${sermon.title || "Untitled"}\nPassage: ${sermon.passage || "unknown"}\nMPT: ${sermon.mpt || "(not set)"}\nMPS: ${sermon.mps || "(not set)"}\n\nOutline:\n${outline.map((p, i) => `${i + 1}. ${p.text}`).join("\n") || "(none)"}\n\nManuscript:\n\n${sermon.manuscript || "(empty)"}`;
+    const manuscript = assembleManuscriptText(sermon);
+    const prompt = `Title: ${sermon.title || "Untitled"}\nPassage: ${sermon.passage || "unknown"}\nMPT: ${sermon.mpt || "(not set)"}\nMPS: ${sermon.mps || "(not set)"}\n\nManuscript:\n\n${manuscript}`;
     onOpenDrawer?.();
     onAI(prompt, TUNE_UP_SYSTEM);
   }
 
+  const words = countWords(sermon);
+  const minutes = Math.round(words / 130);
+  const hasContent = words > 0;
+
+  const sectionCard = {
+    background: "var(--white)",
+    border: "1px solid var(--parchment-deep)",
+    borderRadius: "var(--radius-lg)",
+    padding: "20px 24px",
+    marginBottom: "4px",
+  };
+
+  const sectionHeading = {
+    fontFamily: "'Playfair Display', serif",
+    fontSize: "15px",
+    fontWeight: "700",
+    color: "var(--ink)",
+    marginBottom: "20px",
+    paddingBottom: "10px",
+    borderBottom: "1px solid var(--parchment-deep)",
+  };
+
   return (
     <div>
+      {/* Toolbar */}
       <div className="manuscript-toolbar">
-        <div className="word-count">
-          {words.toLocaleString()} words · ~{minutes} min
-        </div>
+        <div className="word-count">{words.toLocaleString()} words · ~{minutes} min</div>
         <button
           className="btn-ghost btn-sm has-tooltip"
-          data-tooltip="Generates a structured writing template from your outline, passage, MPT, and MPS. Use it to scaffold a blank manuscript or reset the structure before you begin writing. Any existing content will be replaced."
-          onClick={() => {
-            if (sermon.manuscript?.trim() && !confirm("Replace the current manuscript with a generated framework? This cannot be undone.")) return;
-            onUpdate({ manuscript: buildTemplate(sermon) });
-          }}
-        >
-          Build Manuscript Framework
-        </button>
-        <button
-          className="btn-ghost btn-sm has-tooltip"
-          data-tooltip="A step-by-step coaching session that walks through what each movement in your sermon needs to accomplish — intro, transitions, and conclusion. Doesn't write anything; coaches direction only and works at your pace."
+          data-tooltip="A step-by-step coaching session that walks through what each movement needs to accomplish — intro, transitions, conclusion. Coaches direction only, one step at a time."
           onClick={runFlowCoach}
-          disabled={aiLoading || !sermon.manuscript}
+          disabled={aiLoading}
         >
           Flow Coach
         </button>
         <button
           className="btn-ghost btn-sm has-tooltip"
-          data-tooltip="Scans your manuscript for passages that will lose listeners when heard aloud. Flags structural orphans and speakability problems with a diagnosis and a direction — no rewrites."
+          data-tooltip="Scans your manuscript for passages that will lose listeners when heard aloud. Steps through each issue one at a time with a diagnosis and direction."
           onClick={runEarCheck}
-          disabled={aiLoading || !sermon.manuscript}
+          disabled={aiLoading || !hasContent}
         >
           Ear Check
         </button>
         <button
           className="btn-primary btn-sm has-tooltip"
-          data-tooltip="A full editorial evaluation covering structure, text alignment, functional balance, and redemptive logic. Produces a Sermon Snapshot, Alignment Map, and Patch Plan with specific, located edit instructions."
+          data-tooltip="A full editorial evaluation covering structure, text alignment, functional balance, and redemptive logic. Produces a Sermon Snapshot, Alignment Map, and Patch Plan."
           onClick={runTuneUp}
-          disabled={aiLoading || !sermon.manuscript}
+          disabled={aiLoading || !hasContent}
         >
           {aiLoading ? "Running…" : "Final Tune-Up"}
         </button>
       </div>
 
-      <textarea
-        className="field-textarea"
-        style={{
-          minHeight: "calc(100vh - 280px)",
-          fontFamily: "'Crimson Pro', serif",
-          fontSize: "17px",
-          lineHeight: "1.8",
-          padding: "20px",
-          border: "1px solid var(--parchment-deep)",
-          borderRadius: "var(--radius-lg)",
-          resize: "vertical",
-        }}
-        value={sermon.manuscript || ""}
-        onChange={(e) => onUpdate({ manuscript: e.target.value })}
-        placeholder="Begin your manuscript here…"
+      {/* Introduction */}
+      <div id="ms-section-intro" style={sectionCard}>
+        <div style={sectionHeading}>Introduction</div>
+        <SectionField
+          label="Opener"
+          value={ms.introduction?.opener || ""}
+          onChange={e => updateMs("introduction", "opener", e.target.value)}
+        />
+        <SectionField
+          label="Main Point of the Text"
+          value={sermon.mpt || ""}
+          onChange={e => onUpdate({ mpt: e.target.value })}
+          rows={1}
+        />
+        <SectionField
+          label="Scripture Reading"
+          value={ms.introduction?.scripture_reading || ""}
+          onChange={e => updateMs("introduction", "scripture_reading", e.target.value)}
+          hint={sermon.passage ? sermon.passage : ""}
+        />
+        <SectionField
+          label="Main Point of the Sermon"
+          value={sermon.mps || ""}
+          onChange={e => onUpdate({ mps: e.target.value })}
+          rows={1}
+        />
+        <SectionField
+          label="Expectation"
+          value={ms.introduction?.expectation || ""}
+          onChange={e => updateMs("introduction", "expectation", e.target.value)}
+        />
+        <SectionField
+          label="Title"
+          value={sermon.title || ""}
+          onChange={e => onUpdate({ title: e.target.value })}
+          rows={1}
+        />
+      </div>
+
+      {/* Points with transitions */}
+      {outline.map((pt, i) => (
+        <div key={pt.id}>
+          <TransitionField
+            label={`Transition → Point ${i + 1}`}
+            value={(ms.transitions || {})[pt.id] || ""}
+            onChange={e => updateMs("transitions", pt.id, e.target.value)}
+          />
+          <div id={`ms-section-${pt.id}`} style={sectionCard}>
+            <div style={sectionHeading}>Point {i + 1}</div>
+            <SectionField
+              label="Point"
+              value={pt.text}
+              onChange={e => updatePointText(pt.id, e.target.value)}
+              rows={1}
+            />
+            <SectionField
+              label="Scripture"
+              value={fes[pt.id]?.scripture || ""}
+              onChange={e => updateFE(pt.id, "scripture", e.target.value)}
+              rows={1}
+            />
+            <SectionField
+              label="Explanation"
+              value={fes[pt.id]?.explanation || ""}
+              onChange={e => updateFE(pt.id, "explanation", e.target.value)}
+            />
+            <SectionField
+              label="Application"
+              value={fes[pt.id]?.application || ""}
+              onChange={e => updateFE(pt.id, "application", e.target.value)}
+            />
+            <SectionField
+              label="Illustration"
+              value={fes[pt.id]?.illustration || ""}
+              onChange={e => updateFE(pt.id, "illustration", e.target.value)}
+            />
+          </div>
+        </div>
+      ))}
+
+      {/* Transition to Conclusion */}
+      <TransitionField
+        label="Transition → Conclusion"
+        value={(ms.transitions || {}).conclusion || ""}
+        onChange={e => updateMs("transitions", "conclusion", e.target.value)}
       />
 
-      {/* Inline manuscript chat */}
+      {/* Conclusion */}
+      <div id="ms-section-conclusion" style={sectionCard}>
+        <div style={sectionHeading}>Conclusion</div>
+        <SectionField
+          label="Response"
+          value={ms.conclusion?.response || ""}
+          onChange={e => updateMs("conclusion", "response", e.target.value)}
+        />
+      </div>
+
+      {/* Inline Write with AI chat */}
       <div style={{ marginTop: "20px", border: "1px solid var(--parchment-deep)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
         <div style={{ padding: "10px 16px", background: "var(--parchment)", borderBottom: "1px solid var(--parchment-deep)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <span style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--ink-ghost)" }}>Write with AI</span>
@@ -306,7 +463,7 @@ export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading, onOpe
             className="field-textarea"
             rows={2}
             style={{ flex: 1, minHeight: "unset", fontSize: "13px", resize: "none", border: "none", background: "transparent", padding: "4px 0" }}
-            placeholder="Write me an introduction. Draft a transition after Point 2. Suggest an illustration…"
+            placeholder="Write me an opener. Draft a transition to Point 2. Give me an illustration for the conclusion…"
             value={msChatInput}
             onChange={e => setMsChatInput(e.target.value)}
             onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMsChat(); } }}
