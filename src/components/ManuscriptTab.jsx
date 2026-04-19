@@ -107,6 +107,8 @@ export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading, onOpe
   const [msChatLoading, setMsChatLoading] = useState(false);
   const [implementLoading, setImplementLoading] = useState(false);
   const msChatEndRef = useRef(null);
+  const manuscriptRef = useRef(null);
+  const cursorPosRef = useRef(null);
 
   useEffect(() => {
     if (msChatEndRef.current) msChatEndRef.current.scrollIntoView({ behavior: "smooth" });
@@ -199,6 +201,22 @@ export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading, onOpe
     sendMsChat("Run an Ear Check on this manuscript. Diagnose where it will lose listeners — structural orphans and speakability problems. Flag the worst offenders with a diagnosis and direction for each.", { isEarCheck: true });
   }
 
+  function applyToManuscript(content) {
+    const current = sermon.manuscript || "";
+    const pos = cursorPosRef.current;
+    if (!current.trim()) {
+      onUpdate({ manuscript: content });
+      return;
+    }
+    if (pos === null || pos >= current.length) {
+      onUpdate({ manuscript: current.trimEnd() + "\n\n" + content });
+      return;
+    }
+    const before = current.slice(0, pos).trimEnd();
+    const after = current.slice(pos).trimStart();
+    onUpdate({ manuscript: [before, content, after].filter(Boolean).join("\n\n") });
+  }
+
   function runTuneUp() {
     const outline = getOutline(sermon);
     const prompt = `Title: ${sermon.title || "Untitled"}\nPassage: ${sermon.passage || "unknown"}\nMPT: ${sermon.mpt || "(not set)"}\nMPS: ${sermon.mps || "(not set)"}\n\nOutline:\n${outline.map((p, i) => `${i + 1}. ${p.text}`).join("\n") || "(none)"}\n\nManuscript:\n\n${sermon.manuscript || "(empty)"}`;
@@ -260,8 +278,12 @@ export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading, onOpe
           borderRadius: "var(--radius-lg)",
           resize: "vertical",
         }}
+        ref={manuscriptRef}
         value={sermon.manuscript || ""}
         onChange={(e) => onUpdate({ manuscript: e.target.value })}
+        onClick={(e) => { cursorPosRef.current = e.target.selectionStart; }}
+        onKeyUp={(e) => { cursorPosRef.current = e.target.selectionStart; }}
+        onBlur={(e) => { cursorPosRef.current = e.target.selectionStart; }}
         placeholder="Begin your manuscript here…"
       />
 
@@ -305,10 +327,7 @@ export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading, onOpe
                       <button
                         className="btn-ghost btn-sm"
                         style={{ fontSize: "12px" }}
-                        onClick={() => {
-                          const current = sermon.manuscript || "";
-                          onUpdate({ manuscript: current.trimEnd() ? current.trimEnd() + "\n\n" + msg.content : msg.content });
-                        }}
+                        onClick={() => applyToManuscript(msg.content)}
                       >
                         ↓ Apply to manuscript
                       </button>
