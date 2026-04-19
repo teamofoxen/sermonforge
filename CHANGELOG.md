@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-04-19 — feat: Sectioned manuscript editor
+
+- Replaced monolithic manuscript textarea with structured section cards: Introduction, one card per outline point, Transitions, and Conclusion.
+- Manuscript JSON stores only new connective tissue (opener, scripture reading, expectation, transitions, response); E/A/I and outline point text edit their source fields directly and sync back.
+- Flow Coach, Ear Check, and Tune-Up now use `assembleManuscriptText()` to reconstruct the full manuscript for AI prompts.
+- FC and Ear Check both use stepped worklists — brief bullets, one item at a time, reversible.
+
+---
+
 ## 2026-04-19 — feat: Ear Check routed to inline chat with Implement Suggestions
 
 - Ear Check now runs in the Write with AI panel (tagged `isEarCheck`) instead of the drawer.
