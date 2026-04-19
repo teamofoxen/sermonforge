@@ -337,41 +337,41 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
                   </div>
                 )}
 
-                {/* Three editable fields */}
+                {/* Three editable fields — ordered outside in: Cultural Moment → The Room → The Sermon's Work */}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px", marginTop: "12px" }}>
                   <div>
-                    <label className="field-label">Topic / Theme</label>
-                    <textarea
-                      className="field-textarea"
-                      value={sermon.topic_theme || ""}
-                      onChange={e => handleUpdate({ topic_theme: e.target.value })}
-                      onInput={(e) => autoResize(e.target)}
-                      ref={(el) => autoResize(el)}
-                      placeholder="Topic or theme — doctrine, life situation, question, felt need..."
-                      rows={1}
-                    />
-                  </div>
-                  <div>
-                    <label className="field-label">Audience</label>
-                    <textarea
-                      className="field-textarea"
-                      value={sermon.audience_assumptions || ""}
-                      onChange={e => handleUpdate({ audience_assumptions: e.target.value })}
-                      onInput={(e) => autoResize(e.target)}
-                      ref={(el) => autoResize(el)}
-                      placeholder="What do you know about who's in the room?"
-                      rows={1}
-                    />
-                  </div>
-                  <div>
-                    <label className="field-label">Background</label>
+                    <label className="field-label">The Cultural Moment</label>
                     <textarea
                       className="field-textarea"
                       value={sermon.background_noise || ""}
                       onChange={e => handleUpdate({ background_noise: e.target.value })}
                       onInput={(e) => autoResize(e.target)}
                       ref={(el) => autoResize(el)}
-                      placeholder="What's in the air — news, community events, cultural moment?"
+                      placeholder="What world is this congregation walking in from? What does culture believe, distort, or weaponize about this topic?"
+                      rows={1}
+                    />
+                  </div>
+                  <div>
+                    <label className="field-label">The Room</label>
+                    <textarea
+                      className="field-textarea"
+                      value={sermon.audience_assumptions || ""}
+                      onChange={e => handleUpdate({ audience_assumptions: e.target.value })}
+                      onInput={(e) => autoResize(e.target)}
+                      ref={(el) => autoResize(el)}
+                      placeholder="Who's in the room and where are they? Where has this congregation drifted, and what do they currently believe?"
+                      rows={1}
+                    />
+                  </div>
+                  <div>
+                    <label className="field-label">The Sermon's Work</label>
+                    <textarea
+                      className="field-textarea"
+                      value={sermon.topic_theme || ""}
+                      onChange={e => handleUpdate({ topic_theme: e.target.value })}
+                      onInput={(e) => autoResize(e.target)}
+                      ref={(el) => autoResize(el)}
+                      placeholder="What is this sermon trying to accomplish? What is the big claim, and where does the Gospel enter?"
                       rows={1}
                     />
                   </div>

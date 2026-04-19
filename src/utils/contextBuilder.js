@@ -485,9 +485,9 @@ export function buildTiers({ normalized, compressed, libraryChunks = [], theolog
   if (inc.pastoralContext) {
     const PASTORAL_BUDGET = 800;
     const fields = [
-      normalized.topic_theme?.trim()          && `Topic/Theme: ${trimStr(normalized.topic_theme.trim(),          PASTORAL_BUDGET)}`,
-      normalized.audience_assumptions?.trim() && `Audience: ${trimStr(normalized.audience_assumptions.trim(),   PASTORAL_BUDGET)}`,
-      normalized.background_noise?.trim()     && `Background: ${trimStr(normalized.background_noise.trim(),     PASTORAL_BUDGET)}`,
+      normalized.background_noise?.trim()     && `The Cultural Moment: ${trimStr(normalized.background_noise.trim(),     PASTORAL_BUDGET)}`,
+      normalized.audience_assumptions?.trim() && `The Room: ${trimStr(normalized.audience_assumptions.trim(),   PASTORAL_BUDGET)}`,
+      normalized.topic_theme?.trim()          && `The Sermon's Work: ${trimStr(normalized.topic_theme.trim(),          PASTORAL_BUDGET)}`,
     ].filter(Boolean);
     if (fields.length > 0) {
       // Apply shared budget: trim the joined string if it exceeds PASTORAL_BUDGET.

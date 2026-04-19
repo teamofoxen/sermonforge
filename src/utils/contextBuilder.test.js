@@ -453,9 +453,9 @@ describe("tier7 — pastoral intelligence: always-on, content-gated", () => {
     const normPartial = { ...NORM, topic_theme: "Lament", audience_assumptions: "", background_noise: "" };
     const t = tiers(STEPS.OUTLINE, normPartial);
     expect(t.tier7).not.toBeNull();
-    expect(t.tier7).toContain("Topic/Theme: Lament");
-    expect(t.tier7).not.toContain("Audience:");
-    expect(t.tier7).not.toContain("Background:");
+    expect(t.tier7).toContain("The Sermon's Work: Lament");
+    expect(t.tier7).not.toContain("The Room:");
+    expect(t.tier7).not.toContain("The Cultural Moment:");
   });
 
   it("single-word topic ('Lament') is included, not suppressed", () => {
@@ -475,16 +475,16 @@ describe("tier7 — pastoral intelligence: always-on, content-gated", () => {
 
   it("all three fields appear when all are populated", () => {
     const t = tiers(STEPS.OUTLINE, NORM_WITH_PASTORAL);
-    expect(t.tier7).toContain("Topic/Theme:");
-    expect(t.tier7).toContain("Audience:");
-    expect(t.tier7).toContain("Background:");
+    expect(t.tier7).toContain("The Cultural Moment:");
+    expect(t.tier7).toContain("The Room:");
+    expect(t.tier7).toContain("The Sermon's Work:");
   });
 
   it("[THIS SERMON] label appears in assembleContext() output", () => {
     const t = tiers(STEPS.OUTLINE, NORM_WITH_PASTORAL);
     const output = assembleContext(t);
     expect(output).toContain("[THIS SERMON]");
-    expect(output).toContain("Topic/Theme: Lament");
+    expect(output).toContain("The Sermon's Work: Lament");
   });
 
   it("[THIS SERMON] appears after [PASSAGE & MPT] and before [INTERPRETATION]", () => {
