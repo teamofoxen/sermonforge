@@ -46,7 +46,8 @@ async function initDatabase() {
     db = new SQL.Database();
   }
 
-  // Create tables
+  // Bootstrap-only schema. All subsequent schema changes MUST go through
+  // runMigrations() below — do not add or alter tables in this block.
   db.run(`
     CREATE TABLE IF NOT EXISTS series (
       id TEXT PRIMARY KEY,
@@ -1600,7 +1601,7 @@ ipcMain.handle("series-export-study-guide", async (_, seriesId) => {
 
     const { Packer } = require("docx");
     const buffer = await Packer.toBuffer(doc);
-    fs.writeFileSync(filepath, buffer);
+    await fs.promises.writeFile(filepath, buffer);
 
     return { success: true, filepath };
   } catch (e) {
@@ -1726,7 +1727,7 @@ ipcMain.handle("sermon-export-pmb", async (_, { blocks, spine, title, passage, m
     const filepath = path.join(exportDir, `${safeTitle} — Preaching Blocks.docx`);
 
     const buffer = await Packer.toBuffer(doc);
-    fs.writeFileSync(filepath, buffer);
+    await fs.promises.writeFile(filepath, buffer);
     shell.openPath(filepath);
 
     return { success: true, filepath };

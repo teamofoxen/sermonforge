@@ -41,5 +41,8 @@ src/data/
 # User-generated feedback files
 Feedback/
 
+# Generated Study Guide exports (legacy repo-root path)
+StudyGuides/
+
 # Obsidian vault config — unrelated to the app
 .obsidian/

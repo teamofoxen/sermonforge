@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-04-19 — chore: sweep-the-multiverse audit fixes
+
+- Both docx export handlers in `electron/main.js` now use `fs.promises.writeFile` instead of `fs.writeFileSync`, eliminating main-process blocking during Study Guide and PMB exports.
+- Moved `build_theology_fts.py` and `build_theology_vectors.js` into `scripts/theology/` with a README documenting the ~600-word chunk invariant and the 384-dim embedding contract.
+- Added a comment above the bootstrap `CREATE TABLE` block in `main.js` stating that all further schema changes must go through `runMigrations()`.
+- Added `StudyGuides/` to `.gitignore`.
+- Installed the `sweep-the-multiverse` skill under `.claude/skills/`.
+
+---
+
 ## 2026-04-19 — feat: Sectioned manuscript editor
 
 - Replaced monolithic manuscript textarea with structured section cards: Introduction, one card per outline point, Transitions, and Conclusion.
