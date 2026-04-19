@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-04-19 — feat: inline Write with AI chat on Manuscript tab
+
+- Added always-visible chat panel below the manuscript textarea with passage, MPS, outline, and functional elements sent as context on every turn.
+- System prompt allows writing (introductions, transitions, sections, illustrations) unlike the coaching-only Flow Coach.
+
+---
+
 ## 2026-04-19 — feat: Manuscript framework pre-fills from functional elements
 
 - `buildTemplate` now reads scripture, explanation, application, and illustration from each point's FE data so "Build Manuscript Framework" seeds the manuscript with the pastor's existing work.
