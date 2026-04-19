@@ -35,31 +35,16 @@ function buildTemplate(sermon) {
   ].join("\n");
 }
 
-const MANUSCRIPT_CHAT_SYSTEM = `You are a sermon writing assistant. Help the pastor draft, develop, and refine their manuscript.
+const MANUSCRIPT_CHAT_SYSTEM = `You are a sermon writing assistant and flow coach in the same conversation.
 
-The pastor may ask you to write introductions, conclusions, transitions, body sections, illustrations, or application content. Write it — don't coach around it.
+WHEN COACHING (the pastor asks what a section needs to accomplish, how it should move, what's missing):
+Work through the sermon movements — intro, each point, transitions, conclusion. Name what each section needs to do to the listener: pacing, emotional register, logical flow, momentum. Be concrete. Speak like a coach.
 
-Voice rules: write at a normal spoken register, not generically "preachery". Ground everything in the passage and the MPS. Preserve the theological weight without sounding academic. If the pastor gives you a fragment or a direction, work with it.
+WHEN WRITING (the pastor asks you to write, draft, or give them an intro, transition, section, illustration, or application):
+Produce a full draft — not an outline, not suggestions, not bullet points. The pastor edits from a draft; they can't preach a plan.
+Voice: spoken register, not generically "preachery". Ground everything in the passage and MPS. Theological weight without sounding academic.
 
-When writing a section: produce a full draft, not an outline or a list of suggestions. The pastor can edit from a draft; they can't preach a bulleted plan.`;
-
-const FLOW_COACH_SYSTEM = `You are a sermon flow coach. Your job is to help the pastor understand what each movement in the sermon needs to accomplish — from the opening through every transition to the final landing. Do not write any of it. Coach the direction only.
-
-Work through the sermon in this order:
-1. The Introduction — what does the opening need to do to earn the congregation's attention and orient them for what's coming?
-2. Each gap between outline points — what movement is needed here and why?
-3. The Conclusion — how does the sermon need to land as a spoken, heard moment?
-
-For each movement, you will:
-1. Briefly name what the congregation just experienced (or, for the intro, what they're arriving with)
-2. Name what's coming next
-3. Give one specific directional coaching note: what kind of movement is needed here and why. Think about pacing, emotional register, logical flow, and momentum. Does the congregation need to be brought forward, given a breath, re-anchored to the main point, or surprised?
-
-Be concrete. Speak like a coach: "This is a good moment to..." / "You need to give people a beat here because..." / "That section was dense — before you move on, they need..."
-
-Do NOT write any transitions, openings, or conclusions. Do NOT suggest specific wording or sentences. Coach the direction only.
-
-Start with the Introduction. After the pastor responds, move to the first gap between outline points, then continue through each gap, and finish with the Conclusion. Work at the pastor's pace.`;
+You do both in the same thread. If the pastor moves from "what does my intro need?" to "now write it" — follow them.`;
 
 const EAR_CHECK_SYSTEM = `You are a sermon delivery analyst. Diagnose where this manuscript will lose listeners. Do not rewrite. Do not coach. Diagnose and direct.
 
@@ -151,14 +136,14 @@ export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading, onOpe
     return parts.join("\n");
   }
 
-  async function sendMsChat() {
-    const input = msChatInput.trim();
+  async function sendMsChat(overrideText = null) {
+    const input = (overrideText ?? msChatInput).trim();
     if (!input || msChatLoading) return;
     const contextPrefix = buildMsContext() + "\n\n---\n\n";
     const newUserMsg = { role: "user", content: input };
     const history = [...msChat, newUserMsg];
     setMsChat(history);
-    setMsChatInput("");
+    if (!overrideText) setMsChatInput("");
     setMsChatLoading(true);
     try {
       const messages = history.map((m, i) =>
@@ -185,9 +170,8 @@ export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading, onOpe
 
   function runFlowCoach() {
     const outline = getOutline(sermon);
-    const prompt = `Title: ${sermon.title || "Untitled"}\nPassage: ${sermon.passage || "unknown"}\nMPT: ${sermon.mpt || "(not set)"}\nMPS: ${sermon.mps || "(not set)"}\n\nOutline:\n${outline.map((p, i) => `${i + 1}. ${p.text}`).join("\n") || "(none)"}\n\nManuscript:\n\n${sermon.manuscript || "(empty)"}\n\nPlease begin with the Introduction.`;
-    onOpenDrawer?.();
-    onAI(prompt, FLOW_COACH_SYSTEM);
+    const prompt = `Walk me through the flow of this sermon. Start with what the Introduction needs to accomplish, then cover each point and transition, then the Conclusion. After you've coached the shape, I may ask you to write specific sections.`;
+    sendMsChat(prompt);
   }
 
   function runEarCheck() {
