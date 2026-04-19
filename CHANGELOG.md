@@ -2,6 +2,12 @@
 
 ---
 
+## 2026-04-19 — feat: Populate Scripture button auto-fetches ESV text per outline point
+
+- Added "Populate Scripture (ESV)" button to Step 4; AI maps each outline point to its verse range, then ESV text is fetched and written into each card automatically.
+
+---
+
 ## 2026-04-19 — fix+feat: Functional Elements — editable titles, scripture field, because-clause fix
 
 - Fixed stale `funcData` state so because-clauses from outline chat now carry through to Step 4 immediately.

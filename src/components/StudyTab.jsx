@@ -16,6 +16,7 @@ import OutlineBuilder from "./OutlineBuilder";
 import InlineAIResponse from "./InlineAIResponse";
 import { OUTLINE_SYSTEM, outlineHasNumberedList, extractOutlineWithExplanations } from "../utils/outlineChat";
 import PassagePopup from "./PassagePopup";
+import { fetchPassage } from "../db/database";
 
 const STEP_LABELS = ["Exegesis", "MPT / MPS", "Outline", "Functional Elements"];
 const PHASE_LABELS = ["Observe", "Interpret", "Redemptive Thread", "Implications"];
@@ -271,6 +272,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
   const [feChat, setFeChat] = useState([]);
   const [feChatInput, setFeChatInput] = useState("");
   const [feChatLoading, setFeChatLoading] = useState(false);
+  const [scripturePopulating, setScripturePopulating] = useState(false);
 
   // Passage popup anchor — DOM element of the triggering button, or null when closed
   const [passageAnchor, setPassageAnchor] = useState(null);
@@ -537,6 +539,36 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
     const cleaned = { ...funcData };
     delete cleaned[pointId];
     onUpdate({ functional_elements: serializeFunctionalElements(cleaned) });
+  }
+
+  async function populateScripture() {
+    if (!sermon.passage || outline.length === 0 || scripturePopulating) return;
+    setScripturePopulating(true);
+    try {
+      const pts = outline.map((p, i) => `${i + 1}. ${p.text}`).join("\n");
+      const resp = await sendAIMessage(
+        [{ role: "user", content: `Passage: ${sermon.passage}\n\nOutline:\n${pts}\n\nMap each outline point to its most relevant verse range within the passage.` }],
+        `You are helping a pastor identify which specific verses within a sermon passage ground each outline point. Return ONLY valid JSON — no preamble, no markdown, no explanation. Format: {"1": "Book Chapter:Verse-Verse", "2": "Book Chapter:Verse-Verse", ...}. Keys are point numbers as strings. Values must be exact verse references that are subsets of the given passage.`
+      );
+      const cleaned = resp.replace(/^```(?:json)?\n?/m, "").replace(/\n?```$/m, "").trim();
+      const map = JSON.parse(cleaned);
+      const next = { ...funcData };
+      await Promise.all(
+        outline.map(async (pt, i) => {
+          const ref = map[String(i + 1)];
+          if (!ref) return;
+          const result = await fetchPassage(ref);
+          if (result?.esv) {
+            next[pt.id] = { ...(next[pt.id] || { explanation: "", application: "", illustration: "" }), scripture: result.esv };
+          }
+        })
+      );
+      onUpdate({ functional_elements: serializeFunctionalElements(next) });
+    } catch (e) {
+      console.error("[populateScripture]", e);
+    } finally {
+      setScripturePopulating(false);
+    }
   }
 
   async function sendFeChat() {
@@ -1212,6 +1244,18 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
       {activeStep === 4 && (
         <div className="study-step-active">
           <SummaryBlock summaryKey="s4" {...summaryProps} />
+
+          {outline.length > 0 && sermon.passage && (
+            <div style={{ marginBottom: "12px" }}>
+              <button
+                className="btn-ghost btn-sm"
+                disabled={scripturePopulating}
+                onClick={populateScripture}
+              >
+                {scripturePopulating ? "Fetching scripture…" : "Populate Scripture (ESV)"}
+              </button>
+            </div>
+          )}
 
 {outline.map((pt, i) => (
             <FuncElem
