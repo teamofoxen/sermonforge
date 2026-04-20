@@ -41,7 +41,14 @@
       "dist/**/*",
       "electron/**/*",
       "node_modules/**/*",
-      "!node_modules/@xenova/transformers/.cache/**"
+      "!node_modules/@xenova/transformers/.cache/**",
+      "!node_modules/better-sqlite3/build/Release/obj/**",
+      "!node_modules/better-sqlite3/build/Release/*.iobj",
+      "!node_modules/better-sqlite3/build/Release/*.ipdb",
+      "!node_modules/better-sqlite3/build/Release/*.pdb",
+      "!node_modules/better-sqlite3/build/Release/*.exp",
+      "!node_modules/better-sqlite3/build/Release/*.lib",
+      "!node_modules/better-sqlite3/build/Release/test_extension.node"
     ],
     "asarUnpack": [
       "node_modules/sql.js/dist/sql-wasm.wasm",
