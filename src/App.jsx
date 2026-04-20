@@ -1,18 +1,19 @@
-import { useState, useCallback, useEffect, Component } from "react";
+import { useState, useCallback, useEffect, Component, lazy, Suspense } from "react";
 import { createSeries } from "./db/database";
 import { DemoProvider } from "./contexts/DemoContext";
 import DemoSplash from "./components/DemoSplash";
 import Sidebar from "./components/Sidebar";
 import Dashboard from "./components/Dashboard";
-import SermonList from "./components/SermonList";
-import Calendar from "./components/Calendar";
-import Illustrations from "./components/Illustrations";
-import Archive from "./components/Archive";
-import Library from "./components/Library";
-import Planning from "./components/Planning";
-import SeriesPlanner from "./components/SeriesPlanner";
-import SermonWorkspace from "./components/SermonWorkspace";
 import PassagePopup from "./components/PassagePopup";
+
+const SermonList = lazy(() => import("./components/SermonList"));
+const Calendar = lazy(() => import("./components/Calendar"));
+const Illustrations = lazy(() => import("./components/Illustrations"));
+const Archive = lazy(() => import("./components/Archive"));
+const Library = lazy(() => import("./components/Library"));
+const Planning = lazy(() => import("./components/Planning"));
+const SeriesPlanner = lazy(() => import("./components/SeriesPlanner"));
+const SermonWorkspace = lazy(() => import("./components/SermonWorkspace"));
 
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -142,6 +143,7 @@ export default function App() {
         onShowPassage={() => setShowPassageModal(true)}
       />
       <div className="main-content">
+        <Suspense fallback={null}>
         {currentView === "dashboard" && (
           <Dashboard
             key={refreshKey}
@@ -191,6 +193,7 @@ export default function App() {
             onPassageChange={setCurrentPassage}
           />
         )}
+        </Suspense>
       </div>
       <PassagePopup
         passage={currentPassage}
