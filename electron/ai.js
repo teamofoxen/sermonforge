@@ -1,17 +1,14 @@
-// electron/ai.js — Anthropic client and AI IPC handler
+// electron/ai.js — AI IPC handler.
 //
 // .env is loaded by main.js before this module is required,
-// so process.env.ANTHROPIC_API_KEY is available at module load time.
+// so process.env.ANTHROPIC_API_KEY is available when provider.js loads.
 
-const { default: Anthropic } = require("@anthropic-ai/sdk");
 const { app } = require("electron");
 const fs = require("fs");
 const path = require("path");
+const { generate, isAvailable } = require("./ai/provider");
 
-let anthropicClient = null;
-if (process.env.ANTHROPIC_API_KEY) {
-  anthropicClient = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-} else {
+if (!isAvailable()) {
   console.error("[AI] ANTHROPIC_API_KEY is not set — AI features will be unavailable.");
 }
 
@@ -26,32 +23,26 @@ function appendAuditLog(entry) {
 function registerAIHandlers(ipcMain) {
   ipcMain.handle("ai-message", async (event, payload) => {
     const { messages, systemPrompt, step, sermonId } = payload || {};
-    if (!anthropicClient) {
-      console.error("[AI] Request received but ANTHROPIC_API_KEY is not set.");
-      return "AI is unavailable — API key not configured.";
-    }
 
     const system = systemPrompt || "You are a helpful assistant for sermon preparation.";
-    const model = "claude-sonnet-4-6";
     const started = Date.now();
 
-    let response;
+    let result;
     try {
-      response = await anthropicClient.messages.create({
-        model,
-        max_tokens: 4096,
-        temperature: 0.2,
-        system,
-        messages: messages,
-      });
+      result = await generate({ system, messages });
     } catch (e) {
       console.error("[ai-message]", e);
       throw e;
     }
 
-    const text = response.content?.[0]?.text;
+    if (result.error) {
+      console.error("[AI] Request failed:", result.message);
+      return `AI is unavailable — ${result.message}.`;
+    }
+
+    const text = result.text;
     if (text == null) {
-      console.error("[ai-message] Unexpected response shape:", JSON.stringify(response.content));
+      console.error("[ai-message] Unexpected response shape:", JSON.stringify(result.raw?.content));
       return "AI returned an unexpected response format.";
     }
 
@@ -62,7 +53,7 @@ function registerAIHandlers(ipcMain) {
       system,
       messages,
       response: text,
-      model,
+      model: result.model,
       latency: Date.now() - started,
     });
 
