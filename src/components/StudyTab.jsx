@@ -15,19 +15,11 @@ import {
 import OutlineBuilder from "./OutlineBuilder";
 import InlineAIResponse from "./InlineAIResponse";
 import { OUTLINE_SYSTEM, outlineHasNumberedList, extractOutlineWithExplanations } from "../utils/outlineChat";
+import { FE_CHAT_SYSTEM } from "../prompts/study";
 import { fetchPassage } from "../db/database";
 
 const STEP_LABELS = ["Exegesis", "MPT / MPS", "Outline", "Functional Elements"];
 const PHASE_LABELS = ["Observe", "Interpret", "Redemptive Thread", "Implications"];
-
-const FE_CHAT_SYSTEM = `You are a homiletics consultant helping a pastor develop functional elements for each sermon point — Explanation (E), Application (A), and Illustration (I).
-
-Explanation: How does this point emerge from the text? Ground it exegetically. Name the theological logic that makes the point both true and necessary.
-Application: What does this point ask of the congregation? Make it concrete and gospel-rooted — not behavior management but a response to what God has done.
-Illustration: What story, image, or example makes this point land in lived experience?
-
-When asked about a specific point, give focused, concrete suggestions. Do not pad. Do not lecture about functional element theory — just help develop the actual content.`;
-
 
 function CollapseArrow({ open }) {
   return (
