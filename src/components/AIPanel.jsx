@@ -7,7 +7,7 @@ import { STEPS, PHASES } from "../constants/steps";
 import { sendAIMessage } from "../utils/ai";
 import { buildContext } from "../utils/contextBuilder";
 import { getMemory, updateMemory, extractPhrasePatterns } from "../utils/memory";
-import { buildSystemPrompt } from "../prompts/sermon";
+import { buildSystemPrompt, appendTaskDirective } from "../prompts/sermon";
 import {
   getLibraryStatus,
   searchLibrary,
@@ -27,6 +27,15 @@ import {
   parseStructuredField,
   serializeStructuredField,
 } from "../utils/studyFields";
+
+// Keep the last N turns (user+assistant pairs) of conversation history when sending
+// each new message. Avoids re-sending an ever-growing transcript that inflates token
+// cost and latency while still giving the model enough recent context to stay coherent.
+const MAX_HISTORY_TURNS = 6;
+
+function trimHistory(messages, maxTurns = MAX_HISTORY_TURNS) {
+  return messages.slice(-maxTurns * 2);
+}
 
 export default function AIPanel({ sermon, activeTab, activeStep, externalMessage, onLoadingChange, loading, onUpdate }) {
   const { demoMode } = useDemo();
@@ -94,14 +103,13 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
     setMessages((prev) => [...prev, userMsg]);
     onLoadingChange?.(true);
     try {
-      const history = [...messagesRef.current, userMsg].map((m) => ({ role: m.role, content: m.content }));
+      const history = trimHistory([...messagesRef.current, userMsg]).map((m) => ({ role: m.role, content: m.content }));
       // Always build the full adaptive system prompt as the base. When an external
       // systemPrompt is provided (chip, review, coherence check), append it as a
-      // TASK directive so adaptive hints are never bypassed.
+      // TASK directive so adaptive hints are never bypassed. The base is an array of
+      // content blocks with cache_control on the static portion.
       const base = buildSystemPrompt(step, sermonId);
-      const finalSystemPrompt = systemPrompt
-        ? `${base}\n\nThe following task takes priority over all adaptive guidance above.\n\nTASK:\n${systemPrompt}`
-        : base;
+      const finalSystemPrompt = appendTaskDirective(base, systemPrompt);
       const response = await sendAIMessage(history, finalSystemPrompt);
       setMessages((prev) => [...prev, { role: "assistant", content: response || "Something went wrong. Please try again.", ...meta }]);
       if (response) captureResponsePatterns(response, step);
@@ -166,7 +174,7 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
 
         const userMsg = { role: "user", content: userContent };
         setMessages(prev => [...prev, userMsg]);
-        const history = [...messagesRef.current, userMsg].map(m => ({ role: m.role, content: m.content }));
+        const history = trimHistory([...messagesRef.current, userMsg]).map(m => ({ role: m.role, content: m.content }));
         const response = await sendAIMessage(history, systemPrompt);
         // Deduplicate sources by author+work for the attribution display
         const sources = hits?.length
@@ -283,7 +291,7 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
       };
 
       setMessages(prev => [...prev, userMsg]);
-      const history = [...messagesRef.current, userMsg].map(m => ({ role: m.role, content: m.content }));
+      const history = trimHistory([...messagesRef.current, userMsg]).map(m => ({ role: m.role, content: m.content }));
       const response = await sendAIMessage(history, buildSystemPrompt(step, sermon?.id));
       setMessages(prev => [...prev, { role: "assistant", content: response || "Something went wrong. Please try again." }]);
       if (response) captureResponsePatterns(response, step);

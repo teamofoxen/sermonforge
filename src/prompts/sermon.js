@@ -27,6 +27,10 @@ export function buildSystemPrompt(step, sermonId) {
     || (step === "study" ? "The pastor is in the study phase."
       : "The pastor is working on sermon preparation.");
 
+  // The static block (role + TOOL CONTEXT + MESSAGE CONTEXT RULES) is identical across
+  // every call in a session. Anthropic prompt caching lets us mark it with cache_control
+  // so it's processed once per 5-min window instead of on every turn. The dynamic block
+  // (stepDesc + adaptive hints) follows and varies per call. See docs.anthropic.com/en/docs/build-with-claude/prompt-caching.
   const toolContext = `TOOL CONTEXT:
 SermonForge is built around a text-driven homiletical method. The workflow is intentional — each stage builds on the last and is designed to keep the text in control of the sermon rather than the pastor's predetermined ideas.
 
@@ -44,11 +48,9 @@ Functional Elements — for each outline point: what does it explain, what does 
 Manuscript — full written form, voice intact.
 Delivery — final preparation, timing, post-sermon reflection.`;
 
-  let base = `You are a sermon preparation assistant for a pastor. Be theologically rigorous. Be concise in conversational responses. Be thorough and structured when a review or evaluation is requested. When the pastor asks questions about the tool, the workflow, or why a stage exists, answer from this context accurately and in the spirit of the method.
+  const staticBlock = `You are a sermon preparation assistant for a pastor. Be theologically rigorous. Be concise in conversational responses. Be thorough and structured when a review or evaluation is requested. When the pastor asks questions about the tool, the workflow, or why a stage exists, answer from this context accurately and in the spirit of the method.
 
 ${toolContext}
-
-${stepDesc}
 
 MESSAGE CONTEXT RULES:
 The pastor's sermon context is provided at the start of each message under labeled sections. Use it according to these rules:
@@ -60,10 +62,24 @@ The pastor's sermon context is provided at the start of each message under label
 - ${CONTEXT_SECTIONS.SUPPORTING}: Library and theology sources support the text — they illustrate, confirm, or enrich. They never override the text or replace exegetical work.
 - ${CONTEXT_SECTIONS.PASTOR}: Reflects established patterns and preferences. Use it to align tone, structure, and style. Do not let it override the passage.`;
 
+  let dynamicBlock = stepDesc;
   const hints = buildAdaptiveHints(getMemory(), step, sermonId);
   if (hints.length > 0) {
-    base += `\n\nADAPTIVE GUIDANCE:\nAdaptive guidance reflects tendencies, not requirements. Do not force patterns where they do not fit the passage.\n${hints.map(h => `- ${h}`).join("\n")}`;
+    dynamicBlock += `\n\nADAPTIVE GUIDANCE:\nAdaptive guidance reflects tendencies, not requirements. Do not force patterns where they do not fit the passage.\n${hints.map(h => `- ${h}`).join("\n")}`;
   }
 
-  return base;
+  return [
+    { type: "text", text: staticBlock, cache_control: { type: "ephemeral" } },
+    { type: "text", text: dynamicBlock },
+  ];
+}
+
+// Appends an extra TASK directive block to a system prompt returned by buildSystemPrompt.
+// Keeps the cached static block intact so chip/review calls still hit the cache.
+export function appendTaskDirective(basePrompt, task) {
+  if (!task) return basePrompt;
+  return [
+    ...basePrompt,
+    { type: "text", text: `The following task takes priority over all adaptive guidance above.\n\nTASK:\n${task}` },
+  ];
 }

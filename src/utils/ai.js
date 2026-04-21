@@ -16,8 +16,8 @@ export async function sendAIMessage(messages, systemPrompt) {
     console.error('[AI] sendAIMessage: messages must be an array', { messages });
     return '';
   }
-  if (typeof systemPrompt !== 'string') {
-    console.error('[AI] sendAIMessage: systemPrompt must be a string', { systemPrompt });
+  if (typeof systemPrompt !== 'string' && !Array.isArray(systemPrompt)) {
+    console.error('[AI] sendAIMessage: systemPrompt must be a string or content-block array', { systemPrompt });
     return '';
   }
 
