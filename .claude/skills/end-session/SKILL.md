@@ -61,6 +61,27 @@ Generate this report:
 
 ---
 
+## STEP 2.5 — UPDATE CHANGELOG (MANDATORY)
+
+Prepend ONE new section to the top of `CHANGELOG.md` (immediately after the first `---`), summarizing ONLY this session's changes.
+
+Format:
+```
+## YYYY-MM-DD — <commit subject>
+
+- bullet
+- bullet
+```
+
+Rules (from `CLAUDE.md` CHANGELOG Rules):
+- Max 5 bullets, each one sentence.
+- Current session only — do NOT restate prior entries or explain rationale.
+- Use today's date.
+- Keep the new section under 120 words.
+- If the file has diverged from the `[Unreleased]` template, match the existing per-session format (as seen at the top of `CHANGELOG.md`).
+
+---
+
 ## STEP 3 — COMMIT
 
 Run:

@@ -2,6 +2,75 @@
 
 ---
 
+## 2026-04-20 — perf(ai): cache static system prompt and trim chat history per call
+
+- `buildSystemPrompt` now returns a content-block array with `cache_control: ephemeral` on the static role + TOOL CONTEXT + MESSAGE CONTEXT RULES prefix so it's processed once per session.
+- Added `appendTaskDirective` so chip/review TASK directives attach as a trailing block without breaking cache reuse.
+- `AIPanel` trims conversation history to the last `MAX_HISTORY_TURNS` (6) turns before each send.
+- `sendAIMessage` validator now accepts either a string or a content-block array for `systemPrompt`.
+
+---
+
+## 2026-04-20 — refactor: lazy-init Anthropic client and return structured error on missing key
+
+- Anthropic client is now instantiated on the first `generate()` call instead of at module load.
+- Missing or empty `ANTHROPIC_API_KEY` returns `{ error: true, message }` instead of throwing.
+- `isAvailable()` reads the env at call time.
+- IPC handler in `electron/ai.js` forwards the structured error as a user-visible message.
+
+---
+
+## 2026-04-20 — refactor: extract system prompts into src/prompts/ and make AI audit log async
+
+- Relocated `buildSystemPrompt`, `OUTLINE_SYSTEM`, and `FE_CHAT_SYSTEM` to `src/prompts/` with `PROMPT_VERSION` headers.
+- Replaced inline prompt definitions in `AIPanel`, `StudyTab`, and `outlineChat` with imports; content unchanged.
+- Dropped now-unused `CONTEXT_SECTIONS` and `buildAdaptiveHints` imports in `AIPanel`.
+- Switched the `ai-message` audit log from `fs.appendFileSync` to `fs.promises.appendFile` (fire-and-forget).
+
+---
+
+## 2026-04-20 — build: exclude better-sqlite3 MSBuild intermediates from asar input
+
+- Added negation globs under `build.files` for `Release/obj`, `*.iobj`, `*.ipdb`, `*.pdb`, `*.exp`, `*.lib`, and `test_extension.node`.
+- Cuts ~10s off the NSIS phase; overall `electron-builder --win` drops from 62s to 47s.
+- Packaging-only; no functional change.
+
+---
+
+## 2026-04-19 — perf: split renderer bundle via React.lazy + manualChunks
+
+- Lazy-loaded 8 non-critical views in `App.jsx` under a single `Suspense` boundary.
+- Added `rollupOptions.manualChunks` for `react-vendor` and `markdown`.
+- Main entry chunk dropped from 542 KB to 49.6 KB (no chunk-size warning).
+- Installed `/agents` and `/run-agent` skills.
+
+---
+
+## 2026-04-19 — chore: remove orphaned .show-text-btn CSS
+
+- Removed the `.show-text-btn` rule, unreferenced after Show Text moved to the sidebar.
+
+---
+
+## 2026-04-19 — feat: move Show Text to sidebar, ESV-only modal
+
+- Removed 4 per-sub-phase Show Text buttons and `passageAnchor` state from `StudyTab`.
+- Added a sidebar nav item that appears only when a sermon passage is loaded.
+- Lifted passage and modal state to `App`; `SermonWorkspace` surfaces `sermon.passage` via `onPassageChange`.
+- Rewrote `PassagePopup` as a centered modal (Escape to close) with ESV-only rendering.
+- Simplified the `passage-fetch` IPC to ESV-only while preserving the response shape.
+
+---
+
+## 2026-04-19 — chore: add Execution Gates, end-session skill, hook reminders
+
+- Added an Execution Gates section to `CLAUDE.md` mandating the sweep sequence.
+- Installed the `/end-session` skill for safe session finalization.
+- Added `Stop` and `PostToolUse` GATE reminder hooks in `settings.json`.
+- Tracked the previously untracked `/interrogate` and `/sweep-the-multiverse` skills.
+
+---
+
 ## 2026-04-19 — chore: remove inline Write with AI panel from Manuscript tab
 
 - Deleted the bottom-of-page Write with AI chat in [ManuscriptTab.jsx](src/components/ManuscriptTab.jsx), along with its state, send handler, system prompt, and now-unused imports (`useState`, `useEffect`, `useRef`, `ReactMarkdown`, `sendAIMessage`).
