@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-04-21 — docs(theology): paperclip legacy-row inventory to proposal
+
+- Added legacy `work_id=NULL` inventory pass to proposal §8 as next-session work.
+- Scoped it as a read-only investigation covering author/work distribution, size histogram, duplicate detection, MiniLM-L6 truncation share, and `section` parseability.
+- Framed as retrieval-precision work (dedupe / dejunk / resize affect search; metadata backfill does not).
+
+---
+
 ## 2026-04-21 — feat(theology): ingest Augustine City of God + make pipeline manifest-driven
 
 - Ingested Augustine's *City of God* (Dods tr.) as 780 chunks with Book.Chapter locators and CCEL page refs.
