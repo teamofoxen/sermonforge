@@ -22,13 +22,27 @@ content_sha256: "d7995178c1fe1723d1124126010e430f12d0444239ad7f9a7c8c818aa976671
 
 # Parser decisions applied to this work (locked in session on 2026-04-21):
 ingest:
-  scope: "books_only"              # skip Prefatory Material / Title Page
-  skip_chapter_arguments: true     # skip ARGUMENT div2s and introHead/intro paragraphs
   footnote_strategy: "strip"       # drop <note> contents from chunk text
   page_mode: "ccel_span"           # CCEL web-edition page markers (NOT print pages); track ccel_page_start + ccel_page_end per chunk for deep-linking to ccel.org/ccel/calvin/institutes/Page_N.html
   chunk_target_words: 600
-  chunk_boundary: "section"        # target ~600 words, flush at next §-boundary when over target
+  chunk_boundary: "section"        # flush at next §-boundary when over target
   chunk_hard_boundary: "chapter"   # never cross a chapter
+  locator_book_style: "arabic"     # "Book 1" (not "Book I")
+  locator_has_sections: true       # locator renders "§N" or "§N-M" when section present
+  # Structure map — tells the parser where books/chapters live and how to detect them.
+  structure:
+    scope:
+      kind: "all_div1"                 # walk every div1; use `book.selector` to keep only book-like ones
+    book:
+      level: "div1"
+      selector: { title_prefix: "BOOK " }
+      n_style: "roman"                 # Beveridge uses i..iv in @n
+    chapter:
+      level: "div2"
+      selector: { title_regex: "CHAPTER\\s+(\\d+)" }
+      n_from: "title_regex"            # extract chapter number from the title match
+    section:
+      mode: "leading_number_regex"     # §1, §2, ... appear as "1. ", "2. " at start of <p> text
 
 notes: |
   Section numbers (§1, §2, ...) are not tagged in the ThML — they appear as

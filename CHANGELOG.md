@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-04-21 — feat(theology): ingest Augustine City of God + make pipeline manifest-driven
+
+- Ingested Augustine's *City of God* (Dods tr.) as 780 chunks with Book.Chapter locators and CCEL page refs.
+- Refactored `parse_ccel_thml.py` to read structure config from the manifest so works with different ThML layouts plug in without code changes.
+- Parameterized `chunk.py` for soft/hard boundary and locator style (Roman vs arabic book, sections vs none).
+- Fixed pre-existing parser bug that dropped paragraphs starting before the first `<pb>` marker.
+- Paperclipped `run.py` wrapper, manifest scaffolder, Westminster Standards, and legacy-row cleanup to proposal §8.
+
+---
+
 ## 2026-04-21 — feat(theology): surface locator + CCEL page refs in retrieval UI
 
 - Added `work_id`, `locator`, `ccel_page_start`, `ccel_page_end` to all theology SELECTs in `electron/main.js` and the `theology-get-chunks` handler.

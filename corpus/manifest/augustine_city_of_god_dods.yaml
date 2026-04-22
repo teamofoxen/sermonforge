@@ -1,0 +1,72 @@
+# Corpus manifest — one work per file.
+# Checked into the repo as a provenance record. The raw source itself lives
+# outside the repo (see raw_path) and is reconstructible from source_url +
+# content_sha256.
+
+id: augustine_city_of_god_dods_1890
+author: "Augustine of Hippo"
+author_dates: "354-430"
+work: "The City of God"
+work_short: "City of God"
+translator: "Marcus Dods"
+translator_dates: "1834-1909"
+edition: "Dods translation, from Nicene and Post-Nicene Fathers, Series I, Vol. II (New York: Christian Literature Publishing Co., 1890), ed. Philip Schaff. CCEL electronic edition."
+language: en
+source_url: "https://ccel.org/ccel/s/schaff/npnf102.xml"
+source_type: "ccel_thml"
+license: "public-domain-pre-1928"
+retrieved_at: "2026-04-21"
+corpus_version: "2026.04"
+raw_path: "corpus/raw/augustine_city_of_god_dods_1890/city_of_god.xml"
+content_sha256: "b8ca21dfa7d553681651f85197064b0fe52ae6c17e5e17252df9301536a4ae2a"
+
+# Parser decisions applied to this work (to be locked after dry-run):
+ingest:
+  footnote_strategy: "strip"       # drop <note> contents from chunk text
+  page_mode: "ccel_span"           # CCEL web-edition page markers; track ccel_page_start/end per chunk for deep-linking
+  chunk_target_words: 600
+  chunk_boundary: "paragraph"      # Augustine has no sections; flush at paragraph boundary when over target
+  chunk_hard_boundary: "chapter"   # never cross a chapter (keeps citations unambiguous)
+  locator_book_style: "roman"      # "Book XIV" (not "Book 14")
+  locator_has_sections: false      # Augustine has no §
+  # Structure map — tells the parser where books/chapters live and how to detect them.
+  structure:
+    scope:
+      kind: "div1_id"                  # NPNF vol 1.02 contains multiple works; scope to City of God only.
+      value: "iv"
+    book:
+      level: "div2"
+      selector: { type_attr: "Book" }  # <div2 type="Book" n="I" ...>
+      n_style: "roman"                 # Roman uppercase in @n (I..XXII)
+    chapter:
+      level: "div3"
+      selector: { type_attr: "Chapter" }  # <div3 type="Chapter" n="1" ...>
+      n_from: "n_attr"                 # chapter number is in @n (arabic)
+      n_style: "arabic"
+    section:
+      mode: "none"                     # Augustine has no §; all emitted paragraphs get section=None
+
+# Locator scheme — canonical citation for City of God is Book.Chapter
+# (e.g., "Book XIV, Ch. 28"), edition-independent. The UI should render
+# citations using locator; the ccel_page fields are a separate "View on
+# CCEL" deep-link.
+
+notes: |
+  Source file is NPNF Series I, Vol. II — contains both *City of God* and
+  *On Christian Doctrine*. This manifest scopes ingestion to City of God
+  only (div1 id="iv"). A separate manifest will cover On Christian
+  Doctrine if/when it is ingested.
+
+  Structure differs from Calvin's Institutes:
+    Calvin:    div1=Book, div2=Chapter, div3=Section
+    Augustine: div1=work, div2=Book,    div3=Chapter (no sections)
+  The parser needs a per-work mode switch keyed on ingest.scope +
+  ingest.chunk_boundary.
+
+  Book I includes a "Preface" (div3 n="i") before Chapter 1. Include it
+  under a locator like "I.preface" or fold it into Book I Chapter 1 —
+  decide during dry-run.
+
+  Dods died 1909, so the translation is clearly pre-1928 US public
+  domain. CCEL electronic edition is freely redistributable under
+  CCEL's permissive terms.

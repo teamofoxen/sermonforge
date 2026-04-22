@@ -60,7 +60,7 @@ Tier A (seed, ~20 works) — canonical, widely cited, clean source scans availab
 - Owen, *Works* (Goold edition, 16 vols)
 - Turretin, *Institutes of Elenctic Theology* (Giger tr., if PD status confirmed;
   otherwise defer)
-- Matthew Henry, *Commentary on the Whole Bible*
+- Augustine, *City of God* (Dods tr.)
 - Spurgeon, *Treasury of David*; selected sermons
 - Bavinck, *Reformed Dogmatics* (Dutch PD; English tr. is **not** PD — defer)
 - Westminster Standards (Confession, Larger + Shorter Catechisms)
@@ -183,7 +183,7 @@ A work is **not** merged into `theology.db` until:
 | Phase | Scope | Exit criteria |
 |-------|-------|---------------|
 | 0 | Schema migration (additive), `works` table, corpus version tagging | Existing corpus re-tagged as `corpus_version="legacy"`; no runtime regression |
-| 1 | Ingestion pipeline scripts + 3 seed works (Institutes, Westminster, Henry on one book) | 3 works ingested end-to-end with page citations surfacing in AI panel |
+| 1 | Ingestion pipeline scripts + 3 seed works (Institutes, Westminster, Augustine *City of God*) | 3 works ingested end-to-end with page citations surfacing in AI panel |
 | 2 | Expand to full Tier A (~20 works) | All Tier A manifests green through quality gates |
 | 3 | Tier B expansion | Reassess after phase 2 — may defer indefinitely |
 
@@ -209,7 +209,17 @@ Phases 0 and 1 are the only committed scope. Later phases revisit after phase 1 
 
 ---
 
-## 8. What This Does Not Unlock On Its Own
+## 8. Deferred (paperclipped 2026-04-21)
+
+Captured mid-Phase-1 for later pickup:
+
+- **`scripts/theology/ingest/run.py`** — one-command wrapper that runs fetch → parse → chunk → load → FTS → vectors against a manifest. Every stage is already idempotent/manifest-driven; this is pure orchestration.
+- **`scripts/theology/ingest/scaffold_manifest.py`** — inspects a ThML XML file and emits a draft manifest (author/work/translator from `<generalInfo>` + `<printSourceInfo>`, structure block inferred from the div tree, sha256 computed). Human still picks scope when a file bundles multiple works (e.g., NPNF vols) and confirms locator conventions. Paired with `run.py`, new-work ingest becomes: drop XML → scaffold → eyeball 2–3 fields → run.py.
+- **Westminster Standards** — the 3rd Phase 1 seed work. Deferred until the two wrappers above exist; doing it by hand would duplicate Calvin+Augustine effort.
+- **Legacy `work_id=NULL` rows** — 160,785 pre-manifest chunks still in `theology.db` tagged `corpus_version="legacy"`. Will need re-manifesting or deprecation before Phase 2.
+- **CCEL deep-link URL pattern for NPNF** — Calvin's retrieval UI uses `ccel.org/ccel/calvin/institutes/Page_N.html`. NPNF pattern is unconfirmed; need one working CoG page URL from ccel.org to wire up the "View on CCEL" link for Augustine chunks.
+
+## 9. What This Does Not Unlock On Its Own
 
 This proposal produces a trustworthy corpus with citation metadata. It does **not**:
 
