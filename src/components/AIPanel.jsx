@@ -8,6 +8,7 @@ import { sendAIMessage } from "../utils/ai";
 import { buildContext } from "../utils/contextBuilder";
 import { getMemory, updateMemory, extractPhrasePatterns } from "../utils/memory";
 import { buildSystemPrompt, appendTaskDirective } from "../prompts/sermon";
+import { formatChunkForLLM, dedupSources } from "../utils/theologyCitation";
 import {
   getLibraryStatus,
   searchLibrary,
@@ -141,7 +142,7 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
       onLoadingChange?.(true);
       try {
         const hits = await searchTheologyLibrary(text, 8);
-        const theologyChunks = hits?.map(h => `[${h.author} — ${h.work}]\n${h.text_chunk}`) || [];
+        const theologyChunks = hits?.map(formatChunkForLLM) || [];
 
         let userContent;
         let systemPrompt;
@@ -159,7 +160,7 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
           systemPrompt = `You are a theology research assistant for a pastor. Answer the question using the sources provided.
 
 - Ground your answer in the provided sources.
-- Include at least one direct quotation with its source attribution (format: [Author — Work]).
+- Include at least one direct quotation with its full source attribution as given in brackets (format: [Author — Work, Locator, p. N]). Preserve the locator and page reference verbatim.
 - If multiple sources speak to the question, reference more than one.
 - Be concise and direct.
 - If the sources do not directly address the question, say so clearly rather than substituting general knowledge.`;
@@ -177,9 +178,7 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
         const history = trimHistory([...messagesRef.current, userMsg]).map(m => ({ role: m.role, content: m.content }));
         const response = await sendAIMessage(history, systemPrompt);
         // Deduplicate sources by author+work for the attribution display
-        const sources = hits?.length
-          ? [...new Map(hits.map(h => [`${h.author}|||${h.work}`, { author: h.author, work: h.work }])).values()]
-          : [];
+        const sources = hits?.length ? dedupSources(hits) : [];
         setMessages(prev => [...prev, { role: "assistant", content: response || "Something went wrong. Please try again.", sources }]);
         if (response) captureResponsePatterns(response, step);
       } catch (err) {
@@ -432,7 +431,16 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
                 <div style={{ marginTop: "8px", paddingTop: "8px", borderTop: "1px solid var(--parchment-deep)", fontSize: "11px", color: "var(--ink-ghost)" }}>
                   <span style={{ fontWeight: 600 }}>Sources consulted: </span>
                   {msg.sources.map((s, si) => (
-                    <span key={si}>{si > 0 ? " · " : ""}{s.author} — <em>{s.work}</em></span>
+                    <span key={si}>
+                      {si > 0 ? " · " : ""}
+                      {s.author} — <em>{s.work}</em>
+                      {s.locator ? `, ${s.locator}` : ""}
+                      {s.ccel_page_start
+                        ? (s.ccel_page_end && s.ccel_page_end !== s.ccel_page_start
+                            ? `, pp. ${s.ccel_page_start}–${s.ccel_page_end}`
+                            : `, p. ${s.ccel_page_start}`)
+                        : ""}
+                    </span>
                   ))}
                 </div>
               )}

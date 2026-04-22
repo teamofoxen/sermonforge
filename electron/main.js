@@ -1183,7 +1183,8 @@ ipcMain.handle("theology-search", async (event, { query, limit = 5 }) => {
           console.log("[VECTOR] Running KNN query");
           const _vecStart = Date.now();
           let vecResults = queryTheology(
-            `SELECT t.id, t.author, t.work,
+            `SELECT t.id, t.author, t.work, t.work_id,
+                    t.locator, t.ccel_page_start, t.ccel_page_end,
                     substr(t.text, 1, 2000) as text_chunk
              FROM (
                SELECT rowid, distance FROM theology_vec
@@ -1202,7 +1203,8 @@ ipcMain.handle("theology-search", async (event, { query, limit = 5 }) => {
             try {
               const authorName = detectedAuthors.length > 0 ? THEOLOGY_AUTHORS[detectedAuthors[0]] : null;
               const ftsQuery = authorName
-                ? `SELECT t.id, t.author, t.work,
+                ? `SELECT t.id, t.author, t.work, t.work_id,
+                          t.locator, t.ccel_page_start, t.ccel_page_end,
                           substr(t.text, 1, 2000) as text_chunk,
                           substr(t.text, 1, 2000) as full_text
                    FROM theology_fts
@@ -1210,7 +1212,8 @@ ipcMain.handle("theology-search", async (event, { query, limit = 5 }) => {
                    WHERE theology_fts MATCH ?
                    AND t.author = ?
                    LIMIT ?`
-                : `SELECT t.id, t.author, t.work,
+                : `SELECT t.id, t.author, t.work, t.work_id,
+                          t.locator, t.ccel_page_start, t.ccel_page_end,
                           substr(t.text, 1, 2000) as text_chunk,
                           substr(t.text, 1, 2000) as full_text
                    FROM theology_fts
@@ -1270,7 +1273,8 @@ ipcMain.handle("theology-search", async (event, { query, limit = 5 }) => {
     if (detectedAuthors.length > 0 && contentParts.length > 0) {
       const authorName = THEOLOGY_AUTHORS[detectedAuthors[0]];
       candidates = queryTheology(
-        `SELECT t.id, t.author, t.work,
+        `SELECT t.id, t.author, t.work, t.work_id,
+                t.locator, t.ccel_page_start, t.ccel_page_end,
                 snippet(theology_fts, '', '', '…', 3, 50) as text_chunk,
                 substr(t.text, 1, 2000) as full_text
          FROM theology_fts
@@ -1282,7 +1286,8 @@ ipcMain.handle("theology-search", async (event, { query, limit = 5 }) => {
       );
     } else if (contentParts.length > 0) {
       candidates = queryTheology(
-        `SELECT t.id, t.author, t.work,
+        `SELECT t.id, t.author, t.work, t.work_id,
+                t.locator, t.ccel_page_start, t.ccel_page_end,
                 snippet(theology_fts, '', '', '…', 3, 50) as text_chunk,
                 substr(t.text, 1, 2000) as full_text
          FROM theology_fts
@@ -1320,7 +1325,8 @@ ipcMain.handle("theology-get-chunks", async (event, { ids, maxChars = 600 }) => 
     const safeMax = Math.min(Math.max(parseInt(maxChars, 10) || 600, 100), 2000);
     const placeholders = ids.map(() => "?").join(",");
     return queryTheology(
-      `SELECT id, author, work, substr(text, 1, ?) as text_chunk
+      `SELECT id, author, work, work_id, locator, ccel_page_start, ccel_page_end,
+              substr(text, 1, ?) as text_chunk
        FROM theology WHERE id IN (${placeholders})`,
       [safeMax, ...ids]
     );

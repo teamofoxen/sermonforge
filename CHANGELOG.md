@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-04-21 — feat(theology): surface locator + CCEL page refs in retrieval UI
+
+- Added `work_id`, `locator`, `ccel_page_start`, `ccel_page_end` to all theology SELECTs in `electron/main.js` and the `theology-get-chunks` handler.
+- New `src/utils/theologyCitation.js` centralizes chunk formatting and source dedup for Dashboard + AIPanel.
+- LLM chunk tags and system-prompt format hint now carry `[Author — Work, Locator, p. N]` with verbatim-preservation instruction.
+- "Sources consulted" rows in Dashboard and AIPanel render locator and page (or page-range) when present.
+
+---
+
 ## 2026-04-21 — feat(theology): manifest-driven ingest pipeline + Calvin Institutes
 
 - Added curated-corpus proposal at `docs/PROPOSALS/theology-corpus.md`.

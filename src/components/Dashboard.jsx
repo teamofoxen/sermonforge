@@ -6,6 +6,7 @@ import NewSermonModal from "./NewSermonModal";
 import { formatDate, getOutline, assembleManuscriptText } from "../utils";
 import { sendAIMessage } from "../utils/ai";
 import { flattenExegesis } from "../utils/studyFields";
+import { formatChunkForLLM, dedupSources } from "../utils/theologyCitation";
 
 export default function Dashboard({ onOpenSermon, onOpenSeries, onNewSeries, onNavigate }) {
   const { enableDemoMode } = useDemo();
@@ -133,14 +134,14 @@ export default function Dashboard({ onOpenSermon, onOpenSeries, onNewSeries, onN
     const systemPrompt = `You are a theology research assistant for a pastor. Answer the question using the sources provided.
 
 - Ground your answer in the provided sources.
-- Include at least one direct quotation with its source attribution (format: [Author — Work]).
+- Include at least one direct quotation with its full source attribution as given in brackets (format: [Author — Work, Locator, p. N]). Preserve the locator and page reference verbatim.
 - If multiple sources speak to the question, reference more than one.
 - Be concise and direct.
 - If the sources do not directly address the question, say so clearly rather than substituting general knowledge.`;
 
     try {
       const hits = await searchTheologyLibrary(text, 8);
-      const chunks = hits?.map(h => `[${h.author} — ${h.work}]\n${h.text_chunk}`) || [];
+      const chunks = hits?.map(formatChunkForLLM) || [];
 
       if (chunks.length === 0) {
         setTheologyResult({ answer: null, sources: [], noHits: true });
@@ -156,7 +157,7 @@ export default function Dashboard({ onOpenSermon, onOpenSeries, onNewSeries, onN
         systemPrompt
       );
 
-      const sources = [...new Map(hits.map(h => [`${h.author}|||${h.work}`, { author: h.author, work: h.work }])).values()];
+      const sources = dedupSources(hits);
       const assistantMsg = { role: "assistant", content: response || "Something went wrong. Please try again.", sources };
       setTheologyMessages(prev => [...prev, assistantMsg]);
       setTheologyResult({ answer: response, sources, noHits: false });
@@ -417,7 +418,16 @@ export default function Dashboard({ onOpenSermon, onOpenSeries, onNewSeries, onN
                   <div style={{ marginTop: "8px", paddingTop: "8px", borderTop: "1px solid var(--parchment-deep)", fontSize: "11px", color: "var(--ink-ghost)" }}>
                     <span style={{ fontWeight: 600 }}>Sources consulted: </span>
                     {theologyResult.sources.map((s, i) => (
-                      <span key={i}>{i > 0 ? " · " : ""}{s.author} — <em>{s.work}</em></span>
+                      <span key={i}>
+                        {i > 0 ? " · " : ""}
+                        {s.author} — <em>{s.work}</em>
+                        {s.locator ? `, ${s.locator}` : ""}
+                        {s.ccel_page_start
+                          ? (s.ccel_page_end && s.ccel_page_end !== s.ccel_page_start
+                              ? `, pp. ${s.ccel_page_start}–${s.ccel_page_end}`
+                              : `, p. ${s.ccel_page_start}`)
+                          : ""}
+                      </span>
                     ))}
                   </div>
                 )}
