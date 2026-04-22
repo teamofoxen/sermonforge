@@ -1,0 +1,45 @@
+# Corpus manifest — one work per file.
+# Checked into the repo as a provenance record. The raw source itself lives
+# outside the repo (see raw_path) and is reconstructible from source_url +
+# content_sha256.
+
+id: calvin_institutes_beveridge_1845
+author: "John Calvin"
+author_dates: "1509-1564"
+work: "Institutes of the Christian Religion"
+work_short: "Institutes"
+translator: "Henry Beveridge"
+translator_dates: "d. 1929"
+edition: "Beveridge translation, first published 1845 (Edinburgh: Calvin Translation Society). CCEL electronic edition 2002."
+language: en
+source_url: "https://ccel.org/ccel/c/calvin/institutes.xml"
+source_type: "ccel_thml"
+license: "public-domain-pre-1928"
+retrieved_at: "2026-04-21"
+corpus_version: "2026.04"
+raw_path: "corpus/raw/calvin_institutes_beveridge_1845/institutes.xml"
+content_sha256: "d7995178c1fe1723d1124126010e430f12d0444239ad7f9a7c8c818aa9766717"
+
+# Parser decisions applied to this work (locked in session on 2026-04-21):
+ingest:
+  scope: "books_only"              # skip Prefatory Material / Title Page
+  skip_chapter_arguments: true     # skip ARGUMENT div2s and introHead/intro paragraphs
+  footnote_strategy: "strip"       # drop <note> contents from chunk text
+  page_mode: "ccel_span"           # CCEL web-edition page markers (NOT print pages); track ccel_page_start + ccel_page_end per chunk for deep-linking to ccel.org/ccel/calvin/institutes/Page_N.html
+  chunk_target_words: 600
+  chunk_boundary: "section"        # target ~600 words, flush at next §-boundary when over target
+  chunk_hard_boundary: "chapter"   # never cross a chapter
+
+notes: |
+  Section numbers (§1, §2, ...) are not tagged in the ThML — they appear as
+  leading "1. ", "2. " in paragraph text. Parser extracts via regex.
+
+  Page numbers (<pb n="...">) are CCEL web-edition markers, NOT print pages.
+  Beveridge's print edition tops out around 1,500 pages; CCEL's go to ~2,690.
+  These numbers map 1:1 to CCEL's HTML URLs (Page_N.html). They are valid
+  for deep-linking back to the source but must NOT be rendered as print
+  pages in citations.
+
+  Canonical citation for Calvin is Book.Chapter.Section (e.g., III.xiii.3),
+  edition-independent. The UI should render citations using locator; the
+  ccel_page fields are a separate "View on CCEL" deep-link.

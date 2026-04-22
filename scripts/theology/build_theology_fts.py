@@ -7,7 +7,7 @@ Safe to re-run — drops and rebuilds if the index already exists.
 import sqlite3
 import os
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "theology.db")
+DB_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "data", "theology.db")
 
 def main():
     if not os.path.exists(DB_PATH):

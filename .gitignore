@@ -22,6 +22,7 @@ release/
 # Database — lives in data/ alongside the project, not in git
 *.db
 *.db-journal
+*.db.backup*
 
 # Editor / OS
 .DS_Store
@@ -34,6 +35,13 @@ Thumbs.db
 
 # Theology source texts — large data files, not source code
 texts/
+
+# Theology corpus — raw sources and derived artifacts are reproducible
+# from source_url + content_sha256 + the ingest scripts. Only manifests
+# are checked in. See docs/PROPOSALS/theology-corpus.md.
+corpus/raw/
+corpus/parsed/
+corpus/chunked/
 
 # Generated / empty data directory
 src/data/

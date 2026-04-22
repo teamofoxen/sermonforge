@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-04-21 — feat(theology): manifest-driven ingest pipeline + Calvin Institutes
+
+- Added curated-corpus proposal at `docs/PROPOSALS/theology-corpus.md`.
+- Built 5-stage ingest pipeline under `scripts/theology/ingest/` (parse_ccel_thml, chunk, migrate_schema, load, smoke_check).
+- Ingested Calvin's Institutes (Beveridge) as 712 chunks with Book.Chapter.Section locators and CCEL deep-link page refs.
+- Added 13 metadata columns to `theology` table; pre-existing rows tagged `corpus_version='legacy'`.
+- Fixed `build_theology_fts.py` and `build_theology_vectors.js` to target canonical `data/theology.db`.
+
+---
+
 ## 2026-04-20 — perf(ai): cache static system prompt and trim chat history per call
 
 - `buildSystemPrompt` now returns a content-block array with `cache_control: ephemeral` on the static role + TOOL CONTEXT + MESSAGE CONTEXT RULES prefix so it's processed once per session.

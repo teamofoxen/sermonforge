@@ -35,7 +35,7 @@ const Database = require("better-sqlite3");
 const sqliteVec = require("sqlite-vec");
 const path = require("path");
 
-const THEOLOGY_DB_PATH = path.join(__dirname, "..", "..", "theology.db");
+const THEOLOGY_DB_PATH = path.join(__dirname, "..", "..", "data", "theology.db");
 const MODEL_NAME = "Xenova/all-MiniLM-L6-v2";
 const EMBEDDING_DIM = 384;
 const BATCH_SIZE = 64;
