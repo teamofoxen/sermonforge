@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-04-26 — feat(flow): reduce inter-stage friction across sermon prep flow
+
+- OutlineTab: forward-facing orientation text; Return to Study button when outline is empty; Continue to Manuscript always visible but disabled until outline exists.
+- ManuscriptTab: purpose statement on arrival; Continue to Delivery button at bottom of page.
+- DeliveryTab: orientation statement above panel tabs; Next: Preaching Outline nudge after Format Manuscript generates.
+- SermonWorkspace: pass onTabChange to ManuscriptTab.
+
+---
+
 ## 2026-04-26 — refactor(ai): remove all AI quick-action chips
 
 - Removed `getSuggestions`, `howChip`, and `HOW_CHIP_MESSAGES` from `AIPanel.jsx`.
