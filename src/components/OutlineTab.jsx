@@ -24,7 +24,7 @@ function mpsExtractStem(mps) {
 }
 
 
-export default function OutlineTab({ sermon, onUpdate, onTabChange }) {
+export default function OutlineTab({ sermon, onUpdate, onTabChange, studySummaries = {} }) {
   const outline = getOutline(sermon);
   const fe = getFunctionalElements(sermon);
   const mpsStem = mpsExtractStem(sermon.mps);
@@ -152,9 +152,14 @@ export default function OutlineTab({ sermon, onUpdate, onTabChange }) {
                     const scripture = fe[p.id]?.scripture;
                     return (
                       <div key={p.id} style={{ marginBottom: "10px" }}>
-                        <div style={{ fontSize: "14px", color: "var(--ink-mid)", lineHeight: "1.5" }}>
+                        <div style={{ fontSize: "14px", color: "var(--ink-mid)", lineHeight: "1.5", display: "flex", alignItems: "baseline", gap: "8px" }}>
                           <span style={{ color: "var(--ink-ghost)", marginRight: "6px" }}>{i + 1}.</span>
-                          {p.text}
+                          <span style={{ flex: 1 }}>{p.text}</span>
+                          <span style={{ display: "flex", gap: "4px", flexShrink: 0 }}>
+                            {[["E", fe[p.id]?.explanation], ["A", fe[p.id]?.application], ["I", fe[p.id]?.illustration]].map(([label, val]) => (
+                              <span key={label} style={{ fontSize: "10px", fontStyle: "normal", fontWeight: "600", letterSpacing: "0.04em", color: val?.trim() ? "var(--gold)" : "var(--ink-ghost)", opacity: val?.trim() ? 1 : 0.4 }}>{label}</span>
+                            ))}
+                          </span>
                         </div>
                         {scripture && (
                           <div style={{ paddingLeft: "20px", marginTop: "4px", fontSize: "13px", fontFamily: "'Crimson Pro', serif", fontStyle: "italic", color: "var(--ink-soft)", lineHeight: "1.6" }}>
@@ -168,6 +173,15 @@ export default function OutlineTab({ sermon, onUpdate, onTabChange }) {
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {(studySummaries.s4 || studySummaries.s3) && (
+        <div className="card" style={{ marginBottom: "20px", background: "var(--parchment-warm)", borderColor: "var(--parchment-deep)" }}>
+          <div style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--ink-ghost)", marginBottom: "8px" }}>From your study work</div>
+          <div style={{ fontSize: "14px", color: "var(--ink-mid)", lineHeight: "1.7", whiteSpace: "pre-wrap" }}>
+            {studySummaries.s4 || studySummaries.s3}
+          </div>
         </div>
       )}
 

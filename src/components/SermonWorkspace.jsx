@@ -27,6 +27,7 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onPas
   const [pendingMessage, setPendingMessage] = useState(null);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [studySummaries, setStudySummaries] = useState({});
   // Pastoral Intelligence card — open when empty, collapsed when filled
   const [piOpen, setPiOpen] = useState(true);
   const { demoMode, enableDemoMode, disableDemoMode } = useDemo();
@@ -394,10 +395,11 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onPas
               aiLoading={aiLoading}
               onStepChange={setActiveStep}
               onTabChange={handleTabChange}
+              onSummaryGenerated={(key, text) => setStudySummaries(prev => ({ ...prev, [key]: text }))}
             />
           )}
           {activeTab === "outline" && (
-            <OutlineTab sermon={sermon} onUpdate={handleUpdate} onTabChange={handleTabChange} />
+            <OutlineTab sermon={sermon} onUpdate={handleUpdate} onTabChange={handleTabChange} studySummaries={studySummaries} />
           )}
           {activeTab === "manuscript" && (
             <ManuscriptTab

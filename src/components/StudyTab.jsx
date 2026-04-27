@@ -217,7 +217,7 @@ function StructuredWorksheet({ fields, data, onChange, legacyNotes }) {
   );
 }
 
-export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChange, onTabChange }) {
+export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChange, onTabChange, onSummaryGenerated }) {
   const { demoMode } = useDemo();
   const [activeStep, setActiveStep] = useState(() => {
     const saved = localStorage.getItem(`sermonforge_study_step_${sermon.id}`);
@@ -439,6 +439,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
         systemPrompt
       );
       setSummaries(prev => ({ ...prev, [key]: response }));
+      if (key === "s3" || key === "s4") onSummaryGenerated?.(key, response);
     } catch (e) {
       console.error("Summary generation failed:", e);
     } finally {
