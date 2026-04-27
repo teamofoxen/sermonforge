@@ -125,7 +125,7 @@ export default function OutlineTab({ sermon, onUpdate, onTabChange }) {
   return (
     <div>
       <div style={{ marginBottom: "20px", fontSize: "13px", color: "var(--ink-ghost)", fontStyle: "italic" }}>
-        The Blueprint is your sermon's load-bearing structure — the MPS and outline in one view. Do the outline work in Study → Step 3, then return here to review the full shape before moving to Manuscript.
+        The Blueprint holds your sermon's load-bearing structure — MPS and outline together. Confirm the shape is right, then move to Manuscript.
       </div>
 
       {/* Reference — passage, MPT, MPS */}
@@ -176,9 +176,14 @@ export default function OutlineTab({ sermon, onUpdate, onTabChange }) {
           <h3 className="card-title">Sermon Body Structure</h3>
         </div>
         {outline.length === 0 && (
-          <p style={{ color: "var(--ink-ghost)", fontStyle: "italic", fontSize: "14px", marginBottom: "12px" }}>
-            No outline points yet. Add points here or in the Study tab.
-          </p>
+          <div style={{ marginBottom: "12px" }}>
+            <p style={{ color: "var(--ink-ghost)", fontStyle: "italic", fontSize: "14px", marginBottom: "8px" }}>
+              No outline points yet. Build them in Study → Step 3, or add points directly below.
+            </p>
+            <button className="btn-ghost btn-sm" onClick={() => onTabChange?.("study")}>
+              ← Return to Study
+            </button>
+          </div>
         )}
         <OutlineBuilder outline={outline} onUpdate={handleOutlineChange} onRemove={handleOutlineRemove} />
         <div style={{ marginTop: "12px", display: "flex", gap: "10px", alignItems: "center" }}>
@@ -280,13 +285,16 @@ export default function OutlineTab({ sermon, onUpdate, onTabChange }) {
         </div>
       )}
 
-      {outline.length > 0 && (
-        <div className="step-advance">
-          <button className="btn-primary btn-sm" onClick={() => onTabChange?.("manuscript")}>
-            Continue to Manuscript →
-          </button>
-        </div>
-      )}
+      <div className="step-advance">
+        <button
+          className="btn-primary btn-sm"
+          onClick={() => onTabChange?.("manuscript")}
+          disabled={outline.length === 0}
+          title={outline.length === 0 ? "Add at least one outline point before moving to Manuscript" : undefined}
+        >
+          Continue to Manuscript →
+        </button>
+      </div>
     </div>
   );
 }

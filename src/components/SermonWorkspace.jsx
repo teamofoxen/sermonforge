@@ -406,6 +406,7 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onPas
               onAI={handleAI}
               aiLoading={aiLoading}
               onOpenDrawer={() => setDrawerOpen(true)}
+              onTabChange={handleTabChange}
             />
           )}
           {activeTab === "delivery" && (

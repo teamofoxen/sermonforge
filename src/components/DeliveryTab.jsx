@@ -103,7 +103,7 @@ function renderDeliveryMarkdown(text) {
   return out.join("\n");
 }
 
-function ManuscriptPanel({ sermon, onUpdate }) {
+function ManuscriptPanel({ sermon, onUpdate, onPanelChange }) {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState(null);
 
@@ -154,10 +154,17 @@ function ManuscriptPanel({ sermon, onUpdate }) {
       {error && <div className="pmb-error">{error}</div>}
 
       {content && (
-        <div
-          className="msd-body"
-          dangerouslySetInnerHTML={{ __html: renderDeliveryMarkdown(content) }}
-        />
+        <>
+          <div
+            className="msd-body"
+            dangerouslySetInnerHTML={{ __html: renderDeliveryMarkdown(content) }}
+          />
+          <div className="step-advance">
+            <button className="btn-ghost btn-sm" onClick={() => onPanelChange?.("outline")}>
+              Next: Preaching Outline →
+            </button>
+          </div>
+        </>
       )}
     </>
   );
@@ -552,6 +559,9 @@ export default function DeliveryTab({ sermon, onUpdate }) {
 
   return (
     <>
+      <div style={{ marginBottom: "20px", fontSize: "13px", color: "var(--ink-ghost)", fontStyle: "italic" }}>
+        Three ways to stand at the pulpit. Format the manuscript for reading aloud, review the preaching outline, or compress everything into memory blocks for preaching without notes.
+      </div>
       <div className="delivery-tabs">
         {PANELS.map((p) => (
           <button
@@ -566,7 +576,7 @@ export default function DeliveryTab({ sermon, onUpdate }) {
 
       <div className="delivery-panel-body">
         {activePanel === "manuscript" && (
-          <ManuscriptPanel sermon={sermon} onUpdate={onUpdate} />
+          <ManuscriptPanel sermon={sermon} onUpdate={onUpdate} onPanelChange={setActivePanel} />
         )}
         {activePanel === "outline" && (
           <OutlinePanel sermon={sermon} />

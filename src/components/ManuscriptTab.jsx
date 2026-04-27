@@ -118,7 +118,7 @@ function TransitionField({ label, value, onChange }) {
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
-export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading, onOpenDrawer }) {
+export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading, onOpenDrawer, onTabChange }) {
   const ms = parseManuscript(sermon.manuscript);
   const outline = getOutline(sermon);
   const fes = getFunctionalElements(sermon);
@@ -195,6 +195,9 @@ export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading, onOpe
 
   return (
     <div>
+      <div style={{ marginBottom: "20px", fontSize: "13px", color: "var(--ink-ghost)", fontStyle: "italic" }}>
+        Expand the outline into full prose. Use the AI tools above to check flow and speakability, then run the Final Tune-Up before moving to Delivery.
+      </div>
       {/* Toolbar */}
       <div className="manuscript-toolbar">
         <div className="word-count">{words.toLocaleString()} words · ~{minutes} min</div>
@@ -319,6 +322,12 @@ export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading, onOpe
           value={ms.conclusion?.response || ""}
           onChange={e => updateMs("conclusion", "response", e.target.value)}
         />
+      </div>
+
+      <div className="step-advance">
+        <button className="btn-primary btn-sm" onClick={() => onTabChange?.("delivery")}>
+          Continue to Delivery →
+        </button>
       </div>
 
     </div>
