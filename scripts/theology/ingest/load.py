@@ -24,8 +24,7 @@ indexes — they are not maintained incrementally:
     python scripts/theology/build_theology_fts.py
     npx electron scripts/theology/build_theology_vectors.js
 
-Note: the FTS builder currently targets the project-root theology.db.
-It will need a one-line fix to target data/theology.db before re-running.
+Both builders already target data/theology.db and are safe to re-run.
 """
 
 import argparse

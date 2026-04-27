@@ -58,7 +58,7 @@ Current schema version: **7**
 | `date` | TEXT | |
 | `preacher` | TEXT | |
 | `stage` | TEXT | `planning \| study \| outline \| writing \| ready \| archived` |
-| `big_idea` | TEXT | |
+| `big_idea` | TEXT | (legacy — never written via IPC; sermon big idea is always read through the series JOIN) |
 | `mpt` | TEXT | Main Point of the Text (past tense) |
 | `mps` | TEXT | Main Point of the Sermon (present tense) |
 | `observations` | TEXT | Step 1 Phase 1 (JSON: structured per-question fields, or legacy plain text) |
@@ -76,6 +76,8 @@ Current schema version: **7**
 | `audience_assumptions` | TEXT | Pastoral Intelligence: who is in the room and what they carry |
 | `background_noise` | TEXT | Pastoral Intelligence: external context (news, events, moment) |
 | `study_guide_note` | TEXT | Short note orienting congregation readers to how this sermon fits the series arc |
+| `preaching_blocks` | TEXT | CMC (Contour-Mapped Compression) without-notes output; added v8 migration |
+| `manuscript_delivery` | TEXT | AI-formatted delivery manuscript; added v9 migration |
 | `created_at` | TEXT | |
 | `updated_at` | TEXT | |
 

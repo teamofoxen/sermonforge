@@ -242,12 +242,17 @@ export function rankChunks(chunks, normalized) {
 }
 
 // Character budget per tier.
+// Tier 6 (pastoral memory context) is capped in buildMemoryContext.
+// Tier 7 (pastoral intelligence) is capped in buildTiers.
+// All caps are enforced via these constants — do not use magic numbers.
 const TIER_LIMITS = Object.freeze({
   tier1: 1500,
   tier2: 2500,
   tier3: 2500,
   tier4: 1200,
   tier5: 8000,
+  tier6:  650,
+  tier7:  800,
 });
 
 /**
@@ -480,19 +485,18 @@ export function buildTiers({ normalized, compressed, libraryChunks = [], theolog
 
   // Tier 7 — pastoral intelligence. Always-on (pastoralContext: true at every step).
   // Gated by content, not step: only emits when at least one field has content.
-  // Budget: 800 chars shared across the three fields.
+  // Budget: TIER_LIMITS.tier7 chars shared across the three fields; applied once
+  // to the joined string so no individual field is over-privileged.
   let tier7 = null;
   if (inc.pastoralContext) {
-    const PASTORAL_BUDGET = 800;
     const fields = [
-      normalized.background_noise?.trim()     && `The Cultural Moment: ${trimStr(normalized.background_noise.trim(),     PASTORAL_BUDGET)}`,
-      normalized.audience_assumptions?.trim() && `The Room: ${trimStr(normalized.audience_assumptions.trim(),   PASTORAL_BUDGET)}`,
-      normalized.topic_theme?.trim()          && `The Sermon's Work: ${trimStr(normalized.topic_theme.trim(),          PASTORAL_BUDGET)}`,
+      normalized.background_noise?.trim()     && `The Cultural Moment: ${normalized.background_noise.trim()}`,
+      normalized.audience_assumptions?.trim() && `The Room: ${normalized.audience_assumptions.trim()}`,
+      normalized.topic_theme?.trim()          && `The Sermon's Work: ${normalized.topic_theme.trim()}`,
     ].filter(Boolean);
     if (fields.length > 0) {
-      // Apply shared budget: trim the joined string if it exceeds PASTORAL_BUDGET.
       const joined = fields.join("\n");
-      tier7 = joined.length <= PASTORAL_BUDGET ? joined : joined.slice(0, PASTORAL_BUDGET).trimEnd();
+      tier7 = joined.length <= TIER_LIMITS.tier7 ? joined : joined.slice(0, TIER_LIMITS.tier7).trimEnd();
     }
   }
 
@@ -782,9 +786,9 @@ export function buildMemoryContext(memory, step) {
   if (sections.length === 0) return "";
 
   let result = sections.join("\n\n");
-  if (result.length > 650) {
-    const cutAt = result.lastIndexOf("\n", 650);
-    result = (cutAt > 0 ? result.slice(0, cutAt) : result.slice(0, 650)).trimEnd() + "…";
+  if (result.length > TIER_LIMITS.tier6) {
+    const cutAt = result.lastIndexOf("\n", TIER_LIMITS.tier6);
+    result = (cutAt > 0 ? result.slice(0, cutAt) : result.slice(0, TIER_LIMITS.tier6)).trimEnd() + "…";
   }
   return result;
 }

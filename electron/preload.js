@@ -2,8 +2,8 @@ const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("electronAPI", {
   // ── AI ────────────────────────────────────────────────────────────────────
-  sendAIMessage: (messages, systemPrompt) =>
-    ipcRenderer.invoke("ai-message", { messages, systemPrompt }),
+  sendAIMessage: (messages, systemPrompt, step, sermonId) =>
+    ipcRenderer.invoke("ai-message", { messages, systemPrompt, step, sermonId }),
 
   // ── Sermons ───────────────────────────────────────────────────────────────
   getAllSermons:   ()              => ipcRenderer.invoke("db-getAllSermons"),

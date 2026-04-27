@@ -1,3 +1,5 @@
+import { STEPS } from "../constants/steps";
+
 const STORAGE_KEY = 'sermonforge_memory';
 
 const EMPTY_MEMORY = {
@@ -244,4 +246,33 @@ export function logMemory() {
 
 if (typeof window !== 'undefined') {
   window.memoryDebug = { getMemory, clearMemory, logMemory };
+}
+
+// Steps where AI response patterns are worth capturing.
+// Exegesis phases are excluded — stylistic patterns shouldn't form during text study.
+const CAPTURE_PATTERN_STEPS = new Set(['manuscript', STEPS.OUTLINE, 'outline']);
+
+/**
+ * Extract up to 2 phrase patterns from an AI response and store them in memory.
+ * Only runs for manuscript and outline steps. Filters out any phrase already in
+ * memory or present in the last 3 stored phrases to prevent the AI reinforcing
+ * its own output endlessly.
+ *
+ * @param {string} response — AI response text
+ * @param {string} step     — active step identifier
+ */
+export function captureResponsePatterns(response, step) {
+  if (!CAPTURE_PATTERN_STEPS.has(step)) return;
+  if (!response?.trim()) return;
+
+  const stored = getMemory()?.patterns?.aiPhrasePatterns ?? [];
+  const storedSet = new Set(stored);
+  const recentSet = new Set(stored.slice(-3));
+
+  const newPatterns = extractPhrasePatterns(response)
+    .slice(0, 2)
+    .filter(p => !storedSet.has(p) && !recentSet.has(p));
+
+  if (newPatterns.length === 0) return;
+  updateMemory({ patterns: { aiPhrasePatterns: newPatterns } });
 }

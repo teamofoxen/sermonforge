@@ -1000,7 +1000,8 @@ ipcMain.handle("library-search", (event, { query, limit = 100, mode = "browse" }
       );
     }
 
-    // FTS5 path (when available) — always searches all indexed columns but ranks well
+    // FTS path (when available) — AI mode only; browse mode always uses LIKE
+    // (browse intentionally limits to title/passage/series and skips full-text index)
     if (mode === "ai") {
       const ftsQuery = buildFtsQuery(query);
       if (ftsQuery) {

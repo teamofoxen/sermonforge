@@ -8,9 +8,11 @@
  *
  * @param {Array<{role: string, content: string}>} messages
  * @param {string} systemPrompt
+ * @param {string} [step]      — active step/tab identifier; written to the audit log
+ * @param {string} [sermonId]  — active sermon id; written to the audit log
  * @returns {Promise<string>} Claude's response text, or empty string on error
  */
-export async function sendAIMessage(messages, systemPrompt) {
+export async function sendAIMessage(messages, systemPrompt, step, sermonId) {
   // Input validation
   if (!Array.isArray(messages)) {
     console.error('[AI] sendAIMessage: messages must be an array', { messages });
@@ -26,7 +28,7 @@ export async function sendAIMessage(messages, systemPrompt) {
   if (isDev) console.log('[AI] request start', { messageCount: messages.length });
 
   try {
-    const response = await window.electronAPI.sendAIMessage(messages, systemPrompt);
+    const response = await window.electronAPI.sendAIMessage(messages, systemPrompt, step, sermonId);
 
     if (isDev) {
       const ms = Math.round(performance.now() - start);

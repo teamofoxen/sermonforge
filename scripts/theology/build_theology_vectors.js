@@ -82,8 +82,10 @@ async function main() {
   console.log(`Chunks to embed: ${pendingRows.length}`);
 
   // ── Batch embedding + insertion ───────────────────────────────────────
-  // vec0 + better-sqlite3 doesn't support parameterized rowids, so
-  // we interpolate the rowid (always an integer from SQLite) in SQL.
+  // rowid is string-interpolated rather than parameterized because vec0 virtual
+  // tables do not support parameterized rowid values with better-sqlite3.
+  // This is safe: rowids are SQLite-assigned integers sourced directly from the
+  // theology table — they are never user-supplied input and carry no injection risk.
   const insertBatch = db.transaction((rows, embeddings) => {
     for (let i = 0; i < rows.length; i++) {
       const vecJson = JSON.stringify(embeddings[i]);

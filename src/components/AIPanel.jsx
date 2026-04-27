@@ -2,27 +2,19 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useDemo } from "../contexts/DemoContext";
 import ContextPreview from "./ContextPreview";
 import ReactMarkdown from "react-markdown";
-import { getOutline, autoResize } from "../utils";
-import { STEPS, PHASES } from "../constants/steps";
+import { autoResize } from "../utils";
 import { sendAIMessage } from "../utils/ai";
 import { buildContext } from "../utils/contextBuilder";
-import { getMemory, updateMemory, extractPhrasePatterns } from "../utils/memory";
+import { captureResponsePatterns } from "../utils/memory";
 import { buildSystemPrompt, appendTaskDirective } from "../prompts/sermon";
 import { formatChunkForLLM, dedupSources } from "../utils/theologyCitation";
+import { getReviewPrompt, buildCoherenceCheckPrompt } from "../utils/reviewPrompts";
+import { getStepFieldConfig, getCurrentFieldData, buildIncorporatePrompt } from "../utils/incorporateHelpers";
 import {
   getTheologyStatus,
   searchTheologyLibrary,
 } from "../db/database";
 import {
-  OBSERVE_FIELDS,
-  INTERPRET_FIELDS,
-  REDEMPTIVE_FIELDS,
-  REDEMPTIVE_SUMMARY_KEY,
-  IMPLICATIONS_THEOLOGICAL,
-  IMPLICATIONS_PERSONAL,
-  IMPLICATIONS_UNBELIEVER_KEY,
-  IMPLICATIONS_COMPILED_KEY,
-  parseStructuredField,
   serializeStructuredField,
 } from "../utils/studyFields";
 
@@ -104,7 +96,7 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
       // content blocks with cache_control on the static portion.
       const base = buildSystemPrompt(step, sermonId);
       const finalSystemPrompt = appendTaskDirective(base, systemPrompt);
-      const response = await sendAIMessage(history, finalSystemPrompt);
+      const response = await sendAIMessage(history, finalSystemPrompt, step, sermonId);
       setMessages((prev) => [...prev, { role: "assistant", content: response || "Something went wrong. Please try again.", ...meta }]);
       if (response) captureResponsePatterns(response, step);
     } catch (err) {
@@ -169,7 +161,7 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
         const userMsg = { role: "user", content: userContent };
         setMessages(prev => [...prev, userMsg]);
         const history = trimHistory([...messagesRef.current, userMsg]).map(m => ({ role: m.role, content: m.content }));
-        const response = await sendAIMessage(history, systemPrompt);
+        const response = await sendAIMessage(history, systemPrompt, step, sermon?.id);
         // Deduplicate sources by author+work for the attribution display
         const sources = hits?.length ? dedupSources(hits) : [];
         setMessages(prev => [...prev, { role: "assistant", content: response || "Something went wrong. Please try again.", sources }]);
@@ -194,29 +186,9 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
   function clearHistory() { setMessages([]); }
 
   function handleSeriesCoherenceCheck() {
-    const mpt           = sermon?.mpt;
-    const outline       = getOutline(sermon);
-    const seriesBigIdea = sermon?.series?.big_idea;
-    const sectionBigIdea = sermon?.section?.big_idea;
-
-    const parts = [];
-    if (mpt)               parts.push(`MPT: "${mpt}"`);
-    if (outline.length > 0) parts.push(`Outline:\n${outline.map((p, i) => `${i + 1}. ${p.text}`).join("\n")}`);
-    parts.push(`Series big idea: "${seriesBigIdea}"`);
-    if (sectionBigIdea)    parts.push(`Section big idea: "${sectionBigIdea}"`);
-
-    const prompt =
-      parts.join("\n\n") +
-      "\n\nEvaluate series alignment:\n" +
-      "1. Where is the alignment between this sermon and the series framework strong?\n" +
-      "2. Where does this sermon diverge from the series framework?\n" +
-      "3. Is that divergence textually necessary and helpful, or distracting?";
-
-    sendMessage(prompt,
-      "Review whether this sermon fits its series without losing its textual integrity. " +
-      "Be direct and specific. Divergence is not always a problem — say so when it is warranted by the text.",
-      activeStep || activeTab, sermon?.id
-    );
+    const check = buildCoherenceCheckPrompt(sermon);
+    if (!check) return;
+    sendMessage(check.prompt, check.system, activeStep || activeTab, sermon?.id);
   }
 
   async function handleIncorporate(reviewContent, reviewStep) {
@@ -228,7 +200,7 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
       const current = getCurrentFieldData(config, sermon);
       const prompt = buildIncorporatePrompt(config, current, reviewContent);
       const systemPrompt = `You are revising sermon preparation content based on AI review feedback. Return only a raw JSON object — no markdown fences, no commentary. Include every original key in your response, even unchanged ones. Preserve the pastor's voice. Apply only changes directly supported by the review feedback.`;
-      const response = await sendAIMessage([{ role: "user", content: prompt }], systemPrompt);
+      const response = await sendAIMessage([{ role: "user", content: prompt }], systemPrompt, reviewStep, sermon?.id);
 
       // Strip any markdown code fences the model may have added
       const cleaned = response?.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
@@ -479,53 +451,6 @@ function IncorporateButton({ onClick, disabled }) {
   );
 }
 
-// Maps a review step to its target field configuration.
-function getStepFieldConfig(step) {
-  switch (step) {
-    case PHASES.OBSERVE:
-      return { type: "json", column: "observations", label: "Observations", fieldDefs: OBSERVE_FIELDS };
-    case PHASES.INTERPRET:
-      return { type: "json", column: "interpretation", label: "Interpretation", fieldDefs: INTERPRET_FIELDS };
-    case PHASES.REDEMPTIVE_THREAD:
-      return {
-        type: "json", column: "redemptive_thread", label: "Redemptive Thread",
-        fieldDefs: [...REDEMPTIVE_FIELDS, { key: REDEMPTIVE_SUMMARY_KEY, label: "Summary" }],
-      };
-    case PHASES.IMPLICATIONS:
-      return {
-        type: "json", column: "implications", label: "Implications",
-        fieldDefs: [
-          ...IMPLICATIONS_THEOLOGICAL, ...IMPLICATIONS_PERSONAL,
-          { key: IMPLICATIONS_UNBELIEVER_KEY, label: "Implications for Unbelievers" },
-          { key: IMPLICATIONS_COMPILED_KEY, label: "Compiled Implications" },
-        ],
-      };
-    case STEPS.MPT_MPS:
-      return {
-        type: "mpt_mps", label: "MPT / MPS",
-        fieldDefs: [{ key: "mpt", label: "MPT" }, { key: "mps", label: "MPS" }],
-      };
-    default:
-      return null;
-  }
-}
-
-function getCurrentFieldData(config, sermon) {
-  if (config.type === "mpt_mps") {
-    return { mpt: sermon?.mpt || "", mps: sermon?.mps || "" };
-  }
-  return parseStructuredField(sermon?.[config.column]);
-}
-
-function buildIncorporatePrompt(config, current, reviewContent) {
-  const keys = config.fieldDefs.map(f => f.key);
-  const currentLabeled = config.fieldDefs
-    .map(f => `${f.label}: ${current[f.key] || "(empty)"}`)
-    .join("\n");
-
-  return `Current content for ${config.label}:\n${currentLabeled}\n\nReview feedback:\n${reviewContent}\n\nBased on this feedback, produce a revised version of the content above.\nReturn a JSON object with these exact keys: ${JSON.stringify(keys)}\nInclude all keys — use the original value for anything you are not changing.`;
-}
-
 function DiffModal({ config, current, proposed, onAccept, onDiscard }) {
   const changed = config.fieldDefs.filter(f => {
     const oldVal = (current[f.key] || "").trim();
@@ -584,125 +509,3 @@ function DiffModal({ config, current, proposed, onAccept, onDiscard }) {
     </div>
   );
 }
-
-// Steps where AI response patterns are worth capturing.
-// Exegesis phases are excluded — stylistic patterns shouldn't form during text study.
-const CAPTURE_PATTERN_STEPS = new Set(['manuscript', STEPS.OUTLINE, 'outline']);
-
-// Extracts up to 2 phrase patterns from an AI response and stores them in memory.
-// Only runs for manuscript and outline steps. Filters out any phrase already in
-// memory or present in the last 3 stored phrases to prevent the AI reinforcing
-// its own output endlessly.
-function captureResponsePatterns(response, step) {
-  if (!CAPTURE_PATTERN_STEPS.has(step)) return;
-  if (!response?.trim()) return;
-
-  const stored = getMemory()?.patterns?.aiPhrasePatterns ?? [];
-  const storedSet = new Set(stored);
-  const recentSet = new Set(stored.slice(-3));
-
-  const newPatterns = extractPhrasePatterns(response)
-    .slice(0, 2)
-    .filter((p) => !storedSet.has(p) && !recentSet.has(p));
-
-  if (newPatterns.length === 0) return;
-  updateMemory({ patterns: { aiPhrasePatterns: newPatterns } });
-}
-
-function getReviewPrompt(tab, sermon, activeStep) {
-  const passage = sermon?.passage || "the passage";
-  const mpt = sermon?.mpt || "";
-  const mps = sermon?.mps || "";
-
-  if (tab === "study") {
-    const phasePrompts = {
-      [PHASES.OBSERVE]:           `Review these observations about ${passage}. Are the main features of the text captured — context, divisions, commands, statements, characters, big ideas? What is missing or underdeveloped?\n\nMy observations:\n${sermon?.observations || "(none)"}`,
-      [PHASES.INTERPRET]:         `Review this interpretation work on ${passage}. Does it move from observation to meaning correctly? Are contrasts, recurring ideas, and key words identified? What gaps remain?\n\nMy interpretation:\n${sermon?.interpretation || "(none)"}`,
-      [PHASES.REDEMPTIVE_THREAD]: `Review this redemptive thread summary for ${passage}. Does it accurately locate this passage in redemptive history? Is Christ's role clear and textually grounded, not imported?\n\nMy redemptive thread notes:\n${sermon?.redemptive_thread || "(none)"}`,
-      [PHASES.IMPLICATIONS]:      `Review these implications drawn from ${passage}. Are they theologically grounded? Do they address both believers and unbelievers? Do they go deeper than behavioral steps?\n\nMy implications:\n${sermon?.implications || "(none)"}`,
-    };
-
-    if (activeStep && phasePrompts[activeStep]) {
-      return {
-        system: "Give direct, specific, constructive feedback as a biblical scholar and homiletics mentor would.",
-        prompt: phasePrompts[activeStep],
-      };
-    }
-
-    // Step 2: MPT/MPS
-    if (activeStep === STEPS.MPT_MPS) {
-      return {
-        system: "Act as a rigorous challenger. Push back, probe weaknesses, and expose where the MPT or MPS does not hold up. Do not offer encouragement unless the work genuinely earns it. If something is weak, say so directly. The pastor needs a tough critic here, not a supportive mentor.",
-        prompt: `Challenge the MPT and MPS for ${passage}.\n\nMPT: ${mpt || "(none)"}\nMPS: ${mps || "(none)"}\n\nProbe each one:\n- Is the MPT the actual main point of the text, or is it what the pastor wanted to find? Can you poke a hole in it?\n- Does the MPS flow organically from the MPT, or is it an import from somewhere else?\n- Is the MPT-to-MPS movement legitimate, or is the preacher smuggling in a point the text doesn't make?\n- What is the weakest part of this formulation?`,
-      };
-    }
-
-    // Step 3: Outline
-    if (activeStep === STEPS.OUTLINE) {
-      const outline = getOutline(sermon);
-      return {
-        system: "Review this outline for homiletical strength.",
-        prompt: `Review this sermon outline for ${passage}.\n\nMPT: ${mpt}\nMPS: ${mps}\n\nOutline:\n${outline.map((p, i) => `${i + 1}. ${p.text}`).join("\n") || "(none)"}\n\nDo the points derive from the text? Do they serve the MPS? Is the progression clear?`,
-      };
-    }
-
-    // Step 4: Functional Elements
-    if (activeStep === STEPS.FUNCTIONAL_ELEMENTS) {
-      const outline = getOutline(sermon);
-      const fe = sermon?.functional_elements
-        ? (typeof sermon.functional_elements === "string"
-            ? (() => { try { return JSON.parse(sermon.functional_elements); } catch { return {}; } })()
-            : sermon.functional_elements)
-        : {};
-      const feLines = outline.map((p, i) => {
-        const entry = fe[p.id] || {};
-        const explanation  = entry.explanation?.trim()  || "(none)";
-        const application  = entry.application?.trim()  || "(none)";
-        const illustration = entry.illustration?.trim() || "(none)";
-        return `Point ${i + 1}: ${p.text}\n  Explanation: ${explanation}\n  Application: ${application}\n  Illustration: ${illustration}`;
-      }).join("\n\n");
-      return {
-        system: "Review the functional elements for homiletical strength. Be thorough — evaluate each point individually.",
-        prompt: `Review the functional elements for each outline point in this sermon on ${passage}.\n\nMPS: ${mps || "(none)"}\n\nFor each point, evaluate:\n- Does the explanation ground the point in the text and the author's intent?\n- Is the application specific, gospel-shaped, and not merely behavioral?\n- Does the illustration serve the point, or does it distract from it?\n- Is anything missing that the point genuinely needs?\n\n${feLines || "(No functional elements recorded)"}`,
-      };
-    }
-
-    // Full study review (fallback)
-    return {
-      system: "Review this study work as a biblical scholar and homiletics mentor would.",
-      prompt: `Review the study work for ${passage}.\n\nObservations: ${sermon?.observations || "(none)"}\n\nInterpretation: ${sermon?.interpretation || "(none)"}\n\nRedemptive thread: ${sermon?.redemptive_thread || "(none)"}\n\nImplications: ${sermon?.implications || "(none)"}\n\nMPT: ${mpt}\nMPS: ${mps}\n\nIs the exegetical work thorough? Is the MPT historically grounded? Does the MPS flow from the text?`,
-    };
-  }
-
-  if (tab === "outline") {
-    const outline = getOutline(sermon);
-    return {
-      system: "Review this outline for homiletical strength.",
-      prompt: `Review this sermon outline for ${passage}.\n\nMPT: ${mpt}\nMPS: ${mps}\n\nOutline:\n${outline.map((p, i) => `${i + 1}. ${p.text}`).join("\n")}\n\nDo the points derive from the text? Do they serve the MPS? Is the progression clear?`,
-    };
-  }
-
-  if (tab === "manuscript") {
-    const manuscriptText = sermon?.manuscript || "(none)";
-    const manuscriptForReview = manuscriptText.length > 8000
-      ? manuscriptText.substring(0, 8000) + "\n\n(manuscript truncated for review — full text in editor)"
-      : manuscriptText;
-    return {
-      system: "Provide a structured manuscript review.",
-      prompt: `Review this sermon manuscript.\n\nPassage: ${passage}\nMPT: ${mpt}\nMPS: ${mps}\n\nManuscript:\n${manuscriptForReview}\n\nGive a brief assessment of: text governance, structural alignment, gospel necessity, and one concrete improvement.`,
-    };
-  }
-
-  if (tab === "delivery") {
-    return {
-      system: "Review this from a preaching coach's perspective.",
-      prompt: `Based on the sermon outline and manuscript for ${passage}, what should this preacher be thinking about for effective delivery?`,
-    };
-  }
-
-  return {
-    system: "Give brief, constructive feedback on the current sermon.",
-    prompt: `Review the current sermon on ${passage} and give brief, constructive feedback.`,
-  };
-}
-

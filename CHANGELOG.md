@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-04-27 — refactor: resolve all sweep-the-universe architectural findings
+
+- Extracted prompt construction and incorporate helpers from AIPanel into reviewPrompts.js and incorporateHelpers.js.
+- Moved captureResponsePatterns to memory.js where its dependencies already live.
+- Threaded step and sermonId through sendAIMessage and preload so audit log entries are no longer null.
+- Added tier6 and tier7 to TIER_LIMITS; removed redundant per-field trim in pastoral intelligence block.
+- Updated schema.md to reflect v8/v9 migration columns and mark big_idea as legacy.
+
+---
+
 ## 2026-04-26 — feat(flow): surface study summaries and E/A/I depth in Blueprint
 
 - StudyTab fires onSummaryGenerated when s3/s4 summaries are produced; SermonWorkspace lifts this state.
