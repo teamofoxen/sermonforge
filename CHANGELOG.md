@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-04-26 — refactor(ai): remove all AI quick-action chips
+
+- Removed `getSuggestions`, `howChip`, and `HOW_CHIP_MESSAGES` from `AIPanel.jsx`.
+- Removed `handleLibrarySearch` and its dead imports (`getLibraryStatus`, `searchLibrary`, `getLibraryManuscripts`).
+- Removed chip rendering block and `libraryCount` state; `getLibraryStatus` call dropped from startup effect.
+
+---
+
 ## 2026-04-26 — fix(ui): dark mode header contrast for AI panel and passage popup
 
 - Added `--dark-header-bg` CSS token (`#1e1a16` in dark mode, `var(--ink)` in light mode).

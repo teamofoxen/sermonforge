@@ -10,9 +10,6 @@ import { getMemory, updateMemory, extractPhrasePatterns } from "../utils/memory"
 import { buildSystemPrompt, appendTaskDirective } from "../prompts/sermon";
 import { formatChunkForLLM, dedupSources } from "../utils/theologyCitation";
 import {
-  getLibraryStatus,
-  searchLibrary,
-  getLibraryManuscripts,
   getTheologyStatus,
   searchTheologyLibrary,
 } from "../db/database";
@@ -42,7 +39,6 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
   const { demoMode } = useDemo();
   const [showContextPreview, setShowContextPreview] = useState(false);
   const [messages, setMessages] = useState([]);
-  const [libraryCount, setLibraryCount] = useState(0);
   const [theologyAvailable, setTheologyAvailable] = useState(false);
   const [theologyEnabled, setTheologyEnabled] = useState(false);
   const [inputText, setInputText] = useState("");
@@ -83,9 +79,6 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
   }, [messages, loading]);
 
   useEffect(() => {
-    getLibraryStatus()
-      .then(s => setLibraryCount(s.count || 0))
-      .catch((e) => console.error("[AIPanel] getLibraryStatus failed:", e));
     getTheologyStatus()
       .then(s => setTheologyAvailable(s.available || false))
       .catch((e) => console.error("[AIPanel] getTheologyStatus failed:", e));
@@ -198,109 +191,6 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
     }
   }
 
-  async function handleLibrarySearch() {
-    if (!sermon || loading) return;
-
-    // Library context is suppressed by resolveIncludes at all steps except "manuscript".
-    // Running the full search at those steps would fetch and rank manuscripts only for them
-    // to be silently discarded by buildContext. Fall back to a plain sendMessage so the
-    // user still gets a useful response based on the standard context for that step.
-    const LIBRARY_GATED_STEPS = new Set([
-      PHASES.OBSERVE, PHASES.INTERPRET, PHASES.REDEMPTIVE_THREAD, PHASES.IMPLICATIONS,
-      STEPS.MPT_MPS, STEPS.OUTLINE, STEPS.FUNCTIONAL_ELEMENTS,
-    ]);
-    if (LIBRARY_GATED_STEPS.has(activeStep)) {
-      const step = activeStep;
-      const context = buildContext({ sermon, step });
-      const promptActionMap = {
-        [PHASES.OBSERVE]:           "What structural observations or textual features have I highlighted in related passages before?",
-        [PHASES.INTERPRET]:         "How have I interpreted similar texts or themes before? What theological conclusions did I draw?",
-        [PHASES.REDEMPTIVE_THREAD]: "How have I traced the redemptive thread through similar passages or themes before?",
-        [PHASES.IMPLICATIONS]:      "What application directions and implications have I used for similar themes or passages?",
-        [STEPS.MPT_MPS]:            "How have I formulated MPTs and MPSs for similar passages before?",
-        [STEPS.OUTLINE]:            "What outline patterns have worked well for similar passages or themes?",
-        [STEPS.FUNCTIONAL_ELEMENTS]: "How have I developed explanation, application, and illustration for similar passages?",
-      };
-      const promptAction = promptActionMap[step] || "What insights from my previous work should inform this new sermon?";
-      const content = context
-        ? `CONTEXT:\n${context}\n\nUSER REQUEST:\n${promptAction}`
-        : promptAction;
-      sendMessage(content, buildSystemPrompt(step, sermon?.id), step, sermon?.id);
-      return;
-    }
-
-    const passage = sermon.passage || "";
-    // Extract just the book name for a reliable FTS anchor
-    // e.g. "Galatians 1:1-5" → "Galatians", "1 Corinthians 13:1" → "1 Corinthians"
-    const bookName = passage ? passage.split(/\s+\d+[:\-]/)[0].trim() : "";
-    const mps = sermon.mps || "";
-    const mpt = sermon.mpt || "";
-
-    if (!bookName && !mps && !mpt) {
-      setMessages(prev => [...prev, {
-        role: "assistant",
-        content: "Add a passage to this sermon first — the library search needs something to go on.",
-      }]);
-      return;
-    }
-
-    // Build a richer query: book name + MPS/MPT + early observation keywords
-    const parts = [bookName, mps, mpt].filter(Boolean);
-    if (activeTab === "study" && sermon.observations) {
-      // observations may be structured JSON or plain text; extract readable content
-      let obsText = sermon.observations;
-      if (sermon.observations.trim().startsWith("{")) {
-        try {
-          obsText = Object.values(JSON.parse(sermon.observations) || {}).filter(v => typeof v === "string").join(" ");
-        } catch { /* malformed JSON — fall through to raw string */ }
-      }
-      if (obsText) parts.push(obsText.substring(0, 200));
-    }
-    const searchQuery = parts.join(" ");
-
-    // At this point only "manuscript" (and "outline" without an activeStep set) reaches here,
-    // since all other library-gated steps returned early above.
-    let promptAction = activeTab === "manuscript"
-      ? "What rhetorical moves, transitions, or compelling phrases from my past work could I adapt here?"
-      : "What insights from my previous work should inform this new sermon?";
-
-    onLoadingChange?.(true);
-    try {
-      const hits = await searchLibrary(searchQuery, 6, "ai");
-
-      if (!hits || hits.length === 0) {
-        setMessages(prev => [...prev, {
-          role: "assistant",
-          content: `No relevant sermons found in your library for "${passage || searchQuery}". Try importing your library from the sidebar first.`,
-        }]);
-        return;
-      }
-
-      const ids = hits.map(h => h.id);
-      const manuscripts = await getLibraryManuscripts(ids, true, 500);
-
-      const libraryChunks = manuscripts.map(m => `**${m.title}** (${m.passage})\n${m.manuscript_text}`);
-      const step = activeStep || activeTab;
-      const context = buildContext({ sermon, step, libraryChunks });
-      const userMsg = {
-        role: "user",
-        content: context
-          ? `CONTEXT:\n${context}\n\nUSER REQUEST:\n${promptAction}`
-          : promptAction,
-      };
-
-      setMessages(prev => [...prev, userMsg]);
-      const history = trimHistory([...messagesRef.current, userMsg]).map(m => ({ role: m.role, content: m.content }));
-      const response = await sendAIMessage(history, buildSystemPrompt(step, sermon?.id));
-      setMessages(prev => [...prev, { role: "assistant", content: response || "Something went wrong. Please try again." }]);
-      if (response) captureResponsePatterns(response, step);
-    } catch (err) {
-      setMessages(prev => [...prev, { role: "assistant", content: `Library search error: ${err.message}` }]);
-    } finally {
-      onLoadingChange?.(false);
-    }
-  }
-
   function clearHistory() { setMessages([]); }
 
   function handleSeriesCoherenceCheck() {
@@ -369,7 +259,6 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
   }
 
   const tabLabels = { study: "Study", outline: "Outline", manuscript: "Manuscript", delivery: "Delivery" };
-  const suggestions = getSuggestions(activeTab, sermon, libraryCount, activeStep);
 
   return (
     <aside className="ai-panel">
@@ -469,22 +358,6 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
       </div>
 
       <div className="ai-panel-footer">
-        {/* Quick action chips */}
-        {suggestions.length > 0 && (
-          <div className="ai-suggestions">
-            {suggestions.map((s, i) => (
-              <button
-                key={i}
-                className="ai-suggestion-btn"
-                onClick={() => s.librarySearch ? handleLibrarySearch() : sendMessage(s.prompt, s.system, activeStep || activeTab, sermon?.id)}
-                disabled={loading}
-              >
-                {s.label}
-              </button>
-            ))}
-          </div>
-        )}
-
         {/* Review My Work */}
         <button
           className="btn-primary"
@@ -734,130 +607,6 @@ function captureResponsePatterns(response, step) {
 
   if (newPatterns.length === 0) return;
   updateMemory({ patterns: { aiPhrasePatterns: newPatterns } });
-}
-
-const HOW_CHIP_MESSAGES = {
-  [PHASES.OBSERVE]:            "Explain the Observe phase — what it's for, what I should be doing, and how it sets up the rest of sermon prep.",
-  [PHASES.INTERPRET]:          "Explain the Interpret phase — what it's for, how it builds on observation, and what good interpretation looks like.",
-  [PHASES.REDEMPTIVE_THREAD]:  "Explain the Redemptive Thread phase — what it's for, why it comes here in the process, and how to think about locating Christ in the text.",
-  [PHASES.IMPLICATIONS]:       "Explain the Implications phase — what it's for, how it differs from application, and how the gospel shapes it.",
-  [STEPS.MPT_MPS]:             "Explain the MPT and MPS — what each one is, why they're distinct, and how to forge them well.",
-  [STEPS.OUTLINE]:             "Explain the Outline stage — what it's for, how it should relate to the text's own structure, and what makes a good sermon outline.",
-  [STEPS.FUNCTIONAL_ELEMENTS]: "Explain Functional Elements — what Explanation, Application, and Illustration are each doing and why every point needs all three.",
-  "outline":    "Explain the Outline stage — what it's for, how it should relate to the text's own structure, and what makes a good sermon outline.",
-  "manuscript": "Explain the Manuscript stage — what it's for in this workflow and how it relates to everything that came before.",
-  "delivery":   "Explain the Delivery tab — what it's for and how to use it well.",
-  "series":     "Explain how Series Planning works in SermonForge — what it's for, how it relates to individual sermon prep, and how to use it well.",
-  "study":      "Explain how the Study tab works — the four phases of exegesis and the steps that follow.",
-  "book-study": "Explain how the Book Study phase works within SermonForge. Describe how each field contributes to the series planning process and how the work here feeds into the rest of the workflow.",
-};
-
-function howChip(key) {
-  const prompt = HOW_CHIP_MESSAGES[key] || "Explain how this stage fits into the overall SermonForge workflow.";
-  return { label: "How does this step work?", prompt };
-}
-
-function getSuggestions(tab, sermon, libraryCount = 0, activeStep) {
-  const passage = sermon?.passage || "this passage";
-  const mps = sermon?.mps || "";
-  const libraryBtn = libraryCount > 0 ? [{ label: "Search My Library", librarySearch: true }] : [];
-
-  if (tab === "study") {
-    const base = [
-      howChip(activeStep || "study"),
-      {
-        label: "Historical context",
-        system: "Provide the key historical and cultural context a preacher needs. Be concise.",
-        prompt: `Give me the key historical and cultural context for ${passage} that a preacher needs for sermon prep.`,
-      },
-      {
-        label: "Key words to study",
-        system: "Identify theologically significant words and phrases with biblical language insights. Be concise and practical.",
-        prompt: `What are the most important words or phrases in ${passage} that carry theological weight? Include any Hebrew/Greek insights worth knowing.`,
-      },
-    ];
-    // Add redemptive thread prompt when in that phase
-    if (activeStep === PHASES.REDEMPTIVE_THREAD) {
-      base.push({
-        label: "Redemptive-historical placement",
-        system: "Engage with this from a Reformed biblical theology perspective. Be specific and textually grounded.",
-        prompt: `Where does ${passage} fit in the arc of redemptive history? How does it point forward or backward to Christ?`,
-      });
-    }
-    return [...base, ...libraryBtn];
-  }
-
-  if (tab === "outline") {
-    return [
-      howChip(activeStep || "outline"),
-      {
-        label: "Suggest outline structures",
-        system: "Suggest text-driven outlines, not topical ones.",
-        prompt: `Suggest two or three possible outline structures for ${passage}. Each should derive the points directly from the text.${mps ? ` The MPS is: ${mps}` : ""}`,
-      },
-      ...libraryBtn,
-    ];
-  }
-
-  if (tab === "manuscript") {
-    return [
-      howChip("manuscript"),
-      {
-        label: "Strengthen the introduction",
-        system: "Focus on the opening hook and the move toward the text.",
-        prompt: `Here is my sermon introduction. Suggest how to strengthen it — improve the hook, the tension, and the move toward the text:\n\n${sermon?.manuscript?.substring(0, 500) || "[No manuscript yet]"}`,
-      },
-      {
-        label: "Check gospel clarity",
-        system: "Evaluate gospel-centeredness from a Reformed homiletical perspective.",
-        prompt: `Evaluate the gospel clarity of this sermon. Passage: ${passage}. MPS: ${mps || "(not set)"}. What should be explicit about Christ's work?`,
-      },
-      ...libraryBtn,
-    ];
-  }
-
-  if (tab === "delivery") {
-    return [
-      howChip("delivery"),
-      {
-        label: "Delivery tips for this passage",
-        system: "Give practical, specific preaching coaching.",
-        prompt: `Give me 3–4 practical delivery tips for preaching ${passage}. Consider tone, pacing, and emotional engagement.`,
-      },
-    ];
-  }
-
-  if (tab === "series") {
-    return [howChip("series")];
-  }
-
-  if (tab === "book-study") {
-    return [
-      howChip("book-study"),
-      {
-        label: "Summarize the book's argument",
-        prompt: "Based on what I've shared, summarize the controlling argument of this book in a form I can work from.",
-      },
-      {
-        label: "Suggest sermon divisions",
-        prompt: "Based on the book's structure, suggest how it might be divided into a preaching series. Give me 4-8 divisions with passage ranges and a one-sentence rationale for each.",
-      },
-      {
-        label: "Where does this sit in redemptive history",
-        prompt: "Help me articulate where this book sits in the arc of redemptive history — from creation to new creation. What does it contribute to the story that only it can contribute?",
-      },
-      {
-        label: "What does this book demand of this congregation",
-        prompt: "Given what this book argues and who this congregation is, what is the specific claim this book makes on us? What does it demand that we believe, repent of, or do?",
-      },
-      {
-        label: "Help me find the big idea",
-        prompt: "I'm working toward a series big idea. Rather than giving me one, ask me three questions that will help me find it myself.",
-      },
-    ];
-  }
-
-  return [];
 }
 
 function getReviewPrompt(tab, sermon, activeStep) {
