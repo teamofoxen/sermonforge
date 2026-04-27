@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-04-27 — fix: flush pending save on workspace unmount; fix cross-platform db path
+
+- SermonWorkspace now calls persistUpdate() on unmount, preventing edits made within the 800ms debounce window from being silently dropped on navigation.
+- Replaced hardcoded Windows db path with path.join(__dirname, '../data') so the database persists correctly on Mac.
+
+---
+
 ## 2026-04-27 — refactor: resolve all sweep-the-universe architectural findings
 
 - Extracted prompt construction and incorporate helpers from AIPanel into reviewPrompts.js and incorporateHelpers.js.

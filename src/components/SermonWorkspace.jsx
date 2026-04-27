@@ -82,6 +82,12 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onPas
     return () => onPassageChange?.(null);
   }, [sermon?.passage, onPassageChange]);
 
+  // Flush any pending debounced save when navigating away so edits
+  // made just before closing the workspace are not silently dropped.
+  useEffect(() => {
+    return () => { persistUpdate(); };
+  }, [persistUpdate]);
+
   function captureMemory(s, { scanPhrases = false } = {}) {
     if (!s) return;
     const hash = `${s.mpt ?? ""}|${s.passage ?? ""}|${s.outline ?? ""}`;
