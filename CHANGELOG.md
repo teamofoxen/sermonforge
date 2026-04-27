@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-04-26 — feat(flow): surface study summaries and E/A/I depth in Blueprint
+
+- StudyTab fires onSummaryGenerated when s3/s4 summaries are produced; SermonWorkspace lifts this state.
+- OutlineTab renders the s4 summary (fallback s3) as a 'From your study work' card.
+- OutlineTab shows E/A/I fill indicators per outline point in the reference card.
+
+---
+
 ## 2026-04-26 — feat(flow): reduce inter-stage friction across sermon prep flow
 
 - OutlineTab: forward-facing orientation text; Return to Study button when outline is empty; Continue to Manuscript always visible but disabled until outline exists.
