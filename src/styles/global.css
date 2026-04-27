@@ -36,6 +36,7 @@
   --sage-pale: #e8f0e7;
   --slate-pale: #e4e9ef;
   --crimson-pale: #f5e4e4;
+  --dark-header-bg: var(--ink);
 }
 
 [data-theme="dark"] {
@@ -47,6 +48,7 @@
   --parchment-warm: #201c18;
   --parchment-deep: #2a2420;
   --white: #242018;
+  --dark-header-bg: #1e1a16;
   --gold: #c8960f;
   --gold-bright: #e0ae1a;
   --gold-pale: #3a2e0a;
@@ -1000,7 +1002,7 @@ button {
 
 .ai-panel-header {
   padding: 16px 18px;
-  background: var(--ink);
+  background: var(--dark-header-bg);
   color: var(--white);
   flex-shrink: 0;
 }
@@ -1988,7 +1990,7 @@ button {
   justify-content: flex-end;
   padding: 8px 10px 0;
   flex-shrink: 0;
-  background: var(--ink);
+  background: var(--dark-header-bg);
 }
 
 .ai-drawer-close-btn {
@@ -2050,7 +2052,7 @@ button {
   align-items: center;
   justify-content: space-between;
   padding: 10px 16px 9px;
-  background: var(--ink);
+  background: var(--dark-header-bg);
   border-bottom: 1px solid rgba(184,134,11,0.3);
   flex-shrink: 0;
 }

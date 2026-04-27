@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-04-26 — fix(ui): dark mode header contrast for AI panel and passage popup
+
+- Added `--dark-header-bg` CSS token (`#1e1a16` in dark mode, `var(--ink)` in light mode).
+- Applied to `.ai-panel-header`, `.ai-drawer-close-bar`, `.passage-popup-header` so headers stay dark in dark mode.
+- Fixes white text and Clear/X buttons being unreadable when `--ink` inverted to light tan.
+- Expanded `run.py` and `scaffold_manifest.py` usage notes in theology corpus proposal.
+
+---
+
 ## 2026-04-21 — docs(theology): paperclip legacy-row inventory to proposal
 
 - Added legacy `work_id=NULL` inventory pass to proposal §8 as next-session work.
