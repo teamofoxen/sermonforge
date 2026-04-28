@@ -576,6 +576,10 @@ function isMeaningful(text) {
 export function assembleContext(tiers) {
   const sections = [];
 
+  // Assembly order intentionally deviates from tier numbering: tier7 follows tier1 so
+  // pastoral intelligence is visible above all interpretive work; tier6 (memory) is last
+  // so it shapes tone without biasing exegesis. Do not reorder without good reason.
+
   // [PASSAGE & MPT]
   {
     const lines = [

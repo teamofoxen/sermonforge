@@ -4,7 +4,7 @@ import { autoResize } from "../utils";
 import { sendAIMessage } from "../utils/ai";
 import { buildContext } from "../utils/contextBuilder";
 import { captureResponsePatterns } from "../utils/memory";
-import { buildSystemPrompt, appendTaskDirective } from "../prompts/sermon";
+import { buildSystemPrompt, appendTaskDirective, THEOLOGY_RESEARCH_PROMPT, INCORPORATE_REVISION_PROMPT } from "../prompts/sermon";
 import { formatChunkForLLM, dedupSources } from "../utils/theologyCitation";
 import { getReviewPrompt, buildCoherenceCheckPrompt } from "../utils/reviewPrompts";
 import { getStepFieldConfig, getCurrentFieldData, buildIncorporatePrompt } from "../utils/incorporateHelpers";
@@ -138,13 +138,7 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
           const sourcesBlock = theologyChunks.join("\n\n");
           const passageLine = sermon?.passage ? `\nPASSAGE: ${sermon.passage}\n` : "";
           userContent = `SOURCES:\n${sourcesBlock}${passageLine}\nQUESTION:\n${text}`;
-          systemPrompt = `You are a theology research assistant for a pastor. Answer the question using the sources provided.
-
-- Ground your answer in the provided sources.
-- Include at least one direct quotation with its full source attribution as given in brackets (format: [Author — Work, Locator, p. N]). Preserve the locator and page reference verbatim.
-- If multiple sources speak to the question, reference more than one.
-- Be concise and direct.
-- If the sources do not directly address the question, say so clearly rather than substituting general knowledge.`;
+          systemPrompt = THEOLOGY_RESEARCH_PROMPT;
         } else {
           // No hits — fall back to standard context-based path.
           const context = buildContext({ sermon, step });
@@ -195,7 +189,7 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
     try {
       const current = getCurrentFieldData(config, sermon);
       const prompt = buildIncorporatePrompt(config, current, reviewContent);
-      const systemPrompt = `You are revising sermon preparation content based on AI review feedback. Return only a raw JSON object — no markdown fences, no commentary. Include every original key in your response, even unchanged ones. Preserve the pastor's voice. Apply only changes directly supported by the review feedback.`;
+      const systemPrompt = INCORPORATE_REVISION_PROMPT;
       const response = await sendAIMessage([{ role: "user", content: prompt }], systemPrompt, reviewStep, sermon?.id);
 
       // Strip any markdown code fences the model may have added

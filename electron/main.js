@@ -453,6 +453,13 @@ function runMigrations() {
     db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '10')");
     version = 10;
   }
+
+  if (version < 11) {
+    // v11: drop sermons.big_idea — superseded by mpt/mps, never populated.
+    try { db.run("ALTER TABLE sermons DROP COLUMN big_idea"); } catch (_) {}
+    db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '11')");
+    version = 11;
+  }
 }
 
 // ── Query helpers ────────────────────────────────────────────────────────────
@@ -563,7 +570,7 @@ function createWindow() {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false,
+      sandbox: false,       // required: sql.js and other Node APIs used in preload
     },
     show: false,
   });
@@ -1609,7 +1616,7 @@ ipcMain.handle("series-export-study-guide", async (_, seriesId) => {
 
     const doc = buildStudyGuideDoc(series, sections, sermons);
 
-    const studyGuidesDir = "C:\\SermonForge\\exports\\StudyGuides";
+    const studyGuidesDir = path.join(app.getPath("documents"), "SermonForge", "exports", "StudyGuides");
     if (!fs.existsSync(studyGuidesDir)) {
       fs.mkdirSync(studyGuidesDir, { recursive: true });
     }
@@ -1738,7 +1745,7 @@ ipcMain.handle("sermon-export-pmb", async (_, { blocks, spine, title, passage, m
       sections: [{ properties: {}, children }],
     });
 
-    const exportDir = "C:\\SermonForge\\exports\\PreachingBlocks";
+    const exportDir = path.join(app.getPath("documents"), "SermonForge", "exports", "PreachingBlocks");
     if (!fs.existsSync(exportDir)) fs.mkdirSync(exportDir, { recursive: true });
 
     const safeTitle = (title || passage || "Sermon").replace(/[<>:"/\\|?*\n\r\t]/g, "—").trim();

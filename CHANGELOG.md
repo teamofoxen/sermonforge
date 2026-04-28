@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-04-28 — chore: schema cleanup and architectural housekeeping
+
+- v11 migration drops `sermons.big_idea` column (dead since mpt/mps replaced it).
+- Export paths changed from hardcoded `C:\SermonForge\exports\` to `app.getPath("documents")`.
+- `THEOLOGY_RESEARCH_PROMPT` and `INCORPORATE_REVISION_PROMPT` extracted from `AIPanel.jsx` to `src/prompts/sermon.js`.
+- Added explanatory comments for non-obvious `assembleContext` tier ordering and `sandbox: false`.
+
+---
+
 ## 2026-04-28 — feat: setup screen — Claude + ESV key collection
 
 - Expanded `keystore.js` to named-key storage; `loadEsvKey()` reads safeStorage in packaged builds, `.env` in unpackaged.
