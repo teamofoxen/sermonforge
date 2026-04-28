@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-04-28 — feat: distribution scaffolding phase 0
+
+- Added `electron/config.js` as the single dev/prod gatekeeper exporting `isDev`, `isPackaged`, `paths`, and `devServerUrl`.
+- Updated `electron/main.js` to replace all scattered `app.isPackaged` and `ELECTRON_DEV` checks with imports from `config.js`.
+- Added `docs/PROPOSALS/distribution.md` capturing the full plan for public distribution (Windows first, Mac pending Apple Developer account).
+
+---
+
 ## 2026-04-28 — feat: sermon workspace tour — 34-stop guided spotlight
 
 - Added tour-only sermon seed (electron/tourData.js + db-loadTourSermon IPC) with id NOT LIKE 'tour-%' filters on list queries so the sermon stays hidden from dashboard and planner.

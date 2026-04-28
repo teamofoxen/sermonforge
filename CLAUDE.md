@@ -21,6 +21,7 @@ This file is a navigation guide. Do not load everything by default.
 | Sermon workspace, study tab, save flow, PassagePopup | [`docs/SYSTEMS/sermon-workspace.md`](docs/SYSTEMS/sermon-workspace.md) | `context-pipeline.md` if touching Pastoral Intelligence fields or structured exegesis JSON |
 | Database, schema, migrations, FTS | [`docs/SYSTEMS/database.md`](docs/SYSTEMS/database.md) | adding columns to `sermons` requires updating `SERMON_COLUMNS` in `electron/main.js` — `buildUpdate()` throws in dev if you miss this, but only if you exercise the save path in testing |
 | IPC channels, preload, main process boundaries | [`docs/SYSTEMS/ipc.md`](docs/SYSTEMS/ipc.md) | — |
+| Distribution, installers, auto-updates, API key setup, crash logging | [`docs/PROPOSALS/distribution.md`](docs/PROPOSALS/distribution.md) | `electron/config.js` (dev/prod gatekeeper) once built |
 
 ## Load only when you need specific lookup details
 

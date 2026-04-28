@@ -3,12 +3,9 @@ const path = require("path");
 const fs = require("fs");
 const os = require("os");
 const { randomUUID } = require("crypto");
+const { isDev, paths, devServerUrl } = require("./config");
 
-// Load .env — project root when unpackaged, resources dir when packaged
-const envPath = app.isPackaged
-  ? path.join(process.resourcesPath, ".env")
-  : path.join(__dirname, "../.env");
-require("dotenv").config({ path: envPath, override: true });
+require("dotenv").config({ path: paths.env, override: true });
 
 const { registerAIHandlers } = require("./ai");
 const BetterSqlite3 = require("better-sqlite3");
@@ -27,14 +24,9 @@ const LIBRARY_PATH = path.join(os.homedir(), "OneDrive", "Ministry", "Preaching"
 // ── Database setup ──────────────────────────────────────────────────────────
 async function initDatabase() {
   const initSqlJs = require("sql.js");
-  SQL = await initSqlJs({
-    locateFile: (file) => app.isPackaged
-      ? path.join(process.resourcesPath, "app.asar.unpacked", "node_modules", "sql.js", "dist", file)
-      : path.join(__dirname, "../node_modules/sql.js/dist/", file),
-  });
+  SQL = await initSqlJs({ locateFile: paths.sqlWasm });
 
-  // Always use userData so dev and production share one database location.
-  const dataDir = path.join(app.getPath("userData"), "data");
+  const dataDir = paths.userData;
   if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
   dbPath = path.join(dataDir, "sermonforge.db");
 
@@ -175,7 +167,7 @@ async function flushDb() {
   if (!db || !dbPath) return;
   // If _pendingWrite is still true here, flushDb was called externally (e.g. quit handler)
   // while a debounced write was still queued. The 500ms crash window was open.
-  if (process.env.ELECTRON_DEV === "1" && _pendingWrite) {
+  if (isDev && _pendingWrite) {
     console.warn("[DB] flushDb: called with a pending write still queued — the 500ms crash window was open. This is expected on app quit; unexpected mid-session.");
   }
   if (saveTimer) {
@@ -254,10 +246,7 @@ async function ensureTheologyEmbedder() {
   console.log("[VECTOR] Loading embedding model...");
   try {
     const { pipeline, env } = await import("@xenova/transformers");
-    const modelDir = app.isPackaged
-      ? path.join(process.resourcesPath, "models")
-      : path.join(__dirname, "../resources/models");
-    env.cacheDir = modelDir;
+    env.cacheDir = paths.models;
     env.allowRemoteModels = false;
     theologyEmbedder = await pipeline("feature-extraction", "Xenova/all-MiniLM-L6-v2", {
       quantized: true,
@@ -566,10 +555,8 @@ function createWindow() {
     show: false,
   });
 
-  // Always load the built dist — "npm start" runs vite build first
-  // Use Vite dev server only when ELECTRON_DEV=1 (the "dev" script)
-  if (process.env.ELECTRON_DEV === "1") {
-    mainWindow.loadURL("http://localhost:5173");
+  if (isDev) {
+    mainWindow.loadURL(devServerUrl);
   } else {
     mainWindow.loadFile(path.join(__dirname, "../dist/index.html"));
   }
