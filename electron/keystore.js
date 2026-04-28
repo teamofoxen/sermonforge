@@ -9,7 +9,7 @@
 const { safeStorage, app } = require("electron");
 const path = require("path");
 const fs = require("fs");
-const { isDev } = require("./config");
+const { isPackaged } = require("./config");
 
 const KEY_FILE = path.join(app.getPath("userData"), "sf-key.enc");
 
@@ -22,7 +22,9 @@ function saveKey(plaintext) {
 }
 
 function loadKey() {
-  if (isDev) return process.env.ANTHROPIC_API_KEY || null;
+  // Any unpackaged run (dev machine, friend's git clone) reads from .env as always.
+  // Only a real packaged install uses safeStorage.
+  if (!isPackaged) return process.env.ANTHROPIC_API_KEY || null;
 
   if (fs.existsSync(KEY_FILE)) {
     try {
