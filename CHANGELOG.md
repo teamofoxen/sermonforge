@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-04-28 — docs: sermon workspace tour implementation spec
+
+- Added docs/PROPOSALS/sermon-workspace-tour.md with locked 34-stop guided tour design and verbatim callout content.
+- Captured key decisions: format, dashboard entry, demo data dependency, visual language, voice, and concentric Pastoral Intelligence ordering.
+- Listed codebase touchpoints and five implementation questions to settle in the build session.
+
+---
+
 ## 2026-04-27 — feat: floating passage panel; fix TDZ crash; unify DB path
 
 - PassagePopup converted from centered modal to fixed floating panel; clicking the passage ref in the topbar toggles it open.
