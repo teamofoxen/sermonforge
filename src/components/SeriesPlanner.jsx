@@ -1,6 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useDemo } from "../contexts/DemoContext";
-import TierBadge from "./TierBadge";
 import { useDebounce } from "../utils/hooks";
 import {
   getSeriesById, updateSeries,
@@ -79,7 +77,6 @@ const BOOK_STUDY_FIELDS = [
 
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function SeriesPlanner({ seriesId, onClose, onOpenSermon }) {
-  const { demoMode, enableDemoMode, disableDemoMode } = useDemo();
   const [series, setSeries]     = useState(null);
   const [sections, setSections] = useState([]);
   const [sermons, setSermons]   = useState([]);
@@ -193,22 +190,6 @@ export default function SeriesPlanner({ seriesId, onClose, onOpenSermon }) {
             {series.status || "Planning"}
           </span>
         </div>
-        <button
-          onClick={() => demoMode ? disableDemoMode() : enableDemoMode()}
-          style={{
-            background: demoMode ? "var(--gold-pale)" : "none",
-            border: demoMode ? "1px solid var(--gold)" : "1px solid var(--parchment-deep)",
-            borderRadius: "var(--radius)",
-            cursor: "pointer",
-            color: demoMode ? "var(--gold)" : "var(--ink-ghost)",
-            fontSize: "11px", padding: "3px 10px",
-            fontFamily: "'Crimson Pro', serif", fontWeight: demoMode ? "700" : "400",
-            flexShrink: 0,
-          }}
-          title={demoMode ? "Turn off demo annotations" : "Turn on demo annotations"}
-        >
-          Demo
-        </button>
         <button
           onClick={() => setShowHowItWorks(true)}
           style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ink-ghost)", fontSize: "12px", padding: "4px 8px", fontFamily: "'Crimson Pro', serif", flexShrink: 0 }}
@@ -344,7 +325,6 @@ const BOOK_STUDY_TIER = {
 };
 
 function BookStudyTab({ series, onChange, drawerOpen, onOpenDrawer, onCloseDrawer }) {
-  const { demoMode } = useDemo();
   const [aiMessages, setAiMessages]   = useState([]);
   const [chatInput, setChatInput]     = useState("");
   const [chatLoading, setChatLoading] = useState(false);
@@ -477,7 +457,7 @@ function BookStudyTab({ series, onChange, drawerOpen, onOpenDrawer, onCloseDrawe
         {BOOK_STUDY_FIELDS.map((fieldDef) => (
           <div key={fieldDef.key} style={{ marginBottom: "24px" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
-              <label style={{ ...labelStyle, marginBottom: 0 }}>{fieldDef.label}  <TierBadge tier={BOOK_STUDY_TIER[fieldDef.key]} /></label>
+              <label style={{ ...labelStyle, marginBottom: 0 }}>{fieldDef.label}</label>
               <div style={{ display: "flex", gap: "6px" }}>
                 {/* Draft button only on Working Big Idea */}
                 {fieldDef.key === "emerging_big_idea" && (series.passage_range || series.title) && (
@@ -541,7 +521,6 @@ function BookStudyTab({ series, onChange, drawerOpen, onOpenDrawer, onCloseDrawe
 
 // ── Overview Tab ──────────────────────────────────────────────────────────────
 function OverviewTab({ series, onChange, drawerOpen, onOpenDrawer, onCloseDrawer }) {
-  const { demoMode } = useDemo();
   const [aiLoading, setAiLoading] = useState(null); // "bigidea" | "overview"
   const [aiMessages, setAiMessages] = useState([]);
   const [chatInput, setChatInput] = useState("");
@@ -698,7 +677,7 @@ function OverviewTab({ series, onChange, drawerOpen, onOpenDrawer, onCloseDrawer
             </>
           )}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
-            <label style={{ ...labelStyle, marginBottom: 0 }}>Series Big Idea  <TierBadge tier={4} /></label>
+            <label style={{ ...labelStyle, marginBottom: 0 }}>Series Big Idea</label>
             <button
               className="btn-ghost btn-sm"
               onClick={generateBigIdea}

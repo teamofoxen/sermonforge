@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-04-28 — refactor: remove demo mode in favor of tour scaffolding
+
+- Deleted DemoContext, DemoSplash, TierBadge, ContextPreview, and electron/demoData.js along with all demo-mode toggles, completeness bar, pipeline map, and Preview Context button.
+- Removed db-loadDemoSeries IPC handler, preload exposure, and renderer wrapper.
+- Added schema v10 migration that deletes orphan demo-% rows from sermons and series.
+- Replaced dashboard "See Demo" button with disabled "Tour Sermon Workspace" and "Tour Sermon Planner" placeholders.
+- Updated sermon-workspace-tour proposal to a tour- ID scheme with the tour sermon hidden from list queries.
+
+---
+
 ## 2026-04-28 — docs: sermon workspace tour implementation spec
 
 - Added docs/PROPOSALS/sermon-workspace-tour.md with locked 34-stop guided tour design and verbatim callout content.

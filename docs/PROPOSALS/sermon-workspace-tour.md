@@ -8,11 +8,16 @@
 
 ## What we're building
 
-A guided spotlight tour of the Sermon Workspace. Triggered from a "Sermon Workspace
-Demo" button on the Dashboard. The tour opens the demo sermon "The Upside-Down
-Kingdom" (Matthew 5:1–12, sermon ID `demo-sotm-sermon-01`) and walks through
-34 stops. Each stop = a spotlight on a real element + a callout card explaining it.
-User clicks "Next" to advance; can skip anytime.
+A guided spotlight tour of the Sermon Workspace. Triggered from a "Tour Sermon
+Workspace" button on the Dashboard. The tour opens a tour-only sermon "The
+Upside-Down Kingdom" (Matthew 5:1–12, sermon ID `tour-sotm-sermon-01`) and walks
+through 34 stops. Each stop = a spotlight on a real element + a callout card
+explaining it. User clicks "Next" to advance; can skip anytime.
+
+The tour sermon is hidden from the Dashboard and Series Planner. It is seeded
+on first tour launch (idempotent), opened directly by ID when the tour starts,
+and excluded from every list query via an `id NOT LIKE 'tour-%'` filter so it
+never appears as ordinary user content.
 
 This is the second of two planned tours. The Series Planner tour is a separate,
 later effort — do not entangle the two.
@@ -23,11 +28,13 @@ later effort — do not entangle the two.
 
 - **Format:** guided spotlight tour. User-paced via Next button. Not auto-playing.
   Not a video. Not connected to a Series Planner tour.
-- **Entry:** new dashboard button, separate from the existing "See Demo." Two
-  tours will eventually share the dashboard header.
-- **Demo data:** uses the existing `demo-sotm-sermon-01` from `electron/demoData.js`
-  — already idempotent and seeded via `loadDemoSeries()`. Do not modify the
-  demo dataset for the tour.
+- **Entry:** dashboard buttons in the page header — "Tour Sermon Workspace" and
+  (later) "Tour Sermon Planner". The legacy "See Demo" button and the entire
+  demo-mode annotation system have been removed; the tour replaces them.
+- **Tour data:** the tour ships with its own sermon ("The Upside-Down Kingdom",
+  Matthew 5:1–12). It uses a `tour-` ID prefix and is filtered out of every
+  list query so it never appears on the dashboard. Seed on first launch
+  (idempotent); open by ID when the tour starts.
 - **Visual language:** dark ink callout card (`var(--ink)` background) with a
   2px gold top border, Playfair Display heading, Crimson Pro body. Spotlight is
   a soft radial-gradient vignette (not a hard mask), with a subtle gold glow on
@@ -44,17 +51,18 @@ later effort — do not entangle the two.
 
 ## Codebase touchpoints
 
-- `src/contexts/DemoContext.jsx` — existing demo state context; tour state should
-  live alongside or extend it
-- `src/components/Dashboard.jsx` — existing "See Demo" button at line 222–230;
-  new tour button goes nearby
+- `src/components/Dashboard.jsx` — "Tour Sermon Workspace" button (already
+  present, currently disabled) needs to be wired up to launch the tour
 - `src/components/SermonWorkspace.jsx` — top-level workspace; tab orchestration;
   the tour needs to drive tab switches
 - `src/components/StudyTab.jsx` — exegesis phases, MPT/MPS, outline, functional
   elements steps
 - `src/components/ManuscriptTab.jsx` — Flow Coach, Ear Check, Tune-Up
 - `src/components/AIPanel.jsx` — must be openable from tour state
-- `electron/demoData.js` — demo sermon content (read-only for this work)
+- New: a `TourContext` (or similar) to own the cursor and prerequisite-driven
+  navigation; a `tourData.js` module under `electron/` for the tour sermon
+  content; a `db-loadTourSermon` IPC handler + preload exposure; list-query
+  filters (`id NOT LIKE 'tour-%'`) on series and sermon list queries
 - `src/styles/global.css` — design system tokens (use only these; no new colors,
   no new fonts)
 
@@ -254,7 +262,7 @@ ready for a hard look.
 
 ### Stop 34 — Finish
 **That's the workspace.** This is one sermon. The Series Planner holds many.
-Both demos are available from the dashboard whenever you want to revisit.
+Both tours are available from the dashboard whenever you want to revisit.
 *Buttons: Finish Tour · Take the Series Planner Tour (disabled until that tour
 exists).*
 
@@ -273,12 +281,12 @@ exists).*
    (Tune-Up) target buttons that may live behind a closed AI drawer. Decide:
    open the drawer for the tour, or point to where the button lives without
    exposing it.
-4. **Persistence** — should "tour seen" be a localStorage flag like the
-   existing splash? Should completing the tour disable demo mode, leave it on,
-   or do nothing? Should the tour be replayable from the dashboard at any time?
-5. **Demo seed dependency** — the tour requires `demo-sotm-sermon-01` to exist.
-   Does clicking the tour button auto-seed via `loadDemoSeries()` if absent, or
-   gate the button on demo data presence?
+4. **Persistence** — should "tour seen" be a localStorage flag? Should the
+   tour be replayable from the dashboard at any time?
+5. **Tour-sermon lifecycle** — seed on first tour launch (lazy) or on app
+   startup via migration? Lazy is simpler and avoids seeding for users who
+   never run the tour. The cleanup story (if a user wants to fully wipe tour
+   data) is also worth deciding.
 
 ---
 
@@ -289,6 +297,3 @@ exists).*
   after that refresh)
 - Field-by-field tour of the Manuscript tab (only Flow Coach, Ear Check,
   Tune-Up are explained at the audit-tool level)
-- Any change to the existing demo seed data
-- Any change to the existing `DemoSplash` 4-step splash modal (it can coexist
-  with the tour or be retired — decide in the build session)

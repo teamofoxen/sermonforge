@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
-import { getAllSeries, getAllSermons, getRecentSermons, loadDemoSeries, getTheologyStatus, searchTheologyLibrary } from "../db/database";
-import { useDemo } from "../contexts/DemoContext";
+import { getAllSeries, getAllSermons, getRecentSermons, getTheologyStatus, searchTheologyLibrary } from "../db/database";
 import NewSermonModal from "./NewSermonModal";
 import { formatDate, getOutline, assembleManuscriptText } from "../utils";
 import { sendAIMessage } from "../utils/ai";
@@ -9,14 +8,12 @@ import { flattenExegesis } from "../utils/studyFields";
 import { formatChunkForLLM, dedupSources } from "../utils/theologyCitation";
 
 export default function Dashboard({ onOpenSermon, onOpenSeries, onNewSeries, onNavigate }) {
-  const { enableDemoMode } = useDemo();
   const [activeSeries, setActiveSeries]   = useState([]);
   const [recentSermons, setRecentSermons] = useState([]);
   const [reorientSummaries, setReorientSummaries] = useState({});
   const [reorientLoading, setReorientLoading]     = useState({});
   const [showNewModal, setShowNewModal] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [demoLoading, setDemoLoading] = useState(false);
   const [theologyAvailable, setTheologyAvailable] = useState(false);
   const [theologyQuery, setTheologyQuery] = useState("");
   const [theologyLoading, setTheologyLoading] = useState(false);
@@ -174,21 +171,6 @@ export default function Dashboard({ onOpenSermon, onOpenSeries, onNewSeries, onN
     setTheologyMessages([]);
   }
 
-  async function handleLoadDemo() {
-    setDemoLoading(true);
-    try {
-      enableDemoMode();
-      const result = await loadDemoSeries();
-      if (result?.seriesId && onOpenSeries) {
-        onOpenSeries(result.seriesId);
-      }
-    } catch (e) {
-      console.error("Failed to load demo series:", e);
-    } finally {
-      setDemoLoading(false);
-    }
-  }
-
   function dismissSummary(key) {
     setReorientSummaries((prev) => { const next = { ...prev }; delete next[key]; return next; });
   }
@@ -221,12 +203,19 @@ export default function Dashboard({ onOpenSermon, onOpenSeries, onNewSeries, onN
           <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
             <button
               className="btn-ghost"
-              onClick={handleLoadDemo}
-              disabled={demoLoading}
-              title="Load a complete sample series to explore the app"
+              disabled
+              title="Coming soon"
               style={{ fontSize: "13px", color: "var(--ink-soft)" }}
             >
-              {demoLoading ? "Loading…" : "See Demo"}
+              Tour Sermon Workspace
+            </button>
+            <button
+              className="btn-ghost"
+              disabled
+              title="Coming soon"
+              style={{ fontSize: "13px", color: "var(--ink-soft)" }}
+            >
+              Tour Sermon Planner
             </button>
             <button className="btn-primary" onClick={onNewSeries}>+ New Series</button>
             <button className="btn-ghost" onClick={() => setShowNewModal(true)}>+ New Sermon</button>

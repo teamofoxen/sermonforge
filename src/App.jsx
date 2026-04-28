@@ -1,7 +1,5 @@
 import { useState, useCallback, useEffect, Component, lazy, Suspense } from "react";
 import { createSeries } from "./db/database";
-import { DemoProvider } from "./contexts/DemoContext";
-import DemoSplash from "./components/DemoSplash";
 import Sidebar from "./components/Sidebar";
 import Dashboard from "./components/Dashboard";
 
@@ -123,8 +121,6 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-    <DemoProvider>
-    <DemoSplash />
     <div className="app-shell">
       <Sidebar
         currentView={currentView}
@@ -187,7 +183,6 @@ export default function App() {
       </div>
 
     </div>
-    </DemoProvider>
     </ErrorBoundary>
   );
 }
