@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-04-28 — feat: distribution phase 2 — crash logging
+
+- Added `electron/logger.js` with `logInfo`, `logError`, `readRecent`; rotates at 1MB, safe before app ready.
+- Hooked `uncaughtException` and `unhandledRejection` in `main.js`; re-throws in dev so errors stay visible.
+- Bug feedback reports now auto-attach the last 50 log lines as a collapsible section in the GitHub issue.
+
+---
+
 ## 2026-04-28 — feat: distribution phase 1 — first-run API key setup
 
 - Added `electron/keystore.js` using Electron safeStorage to store the user's Claude API key; dev always reads from `.env`.

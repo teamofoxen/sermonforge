@@ -177,7 +177,7 @@ These don't require code — just a shift in how to think when building:
 |-------|-------|--------------|
 | 0 | `electron/config.js` — dev/prod gatekeeper | Nothing ✅ |
 | 1 | `SetupScreen.jsx` — first-run API key entry | Phase 0 ✅ |
-| 2 | Crash log + auto-attach to feedback | Phase 0 |
+| 2 | Crash log + auto-attach to feedback | Phase 0 ✅ |
 | 3 | `electron-updater` wired up | Phase 0 |
 | 4 | Mac build config + icons + entitlements | Apple Developer account confirmed |
 | 5 | GitHub Actions build workflow | Phases 3 + 4 complete |

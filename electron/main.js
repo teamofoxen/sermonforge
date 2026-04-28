@@ -4,6 +4,16 @@ const fs = require("fs");
 const os = require("os");
 const { randomUUID } = require("crypto");
 const { isDev, paths, devServerUrl } = require("./config");
+const { logInfo, logError, readRecent } = require("./logger");
+
+// Catch anything that slips through before app ready
+process.on("uncaughtException", (err) => {
+  logError("uncaughtException", err);
+  if (isDev) throw err;
+});
+process.on("unhandledRejection", (reason) => {
+  logError("unhandledRejection", reason instanceof Error ? reason : new Error(String(reason)));
+});
 
 require("dotenv").config({ path: paths.env, override: true });
 
@@ -1871,6 +1881,19 @@ ipcMain.handle("feedback-submit", async (_, payload) => {
       }
     }
 
+    if (category === "bug") {
+      const recentLogs = readRecent(50);
+      if (recentLogs) {
+        lines.push("## Error Log (last 50 lines)");
+        lines.push("<details><summary>expand</summary>\n");
+        lines.push("```");
+        lines.push(recentLogs);
+        lines.push("```");
+        lines.push("\n</details>");
+        lines.push("");
+      }
+    }
+
     const token = process.env.GITHUB_FEEDBACK_TOKEN;
     if (!token) {
       console.error("[feedback-submit] GITHUB_FEEDBACK_TOKEN not set in .env");
@@ -2064,6 +2087,7 @@ ipcMain.handle('passage-fetch', async (_, passage) => {
 
 // ── App lifecycle ────────────────────────────────────────────────────────────
 app.whenReady().then(async () => {
+  logInfo(`SermonForge ${app.getVersion()} starting`);
   await initDatabase();
   createWindow();
 
