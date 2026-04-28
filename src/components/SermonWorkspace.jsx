@@ -13,12 +13,13 @@ import OutlineTab from "./OutlineTab";
 import ManuscriptTab from "./ManuscriptTab";
 import DeliveryTab from "./DeliveryTab";
 import AIPanel from "./AIPanel";
+import PassagePopup from "./PassagePopup";
 
 const TABS = ["study", "outline", "manuscript", "delivery"];
 const TAB_LABELS = { study: "Study", outline: "Blueprint", manuscript: "Manuscript", delivery: "Delivery" };
 
 
-export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onPassageChange }) {
+export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
   const [sermon, setSermon] = useState(null);
   const [activeTab, setActiveTab] = useState("study");
   const [activeStep, setActiveStep] = useState(null);
@@ -28,6 +29,7 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onPas
   const [showHowItWorks, setShowHowItWorks] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [studySummaries, setStudySummaries] = useState({});
+  const [showPassage, setShowPassage] = useState(false);
   // Pastoral Intelligence card — open when empty, collapsed when filled
   const [piOpen, setPiOpen] = useState(true);
   const { demoMode, enableDemoMode, disableDemoMode } = useDemo();
@@ -77,17 +79,6 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onPas
     load();
   }, [sermonId]);
 
-  useEffect(() => {
-    onPassageChange?.(sermon?.passage || null);
-    return () => onPassageChange?.(null);
-  }, [sermon?.passage, onPassageChange]);
-
-  // Flush any pending debounced save when navigating away so edits
-  // made just before closing the workspace are not silently dropped.
-  useEffect(() => {
-    return () => { persistUpdate(); };
-  }, [persistUpdate]);
-
   function captureMemory(s, { scanPhrases = false } = {}) {
     if (!s) return;
     const hash = `${s.mpt ?? ""}|${s.passage ?? ""}|${s.outline ?? ""}`;
@@ -128,6 +119,11 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onPas
   );
 
   const debouncedSave = useDebounce(persistUpdate, 800);
+
+  // Flush any pending debounced save when navigating away.
+  useEffect(() => {
+    return () => { persistUpdate(); };
+  }, [persistUpdate]);
 
   function handleUpdate(fields) {
     const merged = { ...sermonRef.current, ...fields };
@@ -204,7 +200,12 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onPas
               )}
               {sermon.series_title && sermon.passage && <span> · </span>}
               {sermon.passage && (
-                <span className="passage-ref">{sermon.passage}</span>
+                <span
+                  className="passage-ref"
+                  onClick={() => setShowPassage(v => !v)}
+                  style={{ cursor: "pointer" }}
+                  title="Show ESV text"
+                >{sermon.passage}</span>
               )}
             </div>
             <div className="topbar-title">{sermon.title}</div>
@@ -441,6 +442,11 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onPas
       />
     </div>
     {showHowItWorks && <SermonHowItWorksModal onClose={() => setShowHowItWorks(false)} />}
+    <PassagePopup
+      passage={sermon?.passage}
+      isOpen={showPassage}
+      onClose={() => setShowPassage(false)}
+    />
     </>
   );
 }

@@ -228,6 +228,10 @@ body {
   font-family: 'JetBrains Mono', monospace;
   font-size: 11px;
   color: var(--gold);
+  transition: opacity 0.15s;
+}
+.topbar-series .passage-ref:hover {
+  opacity: 0.75;
 }
 
 .topbar-title {
@@ -2035,6 +2039,12 @@ button {
 
 /* ── Passage popup ───────────────────────────────────────────────────────── */
 .passage-popup {
+  position: fixed;
+  right: 20px;
+  top: 56px;
+  width: 360px;
+  max-height: calc(100vh - 76px);
+  z-index: 500;
   background: var(--white);
   border: 1px solid var(--parchment-deep);
   border-radius: var(--radius-lg);
@@ -2043,7 +2053,7 @@ button {
   display: flex;
   flex-direction: column;
   resize: both;
-  min-width: 320px;
+  min-width: 260px;
   min-height: 160px;
 }
 
@@ -2085,9 +2095,8 @@ button {
 }
 
 .passage-popup-columns {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 0;
+  display: flex;
+  flex-direction: column;
   overflow-y: auto;
   flex: 1;
 }

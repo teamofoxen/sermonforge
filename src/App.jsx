@@ -4,7 +4,6 @@ import { DemoProvider } from "./contexts/DemoContext";
 import DemoSplash from "./components/DemoSplash";
 import Sidebar from "./components/Sidebar";
 import Dashboard from "./components/Dashboard";
-import PassagePopup from "./components/PassagePopup";
 
 const SermonList = lazy(() => import("./components/SermonList"));
 const Calendar = lazy(() => import("./components/Calendar"));
@@ -71,8 +70,6 @@ export default function App() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [returnDestination, setReturnDestination] = useState("dashboard");
   const [returnSeriesId, setReturnSeriesId] = useState(null);
-  const [currentPassage, setCurrentPassage] = useState(null);
-  const [showPassageModal, setShowPassageModal] = useState(false);
 
   const openSermon = useCallback((id, origin = "dashboard", seriesId = null) => {
     setOpenSermonId(id);
@@ -87,8 +84,6 @@ export default function App() {
     setOpenSermonId(null);
     setReturnDestination("dashboard");
     setReturnSeriesId(null);
-    setCurrentPassage(null);
-    setShowPassageModal(false);
     setRefreshKey(k => k + 1);
     if (dest === "series-planner" && sid) {
       setOpenSeriesId(sid);
@@ -122,8 +117,6 @@ export default function App() {
     setCurrentView(view);
     if (view !== "workspace") {
       setOpenSermonId(null);
-      setCurrentPassage(null);
-      setShowPassageModal(false);
     }
     if (view !== "series-planner") setOpenSeriesId(null);
   }, []);
@@ -139,8 +132,6 @@ export default function App() {
         onOpenSermon={openSermon}
         theme={theme}
         onToggleTheme={toggleTheme}
-        currentPassage={currentPassage}
-        onShowPassage={() => setShowPassageModal(true)}
       />
       <div className="main-content">
         <Suspense fallback={null}>
@@ -190,16 +181,11 @@ export default function App() {
             sermonId={openSermonId}
             onClose={closeWorkspace}
             onOpenSeries={openPlanner}
-            onPassageChange={setCurrentPassage}
           />
         )}
         </Suspense>
       </div>
-      <PassagePopup
-        passage={currentPassage}
-        isOpen={showPassageModal}
-        onClose={() => setShowPassageModal(false)}
-      />
+
     </div>
     </DemoProvider>
     </ErrorBoundary>

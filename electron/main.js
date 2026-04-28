@@ -33,8 +33,8 @@ async function initDatabase() {
       : path.join(__dirname, "../node_modules/sql.js/dist/", file),
   });
 
-  // Determine DB path
-  const dataDir = path.join(__dirname, "../data");
+  // Always use userData so dev and production share one database location.
+  const dataDir = path.join(app.getPath("userData"), "data");
   if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
   dbPath = path.join(dataDir, "sermonforge.db");
 

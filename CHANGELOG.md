@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-04-27 — feat: floating passage panel; fix TDZ crash; unify DB path
+
+- PassagePopup converted from centered modal to fixed floating panel; clicking the passage ref in the topbar toggles it open.
+- Sidebar "Show Text" button removed; popup state ownership moved into SermonWorkspace.
+- Fixed production crash: flush-pending-save useEffect moved to after persistUpdate declaration (TDZ violation in minified bundle).
+- DB path unified to app.getPath("userData") for both dev and production — no more split databases on install.
+
+---
+
 ## 2026-04-27 — fix: flush pending save on workspace unmount; fix cross-platform db path
 
 - SermonWorkspace now calls persistUpdate() on unmount, preventing edits made within the 800ms debounce window from being silently dropped on navigation.

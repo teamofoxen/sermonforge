@@ -37,7 +37,7 @@ const CHEVRON_UP = (
   </svg>
 );
 
-export default function Sidebar({ currentView, onNavigate, onOpenSermon, theme, onToggleTheme, currentPassage, onShowPassage }) {
+export default function Sidebar({ currentView, onNavigate, onOpenSermon, theme, onToggleTheme }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [recentSermons, setRecentSermons] = useState([]);
   const [showFeedback, setShowFeedback] = useState(false);
@@ -140,21 +140,6 @@ export default function Sidebar({ currentView, onNavigate, onOpenSermon, theme, 
                 </span>
               </div>
             ))}
-          </div>
-        )}
-
-        {/* Show Text — visible when a sermon passage is available */}
-        {currentPassage && (
-          <div
-            className="nav-item"
-            onClick={() => onShowPassage?.()}
-            title={`Show ESV text for ${currentPassage}`}
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
-            </svg>
-            Show Text
           </div>
         )}
 
