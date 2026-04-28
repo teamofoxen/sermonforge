@@ -1,7 +1,8 @@
 import { useState, useCallback, useEffect, Component, lazy, Suspense } from "react";
-import { createSeries } from "./db/database";
+import { createSeries, getApiKeyStatus } from "./db/database";
 import { TourProvider } from "./contexts/TourContext";
 import TourOverlay from "./components/TourOverlay";
+import SetupScreen from "./components/SetupScreen";
 import Sidebar from "./components/Sidebar";
 import Dashboard from "./components/Dashboard";
 
@@ -53,6 +54,14 @@ class ErrorBoundary extends Component {
 }
 
 export default function App() {
+  const [keyReady, setKeyReady] = useState(null); // null=loading, false=needs setup, true=ready
+
+  useEffect(() => {
+    getApiKeyStatus()
+      .then(r => setKeyReady(r?.configured === true))
+      .catch(() => setKeyReady(false));
+  }, []);
+
   const [theme, setTheme] = useState(() => localStorage.getItem("sf-theme") || "light");
 
   useEffect(() => {
@@ -120,6 +129,9 @@ export default function App() {
     }
     if (view !== "series-planner") setOpenSeriesId(null);
   }, []);
+
+  if (keyReady === null) return null; // brief loading — avoids flash of setup screen
+  if (keyReady === false) return <SetupScreen onComplete={() => setKeyReady(true)} />;
 
   return (
     <ErrorBoundary>

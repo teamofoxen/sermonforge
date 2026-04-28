@@ -61,6 +61,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // ── Tour ──────────────────────────────────────────────────────────────────
   loadTourSermon: () => ipcRenderer.invoke("db-loadTourSermon"),
 
+  // ── API key setup ─────────────────────────────────────────────────────────
+  getApiKeyStatus: () => ipcRenderer.invoke("app-get-key-status"),
+  saveApiKey:      (key) => ipcRenderer.invoke("app-save-api-key", key),
+
   // ── Feedback ──────────────────────────────────────────────────────────────
   getSchemaVersion: () => ipcRenderer.invoke("db-getSchemaVersion"),
   getAppVersion:    () => ipcRenderer.invoke("app-get-version"),

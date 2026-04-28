@@ -59,6 +59,10 @@ export const exportPmb = (data) => api.exportPmb(data);
 // ── Tour ──────────────────────────────────────────────────────────────────────
 export const loadTourSermon = () => api.loadTourSermon();
 
+// ── API key setup ─────────────────────────────────────────────────────────────
+export const getApiKeyStatus = () => api.getApiKeyStatus();
+export const saveApiKey      = (key) => api.saveApiKey(key);
+
 // ── Feedback ──────────────────────────────────────────────────────────────────
 export const getSchemaVersion = () => api.getSchemaVersion();
 export const getAppVersion    = () => api.getAppVersion();

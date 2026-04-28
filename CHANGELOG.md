@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-04-28 — feat: distribution phase 1 — first-run API key setup
+
+- Added `electron/keystore.js` using Electron safeStorage to store the user's Claude API key; dev always reads from `.env`.
+- Updated `electron/ai/provider.js` to load the key via keystore instead of directly from `process.env`.
+- Added `app-get-key-status` and `app-save-api-key` IPC handlers; preload and database.js wrappers wired up.
+- Built `SetupScreen.jsx` (design-system-compliant first-run screen) and gated `App.jsx` behind key status check.
+
+---
+
 ## 2026-04-28 — feat: distribution scaffolding phase 0
 
 - Added `electron/config.js` as the single dev/prod gatekeeper exporting `isDev`, `isPackaged`, `paths`, and `devServerUrl`.

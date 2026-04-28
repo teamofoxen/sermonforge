@@ -8,6 +8,8 @@ const { isDev, paths, devServerUrl } = require("./config");
 require("dotenv").config({ path: paths.env, override: true });
 
 const { registerAIHandlers } = require("./ai");
+const { saveKey, isConfigured } = require("./keystore");
+const { resetClient } = require("./ai/provider");
 const BetterSqlite3 = require("better-sqlite3");
 const sqliteVec = require("sqlite-vec");
 
@@ -1750,6 +1752,25 @@ ipcMain.handle("db-getSchemaVersion", () => {
 
 ipcMain.handle("app-get-version", () => {
   return { version: app.getVersion() };
+});
+
+// ── API key setup ─────────────────────────────────────────────────────────────
+ipcMain.handle("app-get-key-status", () => {
+  return { configured: isConfigured() };
+});
+
+ipcMain.handle("app-save-api-key", (_, key) => {
+  if (typeof key !== "string" || !key.startsWith("sk-ant-") || key.length < 20) {
+    return { success: false, error: "Invalid API key format." };
+  }
+  try {
+    saveKey(key);
+    resetClient();
+    return { success: true };
+  } catch (e) {
+    console.error("[app-save-api-key]", e.message);
+    return { success: false, error: e.message };
+  }
 });
 
 const CATEGORY_LABELS = {
