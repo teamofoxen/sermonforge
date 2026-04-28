@@ -42,7 +42,7 @@
       "provider": "github",
       "owner": "teamofoxen",
       "repo": "sermonforge",
-      "draft": false
+      "releaseType": "release"
     },
     "files": [
       "dist/**/*",
