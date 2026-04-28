@@ -94,10 +94,11 @@ export default function SetupScreen({ onComplete }) {
   return (
     <div style={{
       display: "flex", alignItems: "flex-start", justifyContent: "center",
-      minHeight: "100vh", background: "var(--parchment)",
+      height: "100vh", background: "var(--parchment)",
       fontFamily: "'Crimson Pro', serif",
       padding: "40px 16px",
       overflowY: "auto",
+      boxSizing: "border-box",
     }}>
       <div style={{
         background: "var(--white)",
@@ -131,8 +132,9 @@ export default function SetupScreen({ onComplete }) {
             1. Claude API key <span style={{ color: "var(--crimson-soft)", fontSize: "13px" }}>required</span>
           </h2>
           <p style={{ color: "var(--ink-mid)", fontSize: "14px", margin: "0 0 10px", lineHeight: "1.5" }}>
-            SermonForge uses Claude AI for all sermon preparation features. The API is pay-as-you-go —
-            typically a fraction of a cent per click. $10 of credit will last weeks.
+            SermonForge uses Claude AI as a study companion — exegetical insight, structural feedback, and
+            editing help. You write the sermon. The API is pay-as-you-go — typically a fraction of a cent
+            per click. $10 of credit will last weeks.
           </p>
           <ol style={STEPS}>
             <li>Go to <strong style={{ color: "var(--ink)" }}>console.anthropic.com</strong> and sign up</li>
@@ -195,7 +197,7 @@ export default function SetupScreen({ onComplete }) {
           disabled={!canSubmit}
           style={{ width: "100%", marginTop: "24px" }}
         >
-          {saving ? "Saving…" : "Save and Open SermonForge"}
+          {saving ? "Saving…" : esv.trim() ? "Save and Open SermonForge" : "Skip ESV and Open SermonForge"}
         </button>
 
         {/* Fine print */}
