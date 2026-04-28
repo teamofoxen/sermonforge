@@ -30,6 +30,12 @@ jobs:
       - name: Build Vite
         run: npx vite build
 
+      - name: Create GitHub Release with notes
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          draft: false
+
       - name: Build and publish Windows installer
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
