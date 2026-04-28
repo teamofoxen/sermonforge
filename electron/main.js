@@ -20,6 +20,7 @@ require("dotenv").config({ path: paths.env, override: true });
 const { registerAIHandlers } = require("./ai");
 const { saveKey, isConfigured } = require("./keystore");
 const { resetClient } = require("./ai/provider");
+const { initUpdater } = require("./updater");
 const BetterSqlite3 = require("better-sqlite3");
 const sqliteVec = require("sqlite-vec");
 
@@ -2090,6 +2091,7 @@ app.whenReady().then(async () => {
   logInfo(`SermonForge ${app.getVersion()} starting`);
   await initDatabase();
   createWindow();
+  initUpdater();
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

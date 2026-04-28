@@ -17,6 +17,7 @@
     "better-sqlite3": "^12.9.0",
     "docx": "^9.6.1",
     "dotenv": "^16.4.5",
+    "electron-updater": "^6.8.3",
     "mammoth": "^1.7.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -37,6 +38,11 @@
   "build": {
     "appId": "com.sermonforge.app",
     "productName": "SermonForge",
+    "publish": {
+      "provider": "github",
+      "owner": "teamofoxen",
+      "repo": "sermonforge"
+    },
     "files": [
       "dist/**/*",
       "electron/**/*",

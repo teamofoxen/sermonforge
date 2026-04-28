@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-04-28 — feat: distribution phase 3 — auto-updater
+
+- Added `electron/updater.js` using `electron-updater`; checks GitHub Releases 3s after launch, downloads silently, prompts restart on completion.
+- Added `publish` GitHub config to `package.json` build section pointing at `teamofoxen/sermonforge`.
+- `.env` remains in `extraResources` for Bible/feedback tokens; `ANTHROPIC_API_KEY` inside it is ignored in packaged builds (keystore skips `.env` when packaged).
+
+---
+
 ## 2026-04-28 — feat: distribution phase 2 — crash logging
 
 - Added `electron/logger.js` with `logInfo`, `logError`, `readRecent`; rotates at 1MB, safe before app ready.

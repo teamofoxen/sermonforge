@@ -153,6 +153,7 @@ Requires secrets stored in GitHub repo settings (not in code):
 - `APPLE_TEAM_ID` — from Apple Developer account
 - `CSC_LINK` + `CSC_KEY_PASSWORD` — Mac signing cert (exported from Keychain)
 - `WIN_CSC_LINK` + `WIN_CSC_KEY_PASSWORD` — Windows cert (optional, deferred)
+- `GITHUB_FEEDBACK_TOKEN` + `BIBLE_API_KEY` + `ESV_API_KEY` — written into a build-time `.env` by the workflow; `ANTHROPIC_API_KEY` is deliberately excluded (users supply their own via setup screen)
 
 ---
 
@@ -178,7 +179,7 @@ These don't require code — just a shift in how to think when building:
 | 0 | `electron/config.js` — dev/prod gatekeeper | Nothing ✅ |
 | 1 | `SetupScreen.jsx` — first-run API key entry | Phase 0 ✅ |
 | 2 | Crash log + auto-attach to feedback | Phase 0 ✅ |
-| 3 | `electron-updater` wired up | Phase 0 |
+| 3 | `electron-updater` wired up | Phase 0 ✅ |
 | 4 | Mac build config + icons + entitlements | Apple Developer account confirmed |
 | 5 | GitHub Actions build workflow | Phases 3 + 4 complete |
 | 6 | First public release on GitHub Releases | Phase 5 complete |
