@@ -608,11 +608,7 @@ function buildUpdate(fields, allowedColumns) {
   if (rejected.length > 0) {
     const msg = `[buildUpdate] Unknown field(s) rejected: [${rejected.join(", ")}]. ` +
       `Allowed columns: [${[...allowedColumns].join(", ")}].`;
-    if (app.isPackaged) {
-      console.warn(msg);
-    } else {
-      throw new Error(msg);
-    }
+    console.warn(msg);
   }
 
   const entries = Object.entries(fields).filter(([k]) => allowedColumns.has(k));
