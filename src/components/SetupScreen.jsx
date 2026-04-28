@@ -163,8 +163,7 @@ export default function SetupScreen({ onComplete }) {
             2. ESV API key <span style={{ color: "var(--ink-ghost)", fontSize: "13px" }}>optional</span>
           </h2>
           <p style={{ color: "var(--ink-mid)", fontSize: "14px", margin: "0 0 10px", lineHeight: "1.5" }}>
-            Adds the ESV translation column to the Bible passage popup. NIV and The Message
-            work without it. The ESV API is free for personal use.
+            Adds the ESV translation to the Bible passage popup. The ESV API is free for personal use.
           </p>
           <ol style={STEPS}>
             <li>Go to <strong style={{ color: "var(--ink)" }}>api.esv.org</strong>, create an account, verify your email</li>

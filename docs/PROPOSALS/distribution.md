@@ -32,14 +32,15 @@
 |-------|--------|
 | Windows installer build | Working (`npm run build` → NSIS `.exe`) |
 | Mac build | Not configured |
-| Auto-updates | Not wired up |
-| API key setup screen | Not built — `.env` is the only mechanism |
+| Auto-updates | **Done** — `electron-updater` wired up via `electron/updater.js` |
+| API key setup screen | **Done** — `SetupScreen.jsx`; Claude + ESV keys via `safeStorage` |
 | GitHub repo | Exists at `github.com/teamofoxen/sermonforge` |
 | Feedback → GitHub Issues | **Working** — `GITHUB_FEEDBACK_TOKEN` in `.env`, posts structured issues |
-| Crash log / auto error capture | Not built |
+| Crash log / auto error capture | **Done** — `electron/logger.js`; last 50 lines attached to feedback |
 | GitHub Actions (automated builds) | Not set up |
 | Apple Developer account | Not confirmed |
 | Windows code signing cert | Deferred — optional for first wave |
+| NIV / The Message (API.Bible) | **Removed** — ESV-only; `BIBLE_API_KEY` fully purged |
 
 ---
 
@@ -153,7 +154,7 @@ Requires secrets stored in GitHub repo settings (not in code):
 - `APPLE_TEAM_ID` — from Apple Developer account
 - `CSC_LINK` + `CSC_KEY_PASSWORD` — Mac signing cert (exported from Keychain)
 - `WIN_CSC_LINK` + `WIN_CSC_KEY_PASSWORD` — Windows cert (optional, deferred)
-- `GITHUB_FEEDBACK_TOKEN` + `BIBLE_API_KEY` + `ESV_API_KEY` — written into a build-time `.env` by the workflow; `ANTHROPIC_API_KEY` is deliberately excluded (users supply their own via setup screen)
+- `GITHUB_FEEDBACK_TOKEN` — written into a build-time `.env` by the workflow; `ANTHROPIC_API_KEY` and `ESV_API_KEY` are deliberately excluded (users supply their own via the setup screen)
 
 ---
 

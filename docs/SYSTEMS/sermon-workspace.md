@@ -115,7 +115,7 @@ exegesis phase. Component: `src/components/PassagePopup.jsx`.
 
 - Opens on hover over the Show Text button; stays open until click-outside or ✕
 - Rendered via React portal to `document.body` (escapes overflow constraints)
-- Shows the sermon passage in three columns: **ESV | NIV | The Message**
+- Shows the sermon passage in ESV
 - Fetched via `fetchPassage()` wrapper in `src/db/database.js` → IPC `"passage-fetch"`
   (API keys never reach the renderer)
 - Position: auto-flips above the anchor button if there's insufficient room below;

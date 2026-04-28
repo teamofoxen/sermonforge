@@ -1932,9 +1932,8 @@ ipcMain.handle("feedback-submit", async (_, payload) => {
 });
 
 // ── Bible passage fetch ───────────────────────────────────────────────────────
-// In-memory caches — keyed by `${bibleId}|${passageId}` or `esv|${passage}`
+// In-memory caches — keyed by `esv|${passage}`
 const _passageCache = new Map();
-let _bibleCatalog = null; // { niv: id|null, msg: id|null } — populated on first use
 
 const OSIS_BOOK_IDS = {
   genesis:'GEN',gen:'GEN',exodus:'EXO',exo:'EXO',ex:'EXO',leviticus:'LEV',lev:'LEV',
@@ -2008,55 +2007,6 @@ function passageToOsisId(passage) {
   return null;
 }
 
-async function getBibleCatalog() {
-  if (_bibleCatalog) return _bibleCatalog;
-  const apiKey = process.env.BIBLE_API_KEY;
-  if (!apiKey) return { niv: null, msg: null, error: 'BIBLE_API_KEY not set in .env' };
-  try {
-    const res = await fetch('https://rest.api.bible/v1/bibles', {
-      headers: { 'api-key': apiKey },
-    });
-    if (!res.ok) {
-      const err = `API.Bible returned HTTP ${res.status} — check your key at scripture.api.bible`;
-      console.error('[bible-catalog]', err);
-      return { niv: null, msg: null, error: err };
-    }
-    const json = await res.json();
-    let niv = null, msg = null;
-    for (const b of (json.data || [])) {
-      const abbr = (b.abbreviation || '').toUpperCase();
-      const name = (b.name || '').toLowerCase();
-      if (!niv && (abbr === 'NIV' || name.includes('new international version'))) niv = b.id;
-      if (!msg && (abbr === 'MSG' || name.includes('the message'))) msg = b.id;
-    }
-    _bibleCatalog = { niv, msg };
-    return _bibleCatalog;
-  } catch (e) {
-    console.error('[bible-catalog]', e.message);
-    return { niv: null, msg: null, error: e.message };
-  }
-}
-
-async function fetchApiBibleText(bibleId, osisId, apiKey) {
-  const cacheKey = `${bibleId}|${osisId}`;
-  if (_passageCache.has(cacheKey)) return _passageCache.get(cacheKey);
-  const url = `https://rest.api.bible/v1/bibles/${bibleId}/passages/${encodeURIComponent(osisId)}` +
-    `?content-type=text&include-notes=false&include-titles=false` +
-    `&include-chapter-numbers=false&include-verse-numbers=true&include-verse-spans=false`;
-  const res = await fetch(url, { headers: { 'api-key': apiKey } });
-  if (!res.ok) throw new Error(`API.Bible HTTP ${res.status}`);
-  const json = await res.json();
-  const raw = json.data?.content || '';
-  const text = raw
-    .replace(/¶\s*/g, '')
-    .replace(/\u00a0/g, ' ')
-    .replace(/\[(\d+)\]\s*/g, '[$1] ')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
-  _passageCache.set(cacheKey, text);
-  return text;
-}
-
 async function fetchEsvText(passage) {
   const esvKey = loadEsvKey();
   if (!esvKey) return null; // null = key not configured
@@ -2074,7 +2024,7 @@ async function fetchEsvText(passage) {
 }
 
 ipcMain.handle('passage-fetch', async (_, passage) => {
-  const result = { esv: null, niv: null, msg: null, esvPending: false };
+  const result = { esv: null, esvPending: false };
 
   try {
     const t = await fetchEsvText(passage);

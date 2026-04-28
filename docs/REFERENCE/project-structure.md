@@ -7,7 +7,6 @@
 ```
 .env file:          project root (never commit)
   ANTHROPIC_API_KEY=sk-ant-...
-  BIBLE_API_KEY=...         (API.Bible — NIV + The Message)
   ESV_API_KEY=...           (Crossway ESV API — optional; ESV column activates when set)
 
 OneDrive path:      C:\Users\rossa\OneDrive

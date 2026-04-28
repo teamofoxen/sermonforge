@@ -78,11 +78,10 @@ returns:  array of { id, title, passage, series_name, manuscript_text }
 ### `"passage-fetch"`
 ```
 receives: passage string (e.g. "Galatians 1:1-10")
-returns:  { esv, niv, msg, esvPending, esvError, nivError, msgError }
+returns:  { esv, esvPending, esvError }
 ```
-Fetches passage text in three translations:
+Fetches passage text in ESV:
 - ESV via Crossway ESV API (`ESV_API_KEY`); `esvPending=true` when key not set
-- NIV and The Message via API.Bible (`BIBLE_API_KEY`)
 
 Results are cached in-memory per session. OSIS passage ID parser handles single verse,
 range, cross-chapter range, and whole chapter formats.

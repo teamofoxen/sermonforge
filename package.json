@@ -41,7 +41,8 @@
     "publish": {
       "provider": "github",
       "owner": "teamofoxen",
-      "repo": "sermonforge"
+      "repo": "sermonforge",
+      "draft": false
     },
     "files": [
       "dist/**/*",
