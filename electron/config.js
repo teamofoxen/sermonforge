@@ -32,11 +32,14 @@ const paths = {
     ? path.join(process.resourcesPath, "models")
     : path.join(__dirname, "../resources/models"),
 
-  // Writable user data directory (same path in dev and prod — Electron's userData)
-  userData: path.join(app.getPath("userData"), "data"),
+  // Writable user data directory.
+  // Dev uses a separate subdirectory so dev work doesn't collide with packaged
+  // installs on the same machine (Windows is case-insensitive, so "sermonforge"
+  // and "SermonForge" userData paths would otherwise share a folder).
+  userData: path.join(app.getPath("userData"), isPackaged ? "data" : "data-dev"),
 
   // Crash + error log (Phase 2 — written here, attached to feedback reports)
-  logs: path.join(app.getPath("userData"), "logs"),
+  logs: path.join(app.getPath("userData"), isPackaged ? "logs" : "logs-dev"),
 };
 
 // ── Dev server ────────────────────────────────────────────────────────────────
