@@ -1,5 +1,7 @@
 import { useState, useCallback, useEffect, Component, lazy, Suspense } from "react";
 import { createSeries } from "./db/database";
+import { TourProvider } from "./contexts/TourContext";
+import TourOverlay from "./components/TourOverlay";
 import Sidebar from "./components/Sidebar";
 import Dashboard from "./components/Dashboard";
 
@@ -121,6 +123,7 @@ export default function App() {
 
   return (
     <ErrorBoundary>
+    <TourProvider>
     <div className="app-shell">
       <Sidebar
         currentView={currentView}
@@ -183,6 +186,8 @@ export default function App() {
       </div>
 
     </div>
+    <TourOverlay />
+    </TourProvider>
     </ErrorBoundary>
   );
 }

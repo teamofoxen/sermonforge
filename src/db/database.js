@@ -56,6 +56,9 @@ export const fetchPassage = (passage) => api.fetchPassage(passage);
 export const exportStudyGuide = (seriesId) => api.exportStudyGuide(seriesId);
 export const exportPmb = (data) => api.exportPmb(data);
 
+// ── Tour ──────────────────────────────────────────────────────────────────────
+export const loadTourSermon = () => api.loadTourSermon();
+
 // ── Feedback ──────────────────────────────────────────────────────────────────
 export const getSchemaVersion = () => api.getSchemaVersion();
 export const getAppVersion    = () => api.getAppVersion();

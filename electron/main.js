@@ -628,6 +628,7 @@ ipcMain.handle("db-getAllSermons", () =>
   queryAll(`SELECT s.*, sr.title as series_title, sr.color as series_color
             FROM sermons s
             LEFT JOIN series sr ON s.series_id = sr.id
+            WHERE s.id NOT LIKE 'tour-%'
             ORDER BY s.date DESC, s.created_at DESC`)
 );
 
@@ -676,7 +677,7 @@ ipcMain.handle("db-deleteSermon", (_, id) => {
 
 // ── Series handlers ───────────────────────────────────────────────────────────
 ipcMain.handle("db-getAllSeries", () =>
-  queryAll("SELECT * FROM series ORDER BY year DESC, title ASC")
+  queryAll("SELECT * FROM series WHERE id NOT LIKE 'tour-%' ORDER BY year DESC, title ASC")
 );
 
 ipcMain.handle("db-getSeriesById", (_, id) => {
@@ -839,11 +840,71 @@ ipcMain.handle("db-getRecentSermons", (_, limit = 3) =>
      FROM sermons s
      LEFT JOIN series sr ON s.series_id = sr.id
      WHERE s.stage != 'archived'
+       AND s.id NOT LIKE 'tour-%'
      ORDER BY s.updated_at DESC, s.created_at DESC
      LIMIT ?`,
     [limit]
   )
 );
+
+// ── Tour sermon seed ──────────────────────────────────────────────────────────
+ipcMain.handle("db-loadTourSermon", () => {
+  const { SERIES_ID, SERMON_ID, series, sermon } = require("./tourData");
+
+  const seriesExists = queryOne("SELECT id FROM series  WHERE id = ?", [SERIES_ID]);
+  const sermonExists = queryOne("SELECT id FROM sermons WHERE id = ?", [SERMON_ID]);
+  if (seriesExists && sermonExists) return { sermonId: SERMON_ID, created: false };
+
+  db.run("BEGIN");
+  try {
+    if (!seriesExists) {
+      db.run(
+        `INSERT INTO series (
+          id, title, color, description, year,
+          big_idea, overview, passage_range, start_date, end_date,
+          structural_outline, status, canon_category,
+          redemptive_context, book_background, book_argument,
+          book_structure, series_motivation, emerging_big_idea
+        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        [
+          series.id, series.title, series.color, series.description, series.year,
+          series.big_idea, series.overview, series.passage_range, series.start_date, series.end_date,
+          series.structural_outline, series.status, series.canon_category,
+          series.redemptive_context, series.book_background, series.book_argument,
+          series.book_structure, series.series_motivation, series.emerging_big_idea,
+        ]
+      );
+    }
+
+    if (!sermonExists) {
+      db.run(
+        `INSERT INTO sermons (
+          id, series_id, is_one_off, title, passage, date, stage,
+          mpt, mps,
+          observations, interpretation, redemptive_thread, implications,
+          outline, functional_elements,
+          manuscript, delivery_notes, timing_notes,
+          topic_theme, audience_assumptions, background_noise, study_guide_note
+        ) VALUES (?,?,0,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        [
+          sermon.id, sermon.series_id, sermon.title, sermon.passage, sermon.date, sermon.stage,
+          sermon.mpt, sermon.mps,
+          sermon.observations, sermon.interpretation, sermon.redemptive_thread, sermon.implications,
+          sermon.outline, sermon.functional_elements,
+          sermon.manuscript, sermon.delivery_notes, sermon.timing_notes,
+          sermon.topic_theme, sermon.audience_assumptions, sermon.background_noise, sermon.study_guide_note,
+        ]
+      );
+    }
+
+    db.run("COMMIT");
+  } catch (e) {
+    db.run("ROLLBACK");
+    throw e;
+  }
+  saveDb();
+  return { sermonId: SERMON_ID, created: true };
+});
 
 ipcMain.handle("library-status", () => {
   try {

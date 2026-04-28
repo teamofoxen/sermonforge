@@ -202,6 +202,7 @@ export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading, onOpe
       <div className="manuscript-toolbar">
         <div className="word-count">{words.toLocaleString()} words · ~{minutes} min</div>
         <button
+          data-tour-id="flow-coach-button"
           className="btn-ghost btn-sm has-tooltip"
           data-tooltip="A step-by-step coaching session that walks through what each movement needs to accomplish — intro, transitions, conclusion. Coaches direction only, one step at a time."
           onClick={runFlowCoach}
@@ -210,6 +211,7 @@ export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading, onOpe
           Flow Coach
         </button>
         <button
+          data-tour-id="ear-check-button"
           className="btn-ghost btn-sm has-tooltip"
           data-tooltip="Scans your manuscript for passages that will lose listeners when heard aloud. Steps through each issue one at a time with a diagnosis and direction."
           onClick={runEarCheck}
@@ -218,6 +220,7 @@ export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading, onOpe
           Ear Check
         </button>
         <button
+          data-tour-id="tune-up-button"
           className="btn-primary btn-sm has-tooltip"
           data-tooltip="A full editorial evaluation covering structure, text alignment, functional balance, and redemptive logic. Produces a Sermon Snapshot, Alignment Map, and Patch Plan."
           onClick={runTuneUp}

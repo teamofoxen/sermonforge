@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
+import { useTour } from "../contexts/TourContext";
 import { getOutline, serializeOutline, getFunctionalElements, serializeFunctionalElements, autoResize } from "../utils";
 import { STEPS, PHASES, PHASE_SEQUENCE, STEP_SEQUENCE } from "../constants/steps";
 import { sendAIMessage } from "../utils/ai";
@@ -216,6 +217,7 @@ function StructuredWorksheet({ fields, data, onChange, legacyNotes }) {
 }
 
 export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChange, onTabChange, onSummaryGenerated }) {
+  const { active: tourActive, desiredUi } = useTour();
   const [activeStep, setActiveStep] = useState(() => {
     const saved = localStorage.getItem(`sermonforge_study_step_${sermon.id}`);
     return saved ? parseInt(saved, 10) : 1;
@@ -229,6 +231,18 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
     localStorage.setItem(`sermonforge_study_step_${sermon.id}`, activeStep);
     localStorage.setItem(`sermonforge_study_subphase_${sermon.id}`, activeSubPhase);
   }, [activeStep, activeSubPhase, sermon.id]);
+
+  // Tour-driven step/subphase alignment. Only writes when there's a real change,
+  // so the user's own navigation isn't fought when the tour isn't active.
+  useEffect(() => {
+    if (!tourActive || !desiredUi) return;
+    if (typeof desiredUi.studyStep === "number" && desiredUi.studyStep !== activeStep) {
+      setActiveStep(desiredUi.studyStep);
+    }
+    if (typeof desiredUi.studySubPhase === "number" && desiredUi.studySubPhase !== activeSubPhase) {
+      setActiveSubPhase(desiredUi.studySubPhase);
+    }
+  }, [tourActive, desiredUi, activeStep, activeSubPhase]);
 
   useEffect(() => {
     setMpsChat([]);
@@ -598,12 +612,17 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
     <div className="study-stage-container">
 
       {/* ── Step indicator ── */}
-      <div className="step-indicator">
+      <div className="step-indicator" data-tour-id="study-step-indicator">
         {STEP_LABELS.map((label, i) => {
           const step = i + 1;
           const status = step < activeStep ? "done" : step === activeStep ? "active" : "future";
           return (
-            <button key={step} className={`step-pill step-pill-${status}`} onClick={() => jumpToStep(step)}>
+            <button
+              key={step}
+              data-tour-id={`study-step-pill-${step}`}
+              className={`step-pill step-pill-${status}`}
+              onClick={() => jumpToStep(step)}
+            >
               <span className="step-pill-num">{step}</span>
               <span className="step-pill-label">{label}</span>
             </button>
@@ -616,12 +635,17 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
       {/* ── Step 1: Exegesis ── */}
       {activeStep === 1 && (
         <div className="study-step-active">
-          <div className="subphase-indicator">
+          <div className="subphase-indicator" data-tour-id="study-subphase-indicator">
             {PHASE_LABELS.map((label, i) => {
               const phase = i + 1;
               const status = phase < activeSubPhase ? "done" : phase === activeSubPhase ? "active" : "future";
               return (
-                <button key={phase} className={`subphase-pill subphase-pill-${status}`} onClick={() => jumpToSubPhase(phase)}>
+                <button
+                  key={phase}
+                  data-tour-id={`study-subphase-pill-${phase}`}
+                  className={`subphase-pill subphase-pill-${status}`}
+                  onClick={() => jumpToSubPhase(phase)}
+                >
                   {phase < activeSubPhase && <span className="subphase-check">✓ </span>}
                   {label}
                 </button>
@@ -634,7 +658,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
           {activeSubPhase === 4 && <SummaryBlock summaryKey="p4" {...summaryProps} />}
 
           {activeSubPhase === 1 && (
-            <div className="sub-phase-body">
+            <div className="sub-phase-body" data-tour-id="phase-1-worksheet">
               <p className="sub-phase-hint">Observe the text — what it says before what it means. Read and reread prayerfully.</p>
               <StructuredWorksheet
                 fields={OBSERVE_FIELDS}
@@ -671,7 +695,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
           )}
 
           {activeSubPhase === 2 && (
-            <div className="sub-phase-body">
+            <div className="sub-phase-body" data-tour-id="phase-2-worksheet">
               <p className="sub-phase-hint">Find the meaning of the text. Move from observation to interpretation.</p>
               <StructuredWorksheet
                 fields={INTERPRET_FIELDS}
@@ -708,7 +732,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
           )}
 
           {activeSubPhase === 3 && (
-            <div className="sub-phase-body">
+            <div className="sub-phase-body" data-tour-id="phase-3-worksheet">
               <p className="sub-phase-hint">Find the redemptive features. How does this text point to or depend on Christ?</p>
               <StructuredWorksheet
                 fields={REDEMPTIVE_FIELDS}
@@ -718,7 +742,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
               />
 
               {/* Summary field — auto-synthesized or hand-written */}
-              <div className="worksheet-summary-block">
+              <div className="worksheet-summary-block" data-tour-id="redemptive-synthesize">
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
                   <label className="worksheet-field-label" style={{ marginBottom: 0 }}>Summary of Redemptive Features</label>
                   <button
@@ -789,24 +813,29 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
           )}
 
           {activeSubPhase === 4 && (
-            <div className="sub-phase-body">
+            <div className="sub-phase-body" data-tour-id="phase-4-worksheet">
               <p className="sub-phase-hint">Concluding implications — how does this passage apply to us today?</p>
 
-              <div className="worksheet-group-header">Theological Significance</div>
-              <StructuredWorksheet
-                fields={IMPLICATIONS_THEOLOGICAL}
-                data={impData}
-                onChange={(key, value) => updateStructured("implications", impData, key, value)}
-                legacyNotes={impData.legacy_notes}
-              />
+              <div data-tour-id="implications-theological">
+                <div className="worksheet-group-header">Theological Significance</div>
+                <StructuredWorksheet
+                  fields={IMPLICATIONS_THEOLOGICAL}
+                  data={impData}
+                  onChange={(key, value) => updateStructured("implications", impData, key, value)}
+                  legacyNotes={impData.legacy_notes}
+                />
+              </div>
 
-              <div className="worksheet-group-header">Personal Application</div>
-              <StructuredWorksheet
-                fields={IMPLICATIONS_PERSONAL}
-                data={impData}
-                onChange={(key, value) => updateStructured("implications", impData, key, value)}
-              />
+              <div data-tour-id="implications-personal">
+                <div className="worksheet-group-header">Personal Application</div>
+                <StructuredWorksheet
+                  fields={IMPLICATIONS_PERSONAL}
+                  data={impData}
+                  onChange={(key, value) => updateStructured("implications", impData, key, value)}
+                />
+              </div>
 
+              <div data-tour-id="implications-unbeliever">
               <div className="worksheet-group-header">Implications for Unbelievers</div>
               <div className="worksheet-field">
                 <textarea
@@ -866,6 +895,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                   placeholder="A consolidated list of all implications from your study — theological, personal, and for unbelievers."
                 />
               </div>
+              </div>{/* /implications-unbeliever */}
 
               <div style={{ marginTop: "8px" }}>
                 <button
@@ -912,7 +942,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
           <SummaryBlock summaryKey="s2" {...summaryProps} />
 
           <div className="mpt-mps-grid">
-            <div className="field-group">
+            <div className="field-group" data-tour-id="mpt-field">
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "5px" }}>
                 <label className="field-label" style={{ marginBottom: 0 }}>Main Point of the Text (MPT)</label>
                 {(sermon.passage || Object.keys(obsData).some(k => k !== "legacy_notes" && obsData[k]?.trim())) && (
@@ -937,7 +967,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                 placeholder="The main point of the text in past tense — what the author was saying to the original audience."
               />
             </div>
-            <div className="field-group">
+            <div className="field-group" data-tour-id="mps-field">
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "5px" }}>
                 <label className="field-label" style={{ marginBottom: 0 }}>Main Point of the Sermon (MPS)</label>
                 {sermon.mpt?.trim() && (
@@ -1076,7 +1106,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
 
       {/* ── Step 3: Outline Builder ── */}
       {activeStep === 3 && (
-        <div className="study-step-active">
+        <div className="study-step-active" data-tour-id="outline-builder">
           <SummaryBlock summaryKey="s3" {...summaryProps} />
 
 <OutlineBuilder
@@ -1204,7 +1234,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
 
       {/* ── Step 4: Functional Elements ── */}
       {activeStep === 4 && (
-        <div className="study-step-active">
+        <div className="study-step-active" data-tour-id="functional-elements">
           <SummaryBlock summaryKey="s4" {...summaryProps} />
 
           {outline.length > 0 && sermon.passage && (

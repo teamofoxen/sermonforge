@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
-import { getAllSeries, getAllSermons, getRecentSermons, getTheologyStatus, searchTheologyLibrary } from "../db/database";
+import { getAllSeries, getAllSermons, getRecentSermons, getTheologyStatus, searchTheologyLibrary, loadTourSermon } from "../db/database";
+import { useTour } from "../contexts/TourContext";
+import { WORKSPACE_TOUR_STOPS } from "../tour/workspaceTourStops";
 import NewSermonModal from "./NewSermonModal";
 import { formatDate, getOutline, assembleManuscriptText } from "../utils";
 import { sendAIMessage } from "../utils/ai";
@@ -8,12 +10,14 @@ import { flattenExegesis } from "../utils/studyFields";
 import { formatChunkForLLM, dedupSources } from "../utils/theologyCitation";
 
 export default function Dashboard({ onOpenSermon, onOpenSeries, onNewSeries, onNavigate }) {
+  const { start: startTour } = useTour();
   const [activeSeries, setActiveSeries]   = useState([]);
   const [recentSermons, setRecentSermons] = useState([]);
   const [reorientSummaries, setReorientSummaries] = useState({});
   const [reorientLoading, setReorientLoading]     = useState({});
   const [showNewModal, setShowNewModal] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [tourLoading, setTourLoading] = useState(false);
   const [theologyAvailable, setTheologyAvailable] = useState(false);
   const [theologyQuery, setTheologyQuery] = useState("");
   const [theologyLoading, setTheologyLoading] = useState(false);
@@ -171,6 +175,23 @@ export default function Dashboard({ onOpenSermon, onOpenSeries, onNewSeries, onN
     setTheologyMessages([]);
   }
 
+  async function handleStartWorkspaceTour() {
+    if (tourLoading) return;
+    setTourLoading(true);
+    try {
+      const result = await loadTourSermon();
+      if (result?.sermonId && onOpenSermon) {
+        onOpenSermon(result.sermonId);
+        // Defer until the workspace mounts so data-tour-id anchors exist.
+        setTimeout(() => startTour(WORKSPACE_TOUR_STOPS), 250);
+      }
+    } catch (e) {
+      console.error("Failed to start workspace tour:", e);
+    } finally {
+      setTourLoading(false);
+    }
+  }
+
   function dismissSummary(key) {
     setReorientSummaries((prev) => { const next = { ...prev }; delete next[key]; return next; });
   }
@@ -203,11 +224,12 @@ export default function Dashboard({ onOpenSermon, onOpenSeries, onNewSeries, onN
           <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
             <button
               className="btn-ghost"
-              disabled
-              title="Coming soon"
+              onClick={handleStartWorkspaceTour}
+              disabled={tourLoading}
+              title="Open the guided tour of the Sermon Workspace"
               style={{ fontSize: "13px", color: "var(--ink-soft)" }}
             >
-              Tour Sermon Workspace
+              {tourLoading ? "Loading…" : "Tour Sermon Workspace"}
             </button>
             <button
               className="btn-ghost"

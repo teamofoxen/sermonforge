@@ -229,8 +229,8 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
   const tabLabels = { study: "Study", outline: "Outline", manuscript: "Manuscript", delivery: "Delivery" };
 
   return (
-    <aside className="ai-panel">
-      <div className="ai-panel-header">
+    <aside className="ai-panel" data-tour-id="ai-panel">
+      <div className="ai-panel-header" data-tour-id="ai-panel-header">
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
             <div className="ai-panel-title">AI Assistant</div>

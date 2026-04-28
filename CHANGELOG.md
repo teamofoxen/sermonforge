@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-04-28 — feat: sermon workspace tour — 34-stop guided spotlight
+
+- Added tour-only sermon seed (electron/tourData.js + db-loadTourSermon IPC) with id NOT LIKE 'tour-%' filters on list queries so the sermon stays hidden from dashboard and planner.
+- Built TourContext + TourOverlay (radial-gradient spotlight, gold-glow ring, dark-ink callout card with markdown body) mounted at the App root.
+- Wired SermonWorkspace and StudyTab to observe each stop's UI prerequisites (tab, studyStep, studySubPhase, drawerOpen, piOpen) via equality-guarded setters.
+- Added data-tour-id anchors across SermonWorkspace, StudyTab, ManuscriptTab, and AIPanel for all 34 stops.
+- Dashboard "Tour Sermon Workspace" button now seeds, opens, and starts the tour with the locked 34-stop content from the spec.
+
+---
+
 ## 2026-04-28 — refactor: remove demo mode in favor of tour scaffolding
 
 - Deleted DemoContext, DemoSplash, TierBadge, ContextPreview, and electron/demoData.js along with all demo-mode toggles, completeness bar, pipeline map, and Preview Context button.

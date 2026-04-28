@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 // useRef is used for pendingMessageId — a stable counter so repeated identical
 // prompts each produce a distinct object reference and always trigger the effect.
 import { useDebounce } from "../utils/hooks";
+import { useTour } from "../contexts/TourContext";
 import { getSermonById, updateSermon, deleteSermon, getSeriesById, getSectionsBySeries } from "../db/database";
 import { updateMemory, extractOutlinePattern, extractPhrasePatterns } from "../utils/memory";
 import { autoResize } from "../utils";
@@ -30,7 +31,24 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
   const [showPassage, setShowPassage] = useState(false);
   // Pastoral Intelligence card — open when empty, collapsed when filled
   const [piOpen, setPiOpen] = useState(true);
+  const { active: tourActive, desiredUi } = useTour();
   const pendingIdRef = useRef(0);
+
+  // When the tour is active, align workspace state with the current stop's
+  // declared prerequisites. Only writes when there's a real change so we don't
+  // fight the user mid-step.
+  useEffect(() => {
+    if (!tourActive || !desiredUi) return;
+    if (desiredUi.tab && desiredUi.tab !== activeTab) {
+      setActiveTab(desiredUi.tab);
+    }
+    if (typeof desiredUi.drawerOpen === "boolean" && desiredUi.drawerOpen !== drawerOpen) {
+      setDrawerOpen(desiredUi.drawerOpen);
+    }
+    if (typeof desiredUi.piOpen === "boolean" && desiredUi.piOpen !== piOpen) {
+      setPiOpen(desiredUi.piOpen);
+    }
+  }, [tourActive, desiredUi, activeTab, drawerOpen, piOpen]);
   // Mirrors sermon state synchronously so captureMemory never reads a stale closure.
   const sermonRef = useRef(null);
   // Last hash captured — prevents duplicate memory writes when content hasn't changed.
@@ -205,7 +223,7 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
                 >{sermon.passage}</span>
               )}
             </div>
-            <div className="topbar-title">{sermon.title}</div>
+            <div className="topbar-title" data-tour-id="workspace-title">{sermon.title}</div>
           </div>
         </div>
 
@@ -219,6 +237,7 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
             How this works
           </button>
           <button
+            data-tour-id="chat-with-ai-button"
             className="btn-ghost btn-sm"
             onClick={() => setDrawerOpen(v => !v)}
             style={{ fontSize: "13px", color: drawerOpen ? "var(--gold)" : "var(--ink-ghost)", borderColor: drawerOpen ? "var(--gold)" : undefined }}
@@ -233,6 +252,7 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
         {TABS.map((tab) => (
           <button
             key={tab}
+            data-tour-id={`stage-tab-${tab}`}
             className={`stage-tab ${activeTab === tab ? "active" : ""}`}
             onClick={() => handleTabChange(tab)}
           >
@@ -246,7 +266,7 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
         <div className="workspace-main">
 
           {/* Pastoral Intelligence orientation card — collapsible */}
-          <div className="card" style={{ margin: "16px 20px 0", padding: "0" }}>
+          <div className="card" data-tour-id="pastoral-context-card" style={{ margin: "16px 20px 0", padding: "0" }}>
             {/* Header — always visible, click to toggle */}
             <div
               onClick={() => setPiOpen(v => !v)}
@@ -298,7 +318,7 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
 
                 {/* Three editable fields — ordered outside in: Cultural Moment → The Room → The Sermon's Work */}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px", marginTop: "12px" }}>
-                  <div>
+                  <div data-tour-id="pi-cultural-moment">
                     <label className="field-label">The Cultural Moment</label>
                     <textarea
                       className="field-textarea"
@@ -310,7 +330,7 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
                       rows={1}
                     />
                   </div>
-                  <div>
+                  <div data-tour-id="pi-the-room">
                     <label className="field-label">The Room</label>
                     <textarea
                       className="field-textarea"
@@ -322,7 +342,7 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
                       rows={1}
                     />
                   </div>
-                  <div>
+                  <div data-tour-id="pi-sermons-work">
                     <label className="field-label">The Sermon's Work</label>
                     <textarea
                       className="field-textarea"
