@@ -61,7 +61,7 @@ export const loadTourSermon = () => api.loadTourSermon();
 
 // ── API key setup ─────────────────────────────────────────────────────────────
 export const getApiKeyStatus = () => api.getApiKeyStatus();
-export const saveApiKey      = (key) => api.saveApiKey(key);
+export const saveApiKeys     = (keys) => api.saveApiKeys(keys);
 
 // ── Feedback ──────────────────────────────────────────────────────────────────
 export const getSchemaVersion = () => api.getSchemaVersion();

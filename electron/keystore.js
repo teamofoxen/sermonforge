@@ -1,47 +1,58 @@
-// electron/keystore.js — secure storage for the user's Anthropic API key.
+// electron/keystore.js — secure storage for user-provided API keys.
 //
-// In dev: always reads from .env so Ross's workflow is unchanged.
-// In prod: uses Electron safeStorage (OS keychain / DPAPI) written to userData.
+// In unpackaged runs (dev, git clones): reads from .env as always.
+// In packaged installs: uses Electron safeStorage (OS keychain / DPAPI).
 //
-// The key never leaves the main process. Renderer only sends it during setup
-// and receives a boolean status — never the key itself.
+// Keys never leave the main process. Renderer sends them once during setup
+// and receives only boolean status — never the values themselves.
 
 const { safeStorage, app } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const { isPackaged } = require("./config");
 
-const KEY_FILE = path.join(app.getPath("userData"), "sf-key.enc");
+// ── Generic named-key storage ─────────────────────────────────────────────────
 
-function saveKey(plaintext) {
+function keyFile(name) {
+  return path.join(app.getPath("userData"), `sf-${name}.enc`);
+}
+
+function saveNamedKey(name, value) {
   if (!safeStorage.isEncryptionAvailable()) {
     throw new Error("OS encryption is not available on this machine.");
   }
-  const encrypted = safeStorage.encryptString(plaintext);
-  fs.writeFileSync(KEY_FILE, encrypted);
+  fs.writeFileSync(keyFile(name), safeStorage.encryptString(value));
 }
 
-function loadKey() {
-  // Any unpackaged run (dev machine, friend's git clone) reads from .env as always.
-  // Only a real packaged install uses safeStorage.
-  if (!isPackaged) return process.env.ANTHROPIC_API_KEY || null;
-
-  if (fs.existsSync(KEY_FILE)) {
+function loadNamedKey(name, envVar) {
+  if (!isPackaged) return process.env[envVar] || null;
+  const f = keyFile(name);
+  if (fs.existsSync(f)) {
     try {
       if (!safeStorage.isEncryptionAvailable()) return null;
-      const buf = fs.readFileSync(KEY_FILE);
-      return safeStorage.decryptString(buf);
+      return safeStorage.decryptString(fs.readFileSync(f));
     } catch (e) {
-      console.error("[keystore] Decrypt failed:", e.message);
+      console.error(`[keystore] Decrypt failed for ${name}:`, e.message);
       return null;
     }
   }
-
   return null;
+}
+
+// ── Named-key convenience exports (used by main.js) ───────────────────────────
+
+function loadKey()    { return loadNamedKey("anthropic", "ANTHROPIC_API_KEY"); }
+function loadEsvKey() { return loadNamedKey("esv",       "ESV_API_KEY"); }
+
+// Save both keys submitted from the setup screen.
+// anthropic is required; esv is optional (empty string = skip).
+function saveKeys({ anthropic, esv }) {
+  saveNamedKey("anthropic", anthropic);
+  if (esv && esv.trim()) saveNamedKey("esv", esv.trim());
 }
 
 function isConfigured() {
   return Boolean(loadKey());
 }
 
-module.exports = { saveKey, loadKey, isConfigured };
+module.exports = { saveKeys, loadKey, loadEsvKey, isConfigured };

@@ -18,7 +18,7 @@ process.on("unhandledRejection", (reason) => {
 require("dotenv").config({ path: paths.env, override: true });
 
 const { registerAIHandlers } = require("./ai");
-const { saveKey, isConfigured } = require("./keystore");
+const { saveKeys, loadEsvKey, isConfigured } = require("./keystore");
 const { resetClient } = require("./ai/provider");
 const { initUpdater } = require("./updater");
 const BetterSqlite3 = require("better-sqlite3");
@@ -1770,12 +1770,13 @@ ipcMain.handle("app-get-key-status", () => {
   return { configured: isConfigured() };
 });
 
-ipcMain.handle("app-save-api-key", (_, key) => {
-  if (typeof key !== "string" || !key.startsWith("sk-ant-") || key.length < 20) {
-    return { success: false, error: "Invalid API key format." };
+ipcMain.handle("app-save-api-key", (_, keys) => {
+  const { anthropic, esv } = keys || {};
+  if (typeof anthropic !== "string" || !anthropic.startsWith("sk-ant-") || anthropic.length < 20) {
+    return { success: false, error: "Invalid Claude API key format." };
   }
   try {
-    saveKey(key);
+    saveKeys({ anthropic, esv });
     resetClient();
     return { success: true };
   } catch (e) {
@@ -2057,8 +2058,8 @@ async function fetchApiBibleText(bibleId, osisId, apiKey) {
 }
 
 async function fetchEsvText(passage) {
-  const esvKey = process.env.ESV_API_KEY;
-  if (!esvKey) return null; // null = key not configured yet
+  const esvKey = loadEsvKey();
+  if (!esvKey) return null; // null = key not configured
   const cacheKey = `esv|${passage}`;
   if (_passageCache.has(cacheKey)) return _passageCache.get(cacheKey);
   const url = `https://api.esv.org/v3/passage/text/?q=${encodeURIComponent(passage)}` +

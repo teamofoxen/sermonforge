@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-04-28 — feat: setup screen — Claude + ESV key collection
+
+- Expanded `keystore.js` to named-key storage; `loadEsvKey()` reads safeStorage in packaged builds, `.env` in unpackaged.
+- Updated `fetchEsvText()` in `main.js` to use keystore instead of `process.env.ESV_API_KEY`.
+- `app-save-api-key` IPC handler now accepts `{ anthropic, esv }` object; ESV is optional.
+- Redesigned `SetupScreen.jsx` with inline step-by-step instructions for both keys.
+
+---
+
 ## 2026-04-28 — feat: distribution phase 3 — auto-updater
 
 - Added `electron/updater.js` using `electron-updater`; checks GitHub Releases 3s after launch, downloads silently, prompts restart on completion.
