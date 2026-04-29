@@ -3,6 +3,17 @@ import { loadTourSermon } from "../db/database";
 import { useTour } from "../contexts/TourContext";
 import { WORKSPACE_TOUR_STOPS } from "../tour/workspaceTourStops";
 import NewSermonModal from "./NewSermonModal";
+import DashboardHeader from "./DashboardHeader";
+import DashboardChurchHistory from "./DashboardChurchHistory";
+
+function ArrowRightIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <line x1="5" y1="12" x2="19" y2="12" />
+      <polyline points="12 5 19 12 12 19" />
+    </svg>
+  );
+}
 
 export default function Dashboard({ onOpenSermon, onNewSeries, onNavigate }) {
   const { start: startTour } = useTour();
@@ -25,134 +36,130 @@ export default function Dashboard({ onOpenSermon, onNewSeries, onNavigate }) {
     }
   }
 
-  const cardStyle = {
-    display: "flex",
-    flexDirection: "column",
-    gap: "12px",
-    padding: "22px 24px",
-  };
-
-  const titleStyle = {
-    fontFamily: "'Playfair Display', serif",
-    fontSize: "22px",
-    fontWeight: "600",
-    color: "var(--ink)",
-    lineHeight: "1.2",
-    margin: 0,
-  };
-
-  const blurbStyle = {
-    fontFamily: "'Crimson Pro', serif",
-    fontSize: "15px",
-    lineHeight: "1.5",
-    color: "var(--ink-mid)",
-    margin: 0,
-    flex: 1,
-  };
-
-  const actionRowStyle = {
-    display: "flex",
-    gap: "8px",
-    alignItems: "center",
-    flexWrap: "wrap",
-    marginTop: "4px",
-  };
-
   return (
     <>
-      {/* Top section — reserved for future use */}
-      <div className="page-header" style={{ minHeight: "120px" }} />
+      <DashboardHeader />
 
-      <div className="page-body">
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))",
-            gap: "20px",
-          }}
-        >
-          {/* Section 1 — Build a series */}
-          <div className="card" style={cardStyle}>
-            <h2 style={titleStyle}>Build a series.</h2>
-            <p style={blurbStyle}>
-              Plan a sermon series end to end. Set the passage range, big idea, and
-              redemptive arc, then break it into weeks. Start fresh or build from a
-              book study.
-            </p>
-            <div style={actionRowStyle}>
-              <button
-                className="btn-ghost"
-                disabled
-                title="Coming soon"
-                style={{ fontSize: "13px", color: "var(--ink-soft)" }}
-              >
-                Take the tour
-              </button>
-              <button className="btn-primary" onClick={onNewSeries}>
-                Build series
-              </button>
+      <div className="page-body dash-page-body">
+        <div className="dash-content">
+          <div className="dash-grid">
+            {/* HERO — Build a sermon */}
+            <div
+              className="dash-tile tile-hero"
+              onClick={() => setShowNewModal(true)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setShowNewModal(true);
+                }
+              }}
+            >
+              <div className="tile-eyebrow">
+                <span className="dot" />
+                <span>Primary&nbsp;workflow</span>
+              </div>
+              <h2 className="tile-title tile-title-lg">
+                Build a <em>sermon.</em>
+              </h2>
+              <p className="tile-blurb">
+                Walk a single sermon from text to manuscript. Exegesis, MPT and MPS,
+                outline, functional elements, and delivery — the full Sermon Workspace,
+                one step at a time.
+              </p>
+              <div className="tile-actions">
+                <button
+                  className="btn-hero"
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowNewModal(true);
+                  }}
+                >
+                  Create sermon <ArrowRightIcon />
+                </button>
+                <button
+                  type="button"
+                  className="tile-meta tile-meta-button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleStartWorkspaceTour();
+                  }}
+                  disabled={tourLoading}
+                >
+                  {tourLoading ? "Loading…" : "or take the guided tour →"}
+                </button>
+              </div>
+            </div>
+
+            {/* SERIES */}
+            <div
+              className="dash-tile tile-secondary"
+              onClick={onNewSeries}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onNewSeries && onNewSeries();
+                }
+              }}
+            >
+              <div className="tile-eyebrow tile-eyebrow-soft">Plan&nbsp;ahead</div>
+              <h3 className="tile-title">
+                Build a <em>series.</em>
+              </h3>
+              <p className="tile-blurb">
+                Plan a sermon series end to end. Set the passage range, big idea,
+                and redemptive arc — then break it into weeks.
+              </p>
+              <span className="tile-link">
+                Build series <ArrowRightIcon />
+              </span>
+            </div>
+
+            {/* QUICK OUTLINE */}
+            <div
+              className="dash-tile"
+              onClick={() => onNavigate && onNavigate("library")}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onNavigate && onNavigate("library");
+                }
+              }}
+            >
+              <div className="tile-eyebrow tile-eyebrow-soft">From&nbsp;your&nbsp;library</div>
+              <h3 className="tile-title">Quick outline builder</h3>
+              <p className="tile-blurb">
+                Pull from your past sermons. Describe what you want to preach, and
+                SermonForge synthesizes outline options grounded in your own voice.
+              </p>
+              <span className="tile-link">
+                Open the Library <ArrowRightIcon />
+              </span>
+            </div>
+
+            {/* THEOLOGY SEARCH */}
+            <div className="dash-tile is-disabled" aria-disabled="true">
+              <div className="tile-eyebrow tile-eyebrow-soft">
+                <span>Coming&nbsp;soon</span>
+              </div>
+              <h3 className="tile-title">Theology search</h3>
+              <p className="tile-blurb">
+                Search a curated theological library — Patristics, Reformed, Puritan —
+                with citation per chunk.
+              </p>
+              <span className="tile-link tile-link-muted">
+                Notify me <ArrowRightIcon />
+              </span>
             </div>
           </div>
 
-          {/* Section 2 — Build a sermon */}
-          <div className="card" style={cardStyle}>
-            <h2 style={titleStyle}>Build a sermon.</h2>
-            <p style={blurbStyle}>
-              Walk a single sermon from text to manuscript. Exegesis, MPT and MPS,
-              outline, functional elements, and delivery — the full Sermon Workspace,
-              one step at a time.
-            </p>
-            <div style={actionRowStyle}>
-              <button
-                className="btn-ghost"
-                onClick={handleStartWorkspaceTour}
-                disabled={tourLoading}
-                title="Open the guided tour of the Sermon Workspace"
-                style={{ fontSize: "13px", color: "var(--ink-soft)" }}
-              >
-                {tourLoading ? "Loading…" : "Take the tour"}
-              </button>
-              <button className="btn-primary" onClick={() => setShowNewModal(true)}>
-                Create sermon
-              </button>
-            </div>
-          </div>
-
-          {/* Section 3 — Quick outline builder */}
-          <div className="card" style={cardStyle}>
-            <h2 style={titleStyle}>Quick outline builder.</h2>
-            <p style={blurbStyle}>
-              Pull from your past sermons. Describe what you want to preach, and
-              SermonForge synthesizes outline options grounded in your own voice.
-            </p>
-            <div style={actionRowStyle}>
-              <button
-                className="btn-primary"
-                onClick={() => onNavigate && onNavigate("library")}
-              >
-                Open the Library
-              </button>
-            </div>
-          </div>
-
-          {/* Section 4 — Theology search */}
-          <div className="card" style={cardStyle}>
-            <h2 style={titleStyle}>Theology search.</h2>
-            <p style={blurbStyle}>
-              Search a curated theological library — Patristics, Reformed, Puritan —
-              with citation per chunk.
-            </p>
-            <div style={actionRowStyle}>
-              <button
-                className="btn-ghost"
-                disabled
-                title="Coming soon"
-                style={{ fontSize: "13px", color: "var(--ink-soft)" }}
-              >
-                Coming soon
-              </button>
-            </div>
-          </div>
+          <DashboardChurchHistory />
         </div>
       </div>
 

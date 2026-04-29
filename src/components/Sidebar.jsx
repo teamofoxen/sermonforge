@@ -44,12 +44,12 @@ export default function Sidebar({ currentView, onNavigate, onOpenSermon, onOpenS
   const [recentSeries, setRecentSeries] = useState([]);
   const [showFeedback, setShowFeedback] = useState(false);
 
-  const visibleRecents = recentSermons.filter((s) => s.title?.trim() && s.stage !== "planning");
+  const visibleRecents = recentSermons.filter((s) => s.title?.trim());
   const visibleSeries = recentSeries.filter((s) => s.title?.trim() && s.title !== "Untitled Series");
 
   useEffect(() => {
     if (!dropdownOpen) return;
-    getRecentSermons(3)
+    getRecentSermons(5)
       .then(setRecentSermons)
       .catch((err) => console.error("[Sidebar] Failed to load recent sermons:", err));
   }, [dropdownOpen]);

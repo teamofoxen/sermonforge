@@ -2,6 +2,16 @@
 
 ---
 
+## [Unreleased] — feat: dashboard illuminated header + 2×2 grid + church history footer
+
+- Empty page-header band replaced with an "illuminated" preacher-quote rotator (random pick on load, manual prev/next, stencil portrait + citation) drawing from a curated 21-quote / 7-preacher dataset.
+- Dashboard body restructured to a 2×2 grid with content-driven tile heights and a hero treatment on "Build a sermon" via gold rule and ornament.
+- "This Day in Church History" footer added with an 80+ entry curated MM-DD dataset (liturgical-feast support included) that walks back up to 30 days when today has no entry.
+- Sidebar Sermon Prep dropdown now surfaces all titled in-progress sermons, not just non-planning, and shows up to 5 (was 3).
+- 7 stencil portrait PNGs added under `src/assets/portraits/` and resolved via `import.meta.glob`.
+
+---
+
 ## 2026-04-28 — feat: dashboard reimagining + Library 2.0 + PI-aware Quick Outline
 
 - Dashboard rewritten to a 4-section layout; "Pick up where you left off" moved to expandable left-nav headers.
