@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-04-28 — feat: dashboard reimagining + Library 2.0 + PI-aware Quick Outline
+
+- Dashboard rewritten to a 4-section layout; "Pick up where you left off" moved to expandable left-nav headers.
+- New `settings` table (v13) + Library folder picker replace the hardcoded OneDrive path (backward-compat fallback).
+- Separate `library.db` (better-sqlite3 + sqlite-vec) holds chunks/vectors; imports are copied into `userData/library/` and embedded via the shared Xenova MiniLM model; backfill via `library-build-embeddings`.
+- `library-search` adds `"hybrid"` mode (Reciprocal Rank Fusion of FTS rank + vector cosine); Quick Outline uses it.
+- Quick Outline rebuilt as a 3-step PI-aware flow: AI elicits Cultural Moment / Room / Sermon's Work follow-ups, synthesizes 3 outlines, and outputs to either the Sermon Workspace (full) or a placeholder Word doc (`stage = "quick"`).
+
+---
+
 ## 2026-04-28 — feat: manuscript tab — full AI context, Tune-Up persistence, DOCX export
 
 - Manuscript tab modes (Flow Coach, Ear Check, Final Tune-Up) now run `buildContext` on the initial fire, so Pastoral Intelligence, exegesis, structure, series context, theology, and memory tiers reach the AI.

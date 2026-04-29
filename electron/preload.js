@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // ── Series ────────────────────────────────────────────────────────────────
   getAllSeries:        ()          => ipcRenderer.invoke("db-getAllSeries"),
+  getRecentSeries:     (limit)     => ipcRenderer.invoke("db-getRecentSeries", limit),
   getSeriesById:       (id)        => ipcRenderer.invoke("db-getSeriesById", id),
   createSeries:        (data)      => ipcRenderer.invoke("db-createSeries", data),
   updateSeries:        (id, fields) => ipcRenderer.invoke("db-updateSeries", { id, fields }),
@@ -39,9 +40,17 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // ── Library ───────────────────────────────────────────────────────────────
   deleteLibraryItem:        (id)                    => ipcRenderer.invoke("db-deleteLibraryItem", id),
   getLibraryStatus:         ()                      => ipcRenderer.invoke("library-status"),
+  getLibraryFolder:         ()                      => ipcRenderer.invoke("library-get-folder"),
+  setLibraryFolder:         ()                      => ipcRenderer.invoke("library-set-folder"),
   importLibrary:            ()                      => ipcRenderer.invoke("library-import"),
+  buildLibraryEmbeddings:   ()                      => ipcRenderer.invoke("library-build-embeddings"),
   searchLibrary:            (query, limit, mode)    => ipcRenderer.invoke("library-search", { query, limit, mode }),
   getLibraryManuscripts:    (ids, truncate, maxChars) => ipcRenderer.invoke("library-get-manuscripts", { ids, truncate, maxChars }),
+  createSermonFromOutline:  (payload)               => ipcRenderer.invoke("library-create-sermon-from-outline", payload),
+
+  // ── Settings ──────────────────────────────────────────────────────────────
+  getSetting:               (key)                   => ipcRenderer.invoke("db-getSetting", key),
+  setSetting:               (key, value)            => ipcRenderer.invoke("db-setSetting", { key, value }),
 
   // ── Theology library ──────────────────────────────────────────────────────
   getTheologyStatus:      ()                     => ipcRenderer.invoke("theology-status"),
@@ -55,6 +64,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   exportStudyGuide: (seriesId) => ipcRenderer.invoke("series-export-study-guide", seriesId),
   exportPmb: (data) => ipcRenderer.invoke("sermon-export-pmb", data),
   exportManuscript: (data) => ipcRenderer.invoke("sermon-export-manuscript", data),
+  exportQuickTemplate: (data) => ipcRenderer.invoke("sermon-export-quick-template", data),
 
   // ── Bible passage ─────────────────────────────────────────────────────────
   fetchPassage: (passage) => ipcRenderer.invoke('passage-fetch', passage),
@@ -77,5 +87,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
     const handler = (event, data) => callback(data);
     ipcRenderer.on("library-import-progress", handler);
     return () => ipcRenderer.removeListener("library-import-progress", handler);
+  },
+  onLibraryEmbedProgress: (callback) => {
+    const handler = (event, data) => callback(data);
+    ipcRenderer.on("library-embed-progress", handler);
+    return () => ipcRenderer.removeListener("library-embed-progress", handler);
   },
 });

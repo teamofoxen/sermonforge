@@ -152,6 +152,8 @@ export default function App() {
         currentView={currentView}
         onNavigate={navigate}
         onOpenSermon={openSermon}
+        onOpenSeries={openPlanner}
+        onNewSeries={handleNewSeries}
         theme={theme}
         onToggleTheme={toggleTheme}
       />
@@ -182,7 +184,7 @@ export default function App() {
           <Archive onOpenSermon={openSermon} />
         )}
         {currentView === "library" && (
-          <Library />
+          <Library onOpenSermon={openSermon} />
         )}
         {currentView === "planning" && (
           <Planning

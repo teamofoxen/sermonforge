@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell } = require("electron");
+const { app, BrowserWindow, ipcMain, shell, dialog } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const os = require("os");
@@ -28,11 +28,17 @@ let db = null;
 let dbPath = null;
 let SQL = null;          // sql.js constructor — used for main sermonforge.db
 let theologyDb = null;   // better-sqlite3 instance for theology.db (+ sqlite-vec)
+let libraryDb = null;    // better-sqlite3 instance for library.db (+ sqlite-vec)
+                         // Holds derived data (chunks + vectors); regeneratable from sermonforge.db.library
+let libraryVecAvailable = false;
 let mainWindow;
 let saveTimer = null;
 let _pendingWrite = false; // true between saveDb() and the debounce flush; used for crash-window warn
 
 const LIBRARY_PATH = path.join(os.homedir(), "OneDrive", "Ministry", "Preaching", "Sermon Library");
+const MANAGED_LIBRARY_DIRNAME = "library";    // subfolder under userData for managed .docx copies
+const EMBED_DIM = 384;                         // Xenova/all-MiniLM-L6-v2 dimensionality
+const CHUNK_MAX_CHARS = 1500;                  // soft cap per chunk; long paragraphs split on sentences
 
 // ── Database setup ──────────────────────────────────────────────────────────
 async function initDatabase() {
@@ -213,7 +219,8 @@ function saveDb() {
 // theology.db is managed exclusively by better-sqlite3 due to sqlite-vec dependency.
 // DO NOT access via sql.js.
 let theologyVecAvailable = false;  // true when theology_vec table has embeddings
-let theologyEmbedder = null;       // lazy-loaded sentence-transformer pipeline
+let embedder = null;               // lazy-loaded sentence-transformer pipeline (Xenova MiniLM L6 v2)
+                                   // Shared by theology and library — model is ~40MB quantized, load once.
 
 async function ensureTheologyDbLoaded() {
   if (theologyDb) return;
@@ -254,25 +261,170 @@ async function ensureTheologyDbLoaded() {
   }
 }
 
-async function ensureTheologyEmbedder() {
-  if (theologyEmbedder) return true;
+async function ensureEmbedder() {
+  if (embedder) return true;
   console.log("[VECTOR] Loading embedding model...");
   try {
     const { pipeline, env } = await import("@xenova/transformers");
     env.cacheDir = paths.models;
     env.allowRemoteModels = false;
-    theologyEmbedder = await pipeline("feature-extraction", "Xenova/all-MiniLM-L6-v2", {
+    embedder = await pipeline("feature-extraction", "Xenova/all-MiniLM-L6-v2", {
       quantized: true,
     });
-    console.log("[VECTOR] Embedding model loaded");
-    console.log("[VECTOR] Model loaded (may require internet on first run; cached after)");
-    console.log(`[VECTOR] Embedder available: ${!!theologyEmbedder}`);
+    console.log(`[VECTOR] Embedder available: ${!!embedder}`);
     return true;
   } catch (e) {
     console.error("[VECTOR] Embedding model failed to load:", e.message);
-    console.log(`[VECTOR] Embedder available: ${!!theologyEmbedder}`);
     return false;
   }
+}
+
+// Embed a single text into a 384-dim vector. Returns the array, or null on failure.
+async function embedText(text) {
+  const ok = await ensureEmbedder();
+  if (!ok) return null;
+  try {
+    const output = await embedder([text], { pooling: "mean", normalize: true });
+    return Array.from(output[0].data);
+  } catch (e) {
+    console.error("[VECTOR] embedText failed:", e.message);
+    return null;
+  }
+}
+
+// ── Library DB (derived chunks + vectors) ────────────────────────────────────
+// Lazily initialized — created on first import or first hybrid search.
+// Holds only derived data; can be deleted and rebuilt from sermonforge.db.library.
+function ensureLibraryDb() {
+  if (libraryDb) return true;
+  if (!dbPath) return false;
+  const libraryDbFile = path.join(path.dirname(dbPath), "library.db");
+  try {
+    libraryDb = new BetterSqlite3(libraryDbFile);
+    try {
+      sqliteVec.load(libraryDb);
+      libraryVecAvailable = true;
+    } catch (vecErr) {
+      console.error(`[LIBRARY VEC] Failed to load sqlite-vec: ${vecErr.message}`);
+      libraryVecAvailable = false;
+    }
+    libraryDb.exec(`
+      CREATE TABLE IF NOT EXISTS library_chunks (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        library_id  TEXT NOT NULL,
+        chunk_index INTEGER NOT NULL,
+        chunk_text  TEXT NOT NULL,
+        UNIQUE (library_id, chunk_index)
+      );
+      CREATE INDEX IF NOT EXISTS idx_library_chunks_lib ON library_chunks (library_id);
+    `);
+    if (libraryVecAvailable) {
+      try {
+        libraryDb.exec(`CREATE VIRTUAL TABLE IF NOT EXISTS library_vec USING vec0(embedding float[${EMBED_DIM}])`);
+      } catch (e) {
+        console.error("[LIBRARY VEC] vec0 table creation failed:", e.message);
+        libraryVecAvailable = false;
+      }
+    }
+    return true;
+  } catch (e) {
+    console.error("[LIBRARY DB] Failed to open:", e.message);
+    libraryDb = null;
+    return false;
+  }
+}
+
+// Split a manuscript into paragraph-aware chunks with a soft size cap.
+// Long paragraphs split further on sentence boundaries; tiny paragraphs merge with neighbors.
+function chunkManuscript(text) {
+  if (!text || typeof text !== "string") return [];
+  const paragraphs = text.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+  const chunks = [];
+  let buffer = "";
+  for (const p of paragraphs) {
+    if (p.length > CHUNK_MAX_CHARS) {
+      if (buffer) { chunks.push(buffer); buffer = ""; }
+      // sentence-split long paragraphs
+      const sentences = p.split(/(?<=[.!?])\s+/);
+      let acc = "";
+      for (const s of sentences) {
+        if ((acc + " " + s).length > CHUNK_MAX_CHARS && acc) {
+          chunks.push(acc.trim());
+          acc = s;
+        } else {
+          acc = acc ? `${acc} ${s}` : s;
+        }
+      }
+      if (acc) chunks.push(acc.trim());
+      continue;
+    }
+    if ((buffer + "\n\n" + p).length > CHUNK_MAX_CHARS && buffer) {
+      chunks.push(buffer);
+      buffer = p;
+    } else {
+      buffer = buffer ? `${buffer}\n\n${p}` : p;
+    }
+  }
+  if (buffer) chunks.push(buffer);
+  return chunks.filter(c => c.length > 20); // drop fragments below noise floor
+}
+
+// Embed a manuscript and persist chunks + vectors to library.db.
+// Returns { chunks: number, embeddedAll: boolean }.
+async function indexLibraryManuscript(libraryId, manuscriptText) {
+  if (!ensureLibraryDb()) return { chunks: 0, embeddedAll: false };
+  const chunks = chunkManuscript(manuscriptText);
+  if (chunks.length === 0) return { chunks: 0, embeddedAll: true };
+
+  // Wipe any prior chunks for this library_id (idempotent re-index)
+  libraryDb.prepare("DELETE FROM library_chunks WHERE library_id = ?").run(libraryId);
+  if (libraryVecAvailable) {
+    try {
+      libraryDb.prepare("DELETE FROM library_vec WHERE rowid IN (SELECT id FROM library_chunks WHERE library_id = ?)").run(libraryId);
+    } catch (_) {}
+  }
+
+  const insertChunk = libraryDb.prepare(
+    "INSERT INTO library_chunks (library_id, chunk_index, chunk_text) VALUES (?, ?, ?)"
+  );
+  const insertVec = libraryVecAvailable
+    ? libraryDb.prepare("INSERT INTO library_vec (rowid, embedding) VALUES (?, ?)")
+    : null;
+
+  let embeddedAll = true;
+  for (let i = 0; i < chunks.length; i++) {
+    const info = insertChunk.run(libraryId, i, chunks[i]);
+    const chunkRowId = info.lastInsertRowid;
+    if (insertVec) {
+      const vec = await embedText(chunks[i]);
+      if (vec && vec.length === EMBED_DIM) {
+        try {
+          insertVec.run(chunkRowId, JSON.stringify(vec));
+        } catch (e) {
+          console.warn("[LIBRARY VEC] insert failed:", e.message);
+          embeddedAll = false;
+        }
+      } else {
+        embeddedAll = false;
+      }
+    } else {
+      embeddedAll = false;
+    }
+  }
+  return { chunks: chunks.length, embeddedAll };
+}
+
+// Copy a source .docx into userData/library/ (managed copy).
+// Returns { managedPath, relativePath } where relativePath is relative to the managed dir.
+function copyToManagedLibrary(sourceFile, sourceLibraryRoot) {
+  const managedRoot = path.join(paths.userData, MANAGED_LIBRARY_DIRNAME);
+  if (!fs.existsSync(managedRoot)) fs.mkdirSync(managedRoot, { recursive: true });
+  const relative = path.relative(sourceLibraryRoot, sourceFile);
+  const managedPath = path.join(managedRoot, relative);
+  const managedDir = path.dirname(managedPath);
+  if (!fs.existsSync(managedDir)) fs.mkdirSync(managedDir, { recursive: true });
+  fs.copyFileSync(sourceFile, managedPath);
+  return { managedPath, relativePath: relative };
 }
 
 // ── Schema migrations ────────────────────────────────────────────────────────
@@ -468,6 +620,38 @@ function runMigrations() {
     db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '12')");
     version = 12;
   }
+
+  if (version < 13) {
+    // v13: settings table — user preferences as key/value strings.
+    // Distinct from `meta` (which is for system-managed schema state).
+    db.run(`CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT
+    )`);
+    db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '13')");
+    version = 13;
+  }
+}
+
+// ── Settings helpers ─────────────────────────────────────────────────────────
+function getSetting(key) {
+  const row = queryOne("SELECT value FROM settings WHERE key = ?", [key]);
+  return row ? row.value : null;
+}
+
+function setSetting(key, value) {
+  db.run(
+    "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+    [key, value]
+  );
+  saveDb();
+}
+
+// Resolve the user's chosen sermon library folder, falling back to the
+// legacy OneDrive default for installs that predate the setting.
+function getLibraryPath() {
+  const stored = getSetting("library_folder");
+  return stored || LIBRARY_PATH;
 }
 
 // ── Query helpers ────────────────────────────────────────────────────────────
@@ -521,9 +705,9 @@ function getAllDocxFiles(dir) {
   return results;
 }
 
-function parseLibraryFile(filePath) {
+function parseLibraryFile(filePath, libraryPath) {
   const basename = path.basename(filePath, ".docx");
-  const relative = path.relative(LIBRARY_PATH, filePath);
+  const relative = path.relative(libraryPath, filePath);
   const parts = relative.split(path.sep);
 
   let title = basename;
@@ -694,6 +878,16 @@ ipcMain.handle("db-getAllSeries", () =>
   queryAll("SELECT * FROM series WHERE id NOT LIKE 'tour-%' ORDER BY year DESC, title ASC")
 );
 
+ipcMain.handle("db-getRecentSeries", (_, limit = 3) =>
+  queryAll(
+    `SELECT * FROM series
+     WHERE id NOT LIKE 'tour-%'
+     ORDER BY COALESCE(updated_at, created_at) DESC
+     LIMIT ?`,
+    [limit]
+  )
+);
+
 ipcMain.handle("db-getSeriesById", (_, id) => {
   const rows = queryAll("SELECT * FROM series WHERE id = ?", [id]);
   return rows[0] || null;
@@ -840,6 +1034,20 @@ ipcMain.handle("db-deleteLibraryItem", (_, id) => {
     db.run("DELETE FROM library WHERE id = ?", [id]);
     db.run("DELETE FROM library_fts WHERE id = ?", [id]);
     db.run("COMMIT");
+    // Best-effort: also drop any chunks + vectors from library.db (derived data,
+    // safe to retry; not part of the sermonforge.db transaction).
+    if (ensureLibraryDb()) {
+      try {
+        if (libraryVecAvailable) {
+          libraryDb.prepare(
+            "DELETE FROM library_vec WHERE rowid IN (SELECT id FROM library_chunks WHERE library_id = ?)"
+          ).run(id);
+        }
+        libraryDb.prepare("DELETE FROM library_chunks WHERE library_id = ?").run(id);
+      } catch (vecErr) {
+        console.warn("[library deleteItem] failed to clean library.db chunks:", vecErr.message);
+      }
+    }
   } catch (e) {
     db.run("ROLLBACK");
     throw e;
@@ -936,25 +1144,109 @@ ipcMain.handle("db-removeTourSermon", () => {
 ipcMain.handle("library-status", () => {
   try {
     const row = queryOne("SELECT COUNT(*) as count, MAX(imported_at) as last_imported FROM library");
-    return { count: row?.count || 0, lastImported: row?.last_imported || null };
+    const count = row?.count || 0;
+
+    // Embedding coverage — how many library rows have at least one chunk in library.db
+    let embeddedCount = 0;
+    if (count > 0 && ensureLibraryDb()) {
+      try {
+        const r = libraryDb.prepare("SELECT COUNT(DISTINCT library_id) as n FROM library_chunks").get();
+        embeddedCount = r?.n || 0;
+      } catch (_) {}
+    }
+
+    return {
+      count,
+      lastImported: row?.last_imported || null,
+      embeddedCount,
+      vecAvailable: libraryVecAvailable,
+    };
   } catch (e) {
     console.error('[library-status]', e);
-    return { count: 0, lastImported: null };
+    return { count: 0, lastImported: null, embeddedCount: 0, vecAvailable: false };
   }
 });
 
+// Backfill embeddings for any library rows that don't yet have chunks indexed.
+// Sends "library-embed-progress" events: { done, total, complete }.
+ipcMain.handle("library-build-embeddings", async () => {
+  if (!ensureLibraryDb()) {
+    return { error: "library.db could not be opened", total: 0, embedded: 0, errors: 0 };
+  }
+
+  const all = queryAll("SELECT id, manuscript_text FROM library");
+  const indexed = new Set(
+    libraryDb.prepare("SELECT DISTINCT library_id FROM library_chunks").all().map(r => r.library_id)
+  );
+  const todo = all.filter(r => !indexed.has(r.id) && r.manuscript_text);
+  const total = todo.length;
+
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send("library-embed-progress", { done: 0, total, complete: false });
+  }
+
+  let embedded = 0;
+  let errors = 0;
+  for (const row of todo) {
+    try {
+      await indexLibraryManuscript(row.id, row.manuscript_text);
+      embedded++;
+    } catch (e) {
+      console.warn("[library-build-embeddings] failed for", row.id, e.message);
+      errors++;
+    }
+    if ((embedded + errors) % 5 === 0 && mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send("library-embed-progress", { done: embedded, total, complete: false });
+    }
+  }
+
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send("library-embed-progress", { done: embedded, total, complete: true });
+  }
+
+  return { total, embedded, errors };
+});
+
+// ── Settings IPC ─────────────────────────────────────────────────────────────
+ipcMain.handle("db-getSetting", (_, key) => getSetting(key));
+ipcMain.handle("db-setSetting", (_, { key, value }) => {
+  setSetting(key, value);
+  return true;
+});
+
+// ── Library folder selection ─────────────────────────────────────────────────
+ipcMain.handle("library-get-folder", () => ({
+  path: getLibraryPath(),
+  isExplicit: !!getSetting("library_folder"),
+}));
+
+ipcMain.handle("library-set-folder", async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    title: "Choose your sermon folder",
+    properties: ["openDirectory"],
+    defaultPath: getLibraryPath(),
+  });
+  if (result.canceled || !result.filePaths?.length) {
+    return { canceled: true, path: null };
+  }
+  const chosen = result.filePaths[0];
+  setSetting("library_folder", chosen);
+  return { canceled: false, path: chosen };
+});
+
 ipcMain.handle("library-import", async (event) => {
-  if (!fs.existsSync(LIBRARY_PATH)) {
-    return { error: "Library path not found", total: 0, imported: 0, errors: 0 };
+  const libraryPath = getLibraryPath();
+  if (!libraryPath || !fs.existsSync(libraryPath)) {
+    return { error: "Library path not set or not found", total: 0, imported: 0, errors: 0 };
   }
 
   const mammoth = require("mammoth");
-  const allFiles = getAllDocxFiles(LIBRARY_PATH);
+  const allFiles = getAllDocxFiles(libraryPath);
 
   const existingRows = queryAll("SELECT filepath FROM library");
   const existingPaths = new Set(existingRows.map(r => r.filepath));
 
-  const toImport = allFiles.filter(f => !existingPaths.has(path.relative(LIBRARY_PATH, f)));
+  const toImport = allFiles.filter(f => !existingPaths.has(path.relative(libraryPath, f)));
   const total = toImport.length;
 
   if (mainWindow && !mainWindow.isDestroyed()) {
@@ -966,16 +1258,25 @@ ipcMain.handle("library-import", async (event) => {
 
   for (const filePath of toImport) {
     try {
-      const relativePath = path.relative(LIBRARY_PATH, filePath);
-      const { title, passage, folder, seriesName } = parseLibraryFile(filePath);
+      const relativePath = path.relative(libraryPath, filePath);
+      const { title, passage, folder, seriesName } = parseLibraryFile(filePath, libraryPath);
+
+      // Managed copy: place a copy under userData/library/ so SermonForge owns the
+      // working set. The user's source folder is read-only from our perspective.
+      try {
+        copyToManagedLibrary(filePath, libraryPath);
+      } catch (copyErr) {
+        console.warn("[library-import] managed copy failed for", relativePath, copyErr.message);
+      }
+
       const result = await mammoth.extractRawText({ path: filePath });
       const manuscriptText = result.value.trim();
       const wordCount = manuscriptText.split(/\s+/).filter(Boolean).length;
       const id = randomUUID();
 
       // NOTE: UNIQUE constraint is on filepath (relative path). Moving a file within
-      // LIBRARY_PATH changes its relative path, causing re-import to create a duplicate
-      // record. The old record becomes an orphan in search results. A future
+      // the library folder changes its relative path, causing re-import to create a
+      // duplicate record. The old record becomes an orphan in search results. A future
       // "clean orphans" function would resolve this.
       db.run(
         `INSERT OR IGNORE INTO library (id, filepath, filename, title, passage, folder, series_name, manuscript_text, word_count)
@@ -983,9 +1284,8 @@ ipcMain.handle("library-import", async (event) => {
         [id, relativePath, path.basename(filePath, ".docx"), title, passage, folder, seriesName, manuscriptText, wordCount]
       );
 
-      // Only insert into FTS when a new row was actually created (not an IGNORE no-op).
-      // An IGNORE no-op means the file was already imported; inserting FTS for it
-      // would create an orphan entry with a new UUID that matches nothing in library.
+      // Only insert into FTS / index embeddings when a new row was actually created
+      // (not an IGNORE no-op). An IGNORE no-op means the file was already imported.
       if (db.getRowsModified() > 0) {
         try {
           db.run(
@@ -994,6 +1294,12 @@ ipcMain.handle("library-import", async (event) => {
           );
         } catch (e) {
           console.warn("[library-import] FTS insert failed for", path.basename(filePath, ".docx"), e.message);
+        }
+
+        try {
+          await indexLibraryManuscript(id, manuscriptText);
+        } catch (e) {
+          console.warn("[library-import] embedding failed for", path.basename(filePath, ".docx"), e.message);
         }
       }
 
@@ -1023,9 +1329,10 @@ ipcMain.handle("library-import", async (event) => {
   return { total: allFiles.length, imported, errors, skipped: existingPaths.size };
 });
 
-ipcMain.handle("library-search", (event, { query, limit = 100, mode = "browse" }) => {
+ipcMain.handle("library-search", async (event, { query, limit = 100, mode = "browse" }) => {
   // mode "browse" — title/passage/series only (search bar filtering)
   // mode "ai"     — includes manuscript_text (Quick Outline, AIPanel contextual search)
+  // mode "hybrid" — FTS rank + vector cosine via Reciprocal Rank Fusion
   try {
     if (!query || !query.trim()) {
       return queryAll(
@@ -1036,9 +1343,81 @@ ipcMain.handle("library-search", (event, { query, limit = 100, mode = "browse" }
       );
     }
 
+    // Hybrid path — combines FTS (manuscript-level keyword) with vector cosine
+    // (chunk-level semantic, aggregated to manuscript via best-chunk score).
+    // Falls back to FTS-only if the vector store is unavailable.
+    if (mode === "hybrid") {
+      const RRF_K = 60;
+      const fanout = Math.max(limit * 4, 40);
+
+      // FTS ranks
+      const ftsRanks = new Map(); // library_id -> rank (1-based)
+      const ftsQuery = buildFtsQuery(query);
+      if (ftsQuery) {
+        try {
+          const ftsHits = queryAll(
+            "SELECT id FROM library_fts WHERE library_fts MATCH ? LIMIT ?",
+            [ftsQuery, fanout]
+          );
+          ftsHits.forEach((h, i) => ftsRanks.set(h.id, i + 1));
+        } catch (_) {}
+      }
+
+      // Vector ranks
+      const vecRanks = new Map();
+      if (libraryVecAvailable && ensureLibraryDb()) {
+        const qVecArr = await embedText(query);
+        if (qVecArr && qVecArr.length === EMBED_DIM) {
+          try {
+            const qVec = JSON.stringify(qVecArr);
+            // Inner: KNN over chunks (the only place MATCH is allowed on a vec0 table).
+            // Outer: aggregate to manuscript level via best (smallest-distance) chunk.
+            const vecHits = libraryDb.prepare(
+              `SELECT lc.library_id as id, MIN(nn.distance) as d
+               FROM (
+                 SELECT rowid, distance FROM library_vec
+                 WHERE embedding MATCH ?
+                 ORDER BY distance LIMIT ?
+               ) nn
+               JOIN library_chunks lc ON lc.id = nn.rowid
+               GROUP BY lc.library_id
+               ORDER BY d ASC
+               LIMIT ?`
+            ).all(qVec, fanout * 2, fanout);
+            vecHits.forEach((h, i) => vecRanks.set(h.id, i + 1));
+          } catch (e) {
+            console.warn("[library-search hybrid] vec query failed:", e.message);
+          }
+        }
+      }
+
+      // RRF score = sum of 1 / (k + rank) across methods
+      const scores = new Map();
+      for (const [id, rank] of ftsRanks) scores.set(id, (scores.get(id) || 0) + 1 / (RRF_K + rank));
+      for (const [id, rank] of vecRanks) scores.set(id, (scores.get(id) || 0) + 1 / (RRF_K + rank));
+
+      if (scores.size === 0) {
+        // fall through to AI-mode FTS+LIKE for graceful behavior
+      } else {
+        const ranked = [...scores.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, limit)
+          .map(([id]) => id);
+        const placeholders = ranked.map(() => "?").join(",");
+        const rows = queryAll(
+          `SELECT id, title, passage, folder, series_name, word_count,
+                  substr(manuscript_text, 1, 250) as excerpt
+           FROM library WHERE id IN (${placeholders})`,
+          ranked
+        );
+        const rowMap = Object.fromEntries(rows.map(r => [r.id, r]));
+        return ranked.map(id => rowMap[id]).filter(Boolean);
+      }
+    }
+
     // FTS path (when available) — AI mode only; browse mode always uses LIKE
     // (browse intentionally limits to title/passage/series and skips full-text index)
-    if (mode === "ai") {
+    if (mode === "ai" || mode === "hybrid") {
       const ftsQuery = buildFtsQuery(query);
       if (ftsQuery) {
         try {
@@ -1069,7 +1448,7 @@ ipcMain.handle("library-search", (event, { query, limit = 100, mode = "browse" }
     if (terms.length === 0) return [];
 
     let conditions, params;
-    if (mode === "ai") {
+    if (mode === "ai" || mode === "hybrid") {
       // Include manuscript body for broader topical matching
       conditions = terms.map(() =>
         "(LOWER(title) LIKE ? OR LOWER(passage) LIKE ? OR LOWER(series_name) LIKE ? OR LOWER(manuscript_text) LIKE ?)"
@@ -1092,6 +1471,181 @@ ipcMain.handle("library-search", (event, { query, limit = 100, mode = "browse" }
   } catch (e) {
     console.error("Library search error:", e.message);
     return [];
+  }
+});
+
+// ── Quick Outline: create sermon from outline + PI ───────────────────────────
+// Creates a full sermons row with the picked outline JSON-encoded into
+// `outline` and PI answers persisted to their matching columns. Mode "full"
+// writes stage="planning" and is intended to land in the workspace; mode
+// "quick" writes stage="quick" and (caller) typically follows with a
+// placeholder DOCX export.
+ipcMain.handle("library-create-sermon-from-outline", (_, payload) => {
+  const {
+    title = "",
+    passage = "",
+    outline = [],            // [{ text, support?, source? }, ...]
+    piAnswers = {},          // { background_noise, audience_assumptions, topic_theme }
+    mode = "full",           // "full" | "quick"
+    seriesId = null,
+    sectionId = null,
+  } = payload || {};
+
+  const id = randomUUID();
+  const stage = mode === "quick" ? "quick" : "planning";
+
+  // Normalize outline points to the {id, text} schema used by the workspace.
+  const normalizedOutline = (Array.isArray(outline) ? outline : [])
+    .filter(p => p && typeof p.text === "string" && p.text.trim())
+    .map(p => ({ id: randomUUID(), text: p.text.trim() }));
+
+  db.run(
+    `INSERT INTO sermons
+       (id, series_id, section_id, is_one_off, title, passage, date, preacher,
+        stage, mpt, mps, observations, outline, manuscript,
+        topic_theme, audience_assumptions, background_noise)
+     VALUES (?, ?, ?, ?, ?, ?, '', '', ?, '', '', '', ?, '', ?, ?, ?)`,
+    [
+      id,
+      seriesId,
+      sectionId,
+      seriesId ? 0 : 1,
+      title || "Untitled Sermon",
+      passage || "",
+      stage,
+      JSON.stringify(normalizedOutline),
+      (piAnswers.topic_theme || "").trim(),
+      (piAnswers.audience_assumptions || "").trim(),
+      (piAnswers.background_noise || "").trim(),
+    ]
+  );
+  saveDb();
+  return { sermonId: id, outlinePoints: normalizedOutline };
+});
+
+// Quick-sermon DOCX template — outline points filled, every other category
+// rendered as an italic grey placeholder so the pastor can fill it in Word.
+ipcMain.handle("sermon-export-quick-template", async (_, payload) => {
+  try {
+    const { Document, Paragraph, TextRun, HeadingLevel, AlignmentType, Packer } = require("docx");
+
+    const {
+      title = "Untitled Sermon",
+      passage = "",
+      outline = [],   // [{ id, text }, ...]
+      piAnswers = {},
+    } = payload || {};
+
+    const children = [];
+
+    function placeholder(text) {
+      return new Paragraph({
+        spacing: { after: 160 },
+        children: [new TextRun({ text, italics: true, color: "888888" })],
+      });
+    }
+    function prosePara(text, opts = {}) {
+      return new Paragraph({
+        spacing: { after: 160 },
+        children: [new TextRun({ text, ...opts })],
+      });
+    }
+    function divider() {
+      return new Paragraph({
+        spacing: { before: 200, after: 200 },
+        alignment: AlignmentType.CENTER,
+        children: [new TextRun({ text: "————————————————————", color: "AAAAAA" })],
+      });
+    }
+    function h2(text) {
+      return new Paragraph({
+        heading: HeadingLevel.HEADING_2,
+        spacing: { before: 200, after: 120 },
+        children: [new TextRun({ text, bold: true })],
+      });
+    }
+
+    // Title block
+    children.push(new Paragraph({
+      heading: HeadingLevel.HEADING_1,
+      spacing: { after: 80 },
+      children: [new TextRun({ text: title, bold: true })],
+    }));
+    if (passage) {
+      children.push(prosePara(passage, { color: "666666" }));
+    } else {
+      children.push(placeholder("[Passage of departure — fill in.]"));
+    }
+
+    children.push(divider());
+
+    // Pastoral Intelligence
+    const hasPI = ["background_noise", "audience_assumptions", "topic_theme"]
+      .some(k => (piAnswers[k] || "").trim());
+    if (hasPI) {
+      children.push(h2("Pastoral Context"));
+      if ((piAnswers.background_noise || "").trim()) {
+        children.push(prosePara(`The Cultural Moment: ${piAnswers.background_noise.trim()}`));
+      }
+      if ((piAnswers.audience_assumptions || "").trim()) {
+        children.push(prosePara(`The Room: ${piAnswers.audience_assumptions.trim()}`));
+      }
+      if ((piAnswers.topic_theme || "").trim()) {
+        children.push(prosePara(`The Sermon's Work: ${piAnswers.topic_theme.trim()}`));
+      }
+      children.push(divider());
+    }
+
+    // Introduction (placeholder)
+    children.push(h2("Introduction"));
+    children.push(placeholder("[Open with the pastoral entry point.]"));
+    children.push(placeholder("[Read the passage.]"));
+    children.push(placeholder("[Set up what this sermon will do.]"));
+
+    // Per-point sections
+    const points = Array.isArray(outline) ? outline : [];
+    points.forEach((pt, i) => {
+      children.push(divider());
+      children.push(new Paragraph({
+        heading: HeadingLevel.HEADING_2,
+        spacing: { before: 200, after: 120 },
+        children: [
+          new TextRun({ text: `Point ${i + 1}.  `, bold: true }),
+          new TextRun({ text: pt.text || "", bold: true }),
+        ],
+      }));
+      children.push(prosePara("Explanation:", { bold: true }));
+      children.push(placeholder("[Develop the theological ground.]"));
+      children.push(prosePara("Application:", { bold: true }));
+      children.push(placeholder("[Press the implication onto the listener.]"));
+      children.push(prosePara("Illustration:", { bold: true }));
+      children.push(placeholder("[An image, story, or analogy that lands the point.]"));
+    });
+
+    // Conclusion
+    children.push(divider());
+    children.push(h2("Conclusion"));
+    children.push(placeholder("[The charge or response. Where does the Gospel land?]"));
+
+    const doc = new Document({
+      styles: { default: { document: { run: { size: 24 } } } },
+      sections: [{ properties: {}, children }],
+    });
+
+    const exportDir = path.join(app.getPath("documents"), "SermonForge", "exports", "Manuscripts");
+    if (!fs.existsSync(exportDir)) fs.mkdirSync(exportDir, { recursive: true });
+
+    const safeTitle = (title || passage || "Sermon").replace(/[<>:"/\\|?*\n\r\t]/g, "—").trim();
+    const filepath = path.join(exportDir, `${safeTitle} — Quick Sermon.docx`);
+
+    const buffer = await Packer.toBuffer(doc);
+    await fs.promises.writeFile(filepath, buffer);
+    shell.openPath(filepath);
+
+    return { success: true, filepath };
+  } catch (e) {
+    console.error("[sermon-export-quick-template]", e);
+    return { success: false, error: e.message };
   }
 });
 
@@ -1211,9 +1765,9 @@ ipcMain.handle("theology-search", async (event, { query, limit = 5 }) => {
     if (theologyVecAvailable) {
       console.log("[VECTOR] Semantic search activated");
       try {
-        const ok = await ensureTheologyEmbedder();
+        const ok = await ensureEmbedder();
         if (ok) {
-          const output = await theologyEmbedder([query], { pooling: "mean", normalize: true });
+          const output = await embedder([query], { pooling: "mean", normalize: true });
           const qVec = JSON.stringify(Array.from(output[0].data));
           const fetchLimit = detectedAuthors.length > 0 ? limit * 10 : limit * 4;
 
@@ -2238,6 +2792,10 @@ app.on("window-all-closed", () => {
   if (theologyDb) { try { theologyDb.close(); } catch (_) {} }
   theologyDb = null;
   theologyVecAvailable = false;
-  theologyEmbedder = null;
+  embedder = null;
+  if (libraryDb) {
+    try { libraryDb.close(); } catch (_) {}
+    libraryDb = null;
+  }
   if (process.platform !== "darwin") app.quit();
 });

@@ -11,6 +11,7 @@ export const deleteSermon    = (id)           => api.deleteSermon(id);
 
 // ── Series ────────────────────────────────────────────────────────────────────
 export const getAllSeries        = ()          => api.getAllSeries();
+export const getRecentSeries     = (limit = 3) => api.getRecentSeries(limit);
 export const getSeriesById       = (id)        => api.getSeriesById(id);
 export const createSeries        = (data)      => api.createSeries(data);
 export const updateSeries        = (id, fields) => api.updateSeries(id, fields);
@@ -36,10 +37,19 @@ export const deleteIllustration  = (id)        => api.deleteIllustration(id);
 // ── Library ───────────────────────────────────────────────────────────────────
 export const deleteLibraryItem       = (id)                      => api.deleteLibraryItem(id);
 export const getLibraryStatus        = ()                        => api.getLibraryStatus();
+export const getLibraryFolder        = ()                        => api.getLibraryFolder();
+export const setLibraryFolder        = ()                        => api.setLibraryFolder();
 export const searchLibrary           = (query, limit, mode)      => api.searchLibrary(query, limit, mode);
 export const importLibrary           = ()                        => api.importLibrary();
+export const buildLibraryEmbeddings  = ()                        => api.buildLibraryEmbeddings();
 export const getLibraryManuscripts   = (ids, truncate, maxChars) => api.getLibraryManuscripts(ids, truncate, maxChars);
-export const onLibraryImportProgress = (callback)               => api.onLibraryImportProgress(callback);
+export const createSermonFromOutline = (payload)                 => api.createSermonFromOutline(payload);
+export const onLibraryImportProgress = (callback)                => api.onLibraryImportProgress(callback);
+export const onLibraryEmbedProgress  = (callback)                => api.onLibraryEmbedProgress(callback);
+
+// ── Settings ──────────────────────────────────────────────────────────────────
+export const getSetting              = (key)                    => api.getSetting(key);
+export const setSetting              = (key, value)             => api.setSetting(key, value);
 
 // ── Theology library ──────────────────────────────────────────────────────────
 export const getTheologyStatus      = ()                    => api.getTheologyStatus();
@@ -56,6 +66,7 @@ export const fetchPassage = (passage) => api.fetchPassage(passage);
 export const exportStudyGuide = (seriesId) => api.exportStudyGuide(seriesId);
 export const exportPmb = (data) => api.exportPmb(data);
 export const exportManuscript = (data) => api.exportManuscript(data);
+export const exportQuickTemplate = (data) => api.exportQuickTemplate(data);
 
 // ── Tour ──────────────────────────────────────────────────────────────────────
 export const loadTourSermon   = () => api.loadTourSermon();
