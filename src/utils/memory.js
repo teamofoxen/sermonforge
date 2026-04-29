@@ -1,4 +1,5 @@
 import { STEPS } from "../constants/steps";
+import { backupMemory, restoreMemory } from "../db/database";
 
 const STORAGE_KEY = 'sermonforge_memory';
 
@@ -36,10 +37,39 @@ export function loadMemory() {
 
 export function saveMemory(memory) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(memory));
+    const json = JSON.stringify(memory);
+    localStorage.setItem(STORAGE_KEY, json);
     _memory = memory;
+    // Write-through backup to userData/memory-backup.json. Fire-and-forget — a
+    // failed backup never blocks or surfaces to the user; the in-renderer hot
+    // path stays at localStorage speed. Browser preview's stub IPC no-ops here.
+    backupMemory(json).catch(() => {});
   } catch (e) {
     console.error('[memory] Failed to save memory to localStorage:', e);
+  }
+}
+
+// One-shot restore from the userData backup file. Called by App.jsx on mount
+// when localStorage is empty (post-Electron-upgrade, fresh install on a machine
+// the pastor has used before via OneDrive sync of userData, or manual cache
+// clear). No-op when localStorage already has memory or when the backup file
+// doesn't exist. Returns the restored memory object, or null when nothing was
+// restored.
+export async function restoreMemoryFromBackup() {
+  try {
+    if (localStorage.getItem(STORAGE_KEY)) return null; // already populated, leave it
+    const result = await restoreMemory();
+    if (!result?.ok || !result.json) return null;
+    // Validate before writing — a malformed backup file should not poison localStorage.
+    let parsed;
+    try { parsed = JSON.parse(result.json); } catch { return null; }
+    if (typeof parsed !== "object" || parsed === null) return null;
+    localStorage.setItem(STORAGE_KEY, result.json);
+    _memory = parsed;
+    return parsed;
+  } catch (e) {
+    console.error('[memory] restoreMemoryFromBackup failed:', e);
+    return null;
   }
 }
 

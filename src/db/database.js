@@ -103,3 +103,7 @@ export const submitFeedback   = (payload) => api.submitFeedback(payload);
 export const onDbWriteError = (callback) => api.onDbWriteError(callback);
 export const onDbWriteOk    = (callback) => api.onDbWriteOk(callback);
 export const flushDb        = () => api.flushDb();
+
+// ── Pastor memory backup ──────────────────────────────────────────────────────
+export const backupMemory  = (json) => api.backupMemory(json);
+export const restoreMemory = ()     => api.restoreMemory();

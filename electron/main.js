@@ -2668,6 +2668,36 @@ ipcMain.handle("db-getSchemaVersion", () => {
 // flushDb result shape so the renderer can either dismiss the banner or keep it.
 ipcMain.handle("db-flush", async () => flushDb());
 
+// Pastor memory backup. Memory still lives in localStorage (per CORE.md — IPC
+// round-trip on every AI call is too expensive to move it server-side). This
+// is a write-through copy to a JSON file in userData so the pattern survives
+// localStorage wipes (Electron major version upgrades, manual cache clear,
+// migrate-to-new-machine). saveMemory in the renderer fires this fire-and-forget;
+// loadMemory falls back to db-restoreMemory when localStorage is empty.
+const MEMORY_BACKUP_PATH = path.join(app.getPath("userData"), "memory-backup.json");
+
+ipcMain.handle("db-backupMemory", async (_, json) => {
+  try {
+    if (typeof json !== "string") return { ok: false, error: "memory must be a JSON string" };
+    await fs.promises.writeFile(MEMORY_BACKUP_PATH, json, "utf8");
+    return { ok: true };
+  } catch (e) {
+    logError("[memory-backup] write failed", e);
+    return { ok: false, error: e.message };
+  }
+});
+
+ipcMain.handle("db-restoreMemory", async () => {
+  try {
+    if (!fs.existsSync(MEMORY_BACKUP_PATH)) return { ok: true, json: null };
+    const json = await fs.promises.readFile(MEMORY_BACKUP_PATH, "utf8");
+    return { ok: true, json };
+  } catch (e) {
+    logError("[memory-backup] read failed", e);
+    return { ok: false, error: e.message };
+  }
+});
+
 ipcMain.handle("app-get-version", () => {
   return { version: app.getVersion() };
 });

@@ -109,4 +109,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
   },
   // Manual flush — banner's "Retry" button.
   flushDb: () => ipcRenderer.invoke("db-flush"),
+
+  // ── Pastor memory backup ──────────────────────────────────────────────────
+  // Write-through copy of localStorage memory so it survives Electron major
+  // upgrades and manual cache clears. See electron/main.js MEMORY_BACKUP_PATH.
+  backupMemory:  (json) => ipcRenderer.invoke("db-backupMemory", json),
+  restoreMemory: ()     => ipcRenderer.invoke("db-restoreMemory"),
 });

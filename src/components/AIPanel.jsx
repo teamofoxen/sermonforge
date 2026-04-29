@@ -28,6 +28,7 @@ function trimHistory(messages, maxTurns = MAX_HISTORY_TURNS) {
 export default function AIPanel({ sermon, activeTab, activeStep, externalMessage, onLoadingChange, loading, onUpdate }) {
   const [messages, setMessages] = useState([]);
   const [theologyAvailable, setTheologyAvailable] = useState(false);
+  const [theologySemantic, setTheologySemantic] = useState(false);
   const [theologyEnabled, setTheologyEnabled] = useState(false);
   const [inputText, setInputText] = useState("");
   const [incorporateLoading, setIncorporateLoading] = useState(false);
@@ -68,7 +69,14 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
 
   useEffect(() => {
     getTheologyStatus()
-      .then(s => setTheologyAvailable(s.available || false))
+      .then(s => {
+        setTheologyAvailable(s?.available || false);
+        // semantic=true when theology_vec has embeddings AND the embedder loaded.
+        // When false, hybrid search degrades to FTS-only; the toggle label below
+        // surfaces this so the pastor isn't told they're getting semantic results
+        // when they're really getting keyword-only results.
+        setTheologySemantic(s?.semantic || false);
+      })
       .catch((e) => console.error("[AIPanel] getTheologyStatus failed:", e));
   }, []);
 
@@ -153,9 +161,20 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
           // they cause refusals when MPT/MPS are absent and bury the source
           // chunks under unrelated context tiers.
           // Instead: a stripped-down research prompt + sources-only message.
+          // Pastoral Intelligence (tier 7) IS preserved when present, since
+          // The Cultural Moment / The Room / The Sermon's Work shape *how* the
+          // research is read even in free-form mode.
           const sourcesBlock = theologyChunks.join("\n\n");
           const passageLine = sermon?.passage ? `\nPASSAGE: ${sermon.passage}\n` : "";
-          userContent = `SOURCES:\n${sourcesBlock}${passageLine}\nQUESTION:\n${text}`;
+          const piLines = [
+            sermon?.background_noise?.trim()     && `The Cultural Moment: ${sermon.background_noise.trim()}`,
+            sermon?.audience_assumptions?.trim() && `The Room: ${sermon.audience_assumptions.trim()}`,
+            sermon?.topic_theme?.trim()          && `The Sermon's Work: ${sermon.topic_theme.trim()}`,
+          ].filter(Boolean);
+          const piBlock = piLines.length > 0
+            ? `\nPASTORAL CONTEXT:\n${piLines.join("\n")}\n`
+            : "";
+          userContent = `SOURCES:\n${sourcesBlock}${passageLine}${piBlock}\nQUESTION:\n${text}`;
           systemPrompt = THEOLOGY_RESEARCH_PROMPT;
         } else {
           // No hits — fall back to standard context-based path.
@@ -344,7 +363,9 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
           </button>
         )}
 
-        {/* Theology library toggle */}
+        {/* Theology library toggle. Label changes when sqlite-vec / embedder
+            is unavailable so the pastor isn't told they're getting semantic
+            results when they're actually FTS-only. */}
         {theologyAvailable && (
           <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12px", color: "var(--ink-soft)", marginBottom: "8px", cursor: "pointer" }}>
             <input
@@ -352,7 +373,7 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
               checked={theologyEnabled}
               onChange={e => setTheologyEnabled(e.target.checked)}
             />
-            Search Theology Library
+            {theologySemantic ? "Search Theology Library" : "Search Theology Library (keyword only)"}
           </label>
         )}
 

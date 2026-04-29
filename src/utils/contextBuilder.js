@@ -818,6 +818,28 @@ export function buildMemoryContext(memory, step) {
 // never carries over suppressed hints from a previous session.
 const _lastHintsBySermon = new Map();
 
+// Tiny deterministic PRNG (mulberry32). Seeded per (sermon, step) so adaptive
+// hints are reproducible within a session. Not cryptographic — just removes
+// Math.random() non-determinism from the system prompt so retries are stable.
+function mulberry32(seed) {
+  let a = seed >>> 0;
+  return function () {
+    a = (a + 0x6D2B79F5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function stringSeed(s) {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
 export function buildAdaptiveHints(memory, step, sermonId) {
   if (!memory) return [];
 
@@ -879,9 +901,15 @@ export function buildAdaptiveHints(memory, step, sermonId) {
     candidates.push({ hint: `Prefer ${memory.style.applicationStyle} application framing if it fits the passage.`, category: "style" });
   }
 
-  // Shuffle so no category has default priority — all hints compete equally under the cap.
+  // Deterministic Fisher-Yates seeded by sermonId+step. Same sermon, same step,
+  // same hint order — repeated AI calls in one session produce reproducible
+  // system prompts. Different sermons or different steps still rotate naturally.
+  // Replaces Math.random() which made every retry within the same step roll
+  // different hints, making AI behavior non-replayable for diagnostics.
+  const seed = stringSeed(`${sermonId}|${step}`);
+  const rand = mulberry32(seed);
   for (let i = candidates.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(rand() * (i + 1));
     [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
   }
 
@@ -942,7 +970,11 @@ export function buildContext({ sermon, step, libraryChunks = [], theologyChunks 
     normalized.passage && `Passage: ${normalized.passage}`,
     normalized.mpt     && `MPT: ${normalized.mpt}`,
   ].filter(Boolean);
-  return fallbackLines.length > 0
-    ? `${CONTEXT_SECTIONS.PASSAGE}\n${fallbackLines.join("\n")}`
-    : "";
+  if (fallbackLines.length > 0) {
+    return `${CONTEXT_SECTIONS.PASSAGE}\n${fallbackLines.join("\n")}`;
+  }
+  // Brand-new sermon with no passage / MPT / PI — explicit marker so the AI
+  // knows to proceed exploratorily rather than answering ungrounded as if
+  // context were merely truncated.
+  return `${CONTEXT_SECTIONS.THIS_SERMON}\nThis sermon is new — passage, MPT, and pastoral intelligence are not yet set. Help the pastor begin.`;
 }
