@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-04-29 — fix: phase 2 durability (atomic flush + .bak fallback + await on quit)
+
+- `flushDb` now writes atomically: blob → `.tmp` → rename old DB to `.bak` → rename `.tmp` to `dbPath`; a crash mid-step never produces a truncated `sermonforge.db`.
+- `initDatabase` falls back to `.bak` when the primary is corrupt; if both fail, the corrupt original is renamed to `sermonforge.db.corrupt-<timestamp>` before a fresh DB is created so no data is silently overwritten.
+- Added `before-quit` handler that `e.preventDefault()`s, awaits `flushDb`, closes native DBs, then `app.exit(0)`; replaces the prior race between async `flushDb` and synchronous `app.quit()` in `window-all-closed`.
+- `_isQuitting` re-entry flag prevents the preventDefault loop on second-pass quit.
+
+---
+
 ## 2026-04-29 — fix: phase 1 visibility (errors + db-write banner + log redaction)
 
 - AI errors now throw from main instead of returning friendly strings; renderer's empty-string fallback handles failure paths uniformly so error text no longer reaches chat, pastor memory, or `last_tune_up`.

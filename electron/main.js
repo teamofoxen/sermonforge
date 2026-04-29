@@ -5,6 +5,7 @@ const os = require("os");
 const { randomUUID } = require("crypto");
 const { isDev, paths, devServerUrl } = require("./config");
 const { logInfo, logError, readRecent } = require("./logger");
+let _isQuitting = false;
 
 // Catch anything that slips through before app ready
 process.on("uncaughtException", (err) => {
@@ -49,11 +50,53 @@ async function initDatabase() {
   const dataDir = paths.userData;
   if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
   dbPath = path.join(dataDir, "sermonforge.db");
+  const bakPath = dbPath + ".bak";
 
-  // Load existing DB or create new one
+  // Try the main DB first. If it's corrupt, fall back to the .bak written by
+  // the previous successful flushDb. If .bak is also bad, rename the corrupt
+  // original to <dbPath>.corrupt-<ts> (so manual recovery is possible) and
+  // start fresh — never silently overwrite a damaged DB.
+  function tryLoad(p) {
+    const buf = fs.readFileSync(p);
+    return new SQL.Database(buf); // throws on truncation/corruption
+  }
+
   if (fs.existsSync(dbPath)) {
-    const fileBuffer = fs.readFileSync(dbPath);
-    db = new SQL.Database(fileBuffer);
+    try {
+      db = tryLoad(dbPath);
+    } catch (primaryErr) {
+      logError(`[DB] primary DB unreadable at ${dbPath}; trying .bak`, primaryErr);
+      if (fs.existsSync(bakPath)) {
+        try {
+          db = tryLoad(bakPath);
+          logInfo(`[DB] loaded backup from ${bakPath} after primary corruption`);
+        } catch (bakErr) {
+          logError(`[DB] .bak also unreadable; preserving corrupt original`, bakErr);
+          db = null;
+        }
+      }
+      if (!db) {
+        // Quarantine the corrupt original so the next flushDb does not overwrite it.
+        const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+        const quarantine = `${dbPath}.corrupt-${stamp}`;
+        try {
+          fs.renameSync(dbPath, quarantine);
+          logError(`[DB] quarantined corrupt DB to ${quarantine}`, primaryErr);
+        } catch (renameErr) {
+          logError(`[DB] failed to quarantine corrupt DB`, renameErr);
+        }
+        db = new SQL.Database();
+      }
+    }
+  } else if (fs.existsSync(bakPath)) {
+    // Edge case: primary missing but backup present (a crash between rename steps).
+    try {
+      db = tryLoad(bakPath);
+      logInfo(`[DB] loaded backup; primary missing`);
+    } catch (e) {
+      logError(`[DB] backup unreadable, starting fresh`, e);
+      db = new SQL.Database();
+    }
   } else {
     db = new SQL.Database();
   }
@@ -194,12 +237,34 @@ async function flushDb() {
     clearTimeout(saveTimer);
     saveTimer = null;
   }
+  // Atomic write with backup preservation:
+  //   1. Serialize sql.js to an in-memory buffer.
+  //   2. Write to <dbPath>.tmp.
+  //   3. Rename existing <dbPath> -> <dbPath>.bak (only if it exists and is non-empty).
+  //   4. Rename <dbPath>.tmp -> <dbPath>.
+  // A crash mid-step never produces a truncated <dbPath>: either the rename has
+  // not happened yet (real DB intact) or it has (.tmp is the new real DB).
+  // .bak survives one bad write — initDatabase falls back to it on next launch.
+  const tmpPath = dbPath + ".tmp";
+  const bakPath = dbPath + ".bak";
   try {
     const data = db.export();
-    await fs.promises.writeFile(dbPath, Buffer.from(data));
+    await fs.promises.writeFile(tmpPath, Buffer.from(data));
+
+    // Promote old DB to .bak (best-effort; missing original on first save is OK).
+    try {
+      const stat = await fs.promises.stat(dbPath);
+      if (stat.size > 0) {
+        await fs.promises.rename(dbPath, bakPath);
+      }
+    } catch (e) {
+      if (e.code !== "ENOENT") throw e; // a missing original is fine; anything else is real
+    }
+
+    await fs.promises.rename(tmpPath, dbPath);
+
     _pendingWrite = false;
     if (_flushFailureCount > 0) {
-      // Recovered. Tell the renderer the banner can dismiss.
       _flushFailureCount = 0;
       mainWindow?.webContents?.send("db-write-ok");
     }
@@ -208,6 +273,8 @@ async function flushDb() {
     _flushFailureCount += 1;
     console.error("Failed to save DB:", e.message);
     logError("[DB] flush failed", e);
+    // Best-effort cleanup of orphan .tmp so it doesn't shadow future writes.
+    try { await fs.promises.unlink(tmpPath); } catch (_) {}
     // Only emit the user-visible signal after two consecutive failures so a single
     // transient OneDrive/AV lock doesn't pop a banner that auto-recovers on the next
     // debounced write. The first failure still appears in app.log via logError above.
@@ -2815,8 +2882,21 @@ app.whenReady().then(async () => {
   });
 });
 
-app.on("window-all-closed", () => {
-  if (db) flushDb();
+// Quit sequence:
+//   1. before-quit fires (covers menu Quit, Cmd-Q, Alt-F4, taskbar Close).
+//   2. preventDefault holds the process open while flushDb completes (await).
+//   3. Native DBs close after the flush (theology is read-only; library may have
+//      pending vec writes from a background embed, so close after the flush settles).
+//   4. app.exit(0) terminates without re-entering the handler (_isQuitting guard).
+// Without this sequencing the previous code raced flushDb against app.quit() and
+// could lose the in-flight write itself, not just the 500 ms debounce window.
+app.on("before-quit", async (e) => {
+  if (_isQuitting) return; // re-entry guard; second pass falls through to default quit
+  _isQuitting = true;
+  e.preventDefault();
+  if (db) {
+    try { await flushDb(); } catch (err) { logError("[quit] flushDb threw", err); }
+  }
   if (theologyDb) { try { theologyDb.close(); } catch (_) {} }
   theologyDb = null;
   theologyVecAvailable = false;
@@ -2825,5 +2905,11 @@ app.on("window-all-closed", () => {
     try { libraryDb.close(); } catch (_) {}
     libraryDb = null;
   }
+  app.exit(0);
+});
+
+// Keep the macOS dock-quit semantics: closing all windows on Win/Linux quits;
+// macOS keeps the app alive until before-quit. before-quit handles the flush.
+app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
 });
