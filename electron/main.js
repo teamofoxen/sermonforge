@@ -223,6 +223,10 @@ async function initDatabase() {
     console.log("FTS not available, search will use LIKE:", e.message);
   }
 
+  // Schema contract guard — runs after migrations + FTS setup. Logs only.
+  // See assertSchemaContract() below for rationale.
+  try { assertSchemaContract(); } catch (e) { logError("[DB] assertSchemaContract threw", e); }
+
   saveDb();
 }
 
@@ -510,6 +514,24 @@ function copyToManagedLibrary(sourceFile, sourceLibraryRoot) {
 }
 
 // ── Schema migrations ────────────────────────────────────────────────────────
+// safeAlter wraps `ALTER TABLE ... ADD COLUMN` so we distinguish "column already
+// exists" (benign — re-running an earlier migration) from real errors (locked DB,
+// disk full, syntax error). The previous `try { ... } catch (_) {}` pattern
+// swallowed everything, which let migration blocks bump schema_version even when
+// the ALTER had failed for a real reason — the column was permanently missing
+// while runMigrations() believed it had succeeded. safeAlter throws on real
+// errors so the version bump at the end of the block is never reached.
+function safeAlter(sql) {
+  try {
+    db.run(sql);
+    return true;
+  } catch (e) {
+    const msg = String(e?.message || e).toLowerCase();
+    if (msg.includes("duplicate column name")) return false; // column exists, skip
+    throw e;
+  }
+}
+
 function runMigrations() {
   db.run(`CREATE TABLE IF NOT EXISTS meta (
     key TEXT PRIMARY KEY,
@@ -525,8 +547,8 @@ function runMigrations() {
 
   if (version < 2) {
     // v2: add functional_elements and checklist to sermons (no-op on fresh installs)
-    try { db.run("ALTER TABLE sermons ADD COLUMN functional_elements TEXT DEFAULT '{}'"); } catch (_) {}
-    try { db.run("ALTER TABLE sermons ADD COLUMN checklist TEXT DEFAULT '{}'"); } catch (_) {}
+    safeAlter("ALTER TABLE sermons ADD COLUMN functional_elements TEXT DEFAULT '{}'");
+    safeAlter("ALTER TABLE sermons ADD COLUMN checklist TEXT DEFAULT '{}'");
     db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '2')");
     version = 2;
   }
@@ -560,16 +582,16 @@ function runMigrations() {
 
   if (version < 4) {
     // v4: series planning fields, sections table, calendar notes, sermon section/one-off
-    try { db.run("ALTER TABLE series ADD COLUMN big_idea TEXT DEFAULT ''"); } catch (_) {}
-    try { db.run("ALTER TABLE series ADD COLUMN overview TEXT DEFAULT ''"); } catch (_) {}
-    try { db.run("ALTER TABLE series ADD COLUMN passage_range TEXT DEFAULT ''"); } catch (_) {}
-    try { db.run("ALTER TABLE series ADD COLUMN start_date TEXT DEFAULT ''"); } catch (_) {}
-    try { db.run("ALTER TABLE series ADD COLUMN end_date TEXT DEFAULT ''"); } catch (_) {}
-    try { db.run("ALTER TABLE series ADD COLUMN structural_outline TEXT DEFAULT ''"); } catch (_) {}
-    try { db.run("ALTER TABLE series ADD COLUMN status TEXT DEFAULT 'planning'"); } catch (_) {}
-    try { db.run("ALTER TABLE series ADD COLUMN canon_category TEXT DEFAULT ''"); } catch (_) {}
-    try { db.run("ALTER TABLE sermons ADD COLUMN section_id TEXT DEFAULT NULL"); } catch (_) {}
-    try { db.run("ALTER TABLE sermons ADD COLUMN is_one_off INTEGER DEFAULT 0"); } catch (_) {}
+    safeAlter("ALTER TABLE series ADD COLUMN big_idea TEXT DEFAULT ''");
+    safeAlter("ALTER TABLE series ADD COLUMN overview TEXT DEFAULT ''");
+    safeAlter("ALTER TABLE series ADD COLUMN passage_range TEXT DEFAULT ''");
+    safeAlter("ALTER TABLE series ADD COLUMN start_date TEXT DEFAULT ''");
+    safeAlter("ALTER TABLE series ADD COLUMN end_date TEXT DEFAULT ''");
+    safeAlter("ALTER TABLE series ADD COLUMN structural_outline TEXT DEFAULT ''");
+    safeAlter("ALTER TABLE series ADD COLUMN status TEXT DEFAULT 'planning'");
+    safeAlter("ALTER TABLE series ADD COLUMN canon_category TEXT DEFAULT ''");
+    safeAlter("ALTER TABLE sermons ADD COLUMN section_id TEXT DEFAULT NULL");
+    safeAlter("ALTER TABLE sermons ADD COLUMN is_one_off INTEGER DEFAULT 0");
     db.run(`CREATE TABLE IF NOT EXISTS series_sections (
       id TEXT PRIMARY KEY,
       series_id TEXT NOT NULL,
@@ -646,36 +668,36 @@ function runMigrations() {
 
   if (version < 6) {
     // v6: pastoral intelligence fields — topic_theme, audience_assumptions, background_noise
-    try { db.run("ALTER TABLE sermons ADD COLUMN topic_theme TEXT DEFAULT ''"); } catch (_) {}
-    try { db.run("ALTER TABLE sermons ADD COLUMN audience_assumptions TEXT DEFAULT ''"); } catch (_) {}
-    try { db.run("ALTER TABLE sermons ADD COLUMN background_noise TEXT DEFAULT ''"); } catch (_) {}
+    safeAlter("ALTER TABLE sermons ADD COLUMN topic_theme TEXT DEFAULT ''");
+    safeAlter("ALTER TABLE sermons ADD COLUMN audience_assumptions TEXT DEFAULT ''");
+    safeAlter("ALTER TABLE sermons ADD COLUMN background_noise TEXT DEFAULT ''");
     db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '6')");
     version = 6;
   }
 
   if (version < 7) {
     // v7: series study fields + sermon study guide note
-    try { db.run("ALTER TABLE series ADD COLUMN redemptive_context TEXT DEFAULT ''"); } catch (_) {}
-    try { db.run("ALTER TABLE series ADD COLUMN book_background TEXT DEFAULT ''"); } catch (_) {}
-    try { db.run("ALTER TABLE series ADD COLUMN book_argument TEXT DEFAULT ''"); } catch (_) {}
-    try { db.run("ALTER TABLE series ADD COLUMN book_structure TEXT DEFAULT ''"); } catch (_) {}
-    try { db.run("ALTER TABLE series ADD COLUMN series_motivation TEXT DEFAULT ''"); } catch (_) {}
-    try { db.run("ALTER TABLE series ADD COLUMN emerging_big_idea TEXT DEFAULT ''"); } catch (_) {}
-    try { db.run("ALTER TABLE sermons ADD COLUMN study_guide_note TEXT DEFAULT ''"); } catch (_) {}
+    safeAlter("ALTER TABLE series ADD COLUMN redemptive_context TEXT DEFAULT ''");
+    safeAlter("ALTER TABLE series ADD COLUMN book_background TEXT DEFAULT ''");
+    safeAlter("ALTER TABLE series ADD COLUMN book_argument TEXT DEFAULT ''");
+    safeAlter("ALTER TABLE series ADD COLUMN book_structure TEXT DEFAULT ''");
+    safeAlter("ALTER TABLE series ADD COLUMN series_motivation TEXT DEFAULT ''");
+    safeAlter("ALTER TABLE series ADD COLUMN emerging_big_idea TEXT DEFAULT ''");
+    safeAlter("ALTER TABLE sermons ADD COLUMN study_guide_note TEXT DEFAULT ''");
     db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '7')");
     version = 7;
   }
 
   if (version < 8) {
     // v8: preaching_blocks — CMC (Contour-Mapped Compression) without-notes output
-    try { db.run("ALTER TABLE sermons ADD COLUMN preaching_blocks TEXT DEFAULT 'null'"); } catch (_) {}
+    safeAlter("ALTER TABLE sermons ADD COLUMN preaching_blocks TEXT DEFAULT 'null'");
     db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '8')");
     version = 8;
   }
 
   if (version < 9) {
     // v9: manuscript_delivery — AI-formatted delivery manuscript
-    try { db.run("ALTER TABLE sermons ADD COLUMN manuscript_delivery TEXT DEFAULT 'null'"); } catch (_) {}
+    safeAlter("ALTER TABLE sermons ADD COLUMN manuscript_delivery TEXT DEFAULT 'null'");
     db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '9')");
     version = 9;
   }
@@ -698,7 +720,7 @@ function runMigrations() {
   if (version < 12) {
     // v12: last_tune_up — JSON wrapper {content, ts} for the most recent Tune-Up response.
     // Persisted only after a successful Final Tune-Up run on the Manuscript tab.
-    try { db.run("ALTER TABLE sermons ADD COLUMN last_tune_up TEXT DEFAULT NULL"); } catch (_) {}
+    safeAlter("ALTER TABLE sermons ADD COLUMN last_tune_up TEXT DEFAULT NULL");
     db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '12')");
     version = 12;
   }
@@ -712,6 +734,67 @@ function runMigrations() {
     )`);
     db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '13')");
     version = 13;
+  }
+
+  if (version < 14) {
+    // v14: schema-contract reconciliation. Re-applies every additive ALTER
+    // from v2/v4/v6/v7/v8/v9/v12 idempotently. Catches installs where a prior
+    // swallowed-catch in any of those migrations skipped a column while the
+    // version was bumped past it. safeAlter no-ops where the column already
+    // exists; throws on any genuine error so the version bump below is
+    // skipped and the migration retries on next launch.
+    safeAlter("ALTER TABLE sermons ADD COLUMN functional_elements TEXT DEFAULT '{}'");
+    safeAlter("ALTER TABLE sermons ADD COLUMN checklist TEXT DEFAULT '{}'");
+    safeAlter("ALTER TABLE sermons ADD COLUMN section_id TEXT DEFAULT NULL");
+    safeAlter("ALTER TABLE sermons ADD COLUMN is_one_off INTEGER DEFAULT 0");
+    safeAlter("ALTER TABLE sermons ADD COLUMN topic_theme TEXT DEFAULT ''");
+    safeAlter("ALTER TABLE sermons ADD COLUMN audience_assumptions TEXT DEFAULT ''");
+    safeAlter("ALTER TABLE sermons ADD COLUMN background_noise TEXT DEFAULT ''");
+    safeAlter("ALTER TABLE sermons ADD COLUMN study_guide_note TEXT DEFAULT ''");
+    safeAlter("ALTER TABLE sermons ADD COLUMN preaching_blocks TEXT DEFAULT 'null'");
+    safeAlter("ALTER TABLE sermons ADD COLUMN manuscript_delivery TEXT DEFAULT 'null'");
+    safeAlter("ALTER TABLE sermons ADD COLUMN last_tune_up TEXT DEFAULT NULL");
+    safeAlter("ALTER TABLE series ADD COLUMN big_idea TEXT DEFAULT ''");
+    safeAlter("ALTER TABLE series ADD COLUMN overview TEXT DEFAULT ''");
+    safeAlter("ALTER TABLE series ADD COLUMN passage_range TEXT DEFAULT ''");
+    safeAlter("ALTER TABLE series ADD COLUMN start_date TEXT DEFAULT ''");
+    safeAlter("ALTER TABLE series ADD COLUMN end_date TEXT DEFAULT ''");
+    safeAlter("ALTER TABLE series ADD COLUMN structural_outline TEXT DEFAULT ''");
+    safeAlter("ALTER TABLE series ADD COLUMN status TEXT DEFAULT 'planning'");
+    safeAlter("ALTER TABLE series ADD COLUMN canon_category TEXT DEFAULT ''");
+    safeAlter("ALTER TABLE series ADD COLUMN redemptive_context TEXT DEFAULT ''");
+    safeAlter("ALTER TABLE series ADD COLUMN book_background TEXT DEFAULT ''");
+    safeAlter("ALTER TABLE series ADD COLUMN book_argument TEXT DEFAULT ''");
+    safeAlter("ALTER TABLE series ADD COLUMN book_structure TEXT DEFAULT ''");
+    safeAlter("ALTER TABLE series ADD COLUMN series_motivation TEXT DEFAULT ''");
+    safeAlter("ALTER TABLE series ADD COLUMN emerging_big_idea TEXT DEFAULT ''");
+    db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '14')");
+    version = 14;
+  }
+}
+
+// Verify the live schema matches the SERMON_COLUMNS / SERIES_COLUMNS allowlists
+// used by buildUpdate(). A missing column means a prior migration silently
+// skipped its ALTER and bumped the version regardless. v14 should heal this on
+// the launch it fires; assertSchemaContract is the canary that confirms it did.
+// Logs only — does not throw — so a degraded-but-functional install keeps booting.
+function assertSchemaContract() {
+  const missing = [];
+  const sermonInfo = queryAll("PRAGMA table_info(sermons)");
+  const actualSermons = new Set(sermonInfo.map(r => r.name));
+  for (const col of SERMON_COLUMNS) {
+    if (!actualSermons.has(col)) missing.push(`sermons.${col}`);
+  }
+  const seriesInfo = queryAll("PRAGMA table_info(series)");
+  const actualSeries = new Set(seriesInfo.map(r => r.name));
+  for (const col of SERIES_COLUMNS) {
+    if (!actualSeries.has(col)) missing.push(`series.${col}`);
+  }
+  if (missing.length > 0) {
+    logError(
+      `[DB] schema contract violation: missing columns [${missing.join(", ")}]`,
+      new Error("schema mismatch — buildUpdate writes to these columns will silently drop in production")
+    );
   }
 }
 
