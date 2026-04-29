@@ -104,6 +104,10 @@ export const onDbWriteError = (callback) => api.onDbWriteError(callback);
 export const onDbWriteOk    = (callback) => api.onDbWriteOk(callback);
 export const flushDb        = () => api.flushDb();
 
+// ── Startup warnings ──────────────────────────────────────────────────────────
+export const getStartupWarning = ()        => api.getStartupWarning();
+export const openDataFolder    = ()        => api.openDataFolder();
+
 // ── Pastor memory backup ──────────────────────────────────────────────────────
 export const backupMemory  = (json) => api.backupMemory(json);
 export const restoreMemory = ()     => api.restoreMemory();

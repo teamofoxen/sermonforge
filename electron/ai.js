@@ -7,6 +7,7 @@ const { app } = require("electron");
 const fs = require("fs");
 const path = require("path");
 const { generate, isAvailable } = require("./ai/provider");
+const { logError } = require("./logger");
 
 if (!isAvailable()) {
   console.error("[AI] ANTHROPIC_API_KEY is not set — AI features will be unavailable.");
@@ -34,7 +35,7 @@ function appendAuditLog(entry) {
       } catch (_) {}
     })
     .catch(e => {
-      console.error("[ai-message] Failed to append audit log:", e);
+      logError("[ai-message] Failed to append audit log", e);
     });
 }
 

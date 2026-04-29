@@ -1,6 +1,7 @@
 // electron/ai/provider.js — Anthropic SDK wrapper.
 // This is the ONLY module that should import @anthropic-ai/sdk.
 
+const { app } = require("electron");
 const { default: Anthropic } = require("@anthropic-ai/sdk");
 const { loadKey } = require("../keystore");
 
@@ -89,6 +90,12 @@ async function generate({ system, messages, model, temperature }) {
       if (attempt === 1 && isRetryable(e)) {
         await new Promise(r => setTimeout(r, RETRY_DELAY_MS));
         continue;
+      }
+      // Stamp auth failures with the app version so user-reported errors carry it.
+      if (e?.status === 401 || e?.status === 403) {
+        const stamped = new Error(`${e.message} (SermonForge ${app.getVersion()})`);
+        stamped.status = e.status;
+        throw stamped;
       }
       throw e;
     }

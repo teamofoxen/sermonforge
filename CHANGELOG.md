@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-04-29 — fix: phase 7 + 8 renderer hygiene and cleanups
+
+- Splash: `electron/loading.html` loads immediately and swaps to the real renderer after `initDatabase`, replacing the blank window during slow starts.
+- OneDrive guard: first launch in a OneDrive-synced userData shows a blocking modal; later launches show a localStorage-sticky banner. New `app-get-startup-warning` + `app-open-data-folder` IPC.
+- Cleanups: `window.memoryDebug` gated to dev only; `buildFtsQuery` drops `sermon`/`sermons`/`different`/`parts` from stop-words; audit-log append failures route through `logError`; Anthropic 401/403 errors stamp the app version.
+- Regression test `tests/markdown-xss.test.jsx` confirms `ReactMarkdown` escapes raw `<script>` and `<img onerror>` in assistant output.
+- `SetupScreen` carries a permanent OneDrive caution; new IPC channels documented.
+
+---
+
 ## 2026-04-29 — fix: save-payload hotfix (H1 pulled forward from Phase 7)
 
 - `SermonWorkspace.persistUpdate` now filters `sermonRef.current` through a renderer-side `SERMON_COLUMNS` mirror (`src/constants/sermonColumns.js`) before sending to `updateSermon`, stripping JOIN fields (`series_title`, `series_color`), the attached `series`/`section` objects, and primary-key/timestamp columns.

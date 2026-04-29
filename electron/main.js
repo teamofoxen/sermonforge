@@ -36,6 +36,8 @@ let mainWindow;
 let saveTimer = null;
 let _pendingWrite = false; // true between saveDb() and the debounce flush; used for crash-window warn
 let _flushFailureCount = 0; // consecutive flushDb failures; banner fires at >= 2 to avoid noise on a single transient lock
+let _firstLaunch = false;  // true when sermonforge.db did not exist at initDatabase entry; drives the first-run OneDrive modal
+let _pendingStartupWarning = null; // set in maybeWarnOneDrive; renderer fetches via app-get-startup-warning on mount
 
 const LIBRARY_PATH = path.join(os.homedir(), "OneDrive", "Ministry", "Preaching", "Sermon Library");
 const MANAGED_LIBRARY_DIRNAME = "library";    // subfolder under userData for managed .docx copies
@@ -51,6 +53,7 @@ async function initDatabase() {
   if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
   dbPath = path.join(dataDir, "sermonforge.db");
   const bakPath = dbPath + ".bak";
+  _firstLaunch = !fs.existsSync(dbPath);
 
   // Try the main DB first. If it's corrupt, fall back to the .bak written by
   // the previous successful flushDb. If .bak is also bad, rename the corrupt
@@ -988,8 +991,7 @@ function buildFtsQuery(userQuery) {
     "are","was","be","this","that","with","from","by","not","but","we","he",
     "she","they","do","did","does","has","have","had","its","which","who","what",
     "when","how","can","will","would","could","should","may","might","put",
-    "together","need","want","please","give","different","parts","sermon",
-    "sermons","three","outline","outlines","based","existing","new","using",
+    "together","need","want","please","give","three","outline","outlines","based","existing","using",
     "say","says","said","about","tell","tells","think","thinks","know","knows",
     "get","got","let","per","via","yet","ago","now","too","also","just","even",
     "very","more","than","then","them","our","your","their","some","any","all",
@@ -1006,6 +1008,12 @@ function buildFtsQuery(userQuery) {
 // seedDatabase() removed — no longer needed (real data in place)
 
 // ── Window creation ─────────────────────────────────────────────────────────
+// Splash flow: createWindow loads electron/loading.html immediately so the user
+// sees a wordmark + spinner during initDatabase (which can take seconds when
+// theology.db opens or library indexing runs at first launch). Once init is
+// complete, app.whenReady calls loadAppContent() to swap the same window to
+// the real renderer entry point. The window stays visible the whole time —
+// no flash of unstyled second window.
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1400,
@@ -1022,15 +1030,36 @@ function createWindow() {
     show: false,
   });
 
+  mainWindow.loadFile(path.join(__dirname, "loading.html"));
+
+  mainWindow.once("ready-to-show", () => {
+    mainWindow.show();
+  });
+}
+
+function loadAppContent() {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
   if (isDev) {
     mainWindow.loadURL(devServerUrl);
   } else {
     mainWindow.loadFile(path.join(__dirname, "../dist/index.html"));
   }
+}
 
-  mainWindow.once("ready-to-show", () => {
-    mainWindow.show();
-  });
+// One-shot startup warning when the userData folder is inside a OneDrive root.
+// Cloud sync agents can rewrite SQLite page files mid-write, which is the most
+// common silent-corruption vector we've seen. First launch (no DB file yet)
+// surfaces a blocking modal because the user can still relocate cheaply; later
+// launches surface a dismiss-once banner — once dismissed in the renderer, it
+// stays dismissed (localStorage flag) so existing users are not nagged.
+//
+// Stored on a module variable rather than push-emitted so we don't race the
+// React mount: webContents.send drops the event if no listener is attached yet.
+function maybeWarnOneDrive() {
+  if (!/OneDrive/i.test(paths.userData)) return;
+  const kind = _firstLaunch ? "onedrive-first-run" : "onedrive";
+  logError(`[startup] userData is inside OneDrive (${paths.userData}); SQLite corruption risk`, null);
+  _pendingStartupWarning = { kind, path: paths.userData };
 }
 
 // ── IPC handlers ────────────────────────────────────────────────────────────
@@ -2854,6 +2883,23 @@ ipcMain.handle("app-get-version", () => {
   return { version: app.getVersion() };
 });
 
+// Opens the userData folder in the OS file manager. Wired to the OneDrive
+// first-run modal so users can locate the data folder before relocating
+// OneDrive sync away from it.
+ipcMain.handle("app-open-data-folder", () => {
+  return shell.openPath(paths.userData);
+});
+
+// Pulled by the renderer on mount to receive any one-shot startup warning
+// (e.g. OneDrive). Pull-pattern avoids races against React mount that a
+// webContents.send would lose. Returns null when nothing is pending; clears
+// the slot on read so the next mount in the same process sees nothing.
+ipcMain.handle("app-get-startup-warning", () => {
+  const w = _pendingStartupWarning;
+  _pendingStartupWarning = null;
+  return w;
+});
+
 // ── API key setup ─────────────────────────────────────────────────────────────
 ipcMain.handle("app-get-key-status", () => {
   return { configured: isConfigured() };
@@ -3138,8 +3184,10 @@ ipcMain.handle('passage-fetch', async (_, passage) => {
 // ── App lifecycle ────────────────────────────────────────────────────────────
 app.whenReady().then(async () => {
   logInfo(`SermonForge ${app.getVersion()} starting`);
+  createWindow();              // splash visible immediately
   await initDatabase();
-  createWindow();
+  maybeWarnOneDrive();         // populates the startup-warning slot before renderer mounts
+  loadAppContent();            // swap splash → real app
   initUpdater();
 
   app.on("activate", () => {
