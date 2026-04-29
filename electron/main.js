@@ -56,9 +56,20 @@ async function initDatabase() {
   // the previous successful flushDb. If .bak is also bad, rename the corrupt
   // original to <dbPath>.corrupt-<ts> (so manual recovery is possible) and
   // start fresh — never silently overwrite a damaged DB.
+  //
+  // IMPORTANT: `new SQL.Database(buf)` does NOT throw on a structurally-corrupt
+  // page-level damaged file — it accepts the buffer and only throws when a
+  // query touches the bad pages. The exec() probe below forces that detection
+  // up front. Without it, a corrupt primary appears to load, queries fail at
+  // runtime, the app limps along with broken state, and the next saveDb writes
+  // serialized garbage on top of the previously-good `.bak` rotation chain.
   function tryLoad(p) {
     const buf = fs.readFileSync(p);
-    return new SQL.Database(buf); // throws on truncation/corruption
+    const candidate = new SQL.Database(buf);
+    // Read sqlite_master — works on fresh empty DBs (no rows) and any healthy
+    // SQLite. Throws on page-level corruption that `new SQL.Database` misses.
+    candidate.exec("SELECT name FROM sqlite_master LIMIT 1");
+    return candidate;
   }
 
   if (fs.existsSync(dbPath)) {
@@ -233,7 +244,23 @@ async function initDatabase() {
   saveDb();
 }
 
-async function flushDb() {
+// flushDb is serialized via _flushQueue. The previous implementation could
+// re-enter when saveDb's setTimeout fired again before the in-flight flush had
+// finished writing — both calls would race on `<dbPath>.tmp` (truncate-then-
+// write under both), interleaving bytes and producing a malformed file that
+// the rotation then promoted into `dbPath`. Chaining each call onto the queue
+// guarantees a single in-flight writer and atomic rotation per call.
+let _flushQueue = Promise.resolve({ ok: true });
+function flushDb() {
+  const next = _flushQueue.then(() => _flushDbImpl());
+  // Swallow errors on the chain so one failed flush does not poison every
+  // subsequent flush with a rejected predecessor. Each call still gets its
+  // own resolved/rejected promise back via `next`.
+  _flushQueue = next.then(() => undefined, () => undefined);
+  return next;
+}
+
+async function _flushDbImpl() {
   if (!db || !dbPath) return { ok: true, skipped: true };
   // If _pendingWrite is still true here, flushDb was called externally (e.g. quit handler)
   // while a debounced write was still queued. The 500ms crash window was open.
