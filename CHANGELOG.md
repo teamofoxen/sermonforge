@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-04-28 — feat: manuscript tab — full AI context, Tune-Up persistence, DOCX export
+
+- Manuscript tab modes (Flow Coach, Ear Check, Final Tune-Up) now run `buildContext` on the initial fire, so Pastoral Intelligence, exegesis, structure, series context, theology, and memory tiers reach the AI.
+- Raised `TIER_LIMITS.tier7` from 800 to 5000 chars so substantive Pastoral Intelligence input is no longer truncated when the three fields are combined.
+- Final Tune-Up responses are persisted to a new `sermons.last_tune_up` column (v12 migration) and surfaced as a collapsible "Last Tune-Up" panel on the Manuscript tab so a careful read isn't lost on workspace close.
+- Added `sermon-export-manuscript` IPC channel and an "Export to Word" button on the Manuscript tab; saves a `.docx` to `Documents/SermonForge/exports/Manuscripts/` and opens it.
+
+---
+
 ## 2026-04-28 — feat: workspace tour adjustments
 
 - Replaced "Skip tour" with "Leave tour" — discards tour sermon/series via new `db-removeTourSermon` IPC handler and returns to dashboard.

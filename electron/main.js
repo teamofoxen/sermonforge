@@ -460,6 +460,14 @@ function runMigrations() {
     db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '11')");
     version = 11;
   }
+
+  if (version < 12) {
+    // v12: last_tune_up — JSON wrapper {content, ts} for the most recent Tune-Up response.
+    // Persisted only after a successful Final Tune-Up run on the Manuscript tab.
+    try { db.run("ALTER TABLE sermons ADD COLUMN last_tune_up TEXT DEFAULT NULL"); } catch (_) {}
+    db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '12')");
+    version = 12;
+  }
 }
 
 // ── Query helpers ────────────────────────────────────────────────────────────
@@ -596,7 +604,7 @@ const SERMON_COLUMNS = new Set([
   "outline", "manuscript", "delivery_notes", "timing_notes", "post_sermon",
   "functional_elements", "checklist", "series_id", "section_id", "is_one_off",
   "topic_theme", "audience_assumptions", "background_noise", "study_guide_note",
-  "preaching_blocks", "manuscript_delivery",
+  "preaching_blocks", "manuscript_delivery", "last_tune_up",
 ]);
 
 const SERIES_COLUMNS = new Set([
@@ -1774,6 +1782,159 @@ ipcMain.handle("sermon-export-pmb", async (_, { blocks, spine, title, passage, m
     return { success: true, filepath };
   } catch (e) {
     console.error("[sermon-export-pmb]", e);
+    return { success: false, error: e.message };
+  }
+});
+
+ipcMain.handle("sermon-export-manuscript", async (_, payload) => {
+  try {
+    const { Document, Paragraph, TextRun, HeadingLevel, AlignmentType } = require("docx");
+    const { Packer } = require("docx");
+
+    const {
+      title = "",
+      passage = "",
+      date = "",
+      mpt = "",
+      mps = "",
+      introduction = {},
+      transitions = {},
+      conclusion = {},
+      outline = [],
+      functionalElements = {},
+    } = payload || {};
+
+    const children = [];
+
+    function prosePara(text) {
+      return new Paragraph({
+        spacing: { after: 160 },
+        children: [new TextRun({ text })],
+      });
+    }
+    function divider() {
+      return new Paragraph({
+        spacing: { before: 200, after: 200 },
+        alignment: AlignmentType.CENTER,
+        children: [new TextRun({ text: "————————————————————", color: "AAAAAA" })],
+      });
+    }
+    function transitionPara(text) {
+      if (!text || !text.trim()) return null;
+      return new Paragraph({
+        spacing: { before: 200, after: 200 },
+        alignment: AlignmentType.CENTER,
+        children: [new TextRun({ text, italics: true, color: "777777" })],
+      });
+    }
+
+    // Title block
+    children.push(new Paragraph({
+      heading: HeadingLevel.HEADING_1,
+      spacing: { after: 80 },
+      children: [new TextRun({ text: title || "Untitled Sermon", bold: true })],
+    }));
+    if (passage) {
+      children.push(new Paragraph({
+        spacing: { after: 80 },
+        children: [new TextRun({ text: passage, color: "666666" })],
+      }));
+    }
+    if (date) {
+      children.push(new Paragraph({
+        spacing: { after: 240 },
+        children: [new TextRun({ text: date, color: "888888", size: 20 })],
+      }));
+    }
+    if (mpt) {
+      children.push(new Paragraph({
+        spacing: { after: 80 },
+        children: [
+          new TextRun({ text: "Main Point of the Text:  ", bold: true }),
+          new TextRun({ text: mpt }),
+        ],
+      }));
+    }
+    if (mps) {
+      children.push(new Paragraph({
+        spacing: { after: 240 },
+        children: [
+          new TextRun({ text: "Main Point of the Sermon:  ", bold: true }),
+          new TextRun({ text: mps }),
+        ],
+      }));
+    }
+
+    children.push(divider());
+
+    // Introduction
+    children.push(new Paragraph({
+      heading: HeadingLevel.HEADING_2,
+      spacing: { before: 160, after: 120 },
+      children: [new TextRun({ text: "Introduction", bold: true })],
+    }));
+    if (introduction.opener)            children.push(prosePara(introduction.opener));
+    if (introduction.scripture_reading) children.push(prosePara(introduction.scripture_reading));
+    if (introduction.expectation)       children.push(prosePara(introduction.expectation));
+
+    // Per-point sections
+    outline.forEach((pt, i) => {
+      const t = transitionPara(transitions[pt.id]);
+      if (t) children.push(t);
+
+      children.push(new Paragraph({
+        heading: HeadingLevel.HEADING_2,
+        spacing: { before: 200, after: 120 },
+        children: [
+          new TextRun({ text: `Point ${i + 1}.  `, bold: true }),
+          new TextRun({ text: pt.text || "", bold: true }),
+        ],
+      }));
+
+      const fe = functionalElements[pt.id] || {};
+      if (fe.scripture) {
+        children.push(new Paragraph({
+          spacing: { after: 120 },
+          children: [new TextRun({ text: fe.scripture, italics: true, color: "555555" })],
+        }));
+      }
+      if (fe.explanation)  children.push(prosePara(fe.explanation));
+      if (fe.application)  children.push(prosePara(fe.application));
+      if (fe.illustration) children.push(prosePara(fe.illustration));
+    });
+
+    // Transition into conclusion
+    const ct = transitionPara(transitions.conclusion);
+    if (ct) children.push(ct);
+
+    // Conclusion
+    children.push(new Paragraph({
+      heading: HeadingLevel.HEADING_2,
+      spacing: { before: 200, after: 120 },
+      children: [new TextRun({ text: "Conclusion", bold: true })],
+    }));
+    if (conclusion.response) children.push(prosePara(conclusion.response));
+
+    const doc = new Document({
+      styles: {
+        default: { document: { run: { size: 24 } } },
+      },
+      sections: [{ properties: {}, children }],
+    });
+
+    const exportDir = path.join(app.getPath("documents"), "SermonForge", "exports", "Manuscripts");
+    if (!fs.existsSync(exportDir)) fs.mkdirSync(exportDir, { recursive: true });
+
+    const safeTitle = (title || passage || "Sermon").replace(/[<>:"/\\|?*\n\r\t]/g, "—").trim();
+    const filepath = path.join(exportDir, `${safeTitle} — Manuscript.docx`);
+
+    const buffer = await Packer.toBuffer(doc);
+    await fs.promises.writeFile(filepath, buffer);
+    shell.openPath(filepath);
+
+    return { success: true, filepath };
+  } catch (e) {
+    console.error("[sermon-export-manuscript]", e);
     return { success: false, error: e.message };
   }
 });

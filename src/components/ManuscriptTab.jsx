@@ -1,4 +1,8 @@
+import { useState } from "react";
+import ReactMarkdown from "react-markdown";
 import { getOutline, getFunctionalElements, serializeOutline, serializeFunctionalElements, autoResize, parseManuscript, assembleManuscriptText } from "../utils";
+import { buildContext } from "../utils/contextBuilder";
+import { exportManuscript } from "../db/database";
 
 function countWords(sermon) {
   const ms = parseManuscript(sermon.manuscript);
@@ -116,12 +120,88 @@ function TransitionField({ label, value, onChange }) {
   );
 }
 
+function formatRelativeTime(date) {
+  const diff = Date.now() - date.getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 30) return `${days}d ago`;
+  return date.toLocaleDateString();
+}
+
+function LastTuneUpPanel({ saved }) {
+  const [open, setOpen] = useState(false);
+  let parsed;
+  try { parsed = JSON.parse(saved); } catch { parsed = null; }
+  if (!parsed?.content) return null;
+
+  const ts = parsed.ts ? new Date(parsed.ts) : null;
+  const ago = ts ? formatRelativeTime(ts) : "";
+
+  return (
+    <div style={{ background: "var(--parchment-warm)", border: "1px solid var(--parchment-deep)", borderRadius: "var(--radius)", marginBottom: "12px" }}>
+      <div
+        onClick={() => setOpen(v => !v)}
+        style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", cursor: "pointer", userSelect: "none" }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <span style={{ fontFamily: "'Playfair Display', serif", fontSize: "10px", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-ghost)" }}>
+            Last Tune-Up
+          </span>
+          {ago && <span style={{ fontSize: "11px", color: "var(--ink-ghost)" }}>{ago}</span>}
+        </div>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+          style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s ease", color: "var(--ink-ghost)" }}>
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </div>
+      {open && (
+        <div style={{ padding: "12px 14px 14px", borderTop: "1px solid var(--parchment-deep)", fontSize: "13px", lineHeight: "1.6", color: "var(--ink-soft)" }}>
+          <div className="ai-markdown">
+            <ReactMarkdown>{parsed.content}</ReactMarkdown>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading, onOpenDrawer, onTabChange }) {
   const ms = parseManuscript(sermon.manuscript);
   const outline = getOutline(sermon);
   const fes = getFunctionalElements(sermon);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState(null);
+
+  async function handleExport() {
+    if (exporting) return;
+    setExporting(true);
+    setExportError(null);
+    try {
+      const result = await exportManuscript({
+        title:    sermon.title    || "",
+        passage:  sermon.passage   || "",
+        date:     sermon.date      || "",
+        mpt:      sermon.mpt       || "",
+        mps:      sermon.mps       || "",
+        introduction: ms.introduction || {},
+        transitions:  ms.transitions  || {},
+        conclusion:   ms.conclusion   || {},
+        outline,
+        functionalElements: fes,
+      });
+      if (!result?.success) setExportError(result?.error || "Export failed.");
+    } catch (e) {
+      setExportError(e.message || "Export failed.");
+    } finally {
+      setExporting(false);
+    }
+  }
 
   function updateMs(section, field, value) {
     const current = parseManuscript(sermon.manuscript);
@@ -152,23 +232,29 @@ export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading, onOpe
     steps.push("Conclusion");
     const worklist = steps.map((s, i) => `${i + 1}. ${s}`).join("\n");
     const manuscript = assembleManuscriptText(sermon);
-    const prompt = `Title: ${sermon.title || "Untitled"}\nPassage: ${sermon.passage || "unknown"}\nMPT: ${sermon.mpt || "(not set)"}\nMPS: ${sermon.mps || "(not set)"}\n\nManuscript:\n\n${manuscript}\n\nWorklist (${steps.length} steps):\n${worklist}\n\nBegin with Step 1.`;
+    const context = buildContext({ sermon, step: "manuscript" });
+    const body = `Title: ${sermon.title || "Untitled"}\nPassage: ${sermon.passage || "unknown"}\nMPT: ${sermon.mpt || "(not set)"}\nMPS: ${sermon.mps || "(not set)"}\n\nManuscript:\n\n${manuscript}\n\nWorklist (${steps.length} steps):\n${worklist}\n\nBegin with Step 1.`;
+    const prompt = context ? `CONTEXT:\n${context}\n\n${body}` : body;
     onOpenDrawer?.();
     onAI(prompt, FLOW_COACH_SYSTEM);
   }
 
   function runEarCheck() {
     const manuscript = assembleManuscriptText(sermon);
-    const prompt = `Title: ${sermon.title || "Untitled"}\nPassage: ${sermon.passage || "unknown"}\nMPT: ${sermon.mpt || "(not set)"}\nMPS: ${sermon.mps || "(not set)"}\n\nManuscript:\n\n${manuscript}`;
+    const context = buildContext({ sermon, step: "manuscript" });
+    const body = `Title: ${sermon.title || "Untitled"}\nPassage: ${sermon.passage || "unknown"}\nMPT: ${sermon.mpt || "(not set)"}\nMPS: ${sermon.mps || "(not set)"}\n\nManuscript:\n\n${manuscript}`;
+    const prompt = context ? `CONTEXT:\n${context}\n\n${body}` : body;
     onOpenDrawer?.();
     onAI(prompt, EAR_CHECK_SYSTEM);
   }
 
   function runTuneUp() {
     const manuscript = assembleManuscriptText(sermon);
-    const prompt = `Title: ${sermon.title || "Untitled"}\nPassage: ${sermon.passage || "unknown"}\nMPT: ${sermon.mpt || "(not set)"}\nMPS: ${sermon.mps || "(not set)"}\n\nManuscript:\n\n${manuscript}`;
+    const context = buildContext({ sermon, step: "manuscript" });
+    const body = `Title: ${sermon.title || "Untitled"}\nPassage: ${sermon.passage || "unknown"}\nMPT: ${sermon.mpt || "(not set)"}\nMPS: ${sermon.mps || "(not set)"}\n\nManuscript:\n\n${manuscript}`;
+    const prompt = context ? `CONTEXT:\n${context}\n\n${body}` : body;
     onOpenDrawer?.();
-    onAI(prompt, TUNE_UP_SYSTEM);
+    onAI(prompt, TUNE_UP_SYSTEM, { persistColumn: "last_tune_up" });
   }
 
   const words = countWords(sermon);
@@ -228,7 +314,22 @@ export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading, onOpe
         >
           {aiLoading ? "Running…" : "Final Tune-Up"}
         </button>
+        <button
+          className="btn-ghost btn-sm has-tooltip"
+          data-tooltip="Export the manuscript as a Word document. Saves to Documents/SermonForge/exports/Manuscripts/ and opens it."
+          onClick={handleExport}
+          disabled={exporting || !hasContent}
+        >
+          {exporting ? "Exporting…" : "Export to Word"}
+        </button>
       </div>
+      {exportError && (
+        <div style={{ fontSize: "12px", color: "#a04d4d", marginBottom: "12px", padding: "0 4px" }}>
+          Export failed: {exportError}
+        </div>
+      )}
+
+      {sermon.last_tune_up && <LastTuneUpPanel saved={sermon.last_tune_up} />}
 
       {/* Introduction */}
       <div id="ms-section-intro" style={sectionCard}>

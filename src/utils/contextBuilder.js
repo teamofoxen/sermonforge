@@ -252,7 +252,7 @@ const TIER_LIMITS = Object.freeze({
   tier4: 1200,
   tier5: 8000,
   tier6:  650,
-  tier7:  800,
+  tier7:  5000,
 });
 
 /**

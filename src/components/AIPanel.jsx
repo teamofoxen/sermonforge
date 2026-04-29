@@ -73,14 +73,30 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
   }, []);
 
   // When SermonWorkspace sets a new pendingMessage, send it into the conversation.
+  // If the payload carries `persistColumn`, the response is JSON-wrapped with a
+  // timestamp and saved through onUpdate so the pastor can return to it later.
   useEffect(() => {
-    if (externalMessage) {
-      sendMessage(externalMessage.prompt, externalMessage.systemPrompt, externalMessage.step, sermon?.id);
-    }
+    if (!externalMessage) return;
+    (async () => {
+      const response = await sendMessage(
+        externalMessage.prompt,
+        externalMessage.systemPrompt,
+        externalMessage.step,
+        sermon?.id,
+      );
+      if (response && externalMessage.persistColumn && onUpdate) {
+        onUpdate({
+          [externalMessage.persistColumn]: JSON.stringify({
+            content: response,
+            ts: new Date().toISOString(),
+          }),
+        });
+      }
+    })();
   }, [externalMessage]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const sendMessage = useCallback(async (userText, systemPrompt, step, sermonId, meta = {}) => {
-    if (!userText?.trim()) return;
+    if (!userText?.trim()) return "";
     const userMsg = { role: "user", content: userText };
     setMessages((prev) => [...prev, userMsg]);
     onLoadingChange?.(true);
@@ -95,11 +111,13 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
       const response = await sendAIMessage(history, finalSystemPrompt, step, sermonId);
       setMessages((prev) => [...prev, { role: "assistant", content: response || "Something went wrong. Please try again.", ...meta }]);
       if (response) captureResponsePatterns(response, step);
+      return response || "";
     } catch (err) {
       setMessages((prev) => [
         ...prev,
         { role: "assistant", content: `Error: ${err.message || "API call failed"}` },
       ]);
+      return "";
     } finally {
       onLoadingChange?.(false);
     }

@@ -1,6 +1,6 @@
 # SermonForge — Database Schema Reference
 
-Current schema version: **7**
+Current schema version: **12**
 
 ---
 
@@ -78,6 +78,7 @@ Current schema version: **7**
 | `study_guide_note` | TEXT | Short note orienting congregation readers to how this sermon fits the series arc |
 | `preaching_blocks` | TEXT | CMC (Contour-Mapped Compression) without-notes output; added v8 migration |
 | `manuscript_delivery` | TEXT | AI-formatted delivery manuscript; added v9 migration |
+| `last_tune_up` | TEXT | JSON `{content, ts}` snapshot of the most recent Final Tune-Up response; added v12 migration |
 | `created_at` | TEXT | |
 | `updated_at` | TEXT | |
 

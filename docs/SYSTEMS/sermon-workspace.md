@@ -132,6 +132,20 @@ See `docs/REFERENCE/ipc-channels.md` for the `passage-fetch` channel spec.
 Lives on the Manuscript tab. Audits completed manuscripts.
 See `docs/SYSTEMS/ai-panel.md` for full description.
 
+The most recent Tune-Up response is persisted to `sermons.last_tune_up` as JSON
+`{ content, ts }` so the pastor can return to it after closing the workspace.
+The Manuscript tab renders a collapsible "Last Tune-Up" panel above the Introduction
+card whenever this column has content. Flow Coach and Ear Check are not persisted —
+their cadence is conversational and only the in-drawer history matters.
+
+## Manuscript Export
+
+A "Export to Word" button on the Manuscript tab toolbar dispatches the
+`sermon-export-manuscript` IPC channel. The renderer passes the parsed manuscript JSON
+(intro/transitions/conclusion), outline `[{id,text}]`, and `functional_elements` map.
+Main builds the `.docx` and saves to `Documents/SermonForge/exports/Manuscripts/`,
+then opens it. See `docs/REFERENCE/ipc-channels.md` for the channel spec.
+
 ---
 
 ## Flow: Sermon Field Edit → Save and Memory Capture

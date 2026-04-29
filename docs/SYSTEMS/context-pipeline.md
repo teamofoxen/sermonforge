@@ -31,7 +31,7 @@ Groups data into 7 priority tiers. Key tiers:
 | 4 | `[SERIES CONTEXT]` | 1200 chars | big_idea, series_motivation, redemptive_context, section big_idea via `summarizeSeries()` |
 | 5 | `[SUPPORTING MATERIAL]` | — | library chunks, theology chunks |
 | 6 | `[PASTOR CONTEXT]` | — | memory/adaptive context |
-| 7 | `[THIS SERMON]` | 800 chars | topic_theme, audience_assumptions, background_noise |
+| 7 | `[THIS SERMON]` | 5000 chars | topic_theme, audience_assumptions, background_noise |
 
 **Tier 4 exclusions:** `book_background`, `book_argument`, `book_structure`, `emerging_big_idea`
 are deliberately excluded — they are too large for the per-sermon context budget and belong in
@@ -41,7 +41,7 @@ series planning only.
 - Always-on — never gated by step.
 - Gated by content: the section is only emitted when at least one field has content
   (`text?.trim().length > 0`). Single-word entries like "Lament" are included.
-- Budget: 800 chars across all three fields combined.
+- Budget: 5000 chars across all three fields combined.
 
 ### 3. resolveIncludes(step)
 Gates which tiers are active for the current step. Tier 7 / `pastoralContext` is always `true`

@@ -128,6 +128,27 @@ Saves to `~/OneDrive/SermonForge/StudyGuides/[title] — Study Guide.docx`.
 Creates the `StudyGuides` directory if absent. Empty parts are omitted entirely.
 See `docs/SYSTEMS/series-planner.md` for the 5-part structure.
 
+### `"sermon-export-pmb"`
+```
+receives: { blocks, spine, title, passage, mps }
+returns:  { success: true, filepath: string }
+        | { success: false, error: string }
+```
+Builds the Preaching Without Notes `.docx` from `sermon.preaching_blocks` (DeliveryTab CMC output).
+Saves to `Documents/SermonForge/exports/PreachingBlocks/[title] — Preaching Blocks.docx`, then opens it via `shell.openPath`.
+
+### `"sermon-export-manuscript"`
+```
+receives: { title, passage, date, mpt, mps,
+            introduction:{opener,scripture_reading,expectation},
+            transitions, conclusion:{response},
+            outline:[{id,text}], functionalElements }
+returns:  { success: true, filepath: string }
+        | { success: false, error: string }
+```
+Builds a `.docx` of the manuscript prose: title block (title, passage, date, MPT, MPS) → divider → Introduction → per-point sections (transition, point heading, scripture, explanation, application, illustration) → conclusion transition → Conclusion.
+Saves to `Documents/SermonForge/exports/Manuscripts/[title] — Manuscript.docx`, then opens it via `shell.openPath`.
+
 ---
 
 ## Feedback

@@ -162,7 +162,13 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
   function handleAI(prompt, systemPrompt, options = {}) {
     if (options.openDrawer) setDrawerOpen(true);
     pendingIdRef.current += 1;
-    setPendingMessage({ prompt, systemPrompt, step: activeStep || activeTab, id: pendingIdRef.current });
+    setPendingMessage({
+      prompt,
+      systemPrompt,
+      step: activeStep || activeTab,
+      id: pendingIdRef.current,
+      persistColumn: options.persistColumn,
+    });
   }
 
   if (loading) {
