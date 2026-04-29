@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-04-29 — fix: phase 5 library + theology consistency
+
+- Library import now identity-resolves by content-hash → filepath → new: a moved file updates filepath instead of creating a duplicate row, and an edited file is detected and re-indexed instead of `INSERT OR IGNORE`-skipped (v15 adds `content_hash` column).
+- `indexLibraryManuscript` is now two-phase: async embed-all-chunks then a single sync transaction that deletes vec rows in the correct order (capture chunk ids first), inserts new chunks/vectors, and writes a `library_chunks_status` completion marker; partial runs roll back.
+- `library-build-embeddings` now filters by `library_chunks_status` instead of mere chunk presence, so partially-indexed rows correctly need re-indexing.
+- FTS pinned to FTS4 — drops the FTS5-first attempt that produced install-to-install drift; existing FTS5 installs are left untouched.
+- `build_theology_vectors.js` now purges orphan `theology_vec` rows on each run, fixing the silent shrinkage caused by `load.py` deleting theology rows without cascading to vec.
+
+---
+
 ## 2026-04-29 — fix: phase 4 ai pipeline hardening
 
 - Anthropic SDK now has a 60s per-attempt timeout, one retry on 429/529/abort, and a 24h client TTL so out-of-band key rotations eventually pick up.

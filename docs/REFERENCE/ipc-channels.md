@@ -117,10 +117,22 @@ Persists the chosen folder to the `library_folder` setting.
 ### `"library-import"`
 ```
 receives: nothing
-returns:  { total, imported, errors, skipped }
+returns:  { total, imported, moved, updated, skipped, errors }
 pushes:   "library-import-progress" events: { done, total, complete }
 ```
-Scans the resolved library folder (see `library-get-folder`) for `.docx` files. Each new import is copied into `userData/library/`, parsed via `mammoth`, persisted to `sermonforge.db.library` + FTS, then chunked and embedded into `library.db` (chunks + vec0 vectors).
+Scans the resolved library folder (see `library-get-folder`) for `.docx` files.
+Each file is parsed via `mammoth`, copied into `userData/library/`, and identity-resolved
+by **content-hash first, then filepath**:
+- **imported** — new file (no hash or path match) → INSERT + FTS + chunk + embed.
+- **moved** — same content_hash but different filepath → UPDATE filepath only.
+  No re-index; the chunks/vectors are already correct.
+- **updated** — same filepath but different content_hash → file was edited;
+  UPDATE manuscript + re-index FTS + re-index chunks/vectors.
+- **skipped** — same hash, same path → no-op (already imported).
+- **errors** — parse / IO / DB failure for a single file; counted, logged, loop continues.
+
+Identity-by-hash fixes the prior duplication-on-folder-rename bug; identity-by-path
+fixes the prior `INSERT OR IGNORE`-skips-edited-files bug.
 
 ### `"library-build-embeddings"`
 ```

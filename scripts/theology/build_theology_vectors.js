@@ -60,6 +60,17 @@ async function main() {
     USING vec0(embedding float[${EMBEDDING_DIM}])
   `);
 
+  // ── Purge orphan vec rows ─────────────────────────────────────────────
+  // load.py deletes theology rows by work_id when re-ingesting; it does NOT
+  // delete corresponding theology_vec rows (no FK + vec0 doesn't cascade).
+  // Without this purge, KNN returns rowids that no longer exist in theology;
+  // the JOIN in theology-search drops them silently and the result set is
+  // smaller than it should be. Idempotent: zero-impact when no orphans.
+  const orphans = db.prepare(`
+    DELETE FROM theology_vec WHERE rowid NOT IN (SELECT rowid FROM theology)
+  `).run().changes;
+  if (orphans > 0) console.log(`Purged ${orphans} orphan vec rows.`);
+
   // ── Determine which chunks need embedding ─────────────────────────────
   const totalChunks = db.prepare("SELECT COUNT(*) as cnt FROM theology").get().cnt;
   const existingVecs = db.prepare("SELECT COUNT(*) as cnt FROM theology_vec").get().cnt;
