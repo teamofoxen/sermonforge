@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, Component, lazy, Suspense } from "react";
-import { createSeries, getApiKeyStatus, removeTourSermon, onDbWriteError, onDbWriteOk, flushDb } from "./db/database";
+import { createSeries, getApiKeyStatus, removeTourSermon, onDbWriteError, onDbWriteOk, flushDb, getSermonColumns } from "./db/database";
+import { SERMON_COLUMNS } from "./constants/sermonColumns";
 import { restoreMemoryFromBackup } from "./utils/memory";
 import { TourProvider } from "./contexts/TourContext";
 import TourOverlay from "./components/TourOverlay";
@@ -69,6 +70,32 @@ export default function App() {
   // manual cache clears that would otherwise wipe accumulated style patterns.
   useEffect(() => {
     restoreMemoryFromBackup().catch((e) => console.error("[App] memory restore failed:", e));
+  }, []);
+
+  // Schema-contract guard: assert the renderer SERMON_COLUMNS mirror still
+  // matches the main-side allowlist. Drift here re-introduces the silent-save
+  // bug class — buildUpdate rejects unknown columns, the renderer's optimistic
+  // setSermon makes it look saved, edits never reach disk. Logs only; the
+  // main-side allowlist remains the security boundary. Skipped in browser-only
+  // preview (no Electron preload) — the IPC stub returns [] and would always
+  // false-flag drift.
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.electronAPI) return;
+    getSermonColumns()
+      .then((res) => {
+        const columns = Array.isArray(res?.columns) ? res.columns : null;
+        if (!columns) return; // stub or unexpected shape — nothing to compare
+        const main = new Set(columns);
+        const missing = [...main].filter(c => !SERMON_COLUMNS.has(c));
+        const extra  = [...SERMON_COLUMNS].filter(c => !main.has(c));
+        if (missing.length || extra.length) {
+          console.error(
+            "[schema-contract] renderer SERMON_COLUMNS drifted from main allowlist.",
+            { missingFromRenderer: missing, extraInRenderer: extra }
+          );
+        }
+      })
+      .catch((e) => console.error("[schema-contract] check failed:", e));
   }, []);
 
   const [theme, setTheme] = useState(() => localStorage.getItem("sf-theme") || "light");

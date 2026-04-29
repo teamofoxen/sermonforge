@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-04-29 — fix: post-fragility audit follow-ups
+
+- `library-build-embeddings` now filters `library_chunks_status` by `embed_count = chunk_count`, so manuscripts left partial by a worker crash are retried instead of marked complete.
+- `electron/embedder/host.js` clears the idle timer before awaiting `ensureWorker()` and re-spawns if the worker reference goes stale during the yield, closing the idle-TTL race against in-flight embed requests.
+- New `app-get-sermon-columns` IPC + `App.jsx` mount assertion logs when the renderer `SERMON_COLUMNS` mirror drifts from the main allowlist; skipped under the browser-preview stub.
+- Documented `db-backupMemory` and `db-restoreMemory` in `docs/REFERENCE/ipc-channels.md` (Phase 4 channels that had been missing).
+
+---
+
 ## 2026-04-29 — fix: phase 6 — embedder worker_thread
 
 - `@xenova/transformers` pipeline now runs in a worker (`electron/embedder/worker.js`) driven from main by `electron/embedder/host.js`; model load and per-query embedding no longer block the main process.

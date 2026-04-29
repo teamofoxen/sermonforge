@@ -82,6 +82,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getAppVersion:    () => ipcRenderer.invoke("app-get-version"),
   submitFeedback:   (payload) => ipcRenderer.invoke("feedback-submit", payload),
 
+  // ── Schema contract guard ─────────────────────────────────────────────────
+  // Renderer-side SERMON_COLUMNS mirror is asserted against this on App mount.
+  getSermonColumns: () => ipcRenderer.invoke("app-get-sermon-columns"),
+
   // ── Progress events ───────────────────────────────────────────────────────
   onLibraryImportProgress: (callback) => {
     const handler = (event, data) => callback(data);

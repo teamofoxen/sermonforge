@@ -111,3 +111,6 @@ export const openDataFolder    = ()        => api.openDataFolder();
 // ── Pastor memory backup ──────────────────────────────────────────────────────
 export const backupMemory  = (json) => api.backupMemory(json);
 export const restoreMemory = ()     => api.restoreMemory();
+
+// ── Schema contract guard ─────────────────────────────────────────────────────
+export const getSermonColumns = () => api.getSermonColumns();
