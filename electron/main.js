@@ -190,17 +190,20 @@ async function initDatabase() {
 
   runMigrations();
 
-  // Ensure FTS index exists — tries FTS5 first, falls back to FTS4.
-  // Runs every startup; IF NOT EXISTS makes it a no-op when already present.
+  // Ensure FTS index exists. Pinned to FTS4 — historical FTS5 attempts produced
+  // install-to-install drift (snippet() argument signatures differ across FTS
+  // versions, and existing query paths use FTS4 syntax). FTS4 is the codified
+  // baseline. Existing installs that landed on FTS5 are left untouched (this
+  // block only runs when no library_fts exists yet).
   try {
     const ftsExists = queryOne("SELECT name FROM sqlite_master WHERE type='table' AND name='library_fts'");
     if (!ftsExists) {
       try {
-        db.run(`CREATE VIRTUAL TABLE library_fts USING fts5(id UNINDEXED, title, passage, manuscript_text)`);
-        console.log("FTS5 index created");
-      } catch (_) {
         db.run(`CREATE VIRTUAL TABLE library_fts USING fts4(id, title, passage, manuscript_text)`);
         console.log("FTS4 index created");
+      } catch (e) {
+        console.error("FTS4 not available:", e.message);
+        throw e;
       }
       // Rebuild index from any already-imported library rows
       const rows = queryAll("SELECT id, title, passage, manuscript_text FROM library");
@@ -403,6 +406,19 @@ function ensureLibraryDb() {
         UNIQUE (library_id, chunk_index)
       );
       CREATE INDEX IF NOT EXISTS idx_library_chunks_lib ON library_chunks (library_id);
+
+      -- Completion marker for indexLibraryManuscript. Without this, partial
+      -- runs (chunks inserted but vectors never written, or process killed
+      -- mid-loop) looked indexed-enough to library-build-embeddings — which
+      -- then skipped them, leaving them stuck in partial state with no signal.
+      -- A row exists here only when the full transactional indexLibraryManuscript
+      -- completed for that library_id; absence = needs (re)indexing.
+      CREATE TABLE IF NOT EXISTS library_chunks_status (
+        library_id  TEXT PRIMARY KEY,
+        indexed_at  TEXT NOT NULL,
+        chunk_count INTEGER NOT NULL,
+        embed_count INTEGER NOT NULL
+      );
     `);
     if (libraryVecAvailable) {
       try {
@@ -457,47 +473,84 @@ function chunkManuscript(text) {
 
 // Embed a manuscript and persist chunks + vectors to library.db.
 // Returns { chunks: number, embeddedAll: boolean }.
+//
+// Two-phase shape:
+//   Phase 1 (async, outside transaction): chunk + embed every chunk into an
+//     in-memory array. The embedder is async; better-sqlite3 transactions
+//     are sync, so embedding cannot run inside the transaction.
+//   Phase 2 (sync, inside transaction): delete the prior chunks/vectors (in
+//     the order that doesn't lose vec rows to orphaning — rowids first, then
+//     chunks), insert the new chunks/vectors, write the completion marker.
+//
+// On any throw inside phase 2, the transaction rolls back atomically and the
+// status marker is not written — library-build-embeddings will see the
+// library_id as needing (re)indexing on its next pass. Previously, the loop
+// inserted chunks one by one without a transaction; a kill mid-loop left
+// partial chunks that looked complete to the backfill heuristic and never
+// got re-tried.
 async function indexLibraryManuscript(libraryId, manuscriptText) {
   if (!ensureLibraryDb()) return { chunks: 0, embeddedAll: false };
   const chunks = chunkManuscript(manuscriptText);
   if (chunks.length === 0) return { chunks: 0, embeddedAll: true };
 
-  // Wipe any prior chunks for this library_id (idempotent re-index)
-  libraryDb.prepare("DELETE FROM library_chunks WHERE library_id = ?").run(libraryId);
+  // Phase 1 — embed all chunks. Vec entries are null when embedder is unavailable
+  // or fails for a single chunk; we still want the chunk text in FTS even when
+  // the vector is missing, so partial vectors are tracked separately.
+  const vectors = new Array(chunks.length).fill(null);
   if (libraryVecAvailable) {
-    try {
-      libraryDb.prepare("DELETE FROM library_vec WHERE rowid IN (SELECT id FROM library_chunks WHERE library_id = ?)").run(libraryId);
-    } catch (_) {}
+    for (let i = 0; i < chunks.length; i++) {
+      const vec = await embedText(chunks[i]);
+      if (vec && vec.length === EMBED_DIM) vectors[i] = vec;
+    }
   }
+  const embedCount = vectors.filter(v => v !== null).length;
 
+  // Phase 2 — atomic write. Order matters: capture old chunk ids before they
+  // are deleted so the corresponding vec rowids can be removed (the prior
+  // bug: DELETE-from-chunks-then-DELETE-from-vec-by-chunk-id always matched
+  // zero vec rows and left orphans).
   const insertChunk = libraryDb.prepare(
     "INSERT INTO library_chunks (library_id, chunk_index, chunk_text) VALUES (?, ?, ?)"
   );
   const insertVec = libraryVecAvailable
     ? libraryDb.prepare("INSERT INTO library_vec (rowid, embedding) VALUES (?, ?)")
     : null;
+  const upsertStatus = libraryDb.prepare(
+    `INSERT INTO library_chunks_status (library_id, indexed_at, chunk_count, embed_count)
+     VALUES (?, ?, ?, ?)
+     ON CONFLICT(library_id) DO UPDATE SET
+       indexed_at  = excluded.indexed_at,
+       chunk_count = excluded.chunk_count,
+       embed_count = excluded.embed_count`
+  );
+  const selectOldIds = libraryDb.prepare(
+    "SELECT id FROM library_chunks WHERE library_id = ?"
+  );
+  const deleteChunks = libraryDb.prepare(
+    "DELETE FROM library_chunks WHERE library_id = ?"
+  );
 
-  let embeddedAll = true;
-  for (let i = 0; i < chunks.length; i++) {
-    const info = insertChunk.run(libraryId, i, chunks[i]);
-    const chunkRowId = info.lastInsertRowid;
-    if (insertVec) {
-      const vec = await embedText(chunks[i]);
-      if (vec && vec.length === EMBED_DIM) {
-        try {
-          insertVec.run(chunkRowId, JSON.stringify(vec));
-        } catch (e) {
-          console.warn("[LIBRARY VEC] insert failed:", e.message);
-          embeddedAll = false;
-        }
-      } else {
-        embeddedAll = false;
+  const tx = libraryDb.transaction(() => {
+    if (libraryVecAvailable) {
+      const oldIds = selectOldIds.all(libraryId).map(r => r.id);
+      if (oldIds.length > 0) {
+        const placeholders = oldIds.map(() => "?").join(",");
+        libraryDb.prepare(`DELETE FROM library_vec WHERE rowid IN (${placeholders})`).run(...oldIds);
       }
-    } else {
-      embeddedAll = false;
     }
-  }
-  return { chunks: chunks.length, embeddedAll };
+    deleteChunks.run(libraryId);
+    for (let i = 0; i < chunks.length; i++) {
+      const info = insertChunk.run(libraryId, i, chunks[i]);
+      const rowid = info.lastInsertRowid;
+      if (insertVec && vectors[i]) {
+        insertVec.run(rowid, JSON.stringify(vectors[i]));
+      }
+    }
+    upsertStatus.run(libraryId, new Date().toISOString(), chunks.length, embedCount);
+  });
+  tx();
+
+  return { chunks: chunks.length, embeddedAll: embedCount === chunks.length && libraryVecAvailable };
 }
 
 // Copy a source .docx into userData/library/ (managed copy).
@@ -554,7 +607,7 @@ function runMigrations() {
   }
 
   if (version < 3) {
-    // v3: sermon library table + FTS search index
+    // v3: sermon library table + FTS search index. Pinned to FTS4 (see initDatabase).
     db.run(`CREATE TABLE IF NOT EXISTS library (
       id TEXT PRIMARY KEY,
       filepath TEXT UNIQUE,
@@ -568,13 +621,9 @@ function runMigrations() {
       imported_at TEXT DEFAULT (datetime('now'))
     )`);
     try {
-      db.run(`CREATE VIRTUAL TABLE IF NOT EXISTS library_fts USING fts5(id UNINDEXED, title, passage, manuscript_text)`);
-    } catch (_) {
-      try {
-        db.run(`CREATE VIRTUAL TABLE IF NOT EXISTS library_fts USING fts4(id, title, passage, manuscript_text)`);
-      } catch (e) {
-        console.error("FTS not available:", e.message);
-      }
+      db.run(`CREATE VIRTUAL TABLE IF NOT EXISTS library_fts USING fts4(id, title, passage, manuscript_text)`);
+    } catch (e) {
+      console.error("FTS not available:", e.message);
     }
     db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '3')");
     version = 3;
@@ -770,6 +819,20 @@ function runMigrations() {
     safeAlter("ALTER TABLE series ADD COLUMN emerging_big_idea TEXT DEFAULT ''");
     db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '14')");
     version = 14;
+  }
+
+  if (version < 15) {
+    // v15: content_hash on library — sha256 of manuscript_text. Used to:
+    //   1. detect a moved file (same hash, different filepath) → update path
+    //      instead of creating a duplicate row, fixing the prior re-import bug
+    //      where folder rename produced wholesale duplicates (M1).
+    //   2. detect an edited file (same filepath, different hash) → re-index
+    //      the chunks/vectors instead of `INSERT OR IGNORE`-skipping (M5).
+    // Backfilled lazily on next import; existing rows keep empty hash until
+    // touched. NULL/empty hash means "not yet computed", treated as no match.
+    safeAlter("ALTER TABLE library ADD COLUMN content_hash TEXT DEFAULT ''");
+    db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '15')");
+    version = 15;
   }
 }
 
@@ -1203,12 +1266,21 @@ ipcMain.handle("db-deleteLibraryItem", (_, id) => {
     // safe to retry; not part of the sermonforge.db transaction).
     if (ensureLibraryDb()) {
       try {
+        // Order matters: vec rows must be looked up by chunk id BEFORE the
+        // chunks themselves are deleted (the prior `DELETE library_chunks
+        // … then DELETE library_vec WHERE rowid IN (SELECT id FROM library_chunks)`
+        // pattern always matched zero, leaving orphans).
         if (libraryVecAvailable) {
-          libraryDb.prepare(
-            "DELETE FROM library_vec WHERE rowid IN (SELECT id FROM library_chunks WHERE library_id = ?)"
-          ).run(id);
+          const oldIds = libraryDb.prepare(
+            "SELECT id FROM library_chunks WHERE library_id = ?"
+          ).all(id).map(r => r.id);
+          if (oldIds.length > 0) {
+            const placeholders = oldIds.map(() => "?").join(",");
+            libraryDb.prepare(`DELETE FROM library_vec WHERE rowid IN (${placeholders})`).run(...oldIds);
+          }
         }
         libraryDb.prepare("DELETE FROM library_chunks WHERE library_id = ?").run(id);
+        libraryDb.prepare("DELETE FROM library_chunks_status WHERE library_id = ?").run(id);
       } catch (vecErr) {
         console.warn("[library deleteItem] failed to clean library.db chunks:", vecErr.message);
       }
@@ -1332,7 +1404,11 @@ ipcMain.handle("library-status", () => {
   }
 });
 
-// Backfill embeddings for any library rows that don't yet have chunks indexed.
+// Backfill embeddings for any library rows that don't yet have a completion
+// marker. Filtering by library_chunks_status (rather than DISTINCT library_id
+// in library_chunks) means partially-indexed rows correctly need re-indexing —
+// the prior heuristic treated any chunk presence as "indexed" and silently
+// stranded rows that crashed mid-run.
 // Sends "library-embed-progress" events: { done, total, complete }.
 ipcMain.handle("library-build-embeddings", async () => {
   if (!ensureLibraryDb()) {
@@ -1340,10 +1416,10 @@ ipcMain.handle("library-build-embeddings", async () => {
   }
 
   const all = queryAll("SELECT id, manuscript_text FROM library");
-  const indexed = new Set(
-    libraryDb.prepare("SELECT DISTINCT library_id FROM library_chunks").all().map(r => r.library_id)
+  const completed = new Set(
+    libraryDb.prepare("SELECT library_id FROM library_chunks_status").all().map(r => r.library_id)
   );
-  const todo = all.filter(r => !indexed.has(r.id) && r.manuscript_text);
+  const todo = all.filter(r => !completed.has(r.id) && r.manuscript_text);
   const total = todo.length;
 
   if (mainWindow && !mainWindow.isDestroyed()) {
@@ -1399,6 +1475,13 @@ ipcMain.handle("library-set-folder", async () => {
   return { canceled: false, path: chosen };
 });
 
+// Compute a stable identity hash for a manuscript. sha256 of the trimmed text;
+// invariant under filepath changes, sensitive to actual content edits.
+function libraryContentHash(text) {
+  const { createHash } = require("crypto");
+  return createHash("sha256").update(text || "").digest("hex");
+}
+
 ipcMain.handle("library-import", async (event) => {
   const libraryPath = getLibraryPath();
   if (!libraryPath || !fs.existsSync(libraryPath)) {
@@ -1407,27 +1490,24 @@ ipcMain.handle("library-import", async (event) => {
 
   const mammoth = require("mammoth");
   const allFiles = getAllDocxFiles(libraryPath);
-
-  const existingRows = queryAll("SELECT filepath FROM library");
-  const existingPaths = new Set(existingRows.map(r => r.filepath));
-
-  const toImport = allFiles.filter(f => !existingPaths.has(path.relative(libraryPath, f)));
-  const total = toImport.length;
+  const total = allFiles.length;
 
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send("library-import-progress", { done: 0, total, complete: false });
   }
 
-  let imported = 0;
+  let imported = 0; // newly inserted rows
+  let moved = 0;    // existing row, same hash, filepath updated
+  let updated = 0;  // existing row, same filepath, content changed → re-indexed
+  let skipped = 0;  // already imported, no change
   let errors = 0;
 
-  for (const filePath of toImport) {
+  for (const filePath of allFiles) {
     try {
       const relativePath = path.relative(libraryPath, filePath);
       const { title, passage, folder, seriesName } = parseLibraryFile(filePath, libraryPath);
 
-      // Managed copy: place a copy under userData/library/ so SermonForge owns the
-      // working set. The user's source folder is read-only from our perspective.
+      // Managed copy under userData/library/ — SermonForge owns the working set.
       try {
         copyToManagedLibrary(filePath, libraryPath);
       } catch (copyErr) {
@@ -1437,61 +1517,106 @@ ipcMain.handle("library-import", async (event) => {
       const result = await mammoth.extractRawText({ path: filePath });
       const manuscriptText = result.value.trim();
       const wordCount = manuscriptText.split(/\s+/).filter(Boolean).length;
-      const id = randomUUID();
+      const contentHash = libraryContentHash(manuscriptText);
 
-      // NOTE: UNIQUE constraint is on filepath (relative path). Moving a file within
-      // the library folder changes its relative path, causing re-import to create a
-      // duplicate record. The old record becomes an orphan in search results. A future
-      // "clean orphans" function would resolve this.
-      db.run(
-        `INSERT OR IGNORE INTO library (id, filepath, filename, title, passage, folder, series_name, manuscript_text, word_count)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [id, relativePath, path.basename(filePath, ".docx"), title, passage, folder, seriesName, manuscriptText, wordCount]
-      );
+      // Identity resolution order:
+      //   1. Match by content_hash (file moved / renamed → reuse the row).
+      //   2. Match by filepath (file edited → re-index).
+      //   3. New file → INSERT + index.
+      const byHash = contentHash
+        ? queryAll("SELECT id, filepath FROM library WHERE content_hash = ? LIMIT 1", [contentHash])[0]
+        : null;
+      const byPath = byHash ? null : queryAll(
+        "SELECT id, content_hash FROM library WHERE filepath = ? LIMIT 1",
+        [relativePath]
+      )[0];
 
-      // Only insert into FTS / index embeddings when a new row was actually created
-      // (not an IGNORE no-op). An IGNORE no-op means the file was already imported.
-      if (db.getRowsModified() > 0) {
+      if (byHash) {
+        if (byHash.filepath !== relativePath) {
+          db.run("UPDATE library SET filepath = ? WHERE id = ?", [relativePath, byHash.id]);
+          moved++;
+        } else {
+          skipped++;
+        }
+      } else if (byPath) {
+        if (byPath.content_hash === contentHash) {
+          // Same path, same content (existing row predates content_hash backfill or
+          // hashing failed). Backfill the hash so future moves are detectable; no
+          // re-index required since the content didn't change.
+          db.run("UPDATE library SET content_hash = ? WHERE id = ?", [contentHash, byPath.id]);
+          skipped++;
+        } else {
+          // Same path, different content → file edited.
+          db.run(
+            "UPDATE library SET manuscript_text = ?, word_count = ?, content_hash = ? WHERE id = ?",
+            [manuscriptText, wordCount, contentHash, byPath.id]
+          );
+          // Drop FTS row + status marker; re-add below so FTS and status reflect new content.
+          db.run("DELETE FROM library_fts WHERE id = ?", [byPath.id]);
+          if (ensureLibraryDb()) {
+            try {
+              libraryDb.prepare("DELETE FROM library_chunks_status WHERE library_id = ?").run(byPath.id);
+            } catch (_) {}
+          }
+          try {
+            db.run(
+              "INSERT INTO library_fts (id, title, passage, manuscript_text) VALUES (?, ?, ?, ?)",
+              [byPath.id, title, passage, manuscriptText]
+            );
+          } catch (e) {
+            console.warn("[library-import] FTS reinsert failed for", relativePath, e.message);
+          }
+          try {
+            await indexLibraryManuscript(byPath.id, manuscriptText);
+          } catch (e) {
+            console.warn("[library-import] re-embed failed for", relativePath, e.message);
+          }
+          updated++;
+        }
+      } else {
+        // Brand-new file.
+        const id = randomUUID();
+        db.run(
+          `INSERT INTO library (id, filepath, filename, title, passage, folder, series_name, manuscript_text, word_count, content_hash)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [id, relativePath, path.basename(filePath, ".docx"), title, passage, folder, seriesName, manuscriptText, wordCount, contentHash]
+        );
         try {
           db.run(
-            `INSERT INTO library_fts (id, title, passage, manuscript_text) VALUES (?, ?, ?, ?)`,
+            "INSERT INTO library_fts (id, title, passage, manuscript_text) VALUES (?, ?, ?, ?)",
             [id, title, passage, manuscriptText]
           );
         } catch (e) {
-          console.warn("[library-import] FTS insert failed for", path.basename(filePath, ".docx"), e.message);
+          console.warn("[library-import] FTS insert failed for", relativePath, e.message);
         }
-
         try {
           await indexLibraryManuscript(id, manuscriptText);
         } catch (e) {
-          console.warn("[library-import] embedding failed for", path.basename(filePath, ".docx"), e.message);
+          console.warn("[library-import] embedding failed for", relativePath, e.message);
         }
+        imported++;
       }
-
-      imported++;
     } catch (e) {
       console.error(`Import error for ${filePath}:`, e.message);
       errors++;
     }
 
-    if ((imported + errors) % 10 === 0) {
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send("library-import-progress", { done: imported, total, complete: false });
-      }
+    const done = imported + moved + updated + skipped + errors;
+    if (done % 10 === 0 && mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send("library-import-progress", { done, total, complete: false });
     }
-
-    if ((imported + errors) % 50 === 0) {
-      saveDb();
-    }
+    if (done % 50 === 0) saveDb();
   }
 
   saveDb();
 
   if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send("library-import-progress", { done: imported, total, complete: true });
+    mainWindow.webContents.send("library-import-progress", {
+      done: imported + moved + updated + skipped + errors, total, complete: true,
+    });
   }
 
-  return { total: allFiles.length, imported, errors, skipped: existingPaths.size };
+  return { total, imported, moved, updated, skipped, errors };
 });
 
 ipcMain.handle("library-search", async (event, { query, limit = 100, mode = "browse" }) => {
