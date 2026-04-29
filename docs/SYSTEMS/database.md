@@ -85,14 +85,27 @@ exact-phrase and book-name lookups are the primary retrieval need.
 
 - **Vector search via `sqlite-vec`** against a `theology_vec` vec0 virtual table
   (384-dim). Query embeddings are generated locally using `@xenova/transformers`
-  with the `Xenova/all-MiniLM-L6-v2` model (quantized). The model is lazy-loaded
-  on first semantic search; subsequent queries reuse the loaded pipeline.
+  with the `Xenova/all-MiniLM-L6-v2` model (quantized).
 - **FTS4 (`theology_fts`)** runs alongside vector search. Exact phrase matches
   from FTS are ranked first; semantic results fill remaining slots.
 - **Automatic fallback to FTS-only** when the vector table has no embeddings or
   when the embedding model fails to load.
 
 No external embedding API is used — embeddings are computed on-device.
+
+### Embedding pipeline location (Phase 6)
+
+The Xenova pipeline runs in a `worker_threads` worker
+(`electron/embedder/worker.js`), driven from main via
+`electron/embedder/host.js`. This keeps ONNX runtime CPU work off the
+main process so renderer IPC, `flushDb`, and dialog handling do not
+stall during model load (1–3 s cold) or per-query embedding.
+
+Kill switch: set `SF_EMBED_WORKER=0` in `.env` or environment to fall
+back to the pre-Phase-6 main-thread pipeline (preserved verbatim inside
+`host.js`). Worker idle TTL: 10 min — terminates the worker to release
+~85 MB of model memory; the next call respawns. Worker crash: pending
+requests reject with a tagged error and the next call respawns.
 
 ---
 

@@ -338,8 +338,7 @@ function saveDb() {
 // theology.db is managed exclusively by better-sqlite3 due to sqlite-vec dependency.
 // DO NOT access via sql.js.
 let theologyVecAvailable = false;  // true when theology_vec table has embeddings
-let embedder = null;               // lazy-loaded sentence-transformer pipeline (Xenova MiniLM L6 v2)
-                                   // Shared by theology and library — model is ~40MB quantized, load once.
+const embedderHost = require("./embedder/host"); // worker-backed by default (electron/embedder/host.js); kill-switch via SF_EMBED_WORKER=0
 
 async function ensureTheologyDbLoaded() {
   if (theologyDb) return;
@@ -380,31 +379,12 @@ async function ensureTheologyDbLoaded() {
   }
 }
 
-async function ensureEmbedder() {
-  if (embedder) return true;
-  console.log("[VECTOR] Loading embedding model...");
-  try {
-    const { pipeline, env } = await import("@xenova/transformers");
-    env.cacheDir = paths.models;
-    env.allowRemoteModels = false;
-    embedder = await pipeline("feature-extraction", "Xenova/all-MiniLM-L6-v2", {
-      quantized: true,
-    });
-    console.log(`[VECTOR] Embedder available: ${!!embedder}`);
-    return true;
-  } catch (e) {
-    console.error("[VECTOR] Embedding model failed to load:", e.message);
-    return false;
-  }
-}
-
 // Embed a single text into a 384-dim vector. Returns the array, or null on failure.
+// Delegates to embedder/host.js, which dispatches to a worker_thread by default
+// (Phase 6) and to a main-thread pipeline when SF_EMBED_WORKER=0.
 async function embedText(text) {
-  const ok = await ensureEmbedder();
-  if (!ok) return null;
   try {
-    const output = await embedder([text], { pooling: "mean", normalize: true });
-    return Array.from(output[0].data);
+    return await embedderHost.embedText(text);
   } catch (e) {
     console.error("[VECTOR] embedText failed:", e.message);
     return null;
@@ -2111,10 +2091,9 @@ ipcMain.handle("theology-search", async (event, { query, limit = 5 }) => {
     if (theologyVecAvailable) {
       console.log("[VECTOR] Semantic search activated");
       try {
-        const ok = await ensureEmbedder();
-        if (ok) {
-          const output = await embedder([query], { pooling: "mean", normalize: true });
-          const qVec = JSON.stringify(Array.from(output[0].data));
+        const qVecArr = await embedText(query);
+        if (qVecArr) {
+          const qVec = JSON.stringify(qVecArr);
           const fetchLimit = detectedAuthors.length > 0 ? limit * 10 : limit * 4;
 
           console.log("[VECTOR] Running KNN query");
@@ -3213,7 +3192,6 @@ app.on("before-quit", async (e) => {
   if (theologyDb) { try { theologyDb.close(); } catch (_) {} }
   theologyDb = null;
   theologyVecAvailable = false;
-  embedder = null;
   if (libraryDb) {
     try { libraryDb.close(); } catch (_) {}
     libraryDb = null;
