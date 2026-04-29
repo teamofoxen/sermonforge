@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-04-29 — fix: save-payload hotfix (H1 pulled forward from Phase 7)
+
+- `SermonWorkspace.persistUpdate` now filters `sermonRef.current` through a renderer-side `SERMON_COLUMNS` mirror (`src/constants/sermonColumns.js`) before sending to `updateSermon`, stripping JOIN fields (`series_title`, `series_color`), the attached `series`/`section` objects, and primary-key/timestamp columns.
+- Without this, `buildUpdate`'s dev-throw guard rejected every save in dev mode, the throw was caught silently in the renderer's `try/catch`, and edits to MPT, MPS, observations, manuscript, etc. never reached the DB despite the optimistic `setSermon` making the UI look correct.
+- The main-side `SERMON_COLUMNS` allowlist + `buildUpdate` remain the security boundary; the renderer filter is a layered UX fix.
+
+---
+
 ## 2026-04-29 — fix: db-corruption hotfix (Phase 2 follow-up)
 
 - `tryLoad` now validates the loaded DB via `SELECT name FROM sqlite_master LIMIT 1` — `new SQL.Database(buf)` does not throw on page-level corruption, so the prior recovery code missed corrupt primaries and let queries fail at runtime instead of falling back to `.bak`.
