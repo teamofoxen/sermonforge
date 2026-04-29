@@ -1,71 +1,23 @@
 ---
 name: end-session
-description: Finalize a SermonForge work session safely — log changes, enforce invariants, gate risks, commit, and push. This is the ONLY allowed path for repository changes. Use when the user types /end-session or asks to wrap up/finalize/commit and push the session.
+description: Finalize a SermonForge work session — update CHANGELOG, commit, push. This is the only sanctioned path for committing changes. Use when the user types /end-session or asks to wrap up/finalize/commit and push the session.
 trigger: /end-session
 ---
 
 # end-session
 
-Finalize a SermonForge work session safely: log changes, enforce invariants, gate risks, commit, and push. This is the ONLY allowed path for repository changes.
+Wrap up a SermonForge work session: update CHANGELOG, commit, push.
 
----
+## STEP 1 — PRECHECK
 
-## STEP 0 — PRECHECK (MANDATORY)
+Run `git status`. If there are no tracked modifications, return `No changes to commit.` and STOP.
 
-Run:
-```
-git status
-```
+## STEP 2 — UPDATE CHANGELOG
 
-If no changes:
-- Return exactly: `No changes to commit.`
-- STOP.
-
----
-
-## STEP 1 — LOG CHANGES
-
-Run:
-```
-git diff --name-only
-```
-
-Generate this report:
-
-```
-## Summary
-- 1–2 sentences
-
-## Files Modified
-- list only
-
-## Key Changes
-- bullets only (high-signal)
-
-## Invariant Check
-- createOutlinePoint() only: Pass/Fail
-- no sermon big_idea writes: Pass/Fail
-- imports valid: Pass/Fail
-
-## Risks
-- None OR brief bullets
-```
-
----
-
-## STEP 2 — GATE
-
-- If ANY invariant = Fail: STOP and report the failure.
-- If risks are non-trivial: STOP and ask for explicit confirmation.
-- Do NOT proceed past this step if blocked.
-
----
-
-## STEP 2.5 — UPDATE CHANGELOG (MANDATORY)
-
-Prepend ONE new section to the top of `CHANGELOG.md` (immediately after the first `---`), summarizing ONLY this session's changes.
+Prepend ONE new section to the top of `CHANGELOG.md`, immediately after the first `---`.
 
 Format:
+
 ```
 ## YYYY-MM-DD — <commit subject>
 
@@ -73,66 +25,27 @@ Format:
 - bullet
 ```
 
-Rules (from `CLAUDE.md` CHANGELOG Rules):
-- Max 5 bullets, each one sentence.
-- Current session only — do NOT restate prior entries or explain rationale.
-- Use today's date.
-- Keep the new section under 120 words.
-- If the file has diverged from the `[Unreleased]` template, match the existing per-session format (as seen at the top of `CHANGELOG.md`).
-
----
+Rules: max 5 bullets, one sentence each, today's date, current session only, under 120 words. Do NOT restate prior entries or explain rationale.
 
 ## STEP 3 — COMMIT
 
-Run:
-```
-git add .
-```
+Stage only the files this session touched. Do **NOT** use `git add .` — pre-existing untracked files in the working tree may be unrelated to this session.
 
-Create ONE commit unless changes are clearly unrelated.
-
-Commit message format:
-- Title: one line
-- Body: max 5 bullets
-
-Run:
-```
-git commit -m "<message>"
-```
-
----
+Commit message: title = the subject used in the CHANGELOG entry. Body = max 5 bullets matching the CHANGELOG content.
 
 ## STEP 4 — PUSH
 
-Run:
-```
-git push origin main
-```
-
----
+`git push origin main`.
 
 ## STEP 5 — CONFIRM
 
-Return ONLY:
+Return only:
 - Commit hash
 - `Pushed`
 
----
-
-## OUTPUT RULES
-
-- Max 150 words
-- No suggestions
-- No explanations
-- No extra commentary
-- Stop after confirmation
-
----
-
 ## HARD RULES
 
-- Do NOT skip invariant check
-- Do NOT commit if gate fails
-- Do NOT push if commit fails
-- Do NOT perform partial actions
-- Do NOT suggest improvements
+- Do NOT stage unrelated untracked files.
+- Do NOT push if commit fails.
+- Do NOT generate a pre-commit summary report — the in-session sweep output (if any) is sufficient context.
+- Do NOT skip the CHANGELOG update.

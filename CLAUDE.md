@@ -76,34 +76,24 @@ historical reference; do not use it as a working guide.
 
 ## Execution Gates
 
-All code changes must pass mandatory sweep checks before proceeding.
+Run `/sweep-the-house` before commit **only** if the diff touches:
 
-### Required Sequence After ANY Code Change
+- `electron/main.js` or `electron/preload.js` (IPC, schema, save path)
+- `src/utils/contextBuilder.js` (context tier logic, tier budgets)
+- `src/utils/ai.js` or any file in `src/prompts/` (AI flow + system prompts)
+- `src/db/database.js` exported wrapper functions (IPC boundary)
+- Migration files or any change that adds/modifies a `sermons` column
 
-1. Run /sweep-the-room
-   - If STATUS = MESSY → STOP
-   - Fix issues before continuing
+For everything else (UI, styling, copy, component refactors, docs, skills, memory, CLAUDE.md itself), skip the sweep and go straight to `/end-session`.
 
-2. Run /sweep-the-house
-   - If STATUS = FAIL → STOP
-   - If STATUS = WARN → STOP and ask
-   - Fix issues before continuing
+### When the sweep runs
 
-3. Only after both pass:
-   - Continue work OR
-   - Run /end-session
+- STATUS = FAIL → STOP, fix the finding, re-run.
+- STATUS = WARN → STOP and ask before continuing.
+- STATUS = PASS → continue or run `/end-session`.
 
 ### Hard Rules
 
-- No skipping sweep steps
-- No continuing work while in a failing state
-- No commits or pushes before passing both sweeps
-- No explanations or further changes until current state is CLEAN
-
-### Enforcement
-
-If a sweep fails:
-- Immediately stop
-- Do not proceed
-- Do not suggest next steps
-- Fix only the failing issues
+- The trigger is the path, not the size — a one-line edit to `electron/main.js` still requires the sweep.
+- Never commit or push while in a failing sweep state.
+- `/sweep-the-room` has been retired; its checks are a strict subset of `/sweep-the-house`.
