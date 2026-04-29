@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-04-29 — fix: db-corruption hotfix (Phase 2 follow-up)
+
+- `tryLoad` now validates the loaded DB via `SELECT name FROM sqlite_master LIMIT 1` — `new SQL.Database(buf)` does not throw on page-level corruption, so the prior recovery code missed corrupt primaries and let queries fail at runtime instead of falling back to `.bak`.
+- `flushDb` is now serialized via a promise chain so two concurrent calls cannot race on the shared `<dbPath>.tmp` file (the prior race interleaved bytes from two flushes and produced a malformed file that the rotation then promoted into `dbPath`).
+- No IPC, schema, or external contract changes.
+
+---
+
 ## 2026-04-29 — fix: phase 5 library + theology consistency
 
 - Library import now identity-resolves by content-hash → filepath → new: a moved file updates filepath instead of creating a duplicate row, and an edited file is detected and re-indexed instead of `INSERT OR IGNORE`-skipped (v15 adds `content_hash` column).
