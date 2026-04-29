@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-04-29 — chore: ignore design-context bundles, drop diag scripts
+
+- `design-context/` and `sermonforge-design-context.md` added to `.gitignore` (regeneratable design-tool snapshots that duplicate `src/styles` and `src/components`).
+- Removed one-shot `scripts/diag-db-diff.js` and `scripts/diag-recent-sermons.js` from the db-corruption and save-payload hotfix sessions.
+
+---
+
 ## 2026-04-29 — fix: post-fragility audit follow-ups
 
 - `library-build-embeddings` now filters `library_chunks_status` by `embed_count = chunk_count`, so manuscripts left partial by a worker crash are retried instead of marked complete.

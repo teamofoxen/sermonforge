@@ -54,3 +54,8 @@ StudyGuides/
 
 # Obsidian vault config — unrelated to the app
 .obsidian/
+
+# Design-tool context bundles — duplicates of src/styles + src/components
+# regenerated on demand for external design tools; do not commit (stale parallel copies).
+design-context/
+sermonforge-design-context.md
