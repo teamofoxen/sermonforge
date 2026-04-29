@@ -330,6 +330,28 @@ builds) or `process.env` (dev). Validates Anthropic key starts with `sk-ant-`
 and is ≥ 20 chars. On success, calls `resetClient()` so the cached SDK client
 is rebuilt with the new key on the next AI call.
 
+### `"app-get-startup-warning"`
+```
+receives: nothing
+returns:  null | { kind: "onedrive" | "onedrive-first-run", path: string }
+```
+Pull-pattern delivery of one-shot startup warnings. Renderer
+(`OneDriveWarning.jsx`) calls once on mount; main returns the pending
+warning and clears the slot so subsequent calls in the same process see
+`null`. The warning is populated in `app.whenReady` after `initDatabase`
+when `paths.userData` matches `/OneDrive/i`. `kind === "onedrive-first-run"`
+when no `sermonforge.db` existed at init entry (drives a blocking modal);
+`kind === "onedrive"` otherwise (drives a localStorage-sticky banner).
+
+### `"app-open-data-folder"`
+```
+receives: nothing
+returns:  Promise<string> (empty string on success, error message on failure — passes shell.openPath result through)
+```
+Opens `paths.userData` in the OS file manager. Wired to the OneDrive
+warning surfaces so the user can locate the folder before relocating
+OneDrive sync away from it.
+
 ---
 
 ## Events (one-way, main → renderer)

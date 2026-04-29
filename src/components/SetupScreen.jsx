@@ -208,6 +208,15 @@ export default function SetupScreen({ onComplete }) {
           Keys are stored securely on this machine and only sent directly to Anthropic
           and Crossway when you use those features.
         </p>
+
+        {/* OneDrive caution — surfaced here so new users see it before adding data. */}
+        <p style={{
+          color: "var(--ink-ghost)", fontSize: "12px",
+          textAlign: "center", marginTop: "10px", lineHeight: "1.5",
+        }}>
+          <strong style={{ color: "var(--ink-soft)" }}>Note:</strong> avoid running SermonForge from a
+          OneDrive-synced folder. Cloud sync can corrupt the local database.
+        </p>
       </div>
     </div>
   );

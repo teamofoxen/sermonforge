@@ -94,6 +94,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
     return () => ipcRenderer.removeListener("library-embed-progress", handler);
   },
 
+  // ── Startup warnings (OneDrive etc.) ──────────────────────────────────────
+  // Pull-pattern: main holds a one-shot warning slot, renderer fetches on mount.
+  // Avoids racing the React mount that a webContents.send would lose.
+  getStartupWarning: () => ipcRenderer.invoke("app-get-startup-warning"),
+  openDataFolder: () => ipcRenderer.invoke("app-open-data-folder"),
+
   // ── Disk-write health ─────────────────────────────────────────────────────
   // Subscriber for the persistent banner. main emits "db-write-error" only on
   // the second consecutive flushDb failure; emits "db-write-ok" once writes recover.

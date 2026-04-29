@@ -6,6 +6,7 @@ import TourOverlay from "./components/TourOverlay";
 import SetupScreen from "./components/SetupScreen";
 import Sidebar from "./components/Sidebar";
 import Dashboard from "./components/Dashboard";
+import OneDriveWarning from "./components/OneDriveWarning";
 
 const SermonList = lazy(() => import("./components/SermonList"));
 const Calendar = lazy(() => import("./components/Calendar"));
@@ -180,6 +181,7 @@ export default function App() {
   return (
     <ErrorBoundary>
     <TourProvider>
+    <OneDriveWarning />
     {writeError && (
       <div className="write-error-banner" role="alert">
         <div className="write-error-banner-text">

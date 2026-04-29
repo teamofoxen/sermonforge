@@ -274,7 +274,7 @@ export function logMemory() {
   return m;
 }
 
-if (typeof window !== 'undefined') {
+if (typeof window !== 'undefined' && import.meta.env?.DEV) {
   window.memoryDebug = { getMemory, clearMemory, logMemory };
 }
 
