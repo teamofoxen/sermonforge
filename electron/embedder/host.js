@@ -122,7 +122,16 @@ function ensureWorker() {
 
 async function embedTextsViaWorker(texts) {
   if (!Array.isArray(texts) || texts.length === 0) return [];
-  const w = await ensureWorker();
+  // Clear the idle timer BEFORE awaiting ensureWorker(). The idle callback is a
+  // macrotask; the await yields and gives that callback a chance to fire and
+  // terminate the worker we are about to post to. Clearing first removes the
+  // race window. The timer is re-armed after postMessage below.
+  clearIdleTimer();
+  let w = await ensureWorker();
+  // Defense in depth: if anything else still terminated the worker during the
+  // yield (a crash, a manual terminate from elsewhere), the reference we hold
+  // is stale. Re-spawn before posting.
+  if (w !== worker) w = await ensureWorker();
   const requestId = nextRequestId++;
   const result = new Promise((resolve, reject) => {
     const timer = setTimeout(() => {

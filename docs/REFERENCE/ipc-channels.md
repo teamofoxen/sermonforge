@@ -89,6 +89,28 @@ returns:  true
 ```
 Upserts a value in the `settings` table. Triggers a debounced `saveDb()`.
 
+### `"db-backupMemory"`
+```
+receives: json string (serialized pastor memory object)
+returns:  { ok: true } | { ok: false, error: string }
+```
+Write-through copy of the renderer's `localStorage.sermonforge_memory` to
+`%APPDATA%\sermonforge\data\memory-backup.json`. Survives Electron major
+upgrades, manual cache clears, and migrate-to-new-machine. Called fire-and-forget
+from `saveMemory()` in `src/utils/memory.js`. Memory remains primary in
+localStorage — this is a durability backup, not a source of truth. Per
+`docs/CORE.md`, full memory does not move to the main process because the IPC
+round-trip per AI call is too expensive.
+
+### `"db-restoreMemory"`
+```
+receives: nothing
+returns:  { ok: true, json: string|null } | { ok: false, error: string }
+```
+Reads the memory backup file. Called from `App.jsx` mount via
+`restoreMemoryFromBackup()` when localStorage is empty. Returns `json: null`
+when no backup file exists (first launch, or backup never written).
+
 ---
 
 ## Library

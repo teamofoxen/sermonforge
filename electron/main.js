@@ -1452,8 +1452,16 @@ ipcMain.handle("library-build-embeddings", async () => {
   }
 
   const all = queryAll("SELECT id, manuscript_text FROM library");
+  // Only treat a library row as fully indexed when every chunk has a vector.
+  // The status row is upserted at the end of indexLibraryManuscript even when
+  // some chunks failed to embed (e.g. worker crash mid-batch in Phase 6),
+  // recording embed_count < chunk_count. Filtering by row presence alone would
+  // mark those manuscripts complete and never retry the failed chunks.
   const completed = new Set(
-    libraryDb.prepare("SELECT library_id FROM library_chunks_status").all().map(r => r.library_id)
+    libraryDb
+      .prepare("SELECT library_id FROM library_chunks_status WHERE embed_count = chunk_count")
+      .all()
+      .map(r => r.library_id)
   );
   const todo = all.filter(r => !completed.has(r.id) && r.manuscript_text);
   const total = todo.length;
@@ -2860,6 +2868,15 @@ ipcMain.handle("db-restoreMemory", async () => {
 
 ipcMain.handle("app-get-version", () => {
   return { version: app.getVersion() };
+});
+
+// Renderer compares the array it gets here to its mirror in
+// src/constants/sermonColumns.js. Drift between the two re-introduces the
+// silent-save bug class (renderer posts an unknown column → buildUpdate's
+// dev-throw rejects the entire UPDATE). assertSchemaContract guards live
+// schema vs main-side; this guards renderer mirror vs main-side.
+ipcMain.handle("app-get-sermon-columns", () => {
+  return { columns: [...SERMON_COLUMNS] };
 });
 
 // Opens the userData folder in the OS file manager. Wired to the OneDrive
