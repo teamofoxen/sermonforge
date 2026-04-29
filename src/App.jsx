@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, Component, lazy, Suspense } from "react";
-import { createSeries, getApiKeyStatus, removeTourSermon } from "./db/database";
+import { createSeries, getApiKeyStatus, removeTourSermon, onDbWriteError, onDbWriteOk, flushDb } from "./db/database";
 import { TourProvider } from "./contexts/TourContext";
 import TourOverlay from "./components/TourOverlay";
 import SetupScreen from "./components/SetupScreen";
@@ -141,12 +141,62 @@ export default function App() {
     setCurrentView("dashboard");
   }, []);
 
+  // Persistent disk-write banner. main emits "db-write-error" only after two
+  // consecutive flushDb failures, so a single transient OneDrive/AV lock that
+  // self-recovers on the next debounced write does not pop a banner.
+  const [writeError, setWriteError] = useState(null);
+  const [retrying, setRetrying] = useState(false);
+
+  useEffect(() => {
+    const unsubError = onDbWriteError((msg) => setWriteError(msg || "Unknown error"));
+    const unsubOk = onDbWriteOk(() => setWriteError(null));
+    return () => { unsubError?.(); unsubOk?.(); };
+  }, []);
+
+  const handleRetryFlush = useCallback(async () => {
+    setRetrying(true);
+    try {
+      const result = await flushDb();
+      if (result?.ok) setWriteError(null);
+      else if (result?.error) setWriteError(result.error);
+    } catch (e) {
+      setWriteError(e?.message || "Retry failed");
+    } finally {
+      setRetrying(false);
+    }
+  }, []);
+
   if (keyReady === null) return null; // brief loading — avoids flash of setup screen
   if (keyReady === false) return <SetupScreen onComplete={() => setKeyReady(true)} />;
 
   return (
     <ErrorBoundary>
     <TourProvider>
+    {writeError && (
+      <div className="write-error-banner" role="alert">
+        <div className="write-error-banner-text">
+          <strong>Last save did not reach disk.</strong>
+          <span className="write-error-banner-detail">{writeError}</span>
+        </div>
+        <div className="write-error-banner-actions">
+          <button
+            className="btn-primary btn-sm"
+            onClick={handleRetryFlush}
+            disabled={retrying}
+          >
+            {retrying ? "Retrying…" : "Retry"}
+          </button>
+          <button
+            className="btn-ghost btn-sm"
+            onClick={() => setWriteError(null)}
+            disabled={retrying}
+            title="Dismiss without retrying"
+          >
+            Dismiss
+          </button>
+        </div>
+      </div>
+    )}
     <div className="app-shell">
       <Sidebar
         currentView={currentView}

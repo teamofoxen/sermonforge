@@ -2596,6 +2596,53 @@ button {
   margin-top: 4px;
 }
 
+/* ── Disk-write error banner ─────────────────────────────────────────────── */
+/* Persistent bar pinned to the top of the viewport when sql.js fails to flush
+   sermonforge.db twice in a row. Sits above the app-shell so the pastor sees
+   it whatever view they're in. Do not auto-dismiss — only the renderer's
+   db-write-ok subscriber or the pastor's Dismiss click clears it. */
+.write-error-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 20px;
+  background: var(--crimson-pale);
+  color: var(--ink);
+  border-bottom: 2px solid var(--crimson);
+  box-shadow: var(--shadow-soft);
+  font-family: 'Crimson Pro', serif;
+  font-size: 14px;
+}
+.write-error-banner-text {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+}
+.write-error-banner-text strong {
+  font-weight: 600;
+  color: var(--crimson);
+}
+.write-error-banner-detail {
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-family: 'JetBrains Mono', monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.write-error-banner-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
 /* ── Responsive ──────────────────────────────────────────────────────────── */
 @media (max-width: 980px) {
   .dash-grid { grid-template-columns: 1fr; }
