@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-04-29 — fix: phase 1 visibility (errors + db-write banner + log redaction)
+
+- AI errors now throw from main instead of returning friendly strings; renderer's empty-string fallback handles failure paths uniformly so error text no longer reaches chat, pastor memory, or `last_tune_up`.
+- Added `db-write-error` IPC subscriber and persistent banner with retry; `flushDb` emits only on the second consecutive failure, with `db-write-ok` clearing it on recovery.
+- Added `db-flush` IPC for the banner's retry button; preload exposes `onDbWriteError`, `onDbWriteOk`, `flushDb`.
+- AI audit log now records structured `error: {kind, message}` for configuration, format, and api failures.
+- Feedback submissions now redact `sk-ant-…`, `github_pat_…`, `ghp_…`, and `Token <key>` shapes from the attached log tail.
+
+---
+
 ## 2026-04-29 — chore: remove stale gate-reminder hooks
 
 - Dropped the PostToolUse echo hook that injected `"GATE: Run /sweep-the-room..."` after every Edit/Write — referenced the deleted skill and added latency.

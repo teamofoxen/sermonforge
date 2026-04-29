@@ -93,4 +93,20 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.on("library-embed-progress", handler);
     return () => ipcRenderer.removeListener("library-embed-progress", handler);
   },
+
+  // ── Disk-write health ─────────────────────────────────────────────────────
+  // Subscriber for the persistent banner. main emits "db-write-error" only on
+  // the second consecutive flushDb failure; emits "db-write-ok" once writes recover.
+  onDbWriteError: (callback) => {
+    const handler = (event, message) => callback(message);
+    ipcRenderer.on("db-write-error", handler);
+    return () => ipcRenderer.removeListener("db-write-error", handler);
+  },
+  onDbWriteOk: (callback) => {
+    const handler = () => callback();
+    ipcRenderer.on("db-write-ok", handler);
+    return () => ipcRenderer.removeListener("db-write-ok", handler);
+  },
+  // Manual flush — banner's "Retry" button.
+  flushDb: () => ipcRenderer.invoke("db-flush"),
 });

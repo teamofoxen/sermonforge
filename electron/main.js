@@ -34,6 +34,7 @@ let libraryVecAvailable = false;
 let mainWindow;
 let saveTimer = null;
 let _pendingWrite = false; // true between saveDb() and the debounce flush; used for crash-window warn
+let _flushFailureCount = 0; // consecutive flushDb failures; banner fires at >= 2 to avoid noise on a single transient lock
 
 const LIBRARY_PATH = path.join(os.homedir(), "OneDrive", "Ministry", "Preaching", "Sermon Library");
 const MANAGED_LIBRARY_DIRNAME = "library";    // subfolder under userData for managed .docx copies
@@ -183,7 +184,7 @@ async function initDatabase() {
 }
 
 async function flushDb() {
-  if (!db || !dbPath) return;
+  if (!db || !dbPath) return { ok: true, skipped: true };
   // If _pendingWrite is still true here, flushDb was called externally (e.g. quit handler)
   // while a debounced write was still queued. The 500ms crash window was open.
   if (isDev && _pendingWrite) {
@@ -197,9 +198,23 @@ async function flushDb() {
     const data = db.export();
     await fs.promises.writeFile(dbPath, Buffer.from(data));
     _pendingWrite = false;
+    if (_flushFailureCount > 0) {
+      // Recovered. Tell the renderer the banner can dismiss.
+      _flushFailureCount = 0;
+      mainWindow?.webContents?.send("db-write-ok");
+    }
+    return { ok: true };
   } catch (e) {
+    _flushFailureCount += 1;
     console.error("Failed to save DB:", e.message);
-    mainWindow?.webContents?.send("db-write-error", e.message);
+    logError("[DB] flush failed", e);
+    // Only emit the user-visible signal after two consecutive failures so a single
+    // transient OneDrive/AV lock doesn't pop a banner that auto-recovers on the next
+    // debounced write. The first failure still appears in app.log via logError above.
+    if (_flushFailureCount >= 2) {
+      mainWindow?.webContents?.send("db-write-error", e.message);
+    }
+    return { ok: false, error: e.message };
   }
 }
 
@@ -2499,6 +2514,10 @@ ipcMain.handle("db-getSchemaVersion", () => {
   return { version: row ? row.value : "unknown" };
 });
 
+// Manual flush — called by the write-error banner's "Retry" button. Returns the
+// flushDb result shape so the renderer can either dismiss the banner or keep it.
+ipcMain.handle("db-flush", async () => flushDb());
+
 ipcMain.handle("app-get-version", () => {
   return { version: app.getVersion() };
 });
@@ -2624,10 +2643,19 @@ ipcMain.handle("feedback-submit", async (_, payload) => {
     if (category === "bug") {
       const recentLogs = readRecent(50);
       if (recentLogs) {
+        // Redact obvious credential shapes before posting to a public-ish issue tracker.
+        // sk-ant-... = Anthropic key; ghp_ / github_pat_ = GitHub PATs; "Token X" = ESV
+        // Authorization header style. None of these should ever appear in app.log under
+        // normal flow, but a future careless console.error on a payload would surface them.
+        const redacted = recentLogs
+          .replace(/sk-ant-[A-Za-z0-9_\-]+/g, "[REDACTED:anthropic]")
+          .replace(/github_pat_[A-Za-z0-9_]+/g, "[REDACTED:github_pat]")
+          .replace(/\bghp_[A-Za-z0-9]+/g, "[REDACTED:github_classic]")
+          .replace(/Token\s+[A-Za-z0-9_\-]{16,}/g, "Token [REDACTED]");
         lines.push("## Error Log (last 50 lines)");
         lines.push("<details><summary>expand</summary>\n");
         lines.push("```");
-        lines.push(recentLogs);
+        lines.push(redacted);
         lines.push("```");
         lines.push("\n</details>");
         lines.push("");

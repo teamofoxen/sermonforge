@@ -44,35 +44,48 @@ function registerAIHandlers(ipcMain) {
 
     const system = systemPrompt || "You are a helpful assistant for sermon preparation.";
     const started = Date.now();
-
-    let result;
-    try {
-      result = await generate({ system, messages });
-    } catch (e) {
-      console.error("[ai-message]", e);
-      throw e;
-    }
-
-    if (result.error) {
-      console.error("[AI] Request failed:", result.message);
-      return `AI is unavailable — ${result.message}.`;
-    }
-
-    const text = result.text;
-    if (text == null) {
-      console.error("[ai-message] Unexpected response shape:", JSON.stringify(result.raw?.content));
-      return "AI returned an unexpected response format.";
-    }
-
-    appendAuditLog({
+    const baseEntry = () => ({
       ts: new Date().toISOString(),
       step: step ?? null,
       sermonId: sermonId ?? null,
       system,
       messages,
+      latency: Date.now() - started,
+    });
+
+    let result;
+    try {
+      result = await generate({ system, messages });
+    } catch (e) {
+      // Network / SDK / abort failures. Audit-log the error then rethrow so the
+      // renderer's existing IPC-rejection path returns "" and the unified
+      // "Something went wrong" fallback bubble fires.
+      appendAuditLog({ ...baseEntry(), error: { kind: "api", message: String(e?.message || e) } });
+      console.error("[ai-message]", e);
+      throw new Error(`AI request failed: ${e?.message || e}`);
+    }
+
+    if (result.error) {
+      // Configuration error — typically API key not set. Throw rather than
+      // returning a string the renderer would render as a normal AI reply.
+      appendAuditLog({ ...baseEntry(), error: { kind: "configuration", message: result.message } });
+      console.error("[AI] Request failed:", result.message);
+      throw new Error(`AI unavailable: ${result.message}`);
+    }
+
+    const text = result.text;
+    if (text == null) {
+      // Anthropic returned a successful HTTP response but the first content
+      // block is non-text or missing. Treat as a format error.
+      appendAuditLog({ ...baseEntry(), error: { kind: "format", message: "null content block" } });
+      console.error("[ai-message] Unexpected response shape:", JSON.stringify(result.raw?.content));
+      throw new Error("AI returned an unexpected response format");
+    }
+
+    appendAuditLog({
+      ...baseEntry(),
       response: text,
       model: result.model,
-      latency: Date.now() - started,
     });
 
     return text;
