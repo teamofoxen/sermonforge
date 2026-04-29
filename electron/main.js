@@ -615,6 +615,9 @@ function buildUpdate(fields, allowedColumns) {
   if (rejected.length > 0) {
     const msg = `[buildUpdate] Unknown field(s) rejected: [${rejected.join(", ")}]. ` +
       `Allowed columns: [${[...allowedColumns].join(", ")}].`;
+    // Dev throws so column/allowlist drift surfaces loudly during development.
+    // Packaged warns so a stale build never crashes a pastor mid-save.
+    if (isDev) throw new Error(msg);
     console.warn(msg);
   }
 

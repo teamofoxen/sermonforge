@@ -4,10 +4,9 @@
 // writes are silently dropped until the path can be resolved.
 // Log is rotated when it exceeds 1MB (keeps last 200 lines).
 
-const { app } = require("electron");
 const path = require("path");
 const fs = require("fs");
-const { isDev } = require("./config");
+const { isDev, paths } = require("./config");
 
 const MAX_BYTES = 1 * 1024 * 1024;
 
@@ -16,9 +15,8 @@ let _logFile = null;
 function logFile() {
   if (_logFile) return _logFile;
   try {
-    const dir = path.join(app.getPath("userData"), "logs");
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-    _logFile = path.join(dir, "app.log");
+    if (!fs.existsSync(paths.logs)) fs.mkdirSync(paths.logs, { recursive: true });
+    _logFile = path.join(paths.logs, "app.log");
     return _logFile;
   } catch (_) {
     return null; // app not ready yet — caller skips write

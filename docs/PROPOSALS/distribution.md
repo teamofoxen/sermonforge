@@ -188,7 +188,21 @@ These don't require code — just a shift in how to think when building:
 
 ---
 
-## 12. Open Questions
+## 12. Release Smoke Test
+
+Run before tagging any release. Auto-updater ships this build to every user in the background — treat each tag as a production deploy.
+
+1. **Setup screen** — fresh install (or delete `userData/sf-anthropic.enc`): screen appears, Claude key validates and saves, ESV skip works.
+2. **Tour load** — Dashboard → "Take the tour": tour sermon seeds, opens, spotlight runs end-to-end.
+3. **AI message** — open any sermon, send a message in AI Panel: response returns, no console errors, audit log entry written.
+4. **Export** — export a sermon to docx and a series Study Guide: both files land in `Documents/SermonForge/exports/...`.
+5. **Quit + relaunch** — confirm DB persisted, no migration errors, no crash log entries from the session.
+
+If any step fails, do not tag.
+
+---
+
+## 13. Open Questions
 
 - **Apple Developer account** — does Ross have one, or does it need to be created?
   Blocks Phase 4 entirely.

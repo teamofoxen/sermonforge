@@ -13,11 +13,29 @@ if (!isAvailable()) {
 }
 
 const AI_LOG_PATH = path.join(app.getPath("userData"), "ai-log.jsonl");
+const MAX_AUDIT_BYTES = 5 * 1024 * 1024; // ~500 entries at typical entry size
+const KEEP_ENTRIES = 500;
+
+function rotateAuditLog() {
+  try {
+    const lines = fs.readFileSync(AI_LOG_PATH, "utf8").split("\n").filter(Boolean);
+    if (lines.length <= KEEP_ENTRIES) return;
+    fs.writeFileSync(AI_LOG_PATH, lines.slice(-KEEP_ENTRIES).join("\n") + "\n");
+  } catch (_) {
+    // Never throw from audit log
+  }
+}
 
 function appendAuditLog(entry) {
-  fs.promises.appendFile(AI_LOG_PATH, JSON.stringify(entry) + "\n").catch(e => {
-    console.error("[ai-message] Failed to append audit log:", e);
-  });
+  fs.promises.appendFile(AI_LOG_PATH, JSON.stringify(entry) + "\n")
+    .then(() => {
+      try {
+        if (fs.statSync(AI_LOG_PATH).size > MAX_AUDIT_BYTES) rotateAuditLog();
+      } catch (_) {}
+    })
+    .catch(e => {
+      console.error("[ai-message] Failed to append audit log:", e);
+    });
 }
 
 function registerAIHandlers(ipcMain) {

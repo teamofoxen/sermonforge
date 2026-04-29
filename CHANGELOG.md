@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-04-28 — chore: post-launch hardening from multiverse audit
+
+- `logger.js` now routes through `paths.logs` from `config.js`, isolating dev (`logs-dev/`) from packaged (`logs/`) on the same machine.
+- `buildUpdate()` in `main.js` throws in dev and warns in packaged, surfacing column/allowlist drift loudly during development.
+- AI audit log in `electron/ai.js` rotates at 5MB and keeps the last 500 entries, matching the `logger.js` rotation pattern.
+- Added a 5-step Release Smoke Test (Section 12) to `docs/PROPOSALS/distribution.md` to gate every tagged release.
+
+---
+
 ## 2026-04-28 — chore: schema cleanup and architectural housekeeping
 
 - v11 migration drops `sermons.big_idea` column (dead since mpt/mps replaced it).
