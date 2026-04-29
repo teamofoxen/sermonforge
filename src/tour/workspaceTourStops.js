@@ -1,4 +1,4 @@
-// Workspace tour — 34-stop guided tour through the Sermon Workspace.
+// Workspace tour — 35-stop guided tour through the Sermon Workspace.
 //
 // Locked content from docs/PROPOSALS/sermon-workspace-tour.md. Body strings are
 // rendered as markdown by TourOverlay — italics (*…*) preserve the spec's
@@ -84,7 +84,7 @@ export const WORKSPACE_TOUR_STOPS = [
     prerequisites: { ...STUDY_BASE, piOpen: true },
   },
 
-  // ── Stops 11–24: Study tab — Step 1 (Exegesis, four phases) ────────────────
+  // ── Stops 11–25: Study tab — Step 1 (Exegesis, four phases) ────────────────
   {
     id: "study-tab",
     anchorId: "stage-tab-study",
@@ -94,7 +94,7 @@ export const WORKSPACE_TOUR_STOPS = [
   },
   {
     id: "phase-1-observe",
-    anchorId: "study-subphase-pill-1",
+    anchorId: "phase-1-worksheet",
     title: "Phase 1 — Observe.",
     body: "Before you interpret, you observe. Nine questions take you through the passage systematically. Resist the urge to jump to meaning.",
     prerequisites: { ...STUDY_BASE, studyStep: 1, studySubPhase: 1 },
@@ -115,7 +115,7 @@ export const WORKSPACE_TOUR_STOPS = [
   },
   {
     id: "phase-2-interpret",
-    anchorId: "study-subphase-pill-2",
+    anchorId: "phase-2-worksheet",
     title: "Phase 2 — Interpret.",
     body: "Beneath the surface. Nine questions push from what the text says to what it means. This is where most of the work happens.",
     prerequisites: { ...STUDY_BASE, studyStep: 1, studySubPhase: 2 },
@@ -136,7 +136,7 @@ export const WORKSPACE_TOUR_STOPS = [
   },
   {
     id: "phase-3-redemptive",
-    anchorId: "study-subphase-pill-3",
+    anchorId: "phase-3-worksheet",
     title: "Phase 3 — Redemptive Thread.",
     body: "Every text points somewhere. Seven questions ask how this one points to Christ — directly or indirectly, by promise, by need, by the nature of the God who saves.",
     prerequisites: { ...STUDY_BASE, studyStep: 1, studySubPhase: 3 },
@@ -157,7 +157,7 @@ export const WORKSPACE_TOUR_STOPS = [
   },
   {
     id: "phase-4-implications",
-    anchorId: "study-subphase-pill-4",
+    anchorId: "phase-4-worksheet",
     title: "Phase 4 — Implications.",
     body: "What does this text demand of the people in the room? Three categories follow — theological, personal, and what it means for someone who doesn't believe.",
     prerequisites: { ...STUDY_BASE, studyStep: 1, studySubPhase: 4 },
@@ -177,19 +177,26 @@ export const WORKSPACE_TOUR_STOPS = [
     prerequisites: { ...STUDY_BASE, studyStep: 1, studySubPhase: 4 },
   },
   {
-    id: "unbeliever-compile",
+    id: "unbeliever",
     anchorId: "implications-unbeliever",
-    title: "Unbeliever. Compile.",
-    body: "What does this text mean for someone who doesn't believe? Then click Compile — the AI consolidates every implication into a master list. You'll prune it, but nothing will get lost.",
+    title: "Implications for Unbelievers.",
+    body: "What does this text mean for someone who doesn't believe? Don't skip it — this is where the gospel meets the room from the outside in.",
+    prerequisites: { ...STUDY_BASE, studyStep: 1, studySubPhase: 4 },
+  },
+  {
+    id: "compile",
+    anchorId: "implications-compile",
+    title: "Compile.",
+    body: "Click Compile — the AI consolidates every implication into a master list. You'll prune it, but nothing will get lost.",
     prerequisites: { ...STUDY_BASE, studyStep: 1, studySubPhase: 4 },
   },
 
-  // ── Stops 25–29: Study tab — Steps 2, 3, 4 ─────────────────────────────────
+  // ── Stops 26–30: Study tab — Steps 2, 3, 4 ─────────────────────────────────
   {
     id: "step-2-mpt-mps",
     anchorId: "study-step-pill-2",
     title: "Step 2 — MPT → MPS.",
-    body: "The two most important sentences in the sermon. Get these right and the outline writes itself. Get them wrong and no amount of clever structure will save it.",
+    body: "The two most important sentences in the sermon — they anchor everything else. Get these right and the outline largely writes itself.",
     prerequisites: { ...STUDY_BASE, studyStep: 2 },
   },
   {
@@ -221,7 +228,7 @@ export const WORKSPACE_TOUR_STOPS = [
     prerequisites: { ...STUDY_BASE, studyStep: 4 },
   },
 
-  // ── Stops 30–34: Manuscript tab + finish ───────────────────────────────────
+  // ── Stops 31–35: Manuscript tab + finish ───────────────────────────────────
   {
     id: "manuscript",
     anchorId: "stage-tab-manuscript",

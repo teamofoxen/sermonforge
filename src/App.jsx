@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, Component, lazy, Suspense } from "react";
-import { createSeries, getApiKeyStatus } from "./db/database";
+import { createSeries, getApiKeyStatus, removeTourSermon } from "./db/database";
 import { TourProvider } from "./contexts/TourContext";
 import TourOverlay from "./components/TourOverlay";
 import SetupScreen from "./components/SetupScreen";
@@ -130,12 +130,23 @@ export default function App() {
     if (view !== "series-planner") setOpenSeriesId(null);
   }, []);
 
+  // "Leave tour" — discard the tour sermon and return to the dashboard.
+  const leaveTour = useCallback(async () => {
+    try { await removeTourSermon(); } catch (e) { console.error("[leaveTour]", e); }
+    setOpenSermonId(null);
+    setOpenSeriesId(null);
+    setReturnDestination("dashboard");
+    setReturnSeriesId(null);
+    setRefreshKey(k => k + 1);
+    setCurrentView("dashboard");
+  }, []);
+
   if (keyReady === null) return null; // brief loading — avoids flash of setup screen
   if (keyReady === false) return <SetupScreen onComplete={() => setKeyReady(true)} />;
 
   return (
     <ErrorBoundary>
-    <TourProvider>
+    <TourProvider onLeave={leaveTour}>
     <div className="app-shell">
       <Sidebar
         currentView={currentView}

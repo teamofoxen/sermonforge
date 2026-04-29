@@ -912,6 +912,19 @@ ipcMain.handle("db-loadTourSermon", () => {
   return { sermonId: SERMON_ID, created: true };
 });
 
+ipcMain.handle("db-removeTourSermon", () => {
+  db.run("BEGIN");
+  try {
+    db.run("DELETE FROM sermons WHERE id LIKE 'tour-%'");
+    db.run("DELETE FROM series  WHERE id LIKE 'tour-%'");
+    db.run("COMMIT");
+  } catch (e) {
+    db.run("ROLLBACK");
+    throw e;
+  }
+  saveDb();
+});
+
 ipcMain.handle("library-status", () => {
   try {
     const row = queryOne("SELECT COUNT(*) as count, MAX(imported_at) as last_imported FROM library");

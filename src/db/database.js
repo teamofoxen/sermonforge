@@ -57,7 +57,8 @@ export const exportStudyGuide = (seriesId) => api.exportStudyGuide(seriesId);
 export const exportPmb = (data) => api.exportPmb(data);
 
 // ── Tour ──────────────────────────────────────────────────────────────────────
-export const loadTourSermon = () => api.loadTourSermon();
+export const loadTourSermon   = () => api.loadTourSermon();
+export const removeTourSermon = () => api.removeTourSermon();
 
 // ── API key setup ─────────────────────────────────────────────────────────────
 export const getApiKeyStatus = () => api.getApiKeyStatus();

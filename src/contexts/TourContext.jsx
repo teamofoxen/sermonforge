@@ -25,7 +25,7 @@ const TourContext = createContext(null);
 
 const STORAGE_KEY = "sf_tour_workspace_seen";
 
-export function TourProvider({ children }) {
+export function TourProvider({ children, onLeave }) {
   const [active, setActive]   = useState(false);
   const [stops, setStops]     = useState([]);
   const [index, setIndex]     = useState(0);
@@ -60,9 +60,13 @@ export function TourProvider({ children }) {
     setIndex((i) => Math.max(0, i - 1));
   }, []);
 
-  const skip = useCallback(() => {
+  // Leave the tour: tear down the tour sermon and return to the dashboard.
+  const leave = useCallback(() => {
     exit();
-  }, [exit]);
+    if (typeof onLeave === "function") {
+      try { onLeave(); } catch (e) { console.error("[tour leave]", e); }
+    }
+  }, [exit, onLeave]);
 
   const complete = useCallback(() => {
     try { localStorage.setItem(STORAGE_KEY, "1"); } catch (_) {}
@@ -81,9 +85,9 @@ export function TourProvider({ children }) {
     start,
     next,
     prev,
-    skip,
+    leave,
     complete,
-  }), [active, stops, index, currentStop, desiredUi, start, next, prev, skip, complete]);
+  }), [active, stops, index, currentStop, desiredUi, start, next, prev, leave, complete]);
 
   return <TourContext.Provider value={value}>{children}</TourContext.Provider>;
 }
@@ -94,7 +98,7 @@ export function useTour() {
     // Outside provider — return inert defaults so consumers don't have to null-guard.
     return {
       active: false, stops: [], index: 0, currentStop: null, desiredUi: null,
-      start: () => {}, next: () => {}, prev: () => {}, skip: () => {}, complete: () => {},
+      start: () => {}, next: () => {}, prev: () => {}, leave: () => {}, complete: () => {},
     };
   }
   return ctx;

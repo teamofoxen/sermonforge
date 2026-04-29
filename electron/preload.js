@@ -59,7 +59,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   fetchPassage: (passage) => ipcRenderer.invoke('passage-fetch', passage),
 
   // ── Tour ──────────────────────────────────────────────────────────────────
-  loadTourSermon: () => ipcRenderer.invoke("db-loadTourSermon"),
+  loadTourSermon:   () => ipcRenderer.invoke("db-loadTourSermon"),
+  removeTourSermon: () => ipcRenderer.invoke("db-removeTourSermon"),
 
   // ── API key setup ─────────────────────────────────────────────────────────
   getApiKeyStatus: () => ipcRenderer.invoke("app-get-key-status"),

@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-04-28 — feat: workspace tour adjustments
+
+- Replaced "Skip tour" with "Leave tour" — discards tour sermon/series via new `db-removeTourSermon` IPC handler and returns to dashboard.
+- `TourOverlay` now scrolls the active anchor into view on stop change.
+- Re-anchored phase-intro stops (Observe, Interpret, Redemptive, Implications) from subphase pills onto their worksheets.
+- Split former "Unbeliever. Compile." stop into two steps; added `data-tour-id="implications-compile"`.
+- Softened Step 2 (MPT → MPS) wording.
+
+---
+
 ## 2026-04-28 — chore: post-launch hardening from multiverse audit
 
 - `logger.js` now routes through `paths.logs` from `config.js`, isolating dev (`logs-dev/`) from packaged (`logs/`) on the same machine.

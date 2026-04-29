@@ -44,17 +44,27 @@ function useAnchorRect(anchorId, active) {
 }
 
 export default function TourOverlay() {
-  const { active, currentStop, index, stops, next, prev, skip } = useTour();
+  const { active, currentStop, index, stops, next, prev, leave } = useTour();
   const anchorId = currentStop?.anchorId;
   const rect = useAnchorRect(anchorId, active);
 
-  // Hold ESC = skip
+  // Bring the current anchor into view when the stop changes, so the spotlight
+  // lands on something the user can actually see.
+  useEffect(() => {
+    if (!active || !anchorId) return;
+    const el = document.querySelector(`[data-tour-id="${anchorId}"]`);
+    if (el && typeof el.scrollIntoView === "function") {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [active, anchorId]);
+
+  // ESC = leave tour
   useEffect(() => {
     if (!active) return;
     function onKey(e) {
       if (e.key === "Escape") {
         e.preventDefault();
-        skip();
+        leave();
       } else if (e.key === "ArrowRight" || e.key === "Enter") {
         e.preventDefault();
         next();
@@ -65,7 +75,7 @@ export default function TourOverlay() {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [active, next, prev, skip]);
+  }, [active, next, prev, leave]);
 
   if (!active || !currentStop) return null;
 
@@ -181,7 +191,7 @@ export default function TourOverlay() {
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
           <button
-            onClick={skip}
+            onClick={leave}
             style={{
               background: "none",
               border: "none",
@@ -194,7 +204,7 @@ export default function TourOverlay() {
               textDecoration: "underline",
             }}
           >
-            Skip tour
+            Leave tour
           </button>
 
           <div style={{ display: "flex", gap: "8px" }}>

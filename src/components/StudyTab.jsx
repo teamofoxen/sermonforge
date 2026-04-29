@@ -850,7 +850,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
               </div>
 
               {/* Compiled implications list — auto-generated or hand-written */}
-              <div className="worksheet-summary-block">
+              <div className="worksheet-summary-block" data-tour-id="implications-compile">
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
                   <label className="worksheet-field-label" style={{ marginBottom: 0 }}>Compiled Implications</label>
                   <button
