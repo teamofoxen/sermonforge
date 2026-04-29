@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-04-29 — fix: phase 4 ai pipeline hardening
+
+- Anthropic SDK now has a 60s per-attempt timeout, one retry on 429/529/abort, and a 24h client TTL so out-of-band key rotations eventually pick up.
+- Pastor memory now write-throughs to `userData/memory-backup.json` via new `db-backupMemory`/`db-restoreMemory` IPC; `App.jsx` restores on mount when localStorage is empty (survives Electron major upgrades and cache clears).
+- `buildAdaptiveHints` shuffle is now deterministic via mulberry32 seeded on `sermonId+step`, replacing `Math.random()`; same sermon, same step, same hints across retries.
+- Theology toggle label changes to "Search Theology Library (keyword only)" when `theology-status.semantic` is false; PI tier (Cultural Moment / Room / Sermon's Work) now prepends to the theology research user message.
+- `buildContext` for a brand-new sermon (no passage/MPT/PI) now returns an explicit `[THIS SERMON]` "this sermon is new" marker instead of an empty string.
+
+---
+
 ## 2026-04-29 — fix: phase 3 migrations + doc reconciliation
 
 - All migration `ALTER TABLE … ADD COLUMN` calls now go through `safeAlter()` which throws on real errors and only swallows "duplicate column name"; the version bump after each migration block is no longer reached when a real failure occurs.

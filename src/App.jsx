@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, Component, lazy, Suspense } from "react";
 import { createSeries, getApiKeyStatus, removeTourSermon, onDbWriteError, onDbWriteOk, flushDb } from "./db/database";
+import { restoreMemoryFromBackup } from "./utils/memory";
 import { TourProvider } from "./contexts/TourContext";
 import TourOverlay from "./components/TourOverlay";
 import SetupScreen from "./components/SetupScreen";
@@ -60,6 +61,13 @@ export default function App() {
     getApiKeyStatus()
       .then(r => setKeyReady(r?.configured === true))
       .catch(() => setKeyReady(false));
+  }, []);
+
+  // One-shot restore of pastor memory from userData/memory-backup.json. No-op
+  // when localStorage already has memory. Covers Electron major upgrades and
+  // manual cache clears that would otherwise wipe accumulated style patterns.
+  useEffect(() => {
+    restoreMemoryFromBackup().catch((e) => console.error("[App] memory restore failed:", e));
   }, []);
 
   const [theme, setTheme] = useState(() => localStorage.getItem("sf-theme") || "light");
