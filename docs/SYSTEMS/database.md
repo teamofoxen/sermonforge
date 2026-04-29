@@ -28,7 +28,7 @@ better-sqlite3, and theology.db is never touched by sql.js.
 
 ## Schema Version
 
-Current schema version: **9**
+Current schema version: **14**
 
 The version is stored in the `meta` table under key `schema_version`.
 Read via IPC `"db-getSchemaVersion"`.
@@ -42,6 +42,21 @@ Read via IPC `"db-getSchemaVersion"`.
   increment. Each migration is a conditional block keyed to the version number.
 - Never add a column, table, or index without a corresponding migration.
 - Schema version must be incremented atomically with the migration that requires it.
+- All `ALTER TABLE … ADD COLUMN` statements go through `safeAlter()`. It treats
+  "duplicate column name" as benign (re-running an idempotent migration) and
+  rethrows every other SQLite error so the version bump at the end of the block
+  is **not** reached on real failures (locked DB, disk full, etc.). The previous
+  swallowing pattern (`try { … } catch (_) {}`) let `schema_version` advance
+  while the column was permanently missing — `safeAlter` makes that impossible.
+- A per-launch `assertSchemaContract()` runs after `runMigrations()` and verifies
+  every column in `SERMON_COLUMNS` / `SERIES_COLUMNS` is present in the live
+  schema. On mismatch it logs an ERROR via `electron/logger.js` (visible in
+  `app.log` and attached to feedback submissions) and the next launch retries
+  the schema-contract migration (see v14 below).
+- **v14 — schema-contract reconciliation.** Re-applies every additive ALTER
+  from v2 / v4 / v6 / v7 / v8 / v9 / v12 idempotently. The backstop for any
+  install where a prior swallowed-catch caused a column to go missing while
+  the version was bumped past it.
 
 ---
 
@@ -94,19 +109,37 @@ Both debounces are deliberate trade-offs, not bugs. Do not reduce them.
 
 ## Storage Path
 
-Databases are stored locally under `C:\SermonForge\data\`:
+Resolved by `electron/config.js` via `app.getPath("userData")` plus a `data` /
+`data-dev` subdirectory. **Single source of truth — never recompute elsewhere.**
 
-- `C:\SermonForge\data\sermonforge.db` — main application database (sql.js)
-- `C:\SermonForge\data\theology.db` — theology corpus (better-sqlite3 + sqlite-vec)
+- Packaged: `%APPDATA%\sermonforge\data\sermonforge.db` (typically
+  `C:\Users\<user>\AppData\Roaming\sermonforge\data\sermonforge.db`)
+- Dev (`ELECTRON_DEV=1`): `%APPDATA%\sermonforge\data-dev\sermonforge.db`
+- `theology.db` and `library.db` live alongside `sermonforge.db` in the same dir.
+- Atomic flush writes via `<dbPath>.tmp` and rotates the prior good blob to
+  `<dbPath>.bak`. On startup, a corrupt primary falls back to `.bak`; if both
+  fail the corrupt original is renamed to `<dbPath>.corrupt-<ts>` and a fresh
+  DB is created — pastor data is never silently overwritten.
+- `ai-log.jsonl` (audit log), `app.log` (crash log), and `sf-anthropic.enc` /
+  `sf-esv.enc` (safeStorage keys) live at the **userData root**, not under
+  `data/`, so they persist across the dev/prod data-folder split.
 
-The data directory is created on first use via `mkdirSync({ recursive: true })`.
+Exports are written to `Documents\SermonForge\exports\` and (Study Guides,
+Feedback) to `~/OneDrive/SermonForge/...` when OneDrive is present.
 
-Exports are written to `C:\SermonForge\exports\` (Study Guides, Feedback).
+OneDrive is **not** used for the application databases. OneDrive is used only
+for the pastor's external sermon file library (`LIBRARY_PATH` default —
+`~/OneDrive/Ministry/Preaching/Sermon Library`, overridable via
+`library-set-folder` IPC) and for the user's own backup choices for exported
+files. The app runs correctly without OneDrive.
 
-OneDrive is **not** used for the application databases. OneDrive is used only for
-the pastor's external sermon file library (`LIBRARY_PATH` —
-`~/OneDrive/Ministry/Preaching/Sermon Library`) and for the user's own backup
-choices for exported files. The app runs correctly without OneDrive.
+**OneDrive risk note.** `app.getPath("userData")` resolves to `%APPDATA%\Roaming`,
+which is normally not synced. Enterprise GPOs or roaming-profile setups can
+redirect Roaming AppData into a sync agent — when that happens, better-sqlite3
+file locks on `theology.db` / `library.db` collide with the sync agent and the
+DBs fail to open. If the user reports DB-open errors and `paths.userData` shows
+a OneDrive-like path, the recovery is to opt the install out of roaming or
+relocate the data directory.
 
 ---
 

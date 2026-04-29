@@ -48,6 +48,32 @@ receives: id string
 returns:  undefined (throws on DB error)
 ```
 Deletes from both `library` and `library_fts` in a single transaction.
+Best-effort cleanup of corresponding rows in `library.db` (chunks + vectors)
+runs outside the transaction; failures there log only.
+
+### `"db-flush"`
+```
+receives: nothing
+returns:  { ok: true } | { ok: false, error: string } | { ok: true, skipped: true }
+```
+Manual flush of `sermonforge.db` to disk. Wired to the `db-write-error`
+banner's "Retry" button; calling directly is also safe. Atomic via
+`<dbPath>.tmp` + rename; rotates the prior good blob to `<dbPath>.bak`.
+
+### `"db-loadTourSermon"`
+```
+receives: nothing
+returns:  { sermonId: string }
+```
+Seeds (or reuses) the tour sermon record (`id LIKE 'tour-%'`) and returns its id.
+Tour rows are excluded from `getAllSermons` / `getRecentSermons` filters.
+
+### `"db-removeTourSermon"`
+```
+receives: nothing
+returns:  undefined
+```
+Deletes the tour sermon record. Idempotent.
 
 ### `"db-getSetting"`
 ```
@@ -173,10 +199,38 @@ Whether `theology.db` is present and loaded.
 ### `"theology-search"`
 ```
 receives: { query: string, limit: number }
-returns:  array of { id, author, work, text_chunk, score }
+returns:  array of {
+            id, author, work, work_id,
+            locator, ccel_page_start, ccel_page_end,
+            text_chunk
+          }
 ```
-LIKE-based search across `author`, `work`, and `text` columns; scored by field weight.
-Returns `[]` if `theology.db` is unavailable.
+**Hybrid FTS4 + sqlite-vec semantic search**, not LIKE. Lazy-loads `theology.db`
+on first call. Pipeline:
+
+1. **Author detection.** A small keyword map (`THEOLOGY_AUTHORS` in
+   `electron/main.js`) recognises author names in the query (`augustine`,
+   `calvin`, `chrysostom`, etc.); detected names are stripped from the
+   semantic/FTS query string and used to filter results.
+2. **Phrase detection.** Quoted segments and content-word pairs separated by
+   up to three stop words are promoted to FTS phrase terms (e.g.
+   `fear of the lord` → `"fear of the lord"`).
+3. **Semantic path** (when `theologyVecAvailable`): runs `Xenova/all-MiniLM-L6-v2`
+   over the query, KNN against `theology_vec` (vec0), JOINs to `theology`. **In
+   parallel**, runs FTS4 over the same query. FTS phrase matches rank first;
+   semantic results fill remaining slots up to `limit`. If author was detected,
+   semantic results are post-filtered to that author.
+4. **FTS-only fallback.** Used when vectors are unavailable, when the embedder
+   fails to load, or when the semantic path throws. Reranks candidates by
+   `scoreTheologyChunk` (term-frequency scoring across `author`, `work`, `text`).
+
+Returns `[]` if `theology.db` is unavailable. Per-call latency is dominated by
+embedder load on first call (~2-3 s cold) and KNN scan on large corpora.
+
+**Note:** `theology-status` returns `{ available, semantic }`. The renderer
+currently surfaces only `available`; an FTS-only fallback is therefore
+indistinguishable from a working semantic search at the UI level today
+(deferred to a later UI phase).
 
 ### `"theology-get-chunks"`
 ```
@@ -245,3 +299,47 @@ receives: nothing
 returns:  { version: string }
 ```
 Reads from `app.getVersion()`.
+
+### `"app-get-key-status"`
+```
+receives: nothing
+returns:  { configured: bool }
+```
+Whether `loadKey()` (in `electron/keystore.js`) returns a non-empty
+Anthropic API key. The key value itself never crosses the IPC boundary.
+
+### `"app-save-api-key"`
+```
+receives: { anthropic: string, esv?: string }
+returns:  { success: true } | { success: false, error: string }
+```
+Validates and stores user-provided keys via Electron `safeStorage` (packaged
+builds) or `process.env` (dev). Validates Anthropic key starts with `sk-ant-`
+and is ≥ 20 chars. On success, calls `resetClient()` so the cached SDK client
+is rebuilt with the new key on the next AI call.
+
+---
+
+## Events (one-way, main → renderer)
+
+Subscribed to via `onLibraryImportProgress`, `onLibraryEmbedProgress`,
+`onDbWriteError`, and `onDbWriteOk` (see `electron/preload.js`). Each subscriber
+returns an unsubscribe function.
+
+### `"library-import-progress"`
+Payload: `{ done: number, total: number, complete: bool }`. Emitted every 10
+files during a `library-import` run, plus a final `complete: true`.
+
+### `"library-embed-progress"`
+Payload: `{ done: number, total: number, complete: bool }`. Emitted every 5
+manuscripts during a `library-build-embeddings` run, plus a final `complete: true`.
+
+### `"db-write-error"`
+Payload: `string` (error message). Emitted by `flushDb` only on the **second
+consecutive** failure — a single transient OneDrive/AV lock that self-recovers
+on the next debounced write does not pop a banner. App.jsx renders a persistent
+top-of-window banner with a "Retry" button (calls `db-flush`) on receipt.
+
+### `"db-write-ok"`
+Payload: none. Emitted by `flushDb` after a successful write that follows at
+least one failure. Renderer dismisses the banner on receipt.

@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-04-29 — fix: phase 3 migrations + doc reconciliation
+
+- All migration `ALTER TABLE … ADD COLUMN` calls now go through `safeAlter()` which throws on real errors and only swallows "duplicate column name"; the version bump after each migration block is no longer reached when a real failure occurs.
+- Added migration v14 — schema-contract reconciliation that re-applies every additive ALTER from v2/v4/v6/v7/v8/v9/v12 idempotently, healing installs where a prior swallowed-catch left a column missing while the version was bumped.
+- Added `assertSchemaContract()` — runs after `runMigrations()`, compares live schema to `SERMON_COLUMNS`/`SERIES_COLUMNS`, logs ERROR on mismatch.
+- Reconciled `docs/SYSTEMS/database.md`, `docs/CORE.md`, `README.md`, and `docs/REFERENCE/ipc-channels.md` with current paths (`%APPDATA%\sermonforge\data\`), schema version 14, the FTS4 + sqlite-vec hybrid theology-search algorithm, and 5 previously-undocumented IPC channels.
+- Added `Library import + sidecar library.db` and expanded distribution-area routing to `CLAUDE.md`.
+
+---
+
 ## 2026-04-29 — fix: phase 2 durability (atomic flush + .bak fallback + await on quit)
 
 - `flushDb` now writes atomically: blob → `.tmp` → rename old DB to `.bak` → rename `.tmp` to `dbPath`; a crash mid-step never produces a truncated `sermonforge.db`.

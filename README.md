@@ -35,8 +35,9 @@ A sermon preparation workspace for pastors. Built with Electron, React, Vite, an
 
 Local-first SQLite storage. No dependency on OneDrive for the database.
 
-- Main application database: `C:\SermonForge\data\sermonforge.db` (sql.js)
-- Theology corpus: `C:\SermonForge\data\theology.db` (better-sqlite3 + sqlite-vec)
+- Main application database: `%APPDATA%\sermonforge\data\sermonforge.db` (sql.js)
+- Theology corpus: `%APPDATA%\sermonforge\data\theology.db` (better-sqlite3 + sqlite-vec)
+- Library sidecar: `%APPDATA%\sermonforge\data\library.db` (chunks + vec0 vectors; derived, regeneratable)
 
 The data directory is created on first launch. Seeded with sample sermons and
 illustrations on first launch.
