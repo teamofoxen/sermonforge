@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useDebounce } from "../utils/hooks";
 import { useTour } from "../contexts/TourContext";
 import { getSermonById, updateSermon, deleteSermon, getSeriesById, getSectionsBySeries } from "../db/database";
+import { pickSermonColumns } from "../constants/sermonColumns";
 import { updateMemory, extractOutlinePattern, extractPhrasePatterns } from "../utils/memory";
 import { autoResize } from "../utils";
 import DeleteButton from "./DeleteButton";
@@ -124,7 +125,14 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
   const persistUpdate = useCallback(
     async () => {
       try {
-        await updateSermon(sermonId, sermonRef.current);
+        // sermonRef.current is the full optimistic state, including JOIN
+        // fields (series_title, series_color), the attached `series` and
+        // `section` objects, and primary-key/timestamp columns. None of
+        // those are in SERMON_COLUMNS, so passing the whole row would make
+        // buildUpdate reject the call (throws in dev / warn-and-drop in
+        // prod). Filter to the writable allowlist before sending.
+        const payload = pickSermonColumns(sermonRef.current);
+        await updateSermon(sermonId, payload);
         captureMemory(sermonRef.current);
       } catch (e) {
         console.error("Save error:", e);
