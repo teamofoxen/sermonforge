@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-04-29 — chore: remove stale gate-reminder hooks
+
+- Dropped the PostToolUse echo hook that injected `"GATE: Run /sweep-the-room..."` after every Edit/Write — referenced the deleted skill and added latency.
+- Dropped the Stop hook entirely; it was firing an `echo` after every assistant response close, including read-only chat turns.
+- Kept the PostToolUse `node --check` hook for `electron/*.js` edits — still catches syntax errors and aligns with the electron-verification rule.
+
+---
+
 ## 2026-04-29 — chore: trim agent loop overhead
 
 - Replaced the mandatory dual-sweep gate in `CLAUDE.md` with a scoped trigger list — `/sweep-the-house` runs only when the diff touches `electron/main.js`, `electron/preload.js`, `src/utils/contextBuilder.js`, `src/utils/ai.js`, `src/prompts/`, `src/db/database.js` exports, or the `sermons` schema.

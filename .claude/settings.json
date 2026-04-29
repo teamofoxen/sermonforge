@@ -7,20 +7,6 @@
           {
             "type": "command",
             "command": "f=$(sed -n 's/.*\"file_path\":\"\\([^\"]*\\)\".*/\\1/p' | head -1); case \"$f\" in */electron/*.js|*\\\\electron\\\\*.js) node --check \"$f\" >&2 || exit 2 ;; esac"
-          },
-          {
-            "type": "command",
-            "command": "echo 'GATE: Code changed. Run /sweep-the-room BEFORE anything else'"
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "echo 'GATE: Run /sweep-the-room and /sweep-the-house before ending session'"
           }
         ]
       }
