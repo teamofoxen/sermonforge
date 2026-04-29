@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-04-29 — chore: tour engine parameterization + browser-preview boot fallback
+
+- `TourContext.start()` now takes `(stops, { onLeave, seenKey })`; provider-level `onLeave` prop and hardcoded `sf_tour_workspace_seen` localStorage key removed from the engine.
+- Workspace tour wired through Dashboard with its own `onLeave: onLeaveTour` and `seenKey: "sf_tour_workspace_seen"`, leaving the engine tour-agnostic.
+- `src/db/database.js` falls back to a Proxy stub when `window.electronAPI` is undefined, so the Vite-only browser preview boots into the dashboard instead of crashing on first IPC call.
+- Stub returns `{configured: true}` for `getApiKeyStatus`, no-op unsubscribe for `on*` subscribers, and `Promise.resolve([])` for everything else; production Electron path is untouched.
+
+---
+
 ## [Unreleased] — feat: dashboard illuminated header + 2×2 grid + church history footer
 
 - Empty page-header band replaced with an "illuminated" preacher-quote rotator (random pick on load, manual prev/next, stencil portrait + citation) drawing from a curated 21-quote / 7-preacher dataset.

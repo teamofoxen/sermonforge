@@ -2,38 +2,39 @@ import { createContext, useContext, useState, useCallback, useMemo } from "react
 
 // TourContext — owns the tour cursor and the "desired UI state" each stop wants.
 //
-// Stops are plain objects (see src/tour/workspaceTourStops.js) shaped like:
+// Each tour self-describes at launch:
+//   start(stops, { onLeave, seenKey })
+// The engine knows nothing about which tour is running. Tour-specific surfaces
+// (e.g. SermonWorkspace, SeriesPlanner) consume `desiredUi` and align their
+// own state when the tour is active. The orchestrator never reaches into their
+// setters directly — it only declares what the next stop needs.
+//
+// Stops are plain objects shaped like:
 //   {
 //     id:        string,                 // stable identifier, used for keying
 //     anchorId:  string,                 // matches data-tour-id on the target element
 //     title:     string,                 // bold heading on the callout card
 //     body:      string,                 // body copy below the heading
-//     prerequisites?: {
-//       tab?:           "study" | "outline" | "manuscript" | "delivery",
-//       studyStep?:     number,
-//       studySubPhase?: number,
-//       drawerOpen?:    boolean,
-//       piOpen?:        boolean,
-//     },
+//     prerequisites?: { ... },           // tour-specific shape
 //   }
-//
-// Components like SermonWorkspace and StudyTab observe `desiredUi` and align their
-// own state when the tour is active. The orchestrator never reaches into their
-// setters directly — it only declares what the next stop needs.
 
 const TourContext = createContext(null);
 
-const STORAGE_KEY = "sf_tour_workspace_seen";
-
-export function TourProvider({ children, onLeave }) {
+export function TourProvider({ children }) {
   const [active, setActive]   = useState(false);
   const [stops, setStops]     = useState([]);
   const [index, setIndex]     = useState(0);
+  const [onLeave, setOnLeave] = useState(null);
+  const [seenKey, setSeenKey] = useState(null);
 
-  const start = useCallback((nextStops) => {
+  const start = useCallback((nextStops, options = {}) => {
     if (!Array.isArray(nextStops) || nextStops.length === 0) return;
+    const cb  = typeof options.onLeave === "function" ? options.onLeave : null;
+    const key = typeof options.seenKey === "string" ? options.seenKey : null;
     setStops(nextStops);
     setIndex(0);
+    setOnLeave(() => cb);
+    setSeenKey(key);
     setActive(true);
   }, []);
 
@@ -41,37 +42,46 @@ export function TourProvider({ children, onLeave }) {
     setActive(false);
     setStops([]);
     setIndex(0);
+    setOnLeave(null);
+    setSeenKey(null);
   }, []);
 
   const next = useCallback(() => {
     setIndex((i) => {
       if (i >= stops.length - 1) {
         // Last stop: complete and exit.
-        try { localStorage.setItem(STORAGE_KEY, "1"); } catch (_) {}
+        if (seenKey) {
+          try { localStorage.setItem(seenKey, "1"); } catch (_) {}
+        }
         setActive(false);
         setStops([]);
+        setOnLeave(null);
+        setSeenKey(null);
         return 0;
       }
       return i + 1;
     });
-  }, [stops.length]);
+  }, [stops.length, seenKey]);
 
   const prev = useCallback(() => {
     setIndex((i) => Math.max(0, i - 1));
   }, []);
 
-  // Leave the tour: tear down the tour sermon and return to the dashboard.
+  // Leave the tour: invoke the launcher's cleanup callback, then tear down state.
   const leave = useCallback(() => {
+    const cb = onLeave;
     exit();
-    if (typeof onLeave === "function") {
-      try { onLeave(); } catch (e) { console.error("[tour leave]", e); }
+    if (typeof cb === "function") {
+      try { cb(); } catch (e) { console.error("[tour leave]", e); }
     }
   }, [exit, onLeave]);
 
   const complete = useCallback(() => {
-    try { localStorage.setItem(STORAGE_KEY, "1"); } catch (_) {}
+    if (seenKey) {
+      try { localStorage.setItem(seenKey, "1"); } catch (_) {}
+    }
     exit();
-  }, [exit]);
+  }, [exit, seenKey]);
 
   const currentStop = active && stops[index] ? stops[index] : null;
   const desiredUi   = currentStop?.prerequisites || null;

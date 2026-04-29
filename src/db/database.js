@@ -1,6 +1,24 @@
 // Database helpers — named operations only. All SQL lives in electron/main.js.
 // Components import these functions; nothing here knows table or column names.
-const api = window.electronAPI;
+
+// Browser-preview fallback: when running under Vite alone (no Electron preload),
+// `window.electronAPI` is undefined. Returning a permissive stub lets UI-only
+// changes be verified in the browser. Real data/AI still requires the Electron shell.
+function makeBrowserPreviewStub() {
+  if (typeof window !== "undefined" && !window.__sfPreviewStubAnnounced) {
+    window.__sfPreviewStubAnnounced = true;
+    console.warn("[SermonForge] No Electron preload detected — running with empty IPC stubs (browser preview only).");
+  }
+  return new Proxy({}, {
+    get(_, prop) {
+      if (prop === "getApiKeyStatus") return () => Promise.resolve({ configured: true });
+      if (typeof prop === "string" && prop.startsWith("on")) return () => () => {};
+      return () => Promise.resolve([]);
+    },
+  });
+}
+
+const api = (typeof window !== "undefined" && window.electronAPI) || makeBrowserPreviewStub();
 
 // ── Sermons ───────────────────────────────────────────────────────────────────
 export const getAllSermons    = ()             => api.getAllSermons();

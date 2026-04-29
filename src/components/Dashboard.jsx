@@ -15,7 +15,7 @@ function ArrowRightIcon() {
   );
 }
 
-export default function Dashboard({ onOpenSermon, onNewSeries, onNavigate }) {
+export default function Dashboard({ onOpenSermon, onNewSeries, onNavigate, onLeaveTour }) {
   const { start: startTour } = useTour();
   const [showNewModal, setShowNewModal] = useState(false);
   const [tourLoading, setTourLoading] = useState(false);
@@ -27,7 +27,10 @@ export default function Dashboard({ onOpenSermon, onNewSeries, onNavigate }) {
       const result = await loadTourSermon();
       if (result?.sermonId && onOpenSermon) {
         onOpenSermon(result.sermonId);
-        setTimeout(() => startTour(WORKSPACE_TOUR_STOPS), 250);
+        setTimeout(() => startTour(WORKSPACE_TOUR_STOPS, {
+          onLeave: onLeaveTour,
+          seenKey: "sf_tour_workspace_seen",
+        }), 250);
       }
     } catch (e) {
       console.error("Failed to start workspace tour:", e);

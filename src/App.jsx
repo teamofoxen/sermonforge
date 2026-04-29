@@ -146,7 +146,7 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-    <TourProvider onLeave={leaveTour}>
+    <TourProvider>
     <div className="app-shell">
       <Sidebar
         currentView={currentView}
@@ -166,6 +166,7 @@ export default function App() {
             onOpenSeries={openPlanner}
             onNewSeries={handleNewSeries}
             onNavigate={navigate}
+            onLeaveTour={leaveTour}
           />
         )}
         {currentView === "sermons" && (
