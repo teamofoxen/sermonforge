@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-04-29 — fix: phase 6 — embedder worker_thread
+
+- `@xenova/transformers` pipeline now runs in a worker (`electron/embedder/worker.js`) driven from main by `electron/embedder/host.js`; model load and per-query embedding no longer block the main process.
+- Host owns lifecycle: spawn-on-demand, 10-min idle TTL, crash respawn, 60 s per-request timeout.
+- Kill switch: `SF_EMBED_WORKER=0` falls back to the pre-Phase-6 main-thread pipeline (preserved verbatim) for one release.
+- `onnxruntime-node` added to `asarUnpack` so packaged builds load the native binaries from outside `app.asar`.
+- `scripts/smoke-embedder-worker.js` verified Xenova + onnxruntime-node embed inside a worker_thread (555 ms cold).
+
+---
+
 ## 2026-04-29 — fix: phase 7 + 8 renderer hygiene and cleanups
 
 - Splash: `electron/loading.html` loads immediately and swaps to the real renderer after `initDatabase`, replacing the blank window during slow starts.
