@@ -168,7 +168,7 @@ export default function Sidebar({ currentView, onNavigate, onOpenSermon, onOpenS
 
         {/* Sermon Prep — inline dropdown */}
         <div
-          className={`nav-item ${currentView === "workspace" ? "active" : ""}`}
+          className={`nav-item ${currentView === "workspace" || currentView === "sermons" ? "active" : ""}`}
           onClick={() => setDropdownOpen((o) => !o)}
         >
           {WORKSPACE_ICON}
@@ -184,6 +184,13 @@ export default function Sidebar({ currentView, onNavigate, onOpenSermon, onOpenS
               style={{ paddingLeft: 36, fontSize: 13, color: "var(--gold-pale)" }}
             >
               + New Sermon
+            </div>
+            <div
+              className="nav-item"
+              onClick={() => handleNavigate("sermons")}
+              style={{ paddingLeft: 36, fontSize: 13 }}
+            >
+              All Sermons
             </div>
             {visibleRecents.length > 0 && (
               <div style={{ borderTop: "1px solid rgba(212,160,23,0.15)", margin: "2px 0" }} />

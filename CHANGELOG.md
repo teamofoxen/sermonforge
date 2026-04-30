@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-04-29 — feat: State #4 position-in-series; Surface #4 All Sermons; vocabulary sweep
+
+- State Contract #4: `SermonWorkspace.jsx` topbar shows "‹ Sermon X of Y ›" with prev/next chevrons; siblings fetched via existing `getSermonsBySeries`; new `onOpenSermon` prop wired through `App.jsx`.
+- Surface Contract #4 (partial): added "All Sermons" entry to the Sermon Prep sidebar dropdown (mirrors "All Series"); Sermon Prep active state extended to highlight when `currentView === "sermons"`.
+- Naming drift sweep (State #5 + Surface #1): `Continue to Outline Tab →` → `Continue to Blueprint →` in StudyTab; Planning page title "Planning" → "All Series"; FeedbackModal "Outline Tab" → "Blueprint Tab"; Dashboard hero CTA "Create sermon" → "Build sermon"; SermonWorkspace "How this works" diagram stage 2 label "Outline" → "Blueprint".
+
+---
+
 ## 2026-04-29 — feat: complete Mutation Contract; State #3 no anonymous series
 
 - Mutation Contract #3: workspace topbar shows "Saving…" / "Saved" / "Save failed · Retry" via new `saving`/`saveError`/`lastSavedAt` state in `SermonWorkspace.jsx`.

@@ -298,6 +298,7 @@ export default function App() {
             sermonId={openSermonId}
             onClose={closeWorkspace}
             onOpenSeries={openPlanner}
+            onOpenSermon={openSermon}
           />
         )}
         </Suspense>

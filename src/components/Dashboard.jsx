@@ -80,7 +80,7 @@ export default function Dashboard({ onOpenSermon, onNewSeries, onLeaveTour }) {
                     setShowNewModal(true);
                   }}
                 >
-                  Create sermon <ArrowRightIcon />
+                  Build sermon <ArrowRightIcon />
                 </button>
                 <button
                   type="button"

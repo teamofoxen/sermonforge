@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 // prompts each produce a distinct object reference and always trigger the effect.
 import { useDebounce } from "../utils/hooks";
 import { useTour } from "../contexts/TourContext";
-import { getSermonById, updateSermon, deleteSermon, getSeriesById, getSectionsBySeries } from "../db/database";
+import { getSermonById, updateSermon, deleteSermon, getSeriesById, getSectionsBySeries, getSermonsBySeries } from "../db/database";
 import { pickSermonColumns } from "../constants/sermonColumns";
 import { updateMemory, extractOutlinePattern, extractPhrasePatterns } from "../utils/memory";
 import { autoResize } from "../utils";
@@ -19,7 +19,7 @@ const TABS = ["study", "outline", "manuscript", "delivery"];
 const TAB_LABELS = { study: "Study", outline: "Blueprint", manuscript: "Manuscript", delivery: "Delivery" };
 
 
-export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
+export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpenSermon }) {
   const [sermon, setSermon] = useState(null);
   const [activeTab, setActiveTab] = useState("study");
   const [activeStep, setActiveStep] = useState(null);
@@ -35,6 +35,10 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState(null);
+  // Position-in-series — State Contract #4: parent context is first-class.
+  // siblingIds is the ordered list of sermon IDs in the current sermon's
+  // series. Empty array when the sermon has no series.
+  const [siblingIds, setSiblingIds] = useState([]);
   // Pastoral Intelligence card — open when empty, collapsed when filled
   const [piOpen, setPiOpen] = useState(true);
   const { active: tourActive, desiredUi } = useTour();
@@ -65,15 +69,20 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
       try {
         const data = await getSermonById(sermonId);
 
-        // Fetch series and sections in parallel — only what's needed.
+        // Fetch series, sections, and sibling sermons in parallel — only what's needed.
         // Sections are fetched only when both ids are present so we can
-        // pluck the matching section without an extra IPC call.
-        const [series, sections] = await Promise.all([
+        // pluck the matching section without an extra IPC call. Siblings
+        // are fetched whenever the sermon belongs to a series so the topbar
+        // can show position and prev/next navigation (State Contract #4).
+        const [series, sections, siblings] = await Promise.all([
           data.series_id
             ? getSeriesById(data.series_id).catch((e) => { console.error("Series fetch failed:", e); return null; })
             : Promise.resolve(null),
           data.series_id && data.section_id
             ? getSectionsBySeries(data.series_id).catch((e) => { console.error("Sections fetch failed:", e); return []; })
+            : Promise.resolve([]),
+          data.series_id
+            ? getSermonsBySeries(data.series_id).catch((e) => { console.error("Siblings fetch failed:", e); return []; })
             : Promise.resolve([]),
         ]);
 
@@ -84,6 +93,7 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
 
         setSermon(data);
         sermonRef.current = data;
+        setSiblingIds(Array.isArray(siblings) ? siblings.map(s => s.id) : []);
         // Auto-collapse PI card if any field already has content
         if (data.topic_theme?.trim() || data.audience_assumptions?.trim() || data.background_noise?.trim()) {
           setPiOpen(false);
@@ -238,7 +248,53 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
               ) : (
                 sermon.series_title && <span>{sermon.series_title}</span>
               )}
-              {sermon.series_title && sermon.passage && <span> · </span>}
+              {/* Position-in-series chip + prev/next chevrons. State Contract #4:
+                  parent context is first-class — the user can answer "which
+                  sermon of how many am I on" without leaving the workspace. */}
+              {(() => {
+                const idx = sermon.series_id && siblingIds.length > 0
+                  ? siblingIds.indexOf(sermonId)
+                  : -1;
+                if (idx < 0) return null;
+                const total = siblingIds.length;
+                const position = idx + 1;
+                const prevId = idx > 0 ? siblingIds[idx - 1] : null;
+                const nextId = idx < total - 1 ? siblingIds[idx + 1] : null;
+                const navStyle = {
+                  background: "transparent",
+                  border: "none",
+                  padding: "0 4px",
+                  cursor: "pointer",
+                  color: "var(--ink-ghost)",
+                  fontSize: "14px",
+                  lineHeight: 1,
+                };
+                const navStyleDisabled = { ...navStyle, cursor: "default", opacity: 0.3 };
+                return (
+                  <>
+                    {sermon.series_title && <span> · </span>}
+                    <span
+                      style={{ display: "inline-flex", alignItems: "center", gap: "2px" }}
+                      title={`Sermon ${position} of ${total} in this series`}
+                    >
+                      <button
+                        style={prevId && onOpenSermon ? navStyle : navStyleDisabled}
+                        onClick={() => prevId && onOpenSermon && onOpenSermon(prevId)}
+                        disabled={!prevId || !onOpenSermon}
+                        aria-label="Previous sermon in series"
+                      >‹</button>
+                      <span>Sermon {position} of {total}</span>
+                      <button
+                        style={nextId && onOpenSermon ? navStyle : navStyleDisabled}
+                        onClick={() => nextId && onOpenSermon && onOpenSermon(nextId)}
+                        disabled={!nextId || !onOpenSermon}
+                        aria-label="Next sermon in series"
+                      >›</button>
+                    </span>
+                  </>
+                );
+              })()}
+              {(sermon.series_title || (sermon.series_id && siblingIds.length > 0)) && sermon.passage && <span> · </span>}
               {sermon.passage && (
                 <span
                   className="passage-ref"
@@ -512,7 +568,7 @@ function SermonHowItWorksModal({ onClose }) {
             <text x="100" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "'Crimson Pro', serif", fontWeight: 600 }}>Study</text>
 
             <rect x="230" y="16" width="180" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
-            <text x="320" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "'Crimson Pro', serif", fontWeight: 600 }}>Outline</text>
+            <text x="320" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "'Crimson Pro', serif", fontWeight: 600 }}>Blueprint</text>
 
             <rect x="450" y="16" width="180" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
             <text x="540" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "'Crimson Pro', serif", fontWeight: 600 }}>Manuscript</text>
