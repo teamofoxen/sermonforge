@@ -1,7 +1,7 @@
 # Enforcement Status
 
-**Last verified:** 2026-04-30 (Pilot B.3 landed — audit triage initiative complete)
-**Verified against:** `docs/CORE.md`, enforcement pass closed against working tree at HEAD `23a97f3` (uncommitted, see closing summary). Pilot C added the CTA primitive layer; Pilot D added the loading + empty-state primitives; Pilot E added `<BackButton>` (Surface #5 closes); Pilot B.2 renamed Archive → Completed Sermons (closes Surface #4 exception); Pilot B.3 added the Dashboard Resume Work panel + return-day reminder + Mark Complete UX (Delivery tab and SeriesPlanner), closing the State #6 surface gap.
+**Last verified:** 2026-04-30 (post-triage import-drift hardening)
+**Verified against:** `docs/CORE.md`, enforcement pass closed against working tree at HEAD `23a97f3` (uncommitted, see closing summary). Pilot C added the CTA primitive layer; Pilot D added the loading + empty-state primitives; Pilot E added `<BackButton>` (Surface #5 closes); Pilot B.2 renamed Archive → Completed Sermons (closes Surface #4 exception); Pilot B.3 added the Dashboard Resume Work panel + Mark Complete UX (closes State #6 surface gap). Post-triage: `react/jsx-no-undef` and `no-undef` enabled to close the consumer-side import-drift class that hit `SeriesPlanner.jsx` during Pilot C.
 
 ## Summary
 
@@ -96,9 +96,13 @@ Contract tests use **Path B**: an in-memory fixture mirroring the spine boundary
 
 ### Consumer-side import drift
 
-Contract tests, the spine integrity gate, and `tsc` together do not catch the case where a renderer component imports a name that the spine doesn't export. The integrity gate scans for *forbidden* imports (direct `db.run`, sermon/series helpers from `src/db/database.js`); it does not validate that imports of `src/core/spine.ts` resolve to real exports. `tsc` skips `.jsx` files by default. The Path B fixture reproduces the spine API surface but doesn't exercise component imports. A renamed export — for example, `getSermonById → getSermon` was applied across consumers, but `getSeriesById → getSeries` was missed in `SeriesPlanner.jsx` — passes every gate and surfaces only at runtime as `TypeError: <name> is not a function`. The post-enforcement audit caught one such case (Series Planner stuck on infinite "Loading…" spinner); the regression was a one-line import rename.
+**Status:** active (resolved post-audit-triage).
 
-**Mitigation candidate:** enable `tsc` on `.jsx` files via JSDoc annotations + `checkJs: true` in `tsconfig.json`, or migrate the imported components to `.tsx` incrementally during audit triage. Either approach turns missing-named-import errors into compile-time failures.
+The class of regression where a renderer component imports a name the spine doesn't export — for example, `getSeriesById` imported from `../core/spine` when the module only exports `getSeries` — used to pass every gate. The spine integrity gate scans for *forbidden* imports, not missing exports. `tsc` skips `.jsx` files by default. The Path B test fixture reproduces the spine API surface but doesn't exercise component imports. Pilot C silently introduced this exact bug in `SeriesPlanner.jsx` (primitives used without imports + `getSeriesById` rename missed) and it surfaced only as a runtime crash on the Series Planner page during the post-enforcement regression audit.
+
+**Resolution:** `react/jsx-no-undef` and ESLint's built-in `no-undef` rule are now enabled at `error` in `.eslintrc.cjs`. The first catches missing-import cases on JSX components (`<Foo />` when `Foo` isn't in scope); the second catches the same on non-JSX symbols (function calls, member accesses, hook references). Both fire at editor time and at the lint-staged pre-commit hook. The Pilot C → SeriesPlanner regression class can no longer pass commit silently — `eslint-plugin-react` was already in `package.json` so the resolution was a `.eslintrc.cjs` config edit plus one fix (`BackButton.tsx` referenced `React.MouseEvent` without importing the namespace).
+
+**Path A** (real Electron in tests) remains a candidate for a deeper class of integration bugs the lint rule can't catch (e.g., wrong-shape arguments to a real export). Still out of scope here; revisit if a regression of that class appears.
 
 ## Lint baseline accounting
 
@@ -110,6 +114,8 @@ Contract tests, the spine integrity gate, and `tsc` together do not catch the ca
 | `sermonforge/canonical-stage-name` | 0 | — |
 | `sermonforge/no-window-alert` | 0 | — |
 | `react-hooks/rules-of-hooks` | 0 | — |
+| `react/jsx-no-undef` | 0 | Enabled post-audit-triage as the structural fix for the consumer-side import-drift class (see §"Consumer-side import drift" above). |
+| `no-undef` | 0 | Enabled alongside `react/jsx-no-undef`; one pre-existing drift surfaced (`BackButton.tsx` referenced `React.MouseEvent` without importing the namespace) and was fixed in the same change. |
 
 **Approach A** (lint-staged in `.husky/pre-commit`) means the residual baseline doesn't block commits on untouched files. New violations on staged files do block. After Pilots C + D the visible total is **15** (residual `no-raw-button` only — nav/tab/tertiary text buttons), down from the original 185.
 

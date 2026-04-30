@@ -20,7 +20,7 @@ module.exports = {
     ecmaFeatures: { jsx: true },
   },
   settings: { react: { version: 'detect' } },
-  plugins: ['sermonforge', 'react-hooks'],
+  plugins: ['sermonforge', 'react-hooks', 'react'],
   ignorePatterns: [
     'dist/**',
     'node_modules/**',
@@ -57,5 +57,14 @@ module.exports = {
     // exhaustive-deps left off because it produces noisy false positives
     // around intentional dep-array narrowing (see AIPanel.jsx:104).
     'react-hooks/rules-of-hooks': 'error',
+    // Structural enforcement against the consumer-side import-drift class
+    // documented in docs/ENFORCEMENT_STATUS.md. The Pilot C → SeriesPlanner
+    // regression — `getSeriesById` imported from a spine that only exports
+    // `getSeries` — passed lint, the integrity gate, and the Path B contract
+    // test fixture, surfacing only as a runtime crash. `react/jsx-no-undef`
+    // catches missing-import cases on JSX components; `no-undef` catches the
+    // same on non-JSX symbols (function calls, member accesses, hooks).
+    'react/jsx-no-undef': 'error',
+    'no-undef': 'error',
   },
 };

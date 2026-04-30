@@ -24,7 +24,7 @@
 // it in `children`. This is the "one spelling, everywhere" enforcement
 // mechanism for back-navigation copy.
 
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties, MouseEvent, ReactNode } from "react";
 import SecondaryButton from "./SecondaryButton";
 import IconButton from "./IconButton";
 
@@ -32,7 +32,7 @@ type BackButtonVariant = "labeled" | "icon";
 type BackButtonSize = "default" | "sm";
 
 export interface BackButtonProps {
-  onClick: (e?: React.MouseEvent<HTMLButtonElement>) => void;
+  onClick: (e?: MouseEvent<HTMLButtonElement>) => void;
   variant?: BackButtonVariant;
   size?: BackButtonSize;
   children?: ReactNode;

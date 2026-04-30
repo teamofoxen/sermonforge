@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-04-30 — feat: enable react/jsx-no-undef + no-undef (close import-drift class)
+
+- `.eslintrc.cjs` registers `eslint-plugin-react` (already in `package.json`) and enables `react/jsx-no-undef` + `no-undef` — closes the consumer-side import-drift class that hit `SeriesPlanner.jsx` during Pilot C and surfaced only at runtime.
+- One pre-existing drift surfaced and fixed: `src/components/primitives/BackButton.tsx` referenced `React.MouseEvent<HTMLButtonElement>` without importing the namespace; switched to the named-type import.
+- `docs/ENFORCEMENT_STATUS.md` — moved the "Consumer-side import drift" caveat from mitigation-candidate to active enforcement; lint baseline accounting lists the new rules at zero.
+- Verified: lint clean at the 15-error residual baseline, 29/29 contract tests pass, spine integrity gate passes (75 files).
+
+---
+
 ## 2026-04-30 — feat: Resume Work + Mark Complete UX (State Contract #6)
 
 - Dashboard Resume Work tile consumes `spine.getInProgressSermons()`; sermons whose delivery date has passed get a return-day reminder section with crimson highlighting.
