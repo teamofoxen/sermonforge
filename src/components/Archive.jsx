@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { getAllSermons, deleteSermon } from "../db/database";
 import { formatDate } from "../utils";
 import DeleteButton from "./DeleteButton";
+import InlineError from "./InlineError";
 
 export default function Archive({ onOpenSermon }) {
   const [sermons, setSermons] = useState([]);
@@ -52,8 +53,8 @@ export default function Archive({ onOpenSermon }) {
         {loading ? (
           <div style={{ color: "var(--ink-ghost)", fontStyle: "italic" }}>Loading…</div>
         ) : loadError ? (
-          <div style={{ color: "var(--crimson-soft)", fontStyle: "italic", padding: "40px 0", textAlign: "center" }}>
-            Failed to load archived sermons. Check the console for details.
+          <div style={{ padding: "40px 0", display: "flex", justifyContent: "center" }}>
+            <InlineError>Could not load archived sermons.</InlineError>
           </div>
         ) : filtered.length === 0 ? (
           <div style={{ color: "var(--ink-ghost)", fontStyle: "italic", padding: "40px 0", textAlign: "center" }}>

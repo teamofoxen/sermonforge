@@ -1400,7 +1400,7 @@ function CalendarTab({ series, sections, sermons, calNotes, onChange, onSermonsC
             <span style={{ fontSize: "12px", color: "var(--sage)" }}>Dates saved</span>
           )}
           {calendarSaveMsg === "error" && (
-            <span style={{ fontSize: "12px", color: "var(--crimson-soft)" }}>Save failed — check console</span>
+            <span style={{ fontSize: "12px", color: "var(--crimson-soft)" }}>Save failed</span>
           )}
         </div>
 
@@ -1482,7 +1482,7 @@ function CalendarTab({ series, sections, sermons, calNotes, onChange, onSermonsC
                 <span style={{ fontSize: "12px", color: "var(--sage)" }}>Dates saved</span>
               )}
               {calendarSaveMsg === "error" && (
-                <span style={{ fontSize: "12px", color: "var(--crimson-soft)" }}>Save failed — check console</span>
+                <span style={{ fontSize: "12px", color: "var(--crimson-soft)" }}>Save failed</span>
               )}
             </div>
           </>

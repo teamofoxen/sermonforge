@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { saveApiKeys } from "../db/database";
+import InlineError from "./InlineError";
 
 const SECTION = {
   borderTop: "1px solid var(--parchment-deep)",
@@ -182,12 +183,9 @@ export default function SetupScreen({ onComplete }) {
 
         {/* Error */}
         {error && (
-          <p style={{
-            color: "var(--crimson-soft)", fontSize: "13px",
-            margin: "16px 0 0", fontFamily: "'Crimson Pro', serif",
-          }}>
-            {error}
-          </p>
+          <div style={{ marginTop: "16px" }}>
+            <InlineError onDismiss={() => setError(null)}>{error}</InlineError>
+          </div>
         )}
 
         {/* Submit */}

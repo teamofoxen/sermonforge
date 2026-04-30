@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-04-29 — feat: complete Mutation Contract; State #3 no anonymous series
+
+- Mutation Contract #3: workspace topbar shows "Saving…" / "Saved" / "Save failed · Retry" via new `saving`/`saveError`/`lastSavedAt` state in `SermonWorkspace.jsx`.
+- State Contract #3: new `NewSeriesModal.jsx` collects title before any record is written; `db-createSeries` IPC rejects empty titles; sidebar "Untitled Series" filter band-aid removed; `App.jsx` `handleNewSeries` opens the modal instead of writing a silent stub.
+- Mutation Contract #5: new `InlineError.jsx` canonical inline pattern; raw `alert()` removed from `NewSermonModal.jsx`; bespoke crimson treatments in Archive, FeedbackModal, SetupScreen, Library import error, and NewSeriesModal swapped to InlineError.
+- `PassagePopup.jsx` rephrased ESV-key error from "Add ESV_API_KEY to .env" to user language; `SeriesPlanner.jsx` stripped "— check console" from "Save failed" indicators.
+
+---
+
 ## 2026-04-29 — feat: Mutation Contract — AI proposals reviewed before apply
 
 - New `src/components/ProposalPanel.jsx` component implements the review-then-apply pattern that enforces Mutation Contract clauses #1 and #2 from `docs/CORE.md`.

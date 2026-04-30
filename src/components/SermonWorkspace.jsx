@@ -30,6 +30,11 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [studySummaries, setStudySummaries] = useState({});
   const [showPassage, setShowPassage] = useState(false);
+  // Save visibility — Mutation Contract #3: saves are events, not background noise.
+  // "Saving…" while in flight, "Saved" when at rest, "Save failed · Retry" on error.
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState(null);
   // Pastoral Intelligence card — open when empty, collapsed when filled
   const [piOpen, setPiOpen] = useState(true);
   const { active: tourActive, desiredUi } = useTour();
@@ -124,6 +129,7 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
 
   const persistUpdate = useCallback(
     async () => {
+      setSaving(true);
       try {
         // sermonRef.current is the full optimistic state, including JOIN
         // fields (series_title, series_color), the attached `series` and
@@ -134,8 +140,13 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
         const payload = pickSermonColumns(sermonRef.current);
         await updateSermon(sermonId, payload);
         captureMemory(sermonRef.current);
+        setSaveError(false);
+        setLastSavedAt(Date.now());
       } catch (e) {
         console.error("Save error:", e);
+        setSaveError(true);
+      } finally {
+        setSaving(false);
       }
     },
     [sermonId]
@@ -242,6 +253,34 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries }) {
         </div>
 
         <div className="topbar-right">
+          {saving && (
+            <span
+              style={{ fontSize: "12px", color: "var(--ink-ghost)", fontStyle: "italic", padding: "0 6px" }}
+            >
+              Saving…
+            </span>
+          )}
+          {!saving && saveError && (
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "0 6px" }}>
+              <span style={{ fontSize: "12px", color: "var(--crimson-soft)" }}>Save failed</span>
+              <button
+                className="btn-ghost btn-sm"
+                style={{ fontSize: "12px", padding: "2px 8px" }}
+                onClick={persistUpdate}
+              >
+                Retry
+              </button>
+            </span>
+          )}
+          {!saving && !saveError && lastSavedAt && (
+            <span
+              style={{ fontSize: "12px", color: "var(--ink-ghost)", padding: "0 6px" }}
+              title={`Last saved ${new Date(lastSavedAt).toLocaleString()}`}
+            >
+              Saved
+            </span>
+          )}
+
           <DeleteButton onDelete={handleDelete} />
 
           <button

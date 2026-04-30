@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, Component, lazy, Suspense } from "react";
-import { createSeries, getApiKeyStatus, removeTourSermon, onDbWriteError, onDbWriteOk, flushDb, getSermonColumns } from "./db/database";
+import { getApiKeyStatus, removeTourSermon, onDbWriteError, onDbWriteOk, flushDb, getSermonColumns } from "./db/database";
 import { SERMON_COLUMNS } from "./constants/sermonColumns";
 import { restoreMemoryFromBackup } from "./utils/memory";
 import { TourProvider } from "./contexts/TourContext";
@@ -7,6 +7,7 @@ import TourOverlay from "./components/TourOverlay";
 import SetupScreen from "./components/SetupScreen";
 import Sidebar from "./components/Sidebar";
 import Dashboard from "./components/Dashboard";
+import NewSeriesModal from "./components/NewSeriesModal";
 import OneDriveWarning from "./components/OneDriveWarning";
 
 const SermonList = lazy(() => import("./components/SermonList"));
@@ -143,12 +144,17 @@ export default function App() {
     setCurrentView("series-planner");
   }, []);
 
-  const handleNewSeries = useCallback(async () => {
-    const id = await createSeries({
-      title: "Untitled Series",
-      year: new Date().getFullYear(),
-      status: "planning",
-    });
+  // State Contract #3: no anonymous atoms. Open the New Series modal instead
+  // of silently writing an "Untitled Series" stub. The modal collects the
+  // series title before any record is created.
+  const [showNewSeriesModal, setShowNewSeriesModal] = useState(false);
+
+  const handleNewSeries = useCallback(() => {
+    setShowNewSeriesModal(true);
+  }, []);
+
+  const handleSeriesCreated = useCallback((id) => {
+    setShowNewSeriesModal(false);
     openPlanner(id);
   }, [openPlanner]);
 
@@ -298,6 +304,12 @@ export default function App() {
       </div>
 
     </div>
+    {showNewSeriesModal && (
+      <NewSeriesModal
+        onClose={() => setShowNewSeriesModal(false)}
+        onCreated={handleSeriesCreated}
+      />
+    )}
     <TourOverlay />
     </TourProvider>
     </ErrorBoundary>
