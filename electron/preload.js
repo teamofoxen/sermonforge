@@ -5,27 +5,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
   sendAIMessage: (messages, systemPrompt, step, sermonId) =>
     ipcRenderer.invoke("ai-message", { messages, systemPrompt, step, sermonId }),
 
-  // ── Sermons ───────────────────────────────────────────────────────────────
-  getAllSermons:   ()              => ipcRenderer.invoke("db-getAllSermons"),
-  getSermonById:  (id)            => ipcRenderer.invoke("db-getSermonById", id),
-  createSermon:   (data)          => ipcRenderer.invoke("db-createSermon", data),
-  updateSermon:   (id, fields)    => ipcRenderer.invoke("db-updateSermon", { id, fields }),
-  deleteSermon:   (id)            => ipcRenderer.invoke("db-deleteSermon", id),
-
-  // ── Series ────────────────────────────────────────────────────────────────
-  getAllSeries:        ()          => ipcRenderer.invoke("db-getAllSeries"),
-  getRecentSeries:     (limit)     => ipcRenderer.invoke("db-getRecentSeries", limit),
-  getSeriesById:       (id)        => ipcRenderer.invoke("db-getSeriesById", id),
-  createSeries:        (data)      => ipcRenderer.invoke("db-createSeries", data),
-  updateSeries:        (id, fields) => ipcRenderer.invoke("db-updateSeries", { id, fields }),
-  deleteSeries:        (id)        => ipcRenderer.invoke("db-deleteSeries", id),
-  getSermonsBySeries:  (seriesId)  => ipcRenderer.invoke("db-getSermonsBySeries", seriesId),
-
-  // ── Series sections ───────────────────────────────────────────────────────
-  getSectionsBySeries: (seriesId)  => ipcRenderer.invoke("db-getSectionsBySeries", seriesId),
-  createSection:       (data)      => ipcRenderer.invoke("db-createSection", data),
-  updateSection:       (id, fields) => ipcRenderer.invoke("db-updateSection", { id, fields }),
-  deleteSection:       (id)        => ipcRenderer.invoke("db-deleteSection", id),
+  // ── Spine — the only sermon/series state surface ──────────────────────────
+  // src/core/spine.ts is the renderer-side companion. Direct calls to
+  // window.electronAPI.spine() outside src/core/spine.ts are flagged by
+  // scripts/spine-integrity.js.
+  spine: (op, payload) => ipcRenderer.invoke("spine", op, payload),
 
   // ── Calendar notes ────────────────────────────────────────────────────────
   getCalendarNotes:    ()          => ipcRenderer.invoke("db-getCalendarNotes"),
@@ -41,9 +25,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   searchTheologyLibrary:  (query, limit)         => ipcRenderer.invoke("theology-search", { query, limit }),
   getTheologyChunks:      (ids, maxChars)        => ipcRenderer.invoke("theology-get-chunks", { ids, maxChars }),
 
-  // ── Dashboard ─────────────────────────────────────────────────────────────
-  getRecentSermons: (limit) => ipcRenderer.invoke("db-getRecentSermons", limit),
-
   // ── Export ───────────────────────────────────────────────────────────────────
   exportStudyGuide: (seriesId) => ipcRenderer.invoke("series-export-study-guide", seriesId),
   exportPmb: (data) => ipcRenderer.invoke("sermon-export-pmb", data),
@@ -51,10 +32,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // ── Bible passage ─────────────────────────────────────────────────────────
   fetchPassage: (passage) => ipcRenderer.invoke('passage-fetch', passage),
-
-  // ── Tour ──────────────────────────────────────────────────────────────────
-  loadTourSermon:   () => ipcRenderer.invoke("db-loadTourSermon"),
-  removeTourSermon: () => ipcRenderer.invoke("db-removeTourSermon"),
 
   // ── API key setup ─────────────────────────────────────────────────────────
   getApiKeyStatus: () => ipcRenderer.invoke("app-get-key-status"),

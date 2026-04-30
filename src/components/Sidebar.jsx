@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getRecentSermons, getRecentSeries } from "../db/database.js";
+import { getRecentSermons, getRecentSeries } from "../core/spine";
 import NewSermonModal from "./NewSermonModal.jsx";
 import FeedbackModal from "./FeedbackModal.jsx";
 

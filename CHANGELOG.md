@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-04-30 — feat: pre-SPRD contract enforcement layer
+
+- New `src/core/contracts.ts` + `src/core/spine.ts` make the spine the only sermon/series API; v17 migration adds `current_*` position columns + `legacy_evidence_cutoff`.
+- `scripts/spine-integrity.js` (wired into `.husky/pre-commit`) blocks renderer-side bypasses — raw SQL, `db.run`, `electronAPI.spine`, or `database.js` imports of spine-only names outside `src/core/`.
+- Local `eslint-plugin-sermonforge` lands five rules; 11 contract tests cover State #3/#5, Process #1–#5, Mutation #1/#3, Surface #1/#4 against a Path-B in-memory fixture.
+- Migrated 11 renderer components to `spine.*`; extracted `SermonWorkspace`'s save-state into `spine.persistMutation` and added `data-testid="movement-event"` on tab transitions.
+- `docs/ENFORCEMENT_STATUS.md` is the canonical per-clause map: 13 structural / 2 test / 3 lint / 3 deferred / 0 unenforceable.
+
+---
+
 ## 2026-04-30 — chore: add enforcement-status check to end-session skill
 
 - Added STEP 2 — ENFORCEMENT STATUS CHECK to `.claude/skills/end-session/SKILL.md` listing the seven contract-enforcement trigger paths.

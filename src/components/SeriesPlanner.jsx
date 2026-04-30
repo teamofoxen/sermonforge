@@ -4,8 +4,12 @@ import {
   getSeriesById, updateSeries,
   getSectionsBySeries, createSection, updateSection, deleteSection,
   getSermonsBySeries, createSermon, updateSermon, deleteSermon,
-  getCalendarNotes, exportStudyGuide,
-} from "../db/database";
+} from "../core/spine";
+import { getCalendarNotes, exportStudyGuide } from "../db/database";
+import {
+  SERIES_STATUS, SERIES_STATUS_LABELS,
+  SERMON_STATUS,
+} from "../core/contracts";
 import { getSeasonForDate, getUpcomingSundays, toDateString } from "../utils/churchCalendar";
 import { tryParse, formatDate, autoResize } from "../utils";
 import DeleteButton from "./DeleteButton";
@@ -30,9 +34,8 @@ const COLOR_OPTIONS = [
 ];
 
 const STATUS_OPTIONS = [
-  { value: "planning", label: "Planning" },
-  { value: "active", label: "Active" },
-  { value: "complete", label: "Complete" },
+  { value: SERIES_STATUS.InProgress, label: SERIES_STATUS_LABELS[SERIES_STATUS.InProgress] },
+  { value: SERIES_STATUS.Complete,   label: SERIES_STATUS_LABELS[SERIES_STATUS.Complete] },
 ];
 
 // ── Book Study field definitions ──────────────────────────────────────────────
@@ -184,10 +187,10 @@ export default function SeriesPlanner({ seriesId, onClose, onOpenSermon }) {
           <span style={{
             fontSize: "11px", padding: "3px 10px", borderRadius: "10px",
             background: "var(--parchment-warm)", border: "1px solid var(--parchment-deep)",
-            color: series.status === "active" ? "var(--sage)" : series.status === "complete" ? "var(--gold)" : "var(--ink-ghost)",
+            color: series.status === SERIES_STATUS.Complete ? "var(--gold)" : "var(--sage)",
             textTransform: "uppercase", letterSpacing: "0.05em",
           }}>
-            {series.status || "Planning"}
+            {SERIES_STATUS_LABELS[series.status] || SERIES_STATUS_LABELS[SERIES_STATUS.InProgress]}
           </span>
         </div>
         <button
@@ -616,7 +619,7 @@ function OverviewTab({ series, onChange, drawerOpen, onOpenDrawer, onCloseDrawer
           </div>
           <div>
             <label style={labelStyle}>Status</label>
-            <select style={selectStyle} value={series.status || "planning"} onChange={(e) => onChange("status", e.target.value)}>
+            <select style={selectStyle} value={series.status || SERIES_STATUS.InProgress} onChange={(e) => onChange("status", e.target.value)}>
               {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </div>
@@ -996,17 +999,21 @@ function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpen
   }
 
   async function addSlot(sectionId = null) {
-    const id = await createSermon({
+    // State Contract #3 — sermons must have a name. Until the user names a
+    // slot, hold a non-empty placeholder so the spine accepts the create.
+    // The slot UI accepts a real title via handleSlotField; until then this
+    // placeholder satisfies the contract without a separate "draft" state.
+    const result = await createSermon({
       series_id: seriesId,
       section_id: sectionId,
-      title: "",
+      name: "Untitled sermon",
       passage: "",
-      stage: "planning",
       is_one_off: 0,
     });
+    const id = result.id;
     onSermonsChange(prev => [...prev, {
       id, series_id: seriesId, section_id: sectionId,
-      title: "", passage: "", date: "", stage: "planning",
+      title: "Untitled sermon", passage: "", date: "", stage: SERMON_STATUS.InProgress,
     }]);
   }
 

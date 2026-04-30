@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
-import { getAllSeries, deleteSeries, getSermonsBySeries } from "../db/database";
+import { getAllSeries, deleteSeries, getSermonsBySeries } from "../core/spine";
+import { SERIES_STATUS_LABELS } from "../core/contracts";
 import DeleteButton from "./DeleteButton";
 
 const CANON_LABELS = { ot: "Old Testament", nt: "New Testament", wisdom: "Wisdom", prophetic: "Prophetic", "": "Uncategorized" };
 const CANON_COLORS = { ot: "var(--gold)", nt: "var(--sage)", wisdom: "var(--crimson)", prophetic: "var(--slate)", "": "var(--ink-ghost)" };
-const STATUS_LABELS = { planning: "Planning", active: "Active", complete: "Complete" };
 
 export default function Planning({ onOpenPlanner, onNewSeries }) {
   const [series, setSeries] = useState([]);
@@ -154,7 +154,7 @@ function SeriesCard({ series: s, sermonCount, onOpen, onDelete }) {
           background: "var(--parchment-warm)", color: statusColor[s.status] || "var(--ink-ghost)",
           border: "1px solid var(--parchment-deep)", textTransform: "uppercase", letterSpacing: "0.05em",
         }}>
-          {STATUS_LABELS[s.status] || s.status}
+          {SERIES_STATUS_LABELS[s.status] || s.status}
         </span>
       </div>
 

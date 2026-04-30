@@ -1,5 +1,13 @@
 // Database helpers — named operations only. All SQL lives in electron/main.js.
 // Components import these functions; nothing here knows table or column names.
+//
+// Sermon and series state operations are NOT exported from this module.
+// They live in `src/core/spine.ts` and route through `ipcMain.handle("spine")`.
+// `scripts/spine-integrity.js` blocks any component that imports a sermon or
+// series helper from here. This file is now scoped to non-sermon/non-series
+// resources: calendar notes, settings, theology, bible passages, exports,
+// API keys, feedback, disk-write health, startup warnings, and pastor memory
+// backup.
 
 // Browser-preview fallback: when running under Vite alone (no Electron preload),
 // `window.electronAPI` is undefined. Returning a permissive stub lets UI-only
@@ -20,28 +28,6 @@ function makeBrowserPreviewStub() {
 
 const api = (typeof window !== "undefined" && window.electronAPI) || makeBrowserPreviewStub();
 
-// ── Sermons ───────────────────────────────────────────────────────────────────
-export const getAllSermons    = ()             => api.getAllSermons();
-export const getSermonById   = (id)           => api.getSermonById(id);
-export const createSermon    = (data)         => api.createSermon(data);
-export const updateSermon    = (id, fields)   => api.updateSermon(id, fields);
-export const deleteSermon    = (id)           => api.deleteSermon(id);
-
-// ── Series ────────────────────────────────────────────────────────────────────
-export const getAllSeries        = ()          => api.getAllSeries();
-export const getRecentSeries     = (limit = 3) => api.getRecentSeries(limit);
-export const getSeriesById       = (id)        => api.getSeriesById(id);
-export const createSeries        = (data)      => api.createSeries(data);
-export const updateSeries        = (id, fields) => api.updateSeries(id, fields);
-export const deleteSeries        = (id)        => api.deleteSeries(id);
-export const getSermonsBySeries  = (seriesId)  => api.getSermonsBySeries(seriesId);
-
-// ── Series sections ───────────────────────────────────────────────────────────
-export const getSectionsBySeries = (seriesId)  => api.getSectionsBySeries(seriesId);
-export const createSection       = (data)      => api.createSection(data);
-export const updateSection       = (id, fields) => api.updateSection(id, fields);
-export const deleteSection       = (id)        => api.deleteSection(id);
-
 // ── Calendar notes ────────────────────────────────────────────────────────────
 export const getCalendarNotes   = ()           => api.getCalendarNotes();
 export const createCalendarNote = (data)       => api.createCalendarNote(data);
@@ -56,9 +42,6 @@ export const getTheologyStatus      = ()                    => api.getTheologySt
 export const searchTheologyLibrary  = (query, limit = 5)   => api.searchTheologyLibrary(query, limit);
 export const getTheologyChunks      = (ids, maxChars = 600) => api.getTheologyChunks(ids, maxChars);
 
-// ── Dashboard ─────────────────────────────────────────────────────────────────
-export const getRecentSermons   = (limit = 3)  => api.getRecentSermons(limit);
-
 // ── Bible passage viewer ──────────────────────────────────────────────────
 export const fetchPassage = (passage) => api.fetchPassage(passage);
 
@@ -66,10 +49,6 @@ export const fetchPassage = (passage) => api.fetchPassage(passage);
 export const exportStudyGuide = (seriesId) => api.exportStudyGuide(seriesId);
 export const exportPmb = (data) => api.exportPmb(data);
 export const exportManuscript = (data) => api.exportManuscript(data);
-
-// ── Tour ──────────────────────────────────────────────────────────────────────
-export const loadTourSermon   = () => api.loadTourSermon();
-export const removeTourSermon = () => api.removeTourSermon();
 
 // ── API key setup ─────────────────────────────────────────────────────────────
 export const getApiKeyStatus = () => api.getApiKeyStatus();

@@ -1,0 +1,9 @@
+# Spine Integrity Gate — see scripts/spine-integrity.js. Blocks commits
+# whenever sermon/series state would bypass the spine. Runs against the full
+# codebase because the gate scans every file for structural violations.
+node scripts/spine-integrity.js || exit 1
+
+# Lint-staged — runs eslint on STAGED files only (Approach A in
+# .eslintrc.cjs). Existing deferred-Phase noise (no-raw-button etc.) on
+# untouched files doesn't block commits; new violations on the diff do.
+npx lint-staged || exit 1

@@ -1,28 +1,26 @@
 import { useState, useEffect } from "react";
-import { getAllSermons, deleteSermon, updateSermon } from "../db/database";
+import { getAllSermons, deleteSermon, updateSermon } from "../core/spine";
 import { formatDate } from "../utils";
 import NewSermonModal from "./NewSermonModal";
 import DeleteButton from "./DeleteButton";
+import { SERMON_STATUS, SERMON_STATUS_LABELS } from "../core/contracts";
 
-const FILTER_STAGES = ["all", "planning", "study", "outline", "writing", "ready"];
-const SERMON_STAGES = ["planning", "study", "outline", "writing", "ready", "archived"];
+const SERMON_STATUS_VALUES = [SERMON_STATUS.InProgress, SERMON_STATUS.Complete];
 
 export default function SermonList({ onOpenSermon }) {
   const [sermons, setSermons] = useState([]);
-  const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [showNewModal, setShowNewModal] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     getAllSermons()
-      .then((data) => setSermons(data.filter((s) => s.stage !== "archived")))
+      .then((data) => setSermons(data.filter((s) => s.stage !== SERMON_STATUS.Complete)))
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
 
   const filtered = sermons.filter((s) => {
-    if (filter !== "all" && s.stage !== filter) return false;
     if (search) {
       const q = search.toLowerCase();
       return (
@@ -61,18 +59,6 @@ export default function SermonList({ onOpenSermon }) {
           />
         </div>
 
-        <div className="filter-row">
-          {FILTER_STAGES.map((s) => (
-            <button
-              key={s}
-              className={`filter-btn ${filter === s ? "active" : ""}`}
-              onClick={() => setFilter(s)}
-            >
-              {s === "all" ? "All" : s.charAt(0).toUpperCase() + s.slice(1)}
-            </button>
-          ))}
-        </div>
-
         {loading ? (
           <div style={{ color: "var(--ink-ghost)", fontStyle: "italic" }}>Loading…</div>
         ) : filtered.length === 0 ? (
@@ -108,7 +94,7 @@ export default function SermonList({ onOpenSermon }) {
                         e.stopPropagation();
                         const newStage = e.target.value;
                         await updateSermon(sermon.id, { stage: newStage });
-                        if (newStage === "archived") {
+                        if (newStage === SERMON_STATUS.Complete) {
                           setSermons((prev) => prev.filter((s) => s.id !== sermon.id));
                         } else {
                           setSermons((prev) => prev.map((s) => s.id === sermon.id ? { ...s, stage: newStage } : s));
@@ -116,8 +102,8 @@ export default function SermonList({ onOpenSermon }) {
                       }}
                       style={{ fontSize: "11px", padding: "2px 6px" }}
                     >
-                      {SERMON_STAGES.map((st) => (
-                        <option key={st} value={st}>{st.charAt(0).toUpperCase() + st.slice(1)}</option>
+                      {SERMON_STATUS_VALUES.map((st) => (
+                        <option key={st} value={st}>{SERMON_STATUS_LABELS[st]}</option>
                       ))}
                     </select>
                     <DeleteButton

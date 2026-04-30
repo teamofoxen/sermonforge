@@ -8,6 +8,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export default defineConfig({
   plugins: [react()],
   base: "./",
+  oxc: {
+    // Vitest 4 / rolldown SSR doesn't pick up the react plugin's JSX
+    // transform on its own — set it explicitly so .tsx contract tests parse.
+    // (vite-react-babel previously read this from `esbuild`, but vite 7+
+    // prefers `oxc` since rolldown uses oxc internally.)
+    jsx: "automatic",
+  },
   test: {
     environment: "node",
     globals: true,

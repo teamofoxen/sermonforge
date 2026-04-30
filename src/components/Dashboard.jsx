@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { loadTourSermon } from "../db/database";
+import { loadTourSermon } from "../core/spine";
 import { useTour } from "../contexts/TourContext";
 import { WORKSPACE_TOUR_STOPS } from "../tour/workspaceTourStops";
 import NewSermonModal from "./NewSermonModal";

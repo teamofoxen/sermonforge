@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { getAllSermons } from "../db/database";
+import { getAllSermons } from "../core/spine";
+import { SERMON_STATUS } from "../core/contracts";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = [
@@ -8,12 +9,8 @@ const MONTHS = [
 ];
 
 const STAGE_COLORS = {
-  planning: "var(--sage)",
-  study: "var(--stage-study)",
-  outline: "var(--slate)",
-  writing: "var(--crimson)",
-  ready: "var(--stage-ready)",
-  archived: "var(--ink-ghost)",
+  [SERMON_STATUS.InProgress]: "var(--sage)",
+  [SERMON_STATUS.Complete]: "var(--gold)",
 };
 
 function getDaysInMonth(year, month) {
@@ -54,7 +51,7 @@ export default function Calendar({ onOpenSermon }) {
   while (cells.length % 7 !== 0) cells.push(null);
 
   const sermonsByDate = {};
-  for (const s of sermons.filter((s) => s.stage !== "archived")) {
+  for (const s of sermons.filter((s) => s.stage !== SERMON_STATUS.Complete)) {
     if (!s.date) continue;
     const d = new Date(s.date + "T00:00:00");
     if (d.getFullYear() === viewYear && d.getMonth() === viewMonth) {

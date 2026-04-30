@@ -1,0 +1,81 @@
+import { describe, it, expect } from "vitest";
+import * as fs from "node:fs";
+import * as path from "node:path";
+
+// Surface Contract #4 (docs/CORE.md):
+//   "'You are here' is always answerable. Every top-level destination has a
+//   canonical sidebar entry and a canonical active-state. No nameless
+//   wandering."
+//
+// Test approach: parse the App.jsx router (the `currentView === "..."`
+// switches that decide which top-level view is shown) and the Sidebar's
+// NAV_ITEMS list. The set of ROUTER destinations must be a subset of the
+// set of canonical destinations the user can reach from the sidebar; any
+// router destination missing from the sidebar is "nameless wandering" —
+// the user can land there but no canonical "you are here" will activate.
+//
+// `series-planner` and `workspace` are deep destinations entered from a
+// different surface (clicking a series card / sermon card). They are not
+// expected to have sidebar entries — the position-in-series chip and
+// breadcrumbs in the workspace topbar provide their "you are here". The
+// test allows them via the EXPECTED_DEEP set.
+
+const ROOT = path.resolve(__dirname, "..", "..");
+
+// Deep routes reached from a different surface than the sidebar:
+//   • series-planner — entered by clicking a series card
+//   • workspace — entered by clicking a sermon card; topbar provides "you are here"
+//   • archive — KNOWN Surface #4 violation deferred to audit-triage Pilot B.2
+//     (rename to "Completed Sermons" + add sidebar entry). Tracked in the
+//     audit-triage status memory; not in scope for Phase 5.
+const EXPECTED_DEEP = new Set(["series-planner", "workspace", "archive"]);
+
+function parseRouterDestinations(): Set<string> {
+  const app = fs.readFileSync(path.join(ROOT, "src", "App.jsx"), "utf8");
+  const matches = app.matchAll(/currentView === ["']([\w-]+)["']/g);
+  const set = new Set<string>();
+  for (const m of matches) set.add(m[1]);
+  return set;
+}
+
+function parseSidebarDestinations(): Set<string> {
+  const sidebar = fs.readFileSync(path.join(ROOT, "src", "components", "Sidebar.jsx"), "utf8");
+  const set = new Set<string>();
+  // `id: "<destination>"` inside NAV_ITEMS array entries.
+  for (const m of sidebar.matchAll(/\bid:\s*["']([\w-]+)["']/g)) set.add(m[1]);
+  // Inline `handleNavigate("<destination>")` and `onNavigate("<destination>")` calls in JSX.
+  for (const m of sidebar.matchAll(/(?:handleNavigate|onNavigate)\(["']([\w-]+)["']\)/g)) set.add(m[1]);
+  return set;
+}
+
+describe("Surface Contract #4: 'you are here' is always answerable", () => {
+  it("every top-level router destination has a canonical sidebar entry (or is an explicit deep route)", () => {
+    const router = parseRouterDestinations();
+    const sidebar = parseSidebarDestinations();
+
+    const orphans: string[] = [];
+    for (const dest of router) {
+      if (sidebar.has(dest)) continue;
+      if (EXPECTED_DEEP.has(dest)) continue;
+      orphans.push(dest);
+    }
+
+    if (orphans.length > 0) {
+      throw new Error(
+        `Surface Contract #4 violation: top-level destinations not registered in the Sidebar:\n${orphans
+          .map((o) => `  - ${o}`)
+          .join("\n")}\n\n` +
+          `Add a canonical sidebar entry, or — if intentionally a deep route — list it in EXPECTED_DEEP in this test.`,
+      );
+    }
+    expect(orphans).toEqual([]);
+  });
+
+  it("the router exposes at least the four canonical top-level destinations", () => {
+    const router = parseRouterDestinations();
+    expect(router.has("dashboard")).toBe(true);
+    expect(router.has("planning")).toBe(true);
+    expect(router.has("calendar")).toBe(true);
+    expect(router.has("sermons")).toBe(true);
+  });
+});

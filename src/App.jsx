@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, Component, lazy, Suspense } from "react";
-import { getApiKeyStatus, removeTourSermon, onDbWriteError, onDbWriteOk, flushDb, getSermonColumns } from "./db/database";
+import { getApiKeyStatus, onDbWriteError, onDbWriteOk, flushDb, getSermonColumns } from "./db/database";
+import { removeTourSermon } from "./core/spine";
 import { SERMON_COLUMNS } from "./constants/sermonColumns";
 import { restoreMemoryFromBackup } from "./utils/memory";
 import { TourProvider } from "./contexts/TourContext";

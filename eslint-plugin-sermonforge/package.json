@@ -1,0 +1,10 @@
+{
+  "name": "eslint-plugin-sermonforge",
+  "version": "1.0.0",
+  "description": "Local ESLint plugin enforcing SermonForge contract clauses (docs/CORE.md).",
+  "main": "index.js",
+  "private": true,
+  "peerDependencies": {
+    "eslint": ">=8"
+  }
+}

@@ -1,15 +1,13 @@
 import { useState, useEffect } from "react";
-import { createSermon, getAllSeries } from "../db/database";
+import { createSermon, getAllSeries } from "../core/spine";
 import InlineError from "./InlineError";
-
-const STAGES = ["planning", "study", "outline", "writing", "ready"];
+import { SERIES_STATUS } from "../core/contracts";
 
 export default function NewSermonModal({ onClose, onCreated }) {
   const [title, setTitle] = useState("");
   const [passage, setPassage] = useState("");
   const [date, setDate] = useState("");
   const [preacher, setPreacher] = useState("");
-  const [stage, setStage] = useState("planning");
   const [seriesId, setSeriesId] = useState("");
   const [seriesList, setSeriesList] = useState([]);
   const [saving, setSaving] = useState(false);
@@ -19,8 +17,8 @@ export default function NewSermonModal({ onClose, onCreated }) {
     getAllSeries()
       .then((list) => {
         setSeriesList(list);
-        const active = list.filter((s) => s.status === "active");
-        if (active.length === 1) setSeriesId(active[0].id);
+        const inProgress = list.filter((s) => s.status === SERIES_STATUS.InProgress);
+        if (inProgress.length === 1) setSeriesId(inProgress[0].id);
       })
       .catch(console.error);
   }, []);
@@ -30,8 +28,8 @@ export default function NewSermonModal({ onClose, onCreated }) {
     setSaving(true);
     setError(null);
     try {
-      const id = await createSermon({ title, passage, date, preacher, stage, series_id: seriesId || null, is_one_off: seriesId ? 0 : 1 });
-      onCreated(id);
+      const result = await createSermon({ name: title, passage, date, preacher, series_id: seriesId || null, is_one_off: seriesId ? 0 : 1 });
+      onCreated(result.id);
     } catch (e) {
       console.error(e);
       setError(e?.message || "Could not create the sermon.");
@@ -70,28 +68,14 @@ export default function NewSermonModal({ onClose, onCreated }) {
             />
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-            <div className="field-group">
-              <label className="field-label">Date</label>
-              <input
-                className="field-input"
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-              />
-            </div>
-            <div className="field-group">
-              <label className="field-label">Stage</label>
-              <select
-                className="field-input"
-                value={stage}
-                onChange={(e) => setStage(e.target.value)}
-              >
-                {STAGES.map((s) => (
-                  <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
-                ))}
-              </select>
-            </div>
+          <div className="field-group">
+            <label className="field-label">Date</label>
+            <input
+              className="field-input"
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+            />
           </div>
 
           <div className="field-group">

@@ -5,6 +5,16 @@ const os = require("os");
 const { randomUUID } = require("crypto");
 const { isDev, paths, devServerUrl } = require("./config");
 const { logInfo, logError, readRecent } = require("./logger");
+const {
+  STAGE, STAGE_SEQUENCE,
+  STEP, STEP_CANONICAL_SEQUENCE,
+  SUB_PHASE, SUB_PHASE_CANONICAL_SEQUENCE,
+  SERMON_STATUS, SERIES_STATUS,
+  MUTATION_KIND,
+  SERMON_COLUMNS, SERIES_COLUMNS, SECTION_COLUMNS,
+  STRUCTURED_FIELDS,
+  ContractViolation,
+} = require("./contracts.cjs");
 let _isQuitting = false;
 
 // Catch anything that slips through before app ready
@@ -586,6 +596,80 @@ function runMigrations() {
     db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '15')");
     version = 15;
   }
+
+  if (version < 16) {
+    // v16: collapse sermon stage + series status to a two-state lifecycle.
+    // The 5 intermediate sermon stages (planning/study/outline/writing/ready)
+    // and 2 intermediate series statuses (planning/active) duplicated the
+    // workspace tab's in-progress position; "archived" was the only true
+    // lifecycle terminus. See docs/CORE.md State Contract clauses 5 + 6.
+    db.run(
+      `UPDATE sermons SET stage = '${SERMON_STATUS.InProgress}'
+         WHERE stage IN ('planning','study','outline','writing','ready')`
+    );
+    db.run(`UPDATE sermons SET stage = '${SERMON_STATUS.Complete}' WHERE stage = 'archived'`);
+    db.run(
+      `UPDATE series SET status = '${SERIES_STATUS.InProgress}'
+         WHERE status IN ('planning','active')`
+    );
+    db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '16')");
+    version = 16;
+  }
+
+  if (version < 17) {
+    // v17: spine prerequisites — canonical process-position columns + legacy
+    // evidence cutoff. State Contract #2 ("every sermon has a canonical
+    // position in the process … queryable from any surface that touches the
+    // sermon") cannot be enforced while position lives only in component
+    // state and localStorage. These columns become the canonical position
+    // store; the spine writes them via transitionState and reads them via
+    // getSermon.
+    //
+    // legacy_evidence_cutoff carves out sermons created before this enforcement
+    // pass — Process Contract #2 ("movement is gated by user evidence") can't
+    // retroactively demand evidence trails for pre-existing sermons. Sermons
+    // with created_at before the cutoff are treated as `evidence: 'legacy'`
+    // when transitionState would otherwise reject for empty evidence. See
+    // src/core/spine.ts header for the carve-out logic.
+    const sermonInfo = queryAll("PRAGMA table_info(sermons)");
+    const have = new Set(sermonInfo.map(r => r.name));
+    if (!have.has("current_stage")) {
+      db.run(`ALTER TABLE sermons ADD COLUMN current_stage TEXT NOT NULL DEFAULT '${STAGE.Study}'`);
+    }
+    if (!have.has("current_step")) {
+      db.run("ALTER TABLE sermons ADD COLUMN current_step TEXT");
+    }
+    if (!have.has("current_sub_phase")) {
+      db.run("ALTER TABLE sermons ADD COLUMN current_sub_phase TEXT");
+    }
+    // Backfill: any sermon currently in_progress and at Study stage
+    // (the schema default) gets a starting Step+SubPhase so getSermon's
+    // ProcessPosition is fully populated for new sermons too.
+    db.run(
+      `UPDATE sermons
+         SET current_step = ?
+       WHERE current_stage = ? AND current_step IS NULL`,
+      [STEP.Exegesis, STAGE.Study]
+    );
+    db.run(
+      `UPDATE sermons
+         SET current_sub_phase = ?
+       WHERE current_stage = ? AND current_step = ? AND current_sub_phase IS NULL`,
+      [SUB_PHASE.Observe, STAGE.Study, STEP.Exegesis]
+    );
+    // Record the cutoff once. queryOne ensures we don't overwrite if v17
+    // re-runs (idempotency for partially-applied migrations).
+    const existingCutoff = queryOne("SELECT value FROM meta WHERE key = 'legacy_evidence_cutoff'");
+    if (!existingCutoff) {
+      const cutoff = new Date().toISOString();
+      db.run(
+        "INSERT INTO meta (key, value) VALUES ('legacy_evidence_cutoff', ?)",
+        [cutoff]
+      );
+    }
+    db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '17')");
+    version = 17;
+  }
 }
 
 // Verify the live schema matches the SERMON_COLUMNS / SERIES_COLUMNS allowlists
@@ -738,26 +822,10 @@ function maybeWarnOneDrive() {
 // ── IPC handlers ────────────────────────────────────────────────────────────
 registerAIHandlers(ipcMain);
 
-// ── Column allowlists — only these field names are accepted in update operations ─
-const SERMON_COLUMNS = new Set([
-  "title", "passage", "date", "preacher", "stage", "mpt", "mps",
-  "observations", "interpretation", "redemptive_thread", "implications",
-  "outline", "manuscript", "delivery_notes", "timing_notes", "post_sermon",
-  "functional_elements", "checklist", "series_id", "section_id", "is_one_off",
-  "topic_theme", "audience_assumptions", "background_noise", "study_guide_note",
-  "preaching_blocks", "manuscript_delivery", "last_tune_up",
-]);
-
-const SERIES_COLUMNS = new Set([
-  "title", "color", "description", "year", "big_idea", "overview",
-  "passage_range", "start_date", "end_date", "structural_outline", "status", "canon_category",
-  "redemptive_context", "book_background", "book_argument", "book_structure",
-  "series_motivation", "emerging_big_idea",
-]);
-
-const SECTION_COLUMNS = new Set([
-  "title", "passage_range", "big_idea", "overview", "sort_order",
-]);
+// Column allowlists are imported from electron/contracts.cjs (single source of
+// truth: src/core/contracts.ts). buildUpdate validates against them; updates
+// to anything outside the allowlist throw in dev (drift surfaces loudly) and
+// warn in prod (a stale build never crashes a pastor mid-save).
 
 function buildUpdate(fields, allowedColumns) {
   const rejected = Object.keys(fields).filter((k) => !allowedColumns.has(k));
@@ -778,177 +846,724 @@ function buildUpdate(fields, allowedColumns) {
   };
 }
 
-// ── Sermon handlers ───────────────────────────────────────────────────────────
-ipcMain.handle("db-getAllSermons", () =>
-  queryAll(`SELECT s.*, sr.title as series_title, sr.color as series_color
-            FROM sermons s
-            LEFT JOIN series sr ON s.series_id = sr.id
-            WHERE s.id NOT LIKE 'tour-%'
-            ORDER BY s.date DESC, s.created_at DESC`)
-);
+// ── Spine — the only sermon/series state surface ─────────────────────────────
+//
+// All renderer-side reads, creates, updates, and deletes of sermon, series,
+// or series_section state route through `ipcMain.handle("spine", ...)`. The
+// renderer-side companion is `src/core/spine.ts`; the integrity gate
+// (`scripts/spine-integrity.js`) blocks any code path that would let a
+// caller bypass this routing.
+//
+// validateAndCommit — single mutation gate
+// ────────────────────────────────────────
+// Mutations cross the boundary as discriminated envelopes; this function is
+// the only place that writes sermon/series state. It cites the violated
+// contract clause on every rejection so the renderer-side ContractViolation
+// carries the same citation. Reads are routed through the same channel for
+// uniformity but bypass the validation switch.
+//
+// Proposal storage
+// ────────────────
+// `ai_proposal` mutations stage value in the in-memory `proposals` map keyed
+// by a server-generated proposalId. They are NEVER written to the DB at
+// proposal time — Mutation Contract #1: "User typing always wins by default."
+// Subsequent `ai_apply` mutations look up the proposal and commit. Proposals
+// expire after PROPOSAL_TTL_MS to bound the map.
 
-ipcMain.handle("db-getSermonById", (_, id) => {
+const proposals = new Map();
+const PROPOSAL_TTL_MS = 1000 * 60 * 60; // 1h
+
+function pruneExpiredProposals() {
+  const now = Date.now();
+  for (const [id, p] of proposals) {
+    if (p.expiresAt < now) proposals.delete(id);
+  }
+}
+
+let _legacyEvidenceCutoffCache = null;
+function getLegacyEvidenceCutoff() {
+  if (_legacyEvidenceCutoffCache !== null) return _legacyEvidenceCutoffCache;
+  const row = queryOne("SELECT value FROM meta WHERE key = 'legacy_evidence_cutoff'");
+  _legacyEvidenceCutoffCache = row ? row.value : "";
+  return _legacyEvidenceCutoffCache;
+}
+
+function isLegacySermon(sermonRow) {
+  const cutoff = getLegacyEvidenceCutoff();
+  if (!cutoff) return false;
+  return (sermonRow.created_at || "") < cutoff;
+}
+
+function rejection(code, clause, message) {
+  return { ok: false, code, clause, message };
+}
+function success(value) {
+  return { ok: true, value: value === undefined ? null : value };
+}
+
+// ── Row → canonical-shape helpers ────────────────────────────────────────────
+
+function shapeSermon(row, parentContext) {
+  if (!row) return null;
+  const out = {
+    // Canonical shape (per src/core/contracts.ts `Sermon`).
+    id: row.id,
+    name: row.title || "",
+    status: row.stage || SERMON_STATUS.InProgress,
+    position: {
+      stage: row.current_stage || STAGE.Study,
+      step: row.current_step || undefined,
+      subPhase: row.current_sub_phase || undefined,
+    },
+    parentContext: parentContext || null,
+    passage: row.passage || "",
+    date: row.date || "",
+    preacher: row.preacher || "",
+    legacy: isLegacySermon(row),
+    // Backward-compat raw row fields. Existing components read these directly;
+    // migration to the canonical shape (Sermon.name, Sermon.position) is gradual.
+    ...row,
+  };
+  return out;
+}
+
+function shapeSeries(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    name: row.title || "",
+    status: row.status || SERIES_STATUS.InProgress,
+    year: row.year || new Date().getFullYear(),
+    color: row.color || "gold",
+    ...row,
+  };
+}
+
+function fetchSermonRow(id) {
   const rows = queryAll(
     `SELECT s.*, sr.title as series_title, sr.color as series_color
      FROM sermons s
      LEFT JOIN series sr ON s.series_id = sr.id
-     WHERE s.id = ?`, [id]
+     WHERE s.id = ?`,
+    [id],
   );
   return rows[0] || null;
-});
+}
 
-ipcMain.handle("db-createSermon", (_, data) => {
-  const id = randomUUID();
-  db.run(
-    `INSERT INTO sermons
-       (id, series_id, section_id, is_one_off, title, passage, date, preacher,
-        stage, mpt, mps, observations, outline, manuscript)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, '', '', '', '[]', '')`,
-    [id, data.series_id || null, data.section_id || null, data.is_one_off ? 1 : 0,
-     data.title, data.passage || "", data.date || "", data.preacher || "",
-     data.stage || "planning"]
+function computeParentContext(row) {
+  if (!row || !row.series_id) return null;
+  const siblings = queryAll(
+    "SELECT id FROM sermons WHERE series_id = ? ORDER BY date ASC, created_at ASC",
+    [row.series_id],
   );
-  saveDb();
-  return id;
-});
+  const idx = siblings.findIndex((s) => s.id === row.id);
+  if (idx === -1) return null;
+  return {
+    seriesId: row.series_id,
+    seriesName: row.series_title || "",
+    positionInSeries: idx + 1,
+    totalInSeries: siblings.length,
+  };
+}
 
-ipcMain.handle("db-updateSermon", (_, { id, fields }) => {
-  const update = buildUpdate(fields, SERMON_COLUMNS);
-  if (!update) {
-    console.error("[db-updateSermon] No valid fields to update", { id, attempted: Object.keys(fields) });
-    return { error: "No valid fields to update", attempted: Object.keys(fields) };
+// ── Read router — no validation, returns enriched shapes ─────────────────────
+
+function spineRead(op, payload) {
+  switch (op) {
+    case "get-sermon": {
+      const row = fetchSermonRow(payload);
+      return shapeSermon(row, computeParentContext(row));
+    }
+    case "get-series": {
+      const rows = queryAll("SELECT * FROM series WHERE id = ?", [payload]);
+      return shapeSeries(rows[0]);
+    }
+    case "get-all-sermons":
+      return queryAll(
+        `SELECT s.*, sr.title as series_title, sr.color as series_color
+         FROM sermons s LEFT JOIN series sr ON s.series_id = sr.id
+         WHERE s.id NOT LIKE 'tour-%'
+         ORDER BY s.date DESC, s.created_at DESC`,
+      ).map((r) => shapeSermon(r, computeParentContext(r)));
+    case "get-all-series":
+      return queryAll(
+        "SELECT * FROM series WHERE id NOT LIKE 'tour-%' ORDER BY year DESC, title ASC",
+      ).map(shapeSeries);
+    case "get-recent-sermons":
+      return queryAll(
+        `SELECT s.*, sr.title as series_title, sr.color as series_color
+         FROM sermons s LEFT JOIN series sr ON s.series_id = sr.id
+         WHERE s.stage != ?
+           AND s.id NOT LIKE 'tour-%'
+         ORDER BY s.updated_at DESC, s.created_at DESC
+         LIMIT ?`,
+        [SERMON_STATUS.Complete, payload?.limit ?? 3],
+      ).map((r) => shapeSermon(r, computeParentContext(r)));
+    case "get-recent-series":
+      return queryAll(
+        `SELECT * FROM series
+         WHERE id NOT LIKE 'tour-%'
+         ORDER BY COALESCE(updated_at, created_at) DESC
+         LIMIT ?`,
+        [payload?.limit ?? 3],
+      ).map(shapeSeries);
+    case "get-in-progress-sermons":
+      // State Contract #6: in-progress work is queryable from the front door.
+      return queryAll(
+        `SELECT s.*, sr.title as series_title, sr.color as series_color
+         FROM sermons s LEFT JOIN series sr ON s.series_id = sr.id
+         WHERE s.stage = ?
+           AND s.id NOT LIKE 'tour-%'
+         ORDER BY s.updated_at DESC, s.created_at DESC`,
+        [SERMON_STATUS.InProgress],
+      ).map((r) => shapeSermon(r, computeParentContext(r)));
+    case "get-sermons-by-series":
+      return queryAll(
+        `SELECT s.*, ss.title as section_title FROM sermons s
+         LEFT JOIN series_sections ss ON s.section_id = ss.id
+         WHERE s.series_id = ? ORDER BY s.date ASC, s.created_at ASC`,
+        [payload],
+      );
+    case "get-sections-by-series":
+      return queryAll(
+        "SELECT * FROM series_sections WHERE series_id = ? ORDER BY sort_order ASC, created_at ASC",
+        [payload],
+      );
+    default:
+      return null;
   }
-  db.run(
-    `UPDATE sermons SET ${update.setClauses}, updated_at = datetime('now') WHERE id = ?`,
-    [...update.values, id]
-  );
-  saveDb();
-});
+}
 
-ipcMain.handle("db-deleteSermon", (_, id) => {
-  db.run("DELETE FROM sermons WHERE id = ?", [id]);
-  saveDb();
-});
+// ── Mutation router — every write goes through validateAndCommit ─────────────
 
-// ── Series handlers ───────────────────────────────────────────────────────────
-ipcMain.handle("db-getAllSeries", () =>
-  queryAll("SELECT * FROM series WHERE id NOT LIKE 'tour-%' ORDER BY year DESC, title ASC")
-);
-
-ipcMain.handle("db-getRecentSeries", (_, limit = 3) =>
-  queryAll(
-    `SELECT * FROM series
-     WHERE id NOT LIKE 'tour-%'
-     ORDER BY COALESCE(updated_at, created_at) DESC
-     LIMIT ?`,
-    [limit]
-  )
-);
-
-ipcMain.handle("db-getSeriesById", (_, id) => {
-  const rows = queryAll("SELECT * FROM series WHERE id = ?", [id]);
-  return rows[0] || null;
-});
-
-ipcMain.handle("db-createSeries", (_, data) => {
-  // State Contract #3 (docs/CORE.md): no anonymous atoms. A series must have
-  // a title before any row is written. The renderer enforces this in
-  // NewSeriesModal; this is the data-layer guarantee.
-  const title = (data?.title || "").trim();
-  if (!title) {
-    throw new Error("Series must have a title");
-  }
-  const id = randomUUID();
-  db.run(
-    `INSERT INTO series
-       (id, title, color, description, year, big_idea, overview,
-        passage_range, start_date, end_date, structural_outline, status, canon_category)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, title, data.color || "gold",
-     data.description || "", data.year || new Date().getFullYear(),
-     data.big_idea || "", data.overview || "", data.passage_range || "",
-     data.start_date || "", data.end_date || "", data.structural_outline || "",
-     data.status || "planning", data.canon_category || ""]
-  );
-  saveDb();
-  return id;
-});
-
-ipcMain.handle("db-updateSeries", (_, { id, fields }) => {
-  const update = buildUpdate(fields, SERIES_COLUMNS);
-  if (!update) {
-    console.error("[db-updateSeries] No valid fields to update", { id, attempted: Object.keys(fields) });
-    return { error: "No valid fields to update", attempted: Object.keys(fields) };
-  }
-  db.run(`UPDATE series SET ${update.setClauses} WHERE id = ?`, [...update.values, id]);
-  saveDb();
-});
-
-ipcMain.handle("db-deleteSeries", (_, id) => {
-  db.run("BEGIN");
+function applyStructuredUpdate(row, field, update) {
+  const raw = row[field];
+  let current;
   try {
-    db.run("DELETE FROM series_sections WHERE series_id = ?", [id]);
-    db.run("UPDATE sermons SET series_id = NULL, section_id = NULL WHERE series_id = ?", [id]);
-    db.run("DELETE FROM series WHERE id = ?", [id]);
-    db.run("COMMIT");
-  } catch (e) {
-    db.run("ROLLBACK");
-    throw e;
+    current = raw ? JSON.parse(raw) : (field === "outline" ? [] : {});
+  } catch {
+    current = field === "outline" ? [] : {};
   }
-  saveDb();
-});
 
-ipcMain.handle("db-getSermonsBySeries", (_, seriesId) =>
-  queryAll(
-    `SELECT s.*, ss.title as section_title FROM sermons s
-     LEFT JOIN series_sections ss ON s.section_id = ss.id
-     WHERE s.series_id = ? ORDER BY s.date ASC, s.created_at ASC`,
-    [seriesId]
-  )
-);
-
-// ── Section handlers ──────────────────────────────────────────────────────────
-ipcMain.handle("db-getSectionsBySeries", (_, seriesId) =>
-  queryAll(
-    "SELECT * FROM series_sections WHERE series_id = ? ORDER BY sort_order ASC, created_at ASC",
-    [seriesId]
-  )
-);
-
-ipcMain.handle("db-createSection", (_, data) => {
-  const id = randomUUID();
-  db.run(
-    `INSERT INTO series_sections
-       (id, series_id, title, passage_range, big_idea, overview, sort_order)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [id, data.series_id, data.title || "", data.passage_range || "",
-     data.big_idea || "", data.overview || "", data.sort_order ?? 0]
-  );
-  saveDb();
-  return id;
-});
-
-ipcMain.handle("db-updateSection", (_, { id, fields }) => {
-  const update = buildUpdate(fields, SECTION_COLUMNS);
-  if (!update) {
-    console.error("[db-updateSection] No valid fields to update", { id, attempted: Object.keys(fields) });
-    return { error: "No valid fields to update", attempted: Object.keys(fields) };
+  if (field === "outline") {
+    if (!Array.isArray(current)) current = [];
+    if (update.op === "add") {
+      current.push({ id: randomUUID(), text: String(update.text || "") });
+    } else if (update.op === "edit") {
+      const i = current.findIndex((p) => p.id === update.id);
+      if (i >= 0) current[i] = { id: update.id, text: String(update.text || "") };
+    } else if (update.op === "remove") {
+      current = current.filter((p) => p.id !== update.id);
+    } else if (update.op === "reorder") {
+      const byId = new Map(current.map((p) => [p.id, p]));
+      const ordered = (update.orderedIds || []).map((id) => byId.get(id)).filter(Boolean);
+      current = ordered;
+    } else {
+      return rejection("STATE_5_BAD_OP", "State #5", `Unknown outline op: ${update.op}`);
+    }
+    return JSON.stringify(current);
   }
-  db.run(`UPDATE series_sections SET ${update.setClauses} WHERE id = ?`, [...update.values, id]);
-  saveDb();
-});
 
-ipcMain.handle("db-deleteSection", (_, id) => {
-  db.run("BEGIN");
+  if (field === "functional_elements") {
+    if (typeof current !== "object" || current === null || Array.isArray(current)) current = {};
+    if (update.op === "set") {
+      const entry = current[update.outlinePointId] || {};
+      entry[update.field] = String(update.value || "");
+      current[update.outlinePointId] = entry;
+      return JSON.stringify(current);
+    }
+    return rejection("STATE_5_BAD_OP", "State #5", `Unknown functional_elements op: ${update.op}`);
+  }
+
+  // observations / interpretation / redemptive_thread / implications: keyed JSON
+  if (typeof current !== "object" || current === null || Array.isArray(current)) current = {};
+  if (update.op === "set") {
+    current[update.questionKey] = String(update.value || "");
+    return JSON.stringify(current);
+  }
+  if (update.op === "set_summary") {
+    current.summary = String(update.value || "");
+    return JSON.stringify(current);
+  }
+  if (update.op === "set_unbeliever") {
+    current.unbeliever = String(update.value || "");
+    return JSON.stringify(current);
+  }
+  if (update.op === "set_compiled") {
+    current.compiled = String(update.value || "");
+    return JSON.stringify(current);
+  }
+  return rejection("STATE_5_BAD_OP", "State #5", `Unknown structured op: ${update.op}`);
+}
+
+function validateAndCommit(op, payload) {
+  switch (op) {
+    case "create-sermon": {
+      const name = (payload?.name || "").trim();
+      if (!name) {
+        return rejection(
+          "STATE_3_NAMELESS_SERMON",
+          "State #3",
+          "State Contract #3 violation: no anonymous atoms — a sermon must have a name.",
+        );
+      }
+      const id = randomUUID();
+      db.run(
+        `INSERT INTO sermons
+           (id, series_id, section_id, is_one_off, title, passage, date, preacher,
+            stage, mpt, mps, observations, outline, manuscript,
+            current_stage, current_step, current_sub_phase)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, '', '', '', '[]', '', ?, ?, ?)`,
+        [
+          id,
+          payload.series_id || null,
+          payload.section_id || null,
+          payload.is_one_off ? 1 : 0,
+          name,
+          payload.passage || "",
+          payload.date || "",
+          payload.preacher || "",
+          SERMON_STATUS.InProgress,
+          STAGE.Study,
+          STEP.Exegesis,
+          SUB_PHASE.Observe,
+        ],
+      );
+      saveDb();
+      return success({ id });
+    }
+
+    case "create-series": {
+      const name = (payload?.name || "").trim();
+      if (!name) {
+        return rejection(
+          "STATE_3_NAMELESS_SERIES",
+          "State #3",
+          "State Contract #3 violation: no anonymous atoms — a series must have a name.",
+        );
+      }
+      const id = randomUUID();
+      db.run(
+        `INSERT INTO series
+           (id, title, color, description, year, big_idea, overview,
+            passage_range, start_date, end_date, structural_outline, status, canon_category)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          id,
+          name,
+          payload.color || "gold",
+          payload.description || "",
+          payload.year || new Date().getFullYear(),
+          payload.big_idea || "",
+          payload.overview || "",
+          payload.passage_range || "",
+          payload.start_date || "",
+          payload.end_date || "",
+          payload.structural_outline || "",
+          SERIES_STATUS.InProgress,
+          payload.canon_category || "",
+        ],
+      );
+      saveDb();
+      return success({ id });
+    }
+
+    case "update-sermon": {
+      // Multi-field user_input mutation — every supplied field is treated as
+      // user typing. Structured fields are accepted as pre-serialized JSON
+      // strings; for typed structured updates callers should use
+      // apply-mutation with kind "user_input". Same allowlist + dev-throw
+      // path as single-field updates.
+      const { id, fields } = payload || {};
+      const update = buildUpdate(fields || {}, SERMON_COLUMNS);
+      if (!update) {
+        return rejection("UPDATE_NO_FIELDS", "State #5", "No valid fields to update.");
+      }
+      db.run(
+        `UPDATE sermons SET ${update.setClauses}, updated_at = datetime('now') WHERE id = ?`,
+        [...update.values, id],
+      );
+      saveDb();
+      return success();
+    }
+
+    case "update-series": {
+      const { id, fields } = payload || {};
+      if (Object.prototype.hasOwnProperty.call(fields || {}, "title")) {
+        const t = (fields.title || "").trim();
+        if (!t) {
+          return rejection(
+            "STATE_3_NAMELESS_SERIES",
+            "State #3",
+            "State Contract #3 violation: a series must have a name.",
+          );
+        }
+      }
+      const update = buildUpdate(fields || {}, SERIES_COLUMNS);
+      if (!update) {
+        return rejection("UPDATE_NO_FIELDS", "State #5", "No valid fields to update.");
+      }
+      db.run(`UPDATE series SET ${update.setClauses} WHERE id = ?`, [...update.values, id]);
+      saveDb();
+      return success();
+    }
+
+    case "delete-sermon":
+      db.run("DELETE FROM sermons WHERE id = ?", [payload]);
+      saveDb();
+      return success();
+
+    case "delete-series":
+      db.run("BEGIN");
+      try {
+        db.run("DELETE FROM series_sections WHERE series_id = ?", [payload]);
+        db.run("UPDATE sermons SET series_id = NULL, section_id = NULL WHERE series_id = ?", [payload]);
+        db.run("DELETE FROM series WHERE id = ?", [payload]);
+        db.run("COMMIT");
+      } catch (e) {
+        db.run("ROLLBACK");
+        throw e;
+      }
+      saveDb();
+      return success();
+
+    case "create-section": {
+      const id = randomUUID();
+      db.run(
+        `INSERT INTO series_sections
+           (id, series_id, title, passage_range, big_idea, overview, sort_order)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [
+          id,
+          payload.series_id,
+          payload.title || "",
+          payload.passage_range || "",
+          payload.big_idea || "",
+          payload.overview || "",
+          payload.sort_order ?? 0,
+        ],
+      );
+      saveDb();
+      return success({ id });
+    }
+
+    case "update-section": {
+      const { id, fields } = payload || {};
+      const update = buildUpdate(fields || {}, SECTION_COLUMNS);
+      if (!update) {
+        return rejection("UPDATE_NO_FIELDS", "State #5", "No valid fields to update.");
+      }
+      db.run(`UPDATE series_sections SET ${update.setClauses} WHERE id = ?`, [...update.values, id]);
+      saveDb();
+      return success();
+    }
+
+    case "delete-section":
+      db.run("BEGIN");
+      try {
+        db.run("UPDATE sermons SET section_id = NULL WHERE section_id = ?", [payload]);
+        db.run("DELETE FROM series_sections WHERE id = ?", [payload]);
+        db.run("COMMIT");
+      } catch (e) {
+        db.run("ROLLBACK");
+        throw e;
+      }
+      saveDb();
+      return success();
+
+    case "transition-state": {
+      const { sermonId, to, evidence, direction, kind } = payload || {};
+      const row = fetchSermonRow(sermonId);
+      if (!row) {
+        return rejection("NOT_FOUND", "State #1", `Sermon ${sermonId} not found.`);
+      }
+      const evidenceTrimmed = (evidence || "").trim();
+      if (!evidenceTrimmed && !isLegacySermon(row)) {
+        return rejection(
+          "PROCESS_2_EMPTY_EVIDENCE",
+          "Process #2",
+          "Process Contract #2 violation: movement is gated by user evidence — the constraint is the gate.",
+        );
+      }
+      if (kind === "stage" && direction === "forward") {
+        const fromIdx = STAGE_SEQUENCE.indexOf(row.current_stage);
+        const toIdx = STAGE_SEQUENCE.indexOf(to);
+        if (fromIdx >= 0 && toIdx >= 0 && toIdx <= fromIdx) {
+          return rejection(
+            "PROCESS_1_FORWARD_TO_PRIOR",
+            "Process #1",
+            "Process Contract #1 violation: forward direction cannot move to a prior stage (movement is monotonic by default).",
+          );
+        }
+      }
+      if (kind === "step" && direction === "forward") {
+        const fromIdx = STEP_CANONICAL_SEQUENCE.indexOf(row.current_step);
+        const toIdx = STEP_CANONICAL_SEQUENCE.indexOf(to);
+        if (fromIdx >= 0 && toIdx >= 0 && toIdx <= fromIdx) {
+          return rejection(
+            "PROCESS_1_FORWARD_TO_PRIOR",
+            "Process #1",
+            "Process Contract #1 violation: forward direction cannot move to a prior step.",
+          );
+        }
+      }
+      if (kind === "sub_phase" && direction === "forward") {
+        const fromIdx = SUB_PHASE_CANONICAL_SEQUENCE.indexOf(row.current_sub_phase);
+        const toIdx = SUB_PHASE_CANONICAL_SEQUENCE.indexOf(to);
+        if (fromIdx >= 0 && toIdx >= 0 && toIdx <= fromIdx) {
+          return rejection(
+            "PROCESS_1_FORWARD_TO_PRIOR",
+            "Process #1",
+            "Process Contract #1 violation: forward direction cannot move to a prior sub-phase.",
+          );
+        }
+      }
+      if (kind === "stage") {
+        const stepDefault = to === STAGE.Study ? STEP.Exegesis : null;
+        const subDefault = to === STAGE.Study ? SUB_PHASE.Observe : null;
+        db.run(
+          `UPDATE sermons SET current_stage = ?, current_step = ?, current_sub_phase = ?, updated_at = datetime('now') WHERE id = ?`,
+          [to, stepDefault, subDefault, sermonId],
+        );
+      } else if (kind === "step") {
+        const subDefault = to === STEP.Exegesis ? SUB_PHASE.Observe : null;
+        db.run(
+          `UPDATE sermons SET current_step = ?, current_sub_phase = ?, updated_at = datetime('now') WHERE id = ?`,
+          [to, subDefault, sermonId],
+        );
+      } else if (kind === "sub_phase") {
+        db.run(
+          `UPDATE sermons SET current_sub_phase = ?, updated_at = datetime('now') WHERE id = ?`,
+          [to, sermonId],
+        );
+      } else {
+        return rejection(
+          "STATE_5_NONCANONICAL_TO",
+          "State #5",
+          `'to' must be a canonical Stage/Step/SubPhase value (got '${to}').`,
+        );
+      }
+      saveDb();
+      return success();
+    }
+
+    case "apply-mutation": {
+      const { kind, sermonId, field } = payload || {};
+      if (!sermonId || !field) {
+        return rejection("BAD_PAYLOAD", "Spine", "applyMutation requires sermonId and field.");
+      }
+      const row = fetchSermonRow(sermonId);
+      if (!row) {
+        return rejection("NOT_FOUND", "State #1", `Sermon ${sermonId} not found.`);
+      }
+      if (!SERMON_COLUMNS.has(field)) {
+        return rejection("STATE_5_UNKNOWN_FIELD", "State #5", `Unknown sermon field '${field}'.`);
+      }
+      const isStructured = STRUCTURED_FIELDS.has(field);
+
+      if (kind === MUTATION_KIND.UserInput) {
+        let serialized;
+        if (isStructured) {
+          const r = applyStructuredUpdate(row, field, payload.value);
+          if (r && typeof r === "object" && r.ok === false) return r;
+          serialized = r;
+        } else {
+          if (typeof payload.value !== "string") {
+            return rejection(
+              "STATE_5_SIMPLE_FIELD_STRUCTURED",
+              "State #5",
+              `'${field}' is a simple field; value must be a string.`,
+            );
+          }
+          serialized = payload.value;
+        }
+        db.run(
+          `UPDATE sermons SET ${field} = ?, updated_at = datetime('now') WHERE id = ?`,
+          [serialized, sermonId],
+        );
+        saveDb();
+        return success();
+      }
+
+      if (kind === MUTATION_KIND.AiProposal) {
+        // Process Contract #5: AI augments user evidence — reject when prior
+        // content is empty. Treat empty string, null, "[]", and "{}" as empty.
+        const prior = row[field];
+        const priorEmpty =
+          prior == null ||
+          (typeof prior === "string" &&
+            (prior.trim() === "" || prior === "[]" || prior === "{}"));
+        if (priorEmpty) {
+          return rejection(
+            "PROCESS_5_AI_NO_USER_EVIDENCE",
+            "Process #5",
+            "Process Contract #5 violation: AI augments, never substitutes — proposals require prior user evidence in the field.",
+          );
+        }
+        if (isStructured) {
+          if (typeof payload.value === "string") {
+            return rejection(
+              "STATE_5_STRUCTURED_FIELD_STRING",
+              "State #5",
+              `'${field}' is a structured field; pass a typed update shape.`,
+            );
+          }
+        } else if (typeof payload.value !== "string") {
+          return rejection(
+            "STATE_5_SIMPLE_FIELD_STRUCTURED",
+            "State #5",
+            `'${field}' is a simple field; value must be a string.`,
+          );
+        }
+        pruneExpiredProposals();
+        const proposalId = randomUUID();
+        proposals.set(proposalId, {
+          sermonId,
+          field,
+          value: payload.value,
+          isStructured,
+          expiresAt: Date.now() + PROPOSAL_TTL_MS,
+        });
+        return success({ proposalId });
+      }
+
+      if (kind === MUTATION_KIND.AiApply) {
+        pruneExpiredProposals();
+        const { proposalId } = payload;
+        if (!proposalId || !proposals.has(proposalId)) {
+          return rejection(
+            "MUTATION_1_AI_APPLY_WITHOUT_PROPOSAL",
+            "Mutation #1",
+            "Mutation Contract #1 violation: user typing wins; ai_apply requires a referenced proposalId from a prior ai_proposal.",
+          );
+        }
+        const p = proposals.get(proposalId);
+        if (p.sermonId !== sermonId || p.field !== field) {
+          return rejection(
+            "MUTATION_1_PROPOSAL_MISMATCH",
+            "Mutation #1",
+            "Mutation Contract #1 violation: proposalId references a different sermon/field than the apply call.",
+          );
+        }
+        let serialized;
+        if (p.isStructured) {
+          const r = applyStructuredUpdate(row, field, p.value);
+          if (r && typeof r === "object" && r.ok === false) return r;
+          serialized = r;
+        } else {
+          serialized = p.value;
+        }
+        db.run(
+          `UPDATE sermons SET ${field} = ?, updated_at = datetime('now') WHERE id = ?`,
+          [serialized, sermonId],
+        );
+        saveDb();
+        proposals.delete(proposalId);
+        return success();
+      }
+
+      return rejection("BAD_KIND", "Mutation", `Unknown mutation kind: ${kind}`);
+    }
+
+    case "load-tour-sermon": {
+      const { SERIES_ID, SERMON_ID, series, sermon } = require("./tourData");
+      const seriesExists = queryOne("SELECT id FROM series  WHERE id = ?", [SERIES_ID]);
+      const sermonExists = queryOne("SELECT id FROM sermons WHERE id = ?", [SERMON_ID]);
+      if (seriesExists && sermonExists) return success({ sermonId: SERMON_ID, created: false });
+      db.run("BEGIN");
+      try {
+        if (!seriesExists) {
+          db.run(
+            `INSERT INTO series (
+              id, title, color, description, year,
+              big_idea, overview, passage_range, start_date, end_date,
+              structural_outline, status, canon_category,
+              redemptive_context, book_background, book_argument,
+              book_structure, series_motivation, emerging_big_idea
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+            [
+              series.id, series.title, series.color, series.description, series.year,
+              series.big_idea, series.overview, series.passage_range, series.start_date, series.end_date,
+              series.structural_outline, series.status, series.canon_category,
+              series.redemptive_context, series.book_background, series.book_argument,
+              series.book_structure, series.series_motivation, series.emerging_big_idea,
+            ],
+          );
+        }
+        if (!sermonExists) {
+          db.run(
+            `INSERT INTO sermons (
+              id, series_id, is_one_off, title, passage, date, stage,
+              mpt, mps,
+              observations, interpretation, redemptive_thread, implications,
+              outline, functional_elements,
+              manuscript, delivery_notes, timing_notes,
+              topic_theme, audience_assumptions, background_noise, study_guide_note,
+              current_stage, current_step, current_sub_phase
+            ) VALUES (?,?,0,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+            [
+              sermon.id, sermon.series_id, sermon.title, sermon.passage, sermon.date, sermon.stage,
+              sermon.mpt, sermon.mps,
+              sermon.observations, sermon.interpretation, sermon.redemptive_thread, sermon.implications,
+              sermon.outline, sermon.functional_elements,
+              sermon.manuscript, sermon.delivery_notes, sermon.timing_notes,
+              sermon.topic_theme, sermon.audience_assumptions, sermon.background_noise, sermon.study_guide_note,
+              STAGE.Study, STEP.Exegesis, SUB_PHASE.Observe,
+            ],
+          );
+        }
+        db.run("COMMIT");
+      } catch (e) {
+        db.run("ROLLBACK");
+        throw e;
+      }
+      saveDb();
+      return success({ sermonId: SERMON_ID, created: true });
+    }
+
+    case "remove-tour-sermon":
+      db.run("BEGIN");
+      try {
+        db.run("DELETE FROM sermons WHERE id LIKE 'tour-%'");
+        db.run("DELETE FROM series  WHERE id LIKE 'tour-%'");
+        db.run("COMMIT");
+      } catch (e) {
+        db.run("ROLLBACK");
+        throw e;
+      }
+      saveDb();
+      return success();
+
+    default:
+      return rejection("UNKNOWN_OP", "Spine", `Unknown spine mutation op: ${op}`);
+  }
+}
+
+const SPINE_READ_OPS = new Set([
+  "get-sermon",
+  "get-series",
+  "get-all-sermons",
+  "get-all-series",
+  "get-recent-sermons",
+  "get-recent-series",
+  "get-in-progress-sermons",
+  "get-sermons-by-series",
+  "get-sections-by-series",
+]);
+
+ipcMain.handle("spine", (_, op, payload) => {
   try {
-    db.run("UPDATE sermons SET section_id = NULL WHERE section_id = ?", [id]);
-    db.run("DELETE FROM series_sections WHERE id = ?", [id]);
-    db.run("COMMIT");
+    if (SPINE_READ_OPS.has(op)) {
+      return spineRead(op, payload);
+    }
+    return validateAndCommit(op, payload);
   } catch (e) {
-    db.run("ROLLBACK");
-    throw e;
+    if (e instanceof ContractViolation) {
+      return rejection(e.code, e.clause, e.message);
+    }
+    logError(`[spine ${op}] uncaught error`, e);
+    return rejection("INTERNAL", "Spine", e?.message || String(e));
   }
-  saveDb();
 });
 
 // ── Calendar note handlers ────────────────────────────────────────────────────
@@ -971,91 +1586,8 @@ ipcMain.handle("db-deleteCalendarNote", (_, id) => {
   saveDb();
 });
 
-// ── Dashboard ─────────────────────────────────────────────────────────────────
-ipcMain.handle("db-getRecentSermons", (_, limit = 3) =>
-  queryAll(
-    `SELECT s.*, sr.title as series_title, sr.color as series_color
-     FROM sermons s
-     LEFT JOIN series sr ON s.series_id = sr.id
-     WHERE s.stage != 'archived'
-       AND s.id NOT LIKE 'tour-%'
-     ORDER BY s.updated_at DESC, s.created_at DESC
-     LIMIT ?`,
-    [limit]
-  )
-);
-
-// ── Tour sermon seed ──────────────────────────────────────────────────────────
-ipcMain.handle("db-loadTourSermon", () => {
-  const { SERIES_ID, SERMON_ID, series, sermon } = require("./tourData");
-
-  const seriesExists = queryOne("SELECT id FROM series  WHERE id = ?", [SERIES_ID]);
-  const sermonExists = queryOne("SELECT id FROM sermons WHERE id = ?", [SERMON_ID]);
-  if (seriesExists && sermonExists) return { sermonId: SERMON_ID, created: false };
-
-  db.run("BEGIN");
-  try {
-    if (!seriesExists) {
-      db.run(
-        `INSERT INTO series (
-          id, title, color, description, year,
-          big_idea, overview, passage_range, start_date, end_date,
-          structural_outline, status, canon_category,
-          redemptive_context, book_background, book_argument,
-          book_structure, series_motivation, emerging_big_idea
-        ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-        [
-          series.id, series.title, series.color, series.description, series.year,
-          series.big_idea, series.overview, series.passage_range, series.start_date, series.end_date,
-          series.structural_outline, series.status, series.canon_category,
-          series.redemptive_context, series.book_background, series.book_argument,
-          series.book_structure, series.series_motivation, series.emerging_big_idea,
-        ]
-      );
-    }
-
-    if (!sermonExists) {
-      db.run(
-        `INSERT INTO sermons (
-          id, series_id, is_one_off, title, passage, date, stage,
-          mpt, mps,
-          observations, interpretation, redemptive_thread, implications,
-          outline, functional_elements,
-          manuscript, delivery_notes, timing_notes,
-          topic_theme, audience_assumptions, background_noise, study_guide_note
-        ) VALUES (?,?,0,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-        [
-          sermon.id, sermon.series_id, sermon.title, sermon.passage, sermon.date, sermon.stage,
-          sermon.mpt, sermon.mps,
-          sermon.observations, sermon.interpretation, sermon.redemptive_thread, sermon.implications,
-          sermon.outline, sermon.functional_elements,
-          sermon.manuscript, sermon.delivery_notes, sermon.timing_notes,
-          sermon.topic_theme, sermon.audience_assumptions, sermon.background_noise, sermon.study_guide_note,
-        ]
-      );
-    }
-
-    db.run("COMMIT");
-  } catch (e) {
-    db.run("ROLLBACK");
-    throw e;
-  }
-  saveDb();
-  return { sermonId: SERMON_ID, created: true };
-});
-
-ipcMain.handle("db-removeTourSermon", () => {
-  db.run("BEGIN");
-  try {
-    db.run("DELETE FROM sermons WHERE id LIKE 'tour-%'");
-    db.run("DELETE FROM series  WHERE id LIKE 'tour-%'");
-    db.run("COMMIT");
-  } catch (e) {
-    db.run("ROLLBACK");
-    throw e;
-  }
-  saveDb();
-});
+// (db-getRecentSermons / db-loadTourSermon / db-removeTourSermon — moved into
+//  the spine handler above. Sermon/series state has exactly one IPC surface.)
 
 // ── Settings IPC ─────────────────────────────────────────────────────────────
 ipcMain.handle("db-getSetting", (_, key) => getSetting(key));

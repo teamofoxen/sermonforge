@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createSeries } from "../db/database";
+import { createSeries } from "../core/spine";
 import InlineError from "./InlineError";
 
 // State Contract #3 in docs/CORE.md: no anonymous atoms — a series must have
@@ -17,12 +17,11 @@ export default function NewSeriesModal({ onClose, onCreated }) {
     setSaving(true);
     setError(null);
     try {
-      const id = await createSeries({
-        title: title.trim(),
+      const result = await createSeries({
+        name: title.trim(),
         year: Number(year) || new Date().getFullYear(),
-        status: "planning",
       });
-      onCreated(id);
+      onCreated(result.id);
     } catch (e) {
       console.error(e);
       setError(e?.message || "Could not create the series.");

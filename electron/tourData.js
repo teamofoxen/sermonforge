@@ -6,6 +6,8 @@
 
 "use strict";
 
+const { SERMON_STATUS, SERIES_STATUS } = require("./contracts.cjs");
+
 // ── Fixed IDs ─────────────────────────────────────────────────────────────────
 
 const SERIES_ID = "tour-sotm-series-2026";
@@ -37,7 +39,7 @@ III. Kingdom Righteousness: The Law Fulfilled (5:17-48)
 IV. Kingdom Devotion: Giving, Prayer, Fasting (6:1-18)
 V. Kingdom Priorities: Money and Anxiety (6:19-34)
 VI. Kingdom Decision: The Two Ways (7:13-29)`,
-  status: "active",
+  status: SERIES_STATUS.InProgress,
   canon_category: "nt",
   redemptive_context: "Matthew writes to a community negotiating its relationship to Jewish tradition and the wider church. Jesus appears as the new Moses — delivering his teaching from a mountain — but what he delivers is not a stricter code. It is the fulfilment of the entire covenant story: the people God always intended, formed by the Spirit, living under his reign. The Sermon on the Mount stands at the hinge between old covenant aspiration and new covenant reality, and every pericope in it reaches forward to Calvary and the resurrection.",
   book_background: "Matthew's Gospel was likely written between AD 80–90, possibly in Antioch, for a community that included both Jewish Christians and Gentile believers. Matthew draws heavily on Mark and Q, but organises the material around five major discourses — a deliberate echo of the five books of Moses. The Sermon on the Mount is the first and most foundational of these.",
@@ -55,7 +57,7 @@ const sermon = {
   title: "The Upside-Down Kingdom",
   passage: "Matthew 5:1-12",
   date: "2026-01-04",
-  stage: "writing",
+  stage: SERMON_STATUS.InProgress,
   mpt: "Jesus declared that those utterly dependent on God — not the morally accomplished — were the ones already living under his reign.",
   mps: "The life God blesses is not the life you build; it is the life you surrender.",
   topic_theme: "Kingdom ethics, Blessed life, Dependence on God, Grace over merit",

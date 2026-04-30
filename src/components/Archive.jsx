@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
-import { getAllSermons, deleteSermon } from "../db/database";
+import { getAllSermons, deleteSermon } from "../core/spine";
 import { formatDate } from "../utils";
 import DeleteButton from "./DeleteButton";
 import InlineError from "./InlineError";
+import { SERMON_STATUS } from "../core/contracts";
 
 export default function Archive({ onOpenSermon }) {
   const [sermons, setSermons] = useState([]);
@@ -12,7 +13,7 @@ export default function Archive({ onOpenSermon }) {
 
   useEffect(() => {
     getAllSermons()
-      .then((data) => setSermons(data.filter((s) => s.stage === "archived")))
+      .then((data) => setSermons(data.filter((s) => s.stage === SERMON_STATUS.Complete)))
       .catch((e) => {
         console.error("[Archive] load failed:", e);
         setLoadError(true);
@@ -81,7 +82,7 @@ export default function Archive({ onOpenSermon }) {
                 <div className="sermon-card-footer">
                   <span>{formatDate(sermon.date)}</span>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <span className="stage-badge stage-archived">archived</span>
+                    <span className="stage-badge stage-complete">complete</span>
                     <DeleteButton
                       small
                       onDelete={async () => {

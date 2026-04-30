@@ -3,8 +3,12 @@ import { useState, useEffect, useRef, useCallback } from "react";
 // prompts each produce a distinct object reference and always trigger the effect.
 import { useDebounce } from "../utils/hooks";
 import { useTour } from "../contexts/TourContext";
-import { getSermonById, updateSermon, deleteSermon, getSeriesById, getSectionsBySeries, getSermonsBySeries } from "../db/database";
-import { pickSermonColumns } from "../constants/sermonColumns";
+import {
+  getSermon, updateSermon, deleteSermon,
+  getSeries, getSectionsBySeries, getSermonsBySeries,
+  persistMutation, INITIAL_SAVE_STATE,
+} from "../core/spine";
+import { pickSermonColumns } from "../core/contracts";
 import { updateMemory, extractOutlinePattern, extractPhrasePatterns } from "../utils/memory";
 import { autoResize } from "../utils";
 import DeleteButton from "./DeleteButton";
@@ -30,11 +34,15 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpe
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [studySummaries, setStudySummaries] = useState({});
   const [showPassage, setShowPassage] = useState(false);
-  // Save visibility — Mutation Contract #3: saves are events, not background noise.
+  // Save visibility — Mutation Contract #3 lives in spine.persistMutation.
   // "Saving…" while in flight, "Saved" when at rest, "Save failed · Retry" on error.
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState(false);
-  const [lastSavedAt, setLastSavedAt] = useState(null);
+  const [saveState, setSaveState] = useState(INITIAL_SAVE_STATE);
+  const { saving, saveError, lastSavedAt } = saveState;
+  // Movement-event marker — Process Contract #3 ("movement is a visible event").
+  // Set when handleTabChange advances the canonical position; auto-clears on
+  // dismiss or next movement. The data-testid="movement-event" lets the
+  // contract test (and future surfaces) locate this canonical marker.
+  const [lastMovement, setLastMovement] = useState(null);
   // Position-in-series — State Contract #4: parent context is first-class.
   // siblingIds is the ordered list of sermon IDs in the current sermon's
   // series. Empty array when the sermon has no series.
@@ -67,7 +75,11 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpe
   useEffect(() => {
     async function load() {
       try {
-        const data = await getSermonById(sermonId);
+        const data = await getSermon(sermonId);
+        if (!data) {
+          setLoading(false);
+          return;
+        }
 
         // Fetch series, sections, and sibling sermons in parallel — only what's needed.
         // Sections are fetched only when both ids are present so we can
@@ -76,7 +88,7 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpe
         // can show position and prev/next navigation (State Contract #4).
         const [series, sections, siblings] = await Promise.all([
           data.series_id
-            ? getSeriesById(data.series_id).catch((e) => { console.error("Series fetch failed:", e); return null; })
+            ? getSeries(data.series_id).catch((e) => { console.error("Series fetch failed:", e); return null; })
             : Promise.resolve(null),
           data.series_id && data.section_id
             ? getSectionsBySeries(data.series_id).catch((e) => { console.error("Sections fetch failed:", e); return []; })
@@ -139,25 +151,15 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpe
 
   const persistUpdate = useCallback(
     async () => {
-      setSaving(true);
-      try {
-        // sermonRef.current is the full optimistic state, including JOIN
-        // fields (series_title, series_color), the attached `series` and
-        // `section` objects, and primary-key/timestamp columns. None of
-        // those are in SERMON_COLUMNS, so passing the whole row would make
-        // buildUpdate reject the call (throws in dev / warn-and-drop in
-        // prod). Filter to the writable allowlist before sending.
-        const payload = pickSermonColumns(sermonRef.current);
+      // sermonRef.current carries JOIN fields, position fields, and
+      // attached series/section objects that are not in SERMON_COLUMNS.
+      // Filter to the writable allowlist before sending — buildUpdate
+      // throws in dev / drops in prod when an unknown column appears.
+      const payload = pickSermonColumns(sermonRef.current);
+      await persistMutation(setSaveState, async () => {
         await updateSermon(sermonId, payload);
         captureMemory(sermonRef.current);
-        setSaveError(false);
-        setLastSavedAt(Date.now());
-      } catch (e) {
-        console.error("Save error:", e);
-        setSaveError(true);
-      } finally {
-        setSaving(false);
-      }
+      });
     },
     [sermonId]
   );
@@ -177,10 +179,14 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpe
   }
 
   function handleTabChange(tab) {
+    const previousTab = activeTab;
     captureMemory(sermonRef.current, { scanPhrases: true });
     setActiveTab(tab);
     setActiveStep(null);
     localStorage.setItem(`sermonforge_sermon_tab_${sermonId}`, tab);
+    if (previousTab && previousTab !== tab) {
+      setLastMovement({ from: previousTab, to: tab, at: Date.now() });
+    }
   }
 
   async function handleDelete() {
@@ -222,6 +228,31 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpe
   return (
     <>
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+      {/* Movement-event marker — Process Contract #3.
+          Surfaces a transient "advanced from X to Y" banner when the
+          canonical position changes. data-testid is the marker contract
+          tests look for; future surfaces inherit this element. */}
+      {lastMovement && (
+        <div
+          data-testid="movement-event"
+          role="status"
+          aria-live="polite"
+          onClick={() => setLastMovement(null)}
+          style={{
+            background: "var(--parchment-warm)",
+            borderLeft: "3px solid var(--gold)",
+            padding: "8px 16px",
+            fontSize: "13px",
+            color: "var(--ink-mid)",
+            fontFamily: "'Crimson Pro', serif",
+            cursor: "pointer",
+          }}
+          title="Click to dismiss"
+        >
+          Advanced from {TAB_LABELS[lastMovement.from] || lastMovement.from} to{" "}
+          {TAB_LABELS[lastMovement.to] || lastMovement.to}.
+        </div>
+      )}
       {/* Top bar */}
       <div className="topbar">
         <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1, minWidth: 0 }}>
