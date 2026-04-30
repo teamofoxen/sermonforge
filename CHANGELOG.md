@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-04-30 — chore: add enforcement-status check to end-session skill
+
+- Added STEP 2 — ENFORCEMENT STATUS CHECK to `.claude/skills/end-session/SKILL.md` listing the seven contract-enforcement trigger paths.
+- When any trigger path is touched, the skill now requires updating `docs/ENFORCEMENT_STATUS.md` (deferred-clause moves, per-clause table sync, test fixture confirmation, "Last verified" date) before proceeding.
+- Renumbered subsequent steps: CHANGELOG → STEP 3, COMMIT → STEP 4, PUSH → STEP 5, CONFIRM → STEP 6.
+
+---
+
 ## 2026-04-30 — feat: mac build pipeline scaffolding
 
 - New `mac` + `dmg` targets in `package.json`: universal arch, hardened runtime, notarize via `APPLE_*` + `MAC_CSC_*` env, stable `SermonForge-Setup.dmg` artifact name matching the Windows pattern.
