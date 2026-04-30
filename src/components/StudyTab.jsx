@@ -13,6 +13,7 @@ import {
 } from "../utils/studyFields";
 import OutlineBuilder from "./OutlineBuilder";
 import InlineAIResponse from "./InlineAIResponse";
+import ProposalPanel from "./ProposalPanel";
 import { OUTLINE_SYSTEM, outlineHasNumberedList, extractOutlineWithExplanations } from "../utils/outlineChat";
 import { FE_CHAT_SYSTEM } from "../prompts/study";
 import { fetchPassage } from "../db/database";
@@ -260,6 +261,14 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
   // Draft-generation loading flags
   const [draftLoading, setDraftLoading] = useState(null); // "mpt" | "mps" | "big_idea"
 
+  // AI draft proposals — Mutation Contract: AI proposals live in a separate
+  // slot until the user explicitly accepts. The corresponding field is never
+  // overwritten by AI without a click.
+  const [mptProposal, setMptProposal] = useState(null);
+  const [mpsProposal, setMpsProposal] = useState(null);
+  const [confirmOutlineApplyIdx, setConfirmOutlineApplyIdx] = useState(null);
+  const [populateScriptureMessage, setPopulateScriptureMessage] = useState(null);
+
   // MPS conversational refinement
   const [mpsChat, setMpsChat] = useState([]); // [{role, content}]
   const [mpsChatInput, setMpsChatInput] = useState("");
@@ -319,12 +328,13 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
   async function generateMPT() {
     if (draftLoading) return;
     setDraftLoading("mpt");
+    setMptProposal(null);
     try {
       const resp = await sendAIMessage(
         [{ role: "user", content: `Passage: ${sermon.passage || "unknown"}\n\nObservations:\n${formatPhaseText(obsData, OBSERVE_FIELDS)}\n\nInterpretation:\n${formatPhaseText(intData, INTERPRET_FIELDS)}\n\nDraft a Main Point of the Text (MPT) for this passage. The MPT is a single sentence in past tense summarizing what the author was saying to the original audience. Return only the sentence.` }],
         "You are a biblical scholar helping a pastor formulate the main point of a text. The MPT must be historically grounded, past tense, and accurately reflect the author's original intent."
       );
-      if (resp?.trim()) onUpdate({ mpt: resp.trim() });
+      if (resp?.trim()) setMptProposal(resp.trim());
     } catch (e) {
       console.error("[generateMPT]", e);
     } finally {
@@ -335,6 +345,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
   async function generateMPS() {
     if (draftLoading || !sermon.mpt?.trim()) return;
     setDraftLoading("mps");
+    setMpsProposal(null);
     try {
       const redThread = formatPhaseText(redData, REDEMPTIVE_FIELDS);
       const implications = formatPhaseText(impData, [...IMPLICATIONS_THEOLOGICAL, ...IMPLICATIONS_PERSONAL]);
@@ -350,7 +361,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
         [{ role: "user", content: `Passage: ${sermon.passage || "unknown"}\n\nMPT: ${sermon.mpt}\n\nRedemptive Thread:\n${redThread || "(none)"}\n\nImplications:\n${implications || "(none)"}${piBlock}\n\nDraft a Main Point of the Sermon (MPS). The MPS is a single present-tense sentence. The MPT is the theological anchor — not a template to restate. Do not mirror the MPT's language; ask what it makes possible for these people right now.${piBlock ? " The sermon intro will move the congregation from the cultural world inward through the room to the claim — assume that journey has been made. The MPS does not retrace it. The MPS lands at The Sermon's Work: telegraph that claim, aimed at who is in the room. The Cultural Moment and The Room inform tone and angle only — they do not need to appear in the sentence. When drawing on the pastoral context, express the underlying human condition in universal terms (e.g., fear, control, guilt, pride), not situational or cultural descriptors. If the MPT has sequential movements, render them as a forward-moving causal chain with one subject and one main verb, using no more than two subordinate clauses." : " If the MPT has sequential movements, render them as a forward-moving causal chain with one subject and one main verb, using no more than two subordinate clauses."} Aim for 35–45 words. Every clause must add meaning; avoid filler connectors used only to reach length. Compress ruthlessly. Return only the sentence.` }],
         "You are a homiletics consultant helping a pastor crystallize a sermon claim. The MPT is the kernel. The MPS is what it produces aimed at this congregation. The sermon intro will handle the concentric journey — cultural world, then the room, then the threshold. The MPS lands after that journey: it is the claim waiting at the end. Derive it primarily from The Sermon's Work; treat The Sermon's Work as the primary driver of the MPS — all other inputs are subordinate. Let The Cultural Moment and The Room shape tone and angle without appearing in the sentence. Do not restate the MPT. Remain theologically anchored in the MPT without repeating or mirroring its language. Do not retrace the intro. One sentence, one spine, landing at the claim."
       );
-      if (resp?.trim()) onUpdate({ mps: resp.trim() });
+      if (resp?.trim()) setMpsProposal(resp.trim());
     } catch (e) {
       console.error("[generateMPS]", e);
     } finally {
@@ -544,8 +555,22 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
   async function populateScripture() {
     if (!sermon.passage || outline.length === 0 || scripturePopulating) return;
     setScripturePopulating(true);
+    setPopulateScriptureMessage(null);
     try {
-      const pts = outline.map((p, i) => `${i + 1}. ${p.text}`).join("\n");
+      // Mutation Contract #1: user typing wins by default. Skip rows that already
+      // have user-entered Scripture content; only fill empty rows.
+      const eligible = outline.filter(pt => !(funcData[pt.id]?.scripture?.trim()));
+      const skippedCount = outline.length - eligible.length;
+
+      if (eligible.length === 0) {
+        setPopulateScriptureMessage({
+          tone: "info",
+          text: `All ${outline.length} point${outline.length === 1 ? "" : "s"} already have Scripture filled — nothing to populate.`,
+        });
+        return;
+      }
+
+      const pts = eligible.map((p, i) => `${i + 1}. ${p.text}`).join("\n");
       const resp = await sendAIMessage(
         [{ role: "user", content: `Passage: ${sermon.passage}\n\nOutline:\n${pts}\n\nMap each outline point to its most relevant verse range within the passage.` }],
         `You are helping a pastor identify which specific verses within a sermon passage ground each outline point. Return ONLY valid JSON — no preamble, no markdown, no explanation. Format: {"1": "Book Chapter:Verse-Verse", "2": "Book Chapter:Verse-Verse", ...}. Keys are point numbers as strings. Values must be exact verse references that are subsets of the given passage.`
@@ -553,19 +578,28 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
       const cleaned = resp.replace(/^```(?:json)?\n?/m, "").replace(/\n?```$/m, "").trim();
       const map = JSON.parse(cleaned);
       const next = { ...funcData };
+      let populated = 0;
       await Promise.all(
-        outline.map(async (pt, i) => {
+        eligible.map(async (pt, i) => {
           const ref = map[String(i + 1)];
           if (!ref) return;
           const result = await fetchPassage(ref);
           if (result?.esv) {
             next[pt.id] = { ...(next[pt.id] || { explanation: "", application: "", illustration: "" }), scripture: result.esv };
+            populated += 1;
           }
         })
       );
       onUpdate({ functional_elements: serializeFunctionalElements(next) });
+      setPopulateScriptureMessage({
+        tone: "ok",
+        text: skippedCount > 0
+          ? `Populated ${populated} of ${eligible.length} empty point${eligible.length === 1 ? "" : "s"} (${skippedCount} already had Scripture, left untouched).`
+          : `Populated ${populated} of ${eligible.length} point${eligible.length === 1 ? "" : "s"}.`,
+      });
     } catch (e) {
       console.error("[populateScripture]", e);
+      setPopulateScriptureMessage({ tone: "error", text: `Could not populate Scripture: ${e.message}` });
     } finally {
       setScripturePopulating(false);
     }
@@ -966,6 +1000,17 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                 ref={(el) => autoResize(el)}
                 placeholder="The main point of the text in past tense — what the author was saying to the original audience."
               />
+              <ProposalPanel
+                loading={draftLoading === "mpt"}
+                proposal={mptProposal}
+                label="AI proposes MPT"
+                acceptLabel={sermon.mpt?.trim() ? "Replace MPT" : "Use this"}
+                onAccept={() => {
+                  onUpdate({ mpt: mptProposal });
+                  setMptProposal(null);
+                }}
+                onDiscard={() => setMptProposal(null)}
+              />
             </div>
             <div className="field-group" data-tour-id="mps-field">
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "5px" }}>
@@ -990,6 +1035,17 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                 onInput={(e) => autoResize(e.target)}
                 ref={(el) => autoResize(el)}
                 placeholder="The main point of the sermon in present tense — what this text is saying to this congregation today."
+              />
+              <ProposalPanel
+                loading={draftLoading === "mps"}
+                proposal={mpsProposal}
+                label="AI proposes MPS"
+                acceptLabel={sermon.mps?.trim() ? "Replace MPS" : "Use this"}
+                onAccept={() => {
+                  onUpdate({ mps: mpsProposal });
+                  setMpsProposal(null);
+                }}
+                onDiscard={() => setMpsProposal(null)}
               />
             </div>
           </div>
@@ -1174,21 +1230,46 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                     <div className="ai-markdown" style={{ marginBottom: extracted ? "8px" : "0" }}>
                       <ReactMarkdown>{msg.content}</ReactMarkdown>
                     </div>
-                    {extracted && (
-                      <button
-                        className="btn-ghost btn-sm"
-                        style={{ fontSize: "12px" }}
-                        onClick={() => {
-                          const existing = getFunctionalElements(sermon);
-                          onUpdate({
-                            outline: serializeOutline(extracted.points),
-                            functional_elements: serializeFunctionalElements({ ...existing, ...extracted.explanations }),
-                          });
-                        }}
-                      >
-                        → Apply to Outline
-                      </button>
-                    )}
+                    {extracted && (() => {
+                      // Mutation Contract #4: replacing existing user-typed outline
+                      // points is destructive — require a two-step inline confirm.
+                      // When outline is empty, single-click is fine (no user content
+                      // to lose).
+                      const isDestructive = outline.length > 0;
+                      const inConfirm = confirmOutlineApplyIdx === i;
+                      const commit = () => {
+                        const existing = getFunctionalElements(sermon);
+                        onUpdate({
+                          outline: serializeOutline(extracted.points),
+                          functional_elements: serializeFunctionalElements({ ...existing, ...extracted.explanations }),
+                        });
+                        setConfirmOutlineApplyIdx(null);
+                      };
+                      if (!isDestructive) {
+                        return (
+                          <button className="btn-ghost btn-sm" style={{ fontSize: "12px" }} onClick={commit}>
+                            → Apply to Outline
+                          </button>
+                        );
+                      }
+                      if (inConfirm) {
+                        return (
+                          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                            <button className="btn-primary btn-sm" style={{ fontSize: "12px" }} onClick={commit}>
+                              Replace {outline.length} existing point{outline.length === 1 ? "" : "s"}
+                            </button>
+                            <button className="btn-ghost btn-sm" style={{ fontSize: "12px" }} onClick={() => setConfirmOutlineApplyIdx(null)}>
+                              Cancel
+                            </button>
+                          </div>
+                        );
+                      }
+                      return (
+                        <button className="btn-ghost btn-sm" style={{ fontSize: "12px" }} onClick={() => setConfirmOutlineApplyIdx(i)}>
+                          → Apply to Outline
+                        </button>
+                      );
+                    })()}
                   </div>
                 );
               })}
@@ -1238,14 +1319,40 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
           <SummaryBlock summaryKey="s4" {...summaryProps} />
 
           {outline.length > 0 && sermon.passage && (
-            <div style={{ marginBottom: "12px" }}>
+            <div style={{ marginBottom: "12px", display: "flex", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
               <button
                 className="btn-ghost btn-sm"
                 disabled={scripturePopulating}
                 onClick={populateScripture}
+                title="Fills empty Scripture rows only — rows with content are left untouched"
               >
                 {scripturePopulating ? "Fetching scripture…" : "Populate Scripture (ESV)"}
               </button>
+              {populateScriptureMessage && (
+                <span style={{
+                  fontSize: "12px",
+                  fontFamily: "'Crimson Pro', serif",
+                  fontStyle: "italic",
+                  color: populateScriptureMessage.tone === "error"
+                    ? "#a04040"
+                    : populateScriptureMessage.tone === "info"
+                      ? "var(--ink-ghost)"
+                      : "var(--ink-soft)",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                }}>
+                  {populateScriptureMessage.text}
+                  <button
+                    onClick={() => setPopulateScriptureMessage(null)}
+                    style={{
+                      background: "transparent", border: "none", cursor: "pointer",
+                      color: "var(--ink-ghost)", fontSize: "14px", lineHeight: 1, padding: 0,
+                    }}
+                    title="Dismiss"
+                  >×</button>
+                </span>
+              )}
             </div>
           )}
 

@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-04-29 — feat: Mutation Contract — AI proposals reviewed before apply
+
+- New `src/components/ProposalPanel.jsx` component implements the review-then-apply pattern that enforces Mutation Contract clauses #1 and #2 from `docs/CORE.md`.
+- Study Step 2 `Draft → MPT` and `Draft → MPS` no longer overwrite the field; the AI draft appears in a parchment-and-gold proposal panel below the textarea with "Use this" / "Discard" buttons.
+- Study Step 3 `Apply to Outline` uses a two-step inline confirm (`Replace N existing points` + Cancel) when the outline already has user content; single-click apply still works when the outline is empty.
+- Study Step 4 `Populate Scripture (ESV)` is now opt-out — it fills only empty Scripture rows, leaves filled rows untouched, and reports populated/skipped counts via a dismissable inline message.
+
+---
+
 ## 2026-04-29 — feat: four-contract framework canon; remove Quick Outline
 
 - Added "The Framework" section to `docs/CORE.md`: Principle (Clarity through Constraint), hierarchy, four contracts (State / Process / Mutation / Surface), and the four-question Test for evaluating any change.
