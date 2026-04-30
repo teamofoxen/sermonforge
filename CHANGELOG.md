@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-04-30 — fix: defer slot creation until user names it
+
+- `+ Add Slot` in `SeriesPlanner` now creates a UI-only draft row keyed `draft-<uuid>`; no IPC `create-sermon` fires until the user types a non-empty title.
+- Title input shows the canonical `placeholder` attribute instead of leaking the literal "Untitled sermon" string into sidebar recents, calendar labels, and workspace topbars.
+- `commitDraft` runs on title blur / Enter / Open click, surfaces inline errors on commit failure, and follows up with `updateSermon` for fields not accepted by `create-sermon` (e.g. `study_guide_note`).
+- Deleting a draft before commit removes it from local state with no spine call; navigating away discards uncommitted drafts.
+
+---
+
 ## 2026-04-30 — fix: post-enforcement audit regressions
 
 - Renamed `getSeriesById` → `getSeries` import + call site in `SeriesPlanner.jsx` so opening a series no longer hangs on "Loading…".

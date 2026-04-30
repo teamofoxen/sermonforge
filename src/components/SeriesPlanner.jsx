@@ -13,6 +13,7 @@ import {
 import { getSeasonForDate, getUpcomingSundays, toDateString } from "../utils/churchCalendar";
 import { tryParse, formatDate, autoResize } from "../utils";
 import DeleteButton from "./DeleteButton";
+import InlineError from "./InlineError";
 import { sendAIMessage } from "../utils/ai";
 import InlineAIResponse from "./InlineAIResponse";
 import ReactMarkdown from "react-markdown";
@@ -973,6 +974,15 @@ function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpen
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
 
+  // Draft slots — UI-only rows that have not yet been committed to the spine.
+  // State Contract #3 forbids createSermon({ name: "" }), so the "+ Add Slot"
+  // button creates a row in this local state instead of immediately calling
+  // the spine. The row commits (createSermon + replace draft with real id) on
+  // first non-empty-name blur/Enter, or when the user clicks Open.
+  const [drafts, setDrafts] = useState([]);
+  const [draftErrors, setDraftErrors] = useState({});
+  const isDraftId = (id) => typeof id === "string" && id.startsWith("draft-");
+
   const persistSlot = useCallback(async (id, fields) => {
     await updateSermon(id, fields);
   }, []);
@@ -998,31 +1008,99 @@ function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpen
     }
   }
 
-  async function addSlot(sectionId = null) {
-    // State Contract #3 — sermons must have a name. Until the user names a
-    // slot, hold a non-empty placeholder so the spine accepts the create.
-    // The slot UI accepts a real title via handleSlotField; until then this
-    // placeholder satisfies the contract without a separate "draft" state.
-    const result = await createSermon({
+  // No spine call — the row exists only in local draft state until the user
+  // types a non-empty name. State Contract #3 stays structurally enforced at
+  // the spine boundary; this just defers when the IPC call fires so no
+  // nameless atom ever reaches it.
+  function addSlot(sectionId = null) {
+    const id = `draft-${crypto.randomUUID()}`;
+    setDrafts(prev => [...prev, {
+      id,
+      _draft: true,
       series_id: seriesId,
       section_id: sectionId,
-      name: "Untitled sermon",
+      title: "",
       passage: "",
-      is_one_off: 0,
-    });
-    const id = result.id;
-    onSermonsChange(prev => [...prev, {
-      id, series_id: seriesId, section_id: sectionId,
-      title: "Untitled sermon", passage: "", date: "", stage: SERMON_STATUS.InProgress,
+      date: "",
+      stage: SERMON_STATUS.InProgress,
     }]);
   }
 
+  // Commit a draft row to the spine. Called on title blur/Enter (with
+  // non-empty name) and from the Open button. Returns the new sermon id on
+  // success, null if there's nothing to commit (empty name) or commit failed.
+  // On failure, surfaces an inline error on the row and keeps the draft so
+  // the user can retry.
+  async function commitDraft(draftId) {
+    const draft = drafts.find(d => d.id === draftId);
+    if (!draft) return null;
+    const name = draft.title?.trim();
+    if (!name) return null;
+    setDraftErrors(prev => {
+      if (!(draftId in prev)) return prev;
+      const next = { ...prev };
+      delete next[draftId];
+      return next;
+    });
+    try {
+      const result = await createSermon({
+        name,
+        series_id: draft.series_id,
+        section_id: draft.section_id,
+        passage: draft.passage || "",
+        date: draft.date || "",
+        is_one_off: 0,
+      });
+      const newId = result.id;
+      // create-sermon doesn't accept study_guide_note; if the user typed one
+      // before committing, follow up with an updateSermon write.
+      if (draft.study_guide_note?.trim?.()) {
+        await updateSermon(newId, { study_guide_note: draft.study_guide_note });
+      }
+      const realSlot = {
+        id: newId,
+        series_id: draft.series_id,
+        section_id: draft.section_id,
+        title: name,
+        passage: draft.passage || "",
+        date: draft.date || "",
+        stage: SERMON_STATUS.InProgress,
+        ...(draft.study_guide_note ? { study_guide_note: draft.study_guide_note } : {}),
+      };
+      onSermonsChange(prev => [...prev, realSlot]);
+      setDrafts(prev => prev.filter(d => d.id !== draftId));
+      return newId;
+    } catch (e) {
+      console.error("[commitDraft]", e);
+      setDraftErrors(prev => ({ ...prev, [draftId]: e?.message || "Could not create the sermon." }));
+      return null;
+    }
+  }
+
   function handleSlotField(id, field, value) {
+    if (isDraftId(id)) {
+      setDrafts(prev => prev.map(s => s.id === id ? { ...s, [field]: value } : s));
+      return;
+    }
     onSermonsChange(prev => prev.map(s => s.id === id ? { ...s, [field]: value } : s));
     debouncedSlotSave(id, { [field]: value });
   }
 
+  function clearDraftError(id) {
+    setDraftErrors(prev => {
+      if (!(id in prev)) return prev;
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+  }
+
   async function handleDeleteSlot(id) {
+    if (isDraftId(id)) {
+      setDrafts(prev => prev.filter(s => s.id !== id));
+      clearDraftError(id);
+      return;
+    }
     await deleteSermon(id);
     onSermonsChange(prev => prev.filter(s => s.id !== id));
   }
@@ -1047,10 +1125,14 @@ function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpen
     }
   }
 
-  // Group sermons by section
-  const unassigned = sermons.filter(s => !s.section_id);
+  // Group sermons by section. Drafts merge in alongside committed sermons
+  // so they render in the right place and order; downstream surfaces (Calendar
+  // tab, etc.) read from `sermons` directly so drafts never leak past the
+  // SlotsTab boundary.
+  const allSlots = [...sermons, ...drafts];
+  const unassigned = allSlots.filter(s => !s.section_id);
   const bySectionId = {};
-  for (const sermon of sermons) {
+  for (const sermon of allSlots) {
     if (sermon.section_id) {
       bySectionId[sermon.section_id] = bySectionId[sermon.section_id] || [];
       bySectionId[sermon.section_id].push(sermon);
@@ -1067,7 +1149,7 @@ function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpen
               Sermon Slots
             </h3>
             <p style={{ fontSize: "13px", color: "var(--ink-ghost)", marginTop: "2px" }}>
-              {sermons.length} slot{sermons.length !== 1 ? "s" : ""} planned
+              {allSlots.length} slot{allSlots.length !== 1 ? "s" : ""} planned
             </p>
           </div>
           {sections.length === 0 && (
@@ -1097,10 +1179,13 @@ function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpen
                   slots={bySectionId[section.id] || []}
                   onChange={handleSlotField}
                   onDelete={handleDeleteSlot}
+                  onCommit={commitDraft}
+                  draftErrors={draftErrors}
+                  onClearError={clearDraftError}
                   onOpenSermon={onOpenSermon}
                   seriesId={seriesId}
                   series={series}
-                  totalSlots={sermons.length}
+                  totalSlots={allSlots.length}
                   sectionBigIdea={section.big_idea || ""}
                   onSlotAI={handleSlotAI}
                 />
@@ -1113,22 +1198,25 @@ function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpen
                 <h4 style={{ fontFamily: "'Playfair Display', serif", fontSize: "14px", fontWeight: "600", color: "var(--ink-ghost)", marginBottom: "10px" }}>
                   Unassigned
                 </h4>
-                <SlotList slots={unassigned} onChange={handleSlotField} onDelete={handleDeleteSlot} onOpenSermon={onOpenSermon} seriesId={seriesId} series={series} totalSlots={sermons.length} sectionBigIdea="" onSlotAI={handleSlotAI} />
+                <SlotList slots={unassigned} onChange={handleSlotField} onDelete={handleDeleteSlot} onCommit={commitDraft} draftErrors={draftErrors} onClearError={clearDraftError} onOpenSermon={onOpenSermon} seriesId={seriesId} series={series} totalSlots={allSlots.length} sectionBigIdea="" onSlotAI={handleSlotAI} />
               </div>
             )}
           </div>
         ) : (
           // Flat list
           <SlotList
-            slots={sermons}
+            slots={allSlots}
             onChange={handleSlotField}
             onDelete={handleDeleteSlot}
+            onCommit={commitDraft}
+            draftErrors={draftErrors}
+            onClearError={clearDraftError}
             showAdd
             onAdd={() => addSlot(null)}
             onOpenSermon={onOpenSermon}
             seriesId={seriesId}
             series={series}
-            totalSlots={sermons.length}
+            totalSlots={allSlots.length}
             sectionBigIdea=""
             onSlotAI={handleSlotAI}
           />
@@ -1155,7 +1243,7 @@ function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpen
   );
 }
 
-function SlotList({ slots, onChange, onDelete, showAdd, onAdd, onOpenSermon, seriesId, series, totalSlots, sectionBigIdea, onSlotAI }) {
+function SlotList({ slots, onChange, onDelete, onCommit, draftErrors, onClearError, showAdd, onAdd, onOpenSermon, seriesId, series, totalSlots, sectionBigIdea, onSlotAI }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
       {slots.length === 0 && (
@@ -1164,7 +1252,22 @@ function SlotList({ slots, onChange, onDelete, showAdd, onAdd, onOpenSermon, ser
         </div>
       )}
       {slots.map((slot, idx) => (
-        <SlotRow key={slot.id} slot={slot} index={idx} onChange={onChange} onDelete={onDelete} onOpenSermon={onOpenSermon} seriesId={seriesId} series={series} totalSlots={totalSlots} sectionBigIdea={sectionBigIdea} onSlotAI={onSlotAI} />
+        <SlotRow
+          key={slot.id}
+          slot={slot}
+          index={idx}
+          onChange={onChange}
+          onDelete={onDelete}
+          onCommit={onCommit}
+          commitError={draftErrors?.[slot.id]}
+          onClearError={onClearError}
+          onOpenSermon={onOpenSermon}
+          seriesId={seriesId}
+          series={series}
+          totalSlots={totalSlots}
+          sectionBigIdea={sectionBigIdea}
+          onSlotAI={onSlotAI}
+        />
       ))}
       {showAdd && (
         <button className="btn-ghost btn-sm" onClick={onAdd} style={{ alignSelf: "flex-start", marginTop: "4px" }}>
@@ -1175,10 +1278,26 @@ function SlotList({ slots, onChange, onDelete, showAdd, onAdd, onOpenSermon, ser
   );
 }
 
-function SlotRow({ slot, index, onChange, onDelete, onOpenSermon, seriesId, series, totalSlots, sectionBigIdea, onSlotAI }) {
+function SlotRow({ slot, index, onChange, onDelete, onCommit, commitError, onClearError, onOpenSermon, seriesId, series, totalSlots, sectionBigIdea, onSlotAI }) {
   const [expanded, setExpanded] = useState(!slot.title && !slot.passage);
   const [assistLoading, setAssistLoading] = useState(false);
   const [assistResponse, setAssistResponse] = useState(null);
+  const isDraft = !!slot._draft;
+
+  // Commit a draft when the user signals "I'm done with the title": blur the
+  // title input, press Enter in it, or click Open. No-op for committed slots.
+  function maybeCommit() {
+    if (!isDraft) return Promise.resolve(slot.id);
+    if (!slot.title?.trim()) return Promise.resolve(null);
+    return Promise.resolve(onCommit?.(slot.id) ?? null);
+  }
+
+  async function handleOpen(e) {
+    e.stopPropagation();
+    const id = isDraft ? await maybeCommit() : slot.id;
+    if (!id) return;
+    onOpenSermon(id, "series-planner", seriesId);
+  }
 
   async function handleAssist(e) {
     e.stopPropagation();
@@ -1220,7 +1339,9 @@ function SlotRow({ slot, index, onChange, onDelete, onOpenSermon, seriesId, seri
         {onOpenSermon && (
           <button
             className="btn-ghost btn-sm"
-            onClick={(e) => { e.stopPropagation(); onOpenSermon(slot.id, "series-planner", seriesId); }}
+            onClick={handleOpen}
+            disabled={isDraft && !slot.title?.trim()}
+            title={isDraft && !slot.title?.trim() ? "Type a title first" : undefined}
             style={{ fontSize: "12px", padding: "3px 10px" }}
           >
             Open
@@ -1247,9 +1368,21 @@ function SlotRow({ slot, index, onChange, onDelete, onOpenSermon, seriesId, seri
               style={inputStyle}
               value={slot.title || ""}
               onChange={(e) => onChange(slot.id, "title", e.target.value)}
+              onBlur={() => { if (isDraft && slot.title?.trim()) onCommit?.(slot.id); }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && isDraft && slot.title?.trim()) {
+                  e.preventDefault();
+                  onCommit?.(slot.id);
+                }
+              }}
               placeholder="e.g. Through the Eyes of Luke"
               onClick={(e) => e.stopPropagation()}
             />
+            {commitError && (
+              <div style={{ marginTop: "6px" }}>
+                <InlineError onDismiss={() => onClearError?.(slot.id)}>{commitError}</InlineError>
+              </div>
+            )}
           </div>
           <div style={{ gridColumn: "1 / -1" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "5px" }}>
