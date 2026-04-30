@@ -164,29 +164,6 @@ pushes:   "library-embed-progress" events: { done, total, complete }
 ```
 Backfills embeddings for any rows in `sermonforge.db.library` that don't yet have chunks indexed in `library.db`. Idempotent. Surfaced in the Library UI as a "Build index" banner.
 
-### `"library-create-sermon-from-outline"`
-```
-receives: {
-  title: string,
-  passage: string,
-  outline: [{ text, support?, source? }, ...],
-  piAnswers: { background_noise, audience_assumptions, topic_theme },
-  mode: "full" | "quick",
-  seriesId?: string,
-  sectionId?: string,
-}
-returns:  { sermonId: string, outlinePoints: [{ id, text }, ...] }
-```
-Inserts a new `sermons` row with the outline JSON-encoded into `outline` and PI answers persisted to their matching columns. `mode: "full"` writes `stage = "planning"`; `mode: "quick"` writes `stage = "quick"`. Used by Quick Outline Builder's Build-full / Build-quick buttons.
-
-### `"sermon-export-quick-template"`
-```
-receives: { title, passage, outline: [{ id, text }, ...], piAnswers }
-returns:  { success: true, filepath } | { success: false, error }
-opens:    saved .docx via `shell.openPath`
-```
-Generates a placeholder Word doc (`Documents/SermonForge/exports/Manuscripts/<title> — Quick Sermon.docx`) with the outline points filled in and italic grey placeholders for every other category (intro, explanation, application, illustration per point, conclusion). Pastoral Intelligence answers render at the top when present.
-
 ### `"library-search"`
 ```
 receives: { query: string, limit: number, mode: "browse"|"ai"|"hybrid" }
@@ -195,7 +172,7 @@ returns:  array of { id, title, passage, folder, series_name, word_count, excerp
 
 Modes:
 - `"browse"` — title/passage/series only (search bar filtering)
-- `"ai"` — includes manuscript_text via FTS, with LIKE fallback
+- `"ai"` — includes manuscript_text via FTS, with LIKE fallback (used by AIPanel contextual search)
 - `"hybrid"` — Reciprocal Rank Fusion across FTS rank (manuscript-level) and vector cosine (chunk-level, aggregated to manuscript via best-chunk distance). Falls back to `"ai"`-style FTS+LIKE when `library.db` / sqlite-vec is unavailable.
 
 ### `"library-get-manuscripts"`

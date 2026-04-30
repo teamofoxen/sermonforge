@@ -15,7 +15,7 @@ function ArrowRightIcon() {
   );
 }
 
-export default function Dashboard({ onOpenSermon, onNewSeries, onNavigate, onLeaveTour }) {
+export default function Dashboard({ onOpenSermon, onNewSeries, onLeaveTour }) {
   const { start: startTour } = useTour();
   const [showNewModal, setShowNewModal] = useState(false);
   const [tourLoading, setTourLoading] = useState(false);
@@ -119,30 +119,6 @@ export default function Dashboard({ onOpenSermon, onNewSeries, onNavigate, onLea
               </p>
               <span className="tile-link">
                 Build series <ArrowRightIcon />
-              </span>
-            </div>
-
-            {/* QUICK OUTLINE */}
-            <div
-              className="dash-tile"
-              onClick={() => onNavigate && onNavigate("library")}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  onNavigate && onNavigate("library");
-                }
-              }}
-            >
-              <div className="tile-eyebrow tile-eyebrow-soft">From&nbsp;your&nbsp;library</div>
-              <h3 className="tile-title">Quick outline builder</h3>
-              <p className="tile-blurb">
-                Pull from your past sermons. Describe what you want to preach, and
-                SermonForge synthesizes outline options grounded in your own voice.
-              </p>
-              <span className="tile-link">
-                Open the Library <ArrowRightIcon />
               </span>
             </div>
 

@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-04-29 — feat: four-contract framework canon; remove Quick Outline
+
+- Added "The Framework" section to `docs/CORE.md`: Principle (Clarity through Constraint), hierarchy, four contracts (State / Process / Mutation / Surface), and the four-question Test for evaluating any change.
+- Removed Quick Outline UI: dashboard tile in `Dashboard.jsx`, multi-step dark panel + state machine + helpers in `Library.jsx`, and the now-unused `onNavigate` prop wiring on Dashboard.
+- Removed Quick Outline IPC: `library-create-sermon-from-outline` and `sermon-export-quick-template` handlers in `electron/main.js`, matching wrappers in `electron/preload.js` and `src/db/database.js`, the `src/prompts/quickOutline.js` prompts file, and IPC channel docs.
+- Updated `/agents` and `/run-agent` skill definitions to remove the arbitrary 3–5 agent cap and the one-agent-per-invocation constraint.
+
+---
+
 ## 2026-04-29 — chore: ignore design-context bundles, drop diag scripts
 
 - `design-context/` and `sermonforge-design-context.md` added to `.gitignore` (regeneratable design-tool snapshots that duplicate `src/styles` and `src/components`).

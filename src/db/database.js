@@ -61,7 +61,6 @@ export const searchLibrary           = (query, limit, mode)      => api.searchLi
 export const importLibrary           = ()                        => api.importLibrary();
 export const buildLibraryEmbeddings  = ()                        => api.buildLibraryEmbeddings();
 export const getLibraryManuscripts   = (ids, truncate, maxChars) => api.getLibraryManuscripts(ids, truncate, maxChars);
-export const createSermonFromOutline = (payload)                 => api.createSermonFromOutline(payload);
 export const onLibraryImportProgress = (callback)                => api.onLibraryImportProgress(callback);
 export const onLibraryEmbedProgress  = (callback)                => api.onLibraryEmbedProgress(callback);
 
@@ -84,7 +83,6 @@ export const fetchPassage = (passage) => api.fetchPassage(passage);
 export const exportStudyGuide = (seriesId) => api.exportStudyGuide(seriesId);
 export const exportPmb = (data) => api.exportPmb(data);
 export const exportManuscript = (data) => api.exportManuscript(data);
-export const exportQuickTemplate = (data) => api.exportQuickTemplate(data);
 
 // ── Tour ──────────────────────────────────────────────────────────────────────
 export const loadTourSermon   = () => api.loadTourSermon();

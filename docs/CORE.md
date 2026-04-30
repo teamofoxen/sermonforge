@@ -29,6 +29,132 @@ every stage.*
 
 ---
 
+## The Framework
+
+> **Authority:** This is the behavioral law of SermonForge. All four contracts
+> below are binding. When a clause conflicts with code, the code is wrong. When
+> two clauses appear to conflict, the hierarchy below resolves it.
+
+### The Principle
+
+**Clarity through Constraint.** The system's job is to force clarity out of the
+user through structured pressure. The system does not do the clarity work for
+the user; it refuses to let the user proceed without it. Every contract below
+derives from this. Any clause that lets the system substitute for the user is
+wrong, not the principle.
+
+### Hierarchy
+
+When contracts appear to conflict, this resolves it:
+
+**Principle → State → Process → Mutation → Surface**
+
+- The Principle wins always.
+- State is the foundation. If the state model doesn't admit X, no other
+  contract can produce X.
+- Process sits on State. It defines what state transitions are legal.
+- Mutation sits on Process. It defines how transitions are committed.
+- Surface derives from all three. Surfaces *express* what the contracts permit.
+  Surfaces never *invent*.
+
+### 1. State Contract — what exists, and where am I in it
+
+1. **The series is the primary planning unit. The sermon is the atomic unit of
+   content work.** Both are first-class canonical state. A sermon may exist
+   without a series (one-off preaching); when it has one, the series is its
+   primary parent context.
+2. **Every sermon has a canonical position in the process.** A sermon is at
+   exactly one stage (Study → Blueprint → Manuscript → Delivery), and within
+   Study at one step (1 Exegesis → 2 MPT/MPS → 3 Outline → 4 Functional
+   Elements). Position is queryable from any surface that touches the sermon.
+3. **No anonymous atoms.** A sermon must have a name. A series must have a
+   name. The system refuses to admit a nameless atom into canonical state.
+4. **Parent context is first-class.** A sermon that belongs to a series carries
+   that membership as canonical state, including its position-in-series
+   ("Sermon 3 of 7"). It is a property of the sermon, not a join surfaced only
+   in one place.
+5. **One name per concept.** "Outline" is one tab and one stage and one
+   dropdown value, with one spelling, everywhere it appears. Vocabulary is part
+   of state, not a UI decoration. Stage values, tab names, step names, and
+   dropdown options must be the canonical names — never aliases or drifts.
+6. **In-progress work is queryable from the front door.** "What sermons am I
+   currently working on" has an answer the dashboard can show. There is no
+   scenario where a sermon exists but the user cannot find it from the launchpad.
+
+### 2. Process Contract — what counts as movement
+
+1. **Movement is monotonic by default.** Forward through stages is the natural
+   direction. Backward movement is allowed but explicit — the user knows they
+   went back.
+2. **Movement is gated by user evidence.** The system does not advance a sermon
+   to the next stage unless the user has produced the artifact that stage
+   requires. The constraint *is* the gate.
+3. **Movement is a visible event.** "Continue" is movement, and movement is
+   never silent. If movement triggers an AI summary, the user sees both the
+   movement and the summary as discrete events.
+4. **Pastoral Context follows the text, not the other way around.** The text
+   speaks first. Pastoral Context is a canonical artifact of every sermon,
+   but it does not precede engagement with the text and is not a prerequisite
+   for entering Study. PC enters Study progressively as the pastor's
+   understanding of the text deepens — introduced as awareness during Observe,
+   held in marination through Interpret, gaining texture at Redemptive Thread,
+   and fully integrated at Implications. The exact phase-by-phase mechanics
+   are specified in `docs/SYSTEMS/sermon-workspace.md`.
+5. **AI augments, never substitutes.** AI runs on user evidence. There is no AI
+   operation that produces sermon content from zero user input. Compressed paths
+   that bypass user evidence are forbidden under this contract.
+
+### 3. Mutation Contract — what happens when something changes
+
+1. **User typing always wins by default.** The system does not overwrite
+   user-typed content without explicit, per-occurrence consent. "Draft,"
+   "Suggest," "Populate" are *proposals*, never *replacements*.
+2. **AI proposals live in a separate slot until accepted.** Accept is one click.
+   Reject is no click. The user's existing field is never touched while a
+   proposal is pending.
+3. **Saves are events, not background noise.** Successful saves are visible —
+   the user can answer "is my work safe" at any moment. Failed saves are visible
+   and retryable. Silent saves are not allowed in either direction.
+4. **Destruction requires evidence of intent proportional to reversal cost.**
+   Single-click destruction is forbidden for anything irreversible or
+   input-wiping. The DeleteButton's two-step inline confirm is the canonical model.
+5. **Errors speak in one voice.** A persistent retryable failure is a banner.
+   A field-level failure is inline. The system never uses a raw browser alert.
+   There is one error vocabulary across the app.
+
+### 4. Surface Contract — how the system speaks
+
+1. **One vocabulary.** The canonical names from State Contract clause 5 are
+   the only names allowed in copy, labels, tabs, dropdowns, modals, and tooltips.
+2. **One CTA system.** Primary actions have one shape. Secondary actions have
+   one shape. Disabled or unbuilt features do not occupy primary positions.
+3. **One empty-state pattern, one loading vocabulary.** A small canonical set
+   of loading verbs ("Loading…", "Saving…", "Thinking…") covers everything.
+   Empty states share a layout and tone.
+4. **"You are here" is always answerable.** Every top-level destination has a
+   canonical sidebar entry and a canonical active-state. No nameless wandering.
+5. **One re-entry convention.** Back is back. Labeled, consistent, predictable
+   from any surface.
+
+### The Test
+
+Every proposed feature, fix, refactor, or audit response must answer four
+questions before it ships:
+
+1. **Which contracts does it touch?** Name them.
+2. **Does it strengthen or weaken each one?** A change that weakens a contract
+   to ship a feature fails the test.
+3. **Does it preserve the Principle?** Does it preserve forced clarity, or
+   does it relax it?
+4. **If it conflicts with an existing clause, which is wrong?** A genuine
+   conflict resolves at the contract layer, not in code. The contract changes,
+   or the proposal changes. Code never decides on its own.
+
+A change that passes all four ships. A change that fails any one of them
+either reshapes to pass, or it does not ship.
+
+---
+
 ## Non-Negotiable Architectural Boundaries
 
 - **No backend.** Local-first only. No web API, no server process, no remote storage.
