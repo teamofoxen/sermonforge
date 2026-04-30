@@ -46,7 +46,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   buildLibraryEmbeddings:   ()                      => ipcRenderer.invoke("library-build-embeddings"),
   searchLibrary:            (query, limit, mode)    => ipcRenderer.invoke("library-search", { query, limit, mode }),
   getLibraryManuscripts:    (ids, truncate, maxChars) => ipcRenderer.invoke("library-get-manuscripts", { ids, truncate, maxChars }),
-  createSermonFromOutline:  (payload)               => ipcRenderer.invoke("library-create-sermon-from-outline", payload),
 
   // ── Settings ──────────────────────────────────────────────────────────────
   getSetting:               (key)                   => ipcRenderer.invoke("db-getSetting", key),
@@ -64,7 +63,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   exportStudyGuide: (seriesId) => ipcRenderer.invoke("series-export-study-guide", seriesId),
   exportPmb: (data) => ipcRenderer.invoke("sermon-export-pmb", data),
   exportManuscript: (data) => ipcRenderer.invoke("sermon-export-manuscript", data),
-  exportQuickTemplate: (data) => ipcRenderer.invoke("sermon-export-quick-template", data),
 
   // ── Bible passage ─────────────────────────────────────────────────────────
   fetchPassage: (passage) => ipcRenderer.invoke('passage-fetch', passage),

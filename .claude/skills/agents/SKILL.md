@@ -20,7 +20,7 @@ If the problem description is too vague to break into distinct system areas, ask
 
 ### STEP 1 — SYSTEM BREAKDOWN
 
-- Break the problem into 3–5 distinct system areas.
+- Break the problem into as many distinct system areas as the problem actually has. Use as few as possible without flattening meaningfully different surfaces, and as many as the problem needs without inventing seams. Do not invoke an arbitrary cap.
 - For each area, state:
   - What it controls
   - Why it matters to the stated problem
@@ -29,7 +29,7 @@ If the problem description is too vague to break into distinct system areas, ask
 
 ### STEP 2 — DEFINE AGENTS
 
-Create 3–5 read-only investigation agents.
+Create one read-only investigation agent per area from Step 1. The total number is whatever Step 1 produced — do not pad and do not collapse just to hit a count.
 
 Each agent MUST:
 - Focus on exactly ONE area from Step 1

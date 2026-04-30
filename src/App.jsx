@@ -252,7 +252,6 @@ export default function App() {
             onOpenSermon={openSermon}
             onOpenSeries={openPlanner}
             onNewSeries={handleNewSeries}
-            onNavigate={navigate}
             onLeaveTour={leaveTour}
           />
         )}
