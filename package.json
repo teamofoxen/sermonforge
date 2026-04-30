@@ -96,6 +96,26 @@
       "shortcutName": "SermonForge",
       "installerHeader": "",
       "deleteAppDataOnUninstall": false
+    },
+    "mac": {
+      "icon": "build/icon.icns",
+      "category": "public.app-category.productivity",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist",
+      "notarize": true,
+      "target": [
+        {
+          "target": "dmg",
+          "arch": "universal"
+        }
+      ],
+      "artifactName": "SermonForge-Setup.dmg"
+    },
+    "dmg": {
+      "title": "SermonForge ${version}",
+      "icon": "build/icon.icns"
     }
   }
 }

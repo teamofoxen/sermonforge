@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-04-30 — feat: mac build pipeline scaffolding
+
+- New `mac` + `dmg` targets in `package.json`: universal arch, hardened runtime, notarize via `APPLE_*` + `MAC_CSC_*` env, stable `SermonForge-Setup.dmg` artifact name matching the Windows pattern.
+- New `.github/workflows/build.yml` `build-macos` job runs `iconutil` over `brand/icons/sermonforge.iconset/` to generate `build/icon.icns`, then electron-builder signs, notarizes, and publishes.
+- New `build/entitlements.mac.plist` declares hardened-runtime requirements (JIT, unsigned exec memory, library validation off, dyld env vars, network client).
+- New `brand/` folder holds the designer-prepared icon kit: 1024 master, SVG masters, Apple iconset (10 sizes with `@2x` naming), Windows PNGs, and horizontal + stacked wordmark lockups carrying the "Clarity through Constraint" tagline.
+- `build/icon.ico` regenerated via ImageMagick from `brand/icons/win/` (7 sizes incl. new 24×24 entry); `build/icon.icns` is gitignored as a CI-generated artifact.
+
+---
+
 ## 2026-04-29 — chore: remove Library and Illustrations features
 
 - Deleted `src/components/Library.jsx` and `src/components/Illustrations.jsx` user-facing pages.

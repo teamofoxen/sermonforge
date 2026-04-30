@@ -19,6 +19,10 @@ release/
 *.dmg
 *.AppImage
 
+# Mac icon — generated in CI from brand/icons/sermonforge.iconset (iconutil only runs on macOS).
+# Source of truth is the iconset directory; never hand-edit or commit the binary.
+build/icon.icns
+
 # Database — lives in data/ alongside the project, not in git
 *.db
 *.db-journal
