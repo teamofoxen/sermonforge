@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { getAllSeries, deleteSeries, getSermonsBySeries } from "../core/spine";
-import { SERIES_STATUS_LABELS } from "../core/contracts";
+import { SERIES_STATUS, SERIES_STATUS_LABELS } from "../core/contracts";
 import DeleteButton from "./DeleteButton";
 
 const CANON_LABELS = { ot: "Old Testament", nt: "New Testament", wisdom: "Wisdom", prophetic: "Prophetic", "": "Uncategorized" };
@@ -129,7 +129,7 @@ export default function Planning({ onOpenPlanner, onNewSeries }) {
 
 function SeriesCard({ series: s, sermonCount, onOpen, onDelete }) {
   const cat = s.canon_category || "";
-  const statusColor = { planning: "var(--ink-ghost)", active: "var(--sage)", complete: "var(--gold)" };
+  const statusColor = { [SERIES_STATUS.InProgress]: "var(--sage)", [SERIES_STATUS.Complete]: "var(--gold)" };
 
   return (
     <div

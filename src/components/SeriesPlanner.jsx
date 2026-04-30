@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useDebounce } from "../utils/hooks";
 import {
-  getSeriesById, updateSeries,
+  getSeries, updateSeries,
   getSectionsBySeries, createSection, updateSection, deleteSection,
   getSermonsBySeries, createSermon, updateSermon, deleteSermon,
 } from "../core/spine";
@@ -106,7 +106,7 @@ export default function SeriesPlanner({ seriesId, onClose, onOpenSermon }) {
   async function load() {
     try {
       const [s, sects, serms, notes] = await Promise.all([
-        getSeriesById(seriesId),
+        getSeries(seriesId),
         getSectionsBySeries(seriesId),
         getSermonsBySeries(seriesId),
         getCalendarNotes(),

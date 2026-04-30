@@ -94,6 +94,12 @@ Contract tests use **Path B**: an in-memory fixture mirroring the spine boundary
 
 **Mitigation candidate:** Path A (real Electron in tests via spectron / playwright / Electron-test-runner) would eliminate this drift surface. Out of scope for this enforcement pass; revisit if drift causes a regression. Documented in `tests/contracts/README.md`.
 
+### Consumer-side import drift
+
+Contract tests, the spine integrity gate, and `tsc` together do not catch the case where a renderer component imports a name that the spine doesn't export. The integrity gate scans for *forbidden* imports (direct `db.run`, sermon/series helpers from `src/db/database.js`); it does not validate that imports of `src/core/spine.ts` resolve to real exports. `tsc` skips `.jsx` files by default. The Path B fixture reproduces the spine API surface but doesn't exercise component imports. A renamed export — for example, `getSermonById → getSermon` was applied across consumers, but `getSeriesById → getSeries` was missed in `SeriesPlanner.jsx` — passes every gate and surfaces only at runtime as `TypeError: <name> is not a function`. The post-enforcement audit caught one such case (Series Planner stuck on infinite "Loading…" spinner); the regression was a one-line import rename.
+
+**Mitigation candidate:** enable `tsc` on `.jsx` files via JSDoc annotations + `checkJs: true` in `tsconfig.json`, or migrate the imported components to `.tsx` incrementally during audit triage. Either approach turns missing-named-import errors into compile-time failures.
+
 ## Lint baseline accounting
 
 | Rule | Current count | Resolved by |

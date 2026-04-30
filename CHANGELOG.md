@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-04-30 — fix: post-enforcement audit regressions
+
+- Renamed `getSeriesById` → `getSeries` import + call site in `SeriesPlanner.jsx` so opening a series no longer hangs on "Loading…".
+- Rewrote `Planning.jsx` `statusColor` map with `SERIES_STATUS` keys so in-progress series render in sage instead of gray.
+- Added "Consumer-side import drift" caveat + JSDoc/checkJs mitigation note to `docs/ENFORCEMENT_STATUS.md`.
+
+---
+
 ## 2026-04-30 — feat: pre-SPRD contract enforcement layer
 
 - New `src/core/contracts.ts` + `src/core/spine.ts` make the spine the only sermon/series API; v17 migration adds `current_*` position columns + `legacy_evidence_cutoff`.
