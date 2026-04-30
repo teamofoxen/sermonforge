@@ -47,23 +47,6 @@ export const getCalendarNotes   = ()           => api.getCalendarNotes();
 export const createCalendarNote = (data)       => api.createCalendarNote(data);
 export const deleteCalendarNote = (id)         => api.deleteCalendarNote(id);
 
-// ── Illustrations ─────────────────────────────────────────────────────────────
-export const getAllIllustrations = ()           => api.getAllIllustrations();
-export const createIllustration  = (data)      => api.createIllustration(data);
-export const deleteIllustration  = (id)        => api.deleteIllustration(id);
-
-// ── Library ───────────────────────────────────────────────────────────────────
-export const deleteLibraryItem       = (id)                      => api.deleteLibraryItem(id);
-export const getLibraryStatus        = ()                        => api.getLibraryStatus();
-export const getLibraryFolder        = ()                        => api.getLibraryFolder();
-export const setLibraryFolder        = ()                        => api.setLibraryFolder();
-export const searchLibrary           = (query, limit, mode)      => api.searchLibrary(query, limit, mode);
-export const importLibrary           = ()                        => api.importLibrary();
-export const buildLibraryEmbeddings  = ()                        => api.buildLibraryEmbeddings();
-export const getLibraryManuscripts   = (ids, truncate, maxChars) => api.getLibraryManuscripts(ids, truncate, maxChars);
-export const onLibraryImportProgress = (callback)                => api.onLibraryImportProgress(callback);
-export const onLibraryEmbedProgress  = (callback)                => api.onLibraryEmbedProgress(callback);
-
 // ── Settings ──────────────────────────────────────────────────────────────────
 export const getSetting              = (key)                    => api.getSetting(key);
 export const setSetting              = (key, value)             => api.setSetting(key, value);

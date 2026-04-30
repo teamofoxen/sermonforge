@@ -12,9 +12,7 @@ import OneDriveWarning from "./components/OneDriveWarning";
 
 const SermonList = lazy(() => import("./components/SermonList"));
 const Calendar = lazy(() => import("./components/Calendar"));
-const Illustrations = lazy(() => import("./components/Illustrations"));
 const Archive = lazy(() => import("./components/Archive"));
-const Library = lazy(() => import("./components/Library"));
 const Planning = lazy(() => import("./components/Planning"));
 const SeriesPlanner = lazy(() => import("./components/SeriesPlanner"));
 const SermonWorkspace = lazy(() => import("./components/SermonWorkspace"));
@@ -270,14 +268,8 @@ export default function App() {
         {currentView === "calendar" && (
           <Calendar onOpenSermon={openSermon} />
         )}
-        {currentView === "illustrations" && (
-          <Illustrations />
-        )}
         {currentView === "archive" && (
           <Archive onOpenSermon={openSermon} />
-        )}
-        {currentView === "library" && (
-          <Library onOpenSermon={openSermon} />
         )}
         {currentView === "planning" && (
           <Planning

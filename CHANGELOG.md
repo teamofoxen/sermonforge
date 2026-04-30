@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-04-29 — chore: remove Library and Illustrations features
+
+- Deleted `src/components/Library.jsx` and `src/components/Illustrations.jsx` user-facing pages.
+- Removed `library` + `illustrations` routes and lazy imports from `src/App.jsx`.
+- Removed library + illustration IPC channel exposures from `electron/preload.js` and matching wrapper exports from `src/db/database.js`; main-process IPC handlers + library DB infrastructure remain dormant pending a follow-up dead-code sweep.
+- `FeedbackModal` UX_PARTS dropped "Illustrations" and "Sermon Library"; `CLAUDE.md` routing table dropped its Library entry; `README.md` dropped the library sidecar mention.
+
+---
+
 ## 2026-04-29 — feat: State #4 position-in-series; Surface #4 All Sermons; vocabulary sweep
 
 - State Contract #4: `SermonWorkspace.jsx` topbar shows "‹ Sermon X of Y ›" with prev/next chevrons; siblings fetched via existing `getSermonsBySeries`; new `onOpenSermon` prop wired through `App.jsx`.
