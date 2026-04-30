@@ -103,6 +103,19 @@ export default function SeriesPlanner({ seriesId, onClose, onOpenSermon }) {
     setActiveTab(saved || "book-study");
   }, [seriesId]);
 
+  // Auto-suggest series complete — Pilot B.3 / Process Contract #2
+  // ("movement gated by user evidence"). The user's evidence is clicking
+  // the Mark Series Complete button; the suggestion is just visibility.
+  // Conditions: every committed (non-draft) child sermon has reached
+  // SERMON_STATUS.Complete, the series itself isn't already complete, and
+  // there's at least one sermon (don't suggest completion of an empty series).
+  const committedSermons = sermons.filter((s) => !s._draft && !s.id?.startsWith?.("draft-"));
+  const allChildrenComplete =
+    committedSermons.length > 0 &&
+    committedSermons.every((s) => s.stage === SERMON_STATUS.Complete);
+  const suggestSeriesComplete =
+    allChildrenComplete && series?.status !== SERIES_STATUS.Complete;
+
   function handleTabChange(tabId) {
     setActiveTab(tabId);
     localStorage.setItem(`sermonforge_planner_tab_${seriesId}`, tabId);
@@ -195,6 +208,16 @@ export default function SeriesPlanner({ seriesId, onClose, onOpenSermon }) {
           }}>
             {SERIES_STATUS_LABELS[series.status] || SERIES_STATUS_LABELS[SERIES_STATUS.InProgress]}
           </span>
+          {series.status !== SERIES_STATUS.Complete && (
+            <SecondaryButton
+              size="sm"
+              onClick={() => persistSeries({ status: SERIES_STATUS.Complete })}
+              title="Mark this series complete"
+              style={{ fontSize: "11px" }}
+            >
+              Mark Series Complete
+            </SecondaryButton>
+          )}
         </div>
         <button
           onClick={() => setShowHowItWorks(true)}
@@ -216,6 +239,37 @@ export default function SeriesPlanner({ seriesId, onClose, onOpenSermon }) {
           Chat with AI
         </SecondaryButton>
       </div>
+
+      {/* Auto-suggest Mark Series Complete — fires when every committed
+          child sermon has reached SERMON_STATUS.Complete. The user's click
+          on Mark Series Complete is the explicit evidence; the banner is
+          just visibility (Process Contract #2 + the Principle). */}
+      {suggestSeriesComplete && (
+        <div
+          role="status"
+          style={{
+            background: "var(--parchment-warm)",
+            borderBottom: "1px solid var(--parchment-deep)",
+            borderLeft: "3px solid var(--gold)",
+            padding: "10px 28px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "12px",
+            fontFamily: "'Crimson Pro', serif",
+            fontSize: "13px",
+            color: "var(--ink-mid)",
+          }}
+        >
+          <span>All sermons in this series are complete. Mark the series complete?</span>
+          <PrimaryButton
+            size="sm"
+            onClick={() => persistSeries({ status: SERIES_STATUS.Complete })}
+          >
+            Mark Series Complete
+          </PrimaryButton>
+        </div>
+      )}
 
       {/* Tab bar */}
       <div style={{

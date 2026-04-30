@@ -1,7 +1,7 @@
 # Enforcement Status
 
-**Last verified:** 2026-04-30 (Pilot B.2 landed)
-**Verified against:** `docs/CORE.md`, enforcement pass closed against working tree at HEAD `23a97f3` (uncommitted, see closing summary). Pilot C added the CTA primitive layer; Pilot D added the loading + empty-state primitives; Pilot E added `<BackButton>` (Surface #5 closes); Pilot B.2 renamed Archive → Completed Sermons (closes Surface #4 `archive` exception), added the canonical sidebar entry, and added per-sermon re-export.
+**Last verified:** 2026-04-30 (Pilot B.3 landed — audit triage initiative complete)
+**Verified against:** `docs/CORE.md`, enforcement pass closed against working tree at HEAD `23a97f3` (uncommitted, see closing summary). Pilot C added the CTA primitive layer; Pilot D added the loading + empty-state primitives; Pilot E added `<BackButton>` (Surface #5 closes); Pilot B.2 renamed Archive → Completed Sermons (closes Surface #4 exception); Pilot B.3 added the Dashboard Resume Work panel + return-day reminder + Mark Complete UX (Delivery tab and SeriesPlanner), closing the State #6 surface gap.
 
 ## Summary
 
@@ -24,7 +24,7 @@ A single clause may be enforced at multiple layers — the count above assigns e
 | State #3 — no anonymous atoms | Structural (renderer fast-fail + IPC re-validation) | Renderer: `src/core/spine.ts` `createSermon` / `createSeries` throw `ContractViolation`. Main: `validateAndCommit` re-rejects with `code: STATE_3_NAMELESS_*` | `npm test -- tests/contracts/state-3-no-anonymous-atoms.test.ts` |
 | State #4 — parent context first-class | Structural | `spine.getSermon()` computes `parentContext: { seriesId, seriesName, positionInSeries, totalInSeries }` from sibling order at read time | `node scripts/spine-integrity.js` (the spine is the only path) |
 | State #5 — one name per concept | Lint + Test | Forbidden-alias set: `writing`, `ready`, `archived` (narrowed — see Deferred). Lint: `sermonforge/canonical-stage-name`. Test: `tests/contracts/state-5-one-name-per-concept.test.ts` | `npm run lint && npm test -- tests/contracts/state-5-one-name-per-concept.test.ts` |
-| State #6 — in-progress queryable from front door | Structural (API only) | `spine.getInProgressSermons()` exists; **dashboard surface integration deferred to Pilot B.3** | `node scripts/spine-integrity.js` (API surface present) |
+| State #6 — in-progress queryable from front door | Structural | `spine.getInProgressSermons()` is wired into the Dashboard Resume Work tile, which renders top in-progress sermons with a return-day reminder section for sermons whose delivery date has passed but stage is still `in_progress`. Mark Complete on the Delivery tab + Mark Series Complete in the SeriesPlanner topbar provide the lifecycle close-out, with auto-suggest banners that surface the action without performing it (Principle: system suggests, user decides). | `node scripts/spine-integrity.js` (API surface present + consumed) |
 | Process #1 — movement is monotonic | Structural + Test | `validateAndCommit` rejects forward-to-prior with `code: PROCESS_1_FORWARD_TO_PRIOR` | `npm test -- tests/contracts/process-1-monotonic.test.ts` |
 | Process #2 — movement gated by user evidence | Structural + Test | `validateAndCommit` rejects empty evidence (non-legacy); v17 `legacy_evidence_cutoff` carve-out for sermons whose `created_at < cutoff`. **Per-stage evidence-sufficiency rules deferred to SPRD** | `npm test -- tests/contracts/process-2-evidence-gated.test.ts` |
 | Process #3 — movement is a visible event | Structural + Test | `data-testid="movement-event"` element rendered in `SermonWorkspace.jsx` on tab transition; meta-test guards against silent removal | `npm test -- tests/contracts/process-3-movement-visible.test.tsx` |
@@ -74,7 +74,7 @@ The gate scans the codebase on every commit and CI run for four bypass classes:
 ### Specific audit-triage pilot dependencies
 
 - **~~Pilot B.2 (Archive → Completed Sermons)~~** — landed. Route renamed `archive` → `completed-sermons`; `tests/contracts/surface-4-you-are-here.test.ts` `EXPECTED_DEEP` no longer contains the route. Per-sermon re-export wired by reusing the existing `sermon-export-manuscript` IPC (no new IPC channel needed).
-- **Pilot B.3 (Dashboard "Resume your work"):** consumes `spine.getInProgressSermons()` to surface in-progress work on the dashboard, closing the State Contract #6 surface gap. Spine API exists today; no surface uses it yet.
+- **~~Pilot B.3 (Dashboard "Resume your work")~~** — landed. Resume Work tile + return-day reminder + Mark Complete on Delivery + Mark Series Complete in planner all wired. State #6 surface gap closed; auto-suggest banners surface actions without performing them so the Principle (Clarity through Constraint) is preserved.
 - **Pilots B.2 / E (workspace tab key migration to PascalCase):** allows `study` and `outline` to be added to the `canonical-stage-name` forbidden set without false positives. Today they appear as legitimate URL-safe tab keys (`TABS = ["study", "outline", "manuscript", "delivery"]`) and column names (`outline` is a sermon column), so the lint rule excludes them.
 - **(Pilot covering view-key migration, if scheduled):** allows `planning` and `active` to be added to the same forbidden set. Today `"planning"` is the top-level Planning view name and `"active"` is the canonical CSS class for active sidebar items.
 - **~~Pilot E (re-entry convention)~~** — landed. `<BackButton>` primitive lands in `src/components/primitives/`; four back-affordance sites migrated. Surface Contract #5 closed.

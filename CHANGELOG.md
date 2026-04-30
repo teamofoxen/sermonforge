@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-04-30 — feat: Resume Work + Mark Complete UX (State Contract #6)
+
+- Dashboard Resume Work tile consumes `spine.getInProgressSermons()`; sermons whose delivery date has passed get a return-day reminder section with crimson highlighting.
+- Delivery tab gains explicit "Mark sermon complete" + an auto-suggest banner when delivery date is past and manuscript exists; the banner suggests, the user clicks.
+- SeriesPlanner topbar gains "Mark Series Complete" + an auto-suggest banner when every committed child sermon is complete.
+- Mark Complete writes `stage` / `status` through `spine.updateSermon` / `updateSeries` — no new IPC channels.
+- `docs/ENFORCEMENT_STATUS.md` updated; State #6 fully closed. **Audit triage initiative complete.**
+
+---
+
 ## 2026-04-30 — feat: Archive → Completed Sermons rename + per-sermon re-export (Surface Contract #4)
 
 - New `src/components/CompletedSermons.jsx` with renamed copy and per-sermon "Re-export" button — reuses existing `sermon-export-manuscript` IPC, no new IPC channel.

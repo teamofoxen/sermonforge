@@ -3,6 +3,8 @@ import { getOutline, getFunctionalElements, tryParse, autoResize, assembleManusc
 import { summarizeExegesis } from "../utils/contextBuilder";
 import { sendAIMessage } from "../utils/ai";
 import { exportPmb } from "../db/database";
+import { updateSermon } from "../core/spine";
+import { SERMON_STATUS } from "../core/contracts";
 import PrimaryButton from "./primitives/PrimaryButton";
 import SecondaryButton from "./primitives/SecondaryButton";
 
@@ -558,12 +560,67 @@ function WithoutNotesPanel({ sermon, onUpdate }) {
 
 export default function DeliveryTab({ sermon, onUpdate }) {
   const [activePanel, setActivePanel] = useState("manuscript");
+  const [marking, setMarking] = useState(false);
+
+  // Mark Complete is an explicit user action — Mutation Contract #4
+  // ("destruction proportional to reversal") and the Principle ("system never
+  // substitutes for user clarity") both require it. The auto-suggest banner
+  // below proposes the action when conditions are met (delivery date past +
+  // manuscript non-empty); clicking the button is the user's evidence of intent.
+  const today = new Date().toISOString().slice(0, 10);
+  const datePast = sermon?.date && sermon.date < today;
+  const hasManuscript = !!assembleManuscriptText(sermon).trim();
+  const isComplete = sermon?.stage === SERMON_STATUS.Complete;
+  const suggestComplete = datePast && hasManuscript && !isComplete;
+
+  async function handleMarkComplete() {
+    if (marking || isComplete) return;
+    setMarking(true);
+    try {
+      await updateSermon(sermon.id, { stage: SERMON_STATUS.Complete });
+      onUpdate?.({ stage: SERMON_STATUS.Complete });
+    } catch (e) {
+      console.error("[DeliveryTab] Mark Complete failed:", e);
+    } finally {
+      setMarking(false);
+    }
+  }
 
   return (
     <>
       <div style={{ marginBottom: "20px", fontSize: "13px", color: "var(--ink-ghost)", fontStyle: "italic" }}>
         Three ways to stand at the pulpit. Format the manuscript for reading aloud, review the preaching outline, or compress everything into memory blocks for preaching without notes.
       </div>
+
+      {/* Auto-suggest Mark Complete banner — appears only when delivery date
+          has passed AND a manuscript exists AND the sermon isn't already
+          complete. The button is the user's explicit evidence of intent. */}
+      {suggestComplete && (
+        <div
+          role="status"
+          style={{
+            background: "var(--parchment-warm)",
+            border: "1px solid var(--parchment-deep)",
+            borderLeft: "3px solid var(--gold)",
+            borderRadius: "var(--radius)",
+            padding: "10px 14px",
+            marginBottom: "16px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "12px",
+            fontFamily: "'Crimson Pro', serif",
+            fontSize: "13px",
+            color: "var(--ink-mid)",
+          }}
+        >
+          <span>Delivery date has passed. Mark this sermon complete?</span>
+          <PrimaryButton size="sm" onClick={handleMarkComplete} disabled={marking}>
+            {marking ? "Saving…" : "Mark Complete"}
+          </PrimaryButton>
+        </div>
+      )}
+
       <div className="delivery-tabs">
         {PANELS.map((p) => (
           <button
@@ -587,6 +644,16 @@ export default function DeliveryTab({ sermon, onUpdate }) {
           <WithoutNotesPanel sermon={sermon} onUpdate={onUpdate} />
         )}
       </div>
+
+      {/* Explicit Mark Complete action — always available regardless of
+          auto-suggest banner. Hidden once already complete. */}
+      {!isComplete && (
+        <div style={{ marginTop: "24px", paddingTop: "16px", borderTop: "1px solid var(--parchment-deep)", display: "flex", justifyContent: "flex-end" }}>
+          <SecondaryButton size="sm" onClick={handleMarkComplete} disabled={marking}>
+            {marking ? "Saving…" : "Mark sermon complete"}
+          </SecondaryButton>
+        </div>
+      )}
     </>
   );
 }
