@@ -10,8 +10,8 @@ import SecondaryButton from "./primitives/SecondaryButton";
 
 // ── Panel constants ───────────────────────────────────────────────────────────
 
-const PANELS = ["manuscript", "outline", "without-notes"];
-const PANEL_LABELS = { "manuscript": "Manuscript", "outline": "Outline", "without-notes": "Without Notes" };
+const PANELS = ["manuscript", "preaching-outline", "without-notes"];
+const PANEL_LABELS = { "manuscript": "Manuscript", "preaching-outline": "Outline", "without-notes": "Without Notes" };
 
 // ── Manuscript delivery ───────────────────────────────────────────────────────
 
@@ -164,7 +164,7 @@ function ManuscriptPanel({ sermon, onUpdate, onPanelChange }) {
             dangerouslySetInnerHTML={{ __html: renderDeliveryMarkdown(content) }}
           />
           <div className="step-advance">
-            <SecondaryButton size="sm" onClick={() => onPanelChange?.("outline")}>
+            <SecondaryButton size="sm" onClick={() => onPanelChange?.("preaching-outline")}>
               Next: Preaching Outline →
             </SecondaryButton>
           </div>
@@ -637,7 +637,7 @@ export default function DeliveryTab({ sermon, onUpdate }) {
         {activePanel === "manuscript" && (
           <ManuscriptPanel sermon={sermon} onUpdate={onUpdate} onPanelChange={setActivePanel} />
         )}
-        {activePanel === "outline" && (
+        {activePanel === "preaching-outline" && (
           <OutlinePanel sermon={sermon} />
         )}
         {activePanel === "without-notes" && (

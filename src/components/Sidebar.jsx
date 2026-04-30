@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { getRecentSermons, getRecentSeries } from "../core/spine";
+import { VIEW } from "../core/contracts";
 import NewSermonModal from "./NewSermonModal.jsx";
 import FeedbackModal from "./FeedbackModal.jsx";
 import IconButton from "./primitives/IconButton";
 
 const NAV_ITEMS = [
   {
-    id: "calendar",
+    id: VIEW.Calendar,
     label: "Calendar",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -106,8 +107,8 @@ export default function Sidebar({ currentView, onNavigate, onOpenSermon, onOpenS
 
         {/* Dashboard */}
         <div
-          className={`nav-item ${currentView === "dashboard" ? "active" : ""}`}
-          onClick={() => handleNavigate("dashboard")}
+          className={`nav-item ${currentView === VIEW.Dashboard ? "active" : ""}`}
+          onClick={() => handleNavigate(VIEW.Dashboard)}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
             <rect x="3" y="3" width="7" height="7" rx="1" />
@@ -120,7 +121,7 @@ export default function Sidebar({ currentView, onNavigate, onOpenSermon, onOpenS
 
         {/* Series Planning — inline dropdown */}
         <div
-          className={`nav-item ${currentView === "planning" || currentView === "series-planner" ? "active" : ""}`}
+          className={`nav-item ${currentView === VIEW.Planning || currentView === VIEW.SeriesPlanner ? "active" : ""}`}
           onClick={() => setSeriesDropdownOpen((o) => !o)}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -143,7 +144,7 @@ export default function Sidebar({ currentView, onNavigate, onOpenSermon, onOpenS
             </div>
             <div
               className="nav-item"
-              onClick={() => handleNavigate("planning")}
+              onClick={() => handleNavigate(VIEW.Planning)}
               style={{ paddingLeft: 36, fontSize: 13 }}
             >
               All Series
@@ -169,7 +170,7 @@ export default function Sidebar({ currentView, onNavigate, onOpenSermon, onOpenS
 
         {/* Sermon Prep — inline dropdown */}
         <div
-          className={`nav-item ${currentView === "workspace" || currentView === "sermons" ? "active" : ""}`}
+          className={`nav-item ${currentView === VIEW.Workspace || currentView === VIEW.Sermons ? "active" : ""}`}
           onClick={() => setDropdownOpen((o) => !o)}
         >
           {WORKSPACE_ICON}
@@ -188,14 +189,14 @@ export default function Sidebar({ currentView, onNavigate, onOpenSermon, onOpenS
             </div>
             <div
               className="nav-item"
-              onClick={() => handleNavigate("sermons")}
+              onClick={() => handleNavigate(VIEW.Sermons)}
               style={{ paddingLeft: 36, fontSize: 13 }}
             >
               All Sermons
             </div>
             <div
               className="nav-item"
-              onClick={() => handleNavigate("completed-sermons")}
+              onClick={() => handleNavigate(VIEW.CompletedSermons)}
               style={{ paddingLeft: 36, fontSize: 13 }}
             >
               Completed Sermons

@@ -10,6 +10,7 @@
  */
 
 import { STEPS, PHASES } from "../constants/steps";
+import { STAGE } from "../core/contracts";
 import { getOutline } from "../utils";
 
 /**
@@ -28,7 +29,7 @@ export function getReviewPrompt(tab, sermon, activeStep) {
   const mpt = sermon?.mpt || "";
   const mps = sermon?.mps || "";
 
-  if (tab === "study") {
+  if (tab === STAGE.Study) {
     const phasePrompts = {
       [PHASES.OBSERVE]:
         `Review these observations about ${passage}. Are the main features of the text captured — context, divisions, commands, statements, characters, big ideas? What is missing or underdeveloped?\n\nMy observations:\n${sermon?.observations || "(none)"}`,
@@ -99,7 +100,7 @@ export function getReviewPrompt(tab, sermon, activeStep) {
     };
   }
 
-  if (tab === "outline") {
+  if (tab === STAGE.Blueprint) {
     const outline = getOutline(sermon);
     return {
       system: "Review this outline for homiletical strength.",
@@ -108,7 +109,7 @@ export function getReviewPrompt(tab, sermon, activeStep) {
     };
   }
 
-  if (tab === "manuscript") {
+  if (tab === STAGE.Manuscript) {
     const manuscriptText = sermon?.manuscript || "(none)";
     const manuscriptForReview =
       manuscriptText.length > 8000
@@ -121,7 +122,7 @@ export function getReviewPrompt(tab, sermon, activeStep) {
     };
   }
 
-  if (tab === "delivery") {
+  if (tab === STAGE.Delivery) {
     return {
       system: "Review this from a preaching coach's perspective.",
       prompt: `Based on the sermon outline and manuscript for ${passage}, what should this preacher be thinking about for effective delivery?`,

@@ -1,4 +1,5 @@
 import { STEPS } from "../constants/steps";
+import { STAGE } from "../core/contracts";
 import { backupMemory, restoreMemory } from "../db/database";
 
 const STORAGE_KEY = 'sermonforge_memory';
@@ -280,7 +281,7 @@ if (typeof window !== 'undefined' && import.meta.env?.DEV) {
 
 // Steps where AI response patterns are worth capturing.
 // Exegesis phases are excluded — stylistic patterns shouldn't form during text study.
-const CAPTURE_PATTERN_STEPS = new Set(['manuscript', STEPS.OUTLINE, 'outline']);
+const CAPTURE_PATTERN_STEPS = new Set([STAGE.Manuscript, STEPS.OUTLINE, STAGE.Blueprint]);
 
 /**
  * Extract up to 2 phrase patterns from an AI response and store them in memory.

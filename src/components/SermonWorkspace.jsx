@@ -8,7 +8,7 @@ import {
   getSeries, getSectionsBySeries, getSermonsBySeries,
   persistMutation, INITIAL_SAVE_STATE,
 } from "../core/spine";
-import { pickSermonColumns } from "../core/contracts";
+import { pickSermonColumns, STAGE, STAGE_SEQUENCE, STAGE_LABELS } from "../core/contracts";
 import { updateMemory, extractOutlinePattern, extractPhrasePatterns } from "../utils/memory";
 import { autoResize } from "../utils";
 import DeleteButton from "./DeleteButton";
@@ -22,13 +22,29 @@ import SecondaryButton from "./primitives/SecondaryButton";
 import IconButton from "./primitives/IconButton";
 import BackButton from "./primitives/BackButton";
 
-const TABS = ["study", "outline", "manuscript", "delivery"];
-const TAB_LABELS = { study: "Study", outline: "Blueprint", manuscript: "Manuscript", delivery: "Delivery" };
+// Workspace tabs are Stage values from `src/core/contracts.ts` — single
+// source of truth. Pre-vocabulary-completion the keys were lowercase and
+// the second key was misnamed `"outline"` (the tab itself is the Blueprint
+// — `OutlineTab.jsx` is just the file that renders it). The tab keys now
+// match `STAGE.{Study,Blueprint,Manuscript,Delivery}` everywhere.
+const TABS = STAGE_SEQUENCE;
+const TAB_LABELS = STAGE_LABELS;
+
+// localStorage migration — pre-vocabulary-completion stored values were
+// lowercase ("study"/"outline"/"manuscript"/"delivery"). Map them to the
+// canonical Stage values at read time so existing sermons restore the
+// correct tab on next mount.
+const LEGACY_TAB_MAP = {
+  study: STAGE.Study,
+  outline: STAGE.Blueprint,
+  manuscript: STAGE.Manuscript,
+  delivery: STAGE.Delivery,
+};
 
 
 export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpenSermon }) {
   const [sermon, setSermon] = useState(null);
-  const [activeTab, setActiveTab] = useState("study");
+  const [activeTab, setActiveTab] = useState(STAGE.Study);
   const [activeStep, setActiveStep] = useState(null);
   const [loading, setLoading] = useState(true);
   const [aiLoading, setAiLoading] = useState(false);
@@ -115,7 +131,8 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpe
         }
         // Restore last active tab across restarts
         const savedTab = localStorage.getItem(`sermonforge_sermon_tab_${sermonId}`);
-        if (savedTab && TABS.includes(savedTab)) setActiveTab(savedTab);
+        const migratedTab = savedTab && (LEGACY_TAB_MAP[savedTab] || savedTab);
+        if (migratedTab && TABS.includes(migratedTab)) setActiveTab(migratedTab);
       } catch (e) {
         console.error("SermonWorkspace load error:", e);
       } finally {
@@ -499,7 +516,7 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpe
             )}
           </div>
 
-          {activeTab === "study" && (
+          {activeTab === STAGE.Study && (
             <StudyTab
               sermon={sermon}
               onUpdate={handleUpdate}
@@ -510,10 +527,10 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpe
               onSummaryGenerated={(key, text) => setStudySummaries(prev => ({ ...prev, [key]: text }))}
             />
           )}
-          {activeTab === "outline" && (
+          {activeTab === STAGE.Blueprint && (
             <OutlineTab sermon={sermon} onUpdate={handleUpdate} onTabChange={handleTabChange} studySummaries={studySummaries} />
           )}
-          {activeTab === "manuscript" && (
+          {activeTab === STAGE.Manuscript && (
             <ManuscriptTab
               sermon={sermon}
               onUpdate={handleUpdate}
@@ -523,7 +540,7 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpe
               onTabChange={handleTabChange}
             />
           )}
-          {activeTab === "delivery" && (
+          {activeTab === STAGE.Delivery && (
             <DeliveryTab sermon={sermon} onUpdate={handleUpdate} />
           )}
         </div>

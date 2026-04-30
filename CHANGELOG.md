@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-04-30 — feat: vocabulary completion — view-keys + tab-keys to canonical PascalCase
+
+- New `VIEW.*` enum in `src/core/contracts.ts`; App.jsx + Sidebar.jsx migrated; Surface #4 test parser accepts `VIEW.<Name>` references alongside literal strings.
+- Workspace tab keys → `STAGE.*` end-to-end (SermonWorkspace, tab callers, tour data, contextBuilder, reviewPrompts, sermon prompts, memory capture set); localStorage migration handles legacy lowercase values.
+- `canonical-stage-name` forbidden set expanded to `writing/ready/archived/planning/active/study/outline`; rule gained a CSS-class-context exemption so `nav-item.active` and similar don't false-fire.
+- Companion renames clear the expanded forbidden set: `.step-pill-active`/`.subphase-pill-active` → `-current` (CSS + JS), DeliveryTab panel `"outline"` → `"preaching-outline"`, AI-loading state keys.
+- Verified: lint at the 15-error residual baseline (`no-raw-button` only), 29/29 contract tests pass, spine integrity OK.
+
+---
+
 ## 2026-04-30 — feat: enable react/jsx-no-undef + no-undef (close import-drift class)
 
 - `.eslintrc.cjs` registers `eslint-plugin-react` (already in `package.json`) and enables `react/jsx-no-undef` + `no-undef` — closes the consumer-side import-drift class that hit `SeriesPlanner.jsx` during Pilot C and surfaced only at runtime.

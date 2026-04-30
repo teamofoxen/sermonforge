@@ -5,6 +5,7 @@ import { buildContext } from "../utils/contextBuilder";
 import { exportManuscript } from "../db/database";
 import PrimaryButton from "./primitives/PrimaryButton";
 import SecondaryButton from "./primitives/SecondaryButton";
+import { STAGE } from "../core/contracts";
 
 function countWords(sermon) {
   const ms = parseManuscript(sermon.manuscript);
@@ -435,7 +436,7 @@ export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading, onOpe
       </div>
 
       <div className="step-advance">
-        <PrimaryButton size="sm" onClick={() => onTabChange?.("delivery")}>
+        <PrimaryButton size="sm" onClick={() => onTabChange?.(STAGE.Delivery)}>
           Continue to Delivery →
         </PrimaryButton>
       </div>

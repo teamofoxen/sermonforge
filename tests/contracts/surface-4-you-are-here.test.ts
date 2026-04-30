@@ -23,29 +23,36 @@ import * as path from "node:path";
 const ROOT = path.resolve(__dirname, "..", "..");
 
 // Deep routes reached from a different surface than the sidebar:
-//   • series-planner — entered by clicking a series card
-//   • workspace — entered by clicking a sermon card; topbar provides "you are here"
+//   • SeriesPlanner — entered by clicking a series card
+//   • Workspace — entered by clicking a sermon card; topbar provides "you are here"
 //
-// (Pilot B.2 of the audit triage renamed `archive` → `completed-sermons`
-// and added a canonical sidebar entry, so the route is no longer a deep
-// exception.)
-const EXPECTED_DEEP = new Set(["series-planner", "workspace"]);
+// (Pilot B.2 renamed `archive` → `CompletedSermons` and added a canonical
+// sidebar entry. The vocabulary-completion pilot then migrated all view keys
+// to the PascalCase canonical names defined by `VIEW` in
+// `src/core/contracts.ts`.)
+const EXPECTED_DEEP = new Set(["SeriesPlanner", "Workspace"]);
 
+// Both forms — literal strings and `VIEW.<Name>` enum references — count as
+// destinations. Post-vocabulary-completion the router and sidebar use enum
+// references almost exclusively (`VIEW.Dashboard`); legacy literal strings
+// remain matched for resilience to incomplete future migrations.
 function parseRouterDestinations(): Set<string> {
   const app = fs.readFileSync(path.join(ROOT, "src", "App.jsx"), "utf8");
-  const matches = app.matchAll(/currentView === ["']([\w-]+)["']/g);
   const set = new Set<string>();
-  for (const m of matches) set.add(m[1]);
+  for (const m of app.matchAll(/currentView === ["']([\w-]+)["']/g)) set.add(m[1]);
+  for (const m of app.matchAll(/currentView === VIEW\.(\w+)/g)) set.add(m[1]);
   return set;
 }
 
 function parseSidebarDestinations(): Set<string> {
   const sidebar = fs.readFileSync(path.join(ROOT, "src", "components", "Sidebar.jsx"), "utf8");
   const set = new Set<string>();
-  // `id: "<destination>"` inside NAV_ITEMS array entries.
+  // `id: "<destination>"` and `id: VIEW.<Destination>` inside NAV_ITEMS entries.
   for (const m of sidebar.matchAll(/\bid:\s*["']([\w-]+)["']/g)) set.add(m[1]);
-  // Inline `handleNavigate("<destination>")` and `onNavigate("<destination>")` calls in JSX.
+  for (const m of sidebar.matchAll(/\bid:\s*VIEW\.(\w+)/g)) set.add(m[1]);
+  // Inline `handleNavigate(...)` and `onNavigate(...)` calls — both literal and enum refs.
   for (const m of sidebar.matchAll(/(?:handleNavigate|onNavigate)\(["']([\w-]+)["']\)/g)) set.add(m[1]);
+  for (const m of sidebar.matchAll(/(?:handleNavigate|onNavigate)\(VIEW\.(\w+)\)/g)) set.add(m[1]);
   return set;
 }
 
@@ -74,9 +81,9 @@ describe("Surface Contract #4: 'you are here' is always answerable", () => {
 
   it("the router exposes at least the four canonical top-level destinations", () => {
     const router = parseRouterDestinations();
-    expect(router.has("dashboard")).toBe(true);
-    expect(router.has("planning")).toBe(true);
-    expect(router.has("calendar")).toBe(true);
-    expect(router.has("sermons")).toBe(true);
+    expect(router.has("Dashboard")).toBe(true);
+    expect(router.has("Planning")).toBe(true);
+    expect(router.has("Calendar")).toBe(true);
+    expect(router.has("Sermons")).toBe(true);
   });
 });

@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, Component, lazy, Suspense } from "rea
 import { getApiKeyStatus, onDbWriteError, onDbWriteOk, flushDb, getSermonColumns } from "./db/database";
 import { removeTourSermon } from "./core/spine";
 import { SERMON_COLUMNS } from "./constants/sermonColumns";
+import { VIEW } from "./core/contracts";
 import { restoreMemoryFromBackup } from "./utils/memory";
 import { TourProvider } from "./contexts/TourContext";
 import TourOverlay from "./components/TourOverlay";
@@ -111,16 +112,16 @@ export default function App() {
     setTheme(t => t === "light" ? "dark" : "light");
   }, []);
 
-  const [currentView, setCurrentView] = useState("dashboard");
+  const [currentView, setCurrentView] = useState(VIEW.Dashboard);
   const [openSermonId, setOpenSermonId] = useState(null);
   const [openSeriesId, setOpenSeriesId] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [returnDestination, setReturnDestination] = useState("dashboard");
+  const [returnDestination, setReturnDestination] = useState(VIEW.Dashboard);
   const [returnSeriesId, setReturnSeriesId] = useState(null);
 
-  const openSermon = useCallback((id, origin = "dashboard", seriesId = null) => {
+  const openSermon = useCallback((id, origin = VIEW.Dashboard, seriesId = null) => {
     setOpenSermonId(id);
-    setCurrentView("workspace");
+    setCurrentView(VIEW.Workspace);
     setReturnDestination(origin);
     setReturnSeriesId(seriesId);
   }, []);
@@ -129,20 +130,20 @@ export default function App() {
     const dest = returnDestination;
     const sid = returnSeriesId;
     setOpenSermonId(null);
-    setReturnDestination("dashboard");
+    setReturnDestination(VIEW.Dashboard);
     setReturnSeriesId(null);
     setRefreshKey(k => k + 1);
-    if (dest === "series-planner" && sid) {
+    if (dest === VIEW.SeriesPlanner && sid) {
       setOpenSeriesId(sid);
-      setCurrentView("series-planner");
+      setCurrentView(VIEW.SeriesPlanner);
     } else {
-      setCurrentView("dashboard");
+      setCurrentView(VIEW.Dashboard);
     }
   }, [returnDestination, returnSeriesId]);
 
   const openPlanner = useCallback((id) => {
     setOpenSeriesId(id);
-    setCurrentView("series-planner");
+    setCurrentView(VIEW.SeriesPlanner);
   }, []);
 
   // State Contract #3: no anonymous atoms. Open the New Series modal instead
@@ -161,16 +162,16 @@ export default function App() {
 
   const closePlanner = useCallback(() => {
     setOpenSeriesId(null);
-    setCurrentView("planning");
+    setCurrentView(VIEW.Planning);
     setRefreshKey(k => k + 1);
   }, []);
 
   const navigate = useCallback((view) => {
     setCurrentView(view);
-    if (view !== "workspace") {
+    if (view !== VIEW.Workspace) {
       setOpenSermonId(null);
     }
-    if (view !== "series-planner") setOpenSeriesId(null);
+    if (view !== VIEW.SeriesPlanner) setOpenSeriesId(null);
   }, []);
 
   // "Leave tour" — discard the tour sermon and return to the dashboard.
@@ -178,10 +179,10 @@ export default function App() {
     try { await removeTourSermon(); } catch (e) { console.error("[leaveTour]", e); }
     setOpenSermonId(null);
     setOpenSeriesId(null);
-    setReturnDestination("dashboard");
+    setReturnDestination(VIEW.Dashboard);
     setReturnSeriesId(null);
     setRefreshKey(k => k + 1);
-    setCurrentView("dashboard");
+    setCurrentView(VIEW.Dashboard);
   }, []);
 
   // Persistent disk-write banner. main emits "db-write-error" only after two
@@ -253,7 +254,7 @@ export default function App() {
       />
       <div className="main-content">
         <Suspense fallback={null}>
-        {currentView === "dashboard" && (
+        {currentView === VIEW.Dashboard && (
           <Dashboard
             key={refreshKey}
             onOpenSermon={openSermon}
@@ -262,33 +263,33 @@ export default function App() {
             onLeaveTour={leaveTour}
           />
         )}
-        {currentView === "sermons" && (
+        {currentView === VIEW.Sermons && (
           <SermonList
             key={refreshKey}
             onOpenSermon={openSermon}
           />
         )}
-        {currentView === "calendar" && (
+        {currentView === VIEW.Calendar && (
           <Calendar onOpenSermon={openSermon} />
         )}
-        {currentView === "completed-sermons" && (
+        {currentView === VIEW.CompletedSermons && (
           <CompletedSermons onOpenSermon={openSermon} />
         )}
-        {currentView === "planning" && (
+        {currentView === VIEW.Planning && (
           <Planning
             key={refreshKey}
             onOpenPlanner={openPlanner}
             onNewSeries={handleNewSeries}
           />
         )}
-        {currentView === "series-planner" && openSeriesId && (
+        {currentView === VIEW.SeriesPlanner && openSeriesId && (
           <SeriesPlanner
             seriesId={openSeriesId}
             onClose={closePlanner}
             onOpenSermon={openSermon}
           />
         )}
-        {currentView === "workspace" && openSermonId && (
+        {currentView === VIEW.Workspace && openSermonId && (
           <SermonWorkspace
             sermonId={openSermonId}
             onClose={closeWorkspace}

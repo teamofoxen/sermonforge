@@ -13,27 +13,56 @@
  * modals, and tooltips."
  *
  * Flags string literals matching the pre-Pilot-B sermon stage / series
- * status vocabulary that should never appear in component logic. The
- * post-Pilot-B canonical lifecycle is two states: SERMON_STATUS.InProgress
- * ('in_progress') and SERMON_STATUS.Complete ('complete'). The values
- * forbidden here are the pre-collapse aliases.
+ * status vocabulary that should never appear in component logic.
  *
- * Allowed locations:
+ * The post-Pilot-B canonical lifecycle is `SERMON_STATUS.InProgress`
+ * (`'in_progress'`) and `SERMON_STATUS.Complete` (`'complete'`). Workspace
+ * tab keys are `STAGE.{Study,Blueprint,Manuscript,Delivery}` (canonical
+ * PascalCase, post-vocabulary-completion). Top-level view keys are
+ * `VIEW.{Dashboard,Sermons,Calendar,CompletedSermons,Planning,
+ * SeriesPlanner,Workspace}` (also PascalCase). The forbidden set below is
+ * the lowercase pre-migration vocabulary.
+ *
+ * The rule exempts string literals nested under a `className` JSX
+ * attribute — those are CSS class names (e.g., `nav-item.active`,
+ * `step-pill-current`) and live in a separate namespace from
+ * state/status/route vocabulary. CSS modifier `.active` is a legitimate
+ * generic UI convention; flagging it would produce massive noise without
+ * surfacing real drift.
+ *
+ * Allowed locations (full file exemptions):
  *   - electron/main.js (the v16/v17 migration deals with legacy values).
  *   - tests/** (fixtures may reference deprecated values).
  *   - src/core/contracts (the canonical types are defined here).
  */
-// Pre-Pilot-B aliases that are exclusively stage/status vocabulary. The
-// names 'planning', 'study', 'outline', and 'active' also have legitimate
-// non-status uses (URL-safe view keys, tab keys, column names, CSS class
-// names); flagging those as Surface/State drift would produce false
-// positives. Audit-triage Pilot B.2/E will revisit 'study' and 'outline'
-// once workspace tab keys migrate to canonical PascalCase.
+// Forbidden lowercase aliases. Expanded post-vocabulary-completion to
+// include `planning` (legacy series status, also the legacy view key for
+// "All Series"), `active` (legacy series status), `study` (legacy
+// workspace tab key), and `outline` (legacy workspace tab key — the tab is
+// canonically `STAGE.Blueprint`).
 const FORBIDDEN = new Set([
   'writing',
   'ready',
   'archived',
+  'planning',
+  'active',
+  'study',
+  'outline',
 ]);
+
+// Walk parent chain looking for a JSXAttribute named `className`. Used to
+// exempt CSS-class-context literals from the forbidden-set check.
+function isInsideClassNameAttr(node) {
+  let p = node.parent;
+  while (p) {
+    if (p.type === 'JSXAttribute') {
+      const name = p.name && p.name.name;
+      return name === 'className';
+    }
+    p = p.parent;
+  }
+  return false;
+}
 
 module.exports = {
   meta: {
@@ -57,6 +86,10 @@ module.exports = {
     function checkLiteral(node) {
       if (typeof node.value !== 'string') return;
       if (!FORBIDDEN.has(node.value)) return;
+      // CSS-class-context exemption: `className={... ? "active" : ""}` and
+      // similar literals inside the className attribute are CSS class
+      // names, not state/status/route identifiers.
+      if (isInsideClassNameAttr(node)) return;
       context.report({ node, messageId: 'deprecated', data: { value: node.value } });
     }
     return {
@@ -67,6 +100,7 @@ module.exports = {
         if (node.quasis.length !== 1) return;
         const v = node.quasis[0].value && node.quasis[0].value.cooked;
         if (typeof v === 'string' && FORBIDDEN.has(v)) {
+          if (isInsideClassNameAttr(node)) return;
           context.report({ node, messageId: 'deprecated', data: { value: v } });
         }
       },

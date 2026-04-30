@@ -4,6 +4,7 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { STEPS, PHASES, STEP_SEQUENCE, PHASE_SEQUENCE } from "../constants/steps";
+import { STAGE } from "../core/contracts";
 
 // ── Mock memory module ─────────────────────────────────────────────────────────
 // contextBuilder imports getMemory at call time (inside buildTiers/buildMemoryContext).
@@ -227,8 +228,8 @@ describe("resolveIncludes — STEP_SEQUENCE (main steps)", () => {
 });
 
 describe("resolveIncludes — extra known steps and fallbacks", () => {
-  it('"manuscript": all tiers active (library + theology + memory gated by threshold)', () => {
-    const t = tiers("manuscript", NORM, COMP,
+  it('STAGE.Manuscript: all tiers active (library + theology + memory gated by threshold)', () => {
+    const t = tiers(STAGE.Manuscript, NORM, COMP,
       ["Library chunk for testing that is long enough to pass isMeaningful check here"],
       ["Theology chunk for testing that is long enough to pass isMeaningful check here"]
     );
@@ -241,14 +242,14 @@ describe("resolveIncludes — extra known steps and fallbacks", () => {
     expect(t.tier6).toBeNull();
   });
 
-  it('"outline" (string alias): same tiers as STEPS.OUTLINE', () => {
-    const tAlias = activeTiers(tiers("outline", NORM_WITH_PASTORAL));
+  it('STAGE.Blueprint (Stage alias): same tiers as STEPS.OUTLINE', () => {
+    const tAlias = activeTiers(tiers(STAGE.Blueprint, NORM_WITH_PASTORAL));
     const tConst = activeTiers(tiers(STEPS.OUTLINE, NORM_WITH_PASTORAL));
     expect(tAlias).toEqual(tConst);
   });
 
-  it('"study": tier1 only — conservative fallback', () => {
-    const t = tiers("study");
+  it('STAGE.Study: tier1 only — conservative fallback', () => {
+    const t = tiers(STAGE.Study);
     expect(t.tier1).not.toBeNull();
     expect(t.tier2).toBeNull();
     expect(t.tier3).toBeNull();
@@ -257,8 +258,8 @@ describe("resolveIncludes — extra known steps and fallbacks", () => {
     expect(t.tier6).toBeNull();
   });
 
-  it('"delivery": tier1 only — conservative fallback', () => {
-    const t = tiers("delivery");
+  it('STAGE.Delivery: tier1 only — conservative fallback', () => {
+    const t = tiers(STAGE.Delivery);
     expect(t.tier1).not.toBeNull();
     expect(t.tier2).toBeNull();
   });
@@ -370,8 +371,8 @@ describe("buildAdaptiveHints — step caps (steps with active caps)", () => {
     expect(hints.length).toBeLessThanOrEqual(3);
   });
 
-  it('"outline" (string alias): same cap as STEPS.OUTLINE', () => {
-    const hints = buildAdaptiveHints(RICH_MEMORY, "outline", "sermon-c");
+  it('STAGE.Blueprint (Stage alias): same cap as STEPS.OUTLINE', () => {
+    const hints = buildAdaptiveHints(RICH_MEMORY, STAGE.Blueprint, "sermon-c");
     expect(hints.length).toBeLessThanOrEqual(3);
   });
 
@@ -380,8 +381,8 @@ describe("buildAdaptiveHints — step caps (steps with active caps)", () => {
     expect(hints.length).toBeLessThanOrEqual(3);
   });
 
-  it('"manuscript": returns at most 3 hints', () => {
-    const hints = buildAdaptiveHints(RICH_MEMORY, "manuscript", "sermon-e");
+  it('STAGE.Manuscript: returns at most 3 hints', () => {
+    const hints = buildAdaptiveHints(RICH_MEMORY, STAGE.Manuscript, "sermon-e");
     expect(hints.length).toBeLessThanOrEqual(3);
   });
 });
@@ -426,7 +427,7 @@ import { normalizeSermon, assembleContext, summarizeSeries } from "./contextBuil
 
 describe("tier7 — pastoral intelligence: always-on, content-gated", () => {
   it("active at every step when fields have content", () => {
-    const allSteps = [...STEP_SEQUENCE, ...PHASE_SEQUENCE, "manuscript", "outline", "study", "delivery"];
+    const allSteps = [...STEP_SEQUENCE, ...PHASE_SEQUENCE, STAGE.Manuscript, STAGE.Blueprint, STAGE.Study, STAGE.Delivery];
     for (const step of allSteps) {
       const t = tiers(step, NORM_WITH_PASTORAL);
       expect(t.tier7).not.toBeNull();

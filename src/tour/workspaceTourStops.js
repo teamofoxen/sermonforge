@@ -6,9 +6,12 @@
 //
 // Each stop declares the UI state it expects via `prerequisites`. The
 // orchestrator (TourContext + workspace observers) aligns SermonWorkspace and
-// StudyTab state when the tour is active.
+// StudyTab state when the tour is active. Tab keys come from `STAGE` in
+// `src/core/contracts.ts` (post-vocabulary-completion canonical names).
 
-const STUDY_BASE = { tab: "study", drawerOpen: false };
+import { STAGE } from "../core/contracts";
+
+const STUDY_BASE = { tab: STAGE.Study, drawerOpen: false };
 
 export const WORKSPACE_TOUR_STOPS = [
   // ── Stops 1–10: workspace + AI overview + Pastoral Intelligence ────────────
@@ -32,28 +35,28 @@ export const WORKSPACE_TOUR_STOPS = [
     anchorId: "ai-panel-header",
     title: "The Assistant.",
     body: "Chat anytime, at any step. The AI's posture shifts with where you are — collaborator during exegesis, challenger at the main points, structural reviewer at the outline, auditor at the manuscript. You're not talking to one assistant; you're talking to the right one for the moment.",
-    prerequisites: { tab: "study", drawerOpen: true },
+    prerequisites: { tab: STAGE.Study, drawerOpen: true },
   },
   {
     id: "what-it-knows",
     anchorId: "ai-panel",
     title: "What it already knows.",
     body: "Before any response, the AI has the passage, your main points, your full study, your outline, the series big idea and section, the pastoral situation, and supporting material. Seven layers of context, assembled fresh every time. You never have to re-explain.",
-    prerequisites: { tab: "study", drawerOpen: true },
+    prerequisites: { tab: STAGE.Study, drawerOpen: true },
   },
   {
     id: "always-in-the-room",
     anchorId: "pastoral-context-card",
     title: "Always in the room.",
     body: "One layer of that context — the cultural moment, the room, the sermon's work — is always sent to the AI, regardless of which step you're on. Three short fields at the top of every tab keep the AI from ever working in the abstract. We'll get to those in step 7.",
-    prerequisites: { tab: "study", drawerOpen: true, piOpen: true },
+    prerequisites: { tab: STAGE.Study, drawerOpen: true, piOpen: true },
   },
   {
     id: "tuned-to-you",
     anchorId: "ai-panel",
     title: "Tuned to you.",
     body: "Over time, the AI surfaces your own rhetorical patterns — how you build outlines, what your MPTs tend to look like, the way you turn applications. Adaptive guidance, tuned to you specifically. Not a model being trained; your past work, surfaced when relevant.",
-    prerequisites: { tab: "study", drawerOpen: true },
+    prerequisites: { tab: STAGE.Study, drawerOpen: true },
   },
   {
     id: "pastoral-intelligence",
@@ -234,34 +237,34 @@ export const WORKSPACE_TOUR_STOPS = [
     anchorId: "stage-tab-manuscript",
     title: "Manuscript.",
     body: "Where the sermon becomes prose. Sections, transitions, full text. Three audit tools live here, each doing something different. Use them after the manuscript is drafted, not before.",
-    prerequisites: { tab: "manuscript", drawerOpen: false },
+    prerequisites: { tab: STAGE.Manuscript, drawerOpen: false },
   },
   {
     id: "flow-coach",
     anchorId: "flow-coach-button",
     title: "Flow Coach.",
     body: "Walks you through every transition in the manuscript, one at a time. *Does this section land? Does the next one pick up cleanly? Is there a gap?* One step per response, so the feedback stays manageable. Use it when the sermon reads in pieces instead of moving.",
-    prerequisites: { tab: "manuscript", drawerOpen: false },
+    prerequisites: { tab: STAGE.Manuscript, drawerOpen: false },
   },
   {
     id: "ear-check",
     anchorId: "ear-check-button",
     title: "Ear Check.",
     body: "Reads the manuscript for what will be heard, not just read. It scans for two things: *structural orphans* — passages that have drifted from the argument — and *speakability flags* — sentences that will lose the room when spoken aloud. Theological precision is fine; unintelligibility isn't.",
-    prerequisites: { tab: "manuscript", drawerOpen: false },
+    prerequisites: { tab: STAGE.Manuscript, drawerOpen: false },
   },
   {
     id: "tune-up",
     anchorId: "tune-up-button",
     title: "Tune-Up.",
     body: "A full audit in three phases. *Snapshot* describes what the sermon is actually doing. *Alignment Map* grades how well it serves the MPT and MPS. *Patch Plan* gives specific edits, marked inline. It preserves your voice and stays within 10% of your original length. Use it when the sermon is ready for a hard look.",
-    prerequisites: { tab: "manuscript", drawerOpen: false },
+    prerequisites: { tab: STAGE.Manuscript, drawerOpen: false },
   },
   {
     id: "finish",
     anchorId: null,
     title: "That's the workspace.",
     body: "This is one sermon. The Series Planner holds many. Both tours are available from the dashboard whenever you want to revisit.",
-    prerequisites: { tab: "manuscript", drawerOpen: false },
+    prerequisites: { tab: STAGE.Manuscript, drawerOpen: false },
   },
 ];

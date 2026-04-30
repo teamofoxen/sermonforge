@@ -814,7 +814,7 @@ function StructureTab({ series, sections, onChange, onSectionsChange, seriesId, 
 
   async function generateOutline() {
     if (!series.passage_range && !series.title) return;
-    setAiLoading("outline");
+    setAiLoading("outline-gen");
     try {
       const resp = await sendAIMessage(
         [{ role: "user", content: `Build a detailed structural/exegetical outline for ${series.passage_range || series.title}. Include major divisions, subdivisions, and key passage markers. Format as a traditional Roman numeral / letter / number outline. Be thorough.` }],
@@ -884,8 +884,8 @@ function StructureTab({ series, sections, onChange, onSectionsChange, seriesId, 
         <div style={{ marginBottom: "28px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
             <label style={{ ...labelStyle, marginBottom: 0 }}>Structural Outline</label>
-            <SecondaryButton size="sm" onClick={generateOutline} disabled={aiLoading === "outline"}>
-              {aiLoading === "outline" ? "Thinking…" : "✦ Generate"}
+            <SecondaryButton size="sm" onClick={generateOutline} disabled={aiLoading === "outline-gen"}>
+              {aiLoading === "outline-gen" ? "Thinking…" : "✦ Generate"}
             </SecondaryButton>
           </div>
           <p style={{ fontSize: "13px", color: "var(--ink-ghost)", marginBottom: "8px" }}>

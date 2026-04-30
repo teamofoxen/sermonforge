@@ -2,6 +2,7 @@
 
 import { STEPS, PHASES } from "../constants/steps";
 import { CONTEXT_SECTIONS } from "../constants/contextSchema";
+import { STAGE } from "../core/contracts";
 import { buildAdaptiveHints } from "../utils/contextBuilder";
 import { getMemory } from "../utils/memory";
 
@@ -17,14 +18,14 @@ export function buildSystemPrompt(step, sermonId) {
     [STEPS.MPT_MPS]:             "The pastor is forging the Main Point of the Text (MPT) and Main Point of the Sermon (MPS).",
     [STEPS.OUTLINE]:             "The pastor is building the sermon outline.",
     [STEPS.FUNCTIONAL_ELEMENTS]: "The pastor is developing functional elements (explanation, application, illustration) per outline point.",
-    "outline":     "The pastor is working on the sermon outline.",
-    "manuscript":  "The pastor is writing the sermon manuscript.",
-    "delivery":    "The pastor is preparing delivery notes.",
-    "book-study":  "The pastor is in the Book Study phase — doing foundational research and theological reflection before series planning begins. This phase involves pasting commentary material, developing the book's argument, locating it in redemptive history, and forming a working big idea. The AI should act as a thinking partner for deep theological and structural exploration, not a content generator.",
+    [STAGE.Blueprint]:  "The pastor is working on the sermon outline.",
+    [STAGE.Manuscript]: "The pastor is writing the sermon manuscript.",
+    [STAGE.Delivery]:   "The pastor is preparing delivery notes.",
+    "book-study":       "The pastor is in the Book Study phase — doing foundational research and theological reflection before series planning begins. This phase involves pasting commentary material, developing the book's argument, locating it in redemptive history, and forming a working big idea. The AI should act as a thinking partner for deep theological and structural exploration, not a content generator.",
   };
 
   const stepDesc = stepDescriptions[step]
-    || (step === "study" ? "The pastor is in the study phase."
+    || (step === STAGE.Study ? "The pastor is in the study phase."
       : "The pastor is working on sermon preparation.");
 
   // The static block (role + TOOL CONTEXT + MESSAGE CONTEXT RULES) is identical across

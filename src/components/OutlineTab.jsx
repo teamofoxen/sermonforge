@@ -14,6 +14,7 @@ import PrimaryButton from "./primitives/PrimaryButton";
 import SecondaryButton from "./primitives/SecondaryButton";
 import IconButton from "./primitives/IconButton";
 import BackButton from "./primitives/BackButton";
+import { STAGE } from "../core/contracts";
 
 function mpsExtractStem(mps) {
   if (!mps) return null;
@@ -198,7 +199,7 @@ export default function OutlineTab({ sermon, onUpdate, onTabChange, studySummari
             <p style={{ color: "var(--ink-ghost)", fontStyle: "italic", fontSize: "14px", marginBottom: "8px" }}>
               No outline points yet. Build them in Study → Step 3, or add points directly below.
             </p>
-            <BackButton size="sm" onClick={() => onTabChange?.("study")}>
+            <BackButton size="sm" onClick={() => onTabChange?.(STAGE.Study)}>
               Return to Study
             </BackButton>
           </div>
@@ -306,7 +307,7 @@ export default function OutlineTab({ sermon, onUpdate, onTabChange, studySummari
       <div className="step-advance">
         <PrimaryButton
           size="sm"
-          onClick={() => onTabChange?.("manuscript")}
+          onClick={() => onTabChange?.(STAGE.Manuscript)}
           disabled={outline.length === 0}
           title={outline.length === 0 ? "Add at least one outline point before moving to Manuscript" : undefined}
         >

@@ -139,6 +139,34 @@ export const MUTATION_KIND = {
   AiApply: "ai_apply",
 } as const satisfies Record<string, MutationKind>;
 
+// ── Surface Contract #4 — top-level view routes ──────────────────────────────
+//
+// Canonical PascalCase view identifiers used by the App router and Sidebar.
+// Pre-vocabulary-completion the router used lowercase strings ("dashboard",
+// "planning", etc.); some of those names (notably "planning" and "active")
+// collided with pre-Pilot-B series-status aliases the `canonical-stage-name`
+// lint rule wanted to forbid, so the rule had to exclude them. After this
+// migration the lint rule's forbidden set expands to include `planning` and
+// `active` since neither appears in component logic anymore.
+export type View =
+  | "Dashboard"
+  | "Sermons"
+  | "Calendar"
+  | "CompletedSermons"
+  | "Planning"
+  | "SeriesPlanner"
+  | "Workspace";
+
+export const VIEW = {
+  Dashboard: "Dashboard",
+  Sermons: "Sermons",
+  Calendar: "Calendar",
+  CompletedSermons: "CompletedSermons",
+  Planning: "Planning",
+  SeriesPlanner: "SeriesPlanner",
+  Workspace: "Workspace",
+} as const satisfies Record<View, View>;
+
 // ── Surface Contract #3 — loading vocabulary ─────────────────────────────────
 export type LoadingVerb = "Loading…" | "Saving…" | "Thinking…";
 

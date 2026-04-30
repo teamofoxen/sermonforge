@@ -20,6 +20,7 @@ import { fetchPassage } from "../db/database";
 import PrimaryButton from "./primitives/PrimaryButton";
 import SecondaryButton from "./primitives/SecondaryButton";
 import IconButton from "./primitives/IconButton";
+import { STAGE } from "../core/contracts";
 
 const STEP_LABELS = ["Exegesis", "MPT / MPS", "Outline", "Functional Elements"];
 const PHASE_LABELS = ["Observe", "Interpret", "Redemptive Thread", "Implications"];
@@ -403,7 +404,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
 
   async function suggestOutline() {
     if (draftLoading || outlineChatLoading) return;
-    setDraftLoading("outline");
+    setDraftLoading("outline-draft");
     setOutlineChat([]);
     try {
       const exegesisContext = [
@@ -652,7 +653,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
       <div className="step-indicator" data-tour-id="study-step-indicator">
         {STEP_LABELS.map((label, i) => {
           const step = i + 1;
-          const status = step < activeStep ? "done" : step === activeStep ? "active" : "future";
+          const status = step < activeStep ? "done" : step === activeStep ? "current" : "future";
           return (
             <button
               key={step}
@@ -675,7 +676,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
           <div className="subphase-indicator" data-tour-id="study-subphase-indicator">
             {PHASE_LABELS.map((label, i) => {
               const phase = i + 1;
-              const status = phase < activeSubPhase ? "done" : phase === activeSubPhase ? "active" : "future";
+              const status = phase < activeSubPhase ? "done" : phase === activeSubPhase ? "current" : "future";
               return (
                 <button
                   key={phase}
@@ -1180,7 +1181,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
               disabled={draftLoading !== null || outlineChatLoading || inlineLoading !== null}
               onClick={suggestOutline}
             >
-              {draftLoading === "outline" ? "Thinking…" : "Suggest Outline"}
+              {draftLoading === "outline-draft" ? "Thinking…" : "Suggest Outline"}
             </SecondaryButton>
             <SecondaryButton
               size="sm"
@@ -1211,7 +1212,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
             onDismiss={() => dismissInline("outline-review")}
           />
 
-          {(outlineChat.length > 0 || draftLoading === "outline") && (
+          {(outlineChat.length > 0 || draftLoading === "outline-draft") && (
             <div className="mps-chat" style={{ marginTop: "16px" }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
                 <span className="field-label" style={{ marginBottom: 0, color: "var(--ink-ghost)", fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.06em" }}>Refine Outline with AI</span>
@@ -1455,7 +1456,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
           </div>
 
           <div className="step-advance">
-            <PrimaryButton size="sm" onClick={() => onTabChange?.("outline")}>
+            <PrimaryButton size="sm" onClick={() => onTabChange?.(STAGE.Blueprint)}>
               Continue to Blueprint →
             </PrimaryButton>
           </div>

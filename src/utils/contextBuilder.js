@@ -3,6 +3,7 @@
 
 import { STEPS, PHASES } from "../constants/steps";
 import { CONTEXT_SECTIONS } from "../constants/contextSchema";
+import { STAGE } from "../core/contracts";
 import { getOutline, getFunctionalElements } from "../utils";
 import { getMemory } from "./memory";
 import { flattenExegesis } from "./studyFields";
@@ -388,18 +389,18 @@ function resolveIncludes(step) {
       return { tier2: true,  tier3: false, tier4: true,  library: false, theology: false, memory: true,  pastoralContext: true };
 
     case STEPS.OUTLINE:
-    case "outline":
+    case STAGE.Blueprint:
       return { tier2: true,  tier3: true,  tier4: true,  library: false, theology: false, memory: true,  pastoralContext: true };
 
     case STEPS.FUNCTIONAL_ELEMENTS:
       return { tier2: true,  tier3: true,  tier4: true,  library: false, theology: false, memory: true,  pastoralContext: true };
 
-    case "manuscript":
+    case STAGE.Manuscript:
       return { tier2: true,  tier3: true,  tier4: true,  library: true,  theology: true,  memory: true,  pastoralContext: true };
 
     case STEPS.EXEGESIS:
-    case "study":
-    case "delivery":
+    case STAGE.Study:
+    case STAGE.Delivery:
     default:
       // Unknown or top-level step — tier1 only. Callers should use a phase-level
       // or tab-level step; this branch signals a missing mapping, not a feature.
@@ -851,9 +852,9 @@ export function buildAdaptiveHints(memory, step, sermonId) {
     [PHASES.IMPLICATIONS]:      0,
     [STEPS.MPT_MPS]:            2,
     [STEPS.OUTLINE]:            3,
-    "outline":                  3,
+    [STAGE.Blueprint]:          3,
     [STEPS.FUNCTIONAL_ELEMENTS]: 3,
-    "manuscript":               3,
+    [STAGE.Manuscript]:         3,
   };
   const cap = STEP_CAPS[step] ?? 0;
   if (cap === 0) return [];
