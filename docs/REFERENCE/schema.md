@@ -84,19 +84,6 @@ Current schema version: **13**
 
 ---
 
-## Table: illustrations
-
-| Column | Type | Notes |
-|--------|------|-------|
-| `id` | TEXT PRIMARY KEY | |
-| `type` | TEXT | `personal \| historical \| biblical \| hypothetical` |
-| `text` | TEXT | |
-| `tags` | TEXT | JSON array |
-| `used_in` | TEXT | JSON array of sermon ids |
-| `created_at` | TEXT | |
-
----
-
 ## Table: calendar_notes
 
 | Column | Type | Notes |
@@ -107,33 +94,6 @@ Current schema version: **13**
 | `label` | TEXT | |
 | `notes` | TEXT | |
 | `created_at` | TEXT | |
-
----
-
-## Table: library
-
-| Column | Type | Notes |
-|--------|------|-------|
-| `id` | TEXT PRIMARY KEY | |
-| `filepath` | TEXT UNIQUE | |
-| `filename` | TEXT | |
-| `title` | TEXT | |
-| `passage` | TEXT | |
-| `folder` | TEXT | |
-| `series_name` | TEXT | |
-| `manuscript_text` | TEXT | |
-| `word_count` | INTEGER | |
-| `imported_at` | TEXT | |
-
----
-
-## Table: library_fts
-
-FTS4 virtual table (FTS5 attempted first; see `docs/SYSTEMS/database.md` for rationale).
-
-Columns: `id`, `title`, `passage`, `manuscript_text`
-
-Used for keyword search across the sermon library.
 
 ---
 
@@ -157,32 +117,4 @@ User preferences as key/value strings. Distinct from `meta` (which is for system
 | `key` | TEXT PRIMARY KEY | |
 | `value` | TEXT | |
 
-Known keys:
-- `library_folder` — absolute path to the user's sermon folder. When unset, the import handler falls back to the legacy OneDrive default for backward compatibility.
-
 Read/write via IPC `"db-getSetting"` / `"db-setSetting"`.
-
----
-
-## Sidecar database: library.db
-
-Separate database file in the same directory as `sermonforge.db`. Managed by **better-sqlite3 + sqlite-vec** (NOT sql.js). Holds **derived data only** — fully regeneratable from `sermonforge.db.library`. Safe to delete; the app will rebuild on next index/import.
-
-### Table: library_chunks
-
-| Column | Type | Notes |
-|--------|------|-------|
-| `id` | INTEGER PRIMARY KEY AUTOINCREMENT | matches `library_vec.rowid` |
-| `library_id` | TEXT NOT NULL | FK to `sermonforge.db.library.id` |
-| `chunk_index` | INTEGER NOT NULL | zero-based position within the manuscript |
-| `chunk_text` | TEXT NOT NULL | paragraph-aware chunk, ~1500 char soft cap |
-
-UNIQUE: `(library_id, chunk_index)`. INDEX: `idx_library_chunks_lib (library_id)`.
-
-### Virtual table: library_vec
-
-`vec0(embedding float[384])` — 384-dim Xenova/all-MiniLM-L6-v2 vectors. `rowid` matches `library_chunks.id`.
-
-### Managed library directory
-
-`userData/library/` holds copies of imported `.docx` files so SermonForge owns the working set. The user's source folder is read-only from the app's perspective.
