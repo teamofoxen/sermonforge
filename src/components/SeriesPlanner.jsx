@@ -17,6 +17,10 @@ import InlineError from "./InlineError";
 import { sendAIMessage } from "../utils/ai";
 import InlineAIResponse from "./InlineAIResponse";
 import ReactMarkdown from "react-markdown";
+import PrimaryButton from "./primitives/PrimaryButton";
+import SecondaryButton from "./primitives/SecondaryButton";
+import IconButton from "./primitives/IconButton";
+import BackButton from "./primitives/BackButton";
 
 
 const CANON_OPTIONS = [
@@ -169,9 +173,7 @@ export default function SeriesPlanner({ seriesId, onClose, onOpenSermon }) {
         padding: "0 28px", display: "flex", alignItems: "center", gap: "16px",
         minHeight: "56px", flexShrink: 0,
       }}>
-        <SecondaryButton size="sm" onClick={onClose} style={{ flexShrink: 0 }}>
-          ← Back
-        </SecondaryButton>
+        <BackButton size="sm" onClick={onClose} style={{ flexShrink: 0 }} />
         <div style={{
           width: "10px", height: "10px", borderRadius: "50%", flexShrink: 0,
           background: `var(--${series.color || "gold"})`,

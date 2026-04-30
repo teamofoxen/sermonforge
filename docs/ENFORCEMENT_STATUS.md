@@ -1,7 +1,7 @@
 # Enforcement Status
 
-**Last verified:** 2026-04-30 (Pilot D landed)
-**Verified against:** `docs/CORE.md`, enforcement pass closed against working tree at HEAD `23a97f3` (uncommitted, see closing summary). Pilot C added the CTA primitive layer (134 of 149 `<button>` violations migrated). Pilot D added `<LoadingState>` + `<EmptyState>` primitives, tightened the `canonical-loading-verb` rule to exempt JSX attributes, replaced 30 non-canonical loading verbs, and migrated three visible empty states to demonstrate the pattern.
+**Last verified:** 2026-04-30 (Pilot E landed)
+**Verified against:** `docs/CORE.md`, enforcement pass closed against working tree at HEAD `23a97f3` (uncommitted, see closing summary). Pilot C added the CTA primitive layer; Pilot D added the loading + empty-state primitives; Pilot E added `<BackButton>` (Surface #5 closes) and migrated four back-affordance buttons. Pilot E also fixed a missing-imports regression in `SeriesPlanner.jsx` where Pilot C's primitive imports were lost in commit (the codebase has no `react/jsx-no-undef` lint rule, so undefined JSX components passed lint silently).
 
 ## Summary
 
@@ -39,7 +39,7 @@ A single clause may be enforced at multiple layers — the count above assigns e
 | Surface #2 — one CTA system | Lint + Structural | `src/components/primitives/{PrimaryButton,SecondaryButton,IconButton}.tsx` are the canonical CTA + icon-button shapes. `sermonforge/no-raw-button` flags every `<button>` outside `src/components/primitives/`. **15 residual baseline errors** (down from 149) sit on shapes Pilot C deliberately doesn't cover: tertiary text-link buttons (Dashboard "guided tour", Sidebar "Send feedback", workspace "How this works"), nav/tab buttons (`stage-tab`, `delivery-tab-btn`, sub-phase pills) deferred to Pilot E, and dark-theme tour overlay buttons. | `npm run lint` (visible 15-error residual; resolved post-Pilot E + future tertiary-link decision) |
 | Surface #3 — one empty-state + loading vocabulary | Lint + Structural | `src/components/primitives/{LoadingState,EmptyState}.tsx` are the canonical loading + empty-state shapes. `LoadingState`'s `verb` prop is typed against the `LoadingVerb` union in `src/core/contracts.ts` (`"Loading…"` / `"Saving…"` / `"Thinking…"`). `<PrimaryButton loading={...}>` auto-renders the canonical verb. `sermonforge/canonical-loading-verb` zero-violations on committed code; rule now exempts JSX attribute values so placeholders aren't false positives. | `npm run lint` (zero `canonical-loading-verb` errors today) |
 | Surface #4 — "you are here" is always answerable | Test | `tests/contracts/surface-4-you-are-here.test.ts` parses router destinations from `App.jsx` and sidebar entries from `Sidebar.jsx`, asserts router ⊆ sidebar ∪ EXPECTED_DEEP. **`archive` route allow-listed in EXPECTED_DEEP** awaiting Pilot B.2 | `npm test -- tests/contracts/surface-4-you-are-here.test.ts` |
-| Surface #5 — one re-entry convention | **Deferred** | No structural, test, or lint enforcement. **Owner: Pilot E** (BackButton primitive). Five different "back" shapes documented in `project_audit_triage_status.md` | (None today; awaits Pilot E) |
+| Surface #5 — one re-entry convention | Structural | `src/components/primitives/BackButton.tsx` is the canonical back-affordance shape; supplies the `←` prefix automatically. Two variants: `labeled` (default, "← Back" or custom child text like "Return to Study") and `icon` (chevron only). Four back-shape sites migrated: SermonWorkspace topbar chevron, SermonWorkspace error case, SeriesPlanner topbar, OutlineTab "Return to Study". | (No dedicated test — the primitive's existence + consumer adoption is the structural artifact; surfaces with no back affordance at all remain a UX-design decision, not a contract gap) |
 
 ## The Spine Integrity Gate
 
@@ -77,7 +77,7 @@ The gate scans the codebase on every commit and CI run for four bypass classes:
 - **Pilot B.3 (Dashboard "Resume your work"):** consumes `spine.getInProgressSermons()` to surface in-progress work on the dashboard, closing the State Contract #6 surface gap. Spine API exists today; no surface uses it yet.
 - **Pilots B.2 / E (workspace tab key migration to PascalCase):** allows `study` and `outline` to be added to the `canonical-stage-name` forbidden set without false positives. Today they appear as legitimate URL-safe tab keys (`TABS = ["study", "outline", "manuscript", "delivery"]`) and column names (`outline` is a sermon column), so the lint rule excludes them.
 - **(Pilot covering view-key migration, if scheduled):** allows `planning` and `active` to be added to the same forbidden set. Today `"planning"` is the top-level Planning view name and `"active"` is the canonical CSS class for active sidebar items.
-- **Pilot E (re-entry convention):** introduces the `<BackButton>` primitive and migrates the five existing "back" shapes (labeled `← Back`, unlabeled chevron, no back at all, etc.). Closes Surface Contract #5.
+- **~~Pilot E (re-entry convention)~~** — landed. `<BackButton>` primitive lands in `src/components/primitives/`; four back-affordance sites migrated. Surface Contract #5 closed.
 
 ### SPRD (Study Phase Re-Design)
 
@@ -115,9 +115,7 @@ Contract tests, the spine integrity gate, and `tsc` together do not catch the ca
 
 ## What's NOT enforced
 
-**Zero clauses are unenforceable.** Every clause in `docs/CORE.md` has a real enforcement mechanism: structural, test, lint, or named-deferred with an owner.
-
-The single clause currently with **no enforcement layer at all** is **Surface Contract #5** (one re-entry convention). Its owner is **Pilot E**; the gap is documented above and in `project_audit_triage_status.md`. Until Pilot E lands, any re-entry shape (`← Back`, unlabeled chevron, no back at all) compiles, lints, and tests cleanly.
+**Zero clauses are unenforceable.** Every clause in `docs/CORE.md` has a real enforcement mechanism: structural, test, lint, or named-deferred with an owner. As of Pilot E landing, all Surface Contract clauses (#1–#5) have at least one enforcement mechanism.
 
 ## What this document is for
 

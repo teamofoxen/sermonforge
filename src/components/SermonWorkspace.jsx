@@ -20,6 +20,7 @@ import AIPanel from "./AIPanel";
 import PassagePopup from "./PassagePopup";
 import SecondaryButton from "./primitives/SecondaryButton";
 import IconButton from "./primitives/IconButton";
+import BackButton from "./primitives/BackButton";
 
 const TABS = ["study", "outline", "manuscript", "delivery"];
 const TAB_LABELS = { study: "Study", outline: "Blueprint", manuscript: "Manuscript", delivery: "Delivery" };
@@ -221,7 +222,7 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpe
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
         <div>
           <p style={{ color: "var(--ink-ghost)" }}>Sermon not found.</p>
-          <SecondaryButton onClick={onClose}>← Back</SecondaryButton>
+          <BackButton onClick={onClose} />
         </div>
       </div>
     );
@@ -258,17 +259,13 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpe
       {/* Top bar */}
       <div className="topbar">
         <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1, minWidth: 0 }}>
-          <IconButton
-            aria-label="Back to previous view"
-            className="btn-icon"
+          <BackButton
+            variant="icon"
             onClick={onClose}
             title="Back"
+            className="btn-icon"
             style={{ flexShrink: 0 }}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <polyline points="15 18 9 12 15 6" />
-            </svg>
-          </IconButton>
+          />
           <div className="topbar-left">
             <div className="topbar-series">
               {sermon.series_title && sermon.series_id && onOpenSeries ? (

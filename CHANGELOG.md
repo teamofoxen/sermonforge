@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-04-30 — feat: BackButton primitive (Surface Contract #5)
+
+- New `src/components/primitives/BackButton.tsx` — canonical back-affordance with `labeled` and `icon` variants; the `←` prefix is structural so consumers can't drift it via copy.
+- Migrated 4 back-affordance sites: SermonWorkspace topbar chevron + sermon-not-found error case, SeriesPlanner topbar, OutlineTab "Return to Study".
+- Fixed a Pilot C regression in `SeriesPlanner.jsx`: `<PrimaryButton>` / `<SecondaryButton>` / `<IconButton>` were used without imports since `f061c12`; passed lint silently because no `react/jsx-no-undef` rule is configured and would have crashed at mount.
+- `docs/ENFORCEMENT_STATUS.md` updated — Surface #5 moved from "Deferred" to "Structural"; all five Surface Contract clauses now have an enforcement layer.
+- Workspace tab-key PascalCase migration deferred to Pilot B.2; `contextBuilder.js`'s lowercase switch cases need coordinated migration.
+
+---
+
 ## 2026-04-30 — feat: empty-state + loading primitives (Surface Contract #3)
 
 - New `src/components/primitives/{EmptyState,LoadingState}.tsx` — canonical empty-state layout and loading-verb shape; `LoadingState`'s `verb` prop is typed against the `LoadingVerb` union (`Loading…` / `Saving…` / `Thinking…`).

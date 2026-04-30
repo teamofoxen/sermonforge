@@ -13,6 +13,7 @@ import { OUTLINE_SYSTEM, outlineHasNumberedList, extractOutlineWithExplanations 
 import PrimaryButton from "./primitives/PrimaryButton";
 import SecondaryButton from "./primitives/SecondaryButton";
 import IconButton from "./primitives/IconButton";
+import BackButton from "./primitives/BackButton";
 
 function mpsExtractStem(mps) {
   if (!mps) return null;
@@ -197,9 +198,9 @@ export default function OutlineTab({ sermon, onUpdate, onTabChange, studySummari
             <p style={{ color: "var(--ink-ghost)", fontStyle: "italic", fontSize: "14px", marginBottom: "8px" }}>
               No outline points yet. Build them in Study → Step 3, or add points directly below.
             </p>
-            <SecondaryButton size="sm" onClick={() => onTabChange?.("study")}>
-              ← Return to Study
-            </SecondaryButton>
+            <BackButton size="sm" onClick={() => onTabChange?.("study")}>
+              Return to Study
+            </BackButton>
           </div>
         )}
         <OutlineBuilder outline={outline} onUpdate={handleOutlineChange} onRemove={handleOutlineRemove} />
