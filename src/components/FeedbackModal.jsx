@@ -15,7 +15,7 @@ const UX_PARTS = [
   "Dashboard", "Series Planning", "Book Study", "Series Overview", "Series Structure",
   "Sermon Slots", "Series Calendar", "Sermon Workspace", "Study Tab",
   "Blueprint Tab", "Manuscript Tab", "Delivery Tab", "AI Panel",
-  "Calendar", "Illustrations", "Archive", "Sermon Library", "Other",
+  "Calendar", "Archive", "Other",
 ];
 
 const AI_STEPS = [

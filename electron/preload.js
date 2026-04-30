@@ -32,21 +32,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   createCalendarNote:  (data)      => ipcRenderer.invoke("db-createCalendarNote", data),
   deleteCalendarNote:  (id)        => ipcRenderer.invoke("db-deleteCalendarNote", id),
 
-  // ── Illustrations ─────────────────────────────────────────────────────────
-  getAllIllustrations:  ()          => ipcRenderer.invoke("db-getAllIllustrations"),
-  createIllustration:   (data)      => ipcRenderer.invoke("db-createIllustration", data),
-  deleteIllustration:   (id)        => ipcRenderer.invoke("db-deleteIllustration", id),
-
-  // ── Library ───────────────────────────────────────────────────────────────
-  deleteLibraryItem:        (id)                    => ipcRenderer.invoke("db-deleteLibraryItem", id),
-  getLibraryStatus:         ()                      => ipcRenderer.invoke("library-status"),
-  getLibraryFolder:         ()                      => ipcRenderer.invoke("library-get-folder"),
-  setLibraryFolder:         ()                      => ipcRenderer.invoke("library-set-folder"),
-  importLibrary:            ()                      => ipcRenderer.invoke("library-import"),
-  buildLibraryEmbeddings:   ()                      => ipcRenderer.invoke("library-build-embeddings"),
-  searchLibrary:            (query, limit, mode)    => ipcRenderer.invoke("library-search", { query, limit, mode }),
-  getLibraryManuscripts:    (ids, truncate, maxChars) => ipcRenderer.invoke("library-get-manuscripts", { ids, truncate, maxChars }),
-
   // ── Settings ──────────────────────────────────────────────────────────────
   getSetting:               (key)                   => ipcRenderer.invoke("db-getSetting", key),
   setSetting:               (key, value)            => ipcRenderer.invoke("db-setSetting", { key, value }),
@@ -83,18 +68,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // ── Schema contract guard ─────────────────────────────────────────────────
   // Renderer-side SERMON_COLUMNS mirror is asserted against this on App mount.
   getSermonColumns: () => ipcRenderer.invoke("app-get-sermon-columns"),
-
-  // ── Progress events ───────────────────────────────────────────────────────
-  onLibraryImportProgress: (callback) => {
-    const handler = (event, data) => callback(data);
-    ipcRenderer.on("library-import-progress", handler);
-    return () => ipcRenderer.removeListener("library-import-progress", handler);
-  },
-  onLibraryEmbedProgress: (callback) => {
-    const handler = (event, data) => callback(data);
-    ipcRenderer.on("library-embed-progress", handler);
-    return () => ipcRenderer.removeListener("library-embed-progress", handler);
-  },
 
   // ── Startup warnings (OneDrive etc.) ──────────────────────────────────────
   // Pull-pattern: main holds a one-shot warning slot, renderer fetches on mount.

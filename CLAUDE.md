@@ -22,7 +22,6 @@ This file is a navigation guide. Do not load everything by default.
 | Database, schema, migrations, FTS | [`docs/SYSTEMS/database.md`](docs/SYSTEMS/database.md) | adding columns to `sermons` requires updating `SERMON_COLUMNS` in `electron/main.js` — `buildUpdate()` throws in dev if you miss this, but only if you exercise the save path in testing |
 | IPC channels, preload, main process boundaries | [`docs/SYSTEMS/ipc.md`](docs/SYSTEMS/ipc.md) | — |
 | Distribution, installers, auto-updates, API key setup, crash logging | [`docs/PROPOSALS/distribution.md`](docs/PROPOSALS/distribution.md) | `electron/config.js` (paths + dev/prod gatekeeper), `electron/keystore.js` (safeStorage), `electron/logger.js` (`app.log`), `electron/updater.js` (electron-updater), `electron/ai/provider.js` (Anthropic SDK wrapper), `src/components/SetupScreen.jsx` (first-run key entry) |
-| Library import + chunking + sidecar `library.db` (chunks + vec0 vectors) | [`docs/SYSTEMS/database.md`](docs/SYSTEMS/database.md) | `electron/main.js` `ensureLibraryDb` / `chunkManuscript` / `indexLibraryManuscript`; `library-import` and `library-build-embeddings` IPC handlers; [`docs/REFERENCE/schema.md`](docs/REFERENCE/schema.md) sidecar section |
 
 ## Load only when you need specific lookup details
 
