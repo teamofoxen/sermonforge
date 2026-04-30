@@ -42,15 +42,6 @@ returns:  array of series rows
 ```
 Returns series excluding tour sermons (`id NOT LIKE 'tour-%'`), ordered by `COALESCE(updated_at, created_at) DESC`. Used by the Sidebar's Series Planning dropdown.
 
-### `"db-deleteLibraryItem"`
-```
-receives: id string
-returns:  undefined (throws on DB error)
-```
-Deletes from both `library` and `library_fts` in a single transaction.
-Best-effort cleanup of corresponding rows in `library.db` (chunks + vectors)
-runs outside the transaction; failures there log only.
-
 ### `"db-flush"`
 ```
 receives: nothing
@@ -110,76 +101,6 @@ returns:  { ok: true, json: string|null } | { ok: false, error: string }
 Reads the memory backup file. Called from `App.jsx` mount via
 `restoreMemoryFromBackup()` when localStorage is empty. Returns `json: null`
 when no backup file exists (first launch, or backup never written).
-
----
-
-## Library
-
-### `"library-status"`
-```
-receives: nothing
-returns:  { count: number, lastImported: string|null }
-```
-
-### `"library-get-folder"`
-```
-receives: nothing
-returns:  { path: string, isExplicit: boolean }
-```
-Returns the resolved sermon-library folder. `isExplicit` is true when the user has chosen a folder; false when falling back to the legacy default.
-
-### `"library-set-folder"`
-```
-receives: nothing
-returns:  { canceled: boolean, path: string|null }
-opens:    native folder picker (dialog.showOpenDialog)
-```
-Persists the chosen folder to the `library_folder` setting.
-
-### `"library-import"`
-```
-receives: nothing
-returns:  { total, imported, moved, updated, skipped, errors }
-pushes:   "library-import-progress" events: { done, total, complete }
-```
-Scans the resolved library folder (see `library-get-folder`) for `.docx` files.
-Each file is parsed via `mammoth`, copied into `userData/library/`, and identity-resolved
-by **content-hash first, then filepath**:
-- **imported** — new file (no hash or path match) → INSERT + FTS + chunk + embed.
-- **moved** — same content_hash but different filepath → UPDATE filepath only.
-  No re-index; the chunks/vectors are already correct.
-- **updated** — same filepath but different content_hash → file was edited;
-  UPDATE manuscript + re-index FTS + re-index chunks/vectors.
-- **skipped** — same hash, same path → no-op (already imported).
-- **errors** — parse / IO / DB failure for a single file; counted, logged, loop continues.
-
-Identity-by-hash fixes the prior duplication-on-folder-rename bug; identity-by-path
-fixes the prior `INSERT OR IGNORE`-skips-edited-files bug.
-
-### `"library-build-embeddings"`
-```
-receives: nothing
-returns:  { total, embedded, errors }
-pushes:   "library-embed-progress" events: { done, total, complete }
-```
-Backfills embeddings for any rows in `sermonforge.db.library` that don't yet have chunks indexed in `library.db`. Idempotent. Surfaced in the Library UI as a "Build index" banner.
-
-### `"library-search"`
-```
-receives: { query: string, limit: number, mode: "browse"|"ai"|"hybrid" }
-returns:  array of { id, title, passage, folder, series_name, word_count, excerpt }
-```
-
-Modes:
-- `"browse"` — title/passage/series only (search bar filtering)
-- `"ai"` — includes manuscript_text via FTS, with LIKE fallback (used by AIPanel contextual search)
-- `"hybrid"` — Reciprocal Rank Fusion across FTS rank (manuscript-level) and vector cosine (chunk-level, aggregated to manuscript via best-chunk distance). Falls back to `"ai"`-style FTS+LIKE when `library.db` / sqlite-vec is unavailable.
-
-### `"library-get-manuscripts"`
-```
-receives: { ids: string[], truncate: bool, maxChars: number }
-returns:  array of { id, title, passage, series_name, manuscript_text }
-```
 
 ---
 
@@ -355,17 +276,8 @@ OneDrive sync away from it.
 
 ## Events (one-way, main → renderer)
 
-Subscribed to via `onLibraryImportProgress`, `onLibraryEmbedProgress`,
-`onDbWriteError`, and `onDbWriteOk` (see `electron/preload.js`). Each subscriber
-returns an unsubscribe function.
-
-### `"library-import-progress"`
-Payload: `{ done: number, total: number, complete: bool }`. Emitted every 10
-files during a `library-import` run, plus a final `complete: true`.
-
-### `"library-embed-progress"`
-Payload: `{ done: number, total: number, complete: bool }`. Emitted every 5
-manuscripts during a `library-build-embeddings` run, plus a final `complete: true`.
+Subscribed to via `onDbWriteError` and `onDbWriteOk` (see `electron/preload.js`).
+Each subscriber returns an unsubscribe function.
 
 ### `"db-write-error"`
 Payload: `string` (error message). Emitted by `flushDb` only on the **second

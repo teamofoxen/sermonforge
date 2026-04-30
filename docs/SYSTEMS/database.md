@@ -10,7 +10,7 @@
 SermonForge uses a **dual-driver** architecture:
 
 - **`sermonforge.db` → sql.js (WASM).** The main application database (sermons,
-  series, sections, calendar notes, illustrations, library, FTS) runs on sql.js.
+  series, sections, calendar notes) runs on sql.js.
   Historical reason: native module compilation was blocked by the Node 24 + VS2026
   environment when this driver was chosen. sql.js serializes the entire database
   to disk on each write, which is why the `saveDb()` debounce is 500ms and must
@@ -70,15 +70,6 @@ When adding new fields to the `sermons` table, they must also be added to `SERMO
 
 ---
 
-## Full-Text Search
-
-`library_fts` (on sermonforge.db) is an FTS4 virtual table (not FTS5).
-**Why FTS4:** FTS5 was attempted first but encountered compatibility issues. FTS4 is stable.
-
-The main sermon library remains FTS-only (keyword search over title, passage, and
-manuscript text). This is appropriate for the pastor's own prior manuscripts, where
-exact-phrase and book-name lookups are the primary retrieval need.
-
 ## Theology Search (vector + FTS hybrid)
 
 `theology.db` uses hybrid retrieval:
@@ -128,7 +119,7 @@ Resolved by `electron/config.js` via `app.getPath("userData")` plus a `data` /
 - Packaged: `%APPDATA%\sermonforge\data\sermonforge.db` (typically
   `C:\Users\<user>\AppData\Roaming\sermonforge\data\sermonforge.db`)
 - Dev (`ELECTRON_DEV=1`): `%APPDATA%\sermonforge\data-dev\sermonforge.db`
-- `theology.db` and `library.db` live alongside `sermonforge.db` in the same dir.
+- `theology.db` lives alongside `sermonforge.db` in the same dir.
 - Atomic flush writes via `<dbPath>.tmp` and rotates the prior good blob to
   `<dbPath>.bak`. On startup, a corrupt primary falls back to `.bak`; if both
   fail the corrupt original is renamed to `<dbPath>.corrupt-<ts>` and a fresh
@@ -141,18 +132,16 @@ Exports are written to `Documents\SermonForge\exports\` and (Study Guides,
 Feedback) to `~/OneDrive/SermonForge/...` when OneDrive is present.
 
 OneDrive is **not** used for the application databases. OneDrive is used only
-for the pastor's external sermon file library (`LIBRARY_PATH` default —
-`~/OneDrive/Ministry/Preaching/Sermon Library`, overridable via
-`library-set-folder` IPC) and for the user's own backup choices for exported
-files. The app runs correctly without OneDrive.
+for the user's own backup choices for exported files. The app runs correctly
+without OneDrive.
 
 **OneDrive risk note.** `app.getPath("userData")` resolves to `%APPDATA%\Roaming`,
 which is normally not synced. Enterprise GPOs or roaming-profile setups can
 redirect Roaming AppData into a sync agent — when that happens, better-sqlite3
-file locks on `theology.db` / `library.db` collide with the sync agent and the
-DBs fail to open. If the user reports DB-open errors and `paths.userData` shows
-a OneDrive-like path, the recovery is to opt the install out of roaming or
-relocate the data directory.
+file locks on `theology.db` collide with the sync agent and the DB fails to open.
+If the user reports DB-open errors and `paths.userData` shows a OneDrive-like
+path, the recovery is to opt the install out of roaming or relocate the data
+directory.
 
 ---
 
@@ -172,5 +161,5 @@ the miss immediately in development — but only if you actually exercise the sa
   the DB. Tradeoff: memory does not survive Electron major version upgrades.
 - **Sermon slots** are real `sermons` records with `stage='planning'`. There is no separate
   planning-slots table.
-- **Illustrations, calendar notes, library, and metadata** are in separate tables.
+- **Calendar notes and metadata** are in separate tables.
   See `docs/REFERENCE/schema.md` for all table definitions.

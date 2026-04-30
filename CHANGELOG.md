@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-04-29 — chore: remove dormant Library + Illustrations dead code
+
+- Removed 11 dormant IPC handlers from `electron/main.js`: `library-status`, `library-build-embeddings`, `library-get-folder`, `library-set-folder`, `library-import`, `library-search`, `library-get-manuscripts`, `db-deleteLibraryItem`, `db-getAllIllustrations`, `db-createIllustration`, `db-deleteIllustration`.
+- Removed library helpers (`ensureLibraryDb`, `chunkManuscript`, `indexLibraryManuscript`, `getLibraryPath`, `getAllDocxFiles`, `parseLibraryFile`, `copyToManagedLibrary`, `libraryContentHash`), globals (`libraryDb`, `libraryVecAvailable`), constants (`MANAGED_LIBRARY_DIRNAME`, `EMBED_DIM`, `CHUNK_MAX_CHARS`, `LIBRARY_PATH`), and the `illustrations` CREATE TABLE.
+- v3 and v15 migration bodies are now no-op version bumps; fresh installs skip creating `library` + `library_fts` + the `content_hash` column. Existing installs retain those tables as orphan data; theology + embedder + buildFtsQuery preserved.
+- `docs/REFERENCE/ipc-channels.md`, `docs/REFERENCE/schema.md`, and `docs/SYSTEMS/database.md` cleaned to match removed surfaces.
+
+---
+
 ## 2026-04-29 — chore: remove Library and Illustrations features
 
 - Deleted `src/components/Library.jsx` and `src/components/Illustrations.jsx` user-facing pages.
