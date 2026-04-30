@@ -25,10 +25,11 @@ const ROOT = path.resolve(__dirname, "..", "..");
 // Deep routes reached from a different surface than the sidebar:
 //   • series-planner — entered by clicking a series card
 //   • workspace — entered by clicking a sermon card; topbar provides "you are here"
-//   • archive — KNOWN Surface #4 violation deferred to audit-triage Pilot B.2
-//     (rename to "Completed Sermons" + add sidebar entry). Tracked in the
-//     audit-triage status memory; not in scope for Phase 5.
-const EXPECTED_DEEP = new Set(["series-planner", "workspace", "archive"]);
+//
+// (Pilot B.2 of the audit triage renamed `archive` → `completed-sermons`
+// and added a canonical sidebar entry, so the route is no longer a deep
+// exception.)
+const EXPECTED_DEEP = new Set(["series-planner", "workspace"]);
 
 function parseRouterDestinations(): Set<string> {
   const app = fs.readFileSync(path.join(ROOT, "src", "App.jsx"), "utf8");

@@ -193,6 +193,13 @@ export default function Sidebar({ currentView, onNavigate, onOpenSermon, onOpenS
             >
               All Sermons
             </div>
+            <div
+              className="nav-item"
+              onClick={() => handleNavigate("completed-sermons")}
+              style={{ paddingLeft: 36, fontSize: 13 }}
+            >
+              Completed Sermons
+            </div>
             {visibleRecents.length > 0 && (
               <div style={{ borderTop: "1px solid rgba(212,160,23,0.15)", margin: "2px 0" }} />
             )}

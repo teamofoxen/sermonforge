@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-04-30 — feat: Archive → Completed Sermons rename + per-sermon re-export (Surface Contract #4)
+
+- New `src/components/CompletedSermons.jsx` with renamed copy and per-sermon "Re-export" button — reuses existing `sermon-export-manuscript` IPC, no new IPC channel.
+- `src/components/Archive.jsx` reduced to a re-export shim pointing to `CompletedSermons`; existing imports keep compiling.
+- App.jsx routing renamed `archive` → `completed-sermons`; Sidebar gains a canonical "Completed Sermons" entry under Sermon Prep.
+- `tests/contracts/surface-4-you-are-here.test.ts` `EXPECTED_DEEP` no longer contains `archive`; the route's Surface #4 exception is closed.
+- `docs/ENFORCEMENT_STATUS.md` updated; view-key + workspace tab-key PascalCase migrations deliberately deferred (both require coordinated `contextBuilder.js` changes).
+
+---
+
 ## 2026-04-30 — feat: BackButton primitive (Surface Contract #5)
 
 - New `src/components/primitives/BackButton.tsx` — canonical back-affordance with `labeled` and `icon` variants; the `←` prefix is structural so consumers can't drift it via copy.

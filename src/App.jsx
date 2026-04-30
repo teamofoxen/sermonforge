@@ -15,7 +15,7 @@ import SecondaryButton from "./components/primitives/SecondaryButton";
 
 const SermonList = lazy(() => import("./components/SermonList"));
 const Calendar = lazy(() => import("./components/Calendar"));
-const Archive = lazy(() => import("./components/Archive"));
+const CompletedSermons = lazy(() => import("./components/CompletedSermons"));
 const Planning = lazy(() => import("./components/Planning"));
 const SeriesPlanner = lazy(() => import("./components/SeriesPlanner"));
 const SermonWorkspace = lazy(() => import("./components/SermonWorkspace"));
@@ -271,8 +271,8 @@ export default function App() {
         {currentView === "calendar" && (
           <Calendar onOpenSermon={openSermon} />
         )}
-        {currentView === "archive" && (
-          <Archive onOpenSermon={openSermon} />
+        {currentView === "completed-sermons" && (
+          <CompletedSermons onOpenSermon={openSermon} />
         )}
         {currentView === "planning" && (
           <Planning
