@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-04-30 — fix: collapse stage CSS classes to canonical two-class set
+
+- Replaced legacy 6-class `.stage-*` rule set with canonical `.stage-in_progress` and `.stage-complete` pair in `src/styles/global.css`.
+- Removed now-unreferenced `--stage-study` and `--stage-ready` CSS vars.
+- Restores badge styling for the `'in_progress'` / `'complete'` vocabulary produced by the v16 migration; closes the Pilot B.1 visual regression where `Archive` and `SermonList` badges rendered unstyled.
+
+---
+
 ## 2026-04-30 — fix: defer slot creation until user names it
 
 - `+ Add Slot` in `SeriesPlanner` now creates a UI-only draft row keyed `draft-<uuid>`; no IPC `create-sermon` fires until the user types a non-empty title.

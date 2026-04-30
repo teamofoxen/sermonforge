@@ -28,8 +28,6 @@
   --shadow-deep: 0 8px 40px rgba(26,20,16,0.18);
   --radius: 4px;
   --radius-lg: 8px;
-  --stage-study: #d67a00;
-  --stage-ready: #228b22;
   --sidebar-bg: #1a1410;
   --tier7: #7b5ea7;
   --tier7-pale: #efe8f5;
@@ -381,12 +379,8 @@ button {
   text-transform: capitalize;
 }
 
-.stage-planning { background: rgba(74,103,65,0.12); color: var(--sage); }
-.stage-study { background: rgba(214,122,0,0.12); color: var(--stage-study); }
-.stage-outline { background: rgba(44,62,80,0.12); color: var(--slate); }
-.stage-writing { background: rgba(139,26,26,0.12); color: var(--crimson); }
-.stage-ready { background: rgba(34,139,34,0.12); color: var(--stage-ready); }
-.stage-archived { background: rgba(168,153,138,0.15); color: var(--ink-ghost); }
+.stage-in_progress { background: rgba(74,103,65,0.12); color: var(--sage); }
+.stage-complete { background: rgba(212,165,75,0.15); color: var(--gold); }
 
 /* ── Cards ───────────────────────────────────────────────────────────────── */
 .card {
