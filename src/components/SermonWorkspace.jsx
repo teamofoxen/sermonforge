@@ -18,6 +18,8 @@ import ManuscriptTab from "./ManuscriptTab";
 import DeliveryTab from "./DeliveryTab";
 import AIPanel from "./AIPanel";
 import PassagePopup from "./PassagePopup";
+import SecondaryButton from "./primitives/SecondaryButton";
+import IconButton from "./primitives/IconButton";
 
 const TABS = ["study", "outline", "manuscript", "delivery"];
 const TAB_LABELS = { study: "Study", outline: "Blueprint", manuscript: "Manuscript", delivery: "Delivery" };
@@ -219,7 +221,7 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpe
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
         <div>
           <p style={{ color: "var(--ink-ghost)" }}>Sermon not found.</p>
-          <button className="btn-ghost" onClick={onClose}>← Back</button>
+          <SecondaryButton onClick={onClose}>← Back</SecondaryButton>
         </div>
       </div>
     );
@@ -256,7 +258,8 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpe
       {/* Top bar */}
       <div className="topbar">
         <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1, minWidth: 0 }}>
-          <button
+          <IconButton
+            aria-label="Back to previous view"
             className="btn-icon"
             onClick={onClose}
             title="Back"
@@ -265,7 +268,7 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpe
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <polyline points="15 18 9 12 15 6" />
             </svg>
-          </button>
+          </IconButton>
           <div className="topbar-left">
             <div className="topbar-series">
               {sermon.series_title && sermon.series_id && onOpenSeries ? (
@@ -308,19 +311,19 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpe
                       style={{ display: "inline-flex", alignItems: "center", gap: "2px" }}
                       title={`Sermon ${position} of ${total} in this series`}
                     >
-                      <button
+                      <IconButton
                         style={prevId && onOpenSermon ? navStyle : navStyleDisabled}
                         onClick={() => prevId && onOpenSermon && onOpenSermon(prevId)}
                         disabled={!prevId || !onOpenSermon}
                         aria-label="Previous sermon in series"
-                      >‹</button>
+                      >‹</IconButton>
                       <span>Sermon {position} of {total}</span>
-                      <button
+                      <IconButton
                         style={nextId && onOpenSermon ? navStyle : navStyleDisabled}
                         onClick={() => nextId && onOpenSermon && onOpenSermon(nextId)}
                         disabled={!nextId || !onOpenSermon}
                         aria-label="Next sermon in series"
-                      >›</button>
+                      >›</IconButton>
                     </span>
                   </>
                 );
@@ -350,13 +353,13 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpe
           {!saving && saveError && (
             <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "0 6px" }}>
               <span style={{ fontSize: "12px", color: "var(--crimson-soft)" }}>Save failed</span>
-              <button
-                className="btn-ghost btn-sm"
+              <SecondaryButton
+                size="sm"
                 style={{ fontSize: "12px", padding: "2px 8px" }}
                 onClick={persistUpdate}
               >
                 Retry
-              </button>
+              </SecondaryButton>
             </span>
           )}
           {!saving && !saveError && lastSavedAt && (
@@ -376,14 +379,14 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpe
           >
             How this works
           </button>
-          <button
+          <SecondaryButton
+            size="sm"
             data-tour-id="chat-with-ai-button"
-            className="btn-ghost btn-sm"
             onClick={() => setDrawerOpen(v => !v)}
             style={{ fontSize: "13px", color: drawerOpen ? "var(--gold)" : "var(--ink-ghost)", borderColor: drawerOpen ? "var(--gold)" : undefined }}
           >
             Chat with AI
-          </button>
+          </SecondaryButton>
         </div>
       </div>
 
@@ -534,7 +537,7 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpe
     {/* AI drawer — slides in from right, overlays content */}
     <div className={`ai-drawer ${drawerOpen ? "open" : ""}`}>
       <div className="ai-drawer-close-bar">
-        <button className="ai-drawer-close-btn" onClick={() => setDrawerOpen(false)}>✕</button>
+        <IconButton aria-label="Close AI drawer" className="ai-drawer-close-btn" onClick={() => setDrawerOpen(false)}>✕</IconButton>
       </div>
       <AIPanel
         sermon={sermon}
@@ -575,14 +578,15 @@ function SermonHowItWorksModal({ onClose }) {
           maxHeight: "90vh", overflowY: "auto",
         }}
       >
-        <button
+        <IconButton
+          aria-label="Close how-this-works modal"
           onClick={onClose}
           style={{
             position: "absolute", top: "14px", right: "16px",
             background: "none", border: "none", cursor: "pointer",
             color: "var(--ink-ghost)", fontSize: "18px", lineHeight: 1,
           }}
-        >✕</button>
+        >✕</IconButton>
         <h3 style={{
           fontFamily: "'Playfair Display', serif", fontSize: "18px",
           color: "var(--ink)", marginBottom: "6px",

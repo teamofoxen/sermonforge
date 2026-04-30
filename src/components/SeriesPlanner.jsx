@@ -169,9 +169,9 @@ export default function SeriesPlanner({ seriesId, onClose, onOpenSermon }) {
         padding: "0 28px", display: "flex", alignItems: "center", gap: "16px",
         minHeight: "56px", flexShrink: 0,
       }}>
-        <button className="btn-ghost btn-sm" onClick={onClose} style={{ flexShrink: 0 }}>
+        <SecondaryButton size="sm" onClick={onClose} style={{ flexShrink: 0 }}>
           ← Back
-        </button>
+        </SecondaryButton>
         <div style={{
           width: "10px", height: "10px", borderRadius: "50%", flexShrink: 0,
           background: `var(--${series.color || "gold"})`,
@@ -206,13 +206,13 @@ export default function SeriesPlanner({ seriesId, onClose, onOpenSermon }) {
         >
           Study Guide
         </button>
-        <button
-          className="btn-ghost btn-sm"
+        <SecondaryButton
+          size="sm"
           onClick={() => setDrawerOpen(v => !v)}
           style={{ fontSize: "13px", color: drawerOpen ? "var(--gold)" : "var(--ink-ghost)", borderColor: drawerOpen ? "var(--gold)" : undefined, flexShrink: 0 }}
         >
           Chat with AI
-        </button>
+        </SecondaryButton>
       </div>
 
       {/* Tab bar */}
@@ -465,22 +465,22 @@ function BookStudyTab({ series, onChange, drawerOpen, onOpenDrawer, onCloseDrawe
               <div style={{ display: "flex", gap: "6px" }}>
                 {/* Draft button only on Working Big Idea */}
                 {fieldDef.key === "emerging_big_idea" && (series.passage_range || series.title) && (
-                  <button
-                    className="btn-ghost btn-sm"
+                  <SecondaryButton
+                    size="sm"
                     onClick={generateWorkingBigIdea}
                     disabled={draftLoading || inlineLoading !== null}
                     style={{ fontSize: "12px" }}
                   >
                     {draftLoading ? "Drafting…" : "Draft →"}
-                  </button>
+                  </SecondaryButton>
                 )}
-                <button
-                  className="btn-ghost btn-sm"
+                <SecondaryButton
+                  size="sm"
                   onClick={() => handleAnalyze(fieldDef)}
                   disabled={!series[fieldDef.key]?.trim() || inlineLoading !== null}
                 >
                   {inlineLoading === fieldDef.key ? "Analyzing…" : "Analyze"}
-                </button>
+                </SecondaryButton>
               </div>
             </div>
             <textarea
@@ -506,7 +506,7 @@ function BookStudyTab({ series, onChange, drawerOpen, onOpenDrawer, onCloseDrawe
       {drawerOpen && (
         <div className="ai-drawer open">
           <div className="ai-drawer-close-bar">
-            <button className="ai-drawer-close-btn" onClick={onCloseDrawer}>✕</button>
+            <IconButton aria-label="Close drawer" className="ai-drawer-close-btn" onClick={onCloseDrawer}>✕</IconButton>
           </div>
           <AIChatPanel
             messages={aiMessages}
@@ -682,13 +682,13 @@ function OverviewTab({ series, onChange, drawerOpen, onOpenDrawer, onCloseDrawer
           )}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
             <label style={{ ...labelStyle, marginBottom: 0 }}>Series Big Idea</label>
-            <button
-              className="btn-ghost btn-sm"
+            <SecondaryButton
+              size="sm"
               onClick={generateBigIdea}
               disabled={aiLoading === "bigidea"}
             >
               {aiLoading === "bigidea" ? "Generating…" : "✦ Generate"}
-            </button>
+            </SecondaryButton>
           </div>
           <input
             style={inputStyle}
@@ -702,13 +702,13 @@ function OverviewTab({ series, onChange, drawerOpen, onOpenDrawer, onCloseDrawer
         <div style={{ marginBottom: "20px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
             <label style={{ ...labelStyle, marginBottom: 0 }}>Series Overview</label>
-            <button
-              className="btn-ghost btn-sm"
+            <SecondaryButton
+              size="sm"
               onClick={generateOverview}
               disabled={aiLoading === "overview"}
             >
               {aiLoading === "overview" ? "Generating…" : "✦ Generate"}
-            </button>
+            </SecondaryButton>
           </div>
           <textarea
             style={{ ...textareaStyle }}
@@ -726,7 +726,7 @@ function OverviewTab({ series, onChange, drawerOpen, onOpenDrawer, onCloseDrawer
       {drawerOpen && (
         <div className="ai-drawer open">
           <div className="ai-drawer-close-bar">
-            <button className="ai-drawer-close-btn" onClick={onCloseDrawer}>✕</button>
+            <IconButton aria-label="Close drawer" className="ai-drawer-close-btn" onClick={onCloseDrawer}>✕</IconButton>
           </div>
           <AIChatPanel
             messages={aiMessages}
@@ -828,9 +828,9 @@ function StructureTab({ series, sections, onChange, onSectionsChange, seriesId, 
         <div style={{ marginBottom: "28px" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
             <label style={{ ...labelStyle, marginBottom: 0 }}>Structural Outline</label>
-            <button className="btn-ghost btn-sm" onClick={generateOutline} disabled={aiLoading === "outline"}>
+            <SecondaryButton size="sm" onClick={generateOutline} disabled={aiLoading === "outline"}>
               {aiLoading === "outline" ? "Generating…" : "✦ Generate"}
-            </button>
+            </SecondaryButton>
           </div>
           <p style={{ fontSize: "13px", color: "var(--ink-ghost)", marginBottom: "8px" }}>
             Build this yourself, paste from a commentary, or generate with AI.
@@ -857,7 +857,7 @@ function StructureTab({ series, sections, onChange, onSectionsChange, seriesId, 
                 Optional. Use for longer books with natural major divisions.
               </p>
             </div>
-            <button className="btn-ghost btn-sm" onClick={addSection}>+ Add Section</button>
+            <SecondaryButton size="sm" onClick={addSection}>+ Add Section</SecondaryButton>
           </div>
 
           {sections.length === 0 ? (
@@ -889,7 +889,7 @@ function StructureTab({ series, sections, onChange, onSectionsChange, seriesId, 
       {drawerOpen && (
         <div className="ai-drawer open">
           <div className="ai-drawer-close-bar">
-            <button className="ai-drawer-close-btn" onClick={onCloseDrawer}>✕</button>
+            <IconButton aria-label="Close drawer" className="ai-drawer-close-btn" onClick={onCloseDrawer}>✕</IconButton>
           </div>
           <AIChatPanel
             messages={aiMessages}
@@ -919,8 +919,8 @@ function SectionEditor({ section, index, total, expanded, onToggle, onChange, on
           <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", color: "var(--ink-soft)" }}>{section.passage_range}</span>
         )}
         <div style={{ display: "flex", gap: "2px" }}>
-          {index > 0 && <button onClick={(e) => { e.stopPropagation(); onMove(-1); }} style={iconBtnStyle} title="Move up">↑</button>}
-          {index < total - 1 && <button onClick={(e) => { e.stopPropagation(); onMove(1); }} style={iconBtnStyle} title="Move down">↓</button>}
+          {index > 0 && <IconButton aria-label="Move section up" onClick={(e) => { e.stopPropagation(); onMove(-1); }} style={iconBtnStyle} title="Move up">↑</IconButton>}
+          {index < total - 1 && <IconButton aria-label="Move section down" onClick={(e) => { e.stopPropagation(); onMove(1); }} style={iconBtnStyle} title="Move down">↓</IconButton>}
           <DeleteButton small onDelete={onDelete} />
         </div>
         <span style={{ color: "var(--ink-ghost)", fontSize: "12px" }}>{expanded ? "▲" : "▼"}</span>
@@ -955,13 +955,13 @@ function SectionEditor({ section, index, total, expanded, onToggle, onChange, on
               placeholder="What does this section of the book accomplish? What shift happens here?"
             />
           </div>
-          <button
-            className="btn-ghost btn-sm"
+          <SecondaryButton
+            size="sm"
             style={{ alignSelf: "flex-start" }}
             onClick={() => onSectionAI(`Help me write a big idea and overview for this section of ${series.passage_range || series.title}: "${section.title || "untitled section"}" covering ${section.passage_range || "unspecified passage"}.`)}
           >
             ✦ Ask AI about this section
-          </button>
+          </SecondaryButton>
         </div>
       )}
     </div>
@@ -1153,7 +1153,7 @@ function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpen
             </p>
           </div>
           {sections.length === 0 && (
-            <button className="btn-primary btn-sm" onClick={() => addSlot(null)}>+ Add Slot</button>
+            <PrimaryButton size="sm" onClick={() => addSlot(null)}>+ Add Slot</PrimaryButton>
           )}
         </div>
 
@@ -1173,7 +1173,7 @@ function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpen
                       </span>
                     )}
                   </div>
-                  <button className="btn-ghost btn-sm" onClick={() => addSlot(section.id)}>+ Add Slot</button>
+                  <SecondaryButton size="sm" onClick={() => addSlot(section.id)}>+ Add Slot</SecondaryButton>
                 </div>
                 <SlotList
                   slots={bySectionId[section.id] || []}
@@ -1226,7 +1226,7 @@ function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpen
       {drawerOpen && (
         <div className="ai-drawer open">
           <div className="ai-drawer-close-bar">
-            <button className="ai-drawer-close-btn" onClick={onCloseDrawer}>✕</button>
+            <IconButton aria-label="Close drawer" className="ai-drawer-close-btn" onClick={onCloseDrawer}>✕</IconButton>
           </div>
           <AIChatPanel
             messages={aiMessages}
@@ -1270,9 +1270,9 @@ function SlotList({ slots, onChange, onDelete, onCommit, draftErrors, onClearErr
         />
       ))}
       {showAdd && (
-        <button className="btn-ghost btn-sm" onClick={onAdd} style={{ alignSelf: "flex-start", marginTop: "4px" }}>
+        <SecondaryButton size="sm" onClick={onAdd} style={{ alignSelf: "flex-start", marginTop: "4px" }}>
           + Add Slot
-        </button>
+        </SecondaryButton>
       )}
     </div>
   );
@@ -1337,15 +1337,15 @@ function SlotRow({ slot, index, onChange, onDelete, onCommit, commitError, onCle
           <span style={{ fontSize: "12px", color: "var(--ink-ghost)" }}>{formatDate(slot.date)}</span>
         )}
         {onOpenSermon && (
-          <button
-            className="btn-ghost btn-sm"
+          <SecondaryButton
+            size="sm"
             onClick={handleOpen}
             disabled={isDraft && !slot.title?.trim()}
             title={isDraft && !slot.title?.trim() ? "Type a title first" : undefined}
             style={{ fontSize: "12px", padding: "3px 10px" }}
           >
             Open
-          </button>
+          </SecondaryButton>
         )}
         <DeleteButton small onDelete={() => onDelete(slot.id)} />
         <span style={{ color: "var(--ink-ghost)", fontSize: "12px" }}>{expanded ? "▲" : "▼"}</span>
@@ -1387,13 +1387,13 @@ function SlotRow({ slot, index, onChange, onDelete, onCommit, commitError, onCle
           <div style={{ gridColumn: "1 / -1" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "5px" }}>
               <label style={{ ...labelStyle, marginBottom: 0 }}>Study Guide Note</label>
-              <button
-                className="btn-ghost btn-sm"
+              <SecondaryButton
+                size="sm"
                 onClick={handleAssist}
                 disabled={assistLoading}
               >
                 {assistLoading ? "Assisting…" : "Assist"}
-              </button>
+              </SecondaryButton>
             </div>
             <textarea
               style={{ ...textareaStyle }}
@@ -1526,16 +1526,16 @@ function CalendarTab({ series, sections, sermons, calNotes, onChange, onSermonsC
               onChange={(e) => onChange("start_date", e.target.value)}
             />
           </div>
-          <button
-            className="btn-primary btn-sm"
+          <PrimaryButton
+            size="sm"
             onClick={suggestSundays}
             disabled={!series.start_date || sermons.length === 0}
           >
             Suggest Sundays ({sermons.length} slots)
-          </button>
-          <button className="btn-ghost btn-sm" onClick={applySchedule} disabled={calendarSaving}>
+          </PrimaryButton>
+          <SecondaryButton size="sm" onClick={applySchedule} disabled={calendarSaving}>
             {calendarSaving ? "Saving…" : "✓ Save Dates"}
-          </button>
+          </SecondaryButton>
           {calendarSaveMsg === "saved" && (
             <span style={{ fontSize: "12px", color: "var(--sage)" }}>Dates saved</span>
           )}
@@ -1601,23 +1601,24 @@ function CalendarTab({ series, sections, sermons, calNotes, onChange, onSermonsC
                         </span>
                       )}
                     </div>
-                    <button
+                    <IconButton
+                      aria-label="Skip one week"
                       onClick={() => skipSunday(sermon.id)}
                       style={iconBtnStyle}
                       title="Skip one week"
                       disabled={!date}
                     >
                       +1wk
-                    </button>
+                    </IconButton>
                   </div>
                 );
               })}
             </div>
 
             <div style={{ marginTop: "16px", display: "flex", alignItems: "center", gap: "12px" }}>
-              <button className="btn-primary" onClick={applySchedule} disabled={calendarSaving}>
+              <PrimaryButton onClick={applySchedule} disabled={calendarSaving}>
                 {calendarSaving ? "Saving…" : "✓ Save All Dates to Sermon Records"}
-              </button>
+              </PrimaryButton>
               {calendarSaveMsg === "saved" && (
                 <span style={{ fontSize: "12px", color: "var(--sage)" }}>Dates saved</span>
               )}
@@ -1632,7 +1633,7 @@ function CalendarTab({ series, sections, sermons, calNotes, onChange, onSermonsC
       {drawerOpen && (
         <div className="ai-drawer open">
           <div className="ai-drawer-close-bar">
-            <button className="ai-drawer-close-btn" onClick={onCloseDrawer}>✕</button>
+            <IconButton aria-label="Close drawer" className="ai-drawer-close-btn" onClick={onCloseDrawer}>✕</IconButton>
           </div>
           <AIChatPanel
             messages={aiMessages}
@@ -1662,9 +1663,9 @@ function CopyButton({ text }) {
   }
 
   return (
-    <button onClick={handleCopy} className="ai-copy-btn" title="Copy response">
+    <IconButton aria-label="Copy AI response" onClick={handleCopy} className="ai-copy-btn" title="Copy response">
       {copied ? "✓ Copied" : "Copy"}
-    </button>
+    </IconButton>
   );
 }
 
@@ -1684,9 +1685,9 @@ function AIChatPanel({ messages, loading, input, onInputChange, onSubmit, placeh
           AI Assistant
         </span>
         {messages.length > 0 && (
-          <button onClick={onClear} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "12px", color: "var(--ink-ghost)" }}>
+          <IconButton aria-label="Clear AI conversation" onClick={onClear} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "12px", color: "var(--ink-ghost)" }}>
             Clear
-          </button>
+          </IconButton>
         )}
       </div>
 
@@ -1743,14 +1744,14 @@ function AIChatPanel({ messages, loading, input, onInputChange, onSubmit, placeh
             if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSubmit(e); }
           }}
         />
-        <button
+        <PrimaryButton
           type="submit"
-          className="btn-primary btn-sm"
+          size="sm"
           style={{ marginTop: "6px", width: "100%" }}
           disabled={loading || !input.trim()}
         >
           {loading ? "Thinking…" : "Send"}
-        </button>
+        </PrimaryButton>
       </form>
     </div>
   );
@@ -1818,14 +1819,15 @@ function SeriesHowItWorksModal({ onClose }) {
           maxHeight: "90vh", overflowY: "auto",
         }}
       >
-        <button
+        <IconButton
+          aria-label="Close how-this-works modal"
           onClick={onClose}
           style={{
             position: "absolute", top: "14px", right: "16px",
             background: "none", border: "none", cursor: "pointer",
             color: "var(--ink-ghost)", fontSize: "18px", lineHeight: 1,
           }}
-        >✕</button>
+        >✕</IconButton>
         <h3 style={{
           fontFamily: "'Playfair Display', serif", fontSize: "18px",
           color: "var(--ink)", marginBottom: "6px",
@@ -2105,14 +2107,15 @@ function StudyGuideModal({ series, sections, sermons, onClose }) {
           maxHeight: "90vh", overflowY: "auto",
         }}
       >
-        <button
+        <IconButton
+          aria-label="Close study guide preview"
           onClick={onClose}
           style={{
             position: "absolute", top: "14px", right: "16px",
             background: "none", border: "none", cursor: "pointer",
             color: "var(--ink-ghost)", fontSize: "18px", lineHeight: 1,
           }}
-        >✕</button>
+        >✕</IconButton>
 
         {/* Header */}
         <div style={{ marginBottom: "24px", paddingRight: "32px" }}>
@@ -2185,10 +2188,10 @@ function StudyGuideModal({ series, sections, sermons, onClose }) {
             </div>
           )}
           <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
-            <button className="btn-ghost btn-sm" onClick={onClose}>Close</button>
-            <button className="btn-primary" onClick={handleExport} disabled={exporting}>
+            <SecondaryButton size="sm" onClick={onClose}>Close</SecondaryButton>
+            <PrimaryButton onClick={handleExport} disabled={exporting}>
               {exporting ? "Exporting…" : "Export to Word"}
-            </button>
+            </PrimaryButton>
           </div>
         </div>
       </div>

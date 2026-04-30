@@ -10,6 +10,9 @@ import {
 import OutlineBuilder from "./OutlineBuilder";
 import InlineAIResponse from "./InlineAIResponse";
 import { OUTLINE_SYSTEM, outlineHasNumberedList, extractOutlineWithExplanations } from "../utils/outlineChat";
+import PrimaryButton from "./primitives/PrimaryButton";
+import SecondaryButton from "./primitives/SecondaryButton";
+import IconButton from "./primitives/IconButton";
 
 function mpsExtractStem(mps) {
   if (!mps) return null;
@@ -194,28 +197,28 @@ export default function OutlineTab({ sermon, onUpdate, onTabChange, studySummari
             <p style={{ color: "var(--ink-ghost)", fontStyle: "italic", fontSize: "14px", marginBottom: "8px" }}>
               No outline points yet. Build them in Study → Step 3, or add points directly below.
             </p>
-            <button className="btn-ghost btn-sm" onClick={() => onTabChange?.("study")}>
+            <SecondaryButton size="sm" onClick={() => onTabChange?.("study")}>
               ← Return to Study
-            </button>
+            </SecondaryButton>
           </div>
         )}
         <OutlineBuilder outline={outline} onUpdate={handleOutlineChange} onRemove={handleOutlineRemove} />
         <div style={{ marginTop: "12px", display: "flex", gap: "10px", alignItems: "center" }}>
-          <button
-            className="btn-ghost btn-sm"
+          <SecondaryButton
+            size="sm"
             disabled={suggestLoading || reviewLoading || outlineChatLoading}
             onClick={handleSuggestOutline}
           >
             {suggestLoading ? "Generating…" : "Suggest Outline"}
-          </button>
+          </SecondaryButton>
           {outline.length > 0 && (
-            <button
-              className="btn-ghost btn-sm"
+            <SecondaryButton
+              size="sm"
               disabled={reviewLoading || suggestLoading || outlineChatLoading}
               onClick={handleReviewOutline}
             >
               {reviewLoading ? "Reviewing…" : "Review Outline"}
-            </button>
+            </SecondaryButton>
           )}
         </div>
         <InlineAIResponse
@@ -232,7 +235,7 @@ export default function OutlineTab({ sermon, onUpdate, onTabChange, studySummari
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
             <span style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--ink-ghost)" }}>Refine Outline with AI</span>
             {outlineChat.length > 0 && (
-              <button className="inline-ai-dismiss" onClick={() => setOutlineChat([])}>Clear</button>
+              <IconButton aria-label="Clear outline chat" className="inline-ai-dismiss" onClick={() => setOutlineChat([])}>Clear</IconButton>
             )}
           </div>
           {outlineChat.map((msg, i) => {
@@ -252,8 +255,8 @@ export default function OutlineTab({ sermon, onUpdate, onTabChange, studySummari
                   <ReactMarkdown>{msg.content}</ReactMarkdown>
                 </div>
                 {extracted && (
-                  <button
-                    className="btn-ghost btn-sm"
+                  <SecondaryButton
+                    size="sm"
                     style={{ fontSize: "12px" }}
                     onClick={() => {
                       const existing = getFunctionalElements(sermon);
@@ -264,7 +267,7 @@ export default function OutlineTab({ sermon, onUpdate, onTabChange, studySummari
                     }}
                   >
                     → Apply to Outline
-                  </button>
+                  </SecondaryButton>
                 )}
               </div>
             );
@@ -287,27 +290,27 @@ export default function OutlineTab({ sermon, onUpdate, onTabChange, studySummari
               onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendOutlineChat(); } }}
               disabled={outlineChatLoading}
             />
-            <button
-              className="btn-ghost btn-sm"
+            <SecondaryButton
+              size="sm"
               style={{ alignSelf: "flex-end", fontSize: "12px", whiteSpace: "nowrap" }}
               onClick={sendOutlineChat}
               disabled={outlineChatLoading || !outlineChatInput.trim()}
             >
               Ask →
-            </button>
+            </SecondaryButton>
           </div>
         </div>
       )}
 
       <div className="step-advance">
-        <button
-          className="btn-primary btn-sm"
+        <PrimaryButton
+          size="sm"
           onClick={() => onTabChange?.("manuscript")}
           disabled={outline.length === 0}
           title={outline.length === 0 ? "Add at least one outline point before moving to Manuscript" : undefined}
         >
           Continue to Manuscript →
-        </button>
+        </PrimaryButton>
       </div>
     </div>
   );

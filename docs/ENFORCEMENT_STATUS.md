@@ -1,7 +1,7 @@
 # Enforcement Status
 
-**Last verified:** 2026-04-30
-**Verified against:** `docs/CORE.md`, enforcement pass closed against working tree at HEAD `23a97f3` (uncommitted, see closing summary)
+**Last verified:** 2026-04-30 (Pilot C landed)
+**Verified against:** `docs/CORE.md`, enforcement pass closed against working tree at HEAD `23a97f3` (uncommitted, see closing summary). Pilot C added `src/components/primitives/{PrimaryButton,SecondaryButton,IconButton}.tsx` and migrated 134 of 149 raw `<button>` violations.
 
 ## Summary
 
@@ -36,7 +36,7 @@ A single clause may be enforced at multiple layers — the count above assigns e
 | Mutation #4 — destruction proportional to reversal | Structural (Component) | `src/components/DeleteButton.jsx` is the canonical two-step inline confirm; used everywhere destructive UI lives. **`<DestructiveAction>` primitive generalization deferred to Phase 4** | (No dedicated test in Phase 5 — DeleteButton's contract is the structural artifact) |
 | Mutation #5 — errors speak in one voice | Lint | `sermonforge/no-window-alert` flags `alert()` / `confirm()` / `window.alert()` / `window.confirm()`. Component pattern: `<InlineError>` for field-level, App.jsx banner for retryable. **`<ErrorBanner>` primitive deferred to Phase 4** | `npm run lint` (zero violations today) |
 | Surface #1 — one vocabulary | Lint + Test | Lint: `sermonforge/canonical-stage-name` (narrowed forbidden set). Test: `tests/contracts/surface-1-one-vocabulary.test.ts` shares scan helper with State #5 | `npm run lint && npm test -- tests/contracts/surface-1-one-vocabulary.test.ts` |
-| Surface #2 — one CTA system | **Lint (deferred)** | `sermonforge/no-raw-button` flags every `<button>` outside `src/components/primitives/`; **149 baseline errors** are visible reminders awaiting Phase 4 / Pilot C primitives | `npm run lint` (visible 149-error baseline; total baseline is 185 with Surface #3) |
+| Surface #2 — one CTA system | Lint + Structural | `src/components/primitives/{PrimaryButton,SecondaryButton,IconButton}.tsx` are the canonical CTA + icon-button shapes. `sermonforge/no-raw-button` flags every `<button>` outside `src/components/primitives/`. **15 residual baseline errors** (down from 149) sit on shapes Pilot C deliberately doesn't cover: tertiary text-link buttons (Dashboard "guided tour", Sidebar "Send feedback", workspace "How this works"), nav/tab buttons (`stage-tab`, `delivery-tab-btn`, sub-phase pills) deferred to Pilot E, and dark-theme tour overlay buttons. | `npm run lint` (visible 15-error residual; resolved post-Pilot E + future tertiary-link decision) |
 | Surface #3 — one empty-state + loading vocabulary | **Lint (deferred)** | `sermonforge/canonical-loading-verb` flags non-canonical loading copy; **36 baseline errors** are visible reminders awaiting Phase 4 / Pilot D primitives | `npm run lint` (visible 36-error baseline) |
 | Surface #4 — "you are here" is always answerable | Test | `tests/contracts/surface-4-you-are-here.test.ts` parses router destinations from `App.jsx` and sidebar entries from `Sidebar.jsx`, asserts router ⊆ sidebar ∪ EXPECTED_DEEP. **`archive` route allow-listed in EXPECTED_DEEP** awaiting Pilot B.2 | `npm test -- tests/contracts/surface-4-you-are-here.test.ts` |
 | Surface #5 — one re-entry convention | **Deferred** | No structural, test, or lint enforcement. **Owner: Pilot E** (BackButton primitive). Five different "back" shapes documented in `project_audit_triage_status.md` | (None today; awaits Pilot E) |
@@ -62,9 +62,9 @@ The gate scans the codebase on every commit and CI run for four bypass classes:
 ### Phase 4 — Component primitive layer (lands during audit triage)
 
 - **Mutation #2** surface side: `<ProposalPanel>` is implemented; primitive-layer generalization completes structural enforcement of "AI proposals live in a separate slot" across all surfaces.
-- **Mutation #4**: `<DestructiveAction>` primitive enforces "destruction proportional to reversal cost" beyond the existing `<DeleteButton>`.
+- **Mutation #4**: `<DestructiveAction>` primitive enforces "destruction proportional to reversal cost" beyond the existing `<DeleteButton>`. (Pilot C moved `DeleteButton` from `src/components/` to `src/components/primitives/` so its three internal raw `<button>`s are exempt from `no-raw-button`; the canonical-pattern role is unchanged.)
 - **Mutation #5** surface side: `<ErrorBanner>` and `<InlineError>` primitives complete the lint-only enforcement currently in place.
-- **Surface #2** (Pilot C): `<PrimaryButton>` / `<SecondaryButton>` primitives. Lint baseline: **149** `no-raw-button` errors.
+- **Surface #2** (Pilot C — landed): `<PrimaryButton>` / `<SecondaryButton>` / `<IconButton>` primitives in `src/components/primitives/`. 134 of 149 raw `<button>` violations migrated; 15 residual (nav/tab buttons deferred to Pilot E, tertiary text-link buttons, dark-theme tour overlay).
 - **Surface #3** (Pilot D): `<EmptyState>` / `<LoadingState>` primitives. Lint baseline: **36** `canonical-loading-verb` errors.
 
 ### Phase 6 — Save and error pipeline integration
@@ -104,14 +104,14 @@ Contract tests, the spine integrity gate, and `tsc` together do not catch the ca
 
 | Rule | Current count | Resolved by |
 |---|---|---|
-| `sermonforge/no-raw-button` | 149 | Phase 4 — `<PrimaryButton>` / `<SecondaryButton>` primitives (Pilot C) |
+| `sermonforge/no-raw-button` | 15 | Pilot C primitives landed (149 → 15). 15 residual: nav/tab buttons (Pilot E), tertiary text-link buttons, dark-theme tour overlay. |
 | `sermonforge/canonical-loading-verb` | 36 | Phase 4 — `<LoadingState>` primitive (Pilot D) |
 | `sermonforge/no-direct-database` | 0 | — |
 | `sermonforge/canonical-stage-name` | 0 | — |
 | `sermonforge/no-window-alert` | 0 | — |
 | `react-hooks/rules-of-hooks` | 0 | — |
 
-**Approach A** (lint-staged in `.husky/pre-commit`) means the 185-error baseline doesn't block commits on untouched files. New violations on staged files do block. The visible count is the deferred-Phase-4 work surface; counts only come down when Pilot C / D / Phase 4 primitives land and components migrate.
+**Approach A** (lint-staged in `.husky/pre-commit`) means the residual baseline doesn't block commits on untouched files. New violations on staged files do block. After Pilot C the visible total is **51** (15 `no-raw-button` residual + 36 `canonical-loading-verb` awaiting Pilot D), down from the original 185.
 
 ## What's NOT enforced
 

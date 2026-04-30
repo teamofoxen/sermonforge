@@ -4,6 +4,7 @@ import { formatDate } from "../utils";
 import NewSermonModal from "./NewSermonModal";
 import DeleteButton from "./DeleteButton";
 import { SERMON_STATUS, SERMON_STATUS_LABELS } from "../core/contracts";
+import PrimaryButton from "./primitives/PrimaryButton";
 
 const SERMON_STATUS_VALUES = [SERMON_STATUS.InProgress, SERMON_STATUS.Complete];
 
@@ -40,9 +41,9 @@ export default function SermonList({ onOpenSermon }) {
             <h1 className="page-title">All Sermons</h1>
             <p className="page-subtitle">{sermons.length} active sermon{sermons.length !== 1 ? "s" : ""}</p>
           </div>
-          <button className="btn-primary" onClick={() => setShowNewModal(true)}>
+          <PrimaryButton onClick={() => setShowNewModal(true)}>
             + New Sermon
-          </button>
+          </PrimaryButton>
         </div>
       </div>
 

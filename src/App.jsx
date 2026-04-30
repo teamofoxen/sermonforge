@@ -10,6 +10,8 @@ import Sidebar from "./components/Sidebar";
 import Dashboard from "./components/Dashboard";
 import NewSeriesModal from "./components/NewSeriesModal";
 import OneDriveWarning from "./components/OneDriveWarning";
+import PrimaryButton from "./components/primitives/PrimaryButton";
+import SecondaryButton from "./components/primitives/SecondaryButton";
 
 const SermonList = lazy(() => import("./components/SermonList"));
 const Calendar = lazy(() => import("./components/Calendar"));
@@ -46,9 +48,9 @@ class ErrorBoundary extends Component {
           <p style={{ color: "var(--ink-ghost)", fontSize: "14px", maxWidth: "400px", textAlign: "center" }}>
             {this.state.error?.message || "An unexpected error occurred."}
           </p>
-          <button className="btn-primary" onClick={() => window.location.reload()}>
+          <PrimaryButton onClick={() => window.location.reload()}>
             Reload App
-          </button>
+          </PrimaryButton>
         </div>
       );
     }
@@ -221,21 +223,21 @@ export default function App() {
           <span className="write-error-banner-detail">{writeError}</span>
         </div>
         <div className="write-error-banner-actions">
-          <button
-            className="btn-primary btn-sm"
+          <PrimaryButton
+            size="sm"
             onClick={handleRetryFlush}
             disabled={retrying}
           >
             {retrying ? "Retrying…" : "Retry"}
-          </button>
-          <button
-            className="btn-ghost btn-sm"
+          </PrimaryButton>
+          <SecondaryButton
+            size="sm"
             onClick={() => setWriteError(null)}
             disabled={retrying}
             title="Dismiss without retrying"
           >
             Dismiss
-          </button>
+          </SecondaryButton>
         </div>
       </div>
     )}

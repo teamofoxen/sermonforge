@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import ReactDOM from "react-dom";
 import { fetchPassage } from "../db/database";
+import IconButton from "./primitives/IconButton";
 
 /**
  * PassagePopup — fixed floating scripture panel (ESV only).
@@ -29,7 +30,7 @@ export default function PassagePopup({ passage, isOpen, onClose }) {
     <div className="passage-popup">
       <div className="passage-popup-header">
         <span className="passage-popup-ref">{passage || "Passage"}</span>
-        <button className="passage-popup-close" onClick={onClose} aria-label="Close">✕</button>
+        <IconButton className="passage-popup-close" onClick={onClose} aria-label="Close">✕</IconButton>
       </div>
 
       {loading && (

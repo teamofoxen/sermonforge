@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { PREACHER_QUOTES } from "../datasets/preacherQuotes";
+import IconButton from "./primitives/IconButton";
 
 const portraitModules = import.meta.glob("../assets/portraits/*.png", {
   eager: true,
@@ -81,22 +82,20 @@ export default function DashboardHeader() {
               <span className="sep" />
               <span className="citation">{q.citation}</span>
               <span style={{ flex: 1 }} />
-              <button
+              <IconButton
                 className="quote-nav"
                 onClick={prev}
                 aria-label="Previous quote"
-                type="button"
               >
                 ‹
-              </button>
-              <button
+              </IconButton>
+              <IconButton
                 className="quote-nav"
                 onClick={next}
                 aria-label="Next quote"
-                type="button"
               >
                 ›
-              </button>
+              </IconButton>
             </div>
           </div>
         </div>

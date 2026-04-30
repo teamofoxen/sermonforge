@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { saveApiKeys } from "../db/database";
 import InlineError from "./InlineError";
+import PrimaryButton from "./primitives/PrimaryButton";
 
 const SECTION = {
   borderTop: "1px solid var(--parchment-deep)",
@@ -189,14 +190,13 @@ export default function SetupScreen({ onComplete }) {
         )}
 
         {/* Submit */}
-        <button
-          className="btn-primary"
+        <PrimaryButton
           onClick={handleSave}
           disabled={!canSubmit}
           style={{ width: "100%", marginTop: "24px" }}
         >
           {saving ? "Saving…" : esv.trim() ? "Save and Open SermonForge" : "Skip ESV and Open SermonForge"}
-        </button>
+        </PrimaryButton>
 
         {/* Fine print */}
         <p style={{

@@ -5,6 +5,7 @@ import { WORKSPACE_TOUR_STOPS } from "../tour/workspaceTourStops";
 import NewSermonModal from "./NewSermonModal";
 import DashboardHeader from "./DashboardHeader";
 import DashboardChurchHistory from "./DashboardChurchHistory";
+import PrimaryButton from "./primitives/PrimaryButton";
 
 function ArrowRightIcon() {
   return (
@@ -72,16 +73,15 @@ export default function Dashboard({ onOpenSermon, onNewSeries, onLeaveTour }) {
                 one step at a time.
               </p>
               <div className="tile-actions">
-                <button
+                <PrimaryButton
                   className="btn-hero"
-                  type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     setShowNewModal(true);
                   }}
                 >
                   Build sermon <ArrowRightIcon />
-                </button>
+                </PrimaryButton>
                 <button
                   type="button"
                   className="tile-meta tile-meta-button"

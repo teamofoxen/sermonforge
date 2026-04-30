@@ -1,5 +1,6 @@
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
+import IconButton from "./primitives/IconButton";
 
 /**
  * InlineAIResponse — appears directly below the field that triggered an AI request.
@@ -28,7 +29,7 @@ export default function InlineAIResponse({ fieldName, response, loading, onDismi
           <div className="ai-markdown" style={{ marginBottom: "10px" }}><ReactMarkdown>{response}</ReactMarkdown></div>
           <div className="inline-ai-actions">
             <InlineCopyButton text={response} />
-            <button className="inline-ai-dismiss" onClick={onDismiss}>✕ Dismiss</button>
+            <IconButton aria-label="Dismiss AI response" className="inline-ai-dismiss" onClick={onDismiss}>✕ Dismiss</IconButton>
           </div>
         </>
       )}
@@ -39,7 +40,8 @@ export default function InlineAIResponse({ fieldName, response, loading, onDismi
 function InlineCopyButton({ text }) {
   const [copied, setCopied] = useState(false);
   return (
-    <button
+    <IconButton
+      aria-label="Copy AI response"
       className="inline-ai-copy"
       onClick={() =>
         navigator.clipboard.writeText(text).then(() => {
@@ -49,6 +51,6 @@ function InlineCopyButton({ text }) {
       }
     >
       {copied ? "✓ Copied" : "Copy"}
-    </button>
+    </IconButton>
   );
 }

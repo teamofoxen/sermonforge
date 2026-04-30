@@ -3,6 +3,8 @@ import { getOutline, getFunctionalElements, tryParse, autoResize, assembleManusc
 import { summarizeExegesis } from "../utils/contextBuilder";
 import { sendAIMessage } from "../utils/ai";
 import { exportPmb } from "../db/database";
+import PrimaryButton from "./primitives/PrimaryButton";
+import SecondaryButton from "./primitives/SecondaryButton";
 
 // ── Panel constants ───────────────────────────────────────────────────────────
 
@@ -146,9 +148,9 @@ function ManuscriptPanel({ sermon, onUpdate, onPanelChange }) {
           <h2 className="delivery-panel-title">Delivery Manuscript</h2>
           <p className="delivery-panel-subtitle">Formatted for reading aloud. Content unchanged.</p>
         </div>
-        <button className="btn-primary" onClick={generate} disabled={generating}>
+        <PrimaryButton onClick={generate} disabled={generating}>
           {generating ? "Formatting…" : content ? "Regenerate" : "Format Manuscript"}
-        </button>
+        </PrimaryButton>
       </div>
 
       {error && <div className="pmb-error">{error}</div>}
@@ -160,9 +162,9 @@ function ManuscriptPanel({ sermon, onUpdate, onPanelChange }) {
             dangerouslySetInnerHTML={{ __html: renderDeliveryMarkdown(content) }}
           />
           <div className="step-advance">
-            <button className="btn-ghost btn-sm" onClick={() => onPanelChange?.("outline")}>
+            <SecondaryButton size="sm" onClick={() => onPanelChange?.("outline")}>
               Next: Preaching Outline →
-            </button>
+            </SecondaryButton>
           </div>
         </>
       )}
@@ -518,13 +520,13 @@ function WithoutNotesPanel({ sermon, onUpdate }) {
         </div>
         <div style={{ display: "flex", gap: "8px" }}>
           {blocks.length > 0 && (
-            <button className="btn-ghost" onClick={handleExport} disabled={exporting}>
+            <SecondaryButton onClick={handleExport} disabled={exporting}>
               {exporting ? "Exporting…" : "Export to Word"}
-            </button>
+            </SecondaryButton>
           )}
-          <button className="btn-primary" onClick={generate} disabled={generating}>
+          <PrimaryButton onClick={generate} disabled={generating}>
             {generating ? "Generating…" : blocks.length > 0 ? "Regenerate" : "Generate Preaching Blocks"}
-          </button>
+          </PrimaryButton>
         </div>
       </div>
 

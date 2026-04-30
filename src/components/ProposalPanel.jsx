@@ -6,6 +6,9 @@
 //
 // See docs/CORE.md "The Framework" → Mutation Contract for the rule this enforces.
 
+import PrimaryButton from "./primitives/PrimaryButton";
+import SecondaryButton from "./primitives/SecondaryButton";
+
 export default function ProposalPanel({
   loading,
   proposal,
@@ -52,20 +55,20 @@ export default function ProposalPanel({
             {proposal}
           </div>
           <div style={{ display: "flex", gap: "8px" }}>
-            <button
-              className="btn-primary btn-sm"
+            <PrimaryButton
+              size="sm"
               style={{ fontSize: "12px" }}
               onClick={onAccept}
             >
               {acceptLabel}
-            </button>
-            <button
-              className="btn-ghost btn-sm"
+            </PrimaryButton>
+            <SecondaryButton
+              size="sm"
               style={{ fontSize: "12px" }}
               onClick={onDiscard}
             >
               Discard
-            </button>
+            </SecondaryButton>
           </div>
         </>
       )}

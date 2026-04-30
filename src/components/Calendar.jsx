@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { getAllSermons } from "../core/spine";
 import { SERMON_STATUS } from "../core/contracts";
+import SecondaryButton from "./primitives/SecondaryButton";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = [
@@ -70,11 +71,11 @@ export default function Calendar({ onOpenSermon }) {
             <p className="page-subtitle">Sermon schedule</p>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <button className="btn-ghost btn-sm" onClick={prevMonth}>← Prev</button>
+            <SecondaryButton size="sm" onClick={prevMonth}>← Prev</SecondaryButton>
             <span style={{ fontFamily: "'Playfair Display', serif", fontSize: "18px", fontWeight: 600, minWidth: "180px", textAlign: "center" }}>
               {MONTHS[viewMonth]} {viewYear}
             </span>
-            <button className="btn-ghost btn-sm" onClick={nextMonth}>Next →</button>
+            <SecondaryButton size="sm" onClick={nextMonth}>Next →</SecondaryButton>
           </div>
         </div>
       </div>

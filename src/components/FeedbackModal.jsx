@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
 import { getSchemaVersion, getAppVersion, submitFeedback } from "../db/database.js";
 import InlineError from "./InlineError";
+import PrimaryButton from "./primitives/PrimaryButton";
+import SecondaryButton from "./primitives/SecondaryButton";
+import IconButton from "./primitives/IconButton";
 
 const CATEGORIES = [
   { value: "",        label: "Select a category…",                  disabled: true },
@@ -98,7 +101,7 @@ export default function FeedbackModal({ currentView, onClose }) {
       <div className="modal" style={{ maxWidth: 520 }}>
         <div className="modal-header">
           <h2 className="modal-title">Send Feedback</h2>
-          <button className="modal-close" onClick={onClose}>×</button>
+          <IconButton aria-label="Close" className="modal-close" onClick={onClose}>×</IconButton>
         </div>
 
         <div className="modal-body">
@@ -274,15 +277,14 @@ export default function FeedbackModal({ currentView, onClose }) {
         </div>
 
         <div className="modal-footer">
-          <button className="btn-ghost" onClick={onClose}>Cancel</button>
-          <button
-            className="btn-primary"
+          <SecondaryButton onClick={onClose}>Cancel</SecondaryButton>
+          <PrimaryButton
             style={{ width: "100%" }}
             onClick={handleSubmit}
             disabled={submitting || !isFormValid(category, fields)}
           >
             {submitting ? "Submitting…" : "Submit Feedback"}
-          </button>
+          </PrimaryButton>
         </div>
       </div>
     </div>

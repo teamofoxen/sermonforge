@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { getAllSeries, deleteSeries, getSermonsBySeries } from "../core/spine";
 import { SERIES_STATUS, SERIES_STATUS_LABELS } from "../core/contracts";
 import DeleteButton from "./DeleteButton";
+import PrimaryButton from "./primitives/PrimaryButton";
 
 const CANON_LABELS = { ot: "Old Testament", nt: "New Testament", wisdom: "Wisdom", prophetic: "Prophetic", "": "Uncategorized" };
 const CANON_COLORS = { ot: "var(--gold)", nt: "var(--sage)", wisdom: "var(--crimson)", prophetic: "var(--slate)", "": "var(--ink-ghost)" };
@@ -61,7 +62,7 @@ export default function Planning({ onOpenPlanner, onNewSeries }) {
             <h1 className="page-title">All Series</h1>
             <p className="page-subtitle">Series planning and biblical coverage</p>
           </div>
-          <button className="btn-primary" onClick={onNewSeries}>+ New Series</button>
+          <PrimaryButton onClick={onNewSeries}>+ New Series</PrimaryButton>
         </div>
       </div>
 
@@ -107,7 +108,7 @@ export default function Planning({ onOpenPlanner, onNewSeries }) {
             <p style={{ fontSize: "14px", marginBottom: "24px" }}>
               Create your first series to start planning.
             </p>
-            <button className="btn-primary" onClick={onNewSeries}>+ New Series</button>
+            <PrimaryButton onClick={onNewSeries}>+ New Series</PrimaryButton>
           </div>
         ) : (
           <div className="series-grid">

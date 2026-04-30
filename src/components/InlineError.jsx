@@ -10,6 +10,9 @@
 //   - Optional onDismiss callback shows a small × dismiss button.
 //   - Renders nothing when `children` is empty / nullish.
 
+import SecondaryButton from "./primitives/SecondaryButton";
+import IconButton from "./primitives/IconButton";
+
 export default function InlineError({ children, onRetry, onDismiss, style }) {
   if (!children) return null;
   return (
@@ -33,16 +36,16 @@ export default function InlineError({ children, onRetry, onDismiss, style }) {
     >
       <span style={{ flex: 1, minWidth: 0 }}>{children}</span>
       {onRetry && (
-        <button
-          className="btn-ghost btn-sm"
+        <SecondaryButton
+          size="sm"
           style={{ fontSize: "12px", padding: "2px 8px", flexShrink: 0 }}
           onClick={onRetry}
         >
           Retry
-        </button>
+        </SecondaryButton>
       )}
       {onDismiss && (
-        <button
+        <IconButton
           onClick={onDismiss}
           aria-label="Dismiss"
           style={{
@@ -55,7 +58,7 @@ export default function InlineError({ children, onRetry, onDismiss, style }) {
             padding: 0,
             flexShrink: 0,
           }}
-        >×</button>
+        >×</IconButton>
       )}
     </div>
   );

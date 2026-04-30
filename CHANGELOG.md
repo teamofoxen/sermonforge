@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-04-30 — feat: CTA primitive layer (Surface Contract #2)
+
+- New `src/components/primitives/{PrimaryButton,SecondaryButton,IconButton}.tsx` — solid gold pill, ghost outline, and behavioral icon-button shapes wrapping the existing `.btn-primary` / `.btn-ghost` / `.btn-sm` classes.
+- Migrated 134 of 149 raw `<button>` elements across 25 component files; lint baseline `sermonforge/no-raw-button` drops 149 → 15.
+- `DeleteButton.jsx` relocated to `src/components/primitives/` with a re-export shim at the old path; 5 importers unchanged.
+- 15 residuals are scoped: workspace tab / sub-phase / sidebar nav buttons (Pilot E territory), tertiary text-link buttons, dark-theme tour overlay.
+- `docs/ENFORCEMENT_STATUS.md` updated — Surface #2 moved from "Lint (deferred)" to "Lint + Structural"; lint baseline accounting reflects the drop.
+
+---
+
 ## 2026-04-30 — fix: collapse stage CSS classes to canonical two-class set
 
 - Replaced legacy 6-class `.stage-*` rule set with canonical `.stage-in_progress` and `.stage-complete` pair in `src/styles/global.css`.

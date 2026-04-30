@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { getStartupWarning, openDataFolder } from "../db/database";
+import PrimaryButton from "./primitives/PrimaryButton";
+import SecondaryButton from "./primitives/SecondaryButton";
 
 const BANNER_DISMISS_KEY = "sf-onedrive-banner-dismissed";
 
@@ -38,12 +40,12 @@ export default function OneDriveWarning() {
           </p>
           <p style={modalPath}>{warning.path}</p>
           <div style={modalActions}>
-            <button className="btn-primary" onClick={() => openDataFolder()}>
+            <PrimaryButton onClick={() => openDataFolder()}>
               Open data folder
-            </button>
-            <button className="btn-ghost" onClick={dismiss}>
+            </PrimaryButton>
+            <SecondaryButton onClick={dismiss}>
               I understand the risk — continue
-            </button>
+            </SecondaryButton>
           </div>
         </div>
       </div>
@@ -59,8 +61,8 @@ export default function OneDriveWarning() {
         </span>
       </div>
       <div className="write-error-banner-actions">
-        <button className="btn-primary btn-sm" onClick={() => openDataFolder()}>Open folder</button>
-        <button className="btn-ghost btn-sm" onClick={dismiss} title="Don't show again">Dismiss</button>
+        <PrimaryButton size="sm" onClick={() => openDataFolder()}>Open folder</PrimaryButton>
+        <SecondaryButton size="sm" onClick={dismiss} title="Don't show again">Dismiss</SecondaryButton>
       </div>
     </div>
   );

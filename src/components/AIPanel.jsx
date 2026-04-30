@@ -15,6 +15,9 @@ import {
 import {
   serializeStructuredField,
 } from "../utils/studyFields";
+import PrimaryButton from "./primitives/PrimaryButton";
+import SecondaryButton from "./primitives/SecondaryButton";
+import IconButton from "./primitives/IconButton";
 
 // Keep the last N turns (user+assistant pairs) of conversation history when sending
 // each new message. Avoids re-sending an ever-growing transcript that inflates token
@@ -269,7 +272,7 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
           </div>
           <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
             {messages.length > 0 && (
-              <button className="ai-clear-btn" onClick={clearHistory}>Clear</button>
+              <IconButton aria-label="Clear AI conversation" className="ai-clear-btn" onClick={clearHistory}>Clear</IconButton>
             )}
           </div>
         </div>
@@ -337,8 +340,7 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
 
       <div className="ai-panel-footer">
         {/* Review My Work */}
-        <button
-          className="btn-primary"
+        <PrimaryButton
           style={{ width: "100%", marginBottom: "10px" }}
           onClick={() => {
             const { prompt, system } = getReviewPrompt(activeTab, sermon, activeStep);
@@ -349,18 +351,17 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
           disabled={loading}
         >
           Review My Work
-        </button>
+        </PrimaryButton>
 
         {/* Series Coherence Check — only shown when series big idea exists */}
         {sermon?.series?.big_idea && (
-          <button
-            className="btn-ghost"
+          <SecondaryButton
             style={{ width: "100%", marginBottom: "10px" }}
             onClick={handleSeriesCoherenceCheck}
             disabled={loading}
           >
             Check Series Alignment
-          </button>
+          </SecondaryButton>
         )}
 
         {/* Theology library toggle. Label changes when sqlite-vec / embedder
@@ -390,14 +391,15 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
             rows={1}
             disabled={loading}
           />
-          <button
+          <IconButton
+            aria-label="Send message"
             className="ai-send-btn"
             onClick={handleSendInput}
             disabled={loading || !inputText.trim()}
             title="Send"
           >
             →
-          </button>
+          </IconButton>
         </div>
       </div>
 
@@ -433,13 +435,14 @@ function CopyButton({ text }) {
   }
 
   return (
-    <button
+    <IconButton
+      aria-label="Copy AI response"
       onClick={handleCopy}
       className="ai-copy-btn"
       title="Copy response"
     >
       {copied ? "✓ Copied" : "Copy"}
-    </button>
+    </IconButton>
   );
 }
 
@@ -447,7 +450,8 @@ function CopyButton({ text }) {
 
 function IncorporateButton({ onClick, disabled }) {
   return (
-    <button
+    <IconButton
+      aria-label="Incorporate AI feedback into the field"
       onClick={onClick}
       disabled={disabled}
       className="ai-copy-btn"
@@ -455,7 +459,7 @@ function IncorporateButton({ onClick, disabled }) {
       style={{ opacity: disabled ? 0.5 : 1 }}
     >
       Incorporate →
-    </button>
+    </IconButton>
   );
 }
 
@@ -478,7 +482,7 @@ function DiffModal({ config, current, proposed, onAccept, onDiscard }) {
       }}>
         <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--parchment-deep)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span style={{ fontWeight: 600, fontSize: "14px" }}>Proposed revisions — {config.label}</span>
-          <button onClick={onDiscard} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "16px", color: "var(--ink-ghost)" }}>✕</button>
+          <IconButton aria-label="Discard proposed revisions" onClick={onDiscard} style={{ background: "none", border: "none", cursor: "pointer", fontSize: "16px", color: "var(--ink-ghost)" }}>✕</IconButton>
         </div>
 
         <div style={{ overflowY: "auto", padding: "16px 20px", flex: 1 }}>
@@ -508,9 +512,9 @@ function DiffModal({ config, current, proposed, onAccept, onDiscard }) {
         </div>
 
         <div style={{ padding: "12px 20px", borderTop: "1px solid var(--parchment-deep)", display: "flex", justifyContent: "flex-end", gap: "8px" }}>
-          <button className="btn-ghost" onClick={onDiscard}>Discard</button>
+          <SecondaryButton onClick={onDiscard}>Discard</SecondaryButton>
           {changed.length > 0 && (
-            <button className="btn-primary" onClick={onAccept}>Accept All</button>
+            <PrimaryButton onClick={onAccept}>Accept All</PrimaryButton>
           )}
         </div>
       </div>

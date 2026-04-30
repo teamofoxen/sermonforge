@@ -3,6 +3,8 @@ import ReactMarkdown from "react-markdown";
 import { getOutline, getFunctionalElements, serializeOutline, serializeFunctionalElements, autoResize, parseManuscript, assembleManuscriptText } from "../utils";
 import { buildContext } from "../utils/contextBuilder";
 import { exportManuscript } from "../db/database";
+import PrimaryButton from "./primitives/PrimaryButton";
+import SecondaryButton from "./primitives/SecondaryButton";
 
 function countWords(sermon) {
   const ms = parseManuscript(sermon.manuscript);
@@ -287,41 +289,45 @@ export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading, onOpe
       {/* Toolbar */}
       <div className="manuscript-toolbar">
         <div className="word-count">{words.toLocaleString()} words · ~{minutes} min</div>
-        <button
+        <SecondaryButton
+          size="sm"
           data-tour-id="flow-coach-button"
-          className="btn-ghost btn-sm has-tooltip"
+          className="has-tooltip"
           data-tooltip="A step-by-step coaching session that walks through what each movement needs to accomplish — intro, transitions, conclusion. Coaches direction only, one step at a time."
           onClick={runFlowCoach}
           disabled={aiLoading}
         >
           Flow Coach
-        </button>
-        <button
+        </SecondaryButton>
+        <SecondaryButton
+          size="sm"
           data-tour-id="ear-check-button"
-          className="btn-ghost btn-sm has-tooltip"
+          className="has-tooltip"
           data-tooltip="Scans your manuscript for passages that will lose listeners when heard aloud. Steps through each issue one at a time with a diagnosis and direction."
           onClick={runEarCheck}
           disabled={aiLoading || !hasContent}
         >
           Ear Check
-        </button>
-        <button
+        </SecondaryButton>
+        <PrimaryButton
+          size="sm"
           data-tour-id="tune-up-button"
-          className="btn-primary btn-sm has-tooltip"
+          className="has-tooltip"
           data-tooltip="A full editorial evaluation covering structure, text alignment, functional balance, and redemptive logic. Produces a Sermon Snapshot, Alignment Map, and Patch Plan."
           onClick={runTuneUp}
           disabled={aiLoading || !hasContent}
         >
           {aiLoading ? "Running…" : "Final Tune-Up"}
-        </button>
-        <button
-          className="btn-ghost btn-sm has-tooltip"
+        </PrimaryButton>
+        <SecondaryButton
+          size="sm"
+          className="has-tooltip"
           data-tooltip="Export the manuscript as a Word document. Saves to Documents/SermonForge/exports/Manuscripts/ and opens it."
           onClick={handleExport}
           disabled={exporting || !hasContent}
         >
           {exporting ? "Exporting…" : "Export to Word"}
-        </button>
+        </SecondaryButton>
       </div>
       {exportError && (
         <div style={{ fontSize: "12px", color: "#a04d4d", marginBottom: "12px", padding: "0 4px" }}>
@@ -429,9 +435,9 @@ export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading, onOpe
       </div>
 
       <div className="step-advance">
-        <button className="btn-primary btn-sm" onClick={() => onTabChange?.("delivery")}>
+        <PrimaryButton size="sm" onClick={() => onTabChange?.("delivery")}>
           Continue to Delivery →
-        </button>
+        </PrimaryButton>
       </div>
 
     </div>

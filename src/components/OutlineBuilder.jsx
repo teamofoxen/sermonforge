@@ -1,4 +1,6 @@
 import { createOutlinePoint } from "../utils";
+import IconButton from "./primitives/IconButton";
+import SecondaryButton from "./primitives/SecondaryButton";
 
 /**
  * Shared outline builder — used by both StudyTab (Step 3) and OutlineTab.
@@ -58,34 +60,37 @@ export default function OutlineBuilder({ outline, onUpdate, onRemove }) {
                 placeholder={`Point ${i + 1} — state a single clear claim that flows from the text`}
               />
               <div className="outline-actions">
-                <button
+                <IconButton
+                  aria-label="Move outline point up"
                   className="btn-icon"
                   onClick={() => moveUp(i)}
                   disabled={i === 0}
                   title="Move up"
                   style={{ fontSize: "12px" }}
-                >↑</button>
-                <button
+                >↑</IconButton>
+                <IconButton
+                  aria-label="Move outline point down"
                   className="btn-icon"
                   onClick={() => moveDown(i)}
                   disabled={i === outline.length - 1}
                   title="Move down"
                   style={{ fontSize: "12px" }}
-                >↓</button>
-                <button
+                >↓</IconButton>
+                <IconButton
+                  aria-label="Remove outline point"
                   className="btn-icon"
                   onClick={() => removePoint(i)}
                   title="Remove"
                   style={{ color: "var(--ink-ghost)" }}
-                >×</button>
+                >×</IconButton>
               </div>
             </li>
           ))}
         </ul>
       )}
-      <button className="btn-ghost btn-sm" onClick={addPoint} style={{ marginTop: "8px" }}>
+      <SecondaryButton size="sm" onClick={addPoint} style={{ marginTop: "8px" }}>
         + Add Point
-      </button>
+      </SecondaryButton>
     </div>
   );
 }

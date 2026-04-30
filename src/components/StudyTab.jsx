@@ -17,6 +17,9 @@ import ProposalPanel from "./ProposalPanel";
 import { OUTLINE_SYSTEM, outlineHasNumberedList, extractOutlineWithExplanations } from "../utils/outlineChat";
 import { FE_CHAT_SYSTEM } from "../prompts/study";
 import { fetchPassage } from "../db/database";
+import PrimaryButton from "./primitives/PrimaryButton";
+import SecondaryButton from "./primitives/SecondaryButton";
+import IconButton from "./primitives/IconButton";
 
 const STEP_LABELS = ["Exegesis", "MPT / MPS", "Outline", "Functional Elements"];
 const PHASE_LABELS = ["Observe", "Interpret", "Redemptive Thread", "Implications"];
@@ -701,8 +704,8 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                 legacyNotes={obsData.legacy_notes}
               />
               <div style={{ marginTop: "8px" }}>
-                <button
-                  className="btn-ghost btn-sm"
+                <SecondaryButton
+                  size="sm"
                   onClick={() => {
                     const filled = OBSERVE_FIELDS
                       .filter(f => obsData[f.key]?.trim())
@@ -717,7 +720,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                   disabled={inlineLoading !== null}
                 >
                   {inlineLoading === "observe" ? "Reviewing…" : "Review →"}
-                </button>
+                </SecondaryButton>
               </div>
               <InlineAIResponse
                 fieldName="Observations"
@@ -738,8 +741,8 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                 legacyNotes={intData.legacy_notes}
               />
               <div style={{ marginTop: "8px" }}>
-                <button
-                  className="btn-ghost btn-sm"
+                <SecondaryButton
+                  size="sm"
                   onClick={() => {
                     const filled = INTERPRET_FIELDS
                       .filter(f => intData[f.key]?.trim())
@@ -754,7 +757,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                   disabled={inlineLoading !== null}
                 >
                   {inlineLoading === "interpret" ? "Reviewing…" : "Review →"}
-                </button>
+                </SecondaryButton>
               </div>
               <InlineAIResponse
                 fieldName="Interpretation"
@@ -779,8 +782,8 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
               <div className="worksheet-summary-block" data-tour-id="redemptive-synthesize">
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
                   <label className="worksheet-field-label" style={{ marginBottom: 0 }}>Summary of Redemptive Features</label>
-                  <button
-                    className="btn-ghost btn-sm"
+                  <SecondaryButton
+                    size="sm"
                     disabled={draftLoading !== null}
                     onClick={async () => {
                       setDraftLoading("red_summary");
@@ -804,7 +807,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                     style={{ fontSize: "12px" }}
                   >
                     {draftLoading === "red_summary" ? "Synthesizing…" : "Synthesize →"}
-                  </button>
+                  </SecondaryButton>
                 </div>
                 <textarea
                   className="field-textarea"
@@ -818,8 +821,8 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
               </div>
 
               <div style={{ marginTop: "8px" }}>
-                <button
-                  className="btn-ghost btn-sm"
+                <SecondaryButton
+                  size="sm"
                   onClick={() => {
                     const filled = REDEMPTIVE_FIELDS
                       .filter(f => redData[f.key]?.trim())
@@ -835,7 +838,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                   disabled={inlineLoading !== null}
                 >
                   {inlineLoading === "redemptive" ? "Reviewing…" : "Review →"}
-                </button>
+                </SecondaryButton>
               </div>
               <InlineAIResponse
                 fieldName="Redemptive Thread"
@@ -887,8 +890,8 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
               <div className="worksheet-summary-block" data-tour-id="implications-compile">
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
                   <label className="worksheet-field-label" style={{ marginBottom: 0 }}>Compiled Implications</label>
-                  <button
-                    className="btn-ghost btn-sm"
+                  <SecondaryButton
+                    size="sm"
                     disabled={draftLoading !== null}
                     onClick={async () => {
                       setDraftLoading("imp_compile");
@@ -917,7 +920,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                     style={{ fontSize: "12px" }}
                   >
                     {draftLoading === "imp_compile" ? "Compiling…" : "Compile →"}
-                  </button>
+                  </SecondaryButton>
                 </div>
                 <textarea
                   className="field-textarea"
@@ -932,8 +935,8 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
               </div>{/* /implications-unbeliever */}
 
               <div style={{ marginTop: "8px" }}>
-                <button
-                  className="btn-ghost btn-sm"
+                <SecondaryButton
+                  size="sm"
                   onClick={() => {
                     const allFields = [...IMPLICATIONS_THEOLOGICAL, ...IMPLICATIONS_PERSONAL]
                       .filter(f => impData[f.key]?.trim())
@@ -949,7 +952,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                   disabled={inlineLoading !== null}
                 >
                   {inlineLoading === "implications" ? "Reviewing…" : "Review →"}
-                </button>
+                </SecondaryButton>
               </div>
               <InlineAIResponse
                 fieldName="Implications"
@@ -961,11 +964,11 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
           )}
 
           <div className="step-advance">
-            <button className="btn-primary btn-sm" onClick={advanceSubPhase}>
+            <PrimaryButton size="sm" onClick={advanceSubPhase}>
               {activeSubPhase < 4
                 ? `Continue to ${PHASE_LABELS[activeSubPhase]} →`
                 : `Continue to ${STEP_LABELS[1]} →`}
-            </button>
+            </PrimaryButton>
           </div>
         </div>
       )}
@@ -980,14 +983,14 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "5px" }}>
                 <label className="field-label" style={{ marginBottom: 0 }}>Main Point of the Text (MPT)</label>
                 {(sermon.passage || Object.keys(obsData).some(k => k !== "legacy_notes" && obsData[k]?.trim())) && (
-                  <button
-                    className="btn-ghost btn-sm"
+                  <SecondaryButton
+                    size="sm"
                     onClick={generateMPT}
                     disabled={draftLoading !== null}
                     style={{ fontSize: "12px" }}
                   >
                     {draftLoading === "mpt" ? "Drafting…" : "Draft →"}
-                  </button>
+                  </SecondaryButton>
                 )}
               </div>
               <textarea
@@ -1016,14 +1019,14 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "5px" }}>
                 <label className="field-label" style={{ marginBottom: 0 }}>Main Point of the Sermon (MPS)</label>
                 {sermon.mpt?.trim() && (
-                  <button
-                    className="btn-ghost btn-sm"
+                  <SecondaryButton
+                    size="sm"
                     onClick={generateMPS}
                     disabled={draftLoading !== null}
                     style={{ fontSize: "12px" }}
                   >
                     {draftLoading === "mps" ? "Drafting…" : "Draft →"}
-                  </button>
+                  </SecondaryButton>
                 )}
               </div>
               <textarea
@@ -1051,8 +1054,8 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
           </div>
 
           <div style={{ display: "flex", gap: "10px", marginTop: "12px" }}>
-            <button
-              className="btn-ghost btn-sm"
+            <SecondaryButton
+              size="sm"
               disabled={inlineLoading !== null}
               onClick={() => fetchInline(
                 "mpt-challenge",
@@ -1061,9 +1064,9 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
               )}
             >
               Challenge My MPT
-            </button>
-            <button
-              className="btn-ghost btn-sm"
+            </SecondaryButton>
+            <SecondaryButton
+              size="sm"
               disabled={inlineLoading !== null}
               onClick={() => fetchInline(
                 "mpt-mps-chain",
@@ -1072,7 +1075,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
               )}
             >
               Check MPT→MPS Chain
-            </button>
+            </SecondaryButton>
           </div>
 
           <InlineAIResponse
@@ -1093,7 +1096,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
                 <span className="field-label" style={{ marginBottom: 0, color: "var(--ink-ghost)", fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.06em" }}>Refine MPS with AI</span>
                 {mpsChat.length > 0 && (
-                  <button className="inline-ai-dismiss" onClick={() => setMpsChat([])}>Clear</button>
+                  <IconButton aria-label="Clear MPS chat" className="inline-ai-dismiss" onClick={() => setMpsChat([])}>Clear</IconButton>
                 )}
               </div>
               {mpsChat.map((msg, i) => {
@@ -1111,13 +1114,13 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                       <ReactMarkdown>{msg.content}</ReactMarkdown>
                     </div>
                     {revisedMatch && (
-                      <button
-                        className="btn-ghost btn-sm"
+                      <SecondaryButton
+                        size="sm"
                         style={{ fontSize: "12px" }}
                         onClick={() => onUpdate({ mps: revisedMatch[1].trim() })}
                       >
                         → Apply to MPS
-                      </button>
+                      </SecondaryButton>
                     )}
                   </div>
                 );
@@ -1140,22 +1143,22 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                   onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMpsChat(); } }}
                   disabled={mpsChatLoading}
                 />
-                <button
-                  className="btn-ghost btn-sm"
+                <SecondaryButton
+                  size="sm"
                   style={{ alignSelf: "flex-end", fontSize: "12px", whiteSpace: "nowrap" }}
                   onClick={sendMpsChat}
                   disabled={mpsChatLoading || !mpsChatInput.trim()}
                 >
                   Ask →
-                </button>
+                </SecondaryButton>
               </div>
             </div>
           )}
 
           <div className="step-advance">
-            <button className="btn-primary btn-sm" onClick={advanceStep}>
+            <PrimaryButton size="sm" onClick={advanceStep}>
               {`Continue to ${STEP_LABELS[2]} →`}
-            </button>
+            </PrimaryButton>
           </div>
         </div>
       )}
@@ -1172,15 +1175,15 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
           />
 
           <div style={{ marginTop: "12px", display: "flex", gap: "10px", alignItems: "center" }}>
-            <button
-              className="btn-ghost btn-sm"
+            <SecondaryButton
+              size="sm"
               disabled={draftLoading !== null || outlineChatLoading || inlineLoading !== null}
               onClick={suggestOutline}
             >
               {draftLoading === "outline" ? "Generating…" : "Suggest Outline"}
-            </button>
-            <button
-              className="btn-ghost btn-sm"
+            </SecondaryButton>
+            <SecondaryButton
+              size="sm"
               disabled={inlineLoading !== null || draftLoading !== null || outlineChatLoading}
               onClick={() => {
                 const pts = outline.map((p, i) => `${i + 1}. ${p.text}`).join("\n");
@@ -1198,7 +1201,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
               }}
             >
               {inlineLoading === "outline-review" ? "Reviewing…" : "Review Outline"}
-            </button>
+            </SecondaryButton>
           </div>
 
           <InlineAIResponse
@@ -1213,7 +1216,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
                 <span className="field-label" style={{ marginBottom: 0, color: "var(--ink-ghost)", fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.06em" }}>Refine Outline with AI</span>
                 {outlineChat.length > 0 && (
-                  <button className="inline-ai-dismiss" onClick={() => setOutlineChat([])}>Clear</button>
+                  <IconButton aria-label="Clear outline chat" className="inline-ai-dismiss" onClick={() => setOutlineChat([])}>Clear</IconButton>
                 )}
               </div>
               {outlineChat.map((msg, i) => {
@@ -1247,27 +1250,27 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                       };
                       if (!isDestructive) {
                         return (
-                          <button className="btn-ghost btn-sm" style={{ fontSize: "12px" }} onClick={commit}>
+                          <SecondaryButton size="sm" style={{ fontSize: "12px" }} onClick={commit}>
                             → Apply to Outline
-                          </button>
+                          </SecondaryButton>
                         );
                       }
                       if (inConfirm) {
                         return (
                           <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                            <button className="btn-primary btn-sm" style={{ fontSize: "12px" }} onClick={commit}>
+                            <PrimaryButton size="sm" style={{ fontSize: "12px" }} onClick={commit}>
                               Replace {outline.length} existing point{outline.length === 1 ? "" : "s"}
-                            </button>
-                            <button className="btn-ghost btn-sm" style={{ fontSize: "12px" }} onClick={() => setConfirmOutlineApplyIdx(null)}>
+                            </PrimaryButton>
+                            <SecondaryButton size="sm" style={{ fontSize: "12px" }} onClick={() => setConfirmOutlineApplyIdx(null)}>
                               Cancel
-                            </button>
+                            </SecondaryButton>
                           </div>
                         );
                       }
                       return (
-                        <button className="btn-ghost btn-sm" style={{ fontSize: "12px" }} onClick={() => setConfirmOutlineApplyIdx(i)}>
+                        <SecondaryButton size="sm" style={{ fontSize: "12px" }} onClick={() => setConfirmOutlineApplyIdx(i)}>
                           → Apply to Outline
-                        </button>
+                        </SecondaryButton>
                       );
                     })()}
                   </div>
@@ -1291,23 +1294,23 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                   onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendOutlineChat(); } }}
                   disabled={outlineChatLoading}
                 />
-                <button
-                  className="btn-ghost btn-sm"
+                <SecondaryButton
+                  size="sm"
                   style={{ alignSelf: "flex-end", fontSize: "12px", whiteSpace: "nowrap" }}
                   onClick={sendOutlineChat}
                   disabled={outlineChatLoading || !outlineChatInput.trim()}
                 >
                   Ask →
-                </button>
+                </SecondaryButton>
               </div>
             </div>
           )}
 
           {outline.length > 0 && (
             <div className="step-advance">
-              <button className="btn-primary btn-sm" onClick={advanceStep}>
+              <PrimaryButton size="sm" onClick={advanceStep}>
               {`Continue to ${STEP_LABELS[3]} →`}
-              </button>
+              </PrimaryButton>
             </div>
           )}
         </div>
@@ -1320,14 +1323,14 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
 
           {outline.length > 0 && sermon.passage && (
             <div style={{ marginBottom: "12px", display: "flex", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
-              <button
-                className="btn-ghost btn-sm"
+              <SecondaryButton
+                size="sm"
                 disabled={scripturePopulating}
                 onClick={populateScripture}
                 title="Fills empty Scripture rows only — rows with content are left untouched"
               >
                 {scripturePopulating ? "Fetching scripture…" : "Populate Scripture (ESV)"}
-              </button>
+              </SecondaryButton>
               {populateScriptureMessage && (
                 <span style={{
                   fontSize: "12px",
@@ -1372,8 +1375,8 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
           ))}
 
           <div style={{ marginTop: "12px" }}>
-            <button
-              className="btn-ghost btn-sm"
+            <SecondaryButton
+              size="sm"
               disabled={inlineLoading !== null}
               onClick={() => {
                 const allEAI = outline.map((pt, i) => {
@@ -1388,7 +1391,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
               }}
             >
               {inlineLoading === "eai-review" ? "Reviewing…" : "Review E/A/I Balance"}
-            </button>
+            </SecondaryButton>
           </div>
 
           <InlineAIResponse
@@ -1403,7 +1406,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
               <span className="field-label" style={{ marginBottom: 0, color: "var(--ink-ghost)", fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.06em" }}>Develop with AI</span>
               {feChat.length > 0 && (
-                <button className="inline-ai-dismiss" onClick={() => setFeChat([])}>Clear</button>
+                <IconButton aria-label="Clear functional elements chat" className="inline-ai-dismiss" onClick={() => setFeChat([])}>Clear</IconButton>
               )}
             </div>
             {feChat.map((msg, i) => {
@@ -1440,21 +1443,21 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                 onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendFeChat(); } }}
                 disabled={feChatLoading}
               />
-              <button
-                className="btn-ghost btn-sm"
+              <SecondaryButton
+                size="sm"
                 style={{ alignSelf: "flex-end", fontSize: "12px", whiteSpace: "nowrap" }}
                 onClick={sendFeChat}
                 disabled={feChatLoading || !feChatInput.trim()}
               >
                 Ask →
-              </button>
+              </SecondaryButton>
             </div>
           </div>
 
           <div className="step-advance">
-            <button className="btn-primary btn-sm" onClick={() => onTabChange?.("outline")}>
+            <PrimaryButton size="sm" onClick={() => onTabChange?.("outline")}>
               Continue to Blueprint →
-            </button>
+            </PrimaryButton>
           </div>
         </div>
       )}

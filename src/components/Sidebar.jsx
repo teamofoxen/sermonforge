@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { getRecentSermons, getRecentSeries } from "../core/spine";
 import NewSermonModal from "./NewSermonModal.jsx";
 import FeedbackModal from "./FeedbackModal.jsx";
+import IconButton from "./primitives/IconButton";
 
 const NAV_ITEMS = [
   {
@@ -227,8 +228,9 @@ export default function Sidebar({ currentView, onNavigate, onOpenSermon, onOpenS
       <div className="sidebar-footer">
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <span>SermonForge v1.0</span>
-          <button
+          <IconButton
             onClick={onToggleTheme}
+            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
             title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
             style={{
               background: "rgba(255,255,255,0.08)",
@@ -242,7 +244,7 @@ export default function Sidebar({ currentView, onNavigate, onOpenSermon, onOpenS
             }}
           >
             {theme === "dark" ? "☀" : "☾"}
-          </button>
+          </IconButton>
         </div>
         <button
           onClick={() => setShowFeedback(true)}

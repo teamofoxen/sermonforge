@@ -2,6 +2,9 @@ import { useState, useEffect } from "react";
 import { createSermon, getAllSeries } from "../core/spine";
 import InlineError from "./InlineError";
 import { SERIES_STATUS } from "../core/contracts";
+import PrimaryButton from "./primitives/PrimaryButton";
+import SecondaryButton from "./primitives/SecondaryButton";
+import IconButton from "./primitives/IconButton";
 
 export default function NewSermonModal({ onClose, onCreated }) {
   const [title, setTitle] = useState("");
@@ -43,7 +46,7 @@ export default function NewSermonModal({ onClose, onCreated }) {
       <div className="modal">
         <div className="modal-header">
           <h2 className="modal-title">New Sermon</h2>
-          <button className="modal-close" onClick={onClose}>×</button>
+          <IconButton aria-label="Close" className="modal-close" onClick={onClose}>×</IconButton>
         </div>
 
         <div className="modal-body">
@@ -106,14 +109,13 @@ export default function NewSermonModal({ onClose, onCreated }) {
         </div>
 
         <div className="modal-footer">
-          <button className="btn-ghost" onClick={onClose}>Cancel</button>
-          <button
-            className="btn-primary"
+          <SecondaryButton onClick={onClose}>Cancel</SecondaryButton>
+          <PrimaryButton
             onClick={handleCreate}
             disabled={!title.trim() || saving}
           >
             {saving ? "Creating…" : "Create Sermon"}
-          </button>
+          </PrimaryButton>
         </div>
       </div>
     </div>

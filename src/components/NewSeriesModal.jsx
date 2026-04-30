@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { createSeries } from "../core/spine";
 import InlineError from "./InlineError";
+import PrimaryButton from "./primitives/PrimaryButton";
+import SecondaryButton from "./primitives/SecondaryButton";
+import IconButton from "./primitives/IconButton";
 
 // State Contract #3 in docs/CORE.md: no anonymous atoms — a series must have
 // a name before any record is written. This modal enforces the rule at the
@@ -35,7 +38,7 @@ export default function NewSeriesModal({ onClose, onCreated }) {
       <div className="modal">
         <div className="modal-header">
           <h2 className="modal-title">New Series</h2>
-          <button className="modal-close" onClick={onClose}>×</button>
+          <IconButton aria-label="Close" className="modal-close" onClick={onClose}>×</IconButton>
         </div>
 
         <div className="modal-body">
@@ -71,14 +74,13 @@ export default function NewSeriesModal({ onClose, onCreated }) {
         </div>
 
         <div className="modal-footer">
-          <button className="btn-ghost" onClick={onClose}>Cancel</button>
-          <button
-            className="btn-primary"
+          <SecondaryButton onClick={onClose}>Cancel</SecondaryButton>
+          <PrimaryButton
             onClick={handleCreate}
             disabled={!title.trim() || saving}
           >
             {saving ? "Creating…" : "Create Series"}
-          </button>
+          </PrimaryButton>
         </div>
       </div>
     </div>
