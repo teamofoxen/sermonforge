@@ -1158,13 +1158,20 @@ ipcMain.handle("db-getSeriesById", (_, id) => {
 });
 
 ipcMain.handle("db-createSeries", (_, data) => {
+  // State Contract #3 (docs/CORE.md): no anonymous atoms. A series must have
+  // a title before any row is written. The renderer enforces this in
+  // NewSeriesModal; this is the data-layer guarantee.
+  const title = (data?.title || "").trim();
+  if (!title) {
+    throw new Error("Series must have a title");
+  }
   const id = randomUUID();
   db.run(
     `INSERT INTO series
        (id, title, color, description, year, big_idea, overview,
         passage_range, start_date, end_date, structural_outline, status, canon_category)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, data.title || "Untitled Series", data.color || "gold",
+    [id, title, data.color || "gold",
      data.description || "", data.year || new Date().getFullYear(),
      data.big_idea || "", data.overview || "", data.passage_range || "",
      data.start_date || "", data.end_date || "", data.structural_outline || "",

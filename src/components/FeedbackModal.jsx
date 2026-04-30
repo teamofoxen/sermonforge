@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { getSchemaVersion, getAppVersion, submitFeedback } from "../db/database.js";
+import InlineError from "./InlineError";
 
 const CATEGORIES = [
   { value: "",        label: "Select a category…",                  disabled: true },
@@ -266,9 +267,9 @@ export default function FeedbackModal({ currentView, onClose }) {
             </p>
           )}
           {errorMsg && (
-            <p style={{ color: "var(--crimson-soft)", fontFamily: "'Crimson Pro', serif", fontSize: 14, margin: "8px 0 0" }}>
-              {errorMsg}
-            </p>
+            <div style={{ marginTop: "8px" }}>
+              <InlineError onDismiss={() => setErrorMsg(null)}>{errorMsg}</InlineError>
+            </div>
           )}
         </div>
 

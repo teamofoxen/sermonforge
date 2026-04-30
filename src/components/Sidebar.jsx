@@ -44,8 +44,12 @@ export default function Sidebar({ currentView, onNavigate, onOpenSermon, onOpenS
   const [recentSeries, setRecentSeries] = useState([]);
   const [showFeedback, setShowFeedback] = useState(false);
 
+  // State Contract #3 enforced at creation; no need to filter "Untitled Series"
+  // here — that name will not be created going forward. Pre-existing rows from
+  // before the contract landed still surface, by design (the user sees and
+  // renames them rather than the sidebar hiding them).
   const visibleRecents = recentSermons.filter((s) => s.title?.trim());
-  const visibleSeries = recentSeries.filter((s) => s.title?.trim() && s.title !== "Untitled Series");
+  const visibleSeries = recentSeries.filter((s) => s.title?.trim());
 
   useEffect(() => {
     if (!dropdownOpen) return;

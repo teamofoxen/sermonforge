@@ -38,7 +38,7 @@ export default function PassagePopup({ passage, isOpen, onClose }) {
 
       {!loading && data?.fetchError && (
         <div className="passage-popup-loading" style={{ color: "var(--crimson-soft)" }}>
-          Error: {data.fetchError}
+          Could not load passage: {data.fetchError}
         </div>
       )}
 
@@ -49,7 +49,7 @@ export default function PassagePopup({ passage, isOpen, onClose }) {
             text={data?.esv}
             pending={data?.esvPending}
             error={data?.esvError}
-            pendingNote="ESV API key not yet configured. Add ESV_API_KEY to .env."
+            pendingNote="ESV scripture lookup is unavailable — an ESV API key has not been configured for this install."
           />
         </div>
       )}

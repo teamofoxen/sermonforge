@@ -12,6 +12,7 @@ import {
   onLibraryEmbedProgress,
 } from "../db/database";
 import DeleteButton from "./DeleteButton";
+import InlineError from "./InlineError";
 
 export default function Library() {
   const [status, setStatus] = useState({ count: 0, lastImported: null, embeddedCount: 0, vecAvailable: false });
@@ -219,11 +220,17 @@ export default function Library() {
         )}
 
         {importResult && !importing && (
-          <div style={{ marginTop: "10px", fontSize: "13px", color: "var(--ink-soft)", fontFamily: "'Crimson Pro', serif" }}>
-            {importResult.error
-              ? `Error: ${importResult.error}`
-              : `Done — ${importResult.imported} new sermon${importResult.imported !== 1 ? "s" : ""} imported${importResult.skipped > 0 ? `, ${importResult.skipped} already in library` : ""}.${importResult.errors > 0 ? ` (${importResult.errors} failed)` : ""}`}
-          </div>
+          importResult.error ? (
+            <div style={{ marginTop: "10px" }}>
+              <InlineError onDismiss={() => setImportResult(null)}>
+                Could not import library: {importResult.error}
+              </InlineError>
+            </div>
+          ) : (
+            <div style={{ marginTop: "10px", fontSize: "13px", color: "var(--ink-soft)", fontFamily: "'Crimson Pro', serif" }}>
+              Done — {importResult.imported} new sermon{importResult.imported !== 1 ? "s" : ""} imported{importResult.skipped > 0 ? `, ${importResult.skipped} already in library` : ""}.{importResult.errors > 0 ? ` (${importResult.errors} failed)` : ""}
+            </div>
+          )
         )}
       </div>
 

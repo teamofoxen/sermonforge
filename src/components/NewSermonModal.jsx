@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { createSermon, getAllSeries } from "../db/database";
+import InlineError from "./InlineError";
 
 const STAGES = ["planning", "study", "outline", "writing", "ready"];
 
@@ -12,6 +13,7 @@ export default function NewSermonModal({ onClose, onCreated }) {
   const [seriesId, setSeriesId] = useState("");
   const [seriesList, setSeriesList] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     getAllSeries()
@@ -24,14 +26,15 @@ export default function NewSermonModal({ onClose, onCreated }) {
   }, []);
 
   async function handleCreate() {
-    if (!title.trim()) return;
+    if (!title.trim() || saving) return;
     setSaving(true);
+    setError(null);
     try {
       const id = await createSermon({ title, passage, date, preacher, stage, series_id: seriesId || null, is_one_off: seriesId ? 0 : 1 });
       onCreated(id);
     } catch (e) {
       console.error(e);
-      alert("Failed to create sermon: " + e.message);
+      setError(e?.message || "Could not create the sermon.");
     } finally {
       setSaving(false);
     }
@@ -114,6 +117,8 @@ export default function NewSermonModal({ onClose, onCreated }) {
               ))}
             </select>
           </div>
+
+          {error && <InlineError onDismiss={() => setError(null)}>{error}</InlineError>}
         </div>
 
         <div className="modal-footer">
