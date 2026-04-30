@@ -58,7 +58,7 @@ export default function Planning({ onOpenPlanner, onNewSeries }) {
       <div className="page-header">
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
-            <h1 className="page-title">Planning</h1>
+            <h1 className="page-title">All Series</h1>
             <p className="page-subtitle">Series planning and biblical coverage</p>
           </div>
           <button className="btn-primary" onClick={onNewSeries}>+ New Series</button>

@@ -1453,7 +1453,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
 
           <div className="step-advance">
             <button className="btn-primary btn-sm" onClick={() => onTabChange?.("outline")}>
-              Continue to Outline Tab →
+              Continue to Blueprint →
             </button>
           </div>
         </div>

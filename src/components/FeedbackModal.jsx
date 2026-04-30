@@ -14,7 +14,7 @@ const CATEGORIES = [
 const UX_PARTS = [
   "Dashboard", "Series Planning", "Book Study", "Series Overview", "Series Structure",
   "Sermon Slots", "Series Calendar", "Sermon Workspace", "Study Tab",
-  "Outline Tab", "Manuscript Tab", "Delivery Tab", "AI Panel",
+  "Blueprint Tab", "Manuscript Tab", "Delivery Tab", "AI Panel",
   "Calendar", "Illustrations", "Archive", "Sermon Library", "Other",
 ];
 
