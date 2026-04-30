@@ -114,7 +114,7 @@ export default function NewSermonModal({ onClose, onCreated }) {
             onClick={handleCreate}
             disabled={!title.trim() || saving}
           >
-            {saving ? "Creating…" : "Create Sermon"}
+            {saving ? "Saving…" : "Create Sermon"}
           </PrimaryButton>
         </div>
       </div>

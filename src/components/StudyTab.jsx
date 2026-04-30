@@ -719,7 +719,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                   }}
                   disabled={inlineLoading !== null}
                 >
-                  {inlineLoading === "observe" ? "Reviewing…" : "Review →"}
+                  {inlineLoading === "observe" ? "Thinking…" : "Review →"}
                 </SecondaryButton>
               </div>
               <InlineAIResponse
@@ -756,7 +756,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                   }}
                   disabled={inlineLoading !== null}
                 >
-                  {inlineLoading === "interpret" ? "Reviewing…" : "Review →"}
+                  {inlineLoading === "interpret" ? "Thinking…" : "Review →"}
                 </SecondaryButton>
               </div>
               <InlineAIResponse
@@ -806,7 +806,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                     }}
                     style={{ fontSize: "12px" }}
                   >
-                    {draftLoading === "red_summary" ? "Synthesizing…" : "Synthesize →"}
+                    {draftLoading === "red_summary" ? "Thinking…" : "Synthesize →"}
                   </SecondaryButton>
                 </div>
                 <textarea
@@ -837,7 +837,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                   }}
                   disabled={inlineLoading !== null}
                 >
-                  {inlineLoading === "redemptive" ? "Reviewing…" : "Review →"}
+                  {inlineLoading === "redemptive" ? "Thinking…" : "Review →"}
                 </SecondaryButton>
               </div>
               <InlineAIResponse
@@ -919,7 +919,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                     }}
                     style={{ fontSize: "12px" }}
                   >
-                    {draftLoading === "imp_compile" ? "Compiling…" : "Compile →"}
+                    {draftLoading === "imp_compile" ? "Thinking…" : "Compile →"}
                   </SecondaryButton>
                 </div>
                 <textarea
@@ -951,7 +951,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                   }}
                   disabled={inlineLoading !== null}
                 >
-                  {inlineLoading === "implications" ? "Reviewing…" : "Review →"}
+                  {inlineLoading === "implications" ? "Thinking…" : "Review →"}
                 </SecondaryButton>
               </div>
               <InlineAIResponse
@@ -989,7 +989,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                     disabled={draftLoading !== null}
                     style={{ fontSize: "12px" }}
                   >
-                    {draftLoading === "mpt" ? "Drafting…" : "Draft →"}
+                    {draftLoading === "mpt" ? "Thinking…" : "Draft →"}
                   </SecondaryButton>
                 )}
               </div>
@@ -1025,7 +1025,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                     disabled={draftLoading !== null}
                     style={{ fontSize: "12px" }}
                   >
-                    {draftLoading === "mps" ? "Drafting…" : "Draft →"}
+                    {draftLoading === "mps" ? "Thinking…" : "Draft →"}
                   </SecondaryButton>
                 )}
               </div>
@@ -1180,7 +1180,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
               disabled={draftLoading !== null || outlineChatLoading || inlineLoading !== null}
               onClick={suggestOutline}
             >
-              {draftLoading === "outline" ? "Generating…" : "Suggest Outline"}
+              {draftLoading === "outline" ? "Thinking…" : "Suggest Outline"}
             </SecondaryButton>
             <SecondaryButton
               size="sm"
@@ -1200,7 +1200,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                 );
               }}
             >
-              {inlineLoading === "outline-review" ? "Reviewing…" : "Review Outline"}
+              {inlineLoading === "outline-review" ? "Thinking…" : "Review Outline"}
             </SecondaryButton>
           </div>
 
@@ -1329,7 +1329,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                 onClick={populateScripture}
                 title="Fills empty Scripture rows only — rows with content are left untouched"
               >
-                {scripturePopulating ? "Fetching scripture…" : "Populate Scripture (ESV)"}
+                {scripturePopulating ? "Loading…" : "Populate Scripture (ESV)"}
               </SecondaryButton>
               {populateScriptureMessage && (
                 <span style={{
@@ -1390,7 +1390,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                 );
               }}
             >
-              {inlineLoading === "eai-review" ? "Reviewing…" : "Review E/A/I Balance"}
+              {inlineLoading === "eai-review" ? "Thinking…" : "Review E/A/I Balance"}
             </SecondaryButton>
           </div>
 

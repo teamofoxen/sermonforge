@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-04-30 — feat: empty-state + loading primitives (Surface Contract #3)
+
+- New `src/components/primitives/{EmptyState,LoadingState}.tsx` — canonical empty-state layout and loading-verb shape; `LoadingState`'s `verb` prop is typed against the `LoadingVerb` union (`Loading…` / `Saving…` / `Thinking…`).
+- `<PrimaryButton loading={LoadingVerb}>` now auto-renders the canonical verb in place of children; prop type changed from `boolean` to `LoadingVerb` (no existing callers).
+- Replaced 30 non-canonical loading verbs across 11 components — Drafting/Generating/Reviewing/Synthesizing/Compiling/Assisting/Analyzing/Running → Thinking…; Submitting/Creating/Exporting/Retrying/Formatting → Saving…; Fetching scripture → Loading…
+- Tightened `sermonforge/canonical-loading-verb` to exempt JSX attribute values so placeholders like `placeholder="Sermon title…"` no longer false-fire; `canonical-loading-verb` baseline drops 36 → 0.
+- Three empty states migrated to `<EmptyState>` (Planning, Archive, SermonList) as the pattern demo; `docs/ENFORCEMENT_STATUS.md` updated — Surface #3 moved from "Lint (deferred)" to "Lint + Structural"; total lint baseline now 15 (down from 185).
+
+---
+
 ## 2026-04-30 — feat: CTA primitive layer (Surface Contract #2)
 
 - New `src/components/primitives/{PrimaryButton,SecondaryButton,IconButton}.tsx` — solid gold pill, ghost outline, and behavioral icon-button shapes wrapping the existing `.btn-primary` / `.btn-ghost` / `.btn-sm` classes.

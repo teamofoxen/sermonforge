@@ -6,7 +6,7 @@ import SecondaryButton from "./primitives/SecondaryButton";
 import IconButton from "./primitives/IconButton";
 
 const CATEGORIES = [
-  { value: "",        label: "Select a category…",                  disabled: true },
+  { value: "",        label: "Select a category",                   disabled: true },
   { value: "bug",     label: "Bug — something is broken" },
   { value: "ux",      label: "UI/UX — something feels wrong or confusing" },
   { value: "ai",      label: "AI Quality — a response was unhelpful or off" },
@@ -283,7 +283,7 @@ export default function FeedbackModal({ currentView, onClose }) {
             onClick={handleSubmit}
             disabled={submitting || !isFormValid(category, fields)}
           >
-            {submitting ? "Submitting…" : "Submit Feedback"}
+            {submitting ? "Saving…" : "Submit Feedback"}
           </PrimaryButton>
         </div>
       </div>

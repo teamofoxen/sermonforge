@@ -149,7 +149,7 @@ function ManuscriptPanel({ sermon, onUpdate, onPanelChange }) {
           <p className="delivery-panel-subtitle">Formatted for reading aloud. Content unchanged.</p>
         </div>
         <PrimaryButton onClick={generate} disabled={generating}>
-          {generating ? "Formatting…" : content ? "Regenerate" : "Format Manuscript"}
+          {generating ? "Saving…" : content ? "Regenerate" : "Format Manuscript"}
         </PrimaryButton>
       </div>
 
@@ -521,11 +521,11 @@ function WithoutNotesPanel({ sermon, onUpdate }) {
         <div style={{ display: "flex", gap: "8px" }}>
           {blocks.length > 0 && (
             <SecondaryButton onClick={handleExport} disabled={exporting}>
-              {exporting ? "Exporting…" : "Export to Word"}
+              {exporting ? "Saving…" : "Export to Word"}
             </SecondaryButton>
           )}
           <PrimaryButton onClick={generate} disabled={generating}>
-            {generating ? "Generating…" : blocks.length > 0 ? "Regenerate" : "Generate Preaching Blocks"}
+            {generating ? "Thinking…" : blocks.length > 0 ? "Regenerate" : "Generate Preaching Blocks"}
           </PrimaryButton>
         </div>
       </div>

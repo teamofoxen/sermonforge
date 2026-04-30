@@ -45,6 +45,11 @@ module.exports = {
         const v = node.value.trim();
         if (!RE_LOADING.test(v)) return;
         if (CANONICAL.has(v)) return;
+        // JSX attribute values (placeholder, title, aria-label, etc.) are
+        // not loading verbs even when they end with an ellipsis — exempt
+        // them so the rule doesn't false-positive on form copy like
+        // `placeholder="Sermon title…"` or `placeholder="Token ..."`.
+        if (node.parent && node.parent.type === 'JSXAttribute') return;
         context.report({ node, messageId: 'nonCanonical', data: { value: v } });
       },
     };

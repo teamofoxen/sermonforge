@@ -3,6 +3,7 @@ import { getAllSeries, deleteSeries, getSermonsBySeries } from "../core/spine";
 import { SERIES_STATUS, SERIES_STATUS_LABELS } from "../core/contracts";
 import DeleteButton from "./DeleteButton";
 import PrimaryButton from "./primitives/PrimaryButton";
+import EmptyState from "./primitives/EmptyState";
 
 const CANON_LABELS = { ot: "Old Testament", nt: "New Testament", wisdom: "Wisdom", prophetic: "Prophetic", "": "Uncategorized" };
 const CANON_COLORS = { ot: "var(--gold)", nt: "var(--sage)", wisdom: "var(--crimson)", prophetic: "var(--slate)", "": "var(--ink-ghost)" };
@@ -97,19 +98,12 @@ export default function Planning({ onOpenPlanner, onNewSeries }) {
 
         {/* Series Grid */}
         {series.length === 0 ? (
-          <div style={{
-            display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-            padding: "80px 40px", color: "var(--ink-ghost)", textAlign: "center",
-          }}>
-            <div style={{ fontSize: "48px", marginBottom: "16px", opacity: 0.3 }}>📖</div>
-            <p style={{ fontFamily: "'Playfair Display', serif", fontSize: "18px", color: "var(--ink-soft)", marginBottom: "8px" }}>
-              No series yet
-            </p>
-            <p style={{ fontSize: "14px", marginBottom: "24px" }}>
-              Create your first series to start planning.
-            </p>
-            <PrimaryButton onClick={onNewSeries}>+ New Series</PrimaryButton>
-          </div>
+          <EmptyState
+            icon="📖"
+            title="No series yet"
+            description="Create your first series to start planning."
+            action={<PrimaryButton onClick={onNewSeries}>+ New Series</PrimaryButton>}
+          />
         ) : (
           <div className="series-grid">
             {series.map((s) => (

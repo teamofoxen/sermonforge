@@ -5,33 +5,33 @@
 // migration, not a visual redesign — a separate decision will rework the
 // shape if/when the design system warrants it.
 //
-// Pilot C (audit triage) lands this primitive and migrates every primary-CTA
-// `<button className="btn-primary">` to `<PrimaryButton>`. The
-// `sermonforge/no-raw-button` lint rule exempts `src/components/primitives/`,
-// so this file is the only place a raw `<button>` for a primary CTA is
-// allowed to live.
+// `loading` accepts a `LoadingVerb` from `src/core/contracts.ts`
+// (`"Loading…"` / `"Saving…"` / `"Thinking…"`). When set, the button is
+// disabled and the canonical verb renders in place of children — Pilot D
+// wired this surface so call sites declare which verb fits their op
+// (Saving for writes, Thinking for AI ops, Loading for reads).
 //
-// `loading` is reserved here for Pilot D, which will wire the canonical
-// loading verbs (`Loading…` / `Saving…` / `Thinking…`) from
-// `src/core/contracts.ts`. Today it disables the button; consumers still
-// supply their own children. Once Pilot D lands, passing `loading` will
-// auto-render the canonical verb in place of children.
+// Consumers may also keep an explicit ternary in `children`
+// (e.g. `{saving ? "Saving…" : "Save"}`) — both patterns are contract-
+// compliant; the lint rule blocks non-canonical verbs at the literal.
 
 import type { ButtonHTMLAttributes, ReactNode } from "react";
+import type { LoadingVerb } from "../../core/contracts";
+import { LoadingState } from "./LoadingState";
 
 type ButtonSize = "default" | "sm";
 
 export interface PrimaryButtonProps
   extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, "type"> {
   size?: ButtonSize;
-  loading?: boolean;
+  loading?: LoadingVerb;
   type?: "button" | "submit" | "reset";
   children: ReactNode;
 }
 
 export function PrimaryButton({
   size = "default",
-  loading = false,
+  loading,
   type = "button",
   className,
   disabled,
@@ -45,10 +45,10 @@ export function PrimaryButton({
     <button
       type={type}
       className={composed}
-      disabled={disabled || loading}
+      disabled={disabled || Boolean(loading)}
       {...rest}
     >
-      {children}
+      {loading ? <LoadingState verb={loading} inline /> : children}
     </button>
   );
 }

@@ -471,7 +471,7 @@ function BookStudyTab({ series, onChange, drawerOpen, onOpenDrawer, onCloseDrawe
                     disabled={draftLoading || inlineLoading !== null}
                     style={{ fontSize: "12px" }}
                   >
-                    {draftLoading ? "Drafting…" : "Draft →"}
+                    {draftLoading ? "Thinking…" : "Draft →"}
                   </SecondaryButton>
                 )}
                 <SecondaryButton
@@ -479,7 +479,7 @@ function BookStudyTab({ series, onChange, drawerOpen, onOpenDrawer, onCloseDrawe
                   onClick={() => handleAnalyze(fieldDef)}
                   disabled={!series[fieldDef.key]?.trim() || inlineLoading !== null}
                 >
-                  {inlineLoading === fieldDef.key ? "Analyzing…" : "Analyze"}
+                  {inlineLoading === fieldDef.key ? "Thinking…" : "Analyze"}
                 </SecondaryButton>
               </div>
             </div>
@@ -687,7 +687,7 @@ function OverviewTab({ series, onChange, drawerOpen, onOpenDrawer, onCloseDrawer
               onClick={generateBigIdea}
               disabled={aiLoading === "bigidea"}
             >
-              {aiLoading === "bigidea" ? "Generating…" : "✦ Generate"}
+              {aiLoading === "bigidea" ? "Thinking…" : "✦ Generate"}
             </SecondaryButton>
           </div>
           <input
@@ -707,7 +707,7 @@ function OverviewTab({ series, onChange, drawerOpen, onOpenDrawer, onCloseDrawer
               onClick={generateOverview}
               disabled={aiLoading === "overview"}
             >
-              {aiLoading === "overview" ? "Generating…" : "✦ Generate"}
+              {aiLoading === "overview" ? "Thinking…" : "✦ Generate"}
             </SecondaryButton>
           </div>
           <textarea
@@ -829,7 +829,7 @@ function StructureTab({ series, sections, onChange, onSectionsChange, seriesId, 
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
             <label style={{ ...labelStyle, marginBottom: 0 }}>Structural Outline</label>
             <SecondaryButton size="sm" onClick={generateOutline} disabled={aiLoading === "outline"}>
-              {aiLoading === "outline" ? "Generating…" : "✦ Generate"}
+              {aiLoading === "outline" ? "Thinking…" : "✦ Generate"}
             </SecondaryButton>
           </div>
           <p style={{ fontSize: "13px", color: "var(--ink-ghost)", marginBottom: "8px" }}>
@@ -1392,7 +1392,7 @@ function SlotRow({ slot, index, onChange, onDelete, onCommit, commitError, onCle
                 onClick={handleAssist}
                 disabled={assistLoading}
               >
-                {assistLoading ? "Assisting…" : "Assist"}
+                {assistLoading ? "Thinking…" : "Assist"}
               </SecondaryButton>
             </div>
             <textarea
@@ -2190,7 +2190,7 @@ function StudyGuideModal({ series, sections, sermons, onClose }) {
           <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
             <SecondaryButton size="sm" onClick={onClose}>Close</SecondaryButton>
             <PrimaryButton onClick={handleExport} disabled={exporting}>
-              {exporting ? "Exporting…" : "Export to Word"}
+              {exporting ? "Saving…" : "Export to Word"}
             </PrimaryButton>
           </div>
         </div>

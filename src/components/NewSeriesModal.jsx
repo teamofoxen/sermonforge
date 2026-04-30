@@ -79,7 +79,7 @@ export default function NewSeriesModal({ onClose, onCreated }) {
             onClick={handleCreate}
             disabled={!title.trim() || saving}
           >
-            {saving ? "Creating…" : "Create Series"}
+            {saving ? "Saving…" : "Create Series"}
           </PrimaryButton>
         </div>
       </div>

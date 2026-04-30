@@ -4,6 +4,8 @@ import { formatDate } from "../utils";
 import DeleteButton from "./DeleteButton";
 import InlineError from "./InlineError";
 import { SERMON_STATUS } from "../core/contracts";
+import EmptyState from "./primitives/EmptyState";
+import LoadingState from "./primitives/LoadingState";
 
 export default function Archive({ onOpenSermon }) {
   const [sermons, setSermons] = useState([]);
@@ -52,15 +54,15 @@ export default function Archive({ onOpenSermon }) {
         </div>
 
         {loading ? (
-          <div style={{ color: "var(--ink-ghost)", fontStyle: "italic" }}>Loading…</div>
+          <LoadingState />
         ) : loadError ? (
           <div style={{ padding: "40px 0", display: "flex", justifyContent: "center" }}>
             <InlineError>Could not load archived sermons.</InlineError>
           </div>
         ) : filtered.length === 0 ? (
-          <div style={{ color: "var(--ink-ghost)", fontStyle: "italic", padding: "40px 0", textAlign: "center" }}>
-            {search ? "No archived sermons match your search." : "No archived sermons yet."}
-          </div>
+          <EmptyState
+            title={search ? "No archived sermons match your search." : "No archived sermons yet."}
+          />
         ) : (
           <div className="sermon-grid">
             {filtered.map((sermon) => (

@@ -5,6 +5,8 @@ import NewSermonModal from "./NewSermonModal";
 import DeleteButton from "./DeleteButton";
 import { SERMON_STATUS, SERMON_STATUS_LABELS } from "../core/contracts";
 import PrimaryButton from "./primitives/PrimaryButton";
+import EmptyState from "./primitives/EmptyState";
+import LoadingState from "./primitives/LoadingState";
 
 const SERMON_STATUS_VALUES = [SERMON_STATUS.InProgress, SERMON_STATUS.Complete];
 
@@ -61,11 +63,9 @@ export default function SermonList({ onOpenSermon }) {
         </div>
 
         {loading ? (
-          <div style={{ color: "var(--ink-ghost)", fontStyle: "italic" }}>Loading…</div>
+          <LoadingState />
         ) : filtered.length === 0 ? (
-          <div style={{ color: "var(--ink-ghost)", fontStyle: "italic", padding: "40px 0", textAlign: "center" }}>
-            No sermons found.
-          </div>
+          <EmptyState title="No sermons found." />
         ) : (
           <div className="sermon-grid">
             {filtered.map((sermon) => (

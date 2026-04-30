@@ -228,7 +228,7 @@ export default function App() {
             onClick={handleRetryFlush}
             disabled={retrying}
           >
-            {retrying ? "Retrying…" : "Retry"}
+            {retrying ? "Saving…" : "Retry"}
           </PrimaryButton>
           <SecondaryButton
             size="sm"

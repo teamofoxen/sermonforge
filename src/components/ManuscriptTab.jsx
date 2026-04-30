@@ -317,7 +317,7 @@ export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading, onOpe
           onClick={runTuneUp}
           disabled={aiLoading || !hasContent}
         >
-          {aiLoading ? "Running…" : "Final Tune-Up"}
+          {aiLoading ? "Thinking…" : "Final Tune-Up"}
         </PrimaryButton>
         <SecondaryButton
           size="sm"
@@ -326,7 +326,7 @@ export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading, onOpe
           onClick={handleExport}
           disabled={exporting || !hasContent}
         >
-          {exporting ? "Exporting…" : "Export to Word"}
+          {exporting ? "Saving…" : "Export to Word"}
         </SecondaryButton>
       </div>
       {exportError && (

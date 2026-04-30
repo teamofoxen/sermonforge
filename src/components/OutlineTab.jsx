@@ -209,7 +209,7 @@ export default function OutlineTab({ sermon, onUpdate, onTabChange, studySummari
             disabled={suggestLoading || reviewLoading || outlineChatLoading}
             onClick={handleSuggestOutline}
           >
-            {suggestLoading ? "Generating…" : "Suggest Outline"}
+            {suggestLoading ? "Thinking…" : "Suggest Outline"}
           </SecondaryButton>
           {outline.length > 0 && (
             <SecondaryButton
@@ -217,7 +217,7 @@ export default function OutlineTab({ sermon, onUpdate, onTabChange, studySummari
               disabled={reviewLoading || suggestLoading || outlineChatLoading}
               onClick={handleReviewOutline}
             >
-              {reviewLoading ? "Reviewing…" : "Review Outline"}
+              {reviewLoading ? "Thinking…" : "Review Outline"}
             </SecondaryButton>
           )}
         </div>
