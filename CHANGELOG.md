@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-05-01 — chore: bundle /simplify in /sweep-the-house + permission allowlist
+
+- Bundle `/simplify` into `/sweep-the-house` as a report-only Part 2 — no fixes applied without explicit user approval.
+- Add Contract Test (four questions tied to The Framework in `docs/CORE.md`) and `CONTRACTS:` output block to the sweep skill.
+- Add 9-entry permission allowlist to `.claude/settings.json` — Claude Preview MCP read tools (`preview_console_logs`, `preview_snapshot`, `preview_list`, `preview_screenshot`, `preview_logs`, `preview_start`, `preview_stop`) plus exact-form `Bash(npm run lint)` and `Bash(npm test)`.
+
+---
+
 ## 2026-05-01 — docs: Beta Testing Initiative (BTI) charter
 
 - Added `docs/PROPOSALS/beta-testing-initiative.md` as the authoritative testing strategy for the closed pastor-friend beta.

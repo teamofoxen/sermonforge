@@ -48,6 +48,18 @@ Deeper diff audit for SermonForge. Controlled scope.
 - Adding sermon fields without updating SERMON_COLUMNS
 - Breaking createOutlinePoint() as the sole outline point constructor
 - Routing AI-sourced patterns to phrasePatterns instead of aiPhrasePatterns
+- Weakening any clause in The Framework (`docs/CORE.md` → "The Framework")
+
+## CONTRACT TEST (binding — `docs/CORE.md` → "The Framework")
+
+Every diff must pass The Test. Run these four questions against the diff:
+
+1. **Which contracts does it touch?** Name them by clause number (e.g. State #3, Mutation #1, Surface #4).
+2. **Does it strengthen or weaken each one?** A change that weakens a contract clause to ship a feature is a HIGH-severity finding and a `FAIL`.
+3. **Does it preserve the Principle (Clarity through Constraint)?** Any change that lets the system substitute for the user's clarity work is a Principle violation — HIGH severity, `FAIL`.
+4. **If it conflicts with an existing clause, which is wrong?** Surface the conflict in findings; do not silently resolve in code.
+
+Add a `CONTRACTS:` block to the output enumerating touched clauses with verdict (strengthens / weakens / neutral). Empty block when the diff doesn't touch contract surfaces.
 
 ## LOWER PRIORITY
 
@@ -56,18 +68,34 @@ Deeper diff audit for SermonForge. Controlled scope.
 
 ## OUTPUT FORMAT
 
+### Part 1 — Sweep Report
+
 STATUS: PASS | WARN | FAIL
 
 SUMMARY: 1-2 sentences
 
+CONTRACTS:
+- <clause> — <strengthens | weakens | neutral> — <one-line why>
+(or "none touched" when the diff doesn't reach contract surfaces)
+
 FINDINGS:
 - [Severity: LOW | MEDIUM | HIGH] issue - file - why it matters - fix (short, no rewrites)
 
+### Part 2 — Simplify Pass
+
+After emitting Part 1, invoke `/simplify` on the same diff via the Skill tool with explicit scope: **REPORT FINDINGS ONLY. Do NOT apply fixes.**
+
+Append its output below Part 1 under the heading `SIMPLIFY PASS`. If `/simplify` returns no findings, emit `SIMPLIFY PASS: nothing to simplify.` and stop.
+
+The user decides whether to act on simplify findings — never edit code in this skill.
+
 ## HARD RULES
 
-- Max 250 words
+- Sweep portion (Part 1) max 300 words; Simplify portion (Part 2) governed by /simplify's own limits
 - No full-repo scanning
 - No embeddings or broad search
 - No large refactors
 - No speculation
 - Stay grounded in the diff
+- Any contract weakening or Principle violation forces `FAIL` regardless of other findings
+- Simplify Pass is REPORT-ONLY. No fixes applied without explicit user approval (per Audit Workflow rule).
