@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-01 — docs: Beta Testing Initiative (BTI) charter
+
+- Added `docs/PROPOSALS/beta-testing-initiative.md` as the authoritative testing strategy for the closed pastor-friend beta.
+- Two co-equal failure-mode anchors (AI invasiveness and workflow-fit), each with felt/behavioral/theological-or-integration layers.
+- Three feedback tiers (in-app flag, pop-out form, async interview) plus continuous Layer 0 telemetry; theological frame check method via opt-in pre/mid/close writing samples.
+- Names friend-cohort downsides (pulled punches, loyalty over-engagement, soft-pedaled invasiveness) with explicit design responses; commits cohort-reading rules pre-data.
+- Q1/Q2/Q5/Q9 set as Phase 0 → Phase 1 gate; Q7 reframed as cohort-feasibility ruling spanning scale, cadence, and active-cohort floor; tester attrition policy and feedback-to-action pathway promoted into the body.
+
+---
+
 ## 2026-05-01 — docs: AI Clarity & Constraint task tracker
 
 - Added 26-item AI remediation tracker at `docs/PROPOSALS/ai-clarity-and-constraint.md` from a 17-agent audit of the AI subsystem.
