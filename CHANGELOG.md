@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-01 — docs: AI Clarity & Constraint task tracker
+
+- Added 26-item AI remediation tracker at `docs/PROPOSALS/ai-clarity-and-constraint.md` from a 17-agent audit of the AI subsystem.
+- Tier A leads with sermon-switch cancellation, proposal-pattern coverage for six direct-write paths, JSON output validation, and differentiated error messages.
+- Seven items blocked on product-owner rulings (Q1–Q7); Items 16 and 26 cannot start without rulings.
+- Item 2 is the umbrella for SPRD Q5 (Synthesize and Compile direct writes) plus four more direct-write paths.
+- No implementation has begun; doc is operational tracker, not charter.
+
+---
+
 ## 2026-05-01 — fix: Vocabulary cleanup follow-up (two missed references)
 
 - AI Compile button's user-message header in `StudyTab.jsx` updated: "Personal application:" → "Personal implications:" (lowercase grep miss in the prior pass).
