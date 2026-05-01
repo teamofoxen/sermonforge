@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-04-30 — feat: SFDI initiative + Process #6 (Study throughline is structural)
+
+- SPRD planning document landed; Q1 ruled sub-phase and step transitions become real recorded movements through the spine.
+- SPRD paused pending SFDI after surfacing that the fields inside each sub-phase need definitions and flow before SPRD's content-level questions resolve.
+- New initiative scoped: Study Field Definition Initiative (SFDI); charter at `docs/PROPOSALS/sfdi-charter.md`.
+- New Process Contract #6 in `docs/CORE.md`: "The Study throughline is structural" — binds integrity, not field count; activates when SFDI ships first entries.
+- New Canonical Vocabulary section in `docs/CORE.md`; `docs/ENFORCEMENT_STATUS.md` updated with Process #6 row, SFDI deferred section, Summary "Inactive" layer.
+
+---
+
 ## 2026-04-30 — feat: TextButton primitive — CTA primitive set complete + audit triage closed
 
 - New `<TextButton>` primitive at `src/components/primitives/TextButton.tsx` with `.btn-text` CSS class; six tertiary text-link buttons migrated (Dashboard guided-tour, Sidebar Send-feedback, workspace + planner "How this works", planner Study Guide, tour overlay "Leave tour").

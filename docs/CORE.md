@@ -57,6 +57,39 @@ When contracts appear to conflict, this resolves it:
 - Surface derives from all three. Surfaces *express* what the contracts permit.
   Surfaces never *invent*.
 
+### Canonical Vocabulary
+
+Terms used by the contracts below. Code, docs, and contract clauses bind to
+these names. (See State Contract clause 5: *one name per concept*.)
+
+- **Stage** — one of Study, Blueprint, Manuscript, Delivery. Tracked as
+  `current_stage` on every sermon.
+- **Step** — within Study only: Exegesis, MPT/MPS, Outline, Functional
+  Elements. Tracked as `current_step`.
+- **Sub-phase** — within Exegesis only: Observe, Interpret, Redemptive Thread,
+  Implications. Tracked as `current_sub_phase`.
+- **Boundary** — the transition point between two adjacent values at the same
+  level. *Stage boundary* (e.g., Study → Blueprint). *Step boundary* (e.g.,
+  Exegesis → MPT/MPS). *Sub-phase boundary* (e.g., Observe → Interpret).
+- **Field** — a single question-and-answer pair the pastor works inside a
+  sub-phase, persisted as a JSON key inside that sub-phase's database column.
+  Engineering-side terms (*column*, *key*, *slot*) remain available; contract
+  language uses *field*.
+- **Named outcome** — the artifact each sub-phase produces, named explicitly:
+  the Observation Set (Observe), the Interpretation Set (Interpret), the
+  Christ-Connection Statement (Redemptive Thread), the Implications Synthesis
+  (Implications). One named outcome per sub-phase.
+- **Handoff** — what passes from one sub-phase's named outcome into the
+  opening of the next sub-phase.
+- **Throughline** — the line of deepening exegetical work that runs through a
+  sub-phase's fields and across sub-phase boundaries, producing the named
+  outcomes that compose into a preaching foundation strong enough to support
+  the Main Preaching Thought (MPT) and Main Preaching Statement (MPS).
+- **Pastoral Context (PC)** — three sermon-level fields: The Cultural Moment
+  (`background_noise`), The Room (`audience_assumptions`), The Sermon's Work
+  (`topic_theme`). Persistence column names follow engineering-side spelling;
+  contract language uses the human names.
+
 ### 1. State Contract — what exists, and where am I in it
 
 1. **The series is the primary planning unit. The sermon is the atomic unit of
@@ -103,6 +136,17 @@ When contracts appear to conflict, this resolves it:
 5. **AI augments, never substitutes.** AI runs on user evidence. There is no AI
    operation that produces sermon content from zero user input. Compressed paths
    that bypass user evidence are forbidden under this contract.
+6. **The Study throughline is structural.** Each Study sub-phase produces a
+   named outcome by way of a throughline that runs through its fields and
+   crosses each sub-phase boundary by handoff. The throughline must be
+   coherent: every field contributes; every named outcome is built from the
+   field-work that precedes it; every handoff is explicit. The pedagogical
+   content — number of fields, wording, exact named-outcome text — may evolve.
+   The structural integrity — that the throughline exists, holds, and produces
+   the named outcomes it claims — does not. The canonical articulation of
+   fields, named outcomes, and handoffs lives in the Study Field Definition
+   Initiative document; this clause activates when that document ships its
+   first per-field entries.
 
 ### 3. Mutation Contract — what happens when something changes
 
