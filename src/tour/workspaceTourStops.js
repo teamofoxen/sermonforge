@@ -173,7 +173,7 @@ export const WORKSPACE_TOUR_STOPS = [
     prerequisites: { ...STUDY_BASE, studyStep: 1, studySubPhase: 4 },
   },
   {
-    id: "personal-application",
+    id: "personal-implications",
     anchorId: "implications-personal",
     title: "Personal Implications.",
     body: "Eight angles — examples to follow, commands to keep, errors to avoid, sins to forsake, gospel promises to claim, new thoughts about God, doctrines to explore, convictions to live by. Most sermons go thin at application; this is where you get ahead of that.",

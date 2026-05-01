@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-05-01 — fix: Vocabulary cleanup follow-up (two missed references)
+
+- AI Compile button's user-message header in `StudyTab.jsx` updated: "Personal application:" → "Personal implications:" (lowercase grep miss in the prior pass).
+- Tour stop ID `personal-application` → `personal-implications` in `workspaceTourStops.js` for vocabulary consistency; tour iterates by index, not by ID, so no persistence breakage.
+
+---
+
 ## 2026-05-01 — feat: Vocabulary cleanup pass (PI → PC, Applications → Implications)
 
 - UI labels renamed: "Possible Applications" → "Possible Implications" in `studyFields.js`; "Personal Application" → "Personal Implications" in StudyTab group header and tour stops; tour stop "Pastoral Intelligence." → "Pastoral Context."

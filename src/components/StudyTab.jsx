@@ -907,7 +907,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                           .join("\n");
                         const unb = impData[IMPLICATIONS_UNBELIEVER_KEY]?.trim() || "";
                         const resp = await sendAIMessage(
-                          [{ role: "user", content: `Passage: ${sermon.passage || "unknown"}\n\nTheological significance:\n${theo || "(none)"}\n\nPersonal application:\n${pers || "(none)"}\n\nImplications for unbelievers:\n${unb || "(none)"}\n\nCompile all of these into a single consolidated list of implications. Each item should be one clear, actionable sentence. Group naturally but don't repeat. Include both theological and practical implications.` }],
+                          [{ role: "user", content: `Passage: ${sermon.passage || "unknown"}\n\nTheological significance:\n${theo || "(none)"}\n\nPersonal implications:\n${pers || "(none)"}\n\nImplications for unbelievers:\n${unb || "(none)"}\n\nCompile all of these into a single consolidated list of implications. Each item should be one clear, actionable sentence. Group naturally but don't repeat. Include both theological and practical implications.` }],
                           "You are a homiletics consultant helping a pastor compile a master list of sermon implications. Every item must be grounded in the text, gospel-rooted, and congregation-facing."
                         );
                         if (resp?.trim()) {
