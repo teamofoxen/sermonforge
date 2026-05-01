@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-01 — feat: PC vision verbatim + Process #4 sharpening + SFDI anchors
+
+- Captured PC vision verbatim in `docs/SYSTEMS/sermon-workspace.md` under new "The Study throughline" section; "Pastoral Intelligence Card" section replaced with "The Pastoral Context card (interim)" naming the always-on card as the anti-pattern the throughline replaces.
+- Process Contract #4 sharpened in `docs/CORE.md`: "follows the text" → "is driven by the text" matching PC vision's directional language.
+- SFDI charter gains "Theological anchors" (Possible Applications as PC's first surfacing; Implications as three-way conversation), "What completion looks like" (experiential / artifact / enforcement / downstream tests), and "Pre-walkthrough cleanup pass" (PI→PC and Applications→Implications).
+- SPRD Q7 partially answered: restructure Implications as one step with PC as one of three voices, not split; details resolve through SFDI's Implications walkthrough.
+- `docs/ENFORCEMENT_STATUS.md` updated for the Process #4 wording sharpening; Last-verified date 2026-05-01.
+
+---
+
 ## 2026-04-30 — feat: SFDI initiative + Process #6 (Study throughline is structural)
 
 - SPRD planning document landed; Q1 ruled sub-phase and step transitions become real recorded movements through the spine.

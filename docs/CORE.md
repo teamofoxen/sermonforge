@@ -125,8 +125,8 @@ these names. (See State Contract clause 5: *one name per concept*.)
 3. **Movement is a visible event.** "Continue" is movement, and movement is
    never silent. If movement triggers an AI summary, the user sees both the
    movement and the summary as discrete events.
-4. **Pastoral Context follows the text, not the other way around.** The text
-   speaks first. Pastoral Context is a canonical artifact of every sermon,
+4. **Pastoral Context is driven by the text, not the other way around.** The
+   text speaks first. Pastoral Context is a canonical artifact of every sermon,
    but it does not precede engagement with the text and is not a prerequisite
    for entering Study. PC enters Study progressively as the pastor's
    understanding of the text deepens — introduced as awareness during Observe,

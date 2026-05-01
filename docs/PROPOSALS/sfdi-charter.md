@@ -16,6 +16,18 @@ SFDI exists to fix that. It is content work, not code work. The walkthrough is t
 
 ---
 
+## Theological anchors
+
+SFDI's walkthrough is grounded in the Pastoral Context (PC) vision articulated by the product owner during SPRD planning and captured verbatim in `docs/SYSTEMS/sermon-workspace.md` under "The Study throughline." That vision is the canonical statement of what SFDI is producing. Two field-level commitments flow directly from it and bind the walkthrough work:
+
+**1. Observe ends with the field that first surfaces PC into the awareness layer.** Today named "Possible Applications" (pending rename to "Possible Implications" as part of the Vocabulary cleanup pass — see below), this field is where the pastor begins to think pastorally without yet leaving the text. SFDI's walkthrough of Observe must honor that role: the field's definition, intent, and handoff into Interpret all express the awareness-layer entry of PC.
+
+**2. Implications is a three-way conversation between Theological Significance, Personal Application, and PC.** Not three parallel groups of fields. PC is one of the three voices, integrated, not orphaned to a top-of-workspace card. SFDI's walkthrough of Implications must concretely articulate this conversation as fields and flow. The named outcome of Implications — the Implications Synthesis — is the integrated form of that conversation. PC's substance gets resolved here, not at MPT/MPS.
+
+The directional principle underneath both: **the text drives the sermon toward Pastoral Context, not the other way around.** Exegesis exists to keep the text speaking first; PC is what the text drives the pastor toward, not what drives the text. SFDI walks fields with this directionality in view.
+
+---
+
 ## What SFDI will produce
 
 Three layers of definition, walked in this order:
@@ -25,6 +37,22 @@ Three layers of definition, walked in this order:
 3. **Flow between sub-phases.** At each sub-phase boundary, a pass on how this sub-phase's outputs hand off to the next. At the end of all four, a final pass on the whole arc — from the first Observe field to the moment the pastor enters MPT/MPS — to verify the through-line feels earned.
 
 The final SFDI document will gather all three layers into one place. It is not pre-structured; it accumulates as the walkthrough proceeds, and the document's shape gets named when enough has been built to know what shape fits.
+
+---
+
+## What completion looks like
+
+The test of SFDI completion isn't a length target or a parser check. It's experiential. Here's what we should see when the walkthrough is done.
+
+**For the pastor.** Opening a sermon and working Observe → Interpret → Redemptive Thread → Implications → MPT/MPS reads as a single deepening exegetical work, not four stapled worksheets. Each sub-phase's fields read as an ordered sequence where each one sets up the next. At the end of each sub-phase, the pastor walks away with a named outcome they can trace back to the field-work that produced it. The handoff into the next sub-phase is felt — the prior outcome is the substrate the next work builds on, not just an AI bullet summary at the top. By the time MPT/MPS opens, the foundation has been earned: the main point doesn't need to reach back into raw worksheet content because the named outcomes of the four sub-phases are themselves substantive.
+
+**For the artifact.** The SFDI document holds an entry for every field in every sub-phase (name, intent, what gets written, role in sub-phase, connects from, connects to); a flow declaration per sub-phase (named outcome + ordered field sequence + how the field-work composes into the outcome); and a handoff articulation at each sub-phase boundary. The document reads narratively, not as a spec sheet. A pastor or another developer could read it cover-to-cover and understand the entire exegetical pedagogy SermonForge encodes.
+
+**For the enforcement layer.** Process Contract #6 activates. The clause is no longer "drafted but inactive" — it has substance to bind to. An automated check parses the SFDI document and validates the visible scaffolding: every field declares its connections, every sub-phase declares its named outcome, every boundary names its handoff. The throughline's substantive integrity — does each field actually contribute, does each named outcome follow from the field-work, does the handoff actually carry — binds the writer; the mechanical part is evidence, the spirit is the contract.
+
+**For downstream initiatives.** SPRD wakes up. Its content-level sections (artifact framing, evidence sufficiency, the open questions partially answered by the PC articulation) get a revision pass against the SFDI definitions. Then SPRD lands. Then implementation begins — the spine routing, the visibility events, the proposal-pattern fixes for Synthesize and Compile, the Pastoral Context card removal, the AI-prompt PC unwiring. PC's substance flows downstream through the named outcomes; explicit AI-PC tier wiring becomes unnecessary.
+
+**The qualitative test.** Each element feels earned. If we don't feel it in the doc, the pastor won't feel it in the workspace. The throughline's integrity is the contract; we're done when the throughline is real.
 
 ---
 
@@ -41,6 +69,22 @@ The final SFDI document will gather all three layers into one place. It is not p
 ## Scope reality
 
 This is large. Roughly 40 fields across four sub-phases need walkthrough entries, plus four within-sub-phase flow passes and three or four between-sub-phase flow passes. There is no time pressure; SFDI proceeds at the cadence the product owner sets. A session covers however many fields make sense for that session.
+
+---
+
+## Pre-walkthrough cleanup pass
+
+Before SFDI's first walkthrough session, a small **Vocabulary cleanup pass** lands to consolidate two State Contract #5 ("one name per concept") drifts surfaced during scoping:
+
+**1. PI → PC.** The user-facing surface (workspace card label, AI prompt strings, the new `CORE.md` Canonical Vocabulary section) already says "Pastoral Context"; the documentation layer (`docs/SYSTEMS/sermon-workspace.md`, `docs/REFERENCE/schema.md`, `docs/REFERENCE/project-structure.md`, `docs/SYSTEMS/context-pipeline.md`, `CLAUDE.md`) and code internals (variable names `piBlock`/`piParts`/`piLines`, code comments, the workspace tour stop title at `src/tour/workspaceTourStops.js`) still say "Pastoral Intelligence" or "PI." The cleanup pass aligns the doc and code-internal layers to the canonical "Pastoral Context" / "PC."
+
+**2. Applications → Implications.** The vocabulary collision between "Possible Applications" (Observe field label) and "Personal Application" (Implications group label) violates State #5. The cleanup pass renames UI labels: "Possible Applications" → "Possible Implications", "Personal Application" → "Personal Implications". Internal JSON keys (`applications`, etc.) stay; renaming them would require a data migration to backfill existing sermons, which isn't worth it.
+
+**Scope of the cleanup pass:** UI labels, AI prompt strings that mention the labels, doc references, code comments, internal variable names. **Out of scope:** JSON keys, database column names, schema migrations.
+
+**Why before SFDI:** the walkthrough should walk fields under their canonical names, not under names pending change. Discovery during SFDI may surface further changes; this cleanup pass handles the changes already discovered.
+
+**Tracked separately from SFDI** — the cleanup pass has its own session and its own commit. It is not part of any SFDI walkthrough session.
 
 ---
 
