@@ -21,6 +21,7 @@ import PassagePopup from "./PassagePopup";
 import SecondaryButton from "./primitives/SecondaryButton";
 import IconButton from "./primitives/IconButton";
 import BackButton from "./primitives/BackButton";
+import TextButton from "./primitives/TextButton";
 
 // Workspace tabs are Stage values from `src/core/contracts.ts` — single
 // source of truth. Pre-vocabulary-completion the keys were lowercase and
@@ -387,12 +388,9 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpe
 
           <DeleteButton onDelete={handleDelete} />
 
-          <button
-            onClick={() => setShowHowItWorks(true)}
-            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ink-ghost)", fontSize: "12px", padding: "4px 8px", fontFamily: "'Crimson Pro', serif" }}
-          >
+          <TextButton onClick={() => setShowHowItWorks(true)}>
             How this works
-          </button>
+          </TextButton>
           <SecondaryButton
             size="sm"
             data-tour-id="chat-with-ai-button"

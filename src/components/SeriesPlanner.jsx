@@ -21,6 +21,7 @@ import PrimaryButton from "./primitives/PrimaryButton";
 import SecondaryButton from "./primitives/SecondaryButton";
 import IconButton from "./primitives/IconButton";
 import BackButton from "./primitives/BackButton";
+import TextButton from "./primitives/TextButton";
 
 
 const CANON_OPTIONS = [
@@ -219,18 +220,18 @@ export default function SeriesPlanner({ seriesId, onClose, onOpenSermon }) {
             </SecondaryButton>
           )}
         </div>
-        <button
+        <TextButton
           onClick={() => setShowHowItWorks(true)}
-          style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ink-ghost)", fontSize: "12px", padding: "4px 8px", fontFamily: "'Crimson Pro', serif", flexShrink: 0 }}
+          style={{ flexShrink: 0 }}
         >
           How this works
-        </button>
-        <button
+        </TextButton>
+        <TextButton
           onClick={() => setShowStudyGuide(true)}
-          style={{ background: "none", border: "none", cursor: "pointer", color: "var(--ink-ghost)", fontSize: "12px", padding: "4px 8px", fontFamily: "'Crimson Pro', serif", flexShrink: 0 }}
+          style={{ flexShrink: 0 }}
         >
           Study Guide
-        </button>
+        </TextButton>
         <SecondaryButton
           size="sm"
           onClick={() => setDrawerOpen(v => !v)}

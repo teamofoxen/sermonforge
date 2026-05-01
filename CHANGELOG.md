@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-04-30 — feat: TextButton primitive — CTA primitive set complete + audit triage closed
+
+- New `<TextButton>` primitive at `src/components/primitives/TextButton.tsx` with `.btn-text` CSS class; six tertiary text-link buttons migrated (Dashboard guided-tour, Sidebar Send-feedback, workspace + planner "How this works", planner Study Guide, tour overlay "Leave tour").
+- TourOverlay "Back" / "Next" migrated to `<SecondaryButton>` / `<PrimaryButton>` with new `.btn-ghost-dark` className override; password-toggle (`SetupScreen`) and × dismiss (`StudyTab`) migrated to `<IconButton>`.
+- Lint `no-raw-button` baseline drops 15 → 5; the residual 5 are tab/pill navigation elements (not CTAs) and are outside Surface #2's scope — a future `<TabButton>`/`<NavButton>` is sequel hygiene, not contract-driven.
+- `docs/ENFORCEMENT_STATUS.md` updated: Surface #2 + #3 promoted to structural-primary, Summary table re-tallied to 16 structural / 2 test / 3 lint / 0 unenforced + 6 sub-clause portions named-deferred to specific successors (Phase 4, Phase 6, SPRD).
+- Audit triage initiative closed; 5 primary pilots (C/D/E/B.2/B.3) + 4 deferred-bucket items shipped; system documented as ready for ~30-tester onboarding.
+
+---
+
 ## 2026-04-30 — feat: vocabulary completion — view-keys + tab-keys to canonical PascalCase
 
 - New `VIEW.*` enum in `src/core/contracts.ts`; App.jsx + Sidebar.jsx migrated; Surface #4 test parser accepts `VIEW.<Name>` references alongside literal strings.

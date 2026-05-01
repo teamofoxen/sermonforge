@@ -4,6 +4,7 @@ import { VIEW } from "../core/contracts";
 import NewSermonModal from "./NewSermonModal.jsx";
 import FeedbackModal from "./FeedbackModal.jsx";
 import IconButton from "./primitives/IconButton";
+import TextButton from "./primitives/TextButton";
 
 const NAV_ITEMS = [
   {
@@ -254,21 +255,12 @@ export default function Sidebar({ currentView, onNavigate, onOpenSermon, onOpenS
             {theme === "dark" ? "☀" : "☾"}
           </IconButton>
         </div>
-        <button
+        <TextButton
           onClick={() => setShowFeedback(true)}
-          style={{
-            background: "none",
-            border: "none",
-            padding: "4px 0 0",
-            cursor: "pointer",
-            fontFamily: "'Crimson Pro', serif",
-            fontSize: 12,
-            color: "var(--ink-ghost)",
-            textDecoration: "none",
-          }}
+          style={{ padding: "4px 0 0" }}
         >
           Send feedback
-        </button>
+        </TextButton>
       </div>
 
       {showFeedback && (

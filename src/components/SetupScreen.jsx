@@ -2,6 +2,7 @@ import { useState } from "react";
 import { saveApiKeys } from "../db/database";
 import InlineError from "./InlineError";
 import PrimaryButton from "./primitives/PrimaryButton";
+import IconButton from "./primitives/IconButton";
 
 const SECTION = {
   borderTop: "1px solid var(--parchment-deep)",
@@ -50,18 +51,18 @@ function KeyInput({ value, onChange, placeholder }) {
           outline: "none",
         }}
       />
-      <button
-        type="button"
+      <IconButton
+        aria-label={show ? "Hide API key" : "Show API key"}
         onClick={() => setShow(v => !v)}
         style={{
           position: "absolute", right: "10px", top: "50%",
           transform: "translateY(-50%)",
-          background: "none", border: "none", cursor: "pointer",
+          background: "none", border: "none",
           color: "var(--ink-ghost)", fontSize: "12px", padding: "2px 4px",
         }}
       >
         {show ? "hide" : "show"}
-      </button>
+      </IconButton>
     </div>
   );
 }

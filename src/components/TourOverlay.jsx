@@ -1,6 +1,9 @@
 import { useEffect, useState, useLayoutEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import { useTour } from "../contexts/TourContext";
+import PrimaryButton from "./primitives/PrimaryButton";
+import SecondaryButton from "./primitives/SecondaryButton";
+import TextButton from "./primitives/TextButton";
 
 // Polls the target element's bounding rect on a short interval so the spotlight
 // follows layout changes (tab switches, accordion opens, scroll). Cheap — a few
@@ -190,57 +193,31 @@ export default function TourOverlay() {
         </div>
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
-          <button
+          <TextButton
             onClick={leave}
-            style={{
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              color: "var(--parchment)",
-              opacity: 0.65,
-              fontFamily: "'Crimson Pro', serif",
-              fontSize: "13px",
-              padding: "4px 0",
-              textDecoration: "underline",
-            }}
+            className="btn-text-dark"
+            style={{ fontSize: "13px", padding: "4px 0" }}
           >
             Leave tour
-          </button>
+          </TextButton>
 
           <div style={{ display: "flex", gap: "8px" }}>
             {index > 0 && (
-              <button
+              <SecondaryButton
+                size="sm"
                 onClick={prev}
-                style={{
-                  background: "transparent",
-                  border: "1px solid rgba(255,255,255,0.2)",
-                  borderRadius: "var(--radius)",
-                  cursor: "pointer",
-                  color: "var(--parchment)",
-                  fontFamily: "'Crimson Pro', serif",
-                  fontSize: "13px",
-                  padding: "6px 14px",
-                }}
+                className="btn-ghost-dark"
               >
                 Back
-              </button>
+              </SecondaryButton>
             )}
-            <button
+            <PrimaryButton
+              size="sm"
               onClick={next}
-              style={{
-                background: "var(--gold)",
-                border: "none",
-                borderRadius: "var(--radius)",
-                cursor: "pointer",
-                color: "var(--ink)",
-                fontFamily: "'Crimson Pro', serif",
-                fontWeight: 700,
-                fontSize: "13px",
-                padding: "6px 16px",
-              }}
+              style={{ fontWeight: 700 }}
             >
               {isLast ? "Finish" : "Next"}
-            </button>
+            </PrimaryButton>
           </div>
         </div>
       </div>

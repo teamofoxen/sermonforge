@@ -1347,14 +1347,15 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                   gap: "6px",
                 }}>
                   {populateScriptureMessage.text}
-                  <button
+                  <IconButton
+                    aria-label="Dismiss message"
                     onClick={() => setPopulateScriptureMessage(null)}
                     style={{
-                      background: "transparent", border: "none", cursor: "pointer",
+                      background: "transparent", border: "none",
                       color: "var(--ink-ghost)", fontSize: "14px", lineHeight: 1, padding: 0,
                     }}
                     title="Dismiss"
-                  >×</button>
+                  >×</IconButton>
                 </span>
               )}
             </div>

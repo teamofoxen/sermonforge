@@ -346,6 +346,49 @@ button {
   font-size: 13px;
 }
 
+.btn-text {
+  background: none;
+  color: var(--ink-ghost);
+  padding: 4px 8px;
+  font-size: 12px;
+  border: none;
+}
+
+.btn-text:hover:not(:disabled) {
+  color: var(--ink);
+  text-decoration: underline;
+}
+
+.btn-text:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Dark-theme variants — used by the tour overlay callout, which renders
+   on a dark ink background. Override colors only; layout is unchanged. */
+.btn-text-dark {
+  color: var(--parchment);
+  opacity: 0.65;
+  text-decoration: underline;
+}
+
+.btn-text-dark:hover:not(:disabled) {
+  color: var(--parchment);
+  opacity: 1;
+}
+
+.btn-ghost-dark {
+  background: transparent;
+  color: var(--parchment);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.btn-ghost-dark:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--parchment);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
 
 
 /* ── Stage dropdown ──────────────────────────────────────────────────────── */

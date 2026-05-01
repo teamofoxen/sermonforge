@@ -6,6 +6,7 @@ import NewSermonModal from "./NewSermonModal";
 import DashboardHeader from "./DashboardHeader";
 import DashboardChurchHistory from "./DashboardChurchHistory";
 import PrimaryButton from "./primitives/PrimaryButton";
+import TextButton from "./primitives/TextButton";
 import { formatDate } from "../utils";
 
 function ArrowRightIcon() {
@@ -102,8 +103,7 @@ export default function Dashboard({ onOpenSermon, onNewSeries, onLeaveTour }) {
                 >
                   Build sermon <ArrowRightIcon />
                 </PrimaryButton>
-                <button
-                  type="button"
+                <TextButton
                   className="tile-meta tile-meta-button"
                   onClick={(e) => {
                     e.stopPropagation();
@@ -112,7 +112,7 @@ export default function Dashboard({ onOpenSermon, onNewSeries, onLeaveTour }) {
                   disabled={tourLoading}
                 >
                   {tourLoading ? "Loading…" : "or take the guided tour →"}
-                </button>
+                </TextButton>
               </div>
             </div>
 
