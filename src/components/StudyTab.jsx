@@ -356,13 +356,13 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
       const hasBackground = sermon.background_noise?.trim();
       const hasAudience = sermon.audience_assumptions?.trim();
       const hasTheme = sermon.topic_theme?.trim();
-      const piBlock = (hasBackground || hasAudience || hasTheme) ? `\n\nPastoral Context:\n${[
+      const pcBlock = (hasBackground || hasAudience || hasTheme) ? `\n\nPastoral Context:\n${[
         hasBackground && `The Cultural Moment (the world the congregation lives in): ${hasBackground}`,
         hasAudience && `The Room (who is in the room and where they are): ${hasAudience}`,
         hasTheme && `The Sermon's Work (the big claim and pastoral purpose): ${hasTheme}`,
       ].filter(Boolean).join("\n")}` : "";
       const resp = await sendAIMessage(
-        [{ role: "user", content: `Passage: ${sermon.passage || "unknown"}\n\nMPT: ${sermon.mpt}\n\nRedemptive Thread:\n${redThread || "(none)"}\n\nImplications:\n${implications || "(none)"}${piBlock}\n\nDraft a Main Point of the Sermon (MPS). The MPS is a single present-tense sentence. The MPT is the theological anchor — not a template to restate. Do not mirror the MPT's language; ask what it makes possible for these people right now.${piBlock ? " The sermon intro will move the congregation from the cultural world inward through the room to the claim — assume that journey has been made. The MPS does not retrace it. The MPS lands at The Sermon's Work: telegraph that claim, aimed at who is in the room. The Cultural Moment and The Room inform tone and angle only — they do not need to appear in the sentence. When drawing on the pastoral context, express the underlying human condition in universal terms (e.g., fear, control, guilt, pride), not situational or cultural descriptors. If the MPT has sequential movements, render them as a forward-moving causal chain with one subject and one main verb, using no more than two subordinate clauses." : " If the MPT has sequential movements, render them as a forward-moving causal chain with one subject and one main verb, using no more than two subordinate clauses."} Aim for 35–45 words. Every clause must add meaning; avoid filler connectors used only to reach length. Compress ruthlessly. Return only the sentence.` }],
+        [{ role: "user", content: `Passage: ${sermon.passage || "unknown"}\n\nMPT: ${sermon.mpt}\n\nRedemptive Thread:\n${redThread || "(none)"}\n\nImplications:\n${implications || "(none)"}${pcBlock}\n\nDraft a Main Point of the Sermon (MPS). The MPS is a single present-tense sentence. The MPT is the theological anchor — not a template to restate. Do not mirror the MPT's language; ask what it makes possible for these people right now.${pcBlock ? " The sermon intro will move the congregation from the cultural world inward through the room to the claim — assume that journey has been made. The MPS does not retrace it. The MPS lands at The Sermon's Work: telegraph that claim, aimed at who is in the room. The Cultural Moment and The Room inform tone and angle only — they do not need to appear in the sentence. When drawing on the pastoral context, express the underlying human condition in universal terms (e.g., fear, control, guilt, pride), not situational or cultural descriptors. If the MPT has sequential movements, render them as a forward-moving causal chain with one subject and one main verb, using no more than two subordinate clauses." : " If the MPT has sequential movements, render them as a forward-moving causal chain with one subject and one main verb, using no more than two subordinate clauses."} Aim for 35–45 words. Every clause must add meaning; avoid filler connectors used only to reach length. Compress ruthlessly. Return only the sentence.` }],
         "You are a homiletics consultant helping a pastor crystallize a sermon claim. The MPT is the kernel. The MPS is what it produces aimed at this congregation. The sermon intro will handle the concentric journey — cultural world, then the room, then the threshold. The MPS lands after that journey: it is the claim waiting at the end. Derive it primarily from The Sermon's Work; treat The Sermon's Work as the primary driver of the MPS — all other inputs are subordinate. Let The Cultural Moment and The Room shape tone and angle without appearing in the sentence. Do not restate the MPT. Remain theologically anchored in the MPT without repeating or mirroring its language. Do not retrace the intro. One sentence, one spine, landing at the claim."
       );
       if (resp?.trim()) setMpsProposal(resp.trim());
@@ -376,14 +376,14 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
   async function sendMpsChat() {
     const input = mpsChatInput.trim();
     if (!input || mpsChatLoading) return;
-    const piParts = [
+    const pcParts = [
       sermon.background_noise?.trim() && `The Cultural Moment (the world the congregation lives in): ${sermon.background_noise.trim()}`,
       sermon.audience_assumptions?.trim() && `The Room (who is in the room and where they are): ${sermon.audience_assumptions.trim()}`,
       sermon.topic_theme?.trim() && `The Sermon's Work (the big claim and pastoral purpose): ${sermon.topic_theme.trim()}`,
     ].filter(Boolean);
-    const piBlock = piParts.length > 0 ? `\n\nPastoral Context (concentric — cultural moment → the room → the sermon's work):\n${piParts.join("\n")}` : "";
+    const pcBlock = pcParts.length > 0 ? `\n\nPastoral Context (concentric — cultural moment → the room → the sermon's work):\n${pcParts.join("\n")}` : "";
     const systemContext = `You are a homiletics consultant refining an MPS (Main Point of the Sermon) with a pastor. The MPS must remain a single present-tense sentence that grows from the MPT. When pastoral context is provided, the MPS should move from the outside in: enter the cultural world first, narrow to this specific audience, then land the theological claim. Do not open with the theological answer — earn it. Respond concisely. If suggesting a revised MPS, present it on its own line prefixed with "Revised MPS:" so the pastor can apply it directly.`;
-    const contextPrefix = `Passage: ${sermon.passage || "unknown"}\nMPT: ${sermon.mpt || "(none)"}\nCurrent MPS: ${sermon.mps || "(none)"}${piBlock}\n\n---\n\n`;
+    const contextPrefix = `Passage: ${sermon.passage || "unknown"}\nMPT: ${sermon.mpt || "(none)"}\nCurrent MPS: ${sermon.mps || "(none)"}${pcBlock}\n\n---\n\n`;
     const newUserMsg = { role: "user", content: input };
     const history = [...mpsChat, newUserMsg];
     setMpsChat(history);
@@ -865,7 +865,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
               </div>
 
               <div data-tour-id="implications-personal">
-                <div className="worksheet-group-header">Personal Application</div>
+                <div className="worksheet-group-header">Personal Implications</div>
                 <StructuredWorksheet
                   fields={IMPLICATIONS_PERSONAL}
                   data={impData}

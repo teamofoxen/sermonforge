@@ -67,8 +67,8 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpe
   // siblingIds is the ordered list of sermon IDs in the current sermon's
   // series. Empty array when the sermon has no series.
   const [siblingIds, setSiblingIds] = useState([]);
-  // Pastoral Intelligence card — open when empty, collapsed when filled
-  const [piOpen, setPiOpen] = useState(true);
+  // Pastoral Context card — open when empty, collapsed when filled
+  const [pcOpen, setPcOpen] = useState(true);
   const { active: tourActive, desiredUi } = useTour();
   const pendingIdRef = useRef(0);
 
@@ -83,10 +83,10 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpe
     if (typeof desiredUi.drawerOpen === "boolean" && desiredUi.drawerOpen !== drawerOpen) {
       setDrawerOpen(desiredUi.drawerOpen);
     }
-    if (typeof desiredUi.piOpen === "boolean" && desiredUi.piOpen !== piOpen) {
-      setPiOpen(desiredUi.piOpen);
+    if (typeof desiredUi.pcOpen === "boolean" && desiredUi.pcOpen !== pcOpen) {
+      setPcOpen(desiredUi.pcOpen);
     }
-  }, [tourActive, desiredUi, activeTab, drawerOpen, piOpen]);
+  }, [tourActive, desiredUi, activeTab, drawerOpen, pcOpen]);
   // Mirrors sermon state synchronously so captureMemory never reads a stale closure.
   const sermonRef = useRef(null);
   // Last hash captured — prevents duplicate memory writes when content hasn't changed.
@@ -126,9 +126,9 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpe
         setSermon(data);
         sermonRef.current = data;
         setSiblingIds(Array.isArray(siblings) ? siblings.map(s => s.id) : []);
-        // Auto-collapse PI card if any field already has content
+        // Auto-collapse PC card if any field already has content
         if (data.topic_theme?.trim() || data.audience_assumptions?.trim() || data.background_noise?.trim()) {
-          setPiOpen(false);
+          setPcOpen(false);
         }
         // Restore last active tab across restarts
         const savedTab = localStorage.getItem(`sermonforge_sermon_tab_${sermonId}`);
@@ -420,18 +420,18 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpe
       <div className="workspace-body">
         <div className="workspace-main">
 
-          {/* Pastoral Intelligence orientation card — collapsible */}
+          {/* Pastoral Context orientation card — collapsible */}
           <div className="card" data-tour-id="pastoral-context-card" style={{ margin: "16px 20px 0", padding: "0" }}>
             {/* Header — always visible, click to toggle */}
             <div
-              onClick={() => setPiOpen(v => !v)}
+              onClick={() => setPcOpen(v => !v)}
               style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", cursor: "pointer", userSelect: "none", gap: "12px" }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: "12px", minWidth: 0, flex: 1 }}>
                 <span style={{ fontFamily: "'Playfair Display', serif", fontSize: "10px", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-ghost)", flexShrink: 0 }}>
                   Pastoral Context
                 </span>
-                {!piOpen && (
+                {!pcOpen && (
                   <span style={{ fontSize: "12px", color: "var(--ink-soft)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {[
                       sermon.topic_theme?.trim() && `${sermon.topic_theme.trim().slice(0, 40)}${sermon.topic_theme.trim().length > 40 ? "…" : ""}`,
@@ -442,13 +442,13 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpe
                 )}
               </div>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
-                style={{ transform: piOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s ease", flexShrink: 0, color: "var(--ink-ghost)" }}>
+                style={{ transform: pcOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s ease", flexShrink: 0, color: "var(--ink-ghost)" }}>
                 <polyline points="6 9 12 15 18 9" />
               </svg>
             </div>
 
             {/* Expanded body */}
-            {piOpen && (
+            {pcOpen && (
               <div style={{ padding: "0 16px 14px", borderTop: "1px solid var(--parchment-deep)" }}>
                 {/* Read-only series context — series sermons only */}
                 {sermon.series_id && (sermon.series?.title || sermon.series?.big_idea || sermon.section?.big_idea) && (

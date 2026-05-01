@@ -17,7 +17,7 @@ It returns a formatted string of labeled sections injected as the CONTEXT block 
 
 ### 1. normalizeSermon(sermon)
 Cleans raw sermon data for pipeline consumption. Extracts:
-- `topic_theme`, `audience_assumptions`, `background_noise` (Pastoral Intelligence fields)
+- `topic_theme`, `audience_assumptions`, `background_noise` (Pastoral Context fields)
 - `series_motivation` and `redemptive_context` from `sermon.series` (series-level fields)
 
 ### 2. buildTiers(normalizedSermon, libraryChunks, theologyChunks)
@@ -111,7 +111,7 @@ It detects whether a field contains structured JSON or legacy plain text:
 and why. Silently adding an excluded field to tier 4 would overflow the context budget.
 
 **If modifying the `[THIS SERMON]` tier (tier 7):** also check `docs/SYSTEMS/sermon-workspace.md`
-— the Pastoral Intelligence card section describes the field semantics and the always-on / content-gated
+— the Pastoral Context card (interim) section describes the field semantics and the always-on / content-gated
 rules that govern this tier.
 
 ---

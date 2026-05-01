@@ -164,20 +164,20 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
           // they cause refusals when MPT/MPS are absent and bury the source
           // chunks under unrelated context tiers.
           // Instead: a stripped-down research prompt + sources-only message.
-          // Pastoral Intelligence (tier 7) IS preserved when present, since
+          // Pastoral Context (tier 7) IS preserved when present, since
           // The Cultural Moment / The Room / The Sermon's Work shape *how* the
           // research is read even in free-form mode.
           const sourcesBlock = theologyChunks.join("\n\n");
           const passageLine = sermon?.passage ? `\nPASSAGE: ${sermon.passage}\n` : "";
-          const piLines = [
+          const pcLines = [
             sermon?.background_noise?.trim()     && `The Cultural Moment: ${sermon.background_noise.trim()}`,
             sermon?.audience_assumptions?.trim() && `The Room: ${sermon.audience_assumptions.trim()}`,
             sermon?.topic_theme?.trim()          && `The Sermon's Work: ${sermon.topic_theme.trim()}`,
           ].filter(Boolean);
-          const piBlock = piLines.length > 0
-            ? `\nPASTORAL CONTEXT:\n${piLines.join("\n")}\n`
+          const pcBlock = pcLines.length > 0
+            ? `\nPASTORAL CONTEXT:\n${pcLines.join("\n")}\n`
             : "";
-          userContent = `SOURCES:\n${sourcesBlock}${passageLine}${piBlock}\nQUESTION:\n${text}`;
+          userContent = `SOURCES:\n${sourcesBlock}${passageLine}${pcBlock}\nQUESTION:\n${text}`;
           systemPrompt = THEOLOGY_RESEARCH_PROMPT;
         } else {
           // No hits — fall back to standard context-based path.

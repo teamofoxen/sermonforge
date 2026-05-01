@@ -72,9 +72,9 @@ Current schema version: **13**
 | `post_sermon` | TEXT | |
 | `functional_elements` | TEXT | JSON object `{0:{explanation,application,illustration},...}` — keyed by outline point UUID |
 | `checklist` | TEXT | JSON object keyed by item label `{label:bool,...}` |
-| `topic_theme` | TEXT | Pastoral Intelligence: the doctrine, situation, or felt need |
-| `audience_assumptions` | TEXT | Pastoral Intelligence: who is in the room and what they carry |
-| `background_noise` | TEXT | Pastoral Intelligence: external context (news, events, moment) |
+| `topic_theme` | TEXT | Pastoral Context: the doctrine, situation, or felt need |
+| `audience_assumptions` | TEXT | Pastoral Context: who is in the room and what they carry |
+| `background_noise` | TEXT | Pastoral Context: external context (news, events, moment) |
 | `study_guide_note` | TEXT | Short note orienting congregation readers to how this sermon fits the series arc |
 | `preaching_blocks` | TEXT | CMC (Contour-Mapped Compression) without-notes output; added v8 migration |
 | `manuscript_delivery` | TEXT | AI-formatted delivery manuscript; added v9 migration |

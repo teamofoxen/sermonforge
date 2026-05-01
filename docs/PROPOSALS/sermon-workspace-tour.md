@@ -42,7 +42,7 @@ later effort — do not entangle the two.
   button, understated "Skip tour" link.
 - **Voice:** pastoral, plain, direct. No marketing-speak. Callout text is locked
   — copy verbatim.
-- **PI fields are concentric outside-in:** The Cultural Moment
+- **PC fields are concentric outside-in:** The Cultural Moment
   (`background_noise`) → The Room (`audience_assumptions`) → The Sermon's Work
   (`topic_theme`). The DB column names are unchanged; only the field labels
   and ordering have been updated in the UI.
@@ -109,8 +109,8 @@ how you build outlines, what your MPTs tend to look like, the way you turn
 applications. Adaptive guidance, tuned to you specifically. Not a model being
 trained; your past work, surfaced when relevant.
 
-### Stop 7 — Pastoral Intelligence
-**Pastoral Intelligence.** Three short fields at the top of every tab, ordered
+### Stop 7 — Pastoral Context
+**Pastoral Context.** Three short fields at the top of every tab, ordered
 from outside in: the cultural moment, the room, the sermon's work. They don't
 shape the sermon's content. They shape how the AI talks to you about it.
 
@@ -145,7 +145,7 @@ commanded and what's declared. Get these right and the rest follows.
 
 ### Stop 14 — Phase 1 / Substance
 **What the text shows.** Characters. Big Ideas. The Obvious Point. Basic
-Outline. Possible Applications. Who's in the passage, what themes surface, and
+Outline. Possible Implications. Who's in the passage, what themes surface, and
 the question most pastors skip — is there an obvious point? State it plainly.
 Don't talk yourself out of it.
 
@@ -195,8 +195,8 @@ someone who doesn't believe.
 ourselves, about Christ. Timeless principles. Particular doctrines. What's
 true here that would be true anywhere?
 
-### Stop 23 — Personal Application
-**Personal Application.** Eight angles — examples to follow, commands to keep,
+### Stop 23 — Personal Implications
+**Personal Implications.** Eight angles — examples to follow, commands to keep,
 errors to avoid, sins to forsake, gospel promises to claim, new thoughts about
 God, doctrines to explore, convictions to live by. Most sermons go thin at
 application; this is where you get ahead of that.

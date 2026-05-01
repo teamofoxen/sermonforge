@@ -20,9 +20,9 @@ SFDI exists to fix that. It is content work, not code work. The walkthrough is t
 
 SFDI's walkthrough is grounded in the Pastoral Context (PC) vision articulated by the product owner during SPRD planning and captured verbatim in `docs/SYSTEMS/sermon-workspace.md` under "The Study throughline." That vision is the canonical statement of what SFDI is producing. Two field-level commitments flow directly from it and bind the walkthrough work:
 
-**1. Observe ends with the field that first surfaces PC into the awareness layer.** Today named "Possible Applications" (pending rename to "Possible Implications" as part of the Vocabulary cleanup pass — see below), this field is where the pastor begins to think pastorally without yet leaving the text. SFDI's walkthrough of Observe must honor that role: the field's definition, intent, and handoff into Interpret all express the awareness-layer entry of PC.
+**1. Observe ends with the field that first surfaces PC into the awareness layer.** Named "Possible Implications" (renamed from "Possible Applications" in the Vocabulary cleanup pass — see below), this field is where the pastor begins to think pastorally without yet leaving the text. SFDI's walkthrough of Observe must honor that role: the field's definition, intent, and handoff into Interpret all express the awareness-layer entry of PC.
 
-**2. Implications is a three-way conversation between Theological Significance, Personal Application, and PC.** Not three parallel groups of fields. PC is one of the three voices, integrated, not orphaned to a top-of-workspace card. SFDI's walkthrough of Implications must concretely articulate this conversation as fields and flow. The named outcome of Implications — the Implications Synthesis — is the integrated form of that conversation. PC's substance gets resolved here, not at MPT/MPS.
+**2. Implications is a three-way conversation between Theological Significance, Personal Implications, and PC.** Not three parallel groups of fields. PC is one of the three voices, integrated, not orphaned to a top-of-workspace card. SFDI's walkthrough of Implications must concretely articulate this conversation as fields and flow. The named outcome of Implications — the Implications Synthesis — is the integrated form of that conversation. PC's substance gets resolved here, not at MPT/MPS.
 
 The directional principle underneath both: **the text drives the sermon toward Pastoral Context, not the other way around.** Exegesis exists to keep the text speaking first; PC is what the text drives the pastor toward, not what drives the text. SFDI walks fields with this directionality in view.
 
@@ -74,17 +74,15 @@ This is large. Roughly 40 fields across four sub-phases need walkthrough entries
 
 ## Pre-walkthrough cleanup pass
 
-Before SFDI's first walkthrough session, a small **Vocabulary cleanup pass** lands to consolidate two State Contract #5 ("one name per concept") drifts surfaced during scoping:
+**Status: landed 2026-05-01.** A one-session **Vocabulary cleanup pass** consolidated two State Contract #5 ("one name per concept") drifts surfaced during scoping. SFDI now walks under the canonical names.
 
-**1. PI → PC.** The user-facing surface (workspace card label, AI prompt strings, the new `CORE.md` Canonical Vocabulary section) already says "Pastoral Context"; the documentation layer (`docs/SYSTEMS/sermon-workspace.md`, `docs/REFERENCE/schema.md`, `docs/REFERENCE/project-structure.md`, `docs/SYSTEMS/context-pipeline.md`, `CLAUDE.md`) and code internals (variable names `piBlock`/`piParts`/`piLines`, code comments, the workspace tour stop title at `src/tour/workspaceTourStops.js`) still say "Pastoral Intelligence" or "PI." The cleanup pass aligns the doc and code-internal layers to the canonical "Pastoral Context" / "PC."
+**1. PI → PC.** Before the cleanup, the user-facing surface (workspace card label, AI prompt strings, the new `CORE.md` Canonical Vocabulary section) already said "Pastoral Context"; the documentation layer (`docs/SYSTEMS/sermon-workspace.md`, `docs/REFERENCE/schema.md`, `docs/REFERENCE/project-structure.md`, `docs/SYSTEMS/context-pipeline.md`, `CLAUDE.md`) and code internals (variable names `piBlock`/`piParts`/`piLines`/`piOpen`, code comments, the workspace tour stop title at `src/tour/workspaceTourStops.js`) still said "Pastoral Intelligence" or "PI." The cleanup pass aligned the doc and code-internal layers to the canonical "Pastoral Context" / "PC." Internal variable names became `pcBlock`/`pcParts`/`pcLines`/`pcOpen`.
 
-**2. Applications → Implications.** The vocabulary collision between "Possible Applications" (Observe field label) and "Personal Application" (Implications group label) violates State #5. The cleanup pass renames UI labels: "Possible Applications" → "Possible Implications", "Personal Application" → "Personal Implications". Internal JSON keys (`applications`, etc.) stay; renaming them would require a data migration to backfill existing sermons, which isn't worth it.
+**2. Applications → Implications.** The vocabulary collision between "Possible Applications" (Observe field label) and "Personal Application" (Implications group label) violated State #5. The cleanup pass renamed UI labels: "Possible Applications" → "Possible Implications", "Personal Application" → "Personal Implications". Internal JSON keys (`applications`, etc.) stayed; renaming them would have required a data migration to backfill existing sermons, which wasn't worth it.
 
-**Scope of the cleanup pass:** UI labels, AI prompt strings that mention the labels, doc references, code comments, internal variable names. **Out of scope:** JSON keys, database column names, schema migrations.
+**Scope of the cleanup pass:** UI labels, AI prompt strings that mentioned the labels, doc references, code comments, internal variable names. **Out of scope:** JSON keys, database column names, schema migrations.
 
-**Why before SFDI:** the walkthrough should walk fields under their canonical names, not under names pending change. Discovery during SFDI may surface further changes; this cleanup pass handles the changes already discovered.
-
-**Tracked separately from SFDI** — the cleanup pass has its own session and its own commit. It is not part of any SFDI walkthrough session.
+**Why before SFDI:** the walkthrough walks fields under their canonical names, not under names pending change. Discovery during SFDI may surface further changes; this cleanup pass handled the changes already discovered.
 
 ---
 

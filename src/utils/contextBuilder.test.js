@@ -71,7 +71,7 @@ function activeTiers(t) {
   };
 }
 
-// NORM with pastoral intelligence fields populated.
+// NORM with pastoral context fields populated.
 const NORM_WITH_PASTORAL = {
   ...NORM,
   topic_theme:          "Lament",
@@ -421,11 +421,11 @@ describe("buildAdaptiveHints — hint format and category dedup", () => {
   });
 });
 
-// ── Pastoral Intelligence tier (tier7) ────────────────────────────────────────
+// ── Pastoral Context tier (tier7) ────────────────────────────────────────────
 
 import { normalizeSermon, assembleContext, summarizeSeries } from "./contextBuilder";
 
-describe("tier7 — pastoral intelligence: always-on, content-gated", () => {
+describe("tier7 — pastoral context: always-on, content-gated", () => {
   it("active at every step when fields have content", () => {
     const allSteps = [...STEP_SEQUENCE, ...PHASE_SEQUENCE, STAGE.Manuscript, STAGE.Blueprint, STAGE.Study, STAGE.Delivery];
     for (const step of allSteps) {
@@ -507,7 +507,7 @@ describe("tier7 — pastoral intelligence: always-on, content-gated", () => {
   });
 });
 
-describe("normalizeSermon() — pastoral intelligence fields", () => {
+describe("normalizeSermon() — pastoral context fields", () => {
   it("returns '' for topic_theme when sermon is null", () => {
     expect(normalizeSermon(null).topic_theme).toBe("");
   });

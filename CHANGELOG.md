@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-05-01 — feat: Vocabulary cleanup pass (PI → PC, Applications → Implications)
+
+- UI labels renamed: "Possible Applications" → "Possible Implications" in `studyFields.js`; "Personal Application" → "Personal Implications" in StudyTab group header and tour stops; tour stop "Pastoral Intelligence." → "Pastoral Context."
+- AI-facing prompt strings updated: `src/prompts/sermon.js` THIS_SERMON section header → "Pastoral Context"; `contextBuilder.js` new-sermon marker string → "pastoral context."
+- Internal variables renamed for consistency across `StudyTab.jsx`, `AIPanel.jsx`, `SermonWorkspace.jsx`, `workspaceTourStops.js`: `piBlock`/`piParts`/`piLines`/`piOpen`/`setPiOpen` → `pcBlock`/`pcParts`/`pcLines`/`pcOpen`/`setPcOpen`.
+- Doc layer aligned (sermon-workspace.md, context-pipeline.md, schema.md, project-structure.md, CLAUDE.md, sermon-workspace-tour.md, sfdi-charter.md, study-phase-redesign.md): "Pastoral Intelligence" → "Pastoral Context"; "Personal Application" → "Personal Implications"; "Possible Applications" → "Possible Implications" outside the verbatim user articulation. JSON keys, database columns, and migrations unchanged. Lint clean (5-error baseline holds), 123/123 tests pass, spine integrity OK.
+
+---
+
 ## 2026-05-01 — feat: PC vision verbatim + Process #4 sharpening + SFDI anchors
 
 - Captured PC vision verbatim in `docs/SYSTEMS/sermon-workspace.md` under new "The Study throughline" section; "Pastoral Intelligence Card" section replaced with "The Pastoral Context card (interim)" naming the always-on card as the anti-pattern the throughline replaces.

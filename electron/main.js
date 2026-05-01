@@ -484,7 +484,7 @@ function runMigrations() {
   }
 
   if (version < 6) {
-    // v6: pastoral intelligence fields — topic_theme, audience_assumptions, background_noise
+    // v6: pastoral context fields — topic_theme, audience_assumptions, background_noise
     safeAlter("ALTER TABLE sermons ADD COLUMN topic_theme TEXT DEFAULT ''");
     safeAlter("ALTER TABLE sermons ADD COLUMN audience_assumptions TEXT DEFAULT ''");
     safeAlter("ALTER TABLE sermons ADD COLUMN background_noise TEXT DEFAULT ''");

@@ -55,7 +55,7 @@ SermonForge/
 │   │   ├── context-pipeline.md  — 7-tier context assembly; buildContext, tiers, budgets
 │   │   ├── ai-panel.md          — AI panel behavior, system prompt, Tune-Up Engine
 │   │   ├── series-planner.md    — Series Planner tabs, Study Guide, calendar engine
-│   │   ├── sermon-workspace.md  — Study tab structure, Pastoral Intelligence, save flow
+│   │   ├── sermon-workspace.md  — Study tab structure, Pastoral Context, save flow
 │   │   ├── database.md          — sql.js, migrations, debounces, SERMON_COLUMNS
 │   │   └── ipc.md               — IPC architecture, boundaries, channel naming
 │   └── REFERENCE/

@@ -48,16 +48,16 @@ holds the substance.
 **Two field-level commitments flow from this articulation and bind the SFDI walkthrough:**
 
 1. **Observe ends with the field that first surfaces PC into the awareness layer.**
-   Today named "Possible Applications" (pending rename to "Possible Implications"
-   as part of the Vocabulary cleanup pass — see `docs/PROPOSALS/sfdi-charter.md`),
-   this field is where the pastor begins to think pastorally without yet leaving
-   the text. SFDI's walkthrough of Observe must honor that role: the field's
-   definition, its place in the Observe sequence, and its handoff into Interpret
-   all express the awareness-layer entry of PC.
+   Named "Possible Implications" (renamed from "Possible Applications" in the
+   Vocabulary cleanup pass — see `docs/PROPOSALS/sfdi-charter.md`), this field is
+   where the pastor begins to think pastorally without yet leaving the text.
+   SFDI's walkthrough of Observe must honor that role: the field's definition,
+   its place in the Observe sequence, and its handoff into Interpret all express
+   the awareness-layer entry of PC.
 2. **Implications is a three-way conversation between Theological Significance,
-   Personal Application, and PC.** Not three parallel groups of fields. PC is one
-   of the three voices, integrated, not orphaned to a top-of-workspace card. The
-   named outcome of Implications — the **Implications Synthesis** — is the
+   Personal Implications, and PC.** Not three parallel groups of fields. PC is
+   one of the three voices, integrated, not orphaned to a top-of-workspace card.
+   The named outcome of Implications — the **Implications Synthesis** — is the
    integrated form of that conversation. PC's substance gets resolved here, not
    at MPT/MPS.
 
@@ -161,10 +161,11 @@ Field definitions live in `src/utils/studyFields.js`.
 9 fields: `context`, `divisions`, `commands`, `statements`, `characters`, `big_ideas`,
 `obvious_point`, `basic_outline`, `applications`.
 
-**Note:** the `applications` field (UI label: "Possible Applications" today; pending
-rename to "Possible Implications" as part of the Vocabulary cleanup pass) is where
-Pastoral Context first surfaces in the awareness layer. The pastor begins to think
-pastorally without yet leaving the text. See "The Study throughline" above.
+**Note:** the `applications` field (UI label: "Possible Implications" — renamed
+from "Possible Applications" in the Vocabulary cleanup pass; the JSON key stays
+`applications` to avoid a data migration) is where Pastoral Context first
+surfaces in the awareness layer. The pastor begins to think pastorally without
+yet leaving the text. See "The Study throughline" above.
 
 #### Phase 2: Interpret → `sermons.interpretation` (JSON)
 9 fields: `context_impact`, `recurring_ideas`, `characters`, `contrasts`, `diagram`,
@@ -178,10 +179,10 @@ pastorally without yet leaving the text. See "The Study throughline" above.
 #### Phase 4: Implications → `sermons.implications` (JSON)
 
 **Vision (per "The Study throughline" above):** Implications is a three-way
-conversation between Theological Significance, Personal Application, and Pastoral
-Context — not three parallel groups of fields. PC is one of the three voices,
-integrated, not orphaned to a top-of-workspace card. The named outcome of
-Implications is the **Implications Synthesis** — the integrated form of that
+conversation between Theological Significance, Personal Implications, and
+Pastoral Context — not three parallel groups of fields. PC is one of the three
+voices, integrated, not orphaned to a top-of-workspace card. The named outcome
+of Implications is the **Implications Synthesis** — the integrated form of that
 conversation, which the pastor carries into MPT/MPS as the pastoral handoff.
 
 **Current state (pending SFDI restructure):** today's implementation has three
@@ -192,7 +193,7 @@ and flow.
 **Today's fields:**
 - **Theological Significance** (5 fields): `about_god`, `about_ourselves`, `about_christ`,
   `timeless`, `doctrines`
-- **Personal Application** (8 fields, pending rename to "Personal Implications" as part of the Vocabulary cleanup pass): `examples`, `commands`, `errors`, `sins`, `promises`,
+- **Personal Implications** (8 fields — renamed from "Personal Application" in the Vocabulary cleanup pass; JSON keys stay): `examples`, `commands`, `errors`, `sins`, `promises`,
   `new_thoughts`, `explore`, `convictions`
 - **Unbeliever Implications** (1 field): key `"unbeliever"`
 - **Compiled list** (key: `"compiled"`)

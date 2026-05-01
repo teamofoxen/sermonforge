@@ -244,7 +244,7 @@ export function rankChunks(chunks, normalized) {
 
 // Character budget per tier.
 // Tier 6 (pastoral memory context) is capped in buildMemoryContext.
-// Tier 7 (pastoral intelligence) is capped in buildTiers.
+// Tier 7 (pastoral context) is capped in buildTiers.
 // All caps are enforced via these constants — do not use magic numbers.
 const TIER_LIMITS = Object.freeze({
   tier1: 1500,
@@ -484,7 +484,7 @@ export function buildTiers({ normalized, compressed, libraryChunks = [], theolog
     if (tier6raw.length > 0) tier6 = tier6raw;
   }
 
-  // Tier 7 — pastoral intelligence. Always-on (pastoralContext: true at every step).
+  // Tier 7 — pastoral context. Always-on (pastoralContext: true at every step).
   // Gated by content, not step: only emits when at least one field has content.
   // Budget: TIER_LIMITS.tier7 chars shared across the three fields; applied once
   // to the joined string so no individual field is over-privileged.
@@ -578,7 +578,7 @@ export function assembleContext(tiers) {
   const sections = [];
 
   // Assembly order intentionally deviates from tier numbering: tier7 follows tier1 so
-  // pastoral intelligence is visible above all interpretive work; tier6 (memory) is last
+  // pastoral context is visible above all interpretive work; tier6 (memory) is last
   // so it shapes tone without biasing exegesis. Do not reorder without good reason.
 
   // [PASSAGE & MPT]
@@ -592,7 +592,7 @@ export function assembleContext(tiers) {
     }
   }
 
-  // [THIS SERMON] — pastoral intelligence: topic/theme, audience, background.
+  // [THIS SERMON] — pastoral context: topic/theme, audience, background.
   // Emitted after [PASSAGE & MPT] so it is always visible above interpretive work.
   if (tiers.tier7) {
     sections.push(dedupeText(`${CONTEXT_SECTIONS.THIS_SERMON}\n${tiers.tier7}`));
@@ -977,5 +977,5 @@ export function buildContext({ sermon, step, libraryChunks = [], theologyChunks 
   // Brand-new sermon with no passage / MPT / PI — explicit marker so the AI
   // knows to proceed exploratorily rather than answering ungrounded as if
   // context were merely truncated.
-  return `${CONTEXT_SECTIONS.THIS_SERMON}\nThis sermon is new — passage, MPT, and pastoral intelligence are not yet set. Help the pastor begin.`;
+  return `${CONTEXT_SECTIONS.THIS_SERMON}\nThis sermon is new — passage, MPT, and pastoral context are not yet set. Help the pastor begin.`;
 }

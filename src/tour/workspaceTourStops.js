@@ -14,13 +14,13 @@ import { STAGE } from "../core/contracts";
 const STUDY_BASE = { tab: STAGE.Study, drawerOpen: false };
 
 export const WORKSPACE_TOUR_STOPS = [
-  // ── Stops 1–10: workspace + AI overview + Pastoral Intelligence ────────────
+  // ── Stops 1–10: workspace + AI overview + Pastoral Context ────────────────
   {
     id: "workspace-intro",
     anchorId: "workspace-title",
     title: "The Sermon Workspace.",
     body: "Where you go deep on one sermon. If a series is already in place, its big idea and context come with you here automatically. If not, the workspace stands on its own — start where you are.",
-    prerequisites: { ...STUDY_BASE, piOpen: true },
+    prerequisites: { ...STUDY_BASE, pcOpen: true },
   },
   {
     id: "ai-philosophy",
@@ -49,7 +49,7 @@ export const WORKSPACE_TOUR_STOPS = [
     anchorId: "pastoral-context-card",
     title: "Always in the room.",
     body: "One layer of that context — the cultural moment, the room, the sermon's work — is always sent to the AI, regardless of which step you're on. Three short fields at the top of every tab keep the AI from ever working in the abstract. We'll get to those in step 7.",
-    prerequisites: { tab: STAGE.Study, drawerOpen: true, piOpen: true },
+    prerequisites: { tab: STAGE.Study, drawerOpen: true, pcOpen: true },
   },
   {
     id: "tuned-to-you",
@@ -61,30 +61,30 @@ export const WORKSPACE_TOUR_STOPS = [
   {
     id: "pastoral-intelligence",
     anchorId: "pastoral-context-card",
-    title: "Pastoral Intelligence.",
+    title: "Pastoral Context.",
     body: "Three short fields at the top of every tab, ordered from outside in: the cultural moment, the room, the sermon's work. They don't shape the sermon's content. They shape how the AI talks to you about it.",
-    prerequisites: { ...STUDY_BASE, piOpen: true },
+    prerequisites: { ...STUDY_BASE, pcOpen: true },
   },
   {
     id: "cultural-moment",
     anchorId: "pi-cultural-moment",
     title: "The Cultural Moment.",
     body: "What world is this congregation walking in from? What does culture believe, distort, or weaponize about this topic? The widest ring — what's already in the air before anyone takes a seat.",
-    prerequisites: { ...STUDY_BASE, piOpen: true },
+    prerequisites: { ...STUDY_BASE, pcOpen: true },
   },
   {
     id: "the-room",
     anchorId: "pi-the-room",
     title: "The Room.",
     body: "Who's in the room, and where are they? Where has this congregation drifted, and what do they currently believe? Posture, not demographics.",
-    prerequisites: { ...STUDY_BASE, piOpen: true },
+    prerequisites: { ...STUDY_BASE, pcOpen: true },
   },
   {
     id: "sermons-work",
     anchorId: "pi-sermons-work",
     title: "The Sermon's Work.",
     body: "What is this sermon trying to accomplish? What's the big claim, and where does the Gospel enter? The innermost ring — the pastoral aim. The AI keeps all three in mind every time you ask it anything; you never have to restate them.",
-    prerequisites: { ...STUDY_BASE, piOpen: true },
+    prerequisites: { ...STUDY_BASE, pcOpen: true },
   },
 
   // ── Stops 11–25: Study tab — Step 1 (Exegesis, four phases) ────────────────
@@ -113,7 +113,7 @@ export const WORKSPACE_TOUR_STOPS = [
     id: "phase-1-substance",
     anchorId: "phase-1-worksheet",
     title: "What the text shows.",
-    body: "Characters. Big Ideas. The Obvious Point. Basic Outline. Possible Applications. Who's in the passage, what themes surface, and the question most pastors skip — is there an obvious point? State it plainly. Don't talk yourself out of it.",
+    body: "Characters. Big Ideas. The Obvious Point. Basic Outline. Possible Implications. Who's in the passage, what themes surface, and the question most pastors skip — is there an obvious point? State it plainly. Don't talk yourself out of it.",
     prerequisites: { ...STUDY_BASE, studyStep: 1, studySubPhase: 1 },
   },
   {
@@ -175,7 +175,7 @@ export const WORKSPACE_TOUR_STOPS = [
   {
     id: "personal-application",
     anchorId: "implications-personal",
-    title: "Personal Application.",
+    title: "Personal Implications.",
     body: "Eight angles — examples to follow, commands to keep, errors to avoid, sins to forsake, gospel promises to claim, new thoughts about God, doctrines to explore, convictions to live by. Most sermons go thin at application; this is where you get ahead of that.",
     prerequisites: { ...STUDY_BASE, studyStep: 1, studySubPhase: 4 },
   },
