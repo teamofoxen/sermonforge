@@ -439,6 +439,8 @@ function BookStudyTab({ series, onChange, drawerOpen, onOpenDrawer, onCloseDrawe
       const result = await sendAIMessage(
         [{ role: "user", content: userContent }],
         layerSeriesTask(BOOK_STUDY_FIELD_ANALYZE_TASK, SERIES_STEPS.BookStudy),
+        SERIES_STEPS.BookStudy,
+        null,
       );
       if (result.ok) {
         setInlineResponses(prev => ({ ...prev, [fieldDef.key]: result.text }));
@@ -460,6 +462,8 @@ function BookStudyTab({ series, onChange, drawerOpen, onOpenDrawer, onCloseDrawe
       const result = await sendAIMessage(
         [{ role: "user", content: `Series: "${series.title || "unknown"}"\nPassage: ${series.passage_range || "unknown"}\n\nBook Study notes:\n${BOOK_STUDY_FIELDS.filter(f => f.key !== "emerging_big_idea" && series[f.key]?.trim()).map(f => `${f.label}:\n${series[f.key].trim()}`).join("\n\n") || "(none yet)"}\n\nDraft a series big idea grounded in the Book Study notes.` }],
         layerSeriesTask(BOOK_STUDY_BIG_IDEA_TASK, SERIES_STEPS.BookStudy),
+        SERIES_STEPS.BookStudy,
+        null,
       );
       if (result.ok && result.text.trim()) onChange("emerging_big_idea", result.text.trim());
     } catch (e) {
@@ -492,6 +496,8 @@ function BookStudyTab({ series, onChange, drawerOpen, onOpenDrawer, onCloseDrawe
       const result = await sendAIMessage(
         newMessages,
         layerSeriesTask(`${BOOK_STUDY_CHAT_TASK}\n\n${seriesContext}`, SERIES_STEPS.BookStudy),
+        SERIES_STEPS.BookStudy,
+        null,
       );
       if (result.ok) {
         setAiMessages([...newMessages, { role: "assistant", content: result.text }]);
@@ -617,6 +623,8 @@ function OverviewTab({ series, onChange, drawerOpen, onOpenDrawer, onCloseDrawer
       const result = await sendAIMessage(
         [{ role: "user", content: `Series title: "${series.title}"\nPassage: ${series.passage_range || "not specified"}\nExisting overview: ${series.overview || "none yet"}\n\nWrite a series Big Idea sentence.` }],
         layerSeriesTask(SERIES_BIG_IDEA_TASK, SERIES_STEPS.Overview),
+        SERIES_STEPS.Overview,
+        null,
       );
       if (result.ok && result.text.trim()) onChange("big_idea", result.text.trim());
     } catch (e) {
@@ -633,6 +641,8 @@ function OverviewTab({ series, onChange, drawerOpen, onOpenDrawer, onCloseDrawer
       const result = await sendAIMessage(
         [{ role: "user", content: `I am planning a sermon series titled "${series.title}" covering ${series.passage_range || "a biblical passage"}.\nBig Idea: ${series.big_idea || "not yet set"}\n\nWrite the series overview.` }],
         layerSeriesTask(SERIES_OVERVIEW_TASK, SERIES_STEPS.Overview),
+        SERIES_STEPS.Overview,
+        null,
       );
       if (result.ok && result.text.trim()) onChange("overview", result.text.trim());
     } catch (e) {
@@ -652,7 +662,7 @@ function OverviewTab({ series, onChange, drawerOpen, onOpenDrawer, onCloseDrawer
     setChatLoading(true);
     try {
       const context = `Series: "${series.title}" | Passage: ${series.passage_range || "—"} | Big Idea: ${series.big_idea || "—"} | Canon: ${series.canon_category || "—"}`;
-      const result = await sendAIMessage(newMessages, layerSeriesTask(`${SERIES_OVERVIEW_CHAT_TASK}\n\nCurrent series context: ${context}.`, SERIES_STEPS.Overview));
+      const result = await sendAIMessage(newMessages, layerSeriesTask(`${SERIES_OVERVIEW_CHAT_TASK}\n\nCurrent series context: ${context}.`, SERIES_STEPS.Overview), SERIES_STEPS.Overview, null);
       if (result.ok) {
         setAiMessages([...newMessages, { role: "assistant", content: result.text }]);
       } else if (result.kind !== "aborted") {
@@ -847,6 +857,8 @@ function StructureTab({ series, sections, onChange, onSectionsChange, seriesId, 
       const result = await sendAIMessage(
         [{ role: "user", content: `Build a detailed structural outline for ${series.passage_range || series.title}.` }],
         layerSeriesTask(SERIES_STRUCTURAL_OUTLINE_TASK, SERIES_STEPS.Structure),
+        SERIES_STEPS.Structure,
+        null,
       );
       if (result.ok && result.text.trim()) onChange("structural_outline", result.text.trim());
     } catch (e) {
@@ -894,7 +906,7 @@ function StructureTab({ series, sections, onChange, onSectionsChange, seriesId, 
     setChatLoading(true);
     try {
       const context = `Series: "${series.title}" | Passage: ${series.passage_range || "—"}`;
-      const result = await sendAIMessage(newMessages, layerSeriesTask(`${SERIES_STRUCTURE_CHAT_TASK}\n\nContext: ${context}.`, SERIES_STEPS.Structure));
+      const result = await sendAIMessage(newMessages, layerSeriesTask(`${SERIES_STRUCTURE_CHAT_TASK}\n\nContext: ${context}.`, SERIES_STEPS.Structure), SERIES_STEPS.Structure, null);
       if (result.ok) {
         setAiMessages([...newMessages, { role: "assistant", content: result.text }]);
       } else if (result.kind !== "aborted") {
@@ -1086,6 +1098,8 @@ function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpen
       const result = await sendAIMessage(
         newMessages,
         layerSeriesTask(`${STUDY_GUIDE_NOTE_TASK}\n\nSeries: "${series.title || "this series"}".`, SERIES_STEPS.Slots),
+        SERIES_STEPS.Slots,
+        null,
       );
       if (result.ok) {
         setAiMessages([...newMessages, { role: "assistant", content: result.text }]);
@@ -1207,7 +1221,7 @@ function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpen
     setChatLoading(true);
     try {
       const context = `Series: "${series.title}" | Passage: ${series.passage_range || "—"} | Existing slots: ${sermons.map(s => s.passage || s.title).filter(Boolean).join(", ") || "none yet"}`;
-      const result = await sendAIMessage(newMessages, layerSeriesTask(`${SERIES_SLOTS_CHAT_TASK}\n\nContext: ${context}.`, SERIES_STEPS.Slots));
+      const result = await sendAIMessage(newMessages, layerSeriesTask(`${SERIES_SLOTS_CHAT_TASK}\n\nContext: ${context}.`, SERIES_STEPS.Slots), SERIES_STEPS.Slots, null);
       if (result.ok) {
         setAiMessages([...newMessages, { role: "assistant", content: result.text }]);
       } else if (result.kind !== "aborted") {
@@ -1410,6 +1424,8 @@ function SlotRow({ slot, index, onChange, onDelete, onCommit, commitError, onCle
       const result = await sendAIMessage(
         [{ role: "user", content: message }],
         layerSeriesTask(`${STUDY_GUIDE_NOTE_TASK}\n\nSeries: "${series?.title || "this series"}".`, SERIES_STEPS.Slots),
+        SERIES_STEPS.Slots,
+        slot?.id ?? null,
       );
       if (result.ok) {
         setAssistResponse(result.text);
@@ -1599,6 +1615,8 @@ function CalendarTab({ series, sections, sermons, calNotes, onChange, onSermonsC
       const result = await sendAIMessage(
         newMessages,
         layerSeriesTask(`${CALENDAR_CHAT_TASK}\n\nSeries: "${series.title}" starting ${series.start_date || "TBD"}.\nCurrent schedule:\n${scheduleContext}${noteContext}`, SERIES_STEPS.Calendar),
+        SERIES_STEPS.Calendar,
+        null,
       );
       if (result.ok) {
         setAiMessages([...newMessages, { role: "assistant", content: result.text }]);

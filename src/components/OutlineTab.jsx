@@ -70,7 +70,9 @@ export default function OutlineTab({ sermon, onUpdate, onTabChange, studySummari
       ].join("\n");
       const result = await sendAIMessage(
         [{ role: "user", content: `${exegesisContext}\n\nPropose a sermon outline.` }],
-        OUTLINE_SYSTEM
+        OUTLINE_SYSTEM,
+        STAGE.Blueprint,
+        sermon.id,
       );
       if (result.ok && result.text.trim()) {
         setOutlineChat([{ role: "assistant", content: result.text.trim() }]);
@@ -104,7 +106,7 @@ export default function OutlineTab({ sermon, onUpdate, onTabChange, studySummari
       const messages = history.map((m, i) =>
         i === history.length - 1 ? { ...m, content: contextPrefix + m.content } : m
       );
-      const result = await sendAIMessage(messages, OUTLINE_SYSTEM);
+      const result = await sendAIMessage(messages, OUTLINE_SYSTEM, STAGE.Blueprint, sermon.id);
       if (result.ok && result.text.trim()) {
         setOutlineChat(prev => [...prev, { role: "assistant", content: result.text.trim() }]);
       } else if (!result.ok && result.kind !== "aborted") {
@@ -125,7 +127,9 @@ export default function OutlineTab({ sermon, onUpdate, onTabChange, studySummari
       const pts = outline.map((p, i) => `${i + 1}. ${p.text}`).join("\n");
       const result = await sendAIMessage(
         [{ role: "user", content: `Passage: ${sermon.passage || "unknown"}.\nMPT: ${sermon.mpt || "(none)"}.\nMPS: ${sermon.mps || "(none)"}.\n\nOutline:\n${pts}` }],
-        `Review this sermon outline. Evaluate: Do the points derive from the text? Do they ladder up to the MPS? Is the progression clear and complete? Does tension resolve in the gospel? Suggest the minimum changes needed.`
+        `Review this sermon outline. Evaluate: Do the points derive from the text? Do they ladder up to the MPS? Is the progression clear and complete? Does tension resolve in the gospel? Suggest the minimum changes needed.`,
+        STAGE.Blueprint,
+        sermon.id,
       );
       if (result.ok) {
         setReviewResponse(result.text);

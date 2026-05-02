@@ -333,7 +333,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
       const userContent = context
         ? `CONTEXT:\n${context}\n\nUSER REQUEST:\n${userRequest}`
         : userRequest;
-      const result = await sendAIMessage([{ role: "user", content: userContent }], layerTask(taskDirective, step));
+      const result = await sendAIMessage([{ role: "user", content: userContent }], layerTask(taskDirective, step), step, sermon.id);
       if (result.ok) {
         setInlineResponses(prev => ({ ...prev, [key]: result.text }));
       } else if (result.kind !== "aborted") {
@@ -364,6 +364,8 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
       const result = await sendAIMessage(
         [{ role: "user", content: userContent }],
         layerTask(MPT_DRAFT_TASK, step),
+        step,
+        sermon.id,
       );
       if (result.ok && result.text.trim()) setMptProposal(result.text.trim());
     } catch (e) {
@@ -387,6 +389,8 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
       const result = await sendAIMessage(
         [{ role: "user", content: userContent }],
         layerTask(hasPC ? MPS_DRAFT_WITH_PC_TASK : MPS_DRAFT_NO_PC_TASK, step),
+        step,
+        sermon.id,
       );
       if (result.ok && result.text.trim()) setMpsProposal(result.text.trim());
     } catch (e) {
@@ -411,7 +415,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
       const messages = history.map((m, i) =>
         i === history.length - 1 ? { ...m, content: contextPrefix + m.content } : m
       );
-      const result = await sendAIMessage(messages, layerTask(MPS_CHAT_TASK, step));
+      const result = await sendAIMessage(messages, layerTask(MPS_CHAT_TASK, step), step, sermon.id);
       if (result.ok && result.text.trim()) {
         setMpsChat(prev => [...prev, { role: "assistant", content: result.text.trim() }]);
       } else if (!result.ok && result.kind !== "aborted") {
@@ -437,6 +441,8 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
       const result = await sendAIMessage(
         [{ role: "user", content: userContent }],
         layerTask(OUTLINE_SYSTEM, step),
+        step,
+        sermon.id,
       );
       if (result.ok && result.text.trim()) setOutlineChat([{ role: "assistant", content: result.text.trim() }]);
     } catch (e) {
@@ -461,7 +467,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
       const messages = history.map((m, i) =>
         i === history.length - 1 ? { ...m, content: contextPrefix + m.content } : m
       );
-      const result = await sendAIMessage(messages, layerTask(OUTLINE_SYSTEM, step));
+      const result = await sendAIMessage(messages, layerTask(OUTLINE_SYSTEM, step), step, sermon.id);
       if (result.ok && result.text.trim()) {
         setOutlineChat(prev => [...prev, { role: "assistant", content: result.text.trim() }]);
       } else if (!result.ok && result.kind !== "aborted") {
@@ -484,6 +490,8 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
       const result = await sendAIMessage(
         [{ role: "user", content: userContent }],
         layerTask(taskDirective, step),
+        step,
+        sermon.id,
       );
       if (result.ok) {
         setSummaries(prev => ({ ...prev, [key]: result.text }));
@@ -612,6 +620,8 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
       const result = await sendAIMessage(
         [{ role: "user", content: userContent }],
         layerTask(POPULATE_SCRIPTURE_TASK, step),
+        step,
+        sermon.id,
       );
       if (!result.ok) {
         if (result.kind === "aborted") return;
@@ -687,7 +697,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
       const messages = history.map((m, i) =>
         i === history.length - 1 ? { ...m, content: contextPrefix + m.content } : m
       );
-      const result = await sendAIMessage(messages, layerTask(FE_CHAT_SYSTEM, step));
+      const result = await sendAIMessage(messages, layerTask(FE_CHAT_SYSTEM, step), step, sermon.id);
       if (result.ok && result.text.trim()) {
         setFeChat(prev => [...prev, { role: "assistant", content: result.text.trim() }]);
       } else if (!result.ok && result.kind !== "aborted") {
@@ -861,6 +871,8 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                         const result = await sendAIMessage(
                           [{ role: "user", content: userContent }],
                           layerTask(SYNTHESIZE_REDEMPTIVE_TASK, step),
+                          step,
+                          sermon.id,
                         );
                         if (result.ok && result.text.trim()) setRedSummaryProposal(result.text.trim());
                       } catch (e) {
@@ -991,6 +1003,8 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                         const result = await sendAIMessage(
                           [{ role: "user", content: userContent }],
                           layerTask(COMPILE_IMPLICATIONS_TASK, step),
+                          step,
+                          sermon.id,
                         );
                         if (result.ok && result.text.trim()) setImpCompileProposal(result.text.trim());
                       } catch (e) {

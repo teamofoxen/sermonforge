@@ -5,7 +5,7 @@ import { sendAIMessage } from "../utils/ai";
 import { parseAIJson, validateCMC } from "../utils/aiSchema";
 import { exportPmb } from "../db/database";
 import { updateSermon } from "../core/spine";
-import { SERMON_STATUS } from "../core/contracts";
+import { SERMON_STATUS, STAGE } from "../core/contracts";
 import PrimaryButton from "./primitives/PrimaryButton";
 import SecondaryButton from "./primitives/SecondaryButton";
 import ProposalPanel from "./ProposalPanel";
@@ -130,7 +130,9 @@ function ManuscriptPanel({ sermon, onUpdate, onPanelChange }) {
       const context = buildManuscriptDeliveryContext(sermon);
       const result = await sendAIMessage(
         [{ role: "user", content: `${context}\n\nFormat the manuscript for delivery.` }],
-        MANUSCRIPT_DELIVERY_SYSTEM
+        MANUSCRIPT_DELIVERY_SYSTEM,
+        STAGE.Delivery,
+        sermon.id,
       );
       if (!result.ok) {
         if (result.kind !== "aborted") setError(`Generation failed: ${result.message}`);
@@ -486,7 +488,9 @@ function WithoutNotesPanel({ sermon, onUpdate }) {
       const context = buildCMCContext(sermon);
       const result = await sendAIMessage(
         [{ role: "user", content: `${context}\n\nGenerate the PMBs.` }],
-        CMC_SYSTEM
+        CMC_SYSTEM,
+        STAGE.Delivery,
+        sermon.id,
       );
       if (!result.ok) {
         if (result.kind !== "aborted") setError(`Generation failed: ${result.message}`);

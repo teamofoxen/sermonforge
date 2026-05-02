@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-05-02 — feat: pass step + sermonId at every sendAIMessage call site (ACCI Item C3)
+
+- `src/components/StudyTab.jsx` (11 sites), `OutlineTab.jsx` (3), `DeliveryTab.jsx` (2), `SeriesPlanner.jsx` (12) — every `sendAIMessage` call now passes the active step (canonical `STEPS.*` / `PHASES.*` / `STAGE.*` / `SERIES_STEPS.*` value) and a `sermonId` (`sermon.id` for sermon-level calls, `slot?.id` for SlotRow assist, `null` for series-level calls). Previously these were undefined, causing the audit log to lose surface attribution and the abort registry to skip the affected sites.
+- `ManuscriptTab.jsx` has no `sendAIMessage` call sites — no change.
+- `OutlineTab.jsx` and `DeliveryTab.jsx` get `STAGE` import.
+- 666 tests passing; lint clean.
+
+---
+
 ## 2026-05-02 — feat: route StudyTab through buildContext (ACCI Item C2)
 
 - `src/components/StudyTab.jsx` — every AI call site now wraps its user request with `buildContext({ sermon, step })` envelope (`CONTEXT:\n…\n\nUSER REQUEST:\n…`), replacing 11 sites' worth of hand-rolled `Passage: … Observations: … Interpretation: …` blocks. `fetchInline` injects the envelope once for all 8 review/challenge/E-A-I callers; `generateMPT`, `generateMPS`, `sendMpsChat`, `suggestOutline`, `sendOutlineChat`, `generateSummary`, `populateScripture`, `sendFeChat`, the Synthesize Redemptive button, and the Compile Implications button each wrap their own.
