@@ -7,8 +7,46 @@ import {
   getSermon, updateSermon, deleteSermon,
   getSeries, getSectionsBySeries, getSermonsBySeries,
   persistMutation, INITIAL_SAVE_STATE,
+  transitionState,
 } from "../core/spine";
-import { pickSermonColumns, STAGE, STAGE_SEQUENCE, STAGE_LABELS } from "../core/contracts";
+import { pickSermonColumns, STAGE, STAGE_SEQUENCE, STAGE_LABELS, ContractViolation } from "../core/contracts";
+
+// Q1 spine routing — stage transitions through handleTabChange call
+// transitionState. Evidence is the source stage's content; an empty source
+// stage rejects on non-legacy sermons via Process #2.
+function buildStageEvidence(sermon, stage) {
+  if (!sermon) return "";
+  const nonEmpty = (s) => {
+    if (!s) return "";
+    const t = String(s).trim();
+    if (t === "" || t === "[]" || t === "{}") return "";
+    return t;
+  };
+  if (stage === STAGE.Study) {
+    return [
+      sermon.observations, sermon.interpretation,
+      sermon.redemptive_thread, sermon.implications,
+      sermon.mpt, sermon.mps, sermon.outline, sermon.functional_elements,
+    ].map(nonEmpty).filter((s) => s).join("\n");
+  }
+  if (stage === STAGE.Blueprint) {
+    return [sermon.outline, sermon.functional_elements].map(nonEmpty).filter((s) => s).join("\n");
+  }
+  if (stage === STAGE.Manuscript) {
+    return nonEmpty(sermon.manuscript);
+  }
+  if (stage === STAGE.Delivery) {
+    return [sermon.delivery_notes, sermon.timing_notes, sermon.post_sermon].map(nonEmpty).filter((s) => s).join("\n");
+  }
+  return "";
+}
+
+function formatTabRejection(e) {
+  if (!e) return "Couldn't change tab.";
+  if (e.code === "PROCESS_2_EMPTY_EVIDENCE") return "Add some content before moving to a new stage.";
+  if (e.code === "PROCESS_1_FORWARD_TO_PRIOR") return "Can't move forward to a prior stage.";
+  return e.message || "Couldn't change tab.";
+}
 import { updateMemory, extractOutlinePattern, extractPhrasePatterns } from "../utils/memory";
 import { abortInFlightForSermon } from "../utils/ai";
 import { autoResize } from "../utils";
@@ -60,10 +98,14 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpe
   const [saveState, setSaveState] = useState(INITIAL_SAVE_STATE);
   const { saving, saveError, lastSavedAt } = saveState;
   // Movement-event marker — Process Contract #3 ("movement is a visible event").
-  // Set when handleTabChange advances the canonical position; auto-clears on
-  // dismiss or next movement. The data-testid="movement-event" lets the
-  // contract test (and future surfaces) locate this canonical marker.
+  // Fires on stage transitions (handleTabChange) and on sub-phase / step
+  // transitions bubbled up from StudyTab via onMovement. Auto-clears on
+  // dismiss or next movement. The data-testid="movement-event" is the
+  // canonical marker the contract test (and future surfaces) locate.
   const [lastMovement, setLastMovement] = useState(null);
+  // Q1 spine routing — stage-level rejections (Process #1/#2 from
+  // transitionState) surface here. Q3 will replace this with proper hard-gate UX.
+  const [tabError, setTabError] = useState(null);
   // Position-in-series — State Contract #4: parent context is first-class.
   // siblingIds is the ordered list of sermon IDs in the current sermon's
   // series. Empty array when the sermon has no series.
@@ -209,15 +251,36 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpe
     debouncedSave();
   }
 
-  function handleTabChange(tab) {
+  async function handleTabChange(tab) {
     const previousTab = activeTab;
+    if (tab === previousTab) return;
+    setTabError(null);
+
+    // Q1 spine routing — stage transitions through transitionState.
+    const fromIdx = STAGE_SEQUENCE.indexOf(previousTab);
+    const toIdx = STAGE_SEQUENCE.indexOf(tab);
+    const direction = toIdx > fromIdx ? "forward" : "backward";
+    const evidence = buildStageEvidence(sermonRef.current, previousTab);
+    try {
+      await transitionState({
+        sermonId,
+        to: tab,
+        evidence,
+        direction,
+      });
+    } catch (e) {
+      if (e instanceof ContractViolation) {
+        setTabError(formatTabRejection(e));
+        return;
+      }
+      throw e;
+    }
+
     captureMemory(sermonRef.current, { scanPhrases: true });
     setActiveTab(tab);
     setActiveStep(null);
     localStorage.setItem(`sermonforge_sermon_tab_${sermonId}`, tab);
-    if (previousTab && previousTab !== tab) {
-      setLastMovement({ from: previousTab, to: tab, at: Date.now() });
-    }
+    setLastMovement({ from: previousTab, to: tab, at: Date.now() });
   }
 
   async function handleDelete() {
@@ -426,6 +489,26 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpe
         ))}
       </div>
 
+      {tabError && (
+        <div
+          data-testid="tab-error"
+          role="alert"
+          aria-live="polite"
+          onClick={() => setTabError(null)}
+          style={{
+            background: "var(--parchment-warm)",
+            borderLeft: "3px solid var(--gold)",
+            padding: "8px 16px",
+            margin: "0 20px 8px",
+            fontSize: "13px",
+            color: "var(--ink-mid)",
+            cursor: "pointer",
+          }}
+        >
+          {tabError}
+        </div>
+      )}
+
       {/* Body */}
       <div className="workspace-body">
         <div className="workspace-main">
@@ -533,6 +616,7 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpe
               onStepChange={setActiveStep}
               onTabChange={handleTabChange}
               onSummaryGenerated={(key, text) => setStudySummaries(prev => ({ ...prev, [key]: text }))}
+              onMovement={({ from, to }) => setLastMovement({ from, to, at: Date.now() })}
             />
           )}
           {activeTab === STAGE.Blueprint && (

@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-05-02 — feat: SPRD Q1 — sub-phase + step transitions through the spine
+
+- `StudyTab.jsx` — `advanceSubPhase` / `advanceStep` / `jumpToStep` / `jumpToSubPhase` route through `transitionState` with source-position content as evidence; rejection surfaces in a dismissable banner.
+- `SermonWorkspace.jsx` — `handleTabChange` routes stage transitions through `transitionState`; new `onMovement` prop bubbles sub-phase + step movements to the existing Process #3 visibility marker.
+- Process #1 / #2 / #3 contract tests extended to sub-phase + step resolutions (+7 new tests; existing stage-tab visibility test seeded with content so Process #2 passes).
+- `docs/ENFORCEMENT_STATUS.md` updated — Q1 landed, per-clause table notes new resolution coverage; SPRD section reflects structural-only post-merge with Q3 and Q8 still open.
+
+---
+
 ## 2026-05-02 — docs: archive ACCI tracker (initiative complete)
 
 - Moved `docs/PROPOSALS/ai-clarity-and-constraint.md` → `docs/ARCHIVE/ai-clarity-and-constraint.md` and stripped misleading "How to resume" / "Decisions resolved" sections; the 26-item ledger is retained as a historical record.

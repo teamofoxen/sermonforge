@@ -32,10 +32,71 @@ import { fetchPassage } from "../db/database";
 import PrimaryButton from "./primitives/PrimaryButton";
 import SecondaryButton from "./primitives/SecondaryButton";
 import IconButton from "./primitives/IconButton";
-import { STAGE } from "../core/contracts";
+import { STAGE, STEP, SUB_PHASE, ContractViolation } from "../core/contracts";
+import { transitionState } from "../core/spine";
 
 const STEP_LABELS = ["Exegesis", "MPT / MPS", "Outline", "Functional Elements"];
 const PHASE_LABELS = ["Observe", "Interpret", "Redemptive Thread", "Implications"];
+
+// ── Q1 spine-routing helpers ─────────────────────────────────────────────────
+// Sub-phase + step transitions route through the spine (Process Contracts #1/#2).
+// Local 1–4 indices map to canonical PascalCase values; evidence is the source
+// position's content so Process #2's empty-evidence check fires meaningfully.
+
+const SUB_PHASE_BY_INDEX = [SUB_PHASE.Observe, SUB_PHASE.Interpret, SUB_PHASE.RedemptiveThread, SUB_PHASE.Implications];
+const STEP_BY_INDEX = [STEP.Exegesis, STEP.MPT_MPS, STEP.Outline, STEP.FunctionalElements];
+
+const SUB_PHASE_FIELD_MAP = {
+  [SUB_PHASE.Observe]: "observations",
+  [SUB_PHASE.Interpret]: "interpretation",
+  [SUB_PHASE.RedemptiveThread]: "redemptive_thread",
+  [SUB_PHASE.Implications]: "implications",
+};
+
+function canonicalSubPhase(n) { return SUB_PHASE_BY_INDEX[n - 1]; }
+function canonicalStep(n) { return STEP_BY_INDEX[n - 1]; }
+
+function buildSubPhaseEvidence(sermon, subPhase) {
+  const fieldName = SUB_PHASE_FIELD_MAP[subPhase];
+  if (!fieldName || !sermon) return "";
+  const data = parseStructuredField(sermon[fieldName]);
+  if (!data || typeof data !== "object") return "";
+  return Object.values(data)
+    .filter((v) => v && String(v).trim())
+    .map((v) => String(v).trim())
+    .join("\n");
+}
+
+function buildStepEvidence(sermon, step) {
+  if (!sermon) return "";
+  if (step === STEP.Exegesis) {
+    return [
+      buildSubPhaseEvidence(sermon, SUB_PHASE.Observe),
+      buildSubPhaseEvidence(sermon, SUB_PHASE.Interpret),
+      buildSubPhaseEvidence(sermon, SUB_PHASE.RedemptiveThread),
+      buildSubPhaseEvidence(sermon, SUB_PHASE.Implications),
+    ].filter((s) => s).join("\n");
+  }
+  if (step === STEP.MPT_MPS) {
+    return [(sermon.mpt || "").trim(), (sermon.mps || "").trim()].filter((s) => s).join("\n");
+  }
+  if (step === STEP.Outline) {
+    const o = (sermon.outline || "").trim();
+    return o === "" || o === "[]" ? "" : o;
+  }
+  if (step === STEP.FunctionalElements) {
+    const fe = (sermon.functional_elements || "").trim();
+    return fe === "" || fe === "{}" ? "" : fe;
+  }
+  return "";
+}
+
+function formatRejection(e) {
+  if (!e) return "Couldn't advance.";
+  if (e.code === "PROCESS_2_EMPTY_EVIDENCE") return "Add some content before advancing.";
+  if (e.code === "PROCESS_1_FORWARD_TO_PRIOR") return "Can't move forward to a prior position.";
+  return e.message || "Couldn't advance.";
+}
 
 function CollapseArrow({ open }) {
   return (
@@ -233,7 +294,7 @@ function StructuredWorksheet({ fields, data, onChange, legacyNotes }) {
   );
 }
 
-export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChange, onTabChange, onSummaryGenerated }) {
+export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChange, onTabChange, onSummaryGenerated, onMovement }) {
   const { active: tourActive, desiredUi } = useTour();
   const [activeStep, setActiveStep] = useState(() => {
     const saved = localStorage.getItem(`sermonforge_study_step_${sermon.id}`);
@@ -243,6 +304,10 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
     const saved = localStorage.getItem(`sermonforge_study_subphase_${sermon.id}`);
     return saved ? parseInt(saved, 10) : 1;
   });
+  // Q1 spine routing — when transitionState rejects (e.g., Process #2 empty
+  // evidence on a non-legacy sermon), this state surfaces a small banner near
+  // the Continue button. Q3 will replace this with proper hard-gate UX.
+  const [advanceError, setAdvanceError] = useState(null);
 
   useEffect(() => {
     localStorage.setItem(`sermonforge_study_step_${sermon.id}`, activeStep);
@@ -505,10 +570,35 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
     }
   }
 
-  function advanceSubPhase() {
+  // Q1 spine routing — every renderer-side movement calls transitionState
+  // before updating local state. Process #1 (monotonic) and Process #2 (evidence)
+  // fire main-side; rejections surface via `advanceError`. Tour-driven state
+  // changes (in the useEffect above) intentionally bypass — they are not real
+  // pastoral work and don't move the canonical position.
+
+  async function advanceSubPhase() {
+    setAdvanceError(null);
     const next = activeSubPhase + 1;
 
     if (next > 4) {
+      // This is a step transition out of Exegesis into MPT/MPS, not a sub-phase
+      // advance. Route as kind=step.
+      const evidence = buildStepEvidence(sermon, STEP.Exegesis);
+      try {
+        await transitionState({
+          sermonId: sermon.id,
+          to: STEP.MPT_MPS,
+          evidence,
+          direction: "forward",
+        });
+      } catch (e) {
+        if (e instanceof ContractViolation) {
+          setAdvanceError(formatRejection(e));
+          return;
+        }
+        throw e;
+      }
+      onMovement?.({ from: STEP.Exegesis, to: STEP.MPT_MPS, kind: "step" });
       setActiveStep(2);
       setActiveSubPhase(1);
       onStepChange?.(STEPS.MPT_MPS);
@@ -521,6 +611,24 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
       return;
     }
 
+    const fromSubPhase = canonicalSubPhase(activeSubPhase);
+    const toSubPhase = canonicalSubPhase(next);
+    const evidence = buildSubPhaseEvidence(sermon, fromSubPhase);
+    try {
+      await transitionState({
+        sermonId: sermon.id,
+        to: toSubPhase,
+        evidence,
+        direction: "forward",
+      });
+    } catch (e) {
+      if (e instanceof ContractViolation) {
+        setAdvanceError(formatRejection(e));
+        return;
+      }
+      throw e;
+    }
+    onMovement?.({ from: fromSubPhase, to: toSubPhase, kind: "sub_phase" });
     setActiveSubPhase(next);
     onStepChange?.(PHASE_SEQUENCE[next - 1]);
 
@@ -548,9 +656,29 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
     }
   }
 
-  function advanceStep() {
+  async function advanceStep() {
+    setAdvanceError(null);
     const next = activeStep + 1;
     if (next > 4) return;
+
+    const fromStep = canonicalStep(activeStep);
+    const toStep = canonicalStep(next);
+    const evidence = buildStepEvidence(sermon, fromStep);
+    try {
+      await transitionState({
+        sermonId: sermon.id,
+        to: toStep,
+        evidence,
+        direction: "forward",
+      });
+    } catch (e) {
+      if (e instanceof ContractViolation) {
+        setAdvanceError(formatRejection(e));
+        return;
+      }
+      throw e;
+    }
+    onMovement?.({ from: fromStep, to: toStep, kind: "step" });
     setActiveStep(next);
     setActiveSubPhase(1);
     onStepChange?.(STEP_SEQUENCE[next - 1]);
@@ -572,13 +700,57 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
     }
   }
 
-  function jumpToStep(step) {
+  async function jumpToStep(step) {
+    setAdvanceError(null);
+    if (step === activeStep) return;
+
+    const fromStep = canonicalStep(activeStep);
+    const toStep = canonicalStep(step);
+    const direction = step > activeStep ? "forward" : "backward";
+    const evidence = buildStepEvidence(sermon, fromStep);
+    try {
+      await transitionState({
+        sermonId: sermon.id,
+        to: toStep,
+        evidence,
+        direction,
+      });
+    } catch (e) {
+      if (e instanceof ContractViolation) {
+        setAdvanceError(formatRejection(e));
+        return;
+      }
+      throw e;
+    }
+    onMovement?.({ from: fromStep, to: toStep, kind: "step" });
     setActiveStep(step);
     setActiveSubPhase(1);
     onStepChange?.(STEP_SEQUENCE[step - 1]);
   }
 
-  function jumpToSubPhase(phase) {
+  async function jumpToSubPhase(phase) {
+    setAdvanceError(null);
+    if (phase === activeSubPhase) return;
+
+    const fromSubPhase = canonicalSubPhase(activeSubPhase);
+    const toSubPhase = canonicalSubPhase(phase);
+    const direction = phase > activeSubPhase ? "forward" : "backward";
+    const evidence = buildSubPhaseEvidence(sermon, fromSubPhase);
+    try {
+      await transitionState({
+        sermonId: sermon.id,
+        to: toSubPhase,
+        evidence,
+        direction,
+      });
+    } catch (e) {
+      if (e instanceof ContractViolation) {
+        setAdvanceError(formatRejection(e));
+        return;
+      }
+      throw e;
+    }
+    onMovement?.({ from: fromSubPhase, to: toSubPhase, kind: "sub_phase" });
     setActiveSubPhase(phase);
     onStepChange?.(PHASE_SEQUENCE[phase - 1]);
   }
@@ -736,6 +908,26 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
       </div>
 
       <SermonShapePreview sermon={sermon} outline={outline} funcData={funcData} />
+
+      {advanceError && (
+        <div
+          data-testid="advance-error"
+          role="alert"
+          aria-live="polite"
+          onClick={() => setAdvanceError(null)}
+          style={{
+            background: "var(--parchment-warm)",
+            borderLeft: "3px solid var(--gold)",
+            padding: "8px 16px",
+            margin: "8px 0",
+            fontSize: "13px",
+            color: "var(--ink-mid)",
+            cursor: "pointer",
+          }}
+        >
+          {advanceError}
+        </div>
+      )}
 
       {/* ── Step 1: Exegesis ── */}
       {activeStep === 1 && (
