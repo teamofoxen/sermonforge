@@ -1,6 +1,6 @@
 # AI Clarity & Constraint — Task Tracker
 
-**Status:** Tier A complete (Items 1–4 shipped 2026-05-01). Tier B complete (Items 5–7 shipped 2026-05-01). Tier C complete (Items 8–11 shipped 2026-05-01 / 2026-05-02). Tier D complete (Items 12–15 shipped 2026-05-02). All seven decisions (Q1–Q7) settled. Tier E is the planned next block.
+**Status:** Tier A complete (Items 1–4 shipped 2026-05-01). Tier B complete (Items 5–7 shipped 2026-05-01). Tier C complete (Items 8–11 shipped 2026-05-01 / 2026-05-02). Tier D complete (Items 12–15 shipped 2026-05-02). Tier E complete (Items 16–17 shipped 2026-05-02). Tier F complete (Items 18–20 shipped 2026-05-02). All seven decisions (Q1–Q7) settled. Tier G is the planned next block.
 **Date drafted:** 2026-05-01.
 **Audience:** future working sessions. Plain language; no engineering vocabulary required.
 
@@ -45,16 +45,16 @@ The 26-item plan below is consolidation, not redesign — every item either pull
 14. **[D3]** ✅ *Shipped 2026-05-02.* Per-call payload size cap (1 MB) at the IPC boundary; per-session call counter written to audit log as `callIndex`. **Q4 decision: compute counter now (write to audit log + expose internally), defer UI surface.** *(electron/ai.js)*
 15. **[D4]** ✅ *Shipped 2026-05-02.* Token-usage fields (`input_tokens`, `output_tokens`, `cache_creation_input_tokens`, `cache_read_input_tokens`) captured into the audit log via `usage` field on success entries. *(provider.js, electron/ai.js)*
 
-### Tier E — privacy and housekeeping
+### Tier E — privacy and housekeeping — **SHIPPED**
 
-16. **[E1]** **Q5 decision: keep full content + document on first run.** Behavior unchanged in `electron/ai.js`; add a paragraph to `SetupScreen.jsx` (and reference in `docs/SYSTEMS/ai-panel.md`) telling the pastor where the log lives, what it contains, and that it is local-only. Threat model: single-user local-first app — privacy lift from hashing/opt-in not worth the debuggability loss. *(electron/ai.js, src/components/SetupScreen.jsx, docs/SYSTEMS/ai-panel.md)*
-17. **[E2]** Fix the audit-log rotation edge case so a single oversized entry cannot leave the file above the size cap. Trim when EITHER `lines.length > KEEP_ENTRIES` OR `size > MAX_AUDIT_BYTES`. *(electron/ai.js)*
+16. **[E1]** ✅ *Shipped 2026-05-02.* Audit log disclosure paragraph added to `SetupScreen.jsx`; full audit log section added to `docs/SYSTEMS/ai-panel.md` (path, contents, retention policy). *(src/components/SetupScreen.jsx, docs/SYSTEMS/ai-panel.md)*
+17. **[E2]** ✅ *Shipped 2026-05-02.* Rotation edge case fixed: removed the `lines.length <= KEEP_ENTRIES` early-return guard from `rotateAuditLog()`. Now always trims to the last KEEP_ENTRIES entries when rotation fires, preventing a few large entries from leaving the file above the size cap. *(electron/ai.js)*
 
-### Tier F — catch the docs up
+### Tier F — catch the docs up — **SHIPPED**
 
-18. **[F1]** Update `docs/REFERENCE/ipc-channels.md` to match current IPC surface (remove obsolete `db-getRecentSermons` / `db-loadTourSermon` / `db-removeTourSermon`; add `spine` channel and ops; add calendar-note channels; correct `ai-message` payload to include `step` and `sermonId`).
-19. **[F2]** Document the AI surface gaps in `docs/SYSTEMS/ai-panel.md` (theology research mode, Incorporate flow, externalMessage / persistColumn pattern, prompt-caching contract, audit-log path and retention).
-20. **[F3]** AI migration playbook documenting how to bump the model id. **Q6 decision: `docs/SYSTEMS/`** — describes maintenance of an existing system, not a forward-looking proposal.
+18. **[F1]** ✅ *Shipped 2026-05-02.* `docs/REFERENCE/ipc-channels.md` updated: removed `db-getRecentSermons`, `db-getRecentSeries`, `db-loadTourSermon`, `db-removeTourSermon`; added `spine` channel with full read + write op table; added `db-getCalendarNotes`, `db-createCalendarNote`, `db-deleteCalendarNote`; corrected `ai-message` payload and return type.
+19. **[F2]** ✅ *Shipped 2026-05-02.* Five undocumented AI surfaces added to `docs/SYSTEMS/ai-panel.md`: theology research mode, Incorporate flow, externalMessage / persistColumn pattern, prompt-caching contract, and audit log (path, contents, retention).
+20. **[F3]** ✅ *Shipped 2026-05-02.* AI model migration playbook created at `docs/SYSTEMS/ai-model-migration.md`. **Q6 decision: `docs/SYSTEMS/`** — describes maintenance of an existing system, not a forward-looking proposal.
 
 ### Tier G — polish
 

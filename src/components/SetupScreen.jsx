@@ -28,6 +28,11 @@ const STEPS = {
   margin: "0 0 12px",
 };
 
+const FINE_PRINT = {
+  color: "var(--ink-ghost)", fontSize: "12px",
+  textAlign: "center", marginTop: "10px", lineHeight: "1.5",
+};
+
 function KeyInput({ value, onChange, placeholder }) {
   const [show, setShow] = useState(false);
   return (
@@ -200,19 +205,20 @@ export default function SetupScreen({ onComplete }) {
         </PrimaryButton>
 
         {/* Fine print */}
-        <p style={{
-          color: "var(--ink-ghost)", fontSize: "12px",
-          textAlign: "center", marginTop: "14px", lineHeight: "1.5",
-        }}>
+        <p style={{ ...FINE_PRINT, marginTop: "14px" }}>
           Keys are stored securely on this machine and only sent directly to Anthropic
           and Crossway when you use those features.
         </p>
 
+        {/* Surfaced at setup so the pastor sees it before their first AI call. */}
+        <p style={FINE_PRINT}>
+          SermonForge keeps a local activity log (<code style={{ fontFamily: "monospace" }}>ai-log.jsonl</code> in
+          your app data folder) recording each AI request — the system prompt, your messages, and the response.
+          It never leaves your machine and is used only for local debugging.
+        </p>
+
         {/* OneDrive caution — surfaced here so new users see it before adding data. */}
-        <p style={{
-          color: "var(--ink-ghost)", fontSize: "12px",
-          textAlign: "center", marginTop: "10px", lineHeight: "1.5",
-        }}>
+        <p style={FINE_PRINT}>
           <strong style={{ color: "var(--ink-soft)" }}>Note:</strong> avoid running SermonForge from a
           OneDrive-synced folder. Cloud sync can corrupt the local database.
         </p>

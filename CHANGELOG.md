@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-02 — docs: ACCI Tiers E–F — audit log disclosure, rotation fix, doc catch-up
+
+- `electron/ai.js` rotation guard removed so large entries can't leave the file above the 5 MB cap.
+- `src/components/SetupScreen.jsx` discloses the local audit log to the pastor on first run.
+- `docs/SYSTEMS/ai-panel.md` documents five previously undocumented AI surfaces: theology research mode, Incorporate flow, externalMessage/persistColumn pattern, prompt-caching contract, and audit log.
+- `docs/REFERENCE/ipc-channels.md` updated to remove four obsolete channels and add the `spine` channel, calendar note channels, and corrected `ai-message` payload.
+- `docs/SYSTEMS/ai-model-migration.md` created as the model-bump playbook.
+
+---
+
 ## 2026-05-02 — feat: ACCI Tier D — CI, AI-integrity lint, payload cap, token usage
 
 - `.github/workflows/test.yml` runs `npm test` on every push to main and on every pull request.

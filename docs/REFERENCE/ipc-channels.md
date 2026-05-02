@@ -9,17 +9,79 @@ See `docs/SYSTEMS/ipc.md` for architecture and boundary rules.
 
 ### `"ai-message"` — handled in `electron/ai.js`
 ```
-receives: { messages: [{role, content}], systemPrompt: string }
-returns:  string (Claude's response text)
+receives: { messages: [{role, content}], systemPrompt: string, step: string, sermonId: string|null }
+returns:  { ok: true, text: string }
+        | { ok: false, kind: "auth"|"rate_limit"|"network"|"server"|"timeout"|"format"|"empty"|"unknown", message: string }
 ```
-The only channel through which the Anthropic API is called. API key never leaves the main process.
+The only channel through which the Anthropic API is called. API key never leaves the main process. Always resolves (never rejects) — callers read the `ok` envelope. Payloads over 1 MB are rejected with `kind: "format"` before the API call is made.
 
 ---
 
 ## Database Operations
 
-Database operations use named per-operation IPC channels. All handlers in `electron/main.js`.
-No raw SQL is accepted from the renderer.
+All sermon and series state routes through the `"spine"` channel. Named per-operation `db-get*` channels for sermons/series (`db-getRecentSermons`, `db-getRecentSeries`, `db-loadTourSermon`, `db-removeTourSermon`) no longer exist — they are spine ops now. Settings, calendar notes, memory, and schema queries remain as named channels. No raw SQL is accepted from the renderer.
+
+### `"spine"`
+```
+receives: op string, payload (op-specific)
+returns:  { ok: true, ...data } | { ok: false, code, clause, message }
+```
+Single channel for all sermon, series, and section state. Operations dispatch to either `spineRead` (read-only) or `validateAndCommit` (writes, contract-gated). See `docs/SYSTEMS/ipc.md` and `src/core/spine.ts` for the full API.
+
+**Read ops** (no contract enforcement, return data directly):
+
+| Op | Payload | Returns |
+|---|---|---|
+| `get-sermon` | sermonId string | shaped sermon row |
+| `get-series` | seriesId string | shaped series row |
+| `get-all-sermons` | — | all non-tour sermons, date DESC |
+| `get-all-series` | — | all non-tour series |
+| `get-recent-sermons` | `{ limit? }` (default 3) | recent non-complete sermons |
+| `get-recent-series` | `{ limit? }` (default 3) | recent series |
+| `get-in-progress-sermons` | — | in-progress sermons (State #6) |
+| `get-sermons-by-series` | seriesId string | sermons in series, date ASC |
+| `get-sections-by-series` | seriesId string | sections in series, sort_order ASC |
+
+**Write ops** (all go through `validateAndCommit`; contract violations return `{ ok: false, code, clause, message }`):
+
+| Op | Payload | Notes |
+|---|---|---|
+| `create-sermon` | `{ name, series_id?, section_id?, is_one_off?, passage?, date?, preacher? }` | State #3: name required |
+| `create-series` | `{ name, color?, description?, year?, ... }` | State #3: name required |
+| `update-sermon` | `{ id, ...fields }` | Fields go through `buildUpdate()` allowlist |
+| `update-series` | `{ id, ...fields }` | — |
+| `delete-sermon` | sermonId string | — |
+| `delete-series` | seriesId string | — |
+| `create-section` | `{ series_id, title, sort_order? }` | — |
+| `update-section` | `{ id, ...fields }` | — |
+| `delete-section` | sectionId string | — |
+| `transition-state` | `{ sermonId, targetStage?, targetStep?, targetSubPhase? }` | Process #1 + #2 enforcement |
+| `apply-mutation` | `{ sermonId, field, value, proposalId? }` | Mutation #1 + #2 enforcement |
+| `load-tour-sermon` | — | Seeds or reuses tour record |
+| `remove-tour-sermon` | — | Deletes tour record; idempotent |
+
+---
+
+### `"db-getCalendarNotes"`
+```
+receives: nothing
+returns:  array of { id, date, type, label, notes }
+```
+Returns all calendar notes ordered by date ASC.
+
+### `"db-createCalendarNote"`
+```
+receives: { date: string, type?: string, label?: string, notes?: string }
+returns:  id string (UUID)
+```
+Inserts a calendar note. `type` defaults to `"special"`. Triggers `saveDb()`.
+
+### `"db-deleteCalendarNote"`
+```
+receives: id string
+returns:  undefined
+```
+Deletes a calendar note by id. Triggers `saveDb()`.
 
 ### `"db-getSchemaVersion"`
 ```
@@ -27,20 +89,6 @@ receives: nothing
 returns:  { version: string }
 ```
 Reads `schema_version` from the `meta` table.
-
-### `"db-getRecentSermons"`
-```
-receives: limit number (default 3)
-returns:  array of sermon rows
-```
-Returns sermons where `stage != 'archived'` and `!= 'planning'`, ordered by `updated_at`.
-
-### `"db-getRecentSeries"`
-```
-receives: limit number (default 3)
-returns:  array of series rows
-```
-Returns series excluding tour sermons (`id NOT LIKE 'tour-%'`), ordered by `COALESCE(updated_at, created_at) DESC`. Used by the Sidebar's Series Planning dropdown.
 
 ### `"db-flush"`
 ```
@@ -50,21 +98,6 @@ returns:  { ok: true } | { ok: false, error: string } | { ok: true, skipped: tru
 Manual flush of `sermonforge.db` to disk. Wired to the `db-write-error`
 banner's "Retry" button; calling directly is also safe. Atomic via
 `<dbPath>.tmp` + rename; rotates the prior good blob to `<dbPath>.bak`.
-
-### `"db-loadTourSermon"`
-```
-receives: nothing
-returns:  { sermonId: string }
-```
-Seeds (or reuses) the tour sermon record (`id LIKE 'tour-%'`) and returns its id.
-Tour rows are excluded from `getAllSermons` / `getRecentSermons` filters.
-
-### `"db-removeTourSermon"`
-```
-receives: nothing
-returns:  undefined
-```
-Deletes the tour sermon record. Idempotent.
 
 ### `"db-getSetting"`
 ```

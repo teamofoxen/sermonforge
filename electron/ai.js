@@ -23,7 +23,9 @@ let processCallCount = 0;
 function rotateAuditLog() {
   try {
     const lines = fs.readFileSync(AI_LOG_PATH, "utf8").split("\n").filter(Boolean);
-    if (lines.length <= KEEP_ENTRIES) return;
+    // Always rewrite — called when size > MAX_AUDIT_BYTES.
+    // Dropping the line-count guard ensures a few large entries can't leave
+    // the file above the cap after rotation fires.
     fs.writeFileSync(AI_LOG_PATH, lines.slice(-KEEP_ENTRIES).join("\n") + "\n");
   } catch (_) {
     // Never throw from audit log
