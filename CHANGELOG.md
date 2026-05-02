@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-05-02 — docs: archive ACCI tracker (initiative complete)
+
+- Moved `docs/PROPOSALS/ai-clarity-and-constraint.md` → `docs/ARCHIVE/ai-clarity-and-constraint.md` and stripped misleading "How to resume" / "Decisions resolved" sections; the 26-item ledger is retained as a historical record.
+- Left a one-paragraph forwarding stub at the old `docs/PROPOSALS/` path so existing references in `SermonWorkspace.jsx` and `beta-testing-initiative.md` still resolve.
+- Memory pointer updated to the new archive location.
+
+---
+
 ## 2026-05-02 — feat: ACCI Tier G — polish (max_tokens signal, TTL fix, confirm guard, dead code)
 
 - `electron/ai/provider.js` surfaces `stop_reason` in the success envelope, guards `getClient()` against a falsy `apiKey` on TTL expiry, and documents retry idempotency.
