@@ -459,7 +459,7 @@ export function installTestSpine(): void {
     searchTheologyLibrary: async () => [],
     getTheologyChunks: async () => [],
     fetchPassage: async () => null,
-    sendAIMessage: async () => null,
+    sendAIMessage: async () => ({ ok: true, text: "" }),
     backupMemory: async () => ({ ok: true }),
     restoreMemory: async () => null,
   };

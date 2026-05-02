@@ -46,6 +46,32 @@ function isRetryable(err) {
   return false;
 }
 
+// Map a thrown SDK/transport error to one of the A4 failure kinds. Renderer-side
+// "aborted" (sermon switch) never originates here — that is set in
+// src/utils/ai.js. Internal timeout aborts (REQUEST_TIMEOUT_MS) surface as
+// kind="timeout", not "aborted".
+function classifyError(err, { internalAbort } = {}) {
+  const status = err?.status;
+  if (status === 401 || status === 403) {
+    return { kind: "auth", message: `Anthropic key was rejected. Open Setup to re-enter it. (SermonForge ${app.getVersion()})` };
+  }
+  if (status === 429) {
+    return { kind: "rate_limit", message: "Anthropic is rate-limiting requests. Wait a moment and try again." };
+  }
+  if (status === 500 || status === 502 || status === 503 || status === 529) {
+    return { kind: "server", message: "Anthropic is temporarily unavailable. Try again shortly." };
+  }
+  if (internalAbort || err?.name === "AbortError" || (typeof err?.message === "string" && /timeout|abort/i.test(err.message))) {
+    return { kind: "timeout", message: "AI request timed out after 60 seconds. Try again." };
+  }
+  // SDK throws without a status when the underlying fetch fails (DNS,
+  // ECONNREFUSED, no route to host). Absent status + no abort = network.
+  if (!status) {
+    return { kind: "network", message: "Cannot reach Anthropic. Check your internet connection." };
+  }
+  return { kind: "unknown", message: `AI request failed: ${err?.message || "unknown error"}` };
+}
+
 async function callOnce({ apiKey, system, messages, model, temperature, signal }) {
   const c = getClient(apiKey);
   return c.messages.create({
@@ -57,24 +83,26 @@ async function callOnce({ apiKey, system, messages, model, temperature, signal }
   }, { signal });
 }
 
+// Returns an envelope. Never throws for transport-classified failures —
+// callers (electron/ai.js) treat the envelope uniformly.
+//   { ok: true, text, model, raw }
+// | { ok: false, kind, message }
 async function generate({ system, messages, model, temperature }) {
   const apiKey = loadKey();
   if (!apiKey) {
-    return { error: true, message: "API key not configured" };
+    return { ok: false, kind: "auth", message: "Anthropic API key is not configured. Open Setup to enter your key." };
   }
   const resolvedModel = model ?? DEFAULT_MODEL;
   const resolvedTemperature = temperature ?? DEFAULT_TEMPERATURE;
 
-  // Per-attempt AbortSignal. 60 s is well above Anthropic's 95th-percentile
-  // non-streaming latency for messages.create. If we ever switch to streaming
-  // this number revisits.
-  let response;
   let lastErr;
+  let timedOut = false;
   for (const attempt of [1, 2]) {
+    timedOut = false;
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS);
+    const timer = setTimeout(() => { timedOut = true; ctrl.abort(); }, REQUEST_TIMEOUT_MS);
     try {
-      response = await callOnce({
+      const response = await callOnce({
         apiKey,
         system,
         messages,
@@ -83,7 +111,12 @@ async function generate({ system, messages, model, temperature }) {
         signal: ctrl.signal,
       });
       clearTimeout(timer);
-      break;
+      return {
+        ok: true,
+        text: response.content?.[0]?.text ?? null,
+        model: resolvedModel,
+        raw: response,
+      };
     } catch (e) {
       clearTimeout(timer);
       lastErr = e;
@@ -91,23 +124,12 @@ async function generate({ system, messages, model, temperature }) {
         await new Promise(r => setTimeout(r, RETRY_DELAY_MS));
         continue;
       }
-      // Stamp auth failures with the app version so user-reported errors carry it.
-      if (e?.status === 401 || e?.status === 403) {
-        const stamped = new Error(`${e.message} (SermonForge ${app.getVersion()})`);
-        stamped.status = e.status;
-        throw stamped;
-      }
-      throw e;
+      break;
     }
   }
 
-  if (!response) throw lastErr ?? new Error("AI request failed without throwing");
-
-  return {
-    text: response.content?.[0]?.text ?? null,
-    model: resolvedModel,
-    raw: response,
-  };
+  const cls = classifyError(lastErr ?? new Error("AI request failed without throwing"), { internalAbort: timedOut });
+  return { ok: false, ...cls };
 }
 
 module.exports = { generate, isAvailable, resetClient, DEFAULT_MODEL, DEFAULT_TEMPERATURE };

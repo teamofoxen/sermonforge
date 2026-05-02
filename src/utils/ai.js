@@ -14,7 +14,15 @@
  *                               the IPC handler in main process still completes;
  *                               we just discard the response). Calls without a
  *                               sermonId are not abortable in the current pass.
- * @returns {Promise<string>} Claude's response text, "" on error or abort
+ * @returns {Promise<
+ *   { ok: true, text: string }
+ *   | { ok: false, kind: "auth"|"rate_limit"|"network"|"server"|"timeout"|"format"|"empty"|"unknown"|"aborted", message: string }
+ * >}
+ *
+ * The eight failure kinds match the A4 taxonomy. "aborted" is an internal-only
+ * 9th kind set when the active sermon switches mid-flight; UI sites should
+ * generally skip rendering anything for it (it represents user intent, not
+ * failure).
  */
 
 // In-flight registry. Map<sermonId, Set<AbortController>>. SermonWorkspace
@@ -34,11 +42,11 @@ export async function sendAIMessage(messages, systemPrompt, step, sermonId) {
   // Input validation
   if (!Array.isArray(messages)) {
     console.error('[AI] sendAIMessage: messages must be an array', { messages });
-    return '';
+    return { ok: false, kind: 'unknown', message: 'Internal error: messages was not an array.' };
   }
   if (typeof systemPrompt !== 'string' && !Array.isArray(systemPrompt)) {
     console.error('[AI] sendAIMessage: systemPrompt must be a string or content-block array', { systemPrompt });
-    return '';
+    return { ok: false, kind: 'unknown', message: 'Internal error: systemPrompt had the wrong type.' };
   }
 
   const isDev = import.meta.env.DEV;
@@ -77,18 +85,23 @@ export async function sendAIMessage(messages, systemPrompt, step, sermonId) {
 
     if (response == null) {
       console.error('[AI] sendAIMessage: received null/undefined response from IPC');
-      return '';
+      return { ok: false, kind: 'unknown', message: 'AI request returned no response.' };
     }
 
+    // The IPC handler resolves with an envelope. Defensive: if a legacy/test
+    // stub returns a bare string, wrap it so callers get a uniform shape.
+    if (typeof response === 'string') {
+      return { ok: true, text: response };
+    }
     return response;
   } catch (err) {
     if (err?.name === 'AbortError') {
       if (isDev) console.log('[AI] request aborted (sermon switch)');
-      return '';
+      return { ok: false, kind: 'aborted', message: '' };
     }
     const context = { messageCount: messages.length, firstRole: messages[0]?.role };
     console.error('[AI] sendAIMessage: IPC call failed', context, err);
-    return '';
+    return { ok: false, kind: 'unknown', message: `AI request failed: ${err?.message || 'unknown error'}` };
   } finally {
     if (controller) {
       const set = inFlight.get(sermonId);

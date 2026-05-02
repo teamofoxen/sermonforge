@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-01 — feat: differentiate AI failure modes (ACCI Item A4)
+
+- `electron/ai/provider.js` classifies thrown SDK/transport errors into eight kinds (auth, rate_limit, network, server, timeout, format, empty, unknown) and returns an `{ ok, kind, message }` envelope instead of throwing.
+- `electron/ai.js` IPC handler now resolves with the envelope on every classified failure (rejected IPC promises drop custom error properties); audit log records `error.kind` for each failure.
+- `src/utils/ai.js` `sendAIMessage` returns the envelope to renderers; sermon-switch abort surfaces as internal-only `kind: "aborted"` so UI sites can skip rendering.
+- Five UI files (`AIPanel.jsx`, `StudyTab.jsx`, `OutlineTab.jsx`, `DeliveryTab.jsx`, `SeriesPlanner.jsx`) replace the unified "Something went wrong" with kind-specific messages at ~31 call sites.
+- Test stub at `tests/contracts/_helpers/test-spine.ts` updated for the new envelope contract; full suite 144 passing.
+
+---
+
 ## 2026-05-01 — feat: JSON-output validator at AI parse boundaries (ACCI Item A3)
 
 - New `src/utils/aiSchema.js`: `parseAIJson` plus four structural-shape validators (Incorporate `mpt_mps`, Incorporate structured-field, Scripture map, CMC blocks).

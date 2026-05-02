@@ -311,8 +311,12 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
   async function fetchInline(key, prompt, system) {
     setInlineLoading(key);
     try {
-      const response = await sendAIMessage([{ role: "user", content: prompt }], system);
-      setInlineResponses(prev => ({ ...prev, [key]: response }));
+      const result = await sendAIMessage([{ role: "user", content: prompt }], system);
+      if (result.ok) {
+        setInlineResponses(prev => ({ ...prev, [key]: result.text }));
+      } else if (result.kind !== "aborted") {
+        setInlineResponses(prev => ({ ...prev, [key]: result.message }));
+      }
     } catch (e) {
       setInlineResponses(prev => ({ ...prev, [key]: `Error: ${e.message}` }));
     } finally {
@@ -340,11 +344,11 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
     setDraftLoading("mpt");
     setMptProposal(null);
     try {
-      const resp = await sendAIMessage(
+      const result = await sendAIMessage(
         [{ role: "user", content: `Passage: ${sermon.passage || "unknown"}\n\nObservations:\n${formatPhaseText(obsData, OBSERVE_FIELDS)}\n\nInterpretation:\n${formatPhaseText(intData, INTERPRET_FIELDS)}\n\nDraft a Main Point of the Text (MPT) for this passage. The MPT is a single sentence in past tense summarizing what the author was saying to the original audience. Return only the sentence.` }],
         "You are a biblical scholar helping a pastor formulate the main point of a text. The MPT must be historically grounded, past tense, and accurately reflect the author's original intent."
       );
-      if (resp?.trim()) setMptProposal(resp.trim());
+      if (result.ok && result.text.trim()) setMptProposal(result.text.trim());
     } catch (e) {
       console.error("[generateMPT]", e);
     } finally {
@@ -367,11 +371,11 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
         hasAudience && `The Room (who is in the room and where they are): ${hasAudience}`,
         hasTheme && `The Sermon's Work (the big claim and pastoral purpose): ${hasTheme}`,
       ].filter(Boolean).join("\n")}` : "";
-      const resp = await sendAIMessage(
+      const result = await sendAIMessage(
         [{ role: "user", content: `Passage: ${sermon.passage || "unknown"}\n\nMPT: ${sermon.mpt}\n\nRedemptive Thread:\n${redThread || "(none)"}\n\nImplications:\n${implications || "(none)"}${pcBlock}\n\nDraft a Main Point of the Sermon (MPS). The MPS is a single present-tense sentence. The MPT is the theological anchor — not a template to restate. Do not mirror the MPT's language; ask what it makes possible for these people right now.${pcBlock ? " The sermon intro will move the congregation from the cultural world inward through the room to the claim — assume that journey has been made. The MPS does not retrace it. The MPS lands at The Sermon's Work: telegraph that claim, aimed at who is in the room. The Cultural Moment and The Room inform tone and angle only — they do not need to appear in the sentence. When drawing on the pastoral context, express the underlying human condition in universal terms (e.g., fear, control, guilt, pride), not situational or cultural descriptors. If the MPT has sequential movements, render them as a forward-moving causal chain with one subject and one main verb, using no more than two subordinate clauses." : " If the MPT has sequential movements, render them as a forward-moving causal chain with one subject and one main verb, using no more than two subordinate clauses."} Aim for 35–45 words. Every clause must add meaning; avoid filler connectors used only to reach length. Compress ruthlessly. Return only the sentence.` }],
         "You are a homiletics consultant helping a pastor crystallize a sermon claim. The MPT is the kernel. The MPS is what it produces aimed at this congregation. The sermon intro will handle the concentric journey — cultural world, then the room, then the threshold. The MPS lands after that journey: it is the claim waiting at the end. Derive it primarily from The Sermon's Work; treat The Sermon's Work as the primary driver of the MPS — all other inputs are subordinate. Let The Cultural Moment and The Room shape tone and angle without appearing in the sentence. Do not restate the MPT. Remain theologically anchored in the MPT without repeating or mirroring its language. Do not retrace the intro. One sentence, one spine, landing at the claim."
       );
-      if (resp?.trim()) setMpsProposal(resp.trim());
+      if (result.ok && result.text.trim()) setMpsProposal(result.text.trim());
     } catch (e) {
       console.error("[generateMPS]", e);
     } finally {
@@ -399,8 +403,12 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
       const messages = history.map((m, i) =>
         i === history.length - 1 ? { ...m, content: contextPrefix + m.content } : m
       );
-      const resp = await sendAIMessage(messages, systemContext);
-      if (resp?.trim()) setMpsChat(prev => [...prev, { role: "assistant", content: resp.trim() }]);
+      const result = await sendAIMessage(messages, systemContext);
+      if (result.ok && result.text.trim()) {
+        setMpsChat(prev => [...prev, { role: "assistant", content: result.text.trim() }]);
+      } else if (!result.ok && result.kind !== "aborted") {
+        setMpsChat(prev => [...prev, { role: "assistant", content: result.message }]);
+      }
     } catch (e) {
       setMpsChat(prev => [...prev, { role: "assistant", content: `Error: ${e.message}` }]);
     } finally {
@@ -422,11 +430,11 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
         `\nRedemptive Thread:\n${formatPhaseText(redData, REDEMPTIVE_FIELDS)}`,
         `\nImplications:\n${formatPhaseText(impData, [...IMPLICATIONS_THEOLOGICAL, ...IMPLICATIONS_PERSONAL])}`,
       ].join("\n");
-      const resp = await sendAIMessage(
+      const result = await sendAIMessage(
         [{ role: "user", content: `${exegesisContext}\n\nPropose a sermon outline.` }],
         OUTLINE_SYSTEM
       );
-      if (resp?.trim()) setOutlineChat([{ role: "assistant", content: resp.trim() }]);
+      if (result.ok && result.text.trim()) setOutlineChat([{ role: "assistant", content: result.text.trim() }]);
     } catch (e) {
       console.error("[suggestOutline]", e);
     } finally {
@@ -454,8 +462,12 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
       const messages = history.map((m, i) =>
         i === history.length - 1 ? { ...m, content: contextPrefix + m.content } : m
       );
-      const resp = await sendAIMessage(messages, OUTLINE_SYSTEM);
-      if (resp?.trim()) setOutlineChat(prev => [...prev, { role: "assistant", content: resp.trim() }]);
+      const result = await sendAIMessage(messages, OUTLINE_SYSTEM);
+      if (result.ok && result.text.trim()) {
+        setOutlineChat(prev => [...prev, { role: "assistant", content: result.text.trim() }]);
+      } else if (!result.ok && result.kind !== "aborted") {
+        setOutlineChat(prev => [...prev, { role: "assistant", content: result.message }]);
+      }
     } catch (e) {
       setOutlineChat(prev => [...prev, { role: "assistant", content: `Error: ${e.message}` }]);
     } finally {
@@ -466,12 +478,14 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
   async function generateSummary(key, userPrompt, systemPrompt) {
     setSummaryLoading(key);
     try {
-      const response = await sendAIMessage(
+      const result = await sendAIMessage(
         [{ role: "user", content: userPrompt }],
         systemPrompt
       );
-      setSummaries(prev => ({ ...prev, [key]: response }));
-      if (key === "s3" || key === "s4") onSummaryGenerated?.(key, response);
+      if (result.ok) {
+        setSummaries(prev => ({ ...prev, [key]: result.text }));
+        if (key === "s3" || key === "s4") onSummaryGenerated?.(key, result.text);
+      }
     } catch (e) {
       console.error("Summary generation failed:", e);
     } finally {
@@ -582,10 +596,16 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
       }
 
       const pts = eligible.map((p, i) => `${i + 1}. ${p.text}`).join("\n");
-      const resp = await sendAIMessage(
+      const result = await sendAIMessage(
         [{ role: "user", content: `Passage: ${sermon.passage}\n\nOutline:\n${pts}\n\nMap each outline point to its most relevant verse range within the passage.` }],
         `You are helping a pastor identify which specific verses within a sermon passage ground each outline point. Return ONLY valid JSON — no preamble, no markdown, no explanation. Format: {"1": "Book Chapter:Verse-Verse", "2": "Book Chapter:Verse-Verse", ...}. Keys are point numbers as strings. Values must be exact verse references that are subsets of the given passage.`
       );
+      if (!result.ok) {
+        if (result.kind === "aborted") return;
+        setPopulateScriptureMessage({ tone: "error", text: `Could not populate Scripture: ${result.message}` });
+        return;
+      }
+      const resp = result.text;
       const parsed = parseAIJson(resp);
       if (!parsed.ok) {
         setPopulateScriptureMessage({ tone: "error", text: `Could not populate Scripture: ${parsed.reason}` });
@@ -665,8 +685,12 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
       const messages = history.map((m, i) =>
         i === history.length - 1 ? { ...m, content: contextPrefix + m.content } : m
       );
-      const resp = await sendAIMessage(messages, FE_CHAT_SYSTEM);
-      if (resp?.trim()) setFeChat(prev => [...prev, { role: "assistant", content: resp.trim() }]);
+      const result = await sendAIMessage(messages, FE_CHAT_SYSTEM);
+      if (result.ok && result.text.trim()) {
+        setFeChat(prev => [...prev, { role: "assistant", content: result.text.trim() }]);
+      } else if (!result.ok && result.kind !== "aborted") {
+        setFeChat(prev => [...prev, { role: "assistant", content: result.message }]);
+      }
     } catch (e) {
       setFeChat(prev => [...prev, { role: "assistant", content: `Error: ${e.message}` }]);
     } finally {
@@ -824,11 +848,11 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                           .filter(f => redData[f.key]?.trim())
                           .map(f => `${f.label}: ${redData[f.key].trim()}`)
                           .join("\n\n");
-                        const resp = await sendAIMessage(
+                        const result = await sendAIMessage(
                           [{ role: "user", content: `Passage: ${sermon.passage || "unknown"}\n\nRedemptive feature answers:\n\n${filled || "(none yet)"}\n\nSynthesize these answers into a cohesive summary of how this passage participates in redemptive history and points to Christ. Write 3–5 sentences. Be specific to the text.` }],
                           "You are a Reformed biblical theologian helping a pastor synthesize redemptive-historical observations into a clear summary. Ground every claim in the text."
                         );
-                        if (resp?.trim()) setRedSummaryProposal(resp.trim());
+                        if (result.ok && result.text.trim()) setRedSummaryProposal(result.text.trim());
                       } catch (e) {
                         console.error("[redemptive synthesize]", e);
                       } finally { setDraftLoading(null); }
@@ -947,11 +971,11 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                           .map(f => `${f.label} ${impData[f.key].trim()}`)
                           .join("\n");
                         const unb = impData[IMPLICATIONS_UNBELIEVER_KEY]?.trim() || "";
-                        const resp = await sendAIMessage(
+                        const result = await sendAIMessage(
                           [{ role: "user", content: `Passage: ${sermon.passage || "unknown"}\n\nTheological significance:\n${theo || "(none)"}\n\nPersonal implications:\n${pers || "(none)"}\n\nImplications for unbelievers:\n${unb || "(none)"}\n\nCompile all of these into a single consolidated list of implications. Each item should be one clear, actionable sentence. Group naturally but don't repeat. Include both theological and practical implications.` }],
                           "You are a homiletics consultant helping a pastor compile a master list of sermon implications. Every item must be grounded in the text, gospel-rooted, and congregation-facing."
                         );
-                        if (resp?.trim()) setImpCompileProposal(resp.trim());
+                        if (result.ok && result.text.trim()) setImpCompileProposal(result.text.trim());
                       } catch (e) {
                         console.error("[implications compile]", e);
                       } finally { setDraftLoading(null); }

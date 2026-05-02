@@ -68,11 +68,15 @@ export default function OutlineTab({ sermon, onUpdate, onTabChange, studySummari
         `\nRedemptive Thread:\n${flattenToText(redData, REDEMPTIVE_FIELDS) || "(none)"}`,
         `\nImplications:\n${flattenToText(impData, [...IMPLICATIONS_THEOLOGICAL, ...IMPLICATIONS_PERSONAL]) || "(none)"}`,
       ].join("\n");
-      const resp = await sendAIMessage(
+      const result = await sendAIMessage(
         [{ role: "user", content: `${exegesisContext}\n\nPropose a sermon outline.` }],
         OUTLINE_SYSTEM
       );
-      if (resp?.trim()) setOutlineChat([{ role: "assistant", content: resp.trim() }]);
+      if (result.ok && result.text.trim()) {
+        setOutlineChat([{ role: "assistant", content: result.text.trim() }]);
+      } else if (!result.ok && result.kind !== "aborted") {
+        setOutlineChat([{ role: "assistant", content: result.message }]);
+      }
     } catch (e) {
       console.error("[OutlineTab suggestOutline]", e);
     } finally {
@@ -100,8 +104,12 @@ export default function OutlineTab({ sermon, onUpdate, onTabChange, studySummari
       const messages = history.map((m, i) =>
         i === history.length - 1 ? { ...m, content: contextPrefix + m.content } : m
       );
-      const resp = await sendAIMessage(messages, OUTLINE_SYSTEM);
-      if (resp?.trim()) setOutlineChat(prev => [...prev, { role: "assistant", content: resp.trim() }]);
+      const result = await sendAIMessage(messages, OUTLINE_SYSTEM);
+      if (result.ok && result.text.trim()) {
+        setOutlineChat(prev => [...prev, { role: "assistant", content: result.text.trim() }]);
+      } else if (!result.ok && result.kind !== "aborted") {
+        setOutlineChat(prev => [...prev, { role: "assistant", content: result.message }]);
+      }
     } catch (e) {
       setOutlineChat(prev => [...prev, { role: "assistant", content: `Error: ${e.message}` }]);
     } finally {
@@ -115,11 +123,15 @@ export default function OutlineTab({ sermon, onUpdate, onTabChange, studySummari
     setReviewResponse(null);
     try {
       const pts = outline.map((p, i) => `${i + 1}. ${p.text}`).join("\n");
-      const resp = await sendAIMessage(
+      const result = await sendAIMessage(
         [{ role: "user", content: `Passage: ${sermon.passage || "unknown"}.\nMPT: ${sermon.mpt || "(none)"}.\nMPS: ${sermon.mps || "(none)"}.\n\nOutline:\n${pts}` }],
         `Review this sermon outline. Evaluate: Do the points derive from the text? Do they ladder up to the MPS? Is the progression clear and complete? Does tension resolve in the gospel? Suggest the minimum changes needed.`
       );
-      setReviewResponse(resp);
+      if (result.ok) {
+        setReviewResponse(result.text);
+      } else if (result.kind !== "aborted") {
+        setReviewResponse(result.message);
+      }
     } catch (e) {
       setReviewResponse(`Error: ${e.message}`);
     } finally {

@@ -128,12 +128,16 @@ function ManuscriptPanel({ sermon, onUpdate, onPanelChange }) {
 
     try {
       const context = buildManuscriptDeliveryContext(sermon);
-      const response = await sendAIMessage(
+      const result = await sendAIMessage(
         [{ role: "user", content: `${context}\n\nFormat the manuscript for delivery.` }],
         MANUSCRIPT_DELIVERY_SYSTEM
       );
+      if (!result.ok) {
+        if (result.kind !== "aborted") setError(`Generation failed: ${result.message}`);
+        return;
+      }
 
-      const cleaned = response
+      const cleaned = result.text
         .replace(/^```(?:markdown|text)?\n?/m, "")
         .replace(/\n?```$/m, "")
         .trim();
@@ -480,10 +484,15 @@ function WithoutNotesPanel({ sermon, onUpdate }) {
 
     try {
       const context = buildCMCContext(sermon);
-      const response = await sendAIMessage(
+      const result = await sendAIMessage(
         [{ role: "user", content: `${context}\n\nGenerate the PMBs.` }],
         CMC_SYSTEM
       );
+      if (!result.ok) {
+        if (result.kind !== "aborted") setError(`Generation failed: ${result.message}`);
+        return;
+      }
+      const response = result.text;
 
       const parsedRaw = parseAIJson(response);
       if (!parsedRaw.ok) {

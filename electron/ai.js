@@ -40,6 +40,11 @@ function appendAuditLog(entry) {
 }
 
 function registerAIHandlers(ipcMain) {
+  // The handler always RESOLVES with an envelope. It never rejects on classified
+  // failures — rejected IPC promises drop custom error properties, which would
+  // strip the kind. Renderer-side wrapper at src/utils/ai.js reads the envelope.
+  //   { ok: true, text }
+  // | { ok: false, kind: "auth"|"rate_limit"|"network"|"server"|"timeout"|"format"|"empty"|"unknown", message }
   ipcMain.handle("ai-message", async (event, payload) => {
     const { messages, systemPrompt, step, sermonId } = payload || {};
 
@@ -58,29 +63,35 @@ function registerAIHandlers(ipcMain) {
     try {
       result = await generate({ system, messages });
     } catch (e) {
-      // Network / SDK / abort failures. Audit-log the error then rethrow so the
-      // renderer's existing IPC-rejection path returns "" and the unified
-      // "Something went wrong" fallback bubble fires.
-      appendAuditLog({ ...baseEntry(), error: { kind: "api", message: String(e?.message || e) } });
+      // Unexpected throw from generate — generate() now returns an envelope for
+      // every classified failure, so this only fires for truly unexpected errors.
+      const message = String(e?.message || e);
+      const failure = { kind: "unknown", message: `AI request failed: ${message}` };
+      appendAuditLog({ ...baseEntry(), error: failure });
       console.error("[ai-message]", e);
-      throw new Error(`AI request failed: ${e?.message || e}`);
+      return { ok: false, ...failure };
     }
 
-    if (result.error) {
-      // Configuration error — typically API key not set. Throw rather than
-      // returning a string the renderer would render as a normal AI reply.
-      appendAuditLog({ ...baseEntry(), error: { kind: "configuration", message: result.message } });
-      console.error("[AI] Request failed:", result.message);
-      throw new Error(`AI unavailable: ${result.message}`);
+    if (!result.ok) {
+      appendAuditLog({ ...baseEntry(), error: { kind: result.kind, message: result.message } });
+      console.error("[AI] Request failed:", result.kind, result.message);
+      return { ok: false, kind: result.kind, message: result.message };
     }
 
     const text = result.text;
     if (text == null) {
       // Anthropic returned a successful HTTP response but the first content
-      // block is non-text or missing. Treat as a format error.
-      appendAuditLog({ ...baseEntry(), error: { kind: "format", message: "null content block" } });
+      // block is non-text or missing.
+      const failure = { kind: "format", message: "AI returned an unexpected response format." };
+      appendAuditLog({ ...baseEntry(), error: failure });
       console.error("[ai-message] Unexpected response shape:", JSON.stringify(result.raw?.content));
-      throw new Error("AI returned an unexpected response format");
+      return { ok: false, ...failure };
+    }
+    if (text.trim() === "") {
+      const failure = { kind: "empty", message: "AI returned an empty response." };
+      appendAuditLog({ ...baseEntry(), error: failure });
+      console.error("[ai-message] Empty response text");
+      return { ok: false, ...failure };
     }
 
     appendAuditLog({
@@ -89,7 +100,7 @@ function registerAIHandlers(ipcMain) {
       model: result.model,
     });
 
-    return text;
+    return { ok: true, text };
   });
 }
 

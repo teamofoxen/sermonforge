@@ -155,10 +155,16 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
       // content blocks with cache_control on the static portion.
       const base = buildSystemPrompt(step, sermonId);
       const finalSystemPrompt = appendTaskDirective(base, systemPrompt);
-      const response = await sendAIMessage(history, finalSystemPrompt, step, sermonId);
-      setMessages((prev) => [...prev, { role: "assistant", content: response || "Something went wrong. Please try again.", ...meta }]);
-      if (response) captureResponsePatterns(response, step);
-      return response || "";
+      const result = await sendAIMessage(history, finalSystemPrompt, step, sermonId);
+      if (!result.ok) {
+        if (result.kind === "aborted") return "";
+        setMessages((prev) => [...prev, { role: "assistant", content: result.message, ...meta }]);
+        return "";
+      }
+      const response = result.text;
+      setMessages((prev) => [...prev, { role: "assistant", content: response, ...meta }]);
+      captureResponsePatterns(response, step);
+      return response;
     } catch (err) {
       setMessages((prev) => [
         ...prev,
@@ -227,11 +233,18 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
         const userMsg = { role: "user", content: userContent };
         setMessages(prev => [...prev, userMsg]);
         const history = trimHistory([...messagesRef.current, userMsg]).map(m => ({ role: m.role, content: m.content }));
-        const response = await sendAIMessage(history, systemPrompt, step, sermon?.id);
+        const result = await sendAIMessage(history, systemPrompt, step, sermon?.id);
         // Deduplicate sources by author+work for the attribution display
         const sources = hits?.length ? dedupSources(hits) : [];
-        setMessages(prev => [...prev, { role: "assistant", content: response || "Something went wrong. Please try again.", sources }]);
-        if (response) captureResponsePatterns(response, step);
+        if (!result.ok) {
+          if (result.kind !== "aborted") {
+            setMessages(prev => [...prev, { role: "assistant", content: result.message, sources }]);
+          }
+        } else {
+          const response = result.text;
+          setMessages(prev => [...prev, { role: "assistant", content: response, sources }]);
+          captureResponsePatterns(response, step);
+        }
       } catch (err) {
         setMessages(prev => [...prev, { role: "assistant", content: `Error: ${err.message}` }]);
       } finally {
@@ -266,7 +279,13 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
       const current = getCurrentFieldData(config, sermon);
       const prompt = buildIncorporatePrompt(config, current, reviewContent);
       const systemPrompt = INCORPORATE_REVISION_PROMPT;
-      const response = await sendAIMessage([{ role: "user", content: prompt }], systemPrompt, reviewStep, sermon?.id);
+      const result = await sendAIMessage([{ role: "user", content: prompt }], systemPrompt, reviewStep, sermon?.id);
+      if (!result.ok) {
+        if (result.kind === "aborted") return;
+        setMessages(prev => [...prev, { role: "assistant", content: `Couldn't revise: ${result.message}` }]);
+        return;
+      }
+      const response = result.text;
 
       const parsed = parseAIJson(response);
       if (!parsed.ok) {
