@@ -32,9 +32,11 @@ The directional principle underneath both: **the text drives the sermon toward P
 
 Three layers of definition, walked in this order:
 
-1. **Per-field definitions.** Every field across all four sub-phases gets a structured entry: name, intent, what the pastor writes in it, role in the sub-phase, and the connections backward and forward to neighboring fields.
-2. **Flow within each sub-phase.** Once all fields in a sub-phase are defined, a holistic pass surfaces how those fields connect into a coherent line of work. Any field that should move, merge, split, be renamed, or be cut gets decided at this stage. Discovery happens during the per-field walkthrough; decisions happen at the sub-phase boundary, not mid-walkthrough.
-3. **Flow between sub-phases.** At each sub-phase boundary, a pass on how this sub-phase's outputs hand off to the next. At the end of all four, a final pass on the whole arc — from the first Observe field to the moment the pastor enters MPT/MPS — to verify the through-line feels earned.
+1. **Per-field definitions.** Every field across all four sub-phases gets a structured entry: name, intent, what the pastor writes in it, role in the sub-phase, and the connections backward and forward to neighboring fields. The per-field walk also names, for each field: what counts as legitimately N/A on a given passage (the **N/A escape valve**, absorbed from SPRD Q3b); what PC content this field carries, if any (the substance the **PC modulation** question rests on, absorbed from SPRD Q6); and whether this field should rename, merge, split, move, or retire (the **reshape question**, absorbed from SPRD Q2). Discovery happens here; decisions wait for layer 2.
+2. **Flow within each sub-phase.** Once all fields in a sub-phase are defined, a holistic pass that does three things. (a) Names the **named outcome** of the sub-phase (Observation Set, Interpretation Set, Christ-Connection Statement, Implications Synthesis as currently named) and articulates how the field-work composes into it (absorbed from SPRD section 2 substance). (b) Names the **load-bearing fields** for that named outcome — the determination evidence-sufficiency thresholds at the sub-phase boundary will rest on (absorbed from SPRD section 3 substance). (c) Settles any reshape decisions surfaced in layer 1.
+3. **Flow between sub-phases.** At each sub-phase boundary, a pass on how this sub-phase's outputs hand off to the next, and what **evidence-sufficiency threshold** the boundary enforces — which fields must be filled, what synthesis presence looks like in practice for this specific named outcome (absorbed from SPRD section 3 substance). The Implications between-sub-phase pass also articulates how the **three-way conversation** (Theological Significance, Personal Implications, Pastoral Context) composes into the Implications Synthesis (absorbed from SPRD Q7 content half). At the end of all four, a final pass on the whole arc — from the first Observe field to the moment the pastor enters MPT/MPS — to verify the through-line feels earned.
+
+The PC progression — minimal at Observe, deepening through Interpret, texture at RT, integrated at Implications — is articulated through the per-field PC content layer 1 names. Once SFDI is done, AI prompts that reference PC have field-level content to draw on; until then, AI prompts treat PC uniformly.
 
 The final SFDI document will gather all three layers into one place. It is not pre-structured; it accumulates as the walkthrough proceeds, and the document's shape gets named when enough has been built to know what shape fits.
 
@@ -50,7 +52,7 @@ The test of SFDI completion isn't a length target or a parser check. It's experi
 
 **For the enforcement layer.** Process Contract #6 activates. The clause is no longer "drafted but inactive" — it has substance to bind to. An automated check parses the SFDI document and validates the visible scaffolding: every field declares its connections, every sub-phase declares its named outcome, every boundary names its handoff. The throughline's substantive integrity — does each field actually contribute, does each named outcome follow from the field-work, does the handoff actually carry — binds the writer; the mechanical part is evidence, the spirit is the contract.
 
-**For downstream initiatives.** SPRD wakes up. Its content-level sections (artifact framing, evidence sufficiency, the open questions partially answered by the PC articulation) get a revision pass against the SFDI definitions. Then SPRD lands. Then implementation begins — the spine routing, the visibility events, the proposal-pattern fixes for Synthesize and Compile, the Pastoral Context card removal, the AI-prompt PC unwiring. PC's substance flows downstream through the named outcomes; explicit AI-PC tier wiring becomes unnecessary.
+**For downstream initiatives.** SPRD's structural pieces ship in parallel — they don't wait for SFDI. The first structural pilot is Q1 spine routing; visibility events (Process #3 extension), evidence gates (Process #2 extension under the hard-gate ruling), the Implications restructure shape, Step 5 as its own workspace step, and PC card removal follow in their own changes. SFDI's content layer flows in as it accumulates — per-field PC content, per-boundary thresholds, Implications voice assignments, named-outcome substance — and as each layer lands, the AI prompts and the per-sub-phase progressive model sharpen against real field-level definitions. PC's substance flows downstream through the named outcomes; explicit AI-PC tier wiring becomes unnecessary.
 
 **The qualitative test.** Each element feels earned. If we don't feel it in the doc, the pastor won't feel it in the workspace. The throughline's integrity is the contract; we're done when the throughline is real.
 
@@ -88,7 +90,9 @@ This is large. Roughly 40 fields across four sub-phases need walkthrough entries
 
 ## How to start a session
 
-When ready, open a working session and name a starting point:
+**Active path: offline drafting (as of 2026-05-02).** The user drafts field definitions in their own time, in a doc, using `docs/PROPOSALS/sfdi-throughline-vision.md` as the orientation sheet. When drafts are ready, they're brought into a session and Claude shapes them collaboratively from the user's words — no interlocutor framing required. Use this mode unless you specifically want to switch to the live-walkthrough alternative.
+
+**Alternative: live walkthrough (preserved as canonical method).** When ready to walk a field live, open a working session and name a starting point:
 
 - **First session:** "Begin SFDI at Observe, field one." That kicks off the per-field walkthrough at the beginning.
 - **Subsequent sessions:** "Resume SFDI at Observe, field four" (or wherever the previous session ended).
@@ -100,14 +104,40 @@ The walkthrough produces structured per-field entries. Those entries accumulate 
 
 ## Relationship to SPRD
 
-SPRD planning is paused at its current question state pending SFDI. Once SFDI lands:
+**Boundary as of 2026-05-02 (revised — content merged into SFDI).** SPRD owns the structural layer of the redesign. SFDI owns the content layer. The earlier decomposition — where SPRD held content sections (section 2 canonical artifacts, section 3 thresholds, Q2, Q3b, Q6, Q7 content half) that "waited for SFDI" — has been collapsed. Those sections and Q's moved into SFDI's scope; SPRD's section 2 and section 3 now carry only the structural framing, with pointers here for substance. Q2, Q3b, Q6, and Q7 content half retired from SPRD's open-questions list.
 
-- SPRD section 2 (canonical artifacts per sub-phase) gets a revision pass against the new field definitions.
-- SPRD section 3 (evidence sufficiency) gets a revision pass — the gating categories were chosen on the assumption that the fields are right; once the fields are right, the categories may shift.
-- SPRD Q3 (hard gates) gets re-confirmed against the new field structure.
-- SPRD Q3b (N/A escape valve), Q7 (Implications restructure), and any other content-level question revisits as needed.
+**What SPRD owns (structural):**
 
-SPRD's structural findings — the spine bypass, the silent transitions, the Mutation #2 violations on Synthesize and Compile, the Pastoral Context progressive model — are independent of field rework. They stand as written. Implementation does not begin until both initiatives land.
+- Spine routing (sub-phase + step transitions through `applyMutation`)
+- Evidence-gate firing mechanics (Process Contract #2 fires at sub-phase, step, and stage resolutions; the kinds of checks available — coverage, structural completeness, synthesis presence)
+- Movement visibility (Process Contract #3 extension to sub-phase movement)
+- Hard-gate posture (Q3 ruling)
+- Old-sermon exemption scope (Q4 ruling)
+- The Implications restructure shape (one step, three voices)
+- Step 5 (Intro/Conclusion) as its own workspace step
+- PC card removal sequencing
+- The structural commitment that AI prompts treat PC as enrichment never as a precondition (Process Contract #4)
+- The structural fact that no schema change is forced by the redesign
+- Inline AI Reviews disposition (Q8, open)
+
+**What SFDI owns (content):**
+
+- Per-field definitions across all four sub-phases (name, intent, what gets written, role, connects from, connects to)
+- Per-sub-phase named outcomes — what each one IS, how the field-work produces it
+- Per-boundary evidence-sufficiency thresholds — what 'enough' looks like in practice
+- Per-field N/A escape valve definitions
+- Per-field PC content (the substance AI prompts read when modulating PC)
+- Implications voice assignments (which fields enact Theological Significance, Personal Implications, Pastoral Context)
+- Reshape decisions surfaced during walks (rename, merge, split, move, retire)
+
+**The boundary in plain language:**
+
+- SPRD says: "Each sub-phase produces a named outcome." SFDI says what each named outcome is and how the field-work produces it.
+- SPRD says: "Every boundary has a hard gate." SFDI says what 'enough' looks like at each specific boundary.
+- SPRD says: "Implications has a three-way conversation." SFDI says which fields enact each voice.
+- SPRD says: "AI prompts treat PC as enrichment, never as a precondition." SFDI says what PC content each field carries that the prompts read from.
+
+SFDI itself moves offline. The user drafts field definitions in their own time, using `docs/PROPOSALS/sfdi-throughline-vision.md` as the orientation sheet. Claude shapes drafts when brought in. The Merida-anchored interlocutor walkthrough method described in the Approach section above is preserved as the canonical method if a live walkthrough resumes, but is not the active path as of 2026-05-02.
 
 ---
 

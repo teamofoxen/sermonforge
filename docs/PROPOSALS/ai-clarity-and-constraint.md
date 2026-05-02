@@ -1,6 +1,6 @@
 # AI Clarity & Constraint — Task Tracker
 
-**Status:** Tier A complete (Items 1–4 shipped 2026-05-01). Tier B complete (Items 5–7 shipped 2026-05-01). Tier C complete (Items 8–11 shipped 2026-05-01 / 2026-05-02). All seven decisions (Q1–Q7) settled. Tier D is the planned next block.
+**Status:** Tier A complete (Items 1–4 shipped 2026-05-01). Tier B complete (Items 5–7 shipped 2026-05-01). Tier C complete (Items 8–11 shipped 2026-05-01 / 2026-05-02). Tier D complete (Items 12–15 shipped 2026-05-02). All seven decisions (Q1–Q7) settled. Tier E is the planned next block.
 **Date drafted:** 2026-05-01.
 **Audience:** future working sessions. Plain language; no engineering vocabulary required.
 
@@ -38,12 +38,12 @@ The 26-item plan below is consolidation, not redesign — every item either pull
 10. **[C3]** ✅ *Shipped `08829d4`.* Pass `step` and `sermonId` on every `sendAIMessage` call site. *(StudyTab.jsx, OutlineTab.jsx, DeliveryTab.jsx, SeriesPlanner.jsx — ManuscriptTab.jsx had no call sites.)*
 11. **[C4]** ✅ *Shipped `85f4736`.* Centralized `OUTLINE_REVIEW_TASK` and `CHALLENGE_MPT_TASK` in `src/prompts/study.js`; 4 outline-review and 2 challenge-MPT call sites now share single sources. *(reviewPrompts.js, OutlineTab.jsx, StudyTab.jsx)*
 
-### Tier D — add the safety nets
+### Tier D — add the safety nets — **SHIPPED**
 
-12. **[D1]** CI workflow that runs `npm test` on push to main and on every pull request. *(new `.github/workflows/test.yml` or job added to `build.yml`)*
-13. **[D2]** AI-integrity gate that fails when the Anthropic SDK is imported outside `electron/ai/provider.js` or `sendAIMessage` is called outside `src/utils/ai.js`. **Q3 decision: ESLint rule** in `eslint-plugin-sermonforge/`, matching the `no-direct-database` pattern.
-14. **[D3]** Per-call payload size cap at the IPC boundary + per-session AI call counter. *Requires #4.* **Q4 decision: compute counter now (write to audit log + expose internally), defer UI surface** until usage data points to the right home; cap ships either way. *(electron/ai.js, src/utils/ai.js)*
-15. **[D4]** Capture token-usage fields (`usage.input_tokens`, `usage.output_tokens`, `usage.cache_creation_input_tokens`, `usage.cache_read_input_tokens`) into the audit log. *(provider.js, electron/ai.js)*
+12. **[D1]** ✅ *Shipped 2026-05-02.* CI workflow that runs `npm test` on push to main and on every pull request. *(new `.github/workflows/test.yml`)*
+13. **[D2]** ✅ *Shipped 2026-05-02.* AI-integrity gate that fails when the Anthropic SDK is imported outside `electron/ai/provider.js` or `window.electronAPI.sendAIMessage` is accessed outside `src/utils/ai.js`. **Q3 decision: ESLint rule** `no-direct-ai` in `eslint-plugin-sermonforge/`, matching the `no-direct-database` pattern. Enabled as `error` in `.eslintrc.cjs`.
+14. **[D3]** ✅ *Shipped 2026-05-02.* Per-call payload size cap (1 MB) at the IPC boundary; per-session call counter written to audit log as `callIndex`. **Q4 decision: compute counter now (write to audit log + expose internally), defer UI surface.** *(electron/ai.js)*
+15. **[D4]** ✅ *Shipped 2026-05-02.* Token-usage fields (`input_tokens`, `output_tokens`, `cache_creation_input_tokens`, `cache_read_input_tokens`) captured into the audit log via `usage` field on success entries. *(provider.js, electron/ai.js)*
 
 ### Tier E — privacy and housekeeping
 

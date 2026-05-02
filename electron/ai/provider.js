@@ -115,6 +115,7 @@ async function generate({ system, messages, model, temperature }) {
         ok: true,
         text: response.content?.[0]?.text ?? null,
         model: resolvedModel,
+        usage: response.usage ?? null,
         raw: response,
       };
     } catch (e) {

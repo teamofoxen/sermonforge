@@ -50,6 +50,7 @@ module.exports = {
     // Structural rules — always enforced.
     'sermonforge/no-window-alert': 'error',
     'sermonforge/no-direct-database': 'error',
+    'sermonforge/no-direct-ai': 'error',
     'sermonforge/canonical-stage-name': 'error',
     // react-hooks plugin registered so existing inline
     // `eslint-disable-line react-hooks/exhaustive-deps` directives resolve.

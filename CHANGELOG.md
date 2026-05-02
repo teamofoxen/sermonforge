@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-05-02 — feat: ACCI Tier D — CI, AI-integrity lint, payload cap, token usage
+
+- `.github/workflows/test.yml` runs `npm test` on every push to main and on every pull request.
+- `eslint-plugin-sermonforge/lib/rules/no-direct-ai.js` flags `@anthropic-ai/sdk` imports outside `provider.js` and `window.electronAPI.sendAIMessage` calls outside `src/utils/ai.js`; enabled as `error` in `.eslintrc.cjs`.
+- `electron/ai.js` rejects IPC payloads over 1 MB and writes a monotonic `callIndex` (process-scoped) to each audit log entry.
+- `electron/ai/provider.js` passes `usage` (input/output/cache tokens) back in the success envelope; `electron/ai.js` writes it to the audit log.
+
+---
+
 ## 2026-05-02 — feat: dedupe outline-review + challenge-MPT prompts (ACCI Item C4)
 
 - `src/prompts/study.js` adds `OUTLINE_REVIEW_TASK` (single source for the 4 outline-review prompts) and `CHALLENGE_MPT_TASK` (single source for the 2 challenge-MPT prompts).

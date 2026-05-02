@@ -16,6 +16,9 @@ if (!isAvailable()) {
 const AI_LOG_PATH = path.join(app.getPath("userData"), "ai-log.jsonl");
 const MAX_AUDIT_BYTES = 5 * 1024 * 1024; // ~500 entries at typical entry size
 const KEEP_ENTRIES = 500;
+const MAX_PAYLOAD_BYTES = 1 * 1024 * 1024;
+
+let processCallCount = 0;
 
 function rotateAuditLog() {
   try {
@@ -46,12 +49,22 @@ function registerAIHandlers(ipcMain) {
   //   { ok: true, text }
   // | { ok: false, kind: "auth"|"rate_limit"|"network"|"server"|"timeout"|"format"|"empty"|"unknown", message }
   ipcMain.handle("ai-message", async (event, payload) => {
+    const payloadSize = Buffer.byteLength(JSON.stringify(payload ?? null));
+    if (payloadSize > MAX_PAYLOAD_BYTES) {
+      const failure = { kind: "format", message: `AI request payload too large (${(payloadSize / 1024).toFixed(0)} KB). Reduce conversation history and try again.` };
+      console.error("[ai-message] Payload exceeds cap:", payloadSize, "bytes");
+      return { ok: false, ...failure };
+    }
+
+    const callIndex = ++processCallCount;
+
     const { messages, systemPrompt, step, sermonId } = payload || {};
 
     const system = systemPrompt || "You are a helpful assistant for sermon preparation.";
     const started = Date.now();
     const baseEntry = () => ({
       ts: new Date().toISOString(),
+      callIndex,
       step: step ?? null,
       sermonId: sermonId ?? null,
       system,
@@ -98,6 +111,7 @@ function registerAIHandlers(ipcMain) {
       ...baseEntry(),
       response: text,
       model: result.model,
+      usage: result.usage ?? null,
     });
 
     return { ok: true, text };
