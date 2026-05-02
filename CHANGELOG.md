@@ -2,6 +2,12 @@
 
 ---
 
+## 2026-05-02 — docs: drop dead CLAUDE_original.md reference
+
+- `CLAUDE.md` Authority section no longer points at `CLAUDE_original.md`; that file no longer exists in the repo, so the reference was inert.
+
+---
+
 ## 2026-05-02 — feat: SPRD Q1 — sub-phase + step transitions through the spine
 
 - `StudyTab.jsx` — `advanceSubPhase` / `advanceStep` / `jumpToStep` / `jumpToSubPhase` route through `transitionState` with source-position content as evidence; rejection surfaces in a dismissable banner.

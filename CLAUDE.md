@@ -69,8 +69,7 @@ Enforcement:
 ## Authority
 
 If code and these documents diverge, the code is considered incorrect unless an explicit
-rationale exists. `CLAUDE_original.md` is the original monolithic version — retained for
-historical reference; do not use it as a working guide.
+rationale exists.
 
 ---
 
