@@ -370,7 +370,7 @@ function pickTier5Chunks(library, theology, limit) {
  * @param {string} step
  * @returns {{ tier2: bool, tier3: bool, tier4: bool, library: bool, theology: bool, memory: bool, pastoralContext: bool }}
  */
-function resolveIncludes(step) {
+export function resolveIncludes(step) {
   //                                       tier2   tier3   tier4   library theology memory  pastoralContext
   switch (step) {
     case PHASES.OBSERVE:
@@ -938,6 +938,108 @@ export function buildAdaptiveHints(memory, step, sermonId) {
     }
   }
   return fresh;
+}
+
+/**
+ * Read-only snapshot of what `buildContext` would emit for the current
+ * sermon/step state. Drives the AI panel's "What I can see" surface so the
+ * pastor can see which tiers are active and which fields will be sent.
+ *
+ * Theology research mode bypasses the tier pipeline (sources + Pastoral
+ * Context only); reflected explicitly in `mode`.
+ *
+ * Does not run trim/dedupe — content presence checks only. Cheap to call.
+ *
+ * @param {object}  options
+ * @param {object}  options.sermon
+ * @param {string}  options.step
+ * @param {boolean} [options.theologyMode]
+ * @returns {{ mode: string, sections: Array<{ label: string, fields: string[] }>, totalFields: number }}
+ */
+export function describeContext({ sermon, step, theologyMode = false }) {
+  const sections = [];
+  const pcFields = [
+    sermon?.background_noise?.trim()     && "The Cultural Moment",
+    sermon?.audience_assumptions?.trim() && "The Room",
+    sermon?.topic_theme?.trim()          && "The Sermon's Work",
+  ].filter(Boolean);
+
+  if (theologyMode) {
+    if (pcFields.length > 0) {
+      sections.push({ label: CONTEXT_SECTIONS.THIS_SERMON, fields: pcFields });
+    }
+    sections.push({ label: "[SOURCES]", fields: ["Theology library results"] });
+    return {
+      mode: "theology-research",
+      sections,
+      totalFields: sections.reduce((n, s) => n + s.fields.length, 0),
+    };
+  }
+
+  const inc = resolveIncludes(step);
+  const normalized = normalizeSermon(sermon);
+  const compressed = {
+    exegesis: summarizeExegesis(sermon),
+    outline:  summarizeOutline(normalized.outline),
+    series:   summarizeSeries(normalized.series, normalized.section),
+  };
+
+  // Tier 1 — passage / MPT (always evaluated; emitted if either has content)
+  const t1Fields = [
+    normalized.passage && "Passage",
+    normalized.mpt     && "MPT",
+  ].filter(Boolean);
+  if (t1Fields.length > 0) sections.push({ label: CONTEXT_SECTIONS.PASSAGE, fields: t1Fields });
+
+  // Tier 7 — Pastoral Context (always-on by step, gated by content)
+  if (inc.pastoralContext && pcFields.length > 0) {
+    sections.push({ label: CONTEXT_SECTIONS.THIS_SERMON, fields: pcFields });
+  }
+
+  // Tier 2 — interpretation
+  if (inc.tier2) {
+    const t2Fields = [
+      normalized.mps                    && "MPS",
+      compressed.exegesis?.length > 0   && "Exegesis summary",
+    ].filter(Boolean);
+    if (t2Fields.length > 0) sections.push({ label: CONTEXT_SECTIONS.INTERPRETATION, fields: t2Fields });
+  }
+
+  // Tier 3 — structure
+  if (inc.tier3) {
+    const t3Fields = [
+      compressed.outline?.length > 0                        && "Outline",
+      Object.keys(normalized.functionalElements ?? {}).length > 0 && "Functional Elements",
+    ].filter(Boolean);
+    if (t3Fields.length > 0) sections.push({ label: CONTEXT_SECTIONS.STRUCTURE, fields: t3Fields });
+  }
+
+  // Tier 4 — series
+  if (inc.tier4 && compressed.series?.length > 0) {
+    sections.push({ label: CONTEXT_SECTIONS.SERIES, fields: ["Series big idea / motivation / redemptive context"] });
+  }
+
+  // Tier 5 — supporting (library / theology). Snapshot can't see chunk
+  // counts ahead of retrieval, so it just notes whether the tier is gated on.
+  if (inc.library || inc.theology) {
+    const t5Fields = [
+      inc.library  && "Library (retrieved at send)",
+      inc.theology && "Theology (retrieved at send)",
+    ].filter(Boolean);
+    sections.push({ label: CONTEXT_SECTIONS.SUPPORTING, fields: t5Fields });
+  }
+
+  // Tier 6 — pastor memory. Has its own content gate inside buildMemoryContext;
+  // here we just mirror the step gate so the pastor sees memory is in play.
+  if (inc.memory) {
+    sections.push({ label: CONTEXT_SECTIONS.PASTOR, fields: ["Memory-derived patterns (if accumulated)"] });
+  }
+
+  return {
+    mode: "tier-based",
+    sections,
+    totalFields: sections.reduce((n, s) => n + s.fields.length, 0),
+  };
 }
 
 /**

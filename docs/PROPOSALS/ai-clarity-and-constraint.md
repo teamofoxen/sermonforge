@@ -1,6 +1,6 @@
 # AI Clarity & Constraint — Task Tracker
 
-**Status:** Scoping. Audit complete (2026-05-01). 26-item remediation plan drafted. No implementation has begun. Work begins when the product owner approves Item 1 and any items needing an up-front decision are settled.
+**Status:** Tier A complete (Items 1–4 shipped 2026-05-01). Tiers B–G (Items 5–26) not started; Tier B is the planned next block. Five decisions still open (Q3–Q7); Q1 and Q2 were settled by execution during Tier A.
 **Date drafted:** 2026-05-01.
 **Audience:** future working sessions. Plain language; no engineering vocabulary required.
 
@@ -18,12 +18,12 @@ The 26-item plan below is consolidation, not redesign — every item either pull
 
 ## The 26 items
 
-### Tier A — stop the bleeding (silent corruption / silent failure)
+### Tier A — stop the bleeding (silent corruption / silent failure) — **SHIPPED**
 
-1. **[A1]** Add an AbortController to `sendAIMessage` and abort in-flight calls when the active sermon changes. *(`src/utils/ai.js`, `src/components/SermonWorkspace.jsx`)*
-2. **[A2]** Replace the six direct-write AI paths with the proposal pattern (or persistColumn-confirm variant for Final Tune-Up). Six paths: Synthesize Redemptive, Compile Implications, Populate Scripture, Manuscript Delivery formatter, Preaching Blocks (CMC), Final Tune-Up. *Requires #1.* *(StudyTab.jsx, DeliveryTab.jsx, AIPanel.jsx; reference `ProposalPanel.jsx`)*
-3. **[A3]** Add a small JSON-output validator and wire it into every JSON-bound parse boundary. *(new `src/utils/aiSchema.js`; wire-up at AIPanel.jsx Incorporate parser, StudyTab.jsx Populate Scripture parser, DeliveryTab.jsx CMC parser, `src/utils/outlineChat.js` outline extraction)* *Tune-Up coverage flagged at Q1.*
-4. **[A4]** Differentiate the eight AI failure modes (auth, rate limit, network, server, timeout, format, empty, unknown) at the provider/IPC/wrapper layers and surface kind-specific user-facing messages. Replaces the unified "Something went wrong." *(provider.js, electron/ai.js, src/utils/ai.js, AIPanel.jsx, StudyTab.jsx, OutlineTab.jsx, DeliveryTab.jsx, SeriesPlanner.jsx)* *Scope flagged at Q2.*
+1. **[A1]** ✅ *Shipped `50a24ac`.* Add an AbortController to `sendAIMessage` and abort in-flight calls when the active sermon changes. *(`src/utils/ai.js`, `src/components/SermonWorkspace.jsx`)*
+2. **[A2]** ✅ *Shipped `2b0fa66`.* Replace the six direct-write AI paths with the proposal pattern (or persistColumn-confirm variant for Final Tune-Up). Six paths: Synthesize Redemptive, Compile Implications, Populate Scripture, Manuscript Delivery formatter, Preaching Blocks (CMC), Final Tune-Up. *(StudyTab.jsx, DeliveryTab.jsx, AIPanel.jsx; reference `ProposalPanel.jsx`)*
+3. **[A3]** ✅ *Shipped `a05defd`.* Add a small JSON-output validator and wire it into every JSON-bound parse boundary. *(new `src/utils/aiSchema.js`; wired at AIPanel.jsx Incorporate parser, StudyTab.jsx Populate Scripture parser, DeliveryTab.jsx CMC parser)* **Q1 resolved by execution: outlineChat.js text-shape parsing and Final Tune-Up prose were deferred — JSON boundaries only.**
+4. **[A4]** ✅ *Shipped `c57bcd2`.* Differentiate the eight AI failure modes (auth, rate limit, network, server, timeout, format, empty, unknown) at the provider/IPC/wrapper layers and surface kind-specific user-facing messages. Replaces the unified "Something went wrong." *(provider.js, electron/ai.js, src/utils/ai.js, AIPanel.jsx, StudyTab.jsx, OutlineTab.jsx, DeliveryTab.jsx, SeriesPlanner.jsx)* **Q2 resolved by execution: shipped as a single PR across all five UI files.**
 
 ### Tier B — make constraints visible
 
@@ -85,8 +85,8 @@ Three cross-cutting risks:
 
 ## Decisions needed before specific items can ship
 
-- **Q1 (Item 3 Tune-Up coverage)** — skip Tune-Up entirely, or add a structural prose check (look for the three phase headings)?
-- **Q2 (Item 4 scope)** — one PR across five files, or AI Panel first then tab files in a second PR?
+- ~~**Q1 (Item 3 Tune-Up coverage)**~~ — **Resolved by A3 execution.** Skipped Tune-Up entirely; JSON boundaries only.
+- ~~**Q2 (Item 4 scope)**~~ — **Resolved by A4 execution.** Shipped as one PR across all five UI files.
 - **Q3 (Item 13 implementation)** — script + pre-commit (like `spine-integrity.js`) or ESLint rule (like `no-direct-database`)?
 - **Q4 (Item 14 counter UI surface)** — settings page, footer, or compute-but-don't-render-yet?
 - **Q5 (Item 16 audit-log policy)** — (a) hash content, keep metadata only; (b) full content, opt-in via setting; (c) keep as-is, document in SetupScreen. **Item 16 is blocked until ruling.**
@@ -97,7 +97,7 @@ Three cross-cutting risks:
 
 ## Dependencies on other in-flight work
 
-- **SPRD Q5** (Synthesize and Compile direct-writes) overlaps with this task's Item 2. Item 2 is the larger umbrella — it covers Synthesize and Compile plus four more direct-write paths. If Item 2 ships before SPRD resumes, SPRD Q5 becomes moot (answered by execution).
+- **SPRD Q5** (Synthesize and Compile direct-writes) — **answered by execution.** Item 2 shipped 2026-05-01 (`2b0fa66`) and converted those two paths plus four more to the proposal pattern. SPRD Q5 is moot.
 - **SFDI** — no overlap. ACCI Items 8 and 9 will edit StudyTab.jsx mechanically (move text, route through pipeline) but do not touch field structure or sub-phase flow.
 - **Distribution proposal** — its claim that an audit log entry is written for each AI message gets properly documented by Item 19 and policy-settled by Item 16.
 
@@ -107,10 +107,10 @@ Three cross-cutting risks:
 
 When ready, open a working session and name a starting point:
 
-- "Begin Item 1" — kicks off Tier A in order.
+- "Begin Tier B" or "Begin Item 5" — picks up at the next planned block (active-role label / "What I can see" panel / write indicators).
 - "Resume at Item N" — for subsequent sessions.
-- "Settle Q5" — for decision sessions when an item is blocked on a ruling.
-- "Run Item 12 in parallel" — for items that don't depend on Tier A. Items 12, 13, 18, 19, 20, 25 are the safest to run out of order.
+- "Settle Q5" — for decision sessions when an item is blocked on a ruling. Q5 still gates Item 16; Q3, Q4, Q6, Q7 still gate Items 13, 14, 20, 26.
+- "Run Item 12 in parallel" — Items 12, 18, 19, 25 are the safest to run out of order. Items 13, 14, 16, 20, 26 require their gating Q resolved first.
 
 Each session targets one item. The session ends when the item is shipped, reviewed, and merged — or when the work flags a divergence and stops for a ruling.
 

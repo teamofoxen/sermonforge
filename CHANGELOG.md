@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-01 — feat: AI panel constraint visibility (ACCI Tier B, Items 5–7)
+
+- `src/prompts/sermon.js` adds `getActiveRole(step, theologyMode)` mapping every step/stage to a posture label; `src/components/AIPanel.jsx` renders it under the panel title (B1).
+- `src/utils/contextBuilder.js` adds `describeContext({ sermon, step, theologyMode })` and exports `resolveIncludes`; `AIPanel.jsx` adds a collapsible "What I can see" surface above the input that lists active tiers, loaded fields, and history turn count (B2).
+- `AIPanel.jsx` adds a transient persist-write flash banner using `PERSIST_SAVED_LABELS` and a "history trimmed" notice when conversation exceeds `MAX_HISTORY_TURNS * 2` (B3).
+- `docs/PROPOSALS/ai-clarity-and-constraint.md` marks Tier A shipped (Items 1–4) with commit refs and resolves Q1/Q2 by execution; SPRD Q5 cross-reference closed.
+- 657 tests passing; lint clean; sweep PASS with Surface #4 + Mutation #3 strengthened.
+
+---
+
 ## 2026-05-01 — Thread Framework contract enforcement into sweep skills
 
 - `.claude/skills/sweep-the-multiverse/SKILL.md` adds a CONTRACT MAP linking each audited area to specific clauses in `docs/CORE.md` → "The Framework", threads `Contract check:` lines into every per-area rule block, adds a CONTRACT POSTURE block plus a `CONTRACTS:` field to the output template, raises the word cap from 800 to 1000, and adds a HARD RULE that any contract weakening or Principle violation forces overall FAIL.

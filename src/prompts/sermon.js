@@ -87,6 +87,44 @@ export const THEOLOGY_RESEARCH_PROMPT = `You are a theology research assistant f
 // System prompt for the Incorporate flow — revises structured sermon fields from review feedback.
 export const INCORPORATE_REVISION_PROMPT = `You are revising sermon preparation content based on AI review feedback. Return only a raw JSON object — no markdown fences, no commentary. Include every original key in your response, even unchanged ones. Preserve the pastor's voice. Apply only changes directly supported by the review feedback.`;
 
+// Returns a short human-readable label for the AI's current posture, based on
+// the active step (or stage fallback) and whether theology research mode is
+// engaged. Mirrors the table in `docs/SYSTEMS/ai-panel.md` § Step-Specific
+// AI Posture. Theology mode wins over step because the renderer bypasses the
+// sermon-workflow system prompt entirely when sources are loaded.
+//
+// `step` is one of the canonical PascalCase STAGE values, the slug-style
+// STEP/PHASE values, or "book-study". Pre-Pilot-B lowercase aliases
+// ("study", "outline") are not accepted — `activeTab` is canonical PascalCase
+// since the vocabulary completion landed.
+export function getActiveRole(step, theologyMode) {
+  if (theologyMode) return "Theology research";
+  switch (step) {
+    case PHASES.OBSERVE:
+    case PHASES.INTERPRET:
+    case PHASES.REDEMPTIVE_THREAD:
+    case PHASES.IMPLICATIONS:
+    case STEPS.EXEGESIS:
+    case STAGE.Study:
+      return "Collaborative analyst";
+    case STEPS.MPT_MPS:
+      return "Challenger";
+    case STEPS.OUTLINE:
+    case STAGE.Blueprint:
+      return "Structural reviewer";
+    case STEPS.FUNCTIONAL_ELEMENTS:
+      return "E/A/I balance evaluator";
+    case STAGE.Manuscript:
+      return "Manuscript auditor";
+    case STAGE.Delivery:
+      return "Delivery coach";
+    case "book-study":
+      return "Book-study thinking partner";
+    default:
+      return "Thinking partner";
+  }
+}
+
 // Appends an extra TASK directive block to a system prompt returned by buildSystemPrompt.
 // Keeps the cached static block intact so chip/review calls still hit the cache.
 export function appendTaskDirective(basePrompt, task) {

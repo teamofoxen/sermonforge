@@ -2,9 +2,9 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import { autoResize } from "../utils";
 import { sendAIMessage } from "../utils/ai";
-import { buildContext } from "../utils/contextBuilder";
+import { buildContext, describeContext } from "../utils/contextBuilder";
 import { captureResponsePatterns } from "../utils/memory";
-import { buildSystemPrompt, appendTaskDirective, THEOLOGY_RESEARCH_PROMPT, INCORPORATE_REVISION_PROMPT } from "../prompts/sermon";
+import { buildSystemPrompt, appendTaskDirective, getActiveRole, THEOLOGY_RESEARCH_PROMPT, INCORPORATE_REVISION_PROMPT } from "../prompts/sermon";
 import { formatChunkForLLM, dedupSources } from "../utils/theologyCitation";
 import { getReviewPrompt, buildCoherenceCheckPrompt } from "../utils/reviewPrompts";
 import { getStepFieldConfig, getCurrentFieldData, buildIncorporatePrompt } from "../utils/incorporateHelpers";
@@ -49,6 +49,8 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
   const [inputText, setInputText] = useState("");
   const [incorporateLoading, setIncorporateLoading] = useState(false);
   const [diffData, setDiffData] = useState(null);
+  const [showContextPanel, setShowContextPanel] = useState(false);
+  const [persistFlash, setPersistFlash] = useState(null);
   const messagesEndRef = useRef(null);
   const latestAssistantRef = useRef(null);
   const prevCountRef = useRef(0);
@@ -136,7 +138,16 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
       }),
     });
     setMessages(prev => prev.map((m, i) => i === index ? { ...m, persisted: true } : m));
+    setPersistFlash({ column: msg.persistColumn });
   }
+
+  // Auto-clear the persist-write flash banner after a short window so it
+  // reads as a transient acknowledgement rather than persistent chrome.
+  useEffect(() => {
+    if (!persistFlash) return;
+    const t = setTimeout(() => setPersistFlash(null), 4000);
+    return () => clearTimeout(t);
+  }, [persistFlash]);
 
   function handleDiscardPersist(index) {
     setMessages(prev => prev.map((m, i) => i === index ? { ...m, persisted: true } : m));
@@ -319,6 +330,11 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
   }
 
   const tabLabels = { study: "Study", outline: "Outline", manuscript: "Manuscript", delivery: "Delivery" };
+  const effectiveStep = activeStep || activeTab;
+  const theologyMode = theologyEnabled && theologyAvailable;
+  const activeRole = getActiveRole(effectiveStep, theologyMode);
+  const historyTrimmed = messages.length > MAX_HISTORY_TURNS * 2;
+  const turnCount = Math.min(MAX_HISTORY_TURNS, Math.ceil(messages.length / 2));
 
   return (
     <aside className="ai-panel" data-tour-id="ai-panel">
@@ -327,6 +343,13 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
           <div>
             <div className="ai-panel-title">AI Assistant</div>
             <div className="ai-panel-subtitle">{tabLabels[activeTab] || "Workspace"}</div>
+            <div
+              className="ai-panel-role"
+              title="The AI's posture for the current step"
+              style={{ marginTop: "4px", fontSize: "11px", color: "var(--gold-pale)", fontStyle: "italic", letterSpacing: "0.02em" }}
+            >
+              Role: {activeRole}
+            </div>
           </div>
           <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
             {messages.length > 0 && (
@@ -336,7 +359,42 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
         </div>
       </div>
 
+      {persistFlash && (
+        <div
+          role="status"
+          style={{
+            background: "rgba(74,103,65,0.12)",
+            borderBottom: "1px solid rgba(74,103,65,0.25)",
+            color: "var(--sage)",
+            padding: "6px 14px",
+            fontSize: "12px",
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+          }}
+        >
+          <span aria-hidden="true">●</span>
+          <span><strong>{PERSIST_SAVED_LABELS[persistFlash.column] || `Saved to ${persistFlash.column}`}</strong> on this sermon.</span>
+        </div>
+      )}
+
       <div className="ai-panel-messages">
+        {historyTrimmed && (
+          <div
+            style={{
+              fontSize: "11px",
+              color: "var(--ink-ghost)",
+              fontStyle: "italic",
+              textAlign: "center",
+              padding: "4px 8px",
+              borderBottom: "1px dashed var(--parchment-deep)",
+              marginBottom: "4px",
+            }}
+            title={`Only the last ${MAX_HISTORY_TURNS} turns are sent to the AI; earlier turns remain on screen but are not part of the prompt.`}
+          >
+            Earlier turns are no longer being sent to the AI (history trimmed to last {MAX_HISTORY_TURNS} turns).
+          </div>
+        )}
         {messages.length === 0 && !loading && (
           <div className="ai-message empty-state">
             Ask anything about your passage, or use the quick actions below.
@@ -459,6 +517,17 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
           </label>
         )}
 
+        {/* "What I can see" — context snapshot the AI will receive on the next send */}
+        <ContextSnapshotPanel
+          open={showContextPanel}
+          onToggle={() => setShowContextPanel(v => !v)}
+          sermon={sermon}
+          step={effectiveStep}
+          theologyMode={theologyMode}
+          turnCount={turnCount}
+          historyTrimmed={historyTrimmed}
+        />
+
         {/* Free-form chat input */}
         <div className="ai-input-row">
           <textarea
@@ -500,6 +569,68 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
         />
       )}
     </aside>
+  );
+}
+
+// ── "What I can see" snapshot panel ────────────────────────────────────────────
+function ContextSnapshotPanel({ open, onToggle, sermon, step, theologyMode, turnCount, historyTrimmed }) {
+  const snapshot = open ? describeContext({ sermon, step, theologyMode }) : null;
+  return (
+    <div style={{ marginBottom: "8px", borderTop: "1px solid var(--parchment-deep)", paddingTop: "8px" }}>
+      <IconButton
+        aria-label={open ? "Hide AI context details" : "Show AI context details"}
+        aria-expanded={open}
+        onClick={onToggle}
+        style={{
+          width: "100%",
+          textAlign: "left",
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+          padding: "2px 4px",
+          fontSize: "11px",
+          color: "var(--ink-soft)",
+          display: "flex",
+          alignItems: "center",
+          gap: "6px",
+          fontFamily: "'Crimson Pro', serif",
+        }}
+      >
+        <span aria-hidden="true" style={{ fontSize: "10px" }}>{open ? "▾" : "▸"}</span>
+        <span>What I can see</span>
+        <span style={{ marginLeft: "auto", color: "var(--ink-ghost)" }}>
+          {turnCount > 0 ? `${turnCount} turn${turnCount === 1 ? "" : "s"}` : "no history"}
+          {historyTrimmed ? " · trimmed" : ""}
+        </span>
+      </IconButton>
+      {open && snapshot && (
+        <div style={{ padding: "6px 8px 4px 18px", fontSize: "11px", color: "var(--ink-soft)" }}>
+          {snapshot.mode === "theology-research" && (
+            <div style={{ color: "var(--ink-ghost)", marginBottom: "4px", fontStyle: "italic" }}>
+              Theology research mode — sermon-workflow context is bypassed.
+            </div>
+          )}
+          {snapshot.sections.length === 0 ? (
+            <div style={{ color: "var(--ink-ghost)" }}>
+              No sermon context yet. The AI will work from your prompt and pastor memory only.
+            </div>
+          ) : (
+            <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
+              {snapshot.sections.map(s => (
+                <li key={s.label} style={{ marginBottom: "3px" }}>
+                  <span style={{ color: "var(--ink)" }}>{s.label}</span>
+                  <span style={{ color: "var(--ink-ghost)" }}> — {s.fields.join(", ")}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div style={{ marginTop: "6px", color: "var(--ink-ghost)", fontSize: "10px" }}>
+            Conversation history: last {turnCount} of {turnCount > 0 ? `${turnCount}+` : "0"} turns
+            {historyTrimmed ? " (older turns dropped from prompt)" : ""}.
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 
