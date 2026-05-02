@@ -79,6 +79,30 @@ async function initDatabase() {
     return candidate;
   }
 
+  // Counts content rows (sermons + series). Drives the legacy-migration
+  // trigger below: a row-less DB at the active path means the user's real
+  // library is sitting at a prior install location, so we look there before
+  // letting them launch into an empty workspace. Fail-soft when tables don't
+  // exist (older schemas, unrecognized SQLite files) — treats those as 0.
+  function countContentRows(handle) {
+    if (!handle) return 0;
+    let total = 0;
+    try {
+      const r = handle.exec("SELECT COUNT(*) FROM sermons");
+      total += Number(r[0]?.values?.[0]?.[0] ?? 0);
+    } catch { /* table missing — treat as 0 */ }
+    try {
+      const r = handle.exec("SELECT COUNT(*) FROM series");
+      total += Number(r[0]?.values?.[0]?.[0] ?? 0);
+    } catch { /* table missing — treat as 0 */ }
+    return total;
+  }
+
+  // ── Phase 1 — establish a working `db` handle ────────────────────────────
+  // No migration logic here; this section only decides whether we have a
+  // primary, fall back to a `.bak`, quarantine a corrupt file, or bootstrap
+  // an empty in-memory DB. Migration runs in Phase 2 against whatever
+  // emerges, so the corrupt-then-empty path also gets a recovery shot.
   if (fs.existsSync(dbPath)) {
     try {
       db = tryLoad(dbPath);
@@ -116,29 +140,56 @@ async function initDatabase() {
       db = new SQL.Database();
     }
   } else {
-    // Path-aware legacy migration. The active path has nothing — but the
-    // app's userData location has moved twice in 2026; the user's real DB
-    // may be sitting at a previous path. Walk `legacyDbPaths`, pick the
-    // most recently-modified candidate that has real content AND loads
-    // cleanly, copy it forward, preserve the legacy file as a backup.
-    // Surfaces a non-blocking startup banner so the pastor sees what
-    // happened. Falls through to a fresh empty DB only when nothing is
-    // recoverable. Forbidding this layer is a CORE.md violation; see
-    // "The userData path is permanent."
+    db = new SQL.Database();
+  }
+
+  // ── Phase 2 — content-aware legacy migration ─────────────────────────────
+  // The Phase-1 db has 0 content rows iff: the active path is missing
+  // (fresh-install at a new userData location), OR exists but is just an
+  // empty schema (a prior empty initialization at the new path — exactly the
+  // 2026-05-02 incident), OR fell through corrupt-fallback to a fresh
+  // `new SQL.Database()`. In all three cases, the user's real library may
+  // be sitting at a prior install location; walk `legacyDbPaths` and pick
+  // the candidate with the most content rows (mtime breaks ties).
+  //
+  // We back up whatever's currently at the active path BEFORE the resolver
+  // copies a winner over it. The legacy source file itself is preserved
+  // (the resolver does copy, not move) so there are always at least two
+  // recovery paths if the migration turned out to be undesired.
+  //
+  // Forbidding this layer is a CORE.md violation; see "The userData path is
+  // permanent."
+  if (countContentRows(db) === 0) {
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    if (fs.existsSync(dbPath)) {
+      try {
+        fs.copyFileSync(dbPath, `${dbPath}.precovery-empty-${stamp}`);
+        logInfo(`[DB] backed up row-empty active DB to ${dbPath}.precovery-empty-${stamp}`);
+      } catch (e) {
+        logError(`[DB] failed to back up empty active DB before migration`, e);
+      }
+    }
+    if (fs.existsSync(bakPath)) {
+      try {
+        fs.copyFileSync(bakPath, `${bakPath}.precovery-empty-${stamp}`);
+      } catch (e) {
+        logError(`[DB] failed to back up empty active .bak before migration`, e);
+      }
+    }
     const migrated = migrateLegacyDb({
       activePath: dbPath,
       candidatePaths: legacyDbPaths,
       tryLoad,
+      countRows: countContentRows,
       logger: { info: logInfo, error: logError },
     });
     if (migrated) {
+      try { db.close(); } catch { /* ignore */ }
       db = migrated.db;
       _pendingStartupWarning = {
         kind: "db_migrated",
         message: `Restored your library from a previous install location (${migrated.source}). The original file is preserved there as a backup.`,
       };
-    } else {
-      db = new SQL.Database();
     }
   }
 

@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-05-02 — fix: row-count-aware DB resolver + empty-active trigger + one-shot recovery tool
+
+- `electron/dbMigration.js` now picks legacy DBs by content-row count (sermons + series), with mtime as the tiebreaker; 0-row schema-only DBs are skipped entirely. Regression test `tests/contracts/db-userdata-path-permanent.test.ts` codifies the 2026-05-02 incident (1-sermon dev DB beating 10-sermon real DB on mtime). Now requires a `countRows(db)` callback.
+- `electron/main.js` `initDatabase()` restructured into Phase 1 (establish a working `db`) and Phase 2 (run migration whenever the resulting `db` has 0 content rows) — covers fresh-install, corrupt-then-empty fallback, AND the case where the active path exists but is just an empty schema. Empty active DB is backed up to `.precovery-empty-{ts}.db` before a successful migration overwrites it.
+- New `scripts/recover-db.cjs` one-shot tool: read-only inventory + row-count-aware promotion of the right legacy DB into the active path. Useful for buddy installs where the in-app resolver hasn't shipped yet.
+- 666 tests passing (+3 vs prior); resolver tests rewritten to verify row-count-primary heuristic; sweep PASS.
+
+---
+
 ## 2026-05-02 — fix: path-aware DB resolver — stop silently orphaning user data on path moves
 
 - New `electron/dbMigration.js` exports `migrateLegacyDb(...)` which walks `legacyDbPaths` (added to `electron/config.js`), picks the most recently-modified candidate ≥32KB that loads cleanly, copies it forward, and returns the loaded DB + source path; the legacy file is preserved (copy, not move) as a backup.
