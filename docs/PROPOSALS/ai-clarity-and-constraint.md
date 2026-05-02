@@ -1,6 +1,6 @@
 # AI Clarity & Constraint — Task Tracker
 
-**Status:** Tier A complete (Items 1–4 shipped 2026-05-01). Tier B complete (Items 5–7 shipped 2026-05-01). All seven decisions (Q1–Q7) settled. Tier C is the planned next block.
+**Status:** Tier A complete (Items 1–4 shipped 2026-05-01). Tier B complete (Items 5–7 shipped 2026-05-01). Tier C complete (Items 8–11 shipped 2026-05-01 / 2026-05-02). All seven decisions (Q1–Q7) settled. Tier D is the planned next block.
 **Date drafted:** 2026-05-01.
 **Audience:** future working sessions. Plain language; no engineering vocabulary required.
 
@@ -31,12 +31,12 @@ The 26-item plan below is consolidation, not redesign — every item either pull
 6. **[B2]** ✅ *Shipped `e19cb1f`.* Collapsible "What I can see" panel under the AI Panel input listing active tiers, loaded fields, and history turn count. *(AIPanel.jsx; new `describeContext` in `src/utils/contextBuilder.js`)*
 7. **[B3]** ✅ *Shipped `e19cb1f`.* UI indicators for conversation truncation (history-trimmed banner when `messages.length > MAX_HISTORY_TURNS * 2`) and `persistColumn` write events (transient flash banner using `PERSIST_SAVED_LABELS`). *(AIPanel.jsx)*
 
-### Tier C — pull the bypasses back
+### Tier C — pull the bypasses back — **SHIPPED**
 
-8. **[C1]** Centralize all inline `You are…` system prompts in StudyTab and SeriesPlanner under `src/prompts/` and route them through `buildSystemPrompt`. *(StudyTab.jsx, SeriesPlanner.jsx, src/prompts/)*
-9. **[C2]** Route StudyTab and SeriesPlanner AI calls through `buildContext` for the context block. *Requires #8.* *(StudyTab.jsx, SeriesPlanner.jsx; references contextBuilder.js)*
-10. **[C3]** Pass `step` and `sermonId` on every `sendAIMessage` call site. The wrapper already accepts both — caller-only change. *(StudyTab.jsx, OutlineTab.jsx, DeliveryTab.jsx, SeriesPlanner.jsx, ManuscriptTab.jsx)*
-11. **[C4]** Centralize the four "review my outline" prompts to one source, and the two "challenge my MPT" prompts to one source. *(reviewPrompts.js, OutlineTab.jsx, StudyTab.jsx)*
+8. **[C1]** ✅ *Shipped `889ed14`.* Centralize all inline `You are…` system prompts in StudyTab and SeriesPlanner under `src/prompts/` and route them through `buildSystemPrompt`. *(StudyTab.jsx, SeriesPlanner.jsx, src/prompts/)*
+9. **[C2]** ✅ *Shipped `a777c3d`.* Route StudyTab AI calls through `buildContext` for the context block. *(StudyTab.jsx; new `buildContext` import; SeriesPlanner.jsx N/A — series-level work has no `sermon` for `buildContext`.)*
+10. **[C3]** ✅ *Shipped `08829d4`.* Pass `step` and `sermonId` on every `sendAIMessage` call site. *(StudyTab.jsx, OutlineTab.jsx, DeliveryTab.jsx, SeriesPlanner.jsx — ManuscriptTab.jsx had no call sites.)*
+11. **[C4]** ✅ *Shipped `85f4736`.* Centralized `OUTLINE_REVIEW_TASK` and `CHALLENGE_MPT_TASK` in `src/prompts/study.js`; 4 outline-review and 2 challenge-MPT call sites now share single sources. *(reviewPrompts.js, OutlineTab.jsx, StudyTab.jsx)*
 
 ### Tier D — add the safety nets
 
@@ -109,7 +109,7 @@ All seven settled by 2026-05-01. Items 13, 14, 16, 20, 26 are now executable.
 
 When ready, open a working session and name a starting point:
 
-- "Begin Tier C" or "Begin Item 8" — picks up at the next planned block (centralize StudyTab/SeriesPlanner prompts + route through `buildContext` + pass step/sermonId everywhere + dedupe review prompts).
+- "Begin Tier D" or "Begin Item 12" — picks up at the next planned block (CI workflow + AI-integrity ESLint rule + IPC payload cap & call counter + token-usage audit fields).
 - "Resume at Item N" — for subsequent sessions.
 - "Run Item 12 in parallel" — all rulings settled, so Items 12, 13, 14, 18, 19, 20, 25, 26 are all runnable out of tier order. Items 13 and 14 are the safest small wins.
 
