@@ -13,7 +13,10 @@ export default function OneDriveWarning() {
     getStartupWarning()
       .then((payload) => {
         if (cancelled || !payload) return;
-        if (payload.kind !== "onedrive" && payload.kind !== "onedrive-first-run") return;
+        const known = payload.kind === "onedrive"
+          || payload.kind === "onedrive-first-run"
+          || payload.kind === "db_migrated";
+        if (!known) return;
         if (payload.kind === "onedrive" && localStorage.getItem(BANNER_DISMISS_KEY) === "1") return;
         setWarning(payload);
       })
@@ -27,6 +30,20 @@ export default function OneDriveWarning() {
     if (warning.kind === "onedrive") localStorage.setItem(BANNER_DISMISS_KEY, "1");
     setWarning(null);
   };
+
+  if (warning.kind === "db_migrated") {
+    return (
+      <div className="write-error-banner" role="status" style={{ background: "rgba(74,103,65,0.10)", borderColor: "rgba(74,103,65,0.25)" }}>
+        <div className="write-error-banner-text">
+          <strong>Library restored.</strong>
+          <span className="write-error-banner-detail">{warning.message}</span>
+        </div>
+        <div className="write-error-banner-actions">
+          <SecondaryButton size="sm" onClick={dismiss}>Got it</SecondaryButton>
+        </div>
+      </div>
+    );
+  }
 
   if (warning.kind === "onedrive-first-run") {
     return (

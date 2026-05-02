@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-02 — fix: path-aware DB resolver — stop silently orphaning user data on path moves
+
+- New `electron/dbMigration.js` exports `migrateLegacyDb(...)` which walks `legacyDbPaths` (added to `electron/config.js`), picks the most recently-modified candidate ≥32KB that loads cleanly, copies it forward, and returns the loaded DB + source path; the legacy file is preserved (copy, not move) as a backup.
+- `electron/main.js` `initDatabase()` invokes the resolver only when the active path is empty; existing installs unaffected. A non-blocking "Library restored" banner surfaces via `_pendingStartupWarning` (`kind: "db_migrated"`).
+- `src/components/OneDriveWarning.jsx` extends to render the new warning kind alongside the OneDrive kinds.
+- `docs/CORE.md` adds "The userData path is permanent" — `legacyDbPaths` is append-only; removing or reordering entries orphans user data and is forbidden.
+- 6 new contract tests under `tests/contracts/db-userdata-path-permanent.test.ts`; 663 total passing; sweep PASS with State #2/#6 + Mutation #3 strengthened.
+
+---
+
 ## 2026-05-02 — docs: SFDI throughline vision sheet + Merida interlocutor method
 
 - New `docs/PROPOSALS/sfdi-throughline-vision.md` — single-page vision sheet for offline field drafting, capturing the throughline arc, the four named outcomes per sub-phase (Observation Set / Interpretation Set / Christ-Connection Statement / Implications Synthesis), PC progressive entry, non-negotiables, and the "feels earned" qualitative test.

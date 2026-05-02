@@ -42,6 +42,36 @@ const paths = {
   logs: path.join(app.getPath("userData"), isPackaged ? "logs" : "logs-dev"),
 };
 
+// ── Legacy DB locations ───────────────────────────────────────────────────────
+// Every place `sermonforge.db` has lived across releases. The DB resolver in
+// `electron/main.js` consults this list when the active `paths.userData/sermonforge.db`
+// doesn't exist — finding the most recent legacy file with real data and
+// migrating it forward.
+//
+// **This list is append-only.** When `paths.userData` changes (in this file or
+// anywhere else), the previous active path MUST be added here in the same
+// commit. CORE.md "The userData path is permanent" clause binds this.
+//
+// Order is informational only — the resolver picks by mtime/size, not order.
+const legacyDbPaths = [
+  // Pre-Apr-13 2026 — bare userData root, before the OneDrive removal commit
+  // (5c54664) introduced a fixed Windows location.
+  path.join(app.getPath("userData"), "sermonforge.db"),
+  // Apr 13 – Apr 27 2026 — fixed `C:\SermonForge\data` location used between
+  // commit 5c54664 (OneDrive removal) and 7ff2c25 (unify DB path).
+  // Windows-only by construction; non-existent on other platforms is a no-op.
+  path.join("C:", "SermonForge", "data", "sermonforge.db"),
+  // Apr 27 – Apr 28 2026 — unified `userData/data` location used between
+  // commit 7ff2c25 and 64d83ee (dev/prod split). After the split this path
+  // is the active packaged-install location; the resolver filters it out
+  // automatically when it matches `paths.userData`.
+  path.join(app.getPath("userData"), "data", "sermonforge.db"),
+  // Apr 28+ 2026 — split dev location. After the split this path is the
+  // active dev location; the resolver filters it out automatically when it
+  // matches `paths.userData`.
+  path.join(app.getPath("userData"), "data-dev", "sermonforge.db"),
+];
+
 // ── Dev server ────────────────────────────────────────────────────────────────
 const devServerUrl = "http://localhost:5173";
 
@@ -55,4 +85,4 @@ const embedWorker = {
   enabled: process.env.SF_EMBED_WORKER !== "0",
 };
 
-module.exports = { isDev, isPackaged, paths, devServerUrl, embedWorker };
+module.exports = { isDev, isPackaged, paths, legacyDbPaths, devServerUrl, embedWorker };

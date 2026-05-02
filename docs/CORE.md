@@ -222,6 +222,15 @@ either reshapes to pass, or it does not ship.
   schema changes go through `runMigrations()` with a version increment.
   See `docs/SYSTEMS/database.md`.
 
+- **The userData path is permanent.** Once a `sermonforge.db` location has shipped in any
+  release, that path stays in `legacyDbPaths` (in `electron/config.js`) forever. New active
+  paths may be introduced; old ones are never abandoned. The DB resolver in
+  `electron/main.js` (`migrateLegacyDb`) walks `legacyDbPaths` whenever the active path is
+  empty, finds the most recent candidate with real content, and copies it forward. A commit
+  that changes the active path without adding the previous path to `legacyDbPaths` in the
+  same diff is wrong. Removing or reordering entries in `legacyDbPaths` orphans user data on
+  every machine that still has a DB at that location and is forbidden.
+
 ---
 
 ## Absolute Invariants

@@ -3,7 +3,7 @@ const path = require("path");
 const fs = require("fs");
 const os = require("os");
 const { randomUUID } = require("crypto");
-const { isDev, paths, devServerUrl } = require("./config");
+const { isDev, paths, legacyDbPaths, devServerUrl } = require("./config");
 const { logInfo, logError, readRecent } = require("./logger");
 const {
   STAGE, STAGE_SEQUENCE,
@@ -45,6 +45,8 @@ let _pendingWrite = false; // true between saveDb() and the debounce flush; used
 let _flushFailureCount = 0; // consecutive flushDb failures; banner fires at >= 2 to avoid noise on a single transient lock
 let _firstLaunch = false;  // true when sermonforge.db did not exist at initDatabase entry; drives the first-run OneDrive modal
 let _pendingStartupWarning = null; // set in maybeWarnOneDrive; renderer fetches via app-get-startup-warning on mount
+
+const { migrateLegacyDb } = require("./dbMigration");
 
 // ── Database setup ──────────────────────────────────────────────────────────
 async function initDatabase() {
@@ -114,7 +116,30 @@ async function initDatabase() {
       db = new SQL.Database();
     }
   } else {
-    db = new SQL.Database();
+    // Path-aware legacy migration. The active path has nothing — but the
+    // app's userData location has moved twice in 2026; the user's real DB
+    // may be sitting at a previous path. Walk `legacyDbPaths`, pick the
+    // most recently-modified candidate that has real content AND loads
+    // cleanly, copy it forward, preserve the legacy file as a backup.
+    // Surfaces a non-blocking startup banner so the pastor sees what
+    // happened. Falls through to a fresh empty DB only when nothing is
+    // recoverable. Forbidding this layer is a CORE.md violation; see
+    // "The userData path is permanent."
+    const migrated = migrateLegacyDb({
+      activePath: dbPath,
+      candidatePaths: legacyDbPaths,
+      tryLoad,
+      logger: { info: logInfo, error: logError },
+    });
+    if (migrated) {
+      db = migrated.db;
+      _pendingStartupWarning = {
+        kind: "db_migrated",
+        message: `Restored your library from a previous install location (${migrated.source}). The original file is preserved there as a backup.`,
+      };
+    } else {
+      db = new SQL.Database();
+    }
   }
 
   // Bootstrap-only schema. All subsequent schema changes MUST go through
