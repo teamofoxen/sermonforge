@@ -4,6 +4,7 @@ import { useTour } from "../contexts/TourContext";
 import { getOutline, serializeOutline, getFunctionalElements, serializeFunctionalElements, autoResize } from "../utils";
 import { STEPS, PHASES, PHASE_SEQUENCE, STEP_SEQUENCE } from "../constants/steps";
 import { sendAIMessage } from "../utils/ai";
+import { buildContext } from "../utils/contextBuilder";
 import {
   OBSERVE_FIELDS, INTERPRET_FIELDS,
   REDEMPTIVE_FIELDS, REDEMPTIVE_SUMMARY_KEY,
@@ -325,10 +326,14 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
     appendTaskDirective(buildSystemPrompt(step, sermon.id), taskDirective),
   [sermon.id]);
 
-  async function fetchInline(key, prompt, taskDirective, step) {
+  async function fetchInline(key, userRequest, taskDirective, step) {
     setInlineLoading(key);
     try {
-      const result = await sendAIMessage([{ role: "user", content: prompt }], layerTask(taskDirective, step));
+      const context = buildContext({ sermon, step });
+      const userContent = context
+        ? `CONTEXT:\n${context}\n\nUSER REQUEST:\n${userRequest}`
+        : userRequest;
+      const result = await sendAIMessage([{ role: "user", content: userContent }], layerTask(taskDirective, step));
       if (result.ok) {
         setInlineResponses(prev => ({ ...prev, [key]: result.text }));
       } else if (result.kind !== "aborted") {
@@ -345,25 +350,20 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
     setInlineResponses(prev => { const n = { ...prev }; delete n[key]; return n; });
   }
 
-  /** Format structured field data (or legacy text) into readable text for AI summaries. */
-  function formatPhaseText(data, fieldDefs) {
-    if (!data || typeof data !== "object") return "(none)";
-    const parts = [];
-    if (data.legacy_notes?.trim()) parts.push(data.legacy_notes.trim());
-    for (const f of fieldDefs) {
-      if (data[f.key]?.trim()) parts.push(`${f.label}: ${data[f.key].trim()}`);
-    }
-    return parts.length > 0 ? parts.join("\n\n") : "(none)";
-  }
 
   async function generateMPT() {
     if (draftLoading) return;
     setDraftLoading("mpt");
     setMptProposal(null);
     try {
+      const step = STEPS.MPT_MPS;
+      const context = buildContext({ sermon, step });
+      const userContent = context
+        ? `CONTEXT:\n${context}\n\nUSER REQUEST:\nDraft a Main Point of the Text (MPT) for this passage.`
+        : "Draft a Main Point of the Text (MPT) for this passage.";
       const result = await sendAIMessage(
-        [{ role: "user", content: `Passage: ${sermon.passage || "unknown"}\n\nObservations:\n${formatPhaseText(obsData, OBSERVE_FIELDS)}\n\nInterpretation:\n${formatPhaseText(intData, INTERPRET_FIELDS)}\n\nDraft a Main Point of the Text (MPT) for this passage.` }],
-        layerTask(MPT_DRAFT_TASK, STEPS.MPT_MPS),
+        [{ role: "user", content: userContent }],
+        layerTask(MPT_DRAFT_TASK, step),
       );
       if (result.ok && result.text.trim()) setMptProposal(result.text.trim());
     } catch (e) {
@@ -378,19 +378,15 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
     setDraftLoading("mps");
     setMpsProposal(null);
     try {
-      const redThread = formatPhaseText(redData, REDEMPTIVE_FIELDS);
-      const implications = formatPhaseText(impData, [...IMPLICATIONS_THEOLOGICAL, ...IMPLICATIONS_PERSONAL]);
-      const hasBackground = sermon.background_noise?.trim();
-      const hasAudience = sermon.audience_assumptions?.trim();
-      const hasTheme = sermon.topic_theme?.trim();
-      const pcBlock = (hasBackground || hasAudience || hasTheme) ? `\n\nPastoral Context:\n${[
-        hasBackground && `The Cultural Moment (the world the congregation lives in): ${hasBackground}`,
-        hasAudience && `The Room (who is in the room and where they are): ${hasAudience}`,
-        hasTheme && `The Sermon's Work (the big claim and pastoral purpose): ${hasTheme}`,
-      ].filter(Boolean).join("\n")}` : "";
+      const step = STEPS.MPT_MPS;
+      const hasPC = !!(sermon.background_noise?.trim() || sermon.audience_assumptions?.trim() || sermon.topic_theme?.trim());
+      const context = buildContext({ sermon, step });
+      const userContent = context
+        ? `CONTEXT:\n${context}\n\nUSER REQUEST:\nDraft a Main Point of the Sermon (MPS) grounded in the MPT.`
+        : "Draft a Main Point of the Sermon (MPS) grounded in the MPT.";
       const result = await sendAIMessage(
-        [{ role: "user", content: `Passage: ${sermon.passage || "unknown"}\n\nMPT: ${sermon.mpt}\n\nRedemptive Thread:\n${redThread || "(none)"}\n\nImplications:\n${implications || "(none)"}${pcBlock}\n\nDraft a Main Point of the Sermon (MPS) grounded in the MPT.` }],
-        layerTask(pcBlock ? MPS_DRAFT_WITH_PC_TASK : MPS_DRAFT_NO_PC_TASK, STEPS.MPT_MPS),
+        [{ role: "user", content: userContent }],
+        layerTask(hasPC ? MPS_DRAFT_WITH_PC_TASK : MPS_DRAFT_NO_PC_TASK, step),
       );
       if (result.ok && result.text.trim()) setMpsProposal(result.text.trim());
     } catch (e) {
@@ -403,23 +399,19 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
   async function sendMpsChat() {
     const input = mpsChatInput.trim();
     if (!input || mpsChatLoading) return;
-    const pcParts = [
-      sermon.background_noise?.trim() && `The Cultural Moment (the world the congregation lives in): ${sermon.background_noise.trim()}`,
-      sermon.audience_assumptions?.trim() && `The Room (who is in the room and where they are): ${sermon.audience_assumptions.trim()}`,
-      sermon.topic_theme?.trim() && `The Sermon's Work (the big claim and pastoral purpose): ${sermon.topic_theme.trim()}`,
-    ].filter(Boolean);
-    const pcBlock = pcParts.length > 0 ? `\n\nPastoral Context (concentric — cultural moment → the room → the sermon's work):\n${pcParts.join("\n")}` : "";
-    const contextPrefix = `Passage: ${sermon.passage || "unknown"}\nMPT: ${sermon.mpt || "(none)"}\nCurrent MPS: ${sermon.mps || "(none)"}${pcBlock}\n\n---\n\n`;
     const newUserMsg = { role: "user", content: input };
     const history = [...mpsChat, newUserMsg];
     setMpsChat(history);
     setMpsChatInput("");
     setMpsChatLoading(true);
     try {
+      const step = STEPS.MPT_MPS;
+      const context = buildContext({ sermon, step });
+      const contextPrefix = context ? `CONTEXT:\n${context}\n\nUSER REQUEST:\n` : "";
       const messages = history.map((m, i) =>
         i === history.length - 1 ? { ...m, content: contextPrefix + m.content } : m
       );
-      const result = await sendAIMessage(messages, layerTask(MPS_CHAT_TASK, STEPS.MPT_MPS));
+      const result = await sendAIMessage(messages, layerTask(MPS_CHAT_TASK, step));
       if (result.ok && result.text.trim()) {
         setMpsChat(prev => [...prev, { role: "assistant", content: result.text.trim() }]);
       } else if (!result.ok && result.kind !== "aborted") {
@@ -437,18 +429,14 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
     setDraftLoading("outline-draft");
     setOutlineChat([]);
     try {
-      const exegesisContext = [
-        `Passage: ${sermon.passage || "unknown"}`,
-        `MPT: ${sermon.mpt || "(none)"}`,
-        `MPS: ${sermon.mps || "(none)"}`,
-        `\nObservations:\n${formatPhaseText(obsData, OBSERVE_FIELDS)}`,
-        `\nInterpretation:\n${formatPhaseText(intData, INTERPRET_FIELDS)}`,
-        `\nRedemptive Thread:\n${formatPhaseText(redData, REDEMPTIVE_FIELDS)}`,
-        `\nImplications:\n${formatPhaseText(impData, [...IMPLICATIONS_THEOLOGICAL, ...IMPLICATIONS_PERSONAL])}`,
-      ].join("\n");
+      const step = STEPS.OUTLINE;
+      const context = buildContext({ sermon, step });
+      const userContent = context
+        ? `CONTEXT:\n${context}\n\nUSER REQUEST:\nPropose a sermon outline.`
+        : "Propose a sermon outline.";
       const result = await sendAIMessage(
-        [{ role: "user", content: `${exegesisContext}\n\nPropose a sermon outline.` }],
-        layerTask(OUTLINE_SYSTEM, STEPS.OUTLINE),
+        [{ role: "user", content: userContent }],
+        layerTask(OUTLINE_SYSTEM, step),
       );
       if (result.ok && result.text.trim()) setOutlineChat([{ role: "assistant", content: result.text.trim() }]);
     } catch (e) {
@@ -461,24 +449,19 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
   async function sendOutlineChat() {
     const input = outlineChatInput.trim();
     if (!input || outlineChatLoading) return;
-    const contextPrefix = [
-      `Passage: ${sermon.passage || "unknown"}`,
-      `MPT: ${sermon.mpt || "(none)"}`,
-      `MPS: ${sermon.mps || "(none)"}`,
-      outline.length > 0
-        ? `Current outline:\n${outline.map((p, i) => `${i + 1}. ${p.text}`).join("\n")}`
-        : null,
-    ].filter(Boolean).join("\n") + "\n\n---\n\n";
     const newUserMsg = { role: "user", content: input };
     const history = [...outlineChat, newUserMsg];
     setOutlineChat(history);
     setOutlineChatInput("");
     setOutlineChatLoading(true);
     try {
+      const step = STEPS.OUTLINE;
+      const context = buildContext({ sermon, step });
+      const contextPrefix = context ? `CONTEXT:\n${context}\n\nUSER REQUEST:\n` : "";
       const messages = history.map((m, i) =>
         i === history.length - 1 ? { ...m, content: contextPrefix + m.content } : m
       );
-      const result = await sendAIMessage(messages, layerTask(OUTLINE_SYSTEM, STEPS.OUTLINE));
+      const result = await sendAIMessage(messages, layerTask(OUTLINE_SYSTEM, step));
       if (result.ok && result.text.trim()) {
         setOutlineChat(prev => [...prev, { role: "assistant", content: result.text.trim() }]);
       } else if (!result.ok && result.kind !== "aborted") {
@@ -491,11 +474,15 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
     }
   }
 
-  async function generateSummary(key, userPrompt, taskDirective, step) {
+  async function generateSummary(key, briefRequest, taskDirective, step) {
     setSummaryLoading(key);
     try {
+      const context = buildContext({ sermon, step });
+      const userContent = context
+        ? `CONTEXT:\n${context}\n\nUSER REQUEST:\n${briefRequest}`
+        : briefRequest;
       const result = await sendAIMessage(
-        [{ role: "user", content: userPrompt }],
+        [{ role: "user", content: userContent }],
         layerTask(taskDirective, step),
       );
       if (result.ok) {
@@ -518,7 +505,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
       onStepChange?.(STEPS.MPT_MPS);
       generateSummary(
         "s2",
-        `Passage: ${sermon.passage || "unknown"}.\n\nPhase 1 – Observations:\n${formatPhaseText(obsData, OBSERVE_FIELDS)}\n\nPhase 2 – Interpretation:\n${formatPhaseText(intData, INTERPRET_FIELDS)}\n\nPhase 3 – Redemptive Thread:\n${formatPhaseText(redData, REDEMPTIVE_FIELDS)}\n\nPhase 4 – Implications:\n${formatPhaseText(impData, [...IMPLICATIONS_THEOLOGICAL, ...IMPLICATIONS_PERSONAL])}`,
+        "Brief me on the complete exegetical work before I forge the main point.",
         BRIEF_EXEGESIS_TO_MPT_MPS_TASK,
         STEPS.MPT_MPS,
       );
@@ -531,21 +518,21 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
     if (next === 2) {
       generateSummary(
         "p2",
-        `Passage: ${sermon.passage || "unknown"}.\n\nObservations:\n${formatPhaseText(obsData, OBSERVE_FIELDS)}`,
+        "Brief me on the observations before I move into interpretation.",
         BRIEF_OBSERVE_TO_INTERPRET_TASK,
         PHASES.INTERPRET,
       );
     } else if (next === 3) {
       generateSummary(
         "p3",
-        `Passage: ${sermon.passage || "unknown"}.\n\nInterpretation notes:\n${formatPhaseText(intData, INTERPRET_FIELDS)}`,
+        "Brief me on the interpretive conclusions before I work the redemptive thread.",
         BRIEF_INTERPRET_TO_REDEMPTIVE_TASK,
         PHASES.REDEMPTIVE_THREAD,
       );
     } else if (next === 4) {
       generateSummary(
         "p4",
-        `Passage: ${sermon.passage || "unknown"}.\n\nRedemptive thread:\n${formatPhaseText(redData, REDEMPTIVE_FIELDS)}`,
+        "Brief me on the Christ-connection before I draw implications.",
         BRIEF_REDEMPTIVE_TO_IMPLICATIONS_TASK,
         PHASES.IMPLICATIONS,
       );
@@ -562,15 +549,14 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
     if (next === 3) {
       generateSummary(
         "s3",
-        `Passage: ${sermon.passage || "unknown"}\nMPT: ${sermon.mpt || "(none)"}\nMPS: ${sermon.mps || "(none)"}\n\nObservations:\n${formatPhaseText(obsData, OBSERVE_FIELDS)}\n\nInterpretation:\n${formatPhaseText(intData, INTERPRET_FIELDS)}\n\nRedemptive Thread:\n${formatPhaseText(redData, REDEMPTIVE_FIELDS)}\n\nImplications:\n${formatPhaseText(impData, [...IMPLICATIONS_THEOLOGICAL, ...IMPLICATIONS_PERSONAL])}`,
+        "Brief me before I build the sermon outline.",
         BRIEF_MPT_MPS_TO_OUTLINE_TASK,
         STEPS.OUTLINE,
       );
     } else if (next === 4) {
-      const pts = getOutline(sermon).map((p, i) => `${i + 1}. ${p.text}`).join("\n");
       generateSummary(
         "s4",
-        `MPS: ${sermon.mps || "(none)"}\nOutline:\n${pts || "(none)"}`,
+        "Brief me before I develop functional elements per outline point.",
         BRIEF_OUTLINE_TO_FE_TASK,
         STEPS.FUNCTIONAL_ELEMENTS,
       );
@@ -618,9 +604,14 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
       }
 
       const pts = eligible.map((p, i) => `${i + 1}. ${p.text}`).join("\n");
+      const step = STEPS.FUNCTIONAL_ELEMENTS;
+      const context = buildContext({ sermon, step });
+      const userContent = context
+        ? `CONTEXT:\n${context}\n\nUSER REQUEST:\nMap each outline point below to its most relevant verse range within the passage.\n\nOutline points to map:\n${pts}`
+        : `Outline points to map:\n${pts}\n\nMap each to its most relevant verse range within the passage.`;
       const result = await sendAIMessage(
-        [{ role: "user", content: `Passage: ${sermon.passage}\n\nOutline:\n${pts}\n\nMap each outline point to its most relevant verse range within the passage.` }],
-        layerTask(POPULATE_SCRIPTURE_TASK, STEPS.FUNCTIONAL_ELEMENTS),
+        [{ role: "user", content: userContent }],
+        layerTask(POPULATE_SCRIPTURE_TASK, step),
       );
       if (!result.ok) {
         if (result.kind === "aborted") return;
@@ -684,30 +675,19 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
   async function sendFeChat() {
     const input = feChatInput.trim();
     if (!input || feChatLoading) return;
-    const allPoints = outline.map((pt, i) => {
-      const d = funcData[pt.id] || {};
-      return [
-        `Point ${i + 1}: ${pt.text}`,
-        d.explanation && `  Explanation: ${d.explanation}`,
-        d.application && `  Application: ${d.application}`,
-        d.illustration && `  Illustration: ${d.illustration}`,
-      ].filter(Boolean).join("\n");
-    }).join("\n\n");
-    const contextPrefix = [
-      `Passage: ${sermon.passage || "unknown"}`,
-      `MPS: ${sermon.mps || "(none)"}`,
-      allPoints ? `\nOutline & current functional elements:\n${allPoints}` : null,
-    ].filter(Boolean).join("\n") + "\n\n---\n\n";
     const newUserMsg = { role: "user", content: input };
     const history = [...feChat, newUserMsg];
     setFeChat(history);
     setFeChatInput("");
     setFeChatLoading(true);
     try {
+      const step = STEPS.FUNCTIONAL_ELEMENTS;
+      const context = buildContext({ sermon, step });
+      const contextPrefix = context ? `CONTEXT:\n${context}\n\nUSER REQUEST:\n` : "";
       const messages = history.map((m, i) =>
         i === history.length - 1 ? { ...m, content: contextPrefix + m.content } : m
       );
-      const result = await sendAIMessage(messages, layerTask(FE_CHAT_SYSTEM, STEPS.FUNCTIONAL_ELEMENTS));
+      const result = await sendAIMessage(messages, layerTask(FE_CHAT_SYSTEM, step));
       if (result.ok && result.text.trim()) {
         setFeChat(prev => [...prev, { role: "assistant", content: result.text.trim() }]);
       } else if (!result.ok && result.kind !== "aborted") {
@@ -790,7 +770,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                       .join("\n\n");
                     fetchInline(
                       "observe",
-                      `Passage: ${sermon.passage || "this passage"}\n\nMy observations on ${sermon.passage || "this passage"}:\n\n${filled || "(none yet)"}`,
+                      `My observations:\n\n${filled || "(none yet)"}`,
                       OBSERVE_REVIEW_TASK,
                       PHASES.OBSERVE,
                     );
@@ -828,7 +808,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                       .join("\n\n");
                     fetchInline(
                       "interpret",
-                      `Passage: ${sermon.passage || "this passage"}\n\nMy interpretation of ${sermon.passage || "this passage"}:\n\n${filled || "(none yet)"}`,
+                      `My interpretation:\n\n${filled || "(none yet)"}`,
                       INTERPRET_REVIEW_TASK,
                       PHASES.INTERPRET,
                     );
@@ -872,9 +852,15 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                           .filter(f => redData[f.key]?.trim())
                           .map(f => `${f.label}: ${redData[f.key].trim()}`)
                           .join("\n\n");
+                        const step = PHASES.REDEMPTIVE_THREAD;
+                        const context = buildContext({ sermon, step });
+                        const userRequest = `Redemptive feature answers to synthesize:\n\n${filled || "(none yet)"}\n\nSynthesize these into a cohesive 3–5 sentence summary.`;
+                        const userContent = context
+                          ? `CONTEXT:\n${context}\n\nUSER REQUEST:\n${userRequest}`
+                          : userRequest;
                         const result = await sendAIMessage(
-                          [{ role: "user", content: `Passage: ${sermon.passage || "unknown"}\n\nRedemptive feature answers:\n\n${filled || "(none yet)"}\n\nSynthesize these answers into a cohesive summary of how this passage participates in redemptive history and points to Christ. Write 3–5 sentences. Be specific to the text.` }],
-                          layerTask(SYNTHESIZE_REDEMPTIVE_TASK, PHASES.REDEMPTIVE_THREAD),
+                          [{ role: "user", content: userContent }],
+                          layerTask(SYNTHESIZE_REDEMPTIVE_TASK, step),
                         );
                         if (result.ok && result.text.trim()) setRedSummaryProposal(result.text.trim());
                       } catch (e) {
@@ -920,7 +906,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                     const summary = redData[REDEMPTIVE_SUMMARY_KEY]?.trim() || "";
                     fetchInline(
                       "redemptive",
-                      `Passage: ${sermon.passage || "this passage"}\n\nRedemptive thread for ${sermon.passage || "this passage"}:\n\n${filled}\n\n${summary ? `Summary: ${summary}` : ""}`,
+                      `Redemptive thread answers:\n\n${filled}\n\n${summary ? `Summary: ${summary}` : ""}`,
                       REDEMPTIVE_REVIEW_TASK,
                       PHASES.REDEMPTIVE_THREAD,
                     );
@@ -996,9 +982,15 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                           .map(f => `${f.label} ${impData[f.key].trim()}`)
                           .join("\n");
                         const unb = impData[IMPLICATIONS_UNBELIEVER_KEY]?.trim() || "";
+                        const step = PHASES.IMPLICATIONS;
+                        const context = buildContext({ sermon, step });
+                        const userRequest = `Implications to compile:\n\nTheological significance:\n${theo || "(none)"}\n\nPersonal implications:\n${pers || "(none)"}\n\nImplications for unbelievers:\n${unb || "(none)"}`;
+                        const userContent = context
+                          ? `CONTEXT:\n${context}\n\nUSER REQUEST:\n${userRequest}`
+                          : userRequest;
                         const result = await sendAIMessage(
-                          [{ role: "user", content: `Passage: ${sermon.passage || "unknown"}\n\nTheological significance:\n${theo || "(none)"}\n\nPersonal implications:\n${pers || "(none)"}\n\nImplications for unbelievers:\n${unb || "(none)"}\n\nCompile all of these into a single consolidated list of implications. Each item should be one clear, actionable sentence. Group naturally but don't repeat. Include both theological and practical implications.` }],
-                          layerTask(COMPILE_IMPLICATIONS_TASK, PHASES.IMPLICATIONS),
+                          [{ role: "user", content: userContent }],
+                          layerTask(COMPILE_IMPLICATIONS_TASK, step),
                         );
                         if (result.ok && result.text.trim()) setImpCompileProposal(result.text.trim());
                       } catch (e) {
@@ -1045,7 +1037,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                     const compiled = impData[IMPLICATIONS_COMPILED_KEY]?.trim() || "";
                     fetchInline(
                       "implications",
-                      `Passage: ${sermon.passage || "this passage"}\n\nImplications from ${sermon.passage || "this passage"}:\n\n${allFields}\n\n${compiled ? `Compiled list: ${compiled}` : ""}`,
+                      `Implications:\n\n${allFields}\n\n${compiled ? `Compiled list: ${compiled}` : ""}`,
                       IMPLICATIONS_REVIEW_TASK,
                       PHASES.IMPLICATIONS,
                     );
@@ -1160,8 +1152,9 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
               disabled={inlineLoading !== null}
               onClick={() => fetchInline(
                 "mpt-challenge",
-                `Passage: ${sermon.passage || "unknown"}. MPT: "${sermon.mpt || "(not written)"}"`,
-                `Push back on this MPT as a careful biblical scholar would. Evaluate: Does this accurately reflect the author's original intent? Is it past tense and historically grounded? Does it avoid reading back NT theology into OT texts inappropriately? Is anything missing from the text's main thrust? Be direct and specific. Quote the text where relevant. This is not encouragement — it is a scholarly challenge.`
+                `MPT to challenge: "${sermon.mpt || "(not written)"}"`,
+                `Push back on this MPT as a careful biblical scholar would. Evaluate: Does this accurately reflect the author's original intent? Is it past tense and historically grounded? Does it avoid reading back NT theology into OT texts inappropriately? Is anything missing from the text's main thrust? Be direct and specific. Quote the text where relevant. This is not encouragement — it is a scholarly challenge.`,
+                STEPS.MPT_MPS,
               )}
             >
               Challenge My MPT
@@ -1171,8 +1164,9 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
               disabled={inlineLoading !== null}
               onClick={() => fetchInline(
                 "mpt-mps-chain",
-                `MPT: "${sermon.mpt || "(not written)"}". MPS: "${sermon.mps || "(not written)"}"`,
-                `Evaluate whether this MPS grows organically from this MPT. MPT: "${sermon.mpt || "(not written)"}". MPS: "${sermon.mps || "(not written)"}". Does the MPS follow from the MPT or is it imposed? Is the chain clean, weak, or broken? Be specific.`
+                `Evaluate the MPT→MPS chain on this sermon.`,
+                `Evaluate whether this MPS grows organically from this MPT. MPT: "${sermon.mpt || "(not written)"}". MPS: "${sermon.mps || "(not written)"}". Does the MPS follow from the MPT or is it imposed? Is the chain clean, weak, or broken? Be specific.`,
+                STEPS.MPT_MPS,
               )}
             >
               Check MPT→MPS Chain
@@ -1287,17 +1281,13 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
               size="sm"
               disabled={inlineLoading !== null || draftLoading !== null || outlineChatLoading}
               onClick={() => {
+                // Exegesis + outline come from buildContext at step OUTLINE.
                 const pts = outline.map((p, i) => `${i + 1}. ${p.text}`).join("\n");
-                const exegesisContext = [
-                  `Observations:\n${formatPhaseText(obsData, OBSERVE_FIELDS)}`,
-                  `Interpretation:\n${formatPhaseText(intData, INTERPRET_FIELDS)}`,
-                  `Redemptive Thread:\n${formatPhaseText(redData, REDEMPTIVE_FIELDS)}`,
-                  `Implications:\n${formatPhaseText(impData, [...IMPLICATIONS_THEOLOGICAL, ...IMPLICATIONS_PERSONAL])}`,
-                ].join("\n\n");
                 fetchInline(
                   "outline-review",
-                  `Passage: ${sermon.passage || "unknown"}.\nMPT: ${sermon.mpt || "(none)"}.\nMPS: ${sermon.mps || "(none)"}.\n\n${exegesisContext}\n\nOutline:\n${pts || "(no points yet)"}`,
-                  `Review this sermon outline against the exegetical work above. Evaluate: Do the points derive from the text's own argument? Do they ladder to the MPS? Is the progression clear and complete? Does tension resolve in the gospel? Suggest the minimum changes needed.`
+                  `Outline to review:\n${pts || "(no points yet)"}`,
+                  `Review this sermon outline against the exegetical work above. Evaluate: Do the points derive from the text's own argument? Do they ladder to the MPS? Is the progression clear and complete? Does tension resolve in the gospel? Suggest the minimum changes needed.`,
+                  STEPS.OUTLINE,
                 );
               }}
             >
@@ -1501,8 +1491,9 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                 }).join("\n\n");
                 fetchInline(
                   "eai-review",
-                  `Passage: ${sermon.passage || "unknown"}.\n\nFunctional elements:\n${allEAI}`,
-                  `Evaluate the Explanation/Application/Illustration balance across all outline points for ${sermon.passage || "this passage"}. Is explanation too thin or too heavy? Is application gospel-rooted or behavior-driven? Are the illustrations doing real work? Give a point-by-point assessment.`
+                  `Functional elements to evaluate:\n${allEAI}`,
+                  `Evaluate the Explanation/Application/Illustration balance across all outline points for ${sermon.passage || "this passage"}. Is explanation too thin or too heavy? Is application gospel-rooted or behavior-driven? Are the illustrations doing real work? Give a point-by-point assessment.`,
+                  STEPS.FUNCTIONAL_ELEMENTS,
                 );
               }}
             >

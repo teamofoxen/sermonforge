@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-02 — feat: route StudyTab through buildContext (ACCI Item C2)
+
+- `src/components/StudyTab.jsx` — every AI call site now wraps its user request with `buildContext({ sermon, step })` envelope (`CONTEXT:\n…\n\nUSER REQUEST:\n…`), replacing 11 sites' worth of hand-rolled `Passage: … Observations: … Interpretation: …` blocks. `fetchInline` injects the envelope once for all 8 review/challenge/E-A-I callers; `generateMPT`, `generateMPS`, `sendMpsChat`, `suggestOutline`, `sendOutlineChat`, `generateSummary`, `populateScripture`, `sendFeChat`, the Synthesize Redemptive button, and the Compile Implications button each wrap their own.
+- `formatPhaseText(...)` removed from StudyTab.jsx — its sole consumers were the now-replaced hand-rolled context blocks; the same data flows in via `buildContext`'s tier-2 exegesis summary.
+- 4 fetchInline call sites (`mpt-challenge`, `mpt-mps-chain`, `outline-review`, `eai-review`) now pass an explicit `step`; previously they fell through to buildSystemPrompt's default.
+- SeriesPlanner.jsx scope of C2 is N/A: series-level work has no `sermon` record for `buildContext` to consume; series-context blocks remain hand-rolled (already passed through `buildSystemPrompt` per C1).
+- 666 tests passing; lint clean; net diff -9 lines.
+
+---
+
 ## 2026-05-02 — fix: row-count-aware DB resolver + empty-active trigger + one-shot recovery tool
 
 - `electron/dbMigration.js` now picks legacy DBs by content-row count (sermons + series), with mtime as the tiebreaker; 0-row schema-only DBs are skipped entirely. Regression test `tests/contracts/db-userdata-path-permanent.test.ts` codifies the 2026-05-02 incident (1-sermon dev DB beating 10-sermon real DB on mtime). Now requires a `countRows(db)` callback.
