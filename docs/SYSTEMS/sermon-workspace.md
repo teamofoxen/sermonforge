@@ -19,9 +19,9 @@ holds the substance.
 **Articulated by the product owner during SPRD planning (2026-04-30, verbatim):**
 
 > The point of exegesis is engagement with the world of text itself, as much as
-> possible, without influence from context. That's to ensure that at the core of a
-> sermon, God is speaking first. My PC shouldn't be driving the sermon, the text
-> should be driving the sermon toward my PC. At the end of the Observe phase is
+> possible, without influence from modern context. That's to ensure that at the
+> core of a sermon, God is speaking first. My PC shouldn't be driving the sermon,
+> the text should be driving the sermon toward my PC. At the end of the Observe phase is
 > "Possible Applications," and this is the first time anything related to PC
 > surfaces. The idea is that the pastor begins to think in terms of "how could
 > this apply to my audience," but doesn't fully enter that mode. Think of it as

@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-05-02 — docs: SFDI throughline vision sheet + Merida interlocutor method
+
+- New `docs/PROPOSALS/sfdi-throughline-vision.md` — single-page vision sheet for offline field drafting, capturing the throughline arc, the four named outcomes per sub-phase (Observation Set / Interpretation Set / Christ-Connection Statement / Implications Synthesis), PC progressive entry, non-negotiables, and the "feels earned" qualitative test.
+- `docs/PROPOSALS/sfdi-charter.md` Approach section revised: "No external source material" replaced with "Merida as conversation partner, not script — interlocutor for every field," every field walk opening through a Merida-anchored question while the pastor remains source-of-truth.
+- `docs/SYSTEMS/sermon-workspace.md` — clarified the verbatim PC articulation in "The Study throughline": "without influence from context" → "without influence from modern context" so biblical-literary engagement (Observe's whole point) isn't excluded by phrasing.
+
+---
+
 ## 2026-05-01 — feat: centralize StudyTab + SeriesPlanner system prompts (ACCI Item C1)
 
 - `src/prompts/study.js` extended with 14 new task-directive constants (review prompts, MPT/MPS draft, MPS chat, populate-scripture, synthesize-redemptive, compile-implications, six advance-step briefings); `src/prompts/sermon.js` adds four `series-*` step descriptions; new `src/prompts/seriesPlanner.js` exports 11 task constants + `SERIES_STEPS`.
