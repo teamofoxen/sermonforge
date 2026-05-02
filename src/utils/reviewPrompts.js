@@ -12,6 +12,7 @@
 import { STEPS, PHASES } from "../constants/steps";
 import { STAGE } from "../core/contracts";
 import { getOutline } from "../utils";
+import { OUTLINE_REVIEW_TASK, CHALLENGE_MPT_TASK } from "../prompts/study";
 
 /**
  * Build the prompt and system message for the "Review My Work" action.
@@ -51,8 +52,7 @@ export function getReviewPrompt(tab, sermon, activeStep) {
     // Step 2: MPT/MPS
     if (activeStep === STEPS.MPT_MPS) {
       return {
-        system:
-          "Act as a rigorous challenger. Push back, probe weaknesses, and expose where the MPT or MPS does not hold up. Do not offer encouragement unless the work genuinely earns it. If something is weak, say so directly. The pastor needs a tough critic here, not a supportive mentor.",
+        system: CHALLENGE_MPT_TASK,
         prompt:
           `Challenge the MPT and MPS for ${passage}.\n\nMPT: ${mpt || "(none)"}\nMPS: ${mps || "(none)"}\n\nProbe each one:\n- Is the MPT the actual main point of the text, or is it what the pastor wanted to find? Can you poke a hole in it?\n- Does the MPS flow organically from the MPT, or is it an import from somewhere else?\n- Is the MPT-to-MPS movement legitimate, or is the preacher smuggling in a point the text doesn't make?\n- What is the weakest part of this formulation?`,
       };
@@ -62,9 +62,9 @@ export function getReviewPrompt(tab, sermon, activeStep) {
     if (activeStep === STEPS.OUTLINE) {
       const outline = getOutline(sermon);
       return {
-        system: "Review this outline for homiletical strength.",
+        system: OUTLINE_REVIEW_TASK,
         prompt:
-          `Review this sermon outline for ${passage}.\n\nMPT: ${mpt}\nMPS: ${mps}\n\nOutline:\n${outline.map((p, i) => `${i + 1}. ${p.text}`).join("\n") || "(none)"}\n\nDo the points derive from the text? Do they serve the MPS? Is the progression clear?`,
+          `Review this sermon outline for ${passage}.\n\nMPT: ${mpt}\nMPS: ${mps}\n\nOutline:\n${outline.map((p, i) => `${i + 1}. ${p.text}`).join("\n") || "(none)"}`,
       };
     }
 
@@ -103,9 +103,9 @@ export function getReviewPrompt(tab, sermon, activeStep) {
   if (tab === STAGE.Blueprint) {
     const outline = getOutline(sermon);
     return {
-      system: "Review this outline for homiletical strength.",
+      system: OUTLINE_REVIEW_TASK,
       prompt:
-        `Review this sermon outline for ${passage}.\n\nMPT: ${mpt}\nMPS: ${mps}\n\nOutline:\n${outline.map((p, i) => `${i + 1}. ${p.text}`).join("\n")}\n\nDo the points derive from the text? Do they serve the MPS? Is the progression clear?`,
+        `Review this sermon outline for ${passage}.\n\nMPT: ${mpt}\nMPS: ${mps}\n\nOutline:\n${outline.map((p, i) => `${i + 1}. ${p.text}`).join("\n")}`,
     };
   }
 

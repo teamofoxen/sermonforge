@@ -47,6 +47,20 @@ export const MPS_CHAT_TASK = `Refine the Main Point of the Sermon (MPS) with the
 
 export const POPULATE_SCRIPTURE_TASK = `Identify which specific verses within the sermon passage ground each outline point. Return ONLY valid JSON — no preamble, no markdown, no explanation. Format: {"1": "Book Chapter:Verse-Verse", "2": "Book Chapter:Verse-Verse", ...}. Keys are point numbers as strings. Values must be exact verse references that are subsets of the given passage.`;
 
+// Single source of truth for outline-review prompts (ACCI Item C4). Used by:
+//   - OutlineTab.jsx handleReviewOutline (Blueprint tab "Review" button)
+//   - StudyTab.jsx outline-review fetchInline (Step 3 inline review)
+//   - reviewPrompts.js getReviewPrompt — STEPS.OUTLINE / STAGE.Blueprint branches
+// Keep these four call sites pointed at this constant; do not re-inline.
+export const OUTLINE_REVIEW_TASK = `Review this sermon outline against the exegetical work and MPS. Evaluate: Do the points derive from the text's own argument? Do they ladder to the MPS? Is the progression clear and complete? Does tension resolve in the gospel? Suggest the minimum changes needed.`;
+
+// Single source of truth for "challenge my MPT" prompts (ACCI Item C4). Used by:
+//   - StudyTab.jsx mpt-challenge fetchInline ("Challenge MPT" button)
+//   - reviewPrompts.js getReviewPrompt — STEPS.MPT_MPS branch
+// The MPT/MPS chain-check (StudyTab "mpt-mps-chain") is a distinct concept
+// (chain integrity, not MPT challenge) and stays separate.
+export const CHALLENGE_MPT_TASK = `Push back on the MPT as a careful biblical scholar would. Evaluate: Does it accurately reflect the author's original intent? Is it past tense and historically grounded? Does it avoid reading back NT theology into OT texts inappropriately? Is anything missing from the text's main thrust? Be direct and specific. Quote the text where relevant. This is not encouragement — it is a scholarly challenge.`;
+
 // ── Step 4 (Functional Elements) ───────────────────────────────────────────
 
 export const FE_CHAT_SYSTEM = `Help develop functional elements for each sermon point — Explanation (E), Application (A), and Illustration (I).

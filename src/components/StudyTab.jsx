@@ -24,6 +24,7 @@ import {
   SYNTHESIZE_REDEMPTIVE_TASK, COMPILE_IMPLICATIONS_TASK,
   MPT_DRAFT_TASK, MPS_DRAFT_WITH_PC_TASK, MPS_DRAFT_NO_PC_TASK, MPS_CHAT_TASK,
   POPULATE_SCRIPTURE_TASK,
+  OUTLINE_REVIEW_TASK, CHALLENGE_MPT_TASK,
   BRIEF_OBSERVE_TO_INTERPRET_TASK, BRIEF_INTERPRET_TO_REDEMPTIVE_TASK, BRIEF_REDEMPTIVE_TO_IMPLICATIONS_TASK,
   BRIEF_EXEGESIS_TO_MPT_MPS_TASK, BRIEF_MPT_MPS_TO_OUTLINE_TASK, BRIEF_OUTLINE_TO_FE_TASK,
 } from "../prompts/study";
@@ -1167,7 +1168,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
               onClick={() => fetchInline(
                 "mpt-challenge",
                 `MPT to challenge: "${sermon.mpt || "(not written)"}"`,
-                `Push back on this MPT as a careful biblical scholar would. Evaluate: Does this accurately reflect the author's original intent? Is it past tense and historically grounded? Does it avoid reading back NT theology into OT texts inappropriately? Is anything missing from the text's main thrust? Be direct and specific. Quote the text where relevant. This is not encouragement — it is a scholarly challenge.`,
+                CHALLENGE_MPT_TASK,
                 STEPS.MPT_MPS,
               )}
             >
@@ -1300,7 +1301,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                 fetchInline(
                   "outline-review",
                   `Outline to review:\n${pts || "(no points yet)"}`,
-                  `Review this sermon outline against the exegetical work above. Evaluate: Do the points derive from the text's own argument? Do they ladder to the MPS? Is the progression clear and complete? Does tension resolve in the gospel? Suggest the minimum changes needed.`,
+                  OUTLINE_REVIEW_TASK,
                   STEPS.OUTLINE,
                 );
               }}

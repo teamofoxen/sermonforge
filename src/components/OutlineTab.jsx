@@ -10,6 +10,7 @@ import {
 import OutlineBuilder from "./OutlineBuilder";
 import InlineAIResponse from "./InlineAIResponse";
 import { OUTLINE_SYSTEM, outlineHasNumberedList, extractOutlineWithExplanations } from "../utils/outlineChat";
+import { OUTLINE_REVIEW_TASK } from "../prompts/study";
 import PrimaryButton from "./primitives/PrimaryButton";
 import SecondaryButton from "./primitives/SecondaryButton";
 import IconButton from "./primitives/IconButton";
@@ -127,7 +128,7 @@ export default function OutlineTab({ sermon, onUpdate, onTabChange, studySummari
       const pts = outline.map((p, i) => `${i + 1}. ${p.text}`).join("\n");
       const result = await sendAIMessage(
         [{ role: "user", content: `Passage: ${sermon.passage || "unknown"}.\nMPT: ${sermon.mpt || "(none)"}.\nMPS: ${sermon.mps || "(none)"}.\n\nOutline:\n${pts}` }],
-        `Review this sermon outline. Evaluate: Do the points derive from the text? Do they ladder up to the MPS? Is the progression clear and complete? Does tension resolve in the gospel? Suggest the minimum changes needed.`,
+        OUTLINE_REVIEW_TASK,
         STAGE.Blueprint,
         sermon.id,
       );

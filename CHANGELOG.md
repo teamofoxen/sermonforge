@@ -2,6 +2,17 @@
 
 ---
 
+## 2026-05-02 — feat: dedupe outline-review + challenge-MPT prompts (ACCI Item C4)
+
+- `src/prompts/study.js` adds `OUTLINE_REVIEW_TASK` (single source for the 4 outline-review prompts) and `CHALLENGE_MPT_TASK` (single source for the 2 challenge-MPT prompts).
+- `src/components/StudyTab.jsx` `outline-review` and `mpt-challenge` fetchInline call sites swap their inline prompts for the imports.
+- `src/components/OutlineTab.jsx` `handleReviewOutline` swaps its inline prompt for `OUTLINE_REVIEW_TASK`.
+- `src/utils/reviewPrompts.js` `STEPS.OUTLINE`, `STEPS.MPT_MPS`, and `STAGE.Blueprint` branches now use the centralized constants as their `system` value; user prompts trimmed of redundant tail questions covered by the task.
+- The `mpt-mps-chain` chain-check stays separate — it tests chain integrity, not MPT challenge. ACCI Tier C complete.
+- 666 tests passing; lint clean.
+
+---
+
 ## 2026-05-02 — feat: pass step + sermonId at every sendAIMessage call site (ACCI Item C3)
 
 - `src/components/StudyTab.jsx` (11 sites), `OutlineTab.jsx` (3), `DeliveryTab.jsx` (2), `SeriesPlanner.jsx` (12) — every `sendAIMessage` call now passes the active step (canonical `STEPS.*` / `PHASES.*` / `STAGE.*` / `SERIES_STEPS.*` value) and a `sermonId` (`sermon.id` for sermon-level calls, `slot?.id` for SlotRow assist, `null` for series-level calls). Previously these were undefined, causing the audit log to lose surface attribution and the abort registry to skip the affected sites.
