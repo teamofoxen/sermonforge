@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-05-01 — Thread Framework contract enforcement into sweep skills
+
+- `.claude/skills/sweep-the-multiverse/SKILL.md` adds a CONTRACT MAP linking each audited area to specific clauses in `docs/CORE.md` → "The Framework", threads `Contract check:` lines into every per-area rule block, adds a CONTRACT POSTURE block plus a `CONTRACTS:` field to the output template, raises the word cap from 800 to 1000, and adds a HARD RULE that any contract weakening or Principle violation forces overall FAIL.
+- `.claude/skills/sweep-the-universe/SKILL.md` applies the same enforcement layer to the per-area variant with a smaller CONTRACT MAP, per-area `Contract check:` lines, a `CONTRACTS:` block in the per-area output template, word cap raised 350 to 400, and the same FAIL-on-weakening rule.
+
+---
+
 ## 2026-05-01 — feat: differentiate AI failure modes (ACCI Item A4)
 
 - `electron/ai/provider.js` classifies thrown SDK/transport errors into eight kinds (auth, rate_limit, network, server, timeout, format, empty, unknown) and returns an `{ ok, kind, message }` envelope instead of throwing.
