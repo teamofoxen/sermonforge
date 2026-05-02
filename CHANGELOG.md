@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-01 — feat: AbortController on sermon switch (ACCI Item A1)
+
+- Added module-level in-flight registry in `src/utils/ai.js` keyed by `sermonId` plus exported `abortInFlightForSermon(sermonId)`.
+- `sendAIMessage` now races the IPC promise against an abort signal and returns `""` on abort — backwards-compatible no-op for all existing call sites.
+- `SermonWorkspace.jsx` aborts the previous sermon's in-flight calls in a `useEffect` cleanup keyed on `sermonId`, preventing stale responses from landing on a different sermon.
+- Renderer-side only: IPC handler still completes; calls without a `sermonId` are unchanged. AIPanel's three sermon-tagged call sites are now abortable; tab-side callers wait on Item C3.
+- Unblocks Item A2 (proposal pattern for the six direct-write AI paths).
+
+---
+
 ## 2026-05-01 — chore: bundle /simplify in /sweep-the-house + permission allowlist
 
 - Bundle `/simplify` into `/sweep-the-house` as a report-only Part 2 — no fixes applied without explicit user approval.

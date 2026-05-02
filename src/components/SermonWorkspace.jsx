@@ -10,6 +10,7 @@ import {
 } from "../core/spine";
 import { pickSermonColumns, STAGE, STAGE_SEQUENCE, STAGE_LABELS } from "../core/contracts";
 import { updateMemory, extractOutlinePattern, extractPhrasePatterns } from "../utils/memory";
+import { abortInFlightForSermon } from "../utils/ai";
 import { autoResize } from "../utils";
 import DeleteButton from "./DeleteButton";
 import StudyTab from "./StudyTab";
@@ -141,6 +142,15 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpe
       }
     }
     load();
+  }, [sermonId]);
+
+  // Abort any in-flight AI calls tagged with the *previous* sermonId when
+  // the active sermon changes (and on unmount). Prevents a stale response
+  // from arriving and being applied to a different sermon — corruption that
+  // is otherwise silent and unrecoverable. See docs/PROPOSALS/ai-clarity-and-constraint.md
+  // Item A1.
+  useEffect(() => {
+    return () => abortInFlightForSermon(sermonId);
   }, [sermonId]);
 
   function captureMemory(s, { scanPhrases = false } = {}) {
