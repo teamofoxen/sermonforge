@@ -2,6 +2,7 @@ import { useState } from "react";
 import { getOutline, getFunctionalElements, tryParse, autoResize, assembleManuscriptText } from "../utils";
 import { summarizeExegesis } from "../utils/contextBuilder";
 import { sendAIMessage } from "../utils/ai";
+import { parseAIJson, validateCMC } from "../utils/aiSchema";
 import { exportPmb } from "../db/database";
 import { updateSermon } from "../core/spine";
 import { SERMON_STATUS } from "../core/contracts";
@@ -484,11 +485,17 @@ function WithoutNotesPanel({ sermon, onUpdate }) {
         CMC_SYSTEM
       );
 
-      const cleaned = response
-        .replace(/^```(?:json)?\n?/m, "")
-        .replace(/\n?```$/m, "")
-        .trim();
-      const parsed = JSON.parse(cleaned);
+      const parsedRaw = parseAIJson(response);
+      if (!parsedRaw.ok) {
+        setError(`Generation failed: ${parsedRaw.reason}`);
+        return;
+      }
+      const validated = validateCMC(parsedRaw.value);
+      if (!validated.ok) {
+        setError(`Generation failed: ${validated.reason}`);
+        return;
+      }
+      const parsed = validated.value;
 
       const proposedBlocks = parsed?.blocks || [];
       const summary = [

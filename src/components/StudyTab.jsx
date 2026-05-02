@@ -15,6 +15,7 @@ import OutlineBuilder from "./OutlineBuilder";
 import InlineAIResponse from "./InlineAIResponse";
 import ProposalPanel from "./ProposalPanel";
 import { OUTLINE_SYSTEM, outlineHasNumberedList, extractOutlineWithExplanations } from "../utils/outlineChat";
+import { parseAIJson, validateScriptureMap } from "../utils/aiSchema";
 import { FE_CHAT_SYSTEM } from "../prompts/study";
 import { fetchPassage } from "../db/database";
 import PrimaryButton from "./primitives/PrimaryButton";
@@ -585,8 +586,17 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
         [{ role: "user", content: `Passage: ${sermon.passage}\n\nOutline:\n${pts}\n\nMap each outline point to its most relevant verse range within the passage.` }],
         `You are helping a pastor identify which specific verses within a sermon passage ground each outline point. Return ONLY valid JSON — no preamble, no markdown, no explanation. Format: {"1": "Book Chapter:Verse-Verse", "2": "Book Chapter:Verse-Verse", ...}. Keys are point numbers as strings. Values must be exact verse references that are subsets of the given passage.`
       );
-      const cleaned = resp.replace(/^```(?:json)?\n?/m, "").replace(/\n?```$/m, "").trim();
-      const map = JSON.parse(cleaned);
+      const parsed = parseAIJson(resp);
+      if (!parsed.ok) {
+        setPopulateScriptureMessage({ tone: "error", text: `Could not populate Scripture: ${parsed.reason}` });
+        return;
+      }
+      const validated = validateScriptureMap(parsed.value);
+      if (!validated.ok) {
+        setPopulateScriptureMessage({ tone: "error", text: `Could not populate Scripture: ${validated.reason}` });
+        return;
+      }
+      const map = validated.value;
       const next = { ...funcData };
       const previewLines = [];
       let populated = 0;

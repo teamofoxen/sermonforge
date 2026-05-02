@@ -15,6 +15,11 @@ import {
 import {
   serializeStructuredField,
 } from "../utils/studyFields";
+import {
+  parseAIJson,
+  validateIncorporateMptMps,
+  validateIncorporateStructuredField,
+} from "../utils/aiSchema";
 import PrimaryButton from "./primitives/PrimaryButton";
 import SecondaryButton from "./primitives/SecondaryButton";
 import IconButton from "./primitives/IconButton";
@@ -263,16 +268,19 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
       const systemPrompt = INCORPORATE_REVISION_PROMPT;
       const response = await sendAIMessage([{ role: "user", content: prompt }], systemPrompt, reviewStep, sermon?.id);
 
-      // Strip any markdown code fences the model may have added
-      const cleaned = response?.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
-      let proposed;
-      try { proposed = JSON.parse(cleaned); } catch { proposed = null; }
-
-      if (!proposed || typeof proposed !== "object") {
-        setMessages(prev => [...prev, { role: "assistant", content: "Couldn't parse the revised content. Try again or paste the feedback manually." }]);
+      const parsed = parseAIJson(response);
+      if (!parsed.ok) {
+        setMessages(prev => [...prev, { role: "assistant", content: `Couldn't parse the revised content: ${parsed.reason} Try again or paste the feedback manually.` }]);
         return;
       }
-      setDiffData({ config, current, proposed });
+      const validated = config.type === "mpt_mps"
+        ? validateIncorporateMptMps(parsed.value)
+        : validateIncorporateStructuredField(parsed.value, config.fieldDefs);
+      if (!validated.ok) {
+        setMessages(prev => [...prev, { role: "assistant", content: `Couldn't use the revised content: ${validated.reason} Try again or paste the feedback manually.` }]);
+        return;
+      }
+      setDiffData({ config, current, proposed: validated.value });
     } catch (err) {
       setMessages(prev => [...prev, { role: "assistant", content: `Incorporate error: ${err.message}` }]);
     } finally {

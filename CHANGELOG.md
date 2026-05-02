@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-01 — feat: JSON-output validator at AI parse boundaries (ACCI Item A3)
+
+- New `src/utils/aiSchema.js`: `parseAIJson` plus four structural-shape validators (Incorporate `mpt_mps`, Incorporate structured-field, Scripture map, CMC blocks).
+- Wired at three JSON parse boundaries — `AIPanel.jsx` Incorporate, `StudyTab.jsx` Populate Scripture, `DeliveryTab.jsx` CMC — replacing silent `null` fallbacks and leaked `SyntaxError` toasts with kind-specific messages.
+- Shape-only validation (no content checks) to avoid rejecting imperfect-but-usable AI output.
+- `outlineChat.js` (text-shape, regex-based) and Final Tune-Up (prose) deferred per scope ruling and Q1.
+- Tests: `src/utils/aiSchema.test.js` (18 cases); full suite 144 passing.
+
+---
+
 ## 2026-05-01 — feat: proposal pattern for six direct-write AI paths (ACCI Item A2)
 
 - Five direct-write paths (Synthesize Redemptive, Compile Implications, Populate Scripture, Manuscript Delivery, Preaching Blocks) now route AI output through `ProposalPanel` — no field write without an explicit click.
