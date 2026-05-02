@@ -7,6 +7,7 @@ import { updateSermon } from "../core/spine";
 import { SERMON_STATUS } from "../core/contracts";
 import PrimaryButton from "./primitives/PrimaryButton";
 import SecondaryButton from "./primitives/SecondaryButton";
+import ProposalPanel from "./ProposalPanel";
 
 // ── Panel constants ───────────────────────────────────────────────────────────
 
@@ -110,6 +111,7 @@ function renderDeliveryMarkdown(text) {
 function ManuscriptPanel({ sermon, onUpdate, onPanelChange }) {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState(null);
+  const [proposal, setProposal] = useState(null);
 
   const stored = tryParse(sermon.manuscript_delivery, null);
   const content = typeof stored === "string" ? stored : null;
@@ -121,6 +123,7 @@ function ManuscriptPanel({ sermon, onUpdate, onPanelChange }) {
     }
     setGenerating(true);
     setError(null);
+    setProposal(null);
 
     try {
       const context = buildManuscriptDeliveryContext(sermon);
@@ -134,7 +137,7 @@ function ManuscriptPanel({ sermon, onUpdate, onPanelChange }) {
         .replace(/\n?```$/m, "")
         .trim();
 
-      onUpdate({ manuscript_delivery: JSON.stringify(cleaned) });
+      if (cleaned) setProposal(cleaned);
     } catch (err) {
       console.error("[ManuscriptDelivery] generation failed:", err);
       setError("Generation failed. Check that the manuscript is complete and try again.");
@@ -151,11 +154,23 @@ function ManuscriptPanel({ sermon, onUpdate, onPanelChange }) {
           <p className="delivery-panel-subtitle">Formatted for reading aloud. Content unchanged.</p>
         </div>
         <PrimaryButton onClick={generate} disabled={generating}>
-          {generating ? "Saving…" : content ? "Regenerate" : "Format Manuscript"}
+          {generating ? "Thinking…" : content ? "Regenerate" : "Format Manuscript"}
         </PrimaryButton>
       </div>
 
       {error && <div className="pmb-error">{error}</div>}
+
+      <ProposalPanel
+        loading={generating}
+        proposal={proposal}
+        label="AI proposes delivery formatting"
+        acceptLabel={content ? "Replace formatted manuscript" : "Use this"}
+        onAccept={() => {
+          onUpdate({ manuscript_delivery: JSON.stringify(proposal) });
+          setProposal(null);
+        }}
+        onDiscard={() => setProposal(null)}
+      />
 
       {content && (
         <>
@@ -445,6 +460,9 @@ function WithoutNotesPanel({ sermon, onUpdate }) {
   const [generating, setGenerating] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState(null);
+  // proposal shape: { parsed, summary } — `parsed` is the generated PMB object,
+  // `summary` is a plaintext preview rendered in ProposalPanel.
+  const [proposal, setProposal] = useState(null);
 
   const data = tryParse(sermon.preaching_blocks, null);
   const blocks = data?.blocks || [];
@@ -457,6 +475,7 @@ function WithoutNotesPanel({ sermon, onUpdate }) {
     }
     setGenerating(true);
     setError(null);
+    setProposal(null);
 
     try {
       const context = buildCMCContext(sermon);
@@ -470,9 +489,15 @@ function WithoutNotesPanel({ sermon, onUpdate }) {
         .replace(/\n?```$/m, "")
         .trim();
       const parsed = JSON.parse(cleaned);
-      parsed.generated = new Date().toISOString();
 
-      onUpdate({ preaching_blocks: JSON.stringify(parsed) });
+      const proposedBlocks = parsed?.blocks || [];
+      const summary = [
+        `Generated ${proposedBlocks.length} preaching block${proposedBlocks.length === 1 ? "" : "s"}.`,
+        parsed?.spine ? `\nSpine: ${parsed.spine}` : "",
+        ...proposedBlocks.map(b => `\n${b.id} (${b.movement}) — ${b.trigger_phrase}\n  ${b.core_claim}`),
+      ].join("\n");
+
+      setProposal({ parsed, summary });
     } catch (err) {
       console.error("[CMC] generation failed:", err);
       setError("Generation failed. Check that the manuscript is complete and try again.");
@@ -533,6 +558,20 @@ function WithoutNotesPanel({ sermon, onUpdate }) {
       </div>
 
       {error && <div className="pmb-error">{error}</div>}
+
+      <ProposalPanel
+        loading={generating}
+        proposal={proposal?.summary || null}
+        label="AI proposes preaching blocks"
+        acceptLabel={blocks.length > 0 ? "Replace preaching blocks" : "Use this"}
+        onAccept={() => {
+          if (!proposal) return;
+          const finalParsed = { ...proposal.parsed, generated: new Date().toISOString() };
+          onUpdate({ preaching_blocks: JSON.stringify(finalParsed) });
+          setProposal(null);
+        }}
+        onDiscard={() => setProposal(null)}
+      />
 
       {blocks.length > 0 && (
         <>

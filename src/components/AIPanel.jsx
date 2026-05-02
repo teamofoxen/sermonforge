@@ -24,6 +24,14 @@ import IconButton from "./primitives/IconButton";
 // cost and latency while still giving the model enough recent context to stay coherent.
 const MAX_HISTORY_TURNS = 6;
 
+// Per-column human labels for the persistColumn-confirm flow.
+const PERSIST_SAVE_LABELS = {
+  last_tune_up: "Save as Last Tune-Up",
+};
+const PERSIST_SAVED_LABELS = {
+  last_tune_up: "Saved as Last Tune-Up",
+};
+
 function trimHistory(messages, maxTurns = MAX_HISTORY_TURNS) {
   return messages.slice(-maxTurns * 2);
 }
@@ -84,8 +92,12 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
   }, []);
 
   // When SermonWorkspace sets a new pendingMessage, send it into the conversation.
-  // If the payload carries `persistColumn`, the response is JSON-wrapped with a
-  // timestamp and saved through onUpdate so the pastor can return to it later.
+  // If the payload carries `persistColumn`, attach it to the assistant message
+  // *after* a successful response so the pastor can confirm before write.
+  // Mutation Contract #2: AI never overwrites a persisted column without an
+  // explicit click. Aborts (sermon switch via A1) and silent failures return
+  // "" — we deliberately do NOT attach persistColumn in that case so a phantom
+  // save button can't appear on a placeholder message.
   useEffect(() => {
     if (!externalMessage) return;
     (async () => {
@@ -95,16 +107,35 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
         externalMessage.step,
         sermon?.id,
       );
-      if (response && externalMessage.persistColumn && onUpdate) {
-        onUpdate({
-          [externalMessage.persistColumn]: JSON.stringify({
-            content: response,
-            ts: new Date().toISOString(),
-          }),
+      if (response && externalMessage.persistColumn) {
+        const persistColumn = externalMessage.persistColumn;
+        setMessages(prev => {
+          for (let i = prev.length - 1; i >= 0; i--) {
+            if (prev[i].role === "assistant") {
+              return prev.map((m, idx) => idx === i ? { ...m, persistColumn } : m);
+            }
+          }
+          return prev;
         });
       }
     })();
   }, [externalMessage]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function handleSavePersist(index) {
+    const msg = messages[index];
+    if (!msg?.persistColumn || !msg?.content || !onUpdate) return;
+    onUpdate({
+      [msg.persistColumn]: JSON.stringify({
+        content: msg.content,
+        ts: new Date().toISOString(),
+      }),
+    });
+    setMessages(prev => prev.map((m, i) => i === index ? { ...m, persisted: true } : m));
+  }
+
+  function handleDiscardPersist(index) {
+    setMessages(prev => prev.map((m, i) => i === index ? { ...m, persisted: true } : m));
+  }
 
   const sendMessage = useCallback(async (userText, systemPrompt, step, sermonId, meta = {}) => {
     if (!userText?.trim()) return "";
@@ -315,13 +346,36 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
                 </div>
               )}
               {msg.role === "assistant" && (
-                <div style={{ display: "flex", gap: "6px" }}>
+                <div style={{ display: "flex", gap: "6px", alignItems: "center", flexWrap: "wrap" }}>
                   <CopyButton text={msg.content} />
                   {msg.isReview && onUpdate && (
                     <IncorporateButton
                       disabled={incorporateLoading || loading}
                       onClick={() => handleIncorporate(msg.content, msg.reviewStep)}
                     />
+                  )}
+                  {msg.persistColumn && onUpdate && !msg.persisted && (
+                    <>
+                      <PrimaryButton
+                        size="sm"
+                        style={{ fontSize: "11px" }}
+                        onClick={() => handleSavePersist(i)}
+                      >
+                        {PERSIST_SAVE_LABELS[msg.persistColumn] || `Save to ${msg.persistColumn}`}
+                      </PrimaryButton>
+                      <SecondaryButton
+                        size="sm"
+                        style={{ fontSize: "11px" }}
+                        onClick={() => handleDiscardPersist(i)}
+                      >
+                        Discard
+                      </SecondaryButton>
+                    </>
+                  )}
+                  {msg.persistColumn && msg.persisted && (
+                    <span style={{ fontSize: "11px", color: "var(--ink-ghost)", fontStyle: "italic" }}>
+                      {PERSIST_SAVED_LABELS[msg.persistColumn] || "Saved"}
+                    </span>
                   )}
                 </div>
               )}

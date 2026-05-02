@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-05-01 — feat: proposal pattern for six direct-write AI paths (ACCI Item A2)
+
+- Five direct-write paths (Synthesize Redemptive, Compile Implications, Populate Scripture, Manuscript Delivery, Preaching Blocks) now route AI output through `ProposalPanel` — no field write without an explicit click.
+- Final Tune-Up converts to a persistColumn-confirm variant: `AIPanel.jsx` attaches `persistColumn` to the assistant message and renders Save/Discard buttons, replacing the silent auto-save into `last_tune_up`.
+- Aborted or empty responses (sermon switch via A1) deliberately do not attach `persistColumn`, so phantom Save buttons cannot appear on placeholder messages.
+- Files: `StudyTab.jsx`, `DeliveryTab.jsx`, `AIPanel.jsx`. Builds on Item A1 (in-flight abort registry).
+
+---
+
 ## 2026-05-01 — feat: AbortController on sermon switch (ACCI Item A1)
 
 - Added module-level in-flight registry in `src/utils/ai.js` keyed by `sermonId` plus exported `abortInFlightForSermon(sermonId)`.

@@ -270,6 +270,11 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
   // overwritten by AI without a click.
   const [mptProposal, setMptProposal] = useState(null);
   const [mpsProposal, setMpsProposal] = useState(null);
+  const [redSummaryProposal, setRedSummaryProposal] = useState(null);
+  const [impCompileProposal, setImpCompileProposal] = useState(null);
+  // Populate Scripture proposal — holds the resolved fe-update + summary text
+  // until the pastor accepts. Shape: { next, summary }.
+  const [scriptureProposal, setScriptureProposal] = useState(null);
   const [confirmOutlineApplyIdx, setConfirmOutlineApplyIdx] = useState(null);
   const [populateScriptureMessage, setPopulateScriptureMessage] = useState(null);
 
@@ -560,6 +565,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
     if (!sermon.passage || outline.length === 0 || scripturePopulating) return;
     setScripturePopulating(true);
     setPopulateScriptureMessage(null);
+    setScriptureProposal(null);
     try {
       // Mutation Contract #1: user typing wins by default. Skip rows that already
       // have user-entered Scripture content; only fill empty rows.
@@ -582,6 +588,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
       const cleaned = resp.replace(/^```(?:json)?\n?/m, "").replace(/\n?```$/m, "").trim();
       const map = JSON.parse(cleaned);
       const next = { ...funcData };
+      const previewLines = [];
       let populated = 0;
       await Promise.all(
         eligible.map(async (pt, i) => {
@@ -591,13 +598,26 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
           if (result?.esv) {
             next[pt.id] = { ...(next[pt.id] || { explanation: "", application: "", illustration: "" }), scripture: result.esv };
             populated += 1;
+            previewLines.push({ idx: outline.indexOf(pt) + 1, text: pt.text, ref, esv: result.esv });
           }
         })
       );
-      onUpdate({ functional_elements: serializeFunctionalElements(next) });
-      setPopulateScriptureMessage({
-        tone: "ok",
-        text: skippedCount > 0
+      if (populated === 0) {
+        setPopulateScriptureMessage({ tone: "info", text: "Nothing to populate — no verse mappings returned." });
+        return;
+      }
+      previewLines.sort((a, b) => a.idx - b.idx);
+      const summary = [
+        skippedCount > 0
+          ? `Will populate ${populated} of ${eligible.length} empty point${eligible.length === 1 ? "" : "s"} (${skippedCount} already had Scripture, left untouched).`
+          : `Will populate ${populated} of ${eligible.length} point${eligible.length === 1 ? "" : "s"}.`,
+        "",
+        ...previewLines.map(p => `Point ${p.idx} — ${p.ref}\n${p.esv}`),
+      ].join("\n");
+      setScriptureProposal({
+        next,
+        summary,
+        message: skippedCount > 0
           ? `Populated ${populated} of ${eligible.length} empty point${eligible.length === 1 ? "" : "s"} (${skippedCount} already had Scripture, left untouched).`
           : `Populated ${populated} of ${eligible.length} point${eligible.length === 1 ? "" : "s"}.`,
       });
@@ -788,6 +808,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                     disabled={draftLoading !== null}
                     onClick={async () => {
                       setDraftLoading("red_summary");
+                      setRedSummaryProposal(null);
                       try {
                         const filled = REDEMPTIVE_FIELDS
                           .filter(f => redData[f.key]?.trim())
@@ -797,10 +818,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                           [{ role: "user", content: `Passage: ${sermon.passage || "unknown"}\n\nRedemptive feature answers:\n\n${filled || "(none yet)"}\n\nSynthesize these answers into a cohesive summary of how this passage participates in redemptive history and points to Christ. Write 3–5 sentences. Be specific to the text.` }],
                           "You are a Reformed biblical theologian helping a pastor synthesize redemptive-historical observations into a clear summary. Ground every claim in the text."
                         );
-                        if (resp?.trim()) {
-                          const next = { ...redData, [REDEMPTIVE_SUMMARY_KEY]: resp.trim() };
-                          onUpdate({ redemptive_thread: serializeStructuredField(next) });
-                        }
+                        if (resp?.trim()) setRedSummaryProposal(resp.trim());
                       } catch (e) {
                         console.error("[redemptive synthesize]", e);
                       } finally { setDraftLoading(null); }
@@ -818,6 +836,18 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                   onInput={(e) => autoResize(e.target)}
                   ref={(el) => autoResize(el)}
                   placeholder="A cohesive summary of how this passage participates in redemptive history and points to Christ."
+                />
+                <ProposalPanel
+                  loading={draftLoading === "red_summary"}
+                  proposal={redSummaryProposal}
+                  label="AI proposes summary"
+                  acceptLabel={redData[REDEMPTIVE_SUMMARY_KEY]?.trim() ? "Replace summary" : "Use this"}
+                  onAccept={() => {
+                    const next = { ...redData, [REDEMPTIVE_SUMMARY_KEY]: redSummaryProposal };
+                    onUpdate({ redemptive_thread: serializeStructuredField(next) });
+                    setRedSummaryProposal(null);
+                  }}
+                  onDiscard={() => setRedSummaryProposal(null)}
                 />
               </div>
 
@@ -896,6 +926,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                     disabled={draftLoading !== null}
                     onClick={async () => {
                       setDraftLoading("imp_compile");
+                      setImpCompileProposal(null);
                       try {
                         const theo = IMPLICATIONS_THEOLOGICAL
                           .filter(f => impData[f.key]?.trim())
@@ -910,10 +941,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                           [{ role: "user", content: `Passage: ${sermon.passage || "unknown"}\n\nTheological significance:\n${theo || "(none)"}\n\nPersonal implications:\n${pers || "(none)"}\n\nImplications for unbelievers:\n${unb || "(none)"}\n\nCompile all of these into a single consolidated list of implications. Each item should be one clear, actionable sentence. Group naturally but don't repeat. Include both theological and practical implications.` }],
                           "You are a homiletics consultant helping a pastor compile a master list of sermon implications. Every item must be grounded in the text, gospel-rooted, and congregation-facing."
                         );
-                        if (resp?.trim()) {
-                          const next = { ...impData, [IMPLICATIONS_COMPILED_KEY]: resp.trim() };
-                          onUpdate({ implications: serializeStructuredField(next) });
-                        }
+                        if (resp?.trim()) setImpCompileProposal(resp.trim());
                       } catch (e) {
                         console.error("[implications compile]", e);
                       } finally { setDraftLoading(null); }
@@ -931,6 +959,18 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                   onInput={(e) => autoResize(e.target)}
                   ref={(el) => autoResize(el)}
                   placeholder="A consolidated list of all implications from your study — theological, personal, and for unbelievers."
+                />
+                <ProposalPanel
+                  loading={draftLoading === "imp_compile"}
+                  proposal={impCompileProposal}
+                  label="AI proposes compiled implications"
+                  acceptLabel={impData[IMPLICATIONS_COMPILED_KEY]?.trim() ? "Replace compiled list" : "Use this"}
+                  onAccept={() => {
+                    const next = { ...impData, [IMPLICATIONS_COMPILED_KEY]: impCompileProposal };
+                    onUpdate({ implications: serializeStructuredField(next) });
+                    setImpCompileProposal(null);
+                  }}
+                  onDiscard={() => setImpCompileProposal(null)}
                 />
               </div>
               </div>{/* /implications-unbeliever */}
@@ -1360,6 +1400,20 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
               )}
             </div>
           )}
+
+          <ProposalPanel
+            loading={scripturePopulating}
+            proposal={scriptureProposal?.summary || null}
+            label="AI proposes Scripture mapping"
+            acceptLabel="Use this"
+            onAccept={() => {
+              if (!scriptureProposal) return;
+              onUpdate({ functional_elements: serializeFunctionalElements(scriptureProposal.next) });
+              setPopulateScriptureMessage({ tone: "ok", text: scriptureProposal.message });
+              setScriptureProposal(null);
+            }}
+            onDiscard={() => setScriptureProposal(null)}
+          />
 
 {outline.map((pt, i) => (
             <FuncElem
