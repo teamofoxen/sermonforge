@@ -173,7 +173,7 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
         return "";
       }
       const response = result.text;
-      setMessages((prev) => [...prev, { role: "assistant", content: response, ...meta }]);
+      setMessages((prev) => [...prev, { role: "assistant", content: response, truncated: result.stop_reason === "max_tokens", ...meta }]);
       captureResponsePatterns(response, step);
       return response;
     } catch (err) {
@@ -253,7 +253,7 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
           }
         } else {
           const response = result.text;
-          setMessages(prev => [...prev, { role: "assistant", content: response, sources }]);
+          setMessages(prev => [...prev, { role: "assistant", content: response, truncated: result.stop_reason === "max_tokens", sources }]);
           captureResponsePatterns(response, step);
         }
       } catch (err) {
@@ -413,6 +413,11 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
               {msg.role === "assistant"
                 ? <div className="ai-markdown"><ReactMarkdown>{msg.content}</ReactMarkdown></div>
                 : msg.content}
+              {msg.truncated && (
+                <div style={{ fontSize: "12px", color: "#a07040", fontStyle: "italic", marginTop: "4px" }}>
+                  Response cut off — the AI reached its output limit. Ask it to continue.
+                </div>
+              )}
               {msg.role === "assistant" && msg.sources?.length > 0 && (
                 <div style={{ marginTop: "8px", paddingTop: "8px", borderTop: "1px solid var(--parchment-deep)", fontSize: "11px", color: "var(--ink-ghost)" }}>
                   <span style={{ fontWeight: 600 }}>Sources consulted: </span>

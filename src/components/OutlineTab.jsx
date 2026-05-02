@@ -40,6 +40,7 @@ export default function OutlineTab({ sermon, onUpdate, onTabChange, studySummari
   const [outlineChat, setOutlineChat] = useState([]);
   const [outlineChatInput, setOutlineChatInput] = useState("");
   const [outlineChatLoading, setOutlineChatLoading] = useState(false);
+  const [applyConfirm, setApplyConfirm] = useState(null);
 
   function handleOutlineChange(newOutline) {
     onUpdate({ outline: serializeOutline(newOutline) });
@@ -273,21 +274,42 @@ export default function OutlineTab({ sermon, onUpdate, onTabChange, studySummari
                 <div className="ai-markdown" style={{ marginBottom: extracted ? "8px" : "0" }}>
                   <ReactMarkdown>{msg.content}</ReactMarkdown>
                 </div>
-                {extracted && (
-                  <SecondaryButton
-                    size="sm"
-                    style={{ fontSize: "12px" }}
-                    onClick={() => {
-                      const existing = getFunctionalElements(sermon);
-                      onUpdate({
-                        outline: serializeOutline(extracted.points),
-                        functional_elements: serializeFunctionalElements({ ...existing, ...extracted.explanations }),
-                      });
-                    }}
-                  >
-                    → Apply to Outline
-                  </SecondaryButton>
-                )}
+                {extracted && (() => {
+                  const isDestructive = outline.length > 0;
+                  const inConfirm = applyConfirm === i;
+                  const commit = () => {
+                    const existing = getFunctionalElements(sermon);
+                    onUpdate({
+                      outline: serializeOutline(extracted.points),
+                      functional_elements: serializeFunctionalElements({ ...existing, ...extracted.explanations }),
+                    });
+                    setApplyConfirm(null);
+                  };
+                  if (!isDestructive) {
+                    return (
+                      <SecondaryButton size="sm" style={{ fontSize: "12px" }} onClick={commit}>
+                        → Apply to Outline
+                      </SecondaryButton>
+                    );
+                  }
+                  if (inConfirm) {
+                    return (
+                      <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                        <PrimaryButton size="sm" style={{ fontSize: "12px" }} onClick={commit}>
+                          Replace {outline.length} existing point{outline.length === 1 ? "" : "s"}
+                        </PrimaryButton>
+                        <SecondaryButton size="sm" style={{ fontSize: "12px" }} onClick={() => setApplyConfirm(null)}>
+                          Cancel
+                        </SecondaryButton>
+                      </div>
+                    );
+                  }
+                  return (
+                    <SecondaryButton size="sm" style={{ fontSize: "12px" }} onClick={() => setApplyConfirm(i)}>
+                      → Apply to Outline
+                    </SecondaryButton>
+                  );
+                })()}
               </div>
             );
           })}

@@ -1088,32 +1088,6 @@ function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpen
   }, []);
   const debouncedSlotSave = useDebounce(persistSlot, 800);
 
-  // Called by SlotRow Assist buttons — sends message to AI, adds response to chat panel.
-  async function handleSlotAI(messageContent) {
-    const userMsg = { role: "user", content: messageContent };
-    const newMessages = [...aiMessages, userMsg];
-    setAiMessages(newMessages);
-    setChatLoading(true);
-    try {
-      const result = await sendAIMessage(
-        newMessages,
-        layerSeriesTask(`${STUDY_GUIDE_NOTE_TASK}\n\nSeries: "${series.title || "this series"}".`, SERIES_STEPS.Slots),
-        SERIES_STEPS.Slots,
-        null,
-      );
-      if (result.ok) {
-        setAiMessages([...newMessages, { role: "assistant", content: result.text }]);
-      } else if (result.kind !== "aborted") {
-        setAiMessages([...newMessages, { role: "assistant", content: result.message }]);
-      }
-    } catch (e) {
-      console.error("[handleSlotAI]", e);
-      setAiMessages([...newMessages, { role: "assistant", content: "Something went wrong. Please try again." }]);
-    } finally {
-      setChatLoading(false);
-    }
-  }
-
   // No spine call — the row exists only in local draft state until the user
   // types a non-empty name. State Contract #3 stays structurally enforced at
   // the spine boundary; this just defers when the IPC call fires so no
@@ -1297,7 +1271,6 @@ function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpen
                   series={series}
                   totalSlots={allSlots.length}
                   sectionBigIdea={section.big_idea || ""}
-                  onSlotAI={handleSlotAI}
                 />
               </div>
             ))}
@@ -1308,7 +1281,7 @@ function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpen
                 <h4 style={{ fontFamily: "'Playfair Display', serif", fontSize: "14px", fontWeight: "600", color: "var(--ink-ghost)", marginBottom: "10px" }}>
                   Unassigned
                 </h4>
-                <SlotList slots={unassigned} onChange={handleSlotField} onDelete={handleDeleteSlot} onCommit={commitDraft} draftErrors={draftErrors} onClearError={clearDraftError} onOpenSermon={onOpenSermon} seriesId={seriesId} series={series} totalSlots={allSlots.length} sectionBigIdea="" onSlotAI={handleSlotAI} />
+                <SlotList slots={unassigned} onChange={handleSlotField} onDelete={handleDeleteSlot} onCommit={commitDraft} draftErrors={draftErrors} onClearError={clearDraftError} onOpenSermon={onOpenSermon} seriesId={seriesId} series={series} totalSlots={allSlots.length} sectionBigIdea="" />
               </div>
             )}
           </div>
@@ -1328,7 +1301,6 @@ function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpen
             series={series}
             totalSlots={allSlots.length}
             sectionBigIdea=""
-            onSlotAI={handleSlotAI}
           />
         )}
       </div>
@@ -1353,7 +1325,7 @@ function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpen
   );
 }
 
-function SlotList({ slots, onChange, onDelete, onCommit, draftErrors, onClearError, showAdd, onAdd, onOpenSermon, seriesId, series, totalSlots, sectionBigIdea, onSlotAI }) {
+function SlotList({ slots, onChange, onDelete, onCommit, draftErrors, onClearError, showAdd, onAdd, onOpenSermon, seriesId, series, totalSlots, sectionBigIdea }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
       {slots.length === 0 && (
@@ -1376,7 +1348,6 @@ function SlotList({ slots, onChange, onDelete, onCommit, draftErrors, onClearErr
           series={series}
           totalSlots={totalSlots}
           sectionBigIdea={sectionBigIdea}
-          onSlotAI={onSlotAI}
         />
       ))}
       {showAdd && (
@@ -1388,7 +1359,7 @@ function SlotList({ slots, onChange, onDelete, onCommit, draftErrors, onClearErr
   );
 }
 
-function SlotRow({ slot, index, onChange, onDelete, onCommit, commitError, onClearError, onOpenSermon, seriesId, series, totalSlots, sectionBigIdea, onSlotAI }) {
+function SlotRow({ slot, index, onChange, onDelete, onCommit, commitError, onClearError, onOpenSermon, seriesId, series, totalSlots, sectionBigIdea }) {
   const [expanded, setExpanded] = useState(!slot.title && !slot.passage);
   const [assistLoading, setAssistLoading] = useState(false);
   const [assistResponse, setAssistResponse] = useState(null);

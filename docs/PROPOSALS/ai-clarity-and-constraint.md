@@ -1,6 +1,6 @@
 # AI Clarity & Constraint — Task Tracker
 
-**Status:** Tier A complete (Items 1–4 shipped 2026-05-01). Tier B complete (Items 5–7 shipped 2026-05-01). Tier C complete (Items 8–11 shipped 2026-05-01 / 2026-05-02). Tier D complete (Items 12–15 shipped 2026-05-02). Tier E complete (Items 16–17 shipped 2026-05-02). Tier F complete (Items 18–20 shipped 2026-05-02). All seven decisions (Q1–Q7) settled. Tier G is the planned next block.
+**Status:** Tier A complete (Items 1–4 shipped 2026-05-01). Tier B complete (Items 5–7 shipped 2026-05-01). Tier C complete (Items 8–11 shipped 2026-05-01 / 2026-05-02). Tier D complete (Items 12–15 shipped 2026-05-02). Tier E complete (Items 16–17 shipped 2026-05-02). Tier F complete (Items 18–20 shipped 2026-05-02). Tier G complete (Items 21–26 shipped 2026-05-02). All seven decisions (Q1–Q7) settled. **INITIATIVE COMPLETE.**
 **Date drafted:** 2026-05-01.
 **Audience:** future working sessions. Plain language; no engineering vocabulary required.
 
@@ -56,14 +56,14 @@ The 26-item plan below is consolidation, not redesign — every item either pull
 19. **[F2]** ✅ *Shipped 2026-05-02.* Five undocumented AI surfaces added to `docs/SYSTEMS/ai-panel.md`: theology research mode, Incorporate flow, externalMessage / persistColumn pattern, prompt-caching contract, and audit log (path, contents, retention).
 20. **[F3]** ✅ *Shipped 2026-05-02.* AI model migration playbook created at `docs/SYSTEMS/ai-model-migration.md`. **Q6 decision: `docs/SYSTEMS/`** — describes maintenance of an existing system, not a forward-looking proposal.
 
-### Tier G — polish
+### Tier G — polish — **SHIPPED**
 
-21. **[G]** Surface `stop_reason: "max_tokens"` truncation as a distinct user-visible signal. *(provider.js, electron/ai.js, AIPanel.jsx)*
-22. **[G]** Add idempotency to retry path or document why retries are safe today. *(provider.js)*
-23. **[G]** Fix the 24h client-TTL edge case where `loadKey()` returning undefined silently constructs a broken Anthropic client. *(provider.js)*
-24. **[G]** Reconcile the OutlineTab "Apply to Outline" flow with StudyTab's two-step destructive-replace confirm. *(OutlineTab.jsx, StudyTab.jsx)*
-25. **[G]** Dedupe the Study Guide Note Writer prompt that's defined twice in SeriesPlanner.jsx (~lines 1057 and 1373).
-26. **[G]** Resolve the orphan `handleSlotAI` function in SeriesPlanner.jsx (~lines 1049–1066). **Q7 decision: delete.** Default to removing dead code; git history retains it.
+21. **[G1]** ✅ *Shipped 2026-05-02.* Surface `stop_reason: "max_tokens"` truncation as a distinct user-visible signal. Amber italic note below the truncated assistant message: "Response cut off — the AI reached its output limit. Ask it to continue." *(provider.js, electron/ai.js, AIPanel.jsx)*
+22. **[G2]** ✅ *Shipped 2026-05-02.* Added comment to the retry loop in `provider.js` documenting why retries are safe (stateless read; side effects land only after the response reaches the renderer). *(provider.js)*
+23. **[G3]** ✅ *Shipped 2026-05-02.* `getClient()` now returns `null` + calls `resetClient()` when `apiKey` is falsy; `callOnce()` throws a synthetic 401 on null client so the failure classifies as `kind="auth"` rather than a silent broken client. *(provider.js)*
+24. **[G4]** ✅ *Shipped 2026-05-02.* OutlineTab "Apply to Outline" now uses the same two-step destructive-replace confirm as StudyTab: single click when outline is empty; first click → confirm state; second click → "Replace N existing points" / Cancel. *(OutlineTab.jsx)*
+25. **[G5]** ✅ *Already complete.* `STUDY_GUIDE_NOTE_TASK` was centralized in `src/prompts/seriesPlanner.js` (with an ACCI-25 comment) before this session; both call sites import the single constant. No further change needed.
+26. **[G6]** ✅ *Shipped 2026-05-02.* Deleted orphan `handleSlotAI` from `SlotsTab`; removed `onSlotAI` from all three `SlotList` call sites and from `SlotList` and `SlotRow` signatures. `SlotRow.handleAssist` is the live path. *(SeriesPlanner.jsx)*
 
 ---
 

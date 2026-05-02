@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-02 — feat: ACCI Tier G — polish (max_tokens signal, TTL fix, confirm guard, dead code)
+
+- `electron/ai/provider.js` surfaces `stop_reason` in the success envelope, guards `getClient()` against a falsy `apiKey` on TTL expiry, and documents retry idempotency.
+- `electron/ai.js` threads `stop_reason` through the IPC success envelope.
+- `src/components/AIPanel.jsx` renders an amber italic truncation note when `stop_reason === "max_tokens"`.
+- `src/components/OutlineTab.jsx` "Apply to Outline" now uses the same two-step destructive-replace confirm as StudyTab.
+- `src/components/SeriesPlanner.jsx` orphan `handleSlotAI` deleted; `onSlotAI` prop removed from `SlotList` and `SlotRow`.
+
+---
+
 ## 2026-05-02 — docs: ACCI Tiers E–F — audit log disclosure, rotation fix, doc catch-up
 
 - `electron/ai.js` rotation guard removed so large entries can't leave the file above the 5 MB cap.

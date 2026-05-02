@@ -116,7 +116,7 @@ function registerAIHandlers(ipcMain) {
       usage: result.usage ?? null,
     });
 
-    return { ok: true, text };
+    return { ok: true, text, stop_reason: result.stop_reason ?? null };
   });
 }
 

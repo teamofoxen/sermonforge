@@ -29,6 +29,13 @@ function getClient(apiKey) {
   // sf-anthropic.enc (or .env) eventually picks up without a full app restart.
   // app-save-api-key already calls resetClient() for the in-app setup flow;
   // this covers the edge case where the key was rotated outside that flow.
+  if (!apiKey) {
+    // TTL fired but loadKey() now returns nothing — key deleted between calls.
+    // Reset so the next valid-key call starts fresh rather than reusing a
+    // cached client built with the old key.
+    resetClient();
+    return null;
+  }
   if (client && Date.now() - clientCreatedAt < CLIENT_TTL_MS) return client;
   client = new Anthropic({ apiKey });
   clientCreatedAt = Date.now();
@@ -74,6 +81,11 @@ function classifyError(err, { internalAbort } = {}) {
 
 async function callOnce({ apiKey, system, messages, model, temperature, signal }) {
   const c = getClient(apiKey);
+  if (!c) {
+    const err = new Error("API key unavailable");
+    err.status = 401;
+    throw err;
+  }
   return c.messages.create({
     model,
     max_tokens: DEFAULT_MAX_TOKENS,
@@ -95,6 +107,10 @@ async function generate({ system, messages, model, temperature }) {
   const resolvedModel = model ?? DEFAULT_MODEL;
   const resolvedTemperature = temperature ?? DEFAULT_TEMPERATURE;
 
+  // Retries are safe: every generate() call is a stateless read. The Anthropic
+  // API has no mutation side effects for message.create calls, and SermonForge
+  // side effects (field writes, audit log entries) only trigger after the
+  // response reaches the renderer or electron/ai.js — never inside this loop.
   let lastErr;
   let timedOut = false;
   for (const attempt of [1, 2]) {
@@ -114,6 +130,7 @@ async function generate({ system, messages, model, temperature }) {
       return {
         ok: true,
         text: response.content?.[0]?.text ?? null,
+        stop_reason: response.stop_reason ?? null,
         model: resolvedModel,
         usage: response.usage ?? null,
         raw: response,
