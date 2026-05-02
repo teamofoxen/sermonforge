@@ -1,6 +1,6 @@
 # AI Clarity & Constraint — Task Tracker
 
-**Status:** Tier A complete (Items 1–4 shipped 2026-05-01). Tiers B–G (Items 5–26) not started; Tier B is the planned next block. Five decisions still open (Q3–Q7); Q1 and Q2 were settled by execution during Tier A.
+**Status:** Tier A complete (Items 1–4 shipped 2026-05-01). Tier B complete (Items 5–7 shipped 2026-05-01). All seven decisions (Q1–Q7) settled. Tier C is the planned next block.
 **Date drafted:** 2026-05-01.
 **Audience:** future working sessions. Plain language; no engineering vocabulary required.
 
@@ -25,11 +25,11 @@ The 26-item plan below is consolidation, not redesign — every item either pull
 3. **[A3]** ✅ *Shipped `a05defd`.* Add a small JSON-output validator and wire it into every JSON-bound parse boundary. *(new `src/utils/aiSchema.js`; wired at AIPanel.jsx Incorporate parser, StudyTab.jsx Populate Scripture parser, DeliveryTab.jsx CMC parser)* **Q1 resolved by execution: outlineChat.js text-shape parsing and Final Tune-Up prose were deferred — JSON boundaries only.**
 4. **[A4]** ✅ *Shipped `c57bcd2`.* Differentiate the eight AI failure modes (auth, rate limit, network, server, timeout, format, empty, unknown) at the provider/IPC/wrapper layers and surface kind-specific user-facing messages. Replaces the unified "Something went wrong." *(provider.js, electron/ai.js, src/utils/ai.js, AIPanel.jsx, StudyTab.jsx, OutlineTab.jsx, DeliveryTab.jsx, SeriesPlanner.jsx)* **Q2 resolved by execution: shipped as a single PR across all five UI files.**
 
-### Tier B — make constraints visible
+### Tier B — make constraints visible — **SHIPPED**
 
-5. **[B1]** Active-role label in the AI Panel header that updates with posture, step, and theology mode. *(AIPanel.jsx)*
-6. **[B2]** Collapsible "What I can see" panel under the AI Panel input listing active tiers, loaded fields, and history turn count. *(AIPanel.jsx)*
-7. **[B3]** UI indicators for conversation truncation and `persistColumn` write events. *(AIPanel.jsx)*
+5. **[B1]** ✅ *Shipped `e19cb1f`.* Active-role label in the AI Panel header that updates with posture, step, and theology mode. *(AIPanel.jsx; new `getActiveRole` in `src/prompts/sermon.js`)*
+6. **[B2]** ✅ *Shipped `e19cb1f`.* Collapsible "What I can see" panel under the AI Panel input listing active tiers, loaded fields, and history turn count. *(AIPanel.jsx; new `describeContext` in `src/utils/contextBuilder.js`)*
+7. **[B3]** ✅ *Shipped `e19cb1f`.* UI indicators for conversation truncation (history-trimmed banner when `messages.length > MAX_HISTORY_TURNS * 2`) and `persistColumn` write events (transient flash banner using `PERSIST_SAVED_LABELS`). *(AIPanel.jsx)*
 
 ### Tier C — pull the bypasses back
 
@@ -41,20 +41,20 @@ The 26-item plan below is consolidation, not redesign — every item either pull
 ### Tier D — add the safety nets
 
 12. **[D1]** CI workflow that runs `npm test` on push to main and on every pull request. *(new `.github/workflows/test.yml` or job added to `build.yml`)*
-13. **[D2]** AI-integrity gate that fails when the Anthropic SDK is imported outside `electron/ai/provider.js` or `sendAIMessage` is called outside `src/utils/ai.js`. *Implementation choice flagged at Q3.*
-14. **[D3]** Per-call payload size cap at the IPC boundary + per-session AI call counter. *Requires #4.* *UI surface flagged at Q4.* *(electron/ai.js, src/utils/ai.js)*
+13. **[D2]** AI-integrity gate that fails when the Anthropic SDK is imported outside `electron/ai/provider.js` or `sendAIMessage` is called outside `src/utils/ai.js`. **Q3 decision: ESLint rule** in `eslint-plugin-sermonforge/`, matching the `no-direct-database` pattern.
+14. **[D3]** Per-call payload size cap at the IPC boundary + per-session AI call counter. *Requires #4.* **Q4 decision: compute counter now (write to audit log + expose internally), defer UI surface** until usage data points to the right home; cap ships either way. *(electron/ai.js, src/utils/ai.js)*
 15. **[D4]** Capture token-usage fields (`usage.input_tokens`, `usage.output_tokens`, `usage.cache_creation_input_tokens`, `usage.cache_read_input_tokens`) into the audit log. *(provider.js, electron/ai.js)*
 
 ### Tier E — privacy and housekeeping
 
-16. **[E1]** Decide what `ai-log.jsonl` should keep and implement. *Cannot start without Q5 ruling.* *(electron/ai.js, docs/SYSTEMS/ai-panel.md)*
+16. **[E1]** **Q5 decision: keep full content + document on first run.** Behavior unchanged in `electron/ai.js`; add a paragraph to `SetupScreen.jsx` (and reference in `docs/SYSTEMS/ai-panel.md`) telling the pastor where the log lives, what it contains, and that it is local-only. Threat model: single-user local-first app — privacy lift from hashing/opt-in not worth the debuggability loss. *(electron/ai.js, src/components/SetupScreen.jsx, docs/SYSTEMS/ai-panel.md)*
 17. **[E2]** Fix the audit-log rotation edge case so a single oversized entry cannot leave the file above the size cap. Trim when EITHER `lines.length > KEEP_ENTRIES` OR `size > MAX_AUDIT_BYTES`. *(electron/ai.js)*
 
 ### Tier F — catch the docs up
 
 18. **[F1]** Update `docs/REFERENCE/ipc-channels.md` to match current IPC surface (remove obsolete `db-getRecentSermons` / `db-loadTourSermon` / `db-removeTourSermon`; add `spine` channel and ops; add calendar-note channels; correct `ai-message` payload to include `step` and `sermonId`).
 19. **[F2]** Document the AI surface gaps in `docs/SYSTEMS/ai-panel.md` (theology research mode, Incorporate flow, externalMessage / persistColumn pattern, prompt-caching contract, audit-log path and retention).
-20. **[F3]** AI migration playbook documenting how to bump the model id. *Location flagged at Q6.*
+20. **[F3]** AI migration playbook documenting how to bump the model id. **Q6 decision: `docs/SYSTEMS/`** — describes maintenance of an existing system, not a forward-looking proposal.
 
 ### Tier G — polish
 
@@ -63,7 +63,7 @@ The 26-item plan below is consolidation, not redesign — every item either pull
 23. **[G]** Fix the 24h client-TTL edge case where `loadKey()` returning undefined silently constructs a broken Anthropic client. *(provider.js)*
 24. **[G]** Reconcile the OutlineTab "Apply to Outline" flow with StudyTab's two-step destructive-replace confirm. *(OutlineTab.jsx, StudyTab.jsx)*
 25. **[G]** Dedupe the Study Guide Note Writer prompt that's defined twice in SeriesPlanner.jsx (~lines 1057 and 1373).
-26. **[G]** Resolve the orphan `handleSlotAI` function in SeriesPlanner.jsx (~lines 1049–1066). *Cannot start without Q7 ruling.*
+26. **[G]** Resolve the orphan `handleSlotAI` function in SeriesPlanner.jsx (~lines 1049–1066). **Q7 decision: delete.** Default to removing dead code; git history retains it.
 
 ---
 
@@ -83,15 +83,17 @@ Three cross-cutting risks:
 
 ---
 
-## Decisions needed before specific items can ship
+## Decisions resolved
+
+All seven settled by 2026-05-01. Items 13, 14, 16, 20, 26 are now executable.
 
 - ~~**Q1 (Item 3 Tune-Up coverage)**~~ — **Resolved by A3 execution.** Skipped Tune-Up entirely; JSON boundaries only.
 - ~~**Q2 (Item 4 scope)**~~ — **Resolved by A4 execution.** Shipped as one PR across all five UI files.
-- **Q3 (Item 13 implementation)** — script + pre-commit (like `spine-integrity.js`) or ESLint rule (like `no-direct-database`)?
-- **Q4 (Item 14 counter UI surface)** — settings page, footer, or compute-but-don't-render-yet?
-- **Q5 (Item 16 audit-log policy)** — (a) hash content, keep metadata only; (b) full content, opt-in via setting; (c) keep as-is, document in SetupScreen. **Item 16 is blocked until ruling.**
-- **Q6 (Item 20 location)** — `docs/PROPOSALS/` or `docs/SYSTEMS/`?
-- **Q7 (Item 26 deletion)** — explicit permission to remove the orphan, or leave alone?
+- ~~**Q3 (Item 13 implementation)**~~ — **ESLint rule** under `eslint-plugin-sermonforge/`, mirrors the `no-direct-database` pattern.
+- ~~**Q4 (Item 14 counter UI surface)**~~ — **Compute now, surface later.** Cap + audit-log instrumentation ship; UI placement deferred until real usage data exists.
+- ~~**Q5 (Item 16 audit-log policy)**~~ — **Keep full content + document on first run.** Behavior unchanged; SetupScreen tells the pastor the log exists, what's in it, and that it stays local. Single-user local-first app — privacy lift from hashing/opt-in not worth the debuggability loss.
+- ~~**Q6 (Item 20 location)**~~ — **`docs/SYSTEMS/`.** Describes maintenance of an existing system, not a forward-looking proposal.
+- ~~**Q7 (Item 26 deletion)**~~ — **Delete.** Git history retains it.
 
 ---
 
@@ -107,10 +109,9 @@ Three cross-cutting risks:
 
 When ready, open a working session and name a starting point:
 
-- "Begin Tier B" or "Begin Item 5" — picks up at the next planned block (active-role label / "What I can see" panel / write indicators).
+- "Begin Tier C" or "Begin Item 8" — picks up at the next planned block (centralize StudyTab/SeriesPlanner prompts + route through `buildContext` + pass step/sermonId everywhere + dedupe review prompts).
 - "Resume at Item N" — for subsequent sessions.
-- "Settle Q5" — for decision sessions when an item is blocked on a ruling. Q5 still gates Item 16; Q3, Q4, Q6, Q7 still gate Items 13, 14, 20, 26.
-- "Run Item 12 in parallel" — Items 12, 18, 19, 25 are the safest to run out of order. Items 13, 14, 16, 20, 26 require their gating Q resolved first.
+- "Run Item 12 in parallel" — all rulings settled, so Items 12, 13, 14, 18, 19, 20, 25, 26 are all runnable out of tier order. Items 13 and 14 are the safest small wins.
 
 Each session targets one item. The session ends when the item is shipped, reviewed, and merged — or when the work flags a divergence and stops for a ruling.
 

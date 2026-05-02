@@ -15,6 +15,15 @@ import { tryParse, formatDate, autoResize } from "../utils";
 import DeleteButton from "./DeleteButton";
 import InlineError from "./InlineError";
 import { sendAIMessage } from "../utils/ai";
+import { buildSystemPrompt, appendTaskDirective } from "../prompts/sermon";
+import {
+  SERIES_STEPS,
+  BOOK_STUDY_FIELD_ANALYZE_TASK, BOOK_STUDY_BIG_IDEA_TASK, BOOK_STUDY_CHAT_TASK,
+  SERIES_BIG_IDEA_TASK, SERIES_OVERVIEW_TASK, SERIES_OVERVIEW_CHAT_TASK,
+  SERIES_STRUCTURAL_OUTLINE_TASK, SERIES_STRUCTURE_CHAT_TASK,
+  SERIES_SLOTS_CHAT_TASK, STUDY_GUIDE_NOTE_TASK,
+  CALENDAR_CHAT_TASK,
+} from "../prompts/seriesPlanner";
 import InlineAIResponse from "./InlineAIResponse";
 import ReactMarkdown from "react-markdown";
 import PrimaryButton from "./primitives/PrimaryButton";
@@ -23,6 +32,12 @@ import IconButton from "./primitives/IconButton";
 import BackButton from "./primitives/BackButton";
 import TextButton from "./primitives/TextButton";
 
+
+// Layer a task directive on top of the canonical system prompt for series-
+// planning surfaces. SeriesPlanner is series-level work — no sermonId.
+// Call sites pass only the task-shaped string and the SERIES_STEPS key.
+const layerSeriesTask = (task, step) =>
+  appendTaskDirective(buildSystemPrompt(step, null), task);
 
 const CANON_OPTIONS = [
   { value: "", label: "— Select category —" },
@@ -423,7 +438,7 @@ function BookStudyTab({ series, onChange, drawerOpen, onOpenDrawer, onCloseDrawe
     try {
       const result = await sendAIMessage(
         [{ role: "user", content: userContent }],
-        `You are a biblical scholar and preaching consultant helping a pastor develop their book study for a sermon series on "${series.title || "this book"}"${series.passage_range ? ` (${series.passage_range})` : ""}. Engage seriously with the pastor's notes and give substantive, practical feedback.`
+        layerSeriesTask(BOOK_STUDY_FIELD_ANALYZE_TASK, SERIES_STEPS.BookStudy),
       );
       if (result.ok) {
         setInlineResponses(prev => ({ ...prev, [fieldDef.key]: result.text }));
@@ -443,8 +458,8 @@ function BookStudyTab({ series, onChange, drawerOpen, onOpenDrawer, onCloseDrawe
     setDraftLoading(true);
     try {
       const result = await sendAIMessage(
-        [{ role: "user", content: `Series: "${series.title || "unknown"}"\nPassage: ${series.passage_range || "unknown"}\n\nBook Study notes:\n${BOOK_STUDY_FIELDS.filter(f => f.key !== "emerging_big_idea" && series[f.key]?.trim()).map(f => `${f.label}:\n${series[f.key].trim()}`).join("\n\n") || "(none yet)"}\n\nDraft a series big idea — one sentence summarizing the central truth this book drives home. Make it sharp, memorable, and theologically precise. Return only the sentence.` }],
-        "You are helping a pastor crystallize a series big idea from their book study work."
+        [{ role: "user", content: `Series: "${series.title || "unknown"}"\nPassage: ${series.passage_range || "unknown"}\n\nBook Study notes:\n${BOOK_STUDY_FIELDS.filter(f => f.key !== "emerging_big_idea" && series[f.key]?.trim()).map(f => `${f.label}:\n${series[f.key].trim()}`).join("\n\n") || "(none yet)"}\n\nDraft a series big idea grounded in the Book Study notes.` }],
+        layerSeriesTask(BOOK_STUDY_BIG_IDEA_TASK, SERIES_STEPS.BookStudy),
       );
       if (result.ok && result.text.trim()) onChange("emerging_big_idea", result.text.trim());
     } catch (e) {
@@ -471,12 +486,12 @@ function BookStudyTab({ series, onChange, drawerOpen, onOpenDrawer, onCloseDrawe
         .filter(f => series[f.key]?.trim())
         .map(f => `${f.label}: ${series[f.key].trim()}`)
         .join("\n");
-      const systemCtx = populatedSummary
+      const seriesContext = populatedSummary
         ? `Book study notes:\n${populatedSummary}`
         : `Series: "${series.title || "untitled"}"${series.passage_range ? ` (${series.passage_range})` : ""}`;
       const result = await sendAIMessage(
         newMessages,
-        `You are a biblical scholar and preaching consultant helping a pastor develop their book study. ${systemCtx}`
+        layerSeriesTask(`${BOOK_STUDY_CHAT_TASK}\n\n${seriesContext}`, SERIES_STEPS.BookStudy),
       );
       if (result.ok) {
         setAiMessages([...newMessages, { role: "assistant", content: result.text }]);
@@ -600,8 +615,8 @@ function OverviewTab({ series, onChange, drawerOpen, onOpenDrawer, onCloseDrawer
     setAiLoading("bigidea");
     try {
       const result = await sendAIMessage(
-        [{ role: "user", content: `Series title: "${series.title}"\nPassage: ${series.passage_range || "not specified"}\nExisting overview: ${series.overview || "none yet"}\n\nWrite a single, compelling series Big Idea sentence — the central truth this series will hammer home. Make it sharp and memorable. Return only the sentence.` }],
-        "You are a sermon series planning assistant. You help pastors craft focused, theologically precise series concepts."
+        [{ role: "user", content: `Series title: "${series.title}"\nPassage: ${series.passage_range || "not specified"}\nExisting overview: ${series.overview || "none yet"}\n\nWrite a series Big Idea sentence.` }],
+        layerSeriesTask(SERIES_BIG_IDEA_TASK, SERIES_STEPS.Overview),
       );
       if (result.ok && result.text.trim()) onChange("big_idea", result.text.trim());
     } catch (e) {
@@ -616,8 +631,8 @@ function OverviewTab({ series, onChange, drawerOpen, onOpenDrawer, onCloseDrawer
     setAiLoading("overview");
     try {
       const result = await sendAIMessage(
-        [{ role: "user", content: `I am planning a sermon series titled "${series.title}" covering ${series.passage_range || "a biblical passage"}.\nBig Idea: ${series.big_idea || "not yet set"}\n\nWrite a 2-paragraph overview:\n1. The historical/literary context and purpose of this passage in Scripture\n2. Why this passage is urgently relevant to a contemporary congregation\n\nBe theologically substantive. Write as if for a pastor's own notes.` }],
-        "You are a biblical scholar and preaching consultant helping a pastor develop a sermon series."
+        [{ role: "user", content: `I am planning a sermon series titled "${series.title}" covering ${series.passage_range || "a biblical passage"}.\nBig Idea: ${series.big_idea || "not yet set"}\n\nWrite the series overview.` }],
+        layerSeriesTask(SERIES_OVERVIEW_TASK, SERIES_STEPS.Overview),
       );
       if (result.ok && result.text.trim()) onChange("overview", result.text.trim());
     } catch (e) {
@@ -637,7 +652,7 @@ function OverviewTab({ series, onChange, drawerOpen, onOpenDrawer, onCloseDrawer
     setChatLoading(true);
     try {
       const context = `Series: "${series.title}" | Passage: ${series.passage_range || "—"} | Big Idea: ${series.big_idea || "—"} | Canon: ${series.canon_category || "—"}`;
-      const result = await sendAIMessage(newMessages, `You are helping a pastor plan a sermon series. Current series context: ${context}. Answer questions about the passage, theme, structure, or anything related to planning this series.`);
+      const result = await sendAIMessage(newMessages, layerSeriesTask(`${SERIES_OVERVIEW_CHAT_TASK}\n\nCurrent series context: ${context}.`, SERIES_STEPS.Overview));
       if (result.ok) {
         setAiMessages([...newMessages, { role: "assistant", content: result.text }]);
       } else if (result.kind !== "aborted") {
@@ -830,8 +845,8 @@ function StructureTab({ series, sections, onChange, onSectionsChange, seriesId, 
     setAiLoading("outline-gen");
     try {
       const result = await sendAIMessage(
-        [{ role: "user", content: `Build a detailed structural/exegetical outline for ${series.passage_range || series.title}. Include major divisions, subdivisions, and key passage markers. Format as a traditional Roman numeral / letter / number outline. Be thorough.` }],
-        "You are a biblical scholar providing a structural outline of a biblical passage for sermon series planning."
+        [{ role: "user", content: `Build a detailed structural outline for ${series.passage_range || series.title}.` }],
+        layerSeriesTask(SERIES_STRUCTURAL_OUTLINE_TASK, SERIES_STEPS.Structure),
       );
       if (result.ok && result.text.trim()) onChange("structural_outline", result.text.trim());
     } catch (e) {
@@ -879,7 +894,7 @@ function StructureTab({ series, sections, onChange, onSectionsChange, seriesId, 
     setChatLoading(true);
     try {
       const context = `Series: "${series.title}" | Passage: ${series.passage_range || "—"}`;
-      const result = await sendAIMessage(newMessages, `You are helping a pastor plan the structure of a sermon series. Context: ${context}. Help with passage divisions, thematic organization, grammatical structure, and section planning.`);
+      const result = await sendAIMessage(newMessages, layerSeriesTask(`${SERIES_STRUCTURE_CHAT_TASK}\n\nContext: ${context}.`, SERIES_STEPS.Structure));
       if (result.ok) {
         setAiMessages([...newMessages, { role: "assistant", content: result.text }]);
       } else if (result.kind !== "aborted") {
@@ -1070,7 +1085,7 @@ function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpen
     try {
       const result = await sendAIMessage(
         newMessages,
-        `You are helping a pastor write study guide notes for a sermon series titled "${series.title || "this series"}". Write for a congregation member — clear, warm, and connected to the series arc.`
+        layerSeriesTask(`${STUDY_GUIDE_NOTE_TASK}\n\nSeries: "${series.title || "this series"}".`, SERIES_STEPS.Slots),
       );
       if (result.ok) {
         setAiMessages([...newMessages, { role: "assistant", content: result.text }]);
@@ -1192,7 +1207,7 @@ function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpen
     setChatLoading(true);
     try {
       const context = `Series: "${series.title}" | Passage: ${series.passage_range || "—"} | Existing slots: ${sermons.map(s => s.passage || s.title).filter(Boolean).join(", ") || "none yet"}`;
-      const result = await sendAIMessage(newMessages, `You are helping a pastor divide a biblical book into sermon-sized units. Context: ${context}. Suggest natural passage breaks, sermon titles, and big ideas. Be specific about verse ranges.`);
+      const result = await sendAIMessage(newMessages, layerSeriesTask(`${SERIES_SLOTS_CHAT_TASK}\n\nContext: ${context}.`, SERIES_STEPS.Slots));
       if (result.ok) {
         setAiMessages([...newMessages, { role: "assistant", content: result.text }]);
       } else if (result.kind !== "aborted") {
@@ -1394,7 +1409,7 @@ function SlotRow({ slot, index, onChange, onDelete, onCommit, commitError, onCle
     try {
       const result = await sendAIMessage(
         [{ role: "user", content: message }],
-        `You are helping a pastor write study guide notes for a sermon series titled "${series?.title || "this series"}". Write for a congregation member — clear, warm, and connected to the series arc.`
+        layerSeriesTask(`${STUDY_GUIDE_NOTE_TASK}\n\nSeries: "${series?.title || "this series"}".`, SERIES_STEPS.Slots),
       );
       if (result.ok) {
         setAssistResponse(result.text);
@@ -1583,7 +1598,7 @@ function CalendarTab({ series, sections, sermons, calNotes, onChange, onSermonsC
       const noteContext = calNotes.length > 0 ? `\nCalendar notes (special dates): ${calNotes.map(n => `${n.date}: ${n.label}`).join(", ")}` : "";
       const result = await sendAIMessage(
         newMessages,
-        `You are helping a pastor schedule a sermon series. Series: "${series.title}" starting ${series.start_date || "TBD"}.\nCurrent schedule:\n${scheduleContext}${noteContext}\n\nAdvise on scheduling adjustments. If the pastor asks to skip a week or rearrange slots, explain what the adjusted schedule would look like (list it out). Do not modify anything — just advise clearly.`
+        layerSeriesTask(`${CALENDAR_CHAT_TASK}\n\nSeries: "${series.title}" starting ${series.start_date || "TBD"}.\nCurrent schedule:\n${scheduleContext}${noteContext}`, SERIES_STEPS.Calendar),
       );
       if (result.ok) {
         setAiMessages([...newMessages, { role: "assistant", content: result.text }]);

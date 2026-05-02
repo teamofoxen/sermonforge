@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-01 — feat: centralize StudyTab + SeriesPlanner system prompts (ACCI Item C1)
+
+- `src/prompts/study.js` extended with 14 new task-directive constants (review prompts, MPT/MPS draft, MPS chat, populate-scripture, synthesize-redemptive, compile-implications, six advance-step briefings); `src/prompts/sermon.js` adds four `series-*` step descriptions; new `src/prompts/seriesPlanner.js` exports 11 task constants + `SERIES_STEPS`.
+- StudyTab.jsx: every inline `You are…` system prompt at ~12 call sites replaced with `layerTask(TASK, step)` → `appendTaskDirective(buildSystemPrompt(step, sermon.id), TASK)`.
+- SeriesPlanner.jsx: same pattern across BookStudy / Overview / Structure / Slots / Calendar tabs and SlotRow Assist (~12 sites) via module-level `layerSeriesTask`.
+- User message content and sendAIMessage signature unchanged in this commit (C2 + C3 follow); 657 tests passing; sweep PASS with Surface #1 + Principle strengthened.
+- Q3–Q7 resolutions recorded in `docs/PROPOSALS/ai-clarity-and-constraint.md`; Tier B (Items 5–7) marked shipped.
+
+---
+
 ## 2026-05-01 — feat: AI panel constraint visibility (ACCI Tier B, Items 5–7)
 
 - `src/prompts/sermon.js` adds `getActiveRole(step, theologyMode)` mapping every step/stage to a posture label; `src/components/AIPanel.jsx` renders it under the panel title (B1).

@@ -22,6 +22,10 @@ export function buildSystemPrompt(step, sermonId) {
     [STAGE.Manuscript]: "The pastor is writing the sermon manuscript.",
     [STAGE.Delivery]:   "The pastor is preparing delivery notes.",
     "book-study":       "The pastor is in the Book Study phase — doing foundational research and theological reflection before series planning begins. This phase involves pasting commentary material, developing the book's argument, locating it in redemptive history, and forming a working big idea. The AI should act as a thinking partner for deep theological and structural exploration, not a content generator.",
+    "series-overview":  "The pastor is working on the series overview — passage range, big idea, and the redemptive arc the series will trace. Treat the passage and series big idea as the orienting lens; help the pastor sharpen them.",
+    "series-structure": "The pastor is structuring the series — passage divisions, sections, thematic and grammatical organization. Help with structural moves; do not generate sermon-level content.",
+    "series-slots":     "The pastor is dividing the series into individual sermons — passage ranges, sermon titles, and slot-level big ideas that participate in the series arc.",
+    "series-calendar":  "The pastor is scheduling the series across the church calendar — assigning sermons to Sundays, working around special dates and seasons.",
   };
 
   const stepDesc = stepDescriptions[step]
