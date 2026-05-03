@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-05-03 — docs: SFDI Field 4 ratified, SPRD Component 1 extended with structured-exercise question type
+
+- SFDI Field 4 (Divisions / Thought Units) ratified — seven-slot entry with three rules (subject + main verb → left margin; modifiers → indent; coordinates → align), Quick outline tips for epistles and narrative, and the expository commitment that "the point of the text is the point of the sermon."
+- SFDI Field Pattern recognizes a new structured-exercise question type alongside the default text-prompt — a canvas the pastor works inside rather than a textarea.
+- SFDI Fields 5–11 gained a forward-looking note that they read against the spine Field 4 produces; Field 4 flagged as load-bearing candidate at the Observe → Interpret threshold.
+- SPRD Component 1 extended with eight concrete affordances for structured-exercise questions: Tab/Shift+Tab indent, line-number gutter, level-0 marker, peripheral reference panel, paste-intercept, composite gating, storage-shape decision, genre-aware static tips.
+
+---
+
 ## 2026-05-03 — skill: add drift-sweep — evidence-based doc/spec drift verification with externalized validator
 
 - New project skill at `.claude/skills/drift-sweep/SKILL.md` enforcing criteria-first → script-first → separated detection/remediation → measurable convergence workflow for any doc/spec/glossary/config drift verification request.
