@@ -14,7 +14,7 @@ dist-electron/
 out/
 
 # Electron builder output
-release/
+/release/
 *.exe
 *.dmg
 *.AppImage

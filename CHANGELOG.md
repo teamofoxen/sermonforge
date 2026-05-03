@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-05-02 — feat: /release skill — gated tag-and-push with security review
+
+- New `/release` skill at `.claude/skills/release/SKILL.md` — pre-flight gates (clean tree, on main, `npm test` pass), version proposal, mandatory `/security-review` invocation, smoke-test checklist from `docs/PROPOSALS/distribution.md` Section 12, then tag + push.
+- HIGH security findings are a hard stop; MEDIUM requires explicit acknowledgement; tag format locked to `vMAJOR.MINOR.PATCH` to match `build.yml`'s `v*` trigger.
+- `.gitignore` `release/` rule anchored to repo root (`/release/`) — was incorrectly matching `.claude/skills/release/`.
+
+---
+
 ## 2026-05-02 — docs: drop dead CLAUDE_original.md reference
 
 - `CLAUDE.md` Authority section no longer points at `CLAUDE_original.md`; that file no longer exists in the repo, so the reference was inert.
