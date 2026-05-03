@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-02 — docs: Isolated-World Workspace UX overhaul added to SPRD structural backlog
+
+- SPRD planning doc gains the **Isolated-World Workspace UX overhaul** as the umbrella structural commitment, replacing the standalone field-level UX entry; three components — (1) field-level spotlight, (2) sermon-level app-takeover with canonical BackButton return, (3) throughline visualization with field-completion summaries and animated cues to the throughline node.
+- The throughline visualization makes Process Contract #6 ("the Study throughline is structural") literally visible — the throughline becomes a line on the screen the pastor watches earn its named outcomes.
+- Design considerations flagged but deferred: throughline shape, animation infrastructure (new for SermonForge), panel positioning, non-disruptive escape for in-progress sermons.
+- Strengthens Surface #4 (you-are-here) materially, Process #6 visually, State #6 (in-progress queryable) at re-entry depth.
+- SFDI working doc's "Where this lives structurally" section updated to reflect the field pattern as Component 1 of the larger workspace UX overhaul, not a standalone item.
+
+---
+
 ## 2026-05-02 — docs: SFDI Phase 1 walk started — field pattern locked, Observe expanded to 11 fields
 
 - New working SFDI doc at `docs/PROPOSALS/study-field-definition-initiative.md` captures the canonical Field Pattern (spotlight + sequential questions + persistent prompts + "Next question" affordance disabled-when-empty) and Phase 1 walk state.

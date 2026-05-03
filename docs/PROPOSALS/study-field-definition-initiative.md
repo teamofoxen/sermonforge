@@ -42,7 +42,7 @@ A **field** is an isolated focused workspace containing one or more **questions*
 ### Where this lives structurally
 
 - **SFDI** defines the question sequence per field — this document.
-- **SPRD** ships the spotlight + sequential-questions + persistent-prompts UX as a structural change to the Study workspace. Tracked in the SPRD planning doc as a structural backlog item, sequenced after the Implications restructure lands.
+- **SPRD** ships the spotlight + sequential-questions + persistent-prompts UX as Component 1 of the **Isolated-World Workspace UX overhaul** (the larger SPRD structural backlog item — Components 2 and 3 are the sermon-level app-takeover and the throughline visualization). See `docs/PROPOSALS/study-phase-redesign.md` → "Isolated-World Workspace UX overhaul" for the full umbrella commitment. Sequenced after the Implications restructure lands.
 
 ---
 
