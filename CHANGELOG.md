@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-05-02 — docs: SPRD Q8 — inline AI Reviews carve-out + correct SPRD backlog framing
+
+- CORE.md Process Contract #5 — added scope note explicitly limiting the empty-evidence enforcement to the substitutive `ai_proposal`/`ai_apply` mutation cycle; advisory AI interfaces (Review buttons + Chat interfaces) are a deliberate carve-out governed by the Principle directly.
+- ENFORCEMENT_STATUS.md Process #5 row — names the seven inline call sites (Observe / Interpret / Redemptive Thread / Implications Reviews + MPS Chat + Outline Suggest + FE Chat) as the scoped carve-out.
+- ENFORCEMENT_STATUS.md SPRD section — Q8 closed; corrected overstatement that "SPRD is fully closed" — open questions are settled but structural backlog (Implications restructure, Step 5, PC card removal, Implications Synthesis named outcome) remains, sequenced behind SFDI.
+- "Last verified" parenthetical updated to reflect Q8 alongside Q1 + Q3.
+
+---
+
 ## 2026-05-02 — docs: SPRD planning doc reflects Q1 + Q3 landed, Q8 next
 
 - Scope map: Q1 and Q3 marked **Landed 2026-05-02** with commit hashes (`c87c307`, `ec3f960`); Q8 marked **Next pilot**.

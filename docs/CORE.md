@@ -135,7 +135,14 @@ these names. (See State Contract clause 5: *one name per concept*.)
    are specified in `docs/SYSTEMS/sermon-workspace.md`.
 5. **AI augments, never substitutes.** AI runs on user evidence. There is no AI
    operation that produces sermon content from zero user input. Compressed paths
-   that bypass user evidence are forbidden under this contract.
+   that bypass user evidence are forbidden under this contract. *Scope: this
+   contract's enforcement (the `ai_proposal`/`ai_apply` mutation cycle,
+   empty-evidence rejection in `validateAndCommit`) covers substitutive AI
+   writes — operations that propose or apply content directly to sermon fields.
+   Advisory AI interfaces — Review buttons that produce display-only commentary,
+   and conversational Chat interfaces where any content application is a
+   separate, explicit, user-confirmed gesture — are outside this contract's
+   enforcement scope and are governed directly by the Principle.*
 6. **The Study throughline is structural.** Each Study sub-phase produces a
    named outcome by way of a throughline that runs through its fields and
    crosses each sub-phase boundary by handoff. The throughline must be
