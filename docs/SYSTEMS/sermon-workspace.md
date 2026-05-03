@@ -174,7 +174,9 @@ yet leaving the text. See "The Study throughline" above.
 #### Phase 3: Redemptive Thread → `sermons.redemptive_thread` (JSON)
 7 question fields + 1 summary field (key: `"summary"`)
 - **"Synthesize →"** button: AI compiles all 7 answers into a cohesive redemptive summary.
-  Summary is also hand-editable.
+  Routes through the proposal pattern (since SPRD Q5, shipped 2026-05-01 via ACCI
+  Item A2 `2b0fa66`) — proposal panel, accept or discard. Summary is also
+  hand-editable.
 
 #### Phase 4: Implications → `sermons.implications` (JSON)
 
@@ -197,10 +199,11 @@ and flow.
   `new_thoughts`, `explore`, `convictions`
 - **Unbeliever Implications** (1 field): key `"unbeliever"`
 - **Compiled list** (key: `"compiled"`)
-- **"Compile →"** button: AI consolidates all answers into a master list. Note:
-  this button currently writes directly into the Compiled slot without going
-  through the proposal pattern — flagged as a Mutation Contract #2 violation in
-  SPRD; resolution pending Q5 in `docs/PROPOSALS/study-phase-redesign.md`.
+- **"Compile →"** button: AI consolidates all answers into a master list. Routes
+  through the proposal pattern — proposal panel, accept or discard, central
+  save-and-check logic. The previous direct-write was resolved by SPRD Q5,
+  shipped 2026-05-01 via ACCI Item A2 (`2b0fa66`) alongside four other
+  previously-bypassed AI write paths.
 
 ### Step 2 — MPT→MPS Forge
 

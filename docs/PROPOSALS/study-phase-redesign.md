@@ -27,7 +27,7 @@ Read this before the sections below. SPRD owns the structural layer of the redes
 
 **Content work merged into SFDI.** Section 2 (canonical artifacts per sub-phase), section 3 (evidence sufficiency thresholds), Q2 (reshape), Q3b (N/A escape valve), Q6 (PC modulation in AI prompts), and Q7 content half (which fields enact which voice in Implications) all moved to SFDI's scope. Sections 2 and 3 in this document now carry only the structural framing, with pointers to SFDI for substance. The merged Q's are retired from this document's open-questions list (section 8). See [docs/PROPOSALS/sfdi-charter.md](sfdi-charter.md) for the absorbed scope and the boundary articulation.
 
-Items tagged *Structural — decided*, *Shipped*, *Structural — settled*, and *Closed* are ready to plan into implementation in any order; section 8's "First structural pilot" subsection names which one to start with. Items tagged *Structural — open* still need a small ruling but don't depend on SFDI. The content layer of the redesign now lives entirely in SFDI.
+Items tagged *Structural — decided*, *Shipped*, *Structural — settled*, and *Closed* are ready to plan into implementation in any order; section 8 holds the per-Q records. **As of 2026-05-02 no items remain tagged *Structural — open*** — Q1, Q3, and Q8 all settled this date; Q4, Q5, Q7-structural, Q9 settled previously; Q2, Q3b, Q6, Q7-content merged into SFDI. Remaining structural backlog items (Implications restructure shipping, Step 5 as its own workspace step, PC card removal, Implications Synthesis as named outcome, the Isolated-World Workspace UX overhaul) are sequenced behind SFDI's content work. The content layer of the redesign now lives entirely in SFDI.
 
 ---
 
@@ -43,7 +43,7 @@ This document covers eight sections in fixed order:
 5. What the rules document needs to say.
 6. What the automated checks need to change.
 7. What changes on screen and in the AI.
-8. What's still open for the product owner to rule on.
+8. Q records, pilot landings, and structural backlog.
 
 A note on scope, settled before this document was written. The four sub-phases of Study, and the step out of Study into the main-point work, do not currently flow through the system that records, checks, and announces the pastor's movement through their sermon. They are silent screen-changes. The product owner has ruled that the redesign **routes them through that system** — they become real, recorded movements with checks and announcements. Every section of this document carries through assuming that scope.
 
@@ -151,19 +151,19 @@ For each edit below, the existing rule is paraphrased (the prior investigation c
 
 ### Process Contract #2 — the "you must have something to show" rule
 
-**Today it says:** A pastor cannot advance from one stage to the next unless they have something non-empty in the previous stage's fields. Sermons created before April 2026 are exempt (the "old-sermon exemption").
+**Original text (pre-redesign):** A pastor cannot advance from one stage to the next unless they have something non-empty in the previous stage's fields. Sermons created before April 2026 are exempt (the "old-sermon exemption").
 
-**What it should say:** The check fires at three resolutions — sub-phase, step, and stage. At each resolution, the rule names *what counts as enough* (using the categories in section 3 above: coverage, structural completeness, synthesis presence, optional length). The old-sermon exemption stays scoped to the original empty-evidence rule and does not extend to the new sub-phase categories — settled by Q4 in section 8. The new categories apply to every sermon regardless of creation date, but only fire at boundaries the pastor crosses during their session.
+**What it now says (Q1 landed 2026-05-02):** The check fires at three resolutions — sub-phase, step, and stage. The empty-evidence baseline applies at every resolution, with the legacy carve-out scoped to the original rule per Q4. Q3 added the disabled-Continue UX layer at sub-phase + step Continue buttons. The substance of "what counts as enough" beyond non-empty (coverage at the early boundaries, synthesis presence at the synthesis-producing boundaries, the N/A escape valve per field) lives in SFDI; SFDI's per-boundary thresholds extend `evaluateAdvance` in `src/utils/studyAdvancement.js` without UI changes.
 
-**Why.** Today the check is binary (something / nothing) at one level (stage). The whole redesign — fixing Implications, gating sub-phase advancement, preventing weak work from reaching MPT/MPS — depends on this rule having something to say at the sub-phase level.
+**Why.** Pre-redesign the check was binary (something / nothing) at one level (stage). The redesign's whole point — gating sub-phase advancement, preventing weak work from reaching MPT/MPS — depended on this rule having something to say at the sub-phase level. That now happens.
 
 ### Process Contract #3 — the "movement must be visible" rule
 
-**Today it says:** When a pastor crosses a stage boundary, the screen acknowledges it (a visible toast, plus an invisible marker so the safety-net tests can confirm it happened, plus a record in the sermon's audit trail). Sub-phase movement is not in scope.
+**Original text (pre-redesign):** When a pastor crosses a stage boundary, the screen acknowledges it (a visible toast, plus an invisible marker so the safety-net tests can confirm it happened, plus a record in the sermon's audit trail). Sub-phase movement was not in scope.
 
-**What it should say:** Sub-phase movement also gets acknowledged. The form of acknowledgement (a marker, a toast, a small banner) is a screen-design detail, but the *fact* of acknowledgement is binding.
+**What it now says (Q1 landed 2026-05-02):** Sub-phase movement also gets acknowledged via the `data-testid="movement-event"` marker bubbled from `StudyTab.jsx` through `SermonWorkspace.jsx`'s `onMovement` callback. The marker fires on sub-phase + step movements at all three resolutions.
 
-**Why.** If sub-phase advancement is silent but new evidence checks fire, the pastor encounters a rejection without context. They know the check fired, but not that they crossed a boundary. The rule should not be silent on this.
+**Why.** Pre-Q1, sub-phase advancement was silent and the new evidence checks would have produced rejections without context. The pastor needed to see the boundary they crossed. That now happens.
 
 ### Process Contract #4 — the "Pastoral Context follows the text" rule
 
@@ -195,9 +195,11 @@ For each edit below, the existing rule is paraphrased (the prior investigation c
 
 ## 6. What the automated checks need to change
 
-The automated checks ("tests") are the safety net. Each check enforces one of the rules in `CORE.md`. When the rules extend to the sub-phase level, the checks have to extend too — and the test fixture (the stand-in for the central save-and-check logic that lets the tests run without a real database) has to be updated in the same change so the safety net keeps working. **Six check files are affected: four go stale and need to grow, two new tests are needed for sub-phase movement, and three of those changes carry an implied test-fixture update.** The reason this section exists separately is that if the test fixture drifts out of sync with the real save-and-check logic, the entire safety net becomes unreliable.
+The automated checks ("tests") are the safety net. Each check enforces one of the rules in `CORE.md`. When the rules extend to the sub-phase level, the checks have to extend too — and the test fixture (the stand-in for the central save-and-check logic that lets the tests run without a real database) has to be updated in the same change so the safety net keeps working.
 
-The first column in the table below lists test file names — these are how the team refers to specific checks. The body of each row is plain language; the file names are reference labels.
+**Status as of 2026-05-02.** Q1 (commit `c87c307`) extended Process #1, #2, and #3 contract tests to sub-phase + step resolutions. Q3 (commit `ec3f960`) added `process-2-evidence-gated-ux.test.tsx` covering the disabled-Continue UI plus the unit tests for `evaluateAdvance`. Q5 closed by execution (ACCI A2 `2b0fa66`). Q8 closed as advisory carve-out — no new check needed. Process #4 per-sub-phase progression checks remain deferred to SFDI. Per-boundary threshold tests beyond non-empty wait for SFDI's per-field thresholds.
+
+The first column in the table below lists test file names — these are how the team refers to specific checks. The body of each row is plain language; the file names are reference labels. **Rows are preserved as the prospective record SPRD planned;** the Status column above gives the current state.
 
 | Test file (label) | What changes | Disposition | Rule it enforces | Test fixture also updates? |
 |---|---|---|---|---|
@@ -221,6 +223,8 @@ The first column in the table below lists test file names — these are how the 
 ## 7. What changes on screen and in the AI
 
 The screen, prompts, and navigation surfaces all see knock-on changes from sections 2–4. This section names *what changes* per surface and *why*; it does not design any surface. Items that should hand off to a separate cleanup pass are listed for handoff only.
+
+**Status as of 2026-05-02.** Sub-phase movement visibility, Continue button enable/disable based on evidence, and sub-phase transition routing through the spine all landed via Q1 + Q3 (commits `c87c307`, `ec3f960`). Synthesize/Compile prompt edits shipped via ACCI A2 (`2b0fa66`). PC card removal, Implications restructure, and Step 5 as its own workspace step remain backlog (sequenced behind SFDI). The **Isolated-World Workspace UX overhaul** (sermon-level takeover + field-level spotlight + throughline visualization) is the umbrella SPRD commitment for the larger workspace experience redesign — see section 8 for the full description.
 
 ### The workspace shell (the always-on parts of the screen)
 
@@ -271,9 +275,9 @@ Scope extension to original SPRD; surfaced during SFDI synthesis. The original S
 
 ---
 
-## 8. What's still open
+## 8. Q records, pilot landings, and structural backlog
 
-Each Q below carries a disposition tag — *Structural — decided*, *Structural — open*, *Structural — settled this revision*, *Merged into SFDI*, *Closed*, or *Shipped* — that indicates whether the Q is ready to plan into implementation, still needs a ruling, has already been answered, or has moved to SFDI's content scope. Only Q's tagged *Structural — open* still need a SPRD-side ruling; the rest are recorded for state.
+Each Q below carries a disposition tag — *Structural — decided*, *Structural — settled this revision*, *Merged into SFDI*, *Closed*, *Shipped*, or *Landed* — that records the Q's resolution. **As of 2026-05-02 no Q remains in the *Structural — open* state**; all Q-records are kept here as the historical answer-trail. The structural backlog (Implications restructure, Step 5, PC card removal, Implications Synthesis named outcome, Isolated-World Workspace UX overhaul) is sequenced behind SFDI and lives in the "Pilot landings and what's next" subsection below.
 
 ### Pilot landings and what's next
 

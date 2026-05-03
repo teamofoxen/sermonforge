@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-02 — docs: comprehensive SPRD/SFDI doc drift sweep — every surface reconciled to current state
+
+- SFDI charter — status header rewritten ("walk in progress" not "scoping; no walkthrough begun"), SFDI document framing updated (working doc exists, accumulates entries), Observe-count footnote added (9 → 11 with Background + Surface Questions), Q8 closed in SPRD-owns list, Isolated-World Workspace UX overhaul added to SPRD-owns list, "downstream initiatives" paragraph rewritten to past-tense for landed pilots.
+- SPRD planning doc — section 5 Process #2/#3 framing flipped from "what it should say" (future) to "what it now says" (Q1 + Q3 landed); section 6 + 7 status notes added at top of each section reflecting what landed vs. what's backlog; section 8 title renamed from "What's still open" to "Q records, pilot landings, and structural backlog" (no Q is open anymore); intro line about *Structural — open* tag corrected.
+- sermon-workspace.md — Compile and Synthesize button descriptions updated to reflect Q5 shipped (proposal pattern), removing stale "currently writes directly" / "pending Q5" framings.
+- ENFORCEMENT_STATUS SPRD section — Isolated-World Workspace UX overhaul added to the structural backlog list (was missing); chain note expanded.
+- All canonical docs now consistent on: Q8 closed (b), Isolated-World Workspace UX overhaul as umbrella, seven-slot entry, Phase 1 walk in progress, Background/Surface Questions added to Observe.
+
+---
+
 ## 2026-05-02 — docs: SPRD planning doc + ENFORCEMENT_STATUS drift sweep — Q8 closed everywhere, umbrella naming consistent
 
 - SPRD planning doc — six stale "Q8 open" / "Q8 next pilot" surfaces updated to reflect Q8 closed (b) advisory carve-out (status header, question-state line, scope-map row, pilot-landings section, test-coverage row, Q8 entry itself, Process #5 redesign discussion).

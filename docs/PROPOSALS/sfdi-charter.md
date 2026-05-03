@@ -1,8 +1,8 @@
 # Study Field Definition Initiative (SFDI) — Charter
 
-**Status:** Scoping. No walkthrough work has begun. The full SFDI document will be drafted later, once enough field-walkthrough entries have accumulated to show what shape the document should take.
+**Status:** Active. Phase 1 (Observe) walk in progress as of 2026-05-02. Working SFDI document at [`study-field-definition-initiative.md`](./study-field-definition-initiative.md) holds the per-field entries, the Field Pattern, and walk state.
 **Audience:** The lone developer of SermonForge, who is also a pastor and the pastor-user. Written in plain language, no engineering vocabulary required.
-**Date drafted:** 2026-04-30.
+**Date drafted:** 2026-04-30. Walk started 2026-05-02.
 
 ---
 
@@ -10,7 +10,7 @@
 
 The Study Phase Re-Design (SPRD) investigation surfaced that the four sub-phases of Study — Observe, Interpret, Redemptive Thread, Implications — feel like four worksheets stapled together rather than a single deepening exegetical work. SPRD set out to fix that at the architecture layer (how the pastor moves through the sub-phases, how evidence is checked, how Pastoral Context enters).
 
-A subsequent insight, raised by the product owner: the *fields inside each sub-phase* are stapled together the same way. Each sub-phase today is a stack of parallel questions — nine in Observe, nine in Interpret, seven in Redemptive Thread, fourteen plus an unbeliever field in Implications. There is no built-in flow from one field to the next. The pastor finishes Observe with answers in nine boxes but no "and therefore..." connecting them. By the time they reach Implications, the work has accumulated as worksheet output rather than as building exegetical understanding. The Main Preaching Thought and Main Preaching Statement do not feel earned because the fields underneath them weren't earning each other.
+A subsequent insight, raised by the product owner: the *fields inside each sub-phase* are stapled together the same way. Each sub-phase at the time SFDI was scoped was a stack of parallel questions — nine in Observe, nine in Interpret, seven in Redemptive Thread, fourteen plus an unbeliever field in Implications. (As of the Phase 1 walk start, Observe is now 11 — Background and Surface Questions added; the other sub-phases are still at their pre-walk counts pending future walks.) There is no built-in flow from one field to the next. The pastor finishes Observe with answers in nine boxes but no "and therefore..." connecting them. By the time they reach Implications, the work has accumulated as worksheet output rather than as building exegetical understanding. The Main Preaching Thought and Main Preaching Statement do not feel earned because the fields underneath them weren't earning each other.
 
 SFDI exists to fix that. It is content work, not code work. The walkthrough is theological and pedagogical — what each field is, what the pastor puts in it, why it sits where it sits, how it hands off to the next field, and how each sub-phase's fields together compose into the named outcome of that sub-phase.
 
@@ -38,7 +38,7 @@ Three layers of definition, walked in this order:
 
 The PC progression — minimal at Observe, deepening through Interpret, texture at RT, integrated at Implications — is articulated through the per-field PC content layer 1 names. Once SFDI is done, AI prompts that reference PC have field-level content to draw on; until then, AI prompts treat PC uniformly.
 
-The final SFDI document will gather all three layers into one place. It is not pre-structured; it accumulates as the walkthrough proceeds, and the document's shape gets named when enough has been built to know what shape fits.
+The SFDI document gathers all three layers into one place. It is not pre-structured; it accumulates as the walkthrough proceeds. The working document at `docs/PROPOSALS/study-field-definition-initiative.md` was created when the Phase 1 walk started (2026-05-02) and accumulates entries as walks finish. Its shape may be re-cut once enough has been built to know what shape fits best.
 
 ---
 
@@ -52,7 +52,7 @@ The test of SFDI completion isn't a length target or a parser check. It's experi
 
 **For the enforcement layer.** Process Contract #6 activates. The clause is no longer "drafted but inactive" — it has substance to bind to. An automated check parses the SFDI document and validates the visible scaffolding: every field declares its connections, every sub-phase declares its named outcome, every boundary names its handoff. The throughline's substantive integrity — does each field actually contribute, does each named outcome follow from the field-work, does the handoff actually carry — binds the writer; the mechanical part is evidence, the spirit is the contract.
 
-**For downstream initiatives.** SPRD's structural pieces ship in parallel — they don't wait for SFDI. The first structural pilot is Q1 spine routing; visibility events (Process #3 extension), evidence gates (Process #2 extension under the hard-gate ruling), the Implications restructure shape, Step 5 as its own workspace step, and PC card removal follow in their own changes. SFDI's content layer flows in as it accumulates — per-field PC content, per-boundary thresholds, Implications voice assignments, named-outcome substance — and as each layer lands, the AI prompts and the per-sub-phase progressive model sharpen against real field-level definitions. PC's substance flows downstream through the named outcomes; explicit AI-PC tier wiring becomes unnecessary.
+**For downstream initiatives.** SPRD's structural pieces ship in parallel — they don't wait for SFDI. **As of 2026-05-02, Q1 spine routing landed (commit `c87c307`), Q3 hard-gate UX landed (commit `ec3f960`), Q5 Synthesize/Compile shipped via ACCI A2 (`2b0fa66`), and Q8 inline AI Reviews closed as advisory carve-out** — together these covered visibility events (Process #3 extension to sub-phase + step), evidence gates (Process #2 extension under the hard-gate ruling), and the substitutive-AI scope clarification. The Implications restructure shape, Step 5 as its own workspace step, PC card removal, the Implications Synthesis as the named outcome, and the Isolated-World Workspace UX overhaul (the umbrella commitment for the workspace experience redesign — three components: field-level spotlight, sermon-level takeover, throughline visualization) are sequenced behind SFDI's content lands. SFDI's content layer flows in as it accumulates — per-field PC content, per-boundary thresholds, Implications voice assignments, named-outcome substance — and as each layer lands, the AI prompts and the per-sub-phase progressive model sharpen against real field-level definitions. PC's substance flows downstream through the named outcomes; explicit AI-PC tier wiring becomes unnecessary.
 
 **The qualitative test.** Each element feels earned. If we don't feel it in the doc, the pastor won't feel it in the workspace. The throughline's integrity is the contract; we're done when the throughline is real.
 
@@ -118,7 +118,8 @@ Entries accumulate in the working SFDI document at `docs/PROPOSALS/study-field-d
 - PC card removal sequencing
 - The structural commitment that AI prompts treat PC as enrichment never as a precondition (Process Contract #4)
 - The structural fact that no schema change is forced by the redesign
-- Inline AI Reviews disposition (Q8, open)
+- Inline AI Reviews disposition (Q8, closed 2026-05-02 as ruling (b) advisory carve-out)
+- Isolated-World Workspace UX overhaul (added 2026-05-02 — three components: field-level spotlight, sermon-level takeover, throughline visualization; sequenced behind SFDI)
 
 **What SFDI owns (content):**
 
