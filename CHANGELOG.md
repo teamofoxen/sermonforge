@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-05-02 — docs: SPRD planning doc reflects Q1 + Q3 landed, Q8 next
+
+- Scope map: Q1 and Q3 marked **Landed 2026-05-02** with commit hashes (`c87c307`, `ec3f960`); Q8 marked **Next pilot**.
+- Section 8 "First structural pilot" subsection retitled "Pilot landings and what's next" — captures Q1 + Q3 outcomes, names Q8 as the next pilot, and notes Step 5 + PC card removal as gated on SFDI's content half.
+- Q1 and Q3 entries in section 8 rewritten in landed voice with implementation pointers (`evaluateAdvance` in `src/utils/studyAdvancement.js` is the SFDI threshold hook point).
+
+---
+
 ## 2026-05-02 — feat: SPRD Q3 — hard-gate UX layer (disabled Continue when source empty)
 
 - New `src/utils/studyAdvancement.js` extracted from StudyTab and SermonWorkspace; exposes `evaluateAdvance(sermon, kind, fromIndex)` as the SFDI threshold hook point alongside the Q1 evidence builders and rejection formatters.

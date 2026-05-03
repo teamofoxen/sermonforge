@@ -15,13 +15,13 @@ Read this before the sections below. SPRD owns the structural layer of the redes
 
 | Item | Disposition |
 |---|---|
-| Q1 — spine-routed sub-phase + step transitions | Structural — decided. **First structural pilot.** |
-| Q3 — hard gates with synthesis presence | Structural — decided |
+| Q1 — spine-routed sub-phase + step transitions | **Landed 2026-05-02** (commit `c87c307`) |
+| Q3 — hard gates with synthesis presence | **Landed 2026-05-02** (commit `ec3f960`) — disabled-Continue UX layer; SFDI thresholds extend `evaluateAdvance` later |
 | Q5 — Synthesize and Compile through proposal pattern | Shipped 2026-05-01 (ACCI Item A2, `2b0fa66`) |
 | Q7 — Implications as one step with three voices | Structural half: decided. Content half: merged into SFDI. |
-| Q4 — old-sermon exemption scope | Structural — settled this revision (scope to original rule) |
+| Q4 — old-sermon exemption scope | Structural — settled (scope to original rule) |
 | Q9 — three vestigial fields cleanup | Closed (handed off to audit triage) |
-| Q8 — inline AI Reviews through the spine | Structural — open |
+| Q8 — inline AI Reviews through the spine | **Structural — open. Next pilot.** |
 | Step 5 (Intro/Conclusion) as its own workspace step | Structural — scope extension (see section 7) |
 | PC card removal | Structural — sequenced after Q7 structural half lands |
 
@@ -275,36 +275,29 @@ Scope extension to original SPRD; surfaced during SFDI synthesis. The original S
 
 Each Q below carries a disposition tag — *Structural — decided*, *Structural — open*, *Structural — settled this revision*, *Merged into SFDI*, *Closed*, or *Shipped* — that indicates whether the Q is ready to plan into implementation, still needs a ruling, has already been answered, or has moved to SFDI's content scope. Only Q's tagged *Structural — open* still need a SPRD-side ruling; the rest are recorded for state.
 
-### First structural pilot — Q1 spine routing
+### Pilot landings and what's next
 
-Of the structural-decided and shipped items, **Q1 spine routing is proposed as the first to ship.** Almost everything else in the structural list either depends on it or is downstream of it:
+**Q1 spine routing — landed 2026-05-02 (commit `c87c307`).** The first structural pilot. `StudyTab.advanceSubPhase` / `advanceStep` / `jumpToStep` / `jumpToSubPhase` and `SermonWorkspace.handleTabChange` route through `transitionState`. Process #1 (monotonic) and Process #2 (empty-evidence) fire at all three resolutions (stage, step, sub-phase). Process #3 visibility marker bubbles sub-phase + step movements via `onMovement`. Contract tests extended to sub-phase + step coverage.
 
-- Sub-phase visibility events (Process #3 extension) only fire at boundaries the central save-and-check logic knows about. No spine routing → no visibility events.
-- Sub-phase evidence gates (Process #2 extension; the hard-gate ruling under Q3) only fire at boundaries the central logic checks. No spine routing → no evidence gates.
-- The Implications restructure into one-step-with-three-voices (Q7 structural half) changes the shape of the Implications sub-phase boundary. The spine has to be ready to host that boundary's new shape.
-- PC card removal (sequenced after Implications restructure) is downstream UI work that flows from the restructure landing.
+**Q3 hard-gate UX — landed 2026-05-02 (commit `ec3f960`).** The disabled-Continue UX layer. Continue buttons render `disabled` with a `title` attribute and inline hint when the source position is empty; pastors see the gate before the click rather than the click-then-banner cycle. Stage tabs and breadcrumb pills keep Q1's click-then-banner UX (per the Q3 ruling that tabs/pills are navigation, not commitment). The new `src/utils/studyAdvancement.js` is the SFDI threshold hook point — `evaluateAdvance(sermon, kind, fromIndex)` gets richer when SFDI lands per-boundary thresholds, no UI changes needed.
 
-Q1 is invisible-but-foundational: the pastor doesn't see "the spine now routes sub-phase transitions" as a feature, but every visible structural change downstream depends on it.
+**Q8 inline AI Reviews — next pilot. Open and structural.** Seven inline AI calls (Observe Review, Interpret Review, RT Review, Implications Review, MPS Chat, Outline Suggest, FE Chat) bypass the central save-and-check logic and live in screen-only state. Q8 settles whether they route through a new save path for AI Reviews (Process #5 coverage) or carve out as advisory. Separable from Q1's pilot — implements in its own change. See Q8 in this section for the trade-off.
 
-**Why not Implications restructure first.** The Implications restructure (Q7 structural half) is the most user-visible piece of the redesign — three voices replace three orphaned groups, PC stops being an always-on card. But its structural half is partly meaningless without its content half (which fields enact which voice), and the content half waits for SFDI. Shipping the structural half on its own gives the pastor a renamed shell of Implications without the field-level work that makes the renaming substantive.
-
-**What "first pilot" means in scope.** Q1 ships as one cohesive piece: route both sub-phase transitions (StudyTab) and step transitions (SermonWorkspace) through the central save-and-check logic; add the visibility marker plumbing; carry the test-fixture updates section 6 names. The Q3 hard-gate logic and the Process #3 visibility events can ship in the same change or in a follow-up — the spine routing has to land first either way. Recommendation: ship spine routing alone, then Q3 + Process #3 in a second change so each landing is reviewable on its own.
+**Remaining structural backlog after Q8 lands:** Step 5 (Intro/Conclusion) as its own workspace step, and PC card removal — both sequenced after the Implications restructure, which is gated on SFDI's content half landing first.
 
 ---
 
-**Q1 — Sub-phase and step transitions: real recorded movements with checks and announcements, or silent screen-changes? — Structural — decided. First structural pilot.**
+**Q1 — Sub-phase and step transitions: real recorded movements with checks and announcements, or silent screen-changes? — Landed 2026-05-02 (commit `c87c307`).**
 
-Today's StudyTab advances sub-phases by incrementing a counter on screen, and SermonWorkspace advances steps the same way; neither calls the central save-and-check logic. The product owner has ruled that the redesign **routes both through the central logic.** Sections 3, 5, and 6 of this document carry through under that ruling. The implementation reach is meaningfully larger than the redesign's original framing assumed: new save-path rules, new rejection codes, fixture updates, visibility markers. That reach is accepted.
+The redesign routes both through the central save-and-check logic. `StudyTab.jsx` (`advanceSubPhase` / `advanceStep` / `jumpToStep` / `jumpToSubPhase`) and `SermonWorkspace.jsx` (`handleTabChange`) call `transitionState` with source-position content as evidence. Process #1 (monotonic) and Process #2 (empty-evidence with legacy carve-out) fire at all three resolutions. The Process #3 visibility marker fires on sub-phase + step movements via the new `onMovement` callback bubbled from StudyTab. Contract tests extended to sub-phase + step coverage. See `docs/ENFORCEMENT_STATUS.md` per-clause table for current Process #1/#2/#3 status.
 
 **Q2 — Reshape the data, or work within the current shapes? — Merged into SFDI.**
 
 Reshape decisions need field-level evidence; SFDI's per-field walks are exactly that evidence. Rename, merge, split, move, retire are already named in the SFDI charter as outcomes the per-field walks may surface. Retired from SPRD's open-questions list. *The structural fact that no schema change is forced by the redesign — adding new pieces inside a JSON bundle, splitting a slot, adding sub-fields all work without a migration — is the part SPRD still owns.*
 
-**Q3 — At sub-phase boundaries: hard gates or soft guidance? — Structural — decided.**
+**Q3 — At sub-phase boundaries: hard gates or soft guidance? — Landed 2026-05-02 (commit `ec3f960`).**
 
-**Ruling:** hard gates with synthesis presence at the synthesis-producing boundaries (RT → Implications and Implications → MPT/MPS) and full coverage / structural completeness at the earlier boundaries (Observe → Interpret and Interpret → RT). Continue is hard-disabled with a clear "you can't advance until X" message when the work is insufficient.
-
-**Why hard.** Soft guidance lets the pastor advance with weak evidence and pushes the consequence downstream into MPT/MPS, where the substrate is already weakened. Hard gates protect the named outcomes of each sub-phase so the next sub-phase has substance to work from. The punch-in-the-face quality of a hard block is accepted as the cost of the artifact framing in section 2 holding. The remaining N/A handling — what to do when a field is genuinely inapplicable to a passage — is split out as Q3b below.
+Hard gates. The disabled-Continue UX layer in StudyTab consumes `evaluateAdvance(sermon, kind, fromIndex)` from `src/utils/studyAdvancement.js`; Continue buttons render `disabled` with a `title` attribute and inline hint when the source position is empty. Stage tabs and breadcrumb pills keep Q1's click-then-banner UX (rulings 1 and 2: navigation, not commitment). Today's enforcement is the empty-evidence baseline at the source position; SFDI's per-boundary thresholds (coverage at the early boundaries, synthesis presence at the synthesis-producing boundaries, the N/A escape valve per field) extend `evaluateAdvance` later — no UI changes needed when they land. The remaining N/A handling — what to do when a field is genuinely inapplicable to a passage — sits in SFDI's scope as Q3b.
 
 **Q3b — N/A escape valve: how should fields that don't apply to a given passage be handled? — Merged into SFDI.**
 
