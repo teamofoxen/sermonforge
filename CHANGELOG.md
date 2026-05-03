@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-03 — skill: add drift-sweep — evidence-based doc/spec drift verification with externalized validator
+
+- New project skill at `.claude/skills/drift-sweep/SKILL.md` enforcing criteria-first → script-first → separated detection/remediation → measurable convergence workflow for any doc/spec/glossary/config drift verification request.
+- Bans self-attestation ("looks clean," "no drift found") without raw validator output; requires four-component report (criteria + script + raw output + convergence statement).
+- Convergence predicate: single clean post-remediation pass when nothing changed, or Pass A + Pass B both exit 0 after deferred items / script hardening absorbed.
+- Hard 5-iteration ceiling forces escalation rather than indefinite re-passing; deferred findings must be promoted into the next iteration's checklist.
+- Frontmatter uses only documented fields (`name`, `description`); slash command `/drift-sweep` documented in body for manual invocation.
+
+---
+
 ## 2026-05-02 — docs: sermon-workspace.md Phase 1 Observe note — flag SFDI walk's two new fields not yet in code
 
 - Added an SFDI walk note to the Phase 1 Observe section flagging that two fields decided in the Phase 1 walk (Background, Surface Questions) are not yet in `OBSERVE_FIELDS` code; the working order through the 11 fields is named; the code change lands with the Isolated-World Workspace UX overhaul.
