@@ -1,7 +1,7 @@
 # Study Field Definition Initiative — Working Document
 
 **Status:** Active. Phase 1 (Observe) walk in progress.
-**Last touched:** 2026-05-02.
+**Last touched:** 2026-05-03.
 **Charter:** [`sfdi-charter.md`](./sfdi-charter.md) — the why, the boundaries, the approach.
 **Vision sheet:** [`sfdi-throughline-vision.md`](./sfdi-throughline-vision.md) — the throughline arc kept in view during walks.
 **Merida cross-reference:** `memory/project_cce_merida_source.md` — the source SermonForge's Study structure was built from.
@@ -82,9 +82,9 @@ The "outside-in" arc through the first four fields: world around the book (Backg
 
 ### Field 1 — Background *(new)*
 
-**Status:** Draft. Awaiting ratification of question sequence + inheritance ruling.
+**Status:** Ratified 2026-05-03.
 
-**Proposed question sequence (from Merida's named items):**
+**Question sequence (from Merida's named items):**
 
 | # | Key | Prompt |
 |---|---|---|
@@ -93,7 +93,7 @@ The "outside-in" arc through the first four fields: world around the book (Backg
 | 3 | `audience` | Who was the original audience, and what occasion prompted the writing? |
 | 4 | `genre` | What kind of literature is this? |
 
-**Draft seven-slot entry:**
+**Seven-slot entry:**
 
 - **Name:** Background
 - **Intent:** Establish the world the book was written into — the historical and literary frame the passage stands inside.
@@ -103,18 +103,15 @@ The "outside-in" arc through the first four fields: world around the book (Backg
 - **Connects from:** Nothing (first field of Observe). Opens against the passage and its book.
 - **Connects to:** Context — having framed the book, locate the passage inside it.
 
-**Open: inheritance ruling.** Background is book-level, not passage-level. Three options pending pastor's decision:
-- **(a) No inheritance** — pastor writes Background fresh for every sermon. Simple but high friction.
-- **(b) Series-level Background** — series carries the book's Background; each sermon inherits and can override. Lower friction, matches Merida's "less needed each week."
-- **(c) Defer** — capture per-sermon now; design series-level inheritance as a SPRD structural follow-up after SFDI ships into structure.
+**Inheritance ruling (2026-05-03):** Series-level — option (b). The series carries the book's Background; each sermon inherits and can override. Matches Merida's "less needed each week" cadence. Implementation is SPRD structural work (data model for series-level Background entry + UI surface + per-sermon override mechanism) — to be added to the SPRD structural backlog.
 
 ---
 
 ### Field 2 — Context
 
-**Status:** Question sequence known (pastor's voice, 2026-05-02). Awaiting formalization under the field pattern.
+**Status:** Ratified 2026-05-03.
 
-**Question sequence (from pastor):**
+**Question sequence (pastor's voice 2026-05-02; keys confirmed 2026-05-03):**
 
 | # | Key | Prompt |
 |---|---|---|
@@ -123,25 +120,71 @@ The "outside-in" arc through the first four fields: world around the book (Backg
 | 3 | `impact` | Do those answers impact what's happening in this passage? If so, how? |
 | 4 | `holy_spirit_intent` | Why do you think the Holy Spirit led the author to write (a) this passage, (b) in this place? |
 
-**Pending under new pattern:**
-- Formalize the seven-slot entry with Connects-from = Background (was "nothing" before Background was added).
-- Confirm question keys.
+**Seven-slot entry:**
+
+- **Name:** Context
+- **Intent:** Locate the passage inside the book — see what flanks it, name how that bearing shapes the passage, surface why the Holy Spirit placed it here.
+- **Question sequence:** Before → After → Impact → Holy Spirit Intent.
+- **What gets written:** Q1–2 describe the flanking material; Q3 names how the flanks bear on the passage; Q4 takes the synthesizing why-this-here step.
+- **Role in sub-phase:** Second field. Locates the passage inside the world Background framed.
+- **Connects from:** Background — having framed the world the book sits inside, Context locates the passage inside the book.
+- **Connects to:** Surface Questions — having located the passage, stand on its surface and report what's there.
 
 ---
 
 ### Field 3 — Surface Questions *(new)*
 
-**Status:** Placeholder. Not yet walked under the new pattern.
+**Status:** Ratified 2026-05-03 — option (c), Where/When/How subset.
 
-**Initial framing (from earlier in session):** stand on the surface and report — Who? What? Where? When? Why (the stated cause in the text)? How? Today's pre-pattern proposal had this as a single question with the W-battery as the hint. Under the field pattern, candidates include: a single question with all six W's; six separate questions (one per W); or the Where/When/How subset only (since Who/What/Why overlap existing fields). To be settled when walked.
+**Question sequence:**
+
+| # | Key | Prompt |
+|---|---|---|
+| 1 | `where` | Where does this take place? |
+| 2 | `when` | When does this take place? |
+| 3 | `how` | How does this unfold? |
+
+**Seven-slot entry:**
+
+- **Name:** Surface Questions
+- **Intent:** Stand on the surface of the text and report basic situational facts before structural or analytical work begins.
+- **Question sequence:** Where → When → How.
+- **What gets written:** Brief reportorial answers grounded in what the text says, not interpretation. Genre-uneven: narrative passages fill all three cleanly; epistle/wisdom may legitimately N/A on Where/When (handled by the per-field N/A escape valve).
+- **Role in sub-phase:** Third field. Surface read of the text after Context located it; the reportorial sweep before structural and analytical fields take over.
+- **Connects from:** Context — having located the passage in the book, stand on its surface and report what's there.
+- **Connects to:** Divisions / Thought Units — having reported the surface, now look at how the page is structured.
+
+**Overlap resolution:** option (c) drops Who/What/Why because they overlap downstream fields (Main Characters / Big Ideas / Obvious Point). The deeper Who/What/Why work happens in those dedicated fields; Surface Questions stays reportorial. Resolves the end-of-Observe "overlap to address" open item at the field level.
 
 ---
 
-### Fields 4–11
+### Field 4 — Divisions / Thought Units
+
+**Status:** Walk in progress 2026-05-03. Awaiting ruling on shape (one question vs two) and on the label question.
+
+**Current code state** (`OBSERVE_FIELDS[1]` in `src/utils/studyFields.js`): label `Divisions / Thought Units`, single hint "What are the main divisions or thought units of the passage?"
+
+**Merida cross-reference:** "How does the passage break up? How many parts?"
+
+**Two shape options under consideration:**
+
+- **(a) One question** — keep current shape. `divisions` — "What are the main divisions or thought units of the passage? Name each part and what signals each break."
+- **(b) Two questions** — split structural identification from textual evidence.
+  - `divisions` — "Identify the main divisions or thought units. Name each part and where it begins/ends."
+  - `signals` — "What signals each break? (transition words, change in subject, character, setting, genre marker, etc.)"
+
+**Recommendation:** (b). Two intellectual moves: feeling where the parts fall, then naming the textual evidence for the breaks. Splitting them adds discipline without bloat.
+
+**Label question:** "Divisions / Thought Units" is a slash-pair label. Keep as-is, or rename (e.g., "Divisions", "Structure", "Thought Units")?
+
+**Suggested throughline → Field 5 (Notable Commands):** Having seen the shape, look at the imperatives that drive the parts.
+
+---
+
+### Fields 5–11
 
 Not yet walked. In current `OBSERVE_FIELDS` order:
 
-- Divisions / Thought Units
 - Notable Commands
 - Notable Statements
 - Main Characters
@@ -156,11 +199,9 @@ Not yet walked. In current `OBSERVE_FIELDS` order:
 
 When all 11 Observe fields have per-field entries, the within-sub-phase flow pass takes a holistic look. Items already on the list:
 
-- **Overlap to address:** Surface Questions' Who? / What? / Why? overlaps Main Characters / Big Ideas / Obvious Point. Options at flow-pass time: leave the overlap (each field hits a different angle), tighten hints to deconflict, or merge.
 - **Reshape decisions:** any rename / merge / split / move / retire surfaced during per-field walks.
 - **Named outcome:** articulate the **Observation Set** — what it IS, how the 11 fields compose into it.
 - **Load-bearing fields:** which fields the empty-evidence threshold rests on at the Observe → Interpret boundary.
-- **Inheritance ruling for Background** (if not settled at Field 1).
 
 ---
 
