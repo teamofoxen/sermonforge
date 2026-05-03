@@ -158,8 +158,18 @@ Four structured worksheet phases. Each phase:
 Field definitions live in `src/utils/studyFields.js`.
 
 #### Phase 1: Observe → `sermons.observations` (JSON)
-9 fields: `context`, `divisions`, `commands`, `statements`, `characters`, `big_ideas`,
+9 fields in code today: `context`, `divisions`, `commands`, `statements`, `characters`, `big_ideas`,
 `obvious_point`, `basic_outline`, `applications`.
+
+**SFDI Phase 1 walk note (as of 2026-05-02):** the Observe walk has decided two
+additional fields that are not yet in code — **Background** (book-level world,
+positioned first) and **Surface Questions** (the W-battery sweep, positioned
+third). Working order is: Background → Context → Surface Questions → Divisions
+→ Commands → Statements → Characters → Big Ideas → Obvious Point → Basic
+Outline → Possible Implications. The code change to add the two new fields
+will land as part of the Isolated-World Workspace UX overhaul (see
+`docs/PROPOSALS/study-phase-redesign.md` section 8). Until then, `OBSERVE_FIELDS`
+in `src/utils/studyFields.js` reflects the current 9.
 
 **Note:** the `applications` field (UI label: "Possible Implications" — renamed
 from "Possible Applications" in the Vocabulary cleanup pass; the JSON key stays

@@ -2,6 +2,12 @@
 
 ---
 
+## 2026-05-02 — docs: sermon-workspace.md Phase 1 Observe note — flag SFDI walk's two new fields not yet in code
+
+- Added an SFDI walk note to the Phase 1 Observe section flagging that two fields decided in the Phase 1 walk (Background, Surface Questions) are not yet in `OBSERVE_FIELDS` code; the working order through the 11 fields is named; the code change lands with the Isolated-World Workspace UX overhaul.
+
+---
+
 ## 2026-05-02 — docs: comprehensive SPRD/SFDI doc drift sweep — every surface reconciled to current state
 
 - SFDI charter — status header rewritten ("walk in progress" not "scoping; no walkthrough begun"), SFDI document framing updated (working doc exists, accumulates entries), Observe-count footnote added (9 → 11 with Background + Surface Questions), Q8 closed in SPRD-owns list, Isolated-World Workspace UX overhaul added to SPRD-owns list, "downstream initiatives" paragraph rewritten to past-tense for landed pilots.
