@@ -32,71 +32,20 @@ import { fetchPassage } from "../db/database";
 import PrimaryButton from "./primitives/PrimaryButton";
 import SecondaryButton from "./primitives/SecondaryButton";
 import IconButton from "./primitives/IconButton";
-import { STAGE, STEP, SUB_PHASE, ContractViolation } from "../core/contracts";
+import { STAGE, STEP, ContractViolation } from "../core/contracts";
 import { transitionState } from "../core/spine";
+import {
+  canonicalSubPhase, canonicalStep,
+  buildSubPhaseEvidence, buildStepEvidence,
+  evaluateAdvance, formatAdvanceRejection,
+} from "../utils/studyAdvancement";
 
 const STEP_LABELS = ["Exegesis", "MPT / MPS", "Outline", "Functional Elements"];
 const PHASE_LABELS = ["Observe", "Interpret", "Redemptive Thread", "Implications"];
 
-// ── Q1 spine-routing helpers ─────────────────────────────────────────────────
-// Sub-phase + step transitions route through the spine (Process Contracts #1/#2).
-// Local 1–4 indices map to canonical PascalCase values; evidence is the source
-// position's content so Process #2's empty-evidence check fires meaningfully.
-
-const SUB_PHASE_BY_INDEX = [SUB_PHASE.Observe, SUB_PHASE.Interpret, SUB_PHASE.RedemptiveThread, SUB_PHASE.Implications];
-const STEP_BY_INDEX = [STEP.Exegesis, STEP.MPT_MPS, STEP.Outline, STEP.FunctionalElements];
-
-const SUB_PHASE_FIELD_MAP = {
-  [SUB_PHASE.Observe]: "observations",
-  [SUB_PHASE.Interpret]: "interpretation",
-  [SUB_PHASE.RedemptiveThread]: "redemptive_thread",
-  [SUB_PHASE.Implications]: "implications",
-};
-
-function canonicalSubPhase(n) { return SUB_PHASE_BY_INDEX[n - 1]; }
-function canonicalStep(n) { return STEP_BY_INDEX[n - 1]; }
-
-function buildSubPhaseEvidence(sermon, subPhase) {
-  const fieldName = SUB_PHASE_FIELD_MAP[subPhase];
-  if (!fieldName || !sermon) return "";
-  const data = parseStructuredField(sermon[fieldName]);
-  if (!data || typeof data !== "object") return "";
-  return Object.values(data)
-    .filter((v) => v && String(v).trim())
-    .map((v) => String(v).trim())
-    .join("\n");
-}
-
-function buildStepEvidence(sermon, step) {
-  if (!sermon) return "";
-  if (step === STEP.Exegesis) {
-    return [
-      buildSubPhaseEvidence(sermon, SUB_PHASE.Observe),
-      buildSubPhaseEvidence(sermon, SUB_PHASE.Interpret),
-      buildSubPhaseEvidence(sermon, SUB_PHASE.RedemptiveThread),
-      buildSubPhaseEvidence(sermon, SUB_PHASE.Implications),
-    ].filter((s) => s).join("\n");
-  }
-  if (step === STEP.MPT_MPS) {
-    return [(sermon.mpt || "").trim(), (sermon.mps || "").trim()].filter((s) => s).join("\n");
-  }
-  if (step === STEP.Outline) {
-    const o = (sermon.outline || "").trim();
-    return o === "" || o === "[]" ? "" : o;
-  }
-  if (step === STEP.FunctionalElements) {
-    const fe = (sermon.functional_elements || "").trim();
-    return fe === "" || fe === "{}" ? "" : fe;
-  }
-  return "";
-}
-
-function formatRejection(e) {
-  if (!e) return "Couldn't advance.";
-  if (e.code === "PROCESS_2_EMPTY_EVIDENCE") return "Add some content before advancing.";
-  if (e.code === "PROCESS_1_FORWARD_TO_PRIOR") return "Can't move forward to a prior position.";
-  return e.message || "Couldn't advance.";
-}
+// SPRD Q1 spine-routing helpers and Q3 sufficiency evaluator live in
+// `src/utils/studyAdvancement.js`. SFDI's per-boundary thresholds extend
+// `evaluateAdvance` there; UI consumers in this file don't change.
 
 function CollapseArrow({ open }) {
   return (
@@ -593,7 +542,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
         });
       } catch (e) {
         if (e instanceof ContractViolation) {
-          setAdvanceError(formatRejection(e));
+          setAdvanceError(formatAdvanceRejection(e));
           return;
         }
         throw e;
@@ -623,7 +572,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
       });
     } catch (e) {
       if (e instanceof ContractViolation) {
-        setAdvanceError(formatRejection(e));
+        setAdvanceError(formatAdvanceRejection(e));
         return;
       }
       throw e;
@@ -673,7 +622,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
       });
     } catch (e) {
       if (e instanceof ContractViolation) {
-        setAdvanceError(formatRejection(e));
+        setAdvanceError(formatAdvanceRejection(e));
         return;
       }
       throw e;
@@ -717,7 +666,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
       });
     } catch (e) {
       if (e instanceof ContractViolation) {
-        setAdvanceError(formatRejection(e));
+        setAdvanceError(formatAdvanceRejection(e));
         return;
       }
       throw e;
@@ -745,7 +694,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
       });
     } catch (e) {
       if (e instanceof ContractViolation) {
-        setAdvanceError(formatRejection(e));
+        setAdvanceError(formatAdvanceRejection(e));
         return;
       }
       throw e;
@@ -884,6 +833,13 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
   }
 
   const summaryProps = { summaries, summaryLoading };
+
+  // SPRD Q3 — sufficiency per Continue button. The disabled-Continue UX consumes
+  // these. SFDI's per-boundary thresholds extend `evaluateAdvance` later; the
+  // call sites here don't change. Empty-evidence baseline today.
+  const subPhaseSufficiency = evaluateAdvance(sermon, "sub_phase", activeSubPhase);
+  const step2Sufficiency = evaluateAdvance(sermon, "step", 2);
+  const step3Sufficiency = evaluateAdvance(sermon, "step", 3);
 
   return (
     <div className="study-stage-container">
@@ -1264,11 +1220,24 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
           )}
 
           <div className="step-advance">
-            <PrimaryButton size="sm" onClick={advanceSubPhase}>
+            <PrimaryButton
+              size="sm"
+              onClick={advanceSubPhase}
+              disabled={!subPhaseSufficiency.ok}
+              title={subPhaseSufficiency.reason || ""}
+            >
               {activeSubPhase < 4
                 ? `Continue to ${PHASE_LABELS[activeSubPhase]} →`
                 : `Continue to ${STEP_LABELS[1]} →`}
             </PrimaryButton>
+            {!subPhaseSufficiency.ok && (
+              <div
+                data-testid="advance-hint"
+                style={{ marginTop: "6px", fontSize: "12px", color: "var(--ink-ghost)", fontStyle: "italic" }}
+              >
+                {subPhaseSufficiency.reason}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1458,9 +1427,22 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
           )}
 
           <div className="step-advance">
-            <PrimaryButton size="sm" onClick={advanceStep}>
+            <PrimaryButton
+              size="sm"
+              onClick={advanceStep}
+              disabled={!step2Sufficiency.ok}
+              title={step2Sufficiency.reason || ""}
+            >
               {`Continue to ${STEP_LABELS[2]} →`}
             </PrimaryButton>
+            {!step2Sufficiency.ok && (
+              <div
+                data-testid="advance-hint"
+                style={{ marginTop: "6px", fontSize: "12px", color: "var(--ink-ghost)", fontStyle: "italic" }}
+              >
+                {step2Sufficiency.reason}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1606,9 +1588,22 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
 
           {outline.length > 0 && (
             <div className="step-advance">
-              <PrimaryButton size="sm" onClick={advanceStep}>
-              {`Continue to ${STEP_LABELS[3]} →`}
+              <PrimaryButton
+                size="sm"
+                onClick={advanceStep}
+                disabled={!step3Sufficiency.ok}
+                title={step3Sufficiency.reason || ""}
+              >
+                {`Continue to ${STEP_LABELS[3]} →`}
               </PrimaryButton>
+              {!step3Sufficiency.ok && (
+                <div
+                  data-testid="advance-hint"
+                  style={{ marginTop: "6px", fontSize: "12px", color: "var(--ink-ghost)", fontStyle: "italic" }}
+                >
+                  {step3Sufficiency.reason}
+                </div>
+              )}
             </div>
           )}
         </div>

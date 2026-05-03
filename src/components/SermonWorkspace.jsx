@@ -10,43 +10,12 @@ import {
   transitionState,
 } from "../core/spine";
 import { pickSermonColumns, STAGE, STAGE_SEQUENCE, STAGE_LABELS, ContractViolation } from "../core/contracts";
+import { buildStageEvidence, formatTabRejection } from "../utils/studyAdvancement";
 
-// Q1 spine routing — stage transitions through handleTabChange call
-// transitionState. Evidence is the source stage's content; an empty source
-// stage rejects on non-legacy sermons via Process #2.
-function buildStageEvidence(sermon, stage) {
-  if (!sermon) return "";
-  const nonEmpty = (s) => {
-    if (!s) return "";
-    const t = String(s).trim();
-    if (t === "" || t === "[]" || t === "{}") return "";
-    return t;
-  };
-  if (stage === STAGE.Study) {
-    return [
-      sermon.observations, sermon.interpretation,
-      sermon.redemptive_thread, sermon.implications,
-      sermon.mpt, sermon.mps, sermon.outline, sermon.functional_elements,
-    ].map(nonEmpty).filter((s) => s).join("\n");
-  }
-  if (stage === STAGE.Blueprint) {
-    return [sermon.outline, sermon.functional_elements].map(nonEmpty).filter((s) => s).join("\n");
-  }
-  if (stage === STAGE.Manuscript) {
-    return nonEmpty(sermon.manuscript);
-  }
-  if (stage === STAGE.Delivery) {
-    return [sermon.delivery_notes, sermon.timing_notes, sermon.post_sermon].map(nonEmpty).filter((s) => s).join("\n");
-  }
-  return "";
-}
-
-function formatTabRejection(e) {
-  if (!e) return "Couldn't change tab.";
-  if (e.code === "PROCESS_2_EMPTY_EVIDENCE") return "Add some content before moving to a new stage.";
-  if (e.code === "PROCESS_1_FORWARD_TO_PRIOR") return "Can't move forward to a prior stage.";
-  return e.message || "Couldn't change tab.";
-}
+// SPRD Q1 spine-routing helpers (buildStageEvidence, formatTabRejection) live
+// in `src/utils/studyAdvancement.js` alongside the sub-phase / step variants
+// and SPRD Q3's `evaluateAdvance`. Stage tabs keep Q1's click-then-banner UX
+// (per the Q3 ruling: tabs are navigation, not commitment).
 import { updateMemory, extractOutlinePattern, extractPhrasePatterns } from "../utils/memory";
 import { abortInFlightForSermon } from "../utils/ai";
 import { autoResize } from "../utils";

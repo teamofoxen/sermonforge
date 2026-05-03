@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-02 — feat: SPRD Q3 — hard-gate UX layer (disabled Continue when source empty)
+
+- New `src/utils/studyAdvancement.js` extracted from StudyTab and SermonWorkspace; exposes `evaluateAdvance(sermon, kind, fromIndex)` as the SFDI threshold hook point alongside the Q1 evidence builders and rejection formatters.
+- `StudyTab.jsx` Continue buttons (sub-phase, step 2, step 3) now `disabled` with `title` attribute and inline hint when source is empty; pastor sees the gate before the click rather than the click-then-banner cycle from Q1.
+- Stage tabs and breadcrumb pills unchanged — they keep Q1's click-then-banner UX per the Q3 ruling that tabs/pills are navigation, not commitment.
+- New `tests/contracts/process-2-evidence-gated-ux.test.tsx` covers the disabled-Continue UI (component) plus `evaluateAdvance` (unit). Test count 675 → 682.
+- `docs/ENFORCEMENT_STATUS.md` updated — Process #2 row notes the Q3 UX layer; SPRD section reflects Q1 + Q3 both landed, Q8 still open.
+
+---
+
 ## 2026-05-02 — feat: /release skill — gated tag-and-push with security review
 
 - New `/release` skill at `.claude/skills/release/SKILL.md` — pre-flight gates (clean tree, on main, `npm test` pass), version proposal, mandatory `/security-review` invocation, smoke-test checklist from `docs/PROPOSALS/distribution.md` Section 12, then tag + push.
