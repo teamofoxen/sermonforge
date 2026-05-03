@@ -39,6 +39,12 @@ A **field** is an isolated focused workspace containing one or more **questions*
 - *Question* — an ordered prompt inside a field (new canonical term).
 - *Answer* — what the pastor writes for each question.
 
+### Structured-exercise questions
+
+Most questions in a field are text prompts answered in a textarea. Some questions are **structured exercises** — a canvas the pastor works inside, not a textarea they write into. Field 4 (Divisions / Thought Units) is the first walked example: its Q1 is an indented sentence-layout canvas; its Q2 is a small follow-up table that references line numbers from Q1.
+
+The Field Pattern accommodates both. A field's question sequence may be any mix of text-prompt questions and structured-exercise questions. The "Next question" gating, the persistent prior-answer visibility, and the per-field empty-evidence override apply to either kind. The structured editor itself — Tab/Shift+Tab indent behavior, line-numbered gutter, level markers, paste-intercept, peripheral reference panel — is SPRD/Component-1 implementation work; SFDI declares only that the pattern *allows* the kind, not how it renders.
+
 ### Where this lives structurally
 
 - **SFDI** defines the question sequence per field — this document.
@@ -160,24 +166,52 @@ The "outside-in" arc through the first four fields: world around the book (Backg
 
 ### Field 4 — Divisions / Thought Units
 
-**Status:** Walk in progress 2026-05-03. Awaiting ruling on shape (one question vs two) and on the label question.
+**Status:** Ratified 2026-05-03.
 
-**Current code state** (`OBSERVE_FIELDS[1]` in `src/utils/studyFields.js`): label `Divisions / Thought Units`, single hint "What are the main divisions or thought units of the passage?"
+**Question sequence:**
 
-**Merida cross-reference:** "How does the passage break up? How many parts?"
+| # | Key | Prompt |
+|---|---|---|
+| 1 | `sentence_layout` | Type the passage by hand. Pull each subject and main verb to the left margin. Indent modifiers under what they modify. Re-align coordinate clauses to the column of their coordinate. |
+| 2 | `divisions` | Where does one main sentence end and the next begin? What signals each break? |
 
-**Two shape options under consideration:**
+**Seven-slot entry:**
 
-- **(a) One question** — keep current shape. `divisions` — "What are the main divisions or thought units of the passage? Name each part and what signals each break."
-- **(b) Two questions** — split structural identification from textual evidence.
-  - `divisions` — "Identify the main divisions or thought units. Name each part and where it begins/ends."
-  - `signals` — "What signals each break? (transition words, change in subject, character, setting, genre marker, etc.)"
+- **Name:** Divisions / Thought Units. The slash-pair earns its place — *Thought Units* names the groups, *Divisions* names the boundaries between them. Two sides of the same operation.
+- **Intent:** The spine-finding field. The pastor types the passage by hand and lays out its sentence-level structure. The slowness is the point — typing by hand begins the marination and forces structural attention. SermonForge removes friction from hard work; it does not make hard work easy. What surfaces here becomes the spine of the sermon's outline. The expository commitment underneath: **the point of the text is the point of the sermon**. The work toward MPT and MPS starts here.
+- **Question sequence:** Sentence Layout → Divisions.
+- **What gets written:** Q1 produces an indented document — each line carries structural depth (level 0–N), with main sentences at the left margin and modifiers indented under what they modify. Q2 produces a small list of break locations (referenced by Q1's line numbers) and the signals (connective, subject change, scene change, genre marker) that mark each break.
+- **Role in sub-phase:** Fourth field. The spine-finding field — the load-bearing structural pass that turns the surface report into a propositional skeleton. Strong candidate for load-bearing at the Observe → Interpret threshold.
+- **Connects from:** Surface Questions — having reported the passage's surface (where, when, how), now find the spine that holds it up.
+- **Connects to:** Notable Commands — having found the spine, look at the imperatives that drive each main sentence.
 
-**Recommendation:** (b). Two intellectual moves: feeling where the parts fall, then naming the textual evidence for the breaks. Splitting them adds discipline without bloat.
+**The three rules (the operation Q1 performs):**
 
-**Label question:** "Divisions / Thought Units" is a slash-pair label. Keep as-is, or rename (e.g., "Divisions", "Structure", "Thought Units")?
+1. **Subject + main verb** → pulled to the left margin. The spine of the clause.
+2. **Modifiers** (adjectives, adverbs, prepositional phrases, subordinate clauses) → indent under what they modify.
+3. **Coordinate clauses** ("and," "but," "or") → re-align to the column of their coordinate. Same indent level as their peer.
 
-**Suggested throughline → Field 5 (Notable Commands):** Having seen the shape, look at the imperatives that drive the parts.
+Clarifier: *main verb* = the finite verb (carries tense, head of the clause). Participles, infinitives, and gerunds are modifiers.
+
+**Quick outline tips — genre-specific application of the three rules:**
+
+The three rules are the operation across all genre. The reference panel beside the canvas surfaces genre-specific application tips:
+
+*For epistles* — the three rules above, applied as written. Long sentences with cascading modifier chains; coordinate clauses joined by "and," "but," "or."
+
+*For narrative* —
+
+1. Each main action → left margin. Most narrative clauses are actions; expect many lines at the margin.
+2. Description and character info ("who was a Pharisee," "now there was a famine") → indent under what they describe.
+3. Dialogue → indent under the speech verb. "He said" stays at the margin; the words spoken indent under it.
+
+*For poetry* — deferred for a future iteration.
+
+**Vocabulary inside the field:** plain language ("main sentence," "supporting sentence") carries the user-facing surface; precise grammatical terms (subject, main verb, modifiers, coordinate clauses) live in the instruction bar and reference panel where precision is the panel's job. The field label "Divisions / Thought Units" is preserved.
+
+**Per-field empty-evidence override:** Both questions required to advance. Q1 satisfied when the canvas has at least one main sentence (level 0) with at least one indented modifier under it; Q2 satisfied when the divisions table has at least one non-empty row.
+
+**Implementation pattern:** Field 4's Q1 is a structured-exercise question (see "Structured-exercise questions" in the Field Pattern). The structured editor (Tab/Shift+Tab structural indent, auto-generated gutter, level-0 visual marker, paste-intercept, peripheral reference panel, composite gating) is SPRD Component-1 implementation work.
 
 ---
 
@@ -193,6 +227,8 @@ Not yet walked. In current `OBSERVE_FIELDS` order:
 - Basic Outline
 - Possible Implications
 
+**Forward-looking note from Field 4's ratification:** Field 4 surfaces the propositional spine of the passage. Fields 5–8 (Notable Commands, Notable Statements, Main Characters, Big Ideas) read against that spine — each examines *what kind of work* the main sentences are doing. Notable Commands looks for the imperatives that drive them; Notable Statements for the indicatives; Main Characters for the subjects acting through them; Big Ideas for the conceptual weight they carry. When each field is walked, its connects-from line should orient against the spine Field 4 produces, not against the passage in raw form.
+
 ---
 
 ### Open items for the end-of-Observe within-sub-phase flow pass
@@ -201,7 +237,7 @@ When all 11 Observe fields have per-field entries, the within-sub-phase flow pas
 
 - **Reshape decisions:** any rename / merge / split / move / retire surfaced during per-field walks.
 - **Named outcome:** articulate the **Observation Set** — what it IS, how the 11 fields compose into it.
-- **Load-bearing fields:** which fields the empty-evidence threshold rests on at the Observe → Interpret boundary.
+- **Load-bearing fields:** which fields the empty-evidence threshold rests on at the Observe → Interpret boundary. **Field 4 (Divisions / Thought Units) is a strong candidate as of its 2026-05-03 ratification** — its spine-finding role makes the Observation Set without it largely incoherent.
 
 ---
 
