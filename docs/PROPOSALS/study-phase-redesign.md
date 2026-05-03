@@ -1,8 +1,8 @@
 # Study Phase Re-Design (SPRD) — Planning Document
 
-**Status:** **Active (revised 2026-05-02). Structural-only — content work merged into SFDI.** This document owns the structural layer of the Study redesign: spine routing, sub-phase + step transitions, evidence-gate firing mechanics, the Implications restructure shape, Step 5 as its own workspace step, PC card removal, movement visibility, and the screen + AI-prompt surfaces SPRD names. The content layer — what each named outcome IS, what 'enough' looks like at each specific boundary, which fields enact which voice in Implications, what PC content each field carries — moved into SFDI. Sections 2 and 3 below now carry only the structural framing; the substance lives in SFDI. Q2, Q3b, Q6, and Q7 content half retired from this document's open questions. SFDI moves offline (user drafts fields in their own time using `docs/PROPOSALS/sfdi-throughline-vision.md`); Claude shapes drafts when brought in. The first structural pilot (proposed in section 8) is **Q1 spine routing** — the foundation everything else stands on.
+**Status:** **Active (revised 2026-05-02). Structural-only — content work merged into SFDI. All open questions settled.** This document owns the structural layer of the Study redesign: spine routing, sub-phase + step transitions, evidence-gate firing mechanics, the Implications restructure shape, Step 5 as its own workspace step, PC card removal, the Implications Synthesis as the named outcome of the Implications sub-phase, the Isolated-World Workspace UX overhaul, movement visibility, and the screen + AI-prompt surfaces SPRD names. The content layer — what each named outcome IS, what 'enough' looks like at each specific boundary, which fields enact which voice in Implications, what PC content each field carries — moved into SFDI. Sections 2 and 3 below now carry only the structural framing; the substance lives in SFDI. Q2, Q3b, Q6, and Q7 content half retired from this document's open questions. SFDI runs in-session (working document at `docs/PROPOSALS/study-field-definition-initiative.md`).
 
-**Question state after revision:** Q1 decided (sub-phase and step transitions become real recorded movements). Q3 decided (hard gates with synthesis presence at the synthesis-producing boundaries; coverage and structural completeness elsewhere). Q4 settled this revision (old-sermon exemption stays scoped to the original empty-evidence rule). Q5 shipped 2026-05-01 via ACCI Item A2 (`2b0fa66`) — Synthesize and Compile now route through the proposal pattern alongside four other previously-bypassed AI write paths. Q7 structural half decided (Implications stays as one step with three voices); content half merged into SFDI. Q9 closed and handed off to audit triage. Q2, Q3b, Q6 merged into SFDI. Q8 open and structural.
+**Question state after revision:** Q1 landed 2026-05-02 (commit `c87c307`). Q3 landed 2026-05-02 (commit `ec3f960`). Q8 closed 2026-05-02 — ruling (b) advisory carve-out; the seven inline Review/Chat buttons are governed by the Principle directly, outside Process #5's enforcement scope. Q4 settled (old-sermon exemption scoped to the original empty-evidence rule). Q5 shipped 2026-05-01 via ACCI Item A2 (`2b0fa66`). Q7 structural half decided (Implications stays as one step with three voices); content half merged into SFDI. Q9 closed and handed off to audit triage. Q2, Q3b, Q6 merged into SFDI.
 
 **Audience:** The lone developer of SermonForge, who is also a pastor and the pastor-user. Written so that every term and phrase lands without needing engineering vocabulary.
 **Date drafted:** 2026-04-30. Revised 2026-05-02.
@@ -21,7 +21,7 @@ Read this before the sections below. SPRD owns the structural layer of the redes
 | Q7 — Implications as one step with three voices | Structural half: decided. Content half: merged into SFDI. |
 | Q4 — old-sermon exemption scope | Structural — settled (scope to original rule) |
 | Q9 — three vestigial fields cleanup | Closed (handed off to audit triage) |
-| Q8 — inline AI Reviews through the spine | **Structural — open. Next pilot.** |
+| Q8 — inline AI Reviews through the spine | Closed 2026-05-02 — ruling (b) advisory carve-out |
 | Step 5 (Intro/Conclusion) as its own workspace step | Structural — scope extension (see section 7) |
 | PC card removal | Structural — sequenced after Q7 structural half lands |
 
@@ -179,9 +179,9 @@ For each edit below, the existing rule is paraphrased (the prior investigation c
 
 **Today it says:** When the AI proposes a write into a field, the proposal is rejected if the field is empty. The check fires through the central save-and-check logic.
 
-**What it should say:** Either (a) the rule extends to cover the inline Review buttons (Observe Review, Interpret Review, RT Review, Implications Review), which today bypass the central save-and-check logic and are unchecked; *or* (b) the rule explicitly names inline reviews as advisory and out of scope — a documented carve-out (Q8 in section 8).
+**What it should say (settled 2026-05-02):** Q8 ruling (b) — the rule explicitly names inline reviews and conversational AI interfaces (the seven inline calls: Observe Review, Interpret Review, RT Review, Implications Review, MPS Chat, Outline Suggest, FE Chat) as advisory and out of scope; CORE.md Process #5 now carries the explicit scope note naming the substitutive `ai_proposal`/`ai_apply` mutation cycle as the enforcement target.
 
-**Why.** Today the rule speaks loudly about one class of AI write (the Draft buttons) and is silent about the seven inline AI calls. The silence is functioning as an implicit carve-out without saying so.
+**Why.** Before the Q8 carve-out landed, the rule spoke loudly about one class of AI write (the Draft buttons) and was silent about the seven inline AI calls — the silence functioned as an implicit carve-out without saying so. Q8 settled this by making the carve-out explicit rather than implicit.
 
 ### Mutation Contract #2 — the "AI writes go through the proposal pattern" rule
 
@@ -212,7 +212,7 @@ The first column in the table below lists test file names — these are how the 
 | `process-4-pc-follows-text.test.tsx` | New check that AI prompts treat PC as enrichment never as a precondition (the SPRD prompt-contract commitment) — fires regardless of whether per-sub-phase modulation is binding or descriptive. | New | Process #4 | No |
 | `process-4-pc-follows-text.test.tsx` | Per-sub-phase PC progression checks (binding modulation) — wait for SFDI, then for the small structural ruling deferred in section 5's Process #4 fork. | Deferred | Process #4 | Conditional |
 | `process-5-ai-augments.test.ts` | Existing check (AI proposal on empty field rejects) remains valid. | Unchanged | Process #5 | No |
-| `process-5-ai-augments.test.ts` | If Q8 = (a), new check asserts inline AI reviews route through the central save-and-check logic. If Q8 = (b), no new check. | New (conditional on Q8) | Process #5 | Conditional |
+| `process-5-ai-augments.test.ts` | Q8 settled as (b) advisory carve-out — no new check needed. | Unchanged | Process #5 | No |
 
 **Standing fixture-parity rule.** Any change to the central save-and-check logic must update the test fixture in the same code change. The redesign's most invasive shape — making sub-phase movement a real recorded boundary, returning per-sub-phase rejection codes, returning a visibility flag for sub-phase boundaries, optionally adding a save path for AI Reviews — implicates the test fixture in three of the rows above. Any redesign work that touches the central logic carries a fixture-update obligation in the same code change.
 
@@ -281,9 +281,9 @@ Each Q below carries a disposition tag — *Structural — decided*, *Structural
 
 **Q3 hard-gate UX — landed 2026-05-02 (commit `ec3f960`).** The disabled-Continue UX layer. Continue buttons render `disabled` with a `title` attribute and inline hint when the source position is empty; pastors see the gate before the click rather than the click-then-banner cycle. Stage tabs and breadcrumb pills keep Q1's click-then-banner UX (per the Q3 ruling that tabs/pills are navigation, not commitment). The new `src/utils/studyAdvancement.js` is the SFDI threshold hook point — `evaluateAdvance(sermon, kind, fromIndex)` gets richer when SFDI lands per-boundary thresholds, no UI changes needed.
 
-**Q8 inline AI Reviews — next pilot. Open and structural.** Seven inline AI calls (Observe Review, Interpret Review, RT Review, Implications Review, MPS Chat, Outline Suggest, FE Chat) bypass the central save-and-check logic and live in screen-only state. Q8 settles whether they route through a new save path for AI Reviews (Process #5 coverage) or carve out as advisory. Separable from Q1's pilot — implements in its own change. See Q8 in this section for the trade-off.
+**Q8 inline AI Reviews — closed 2026-05-02. Ruling (b) advisory carve-out.** The seven inline AI calls (Observe Review, Interpret Review, RT Review, Implications Review, MPS Chat, Outline Suggest, FE Chat) are a deliberate carve-out from Process Contract #5's enforcement scope. CORE.md Process #5 now explicitly limits its enforcement to the substitutive `ai_proposal`/`ai_apply` mutation cycle; advisory AI interfaces are governed by the Principle directly. ENFORCEMENT_STATUS.md Process #5 row names the seven sites as the scoped carve-out. No code change.
 
-**Remaining structural backlog after Q8 lands:** the Implications restructure (Q7 structural half), Step 5 (Intro/Conclusion) as its own workspace step, PC card removal, the Implications Synthesis as the named outcome of the Implications sub-phase, and the **Isolated-World Workspace UX overhaul** (see below). All sequenced after SFDI's content half lands first.
+**Remaining structural backlog (all sequenced behind SFDI's content half):** the Implications restructure (Q7 structural half), Step 5 (Intro/Conclusion) as its own workspace step, PC card removal, the Implications Synthesis as the named outcome of the Implications sub-phase, and the **Isolated-World Workspace UX overhaul** (see below).
 
 **Isolated-World Workspace UX overhaul — added 2026-05-02 (SPRD scope, gated on SFDI).** A coordinated workspace UX redesign with three components. The umbrella principle: the sermon is its own isolated world. The pastor is *in* the work, not surveying an inventory.
 
@@ -339,11 +339,11 @@ PC modulation depends on knowing what PC content each field actually carries. SF
 
 Single coherent step keeps the four-sub-phase shape intact and forces the synthesis to do the unifying work. Splitting was rejected because adding sub-phases touches navigation, the position-tracking columns added in v17, and tests — and the three concerns are theologically related, not independent.
 
-**Q8 — Inline AI Review buttons: route through the central save-and-check logic, or stay as advisory? — Structural — open.**
+**Q8 — Inline AI Review buttons: route through the central save-and-check logic, or stay as advisory? — Closed 2026-05-02. Ruling: (b) advisory carve-out.**
 
-Seven inline AI calls (Observe Review, Interpret Review, RT Review, Implications Review, MPS Chat, Outline Suggest, FE Chat) bypass the central save-and-check logic and live in screen-only state. None are subject to Process Contract #5 — the "AI augments, doesn't substitute" rule. Routing them through a new save path specifically for AI Reviews brings the rule to bear and gives the safety net coverage; staying as-is keeps inline AI feeling lightweight and disposable. The harder version of this question is whether Process Contract #5 *should* cover advisory AI at all — the rule was written about substitutive AI writes, and inline reviews are read-only by design.
+Seven inline AI calls (Observe Review, Interpret Review, RT Review, Implications Review, MPS Chat, Outline Suggest, FE Chat) bypass the central save-and-check logic and live in screen-only state. The ruling: these are a deliberate advisory carve-out, not a Process #5 violation to fix. Process Contract #5's enforcement was always about substitutive AI writes (the `ai_proposal`/`ai_apply` mutation cycle that proposes content directly to sermon fields); the seven inline calls are advisory or conversational interfaces where any content application is a separate, explicit, user-confirmed gesture. Routing them through the spine would invent a mutation kind that doesn't mutate, with no contract benefit.
 
-**Why this Q is structural-but-not-shipping-with-the-pilot.** Q8's resolution doesn't depend on field definitions, so it's structural. But it's separable from Q1's spine-routing pilot — inline reviews can be carved out or routed in a follow-up change without blocking Q1. Settle Q8 once Q1 has landed and the spine is stable.
+**What landed 2026-05-02.** CORE.md Process #5 gained an explicit scope note naming the substitutive enforcement target and the advisory carve-out; ENFORCEMENT_STATUS.md Process #5 row names the seven sites as the scoped carve-out. Documentation only — no code change. Commit `79f3fd9`.
 
 **Q9 — Three unused fields: clean up in the redesign or in a separate pass? — Closed. Handed off to audit triage.**
 

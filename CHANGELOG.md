@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-02 — docs: SPRD planning doc + ENFORCEMENT_STATUS drift sweep — Q8 closed everywhere, umbrella naming consistent
+
+- SPRD planning doc — six stale "Q8 open" / "Q8 next pilot" surfaces updated to reflect Q8 closed (b) advisory carve-out (status header, question-state line, scope-map row, pilot-landings section, test-coverage row, Q8 entry itself, Process #5 redesign discussion).
+- SPRD planning doc status header — "SFDI moves offline" framing replaced with "SFDI runs in-session" pointer to the working SFDI document.
+- SPRD planning doc — "Remaining structural backlog after Q8 lands" qualifier dropped; backlog now reads as the ongoing list (Implications restructure, Step 5, PC card removal, Implications Synthesis named outcome, Isolated-World Workspace UX overhaul).
+- ENFORCEMENT_STATUS Last-verified parenthetical — "field-level UX redesign" renamed to "Isolated-World Workspace UX overhaul" with three components named.
+- Memory `project_sprd_sfdi_state.md` — description, SPRD bullet, and "where were we" guidance all aligned to the umbrella naming and Q8-closed state.
+
+---
+
 ## 2026-05-02 — docs: Isolated-World Workspace UX overhaul added to SPRD structural backlog
 
 - SPRD planning doc gains the **Isolated-World Workspace UX overhaul** as the umbrella structural commitment, replacing the standalone field-level UX entry; three components — (1) field-level spotlight, (2) sermon-level app-takeover with canonical BackButton return, (3) throughline visualization with field-completion summaries and animated cues to the throughline node.
