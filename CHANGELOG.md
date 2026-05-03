@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-02 — docs: SFDI Phase 1 walk started — field pattern locked, Observe expanded to 11 fields
+
+- New working SFDI doc at `docs/PROPOSALS/study-field-definition-initiative.md` captures the canonical Field Pattern (spotlight + sequential questions + persistent prompts + "Next question" affordance disabled-when-empty) and Phase 1 walk state.
+- Observe field order revised to 11 fields — Background and Surface Questions added as new fields; Background's draft seven-slot entry awaiting question-sequence ratification + inheritance ruling; Context's four pastor-articulated questions captured.
+- CORE.md Canonical Vocabulary gained two new terms — Question (ordered prompt inside a field) and Answer (what the pastor writes per question); Field clause sharpened to name the questions-inside framing.
+- SFDI charter updated — six-slot entries are now seven-slot (added Question sequence); field-pattern pointer added; "How to start a session" simplified to in-session-only path; throughline vision sheet header reframed.
+- SPRD planning doc gains a new structural backlog item — field-level UX redesign (spotlight + sequential questions + persistent prompts), sequenced behind SFDI; ENFORCEMENT_STATUS Last-verified parenthetical reflects the vocabulary additions and new SPRD backlog item.
+
+---
+
 ## 2026-05-02 — docs: SPRD Q8 — inline AI Reviews carve-out + correct SPRD backlog framing
 
 - CORE.md Process Contract #5 — added scope note explicitly limiting the empty-evidence enforcement to the substitutive `ai_proposal`/`ai_apply` mutation cycle; advisory AI interfaces (Review buttons + Chat interfaces) are a deliberate carve-out governed by the Principle directly.

@@ -100,7 +100,7 @@ Three structural commitments live in SPRD:
 - **The named outcome sits inside the sub-phase, not after it.** It is the work of the sub-phase, produced as the field-work composes — not an interstitial step between sub-phases.
 - **The handoff to the next sub-phase carries the named outcome forward.** The next sub-phase opens against it; the prior named outcome is the substrate the next work builds on.
 
-The substance — what each named outcome IS, what fields produce it, how the field-work composes into it — lives in SFDI. The current orientation sheet at `docs/PROPOSALS/sfdi-throughline-vision.md` carries the working set of named outcomes (Observation Set, Interpretation Set, Christ-Connection Statement, Implications Synthesis) for offline drafting; SFDI's per-field walks deepen them. The names are subject to refinement during SFDI walks.
+The substance — what each named outcome IS, what fields produce it, how the field-work composes into it — lives in SFDI. The current orientation sheet at `docs/PROPOSALS/sfdi-throughline-vision.md` carries the working set of named outcomes (Observation Set, Interpretation Set, Christ-Connection Statement, Implications Synthesis); SFDI's per-field walks deepen them. The names are subject to refinement during SFDI walks.
 
 **Two structural notes on shape that SPRD owns:**
 
@@ -283,7 +283,9 @@ Each Q below carries a disposition tag — *Structural — decided*, *Structural
 
 **Q8 inline AI Reviews — next pilot. Open and structural.** Seven inline AI calls (Observe Review, Interpret Review, RT Review, Implications Review, MPS Chat, Outline Suggest, FE Chat) bypass the central save-and-check logic and live in screen-only state. Q8 settles whether they route through a new save path for AI Reviews (Process #5 coverage) or carve out as advisory. Separable from Q1's pilot — implements in its own change. See Q8 in this section for the trade-off.
 
-**Remaining structural backlog after Q8 lands:** Step 5 (Intro/Conclusion) as its own workspace step, and PC card removal — both sequenced after the Implications restructure, which is gated on SFDI's content half landing first.
+**Remaining structural backlog after Q8 lands:** the Implications restructure (Q7 structural half), Step 5 (Intro/Conclusion) as its own workspace step, PC card removal, the Implications Synthesis as the named outcome of the Implications sub-phase, and the **field-level UX redesign** (see below). All sequenced after SFDI's content half lands first.
+
+**Field-level UX redesign — added 2026-05-02 (SPRD scope, gated on SFDI).** SFDI's per-field walks adopted a field pattern that defines fields as isolated focused workspaces with sequential **questions** inside (one question visible at a time, prior answers persistent, "Next question" advancing under the same disabled-when-empty hard-gate posture as Q3). The pattern is canonical SFDI artifact (see `docs/PROPOSALS/study-field-definition-initiative.md` → "The Field Pattern"); SPRD owns the structural shipping job — spotlight UX, sequential question rendering, persistent-prompt input shape, "Next question" affordance, and the storage shape change (each field's value becomes a sub-object keyed by stable question identifiers; same JSON columns, no schema migration). The empty-evidence gate may extend to per-question requirements once SFDI rules per-field whether all questions are required or some are optional; that extension lives in `evaluateAdvance` in `src/utils/studyAdvancement.js`.
 
 ---
 

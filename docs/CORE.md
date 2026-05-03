@@ -71,10 +71,18 @@ these names. (See State Contract clause 5: *one name per concept*.)
 - **Boundary** — the transition point between two adjacent values at the same
   level. *Stage boundary* (e.g., Study → Blueprint). *Step boundary* (e.g.,
   Exegesis → MPT/MPS). *Sub-phase boundary* (e.g., Observe → Interpret).
-- **Field** — a single question-and-answer pair the pastor works inside a
+- **Field** — an isolated focused workspace the pastor works inside a
   sub-phase, persisted as a JSON key inside that sub-phase's database column.
+  Each field contains one or more **questions** in an ordered sequence.
   Engineering-side terms (*column*, *key*, *slot*) remain available; contract
   language uses *field*.
+- **Question** — an ordered prompt inside a field. The pastor answers
+  questions one at a time; the field's value is the composition of the
+  answers. Question keys are stable identifiers persisted as sub-keys inside
+  the field's JSON value.
+- **Answer** — what the pastor writes for each question. Answers persist
+  individually; previous answers stay visible while the current question is
+  active.
 - **Named outcome** — the artifact each sub-phase produces, named explicitly:
   the Observation Set (Observe), the Interpretation Set (Interpret), the
   Christ-Connection Statement (Redemptive Thread), the Implications Synthesis

@@ -1,6 +1,6 @@
 # Study Throughline — Vision Sheet
 
-For offline field drafting. Keep this in view.
+Orientation sheet for SFDI in-session walks. Keep this in view.
 
 ---
 
