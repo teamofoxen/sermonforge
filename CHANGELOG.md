@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-04 — sprd A1.3: per-question N/A toggle UI
+
+- `SpotlightField` gains a "Mark not applicable" / "Mark applicable" toggle next to "Next question →" — marking N/A advances to the next field, un-marking returns the pastor to edit.
+- N/A questions render distinctly: dimmed textarea + ghost-color label when active, italic "Not applicable" placeholder when collapsed.
+- The Next-question gate now passes when the question is either non-empty or marked N/A.
+- New `toggleStructuredNA` callback wires through `setQuestionNA`; existing answer text is preserved across toggling so un-mark recovers the pastor's work.
+- Initial-active-field detection treats N/A questions as complete; pastor lands on the first not-yet-engaged field on re-entry.
+
+---
+
 ## 2026-05-04 — sprd A1.1: spotlight rendering for Study fields
 
 - `SpotlightWorksheet` replaces `StructuredWorksheet`: one field active at a time (textarea + "Next question →" disabled-when-empty), others collapsed showing the answer or "Not yet answered" placeholder.

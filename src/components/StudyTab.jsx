@@ -12,6 +12,7 @@ import {
   IMPLICATIONS_UNBELIEVER_KEY, IMPLICATIONS_COMPILED_KEY,
   parseStructuredField, serializeStructuredField,
   getPrimaryAnswer, setPrimaryAnswer, hasAnyAnswer,
+  isQuestionNA, setQuestionNA, DEFAULT_QUESTION_KEY,
 } from "../utils/studyFields";
 import OutlineBuilder from "./OutlineBuilder";
 import InlineAIResponse from "./InlineAIResponse";
@@ -215,11 +216,17 @@ function FuncElem({ pointText, pointId, displayIndex, funcData, onUpdate, onUpda
 
 /**
  * SpotlightField — one field rendered in either spotlight (active) or
- * collapsed-summary state. Active shows label + textarea + "Next question"
- * button (disabled until answer is non-empty). Collapsed shows label + the
- * pastor's answer (or "Not yet answered" placeholder) and is click-to-edit.
+ * collapsed-summary state. Active shows label + textarea + a row with a
+ * "Mark not applicable" toggle and a "Next question" button. Collapsed shows
+ * label + the pastor's answer, an empty placeholder, or an N/A indicator;
+ * always click-to-edit.
+ *
+ * N/A semantics: marking a question N/A is a deliberate "this doesn't apply"
+ * gesture — the field counts as complete (advance permitted), but the answer
+ * is not contributed as evidence (handled in studyFields.answeredQuestions).
+ * Toggling preserves the existing answer text so un-marking recovers it.
  */
-function SpotlightField({ field, isActive, isLast, value, onChange, onActivate, onNext }) {
+function SpotlightField({ field, isActive, isLast, value, isNA, onChange, onActivate, onNext, onToggleNA }) {
   const taRef = useRef(null);
   useEffect(() => {
     if (isActive && taRef.current) {
@@ -231,9 +238,17 @@ function SpotlightField({ field, isActive, isLast, value, onChange, onActivate, 
 
   if (!isActive) {
     const trimmed = value.trim();
+    let summary;
+    if (isNA) {
+      summary = <span className="worksheet-field-summary-na">Not applicable</span>;
+    } else if (trimmed) {
+      summary = trimmed;
+    } else {
+      summary = <span className="worksheet-field-summary-empty">Not yet answered</span>;
+    }
     return (
       <div
-        className="worksheet-field worksheet-field-collapsed"
+        className={`worksheet-field worksheet-field-collapsed${isNA ? " worksheet-field-na" : ""}`}
         onClick={onActivate}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onActivate(); }
@@ -243,18 +258,14 @@ function SpotlightField({ field, isActive, isLast, value, onChange, onActivate, 
         aria-label={`Edit ${field.label}`}
       >
         <div className="worksheet-field-label">{field.label}</div>
-        <div className="worksheet-field-summary">
-          {trimmed
-            ? trimmed
-            : <span className="worksheet-field-summary-empty">Not yet answered</span>}
-        </div>
+        <div className="worksheet-field-summary">{summary}</div>
       </div>
     );
   }
 
-  const canAdvance = !!value.trim();
+  const canAdvance = isNA || !!value.trim();
   return (
-    <div className="worksheet-field worksheet-field-active">
+    <div className={`worksheet-field worksheet-field-active${isNA ? " worksheet-field-na" : ""}`}>
       <label className="worksheet-field-label">{field.label}</label>
       <textarea
         className="field-textarea"
@@ -264,19 +275,27 @@ function SpotlightField({ field, isActive, isLast, value, onChange, onActivate, 
         onInput={(e) => autoResize(e.target)}
         ref={(el) => { taRef.current = el; autoResize(el); }}
         placeholder={field.hint || ""}
+        disabled={isNA}
       />
-      {!isLast && (
-        <div className="spotlight-controls">
+      <div className="spotlight-controls">
+        <button
+          type="button"
+          className="spotlight-na-toggle"
+          onClick={onToggleNA}
+        >
+          {isNA ? "Mark applicable" : "Mark not applicable"}
+        </button>
+        {!isLast && (
           <PrimaryButton
             size="sm"
             disabled={!canAdvance}
-            title={canAdvance ? "" : "Answer the question to continue"}
+            title={canAdvance ? "" : "Answer the question or mark it not applicable to continue"}
             onClick={onNext}
           >
             Next question →
           </PrimaryButton>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
@@ -284,12 +303,16 @@ function SpotlightField({ field, isActive, isLast, value, onChange, onActivate, 
 /**
  * SpotlightWorksheet — renders a list of field definitions in spotlight pattern.
  * One field is active (textarea + Next-question button); the rest are collapsed
- * summaries. Initial active field is the first incomplete one (or the first
- * field if all complete). Click a collapsed field to edit it.
+ * summaries. Initial active field is the first incomplete one (counting N/A as
+ * complete) or the first field if all complete. Click a collapsed field to
+ * edit it. Marking N/A is a deliberate complete-the-field gesture and advances
+ * to the next field like Next-question does.
  */
-function SpotlightWorksheet({ fields, data, onChange, legacyNotes }) {
+function SpotlightWorksheet({ fields, data, onChange, onToggleNA, legacyNotes }) {
   const initialActive = useMemo(() => {
-    const firstIncomplete = fields.find(f => !getPrimaryAnswer(data, f.key).trim());
+    const firstIncomplete = fields.find(f =>
+      !getPrimaryAnswer(data, f.key).trim() && !isQuestionNA(data, f.key)
+    );
     return firstIncomplete?.key ?? fields[0]?.key ?? null;
     // Compute once on mount; user actions own active state thereafter.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -300,6 +323,14 @@ function SpotlightWorksheet({ fields, data, onChange, legacyNotes }) {
     const idx = fields.findIndex(f => f.key === currentKey);
     if (idx < 0 || idx >= fields.length - 1) return;
     setActiveKey(fields[idx + 1].key);
+  };
+
+  const handleToggleNA = (key) => {
+    const wasNA = isQuestionNA(data, key);
+    onToggleNA(key);
+    // Marking N/A is a complete-the-field gesture → advance. Un-marking
+    // returns the pastor to the field to edit, so don't advance then.
+    if (!wasNA) advanceToNextField(key);
   };
 
   return (
@@ -317,9 +348,11 @@ function SpotlightWorksheet({ fields, data, onChange, legacyNotes }) {
           isActive={f.key === activeKey}
           isLast={idx === fields.length - 1}
           value={getPrimaryAnswer(data, f.key)}
+          isNA={isQuestionNA(data, f.key)}
           onChange={(value) => onChange(f.key, value)}
           onActivate={() => setActiveKey(f.key)}
           onNext={() => advanceToNextField(f.key)}
+          onToggleNA={() => handleToggleNA(f.key)}
         />
       ))}
     </div>
@@ -413,6 +446,12 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
 
   const updateStructured = useCallback((column, currentData, key, value) => {
     const next = setPrimaryAnswer(currentData, key, value);
+    onUpdate({ [column]: serializeStructuredField(next) });
+  }, [onUpdate]);
+
+  const toggleStructuredNA = useCallback((column, currentData, key) => {
+    const wasNA = isQuestionNA(currentData, key);
+    const next = setQuestionNA(currentData, key, DEFAULT_QUESTION_KEY, !wasNA);
     onUpdate({ [column]: serializeStructuredField(next) });
   }, [onUpdate]);
 
@@ -1000,6 +1039,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                 fields={OBSERVE_FIELDS}
                 data={obsData}
                 onChange={(key, value) => updateStructured("observations", obsData, key, value)}
+                onToggleNA={(key) => toggleStructuredNA("observations", obsData, key)}
                 legacyNotes={obsData.legacy_notes}
               />
               <div style={{ marginTop: "8px" }}>
@@ -1039,6 +1079,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                 fields={INTERPRET_FIELDS}
                 data={intData}
                 onChange={(key, value) => updateStructured("interpretation", intData, key, value)}
+                onToggleNA={(key) => toggleStructuredNA("interpretation", intData, key)}
                 legacyNotes={intData.legacy_notes}
               />
               <div style={{ marginTop: "8px" }}>
@@ -1078,6 +1119,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                 fields={REDEMPTIVE_FIELDS}
                 data={redData}
                 onChange={(key, value) => updateStructured("redemptive_thread", redData, key, value)}
+                onToggleNA={(key) => toggleStructuredNA("redemptive_thread", redData, key)}
                 legacyNotes={redData.legacy_notes}
               />
 
@@ -1183,6 +1225,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                   fields={IMPLICATIONS_THEOLOGICAL}
                   data={impData}
                   onChange={(key, value) => updateStructured("implications", impData, key, value)}
+                  onToggleNA={(key) => toggleStructuredNA("implications", impData, key)}
                   legacyNotes={impData.legacy_notes}
                 />
               </div>
@@ -1193,6 +1236,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                   fields={IMPLICATIONS_PERSONAL}
                   data={impData}
                   onChange={(key, value) => updateStructured("implications", impData, key, value)}
+                  onToggleNA={(key) => toggleStructuredNA("implications", impData, key)}
                 />
               </div>
 

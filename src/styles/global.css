@@ -842,8 +842,48 @@ button {
 
 .spotlight-controls {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
   margin-top: 8px;
+}
+
+.spotlight-na-toggle {
+  background: none;
+  border: none;
+  padding: 4px 0;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--ink-ghost);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.spotlight-na-toggle:hover {
+  color: var(--ink-mid);
+}
+
+.spotlight-na-toggle:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+/* N/A field — pastor explicitly marked the question inapplicable. */
+.worksheet-field-na .worksheet-field-label {
+  color: var(--ink-ghost);
+}
+
+.worksheet-field-na .field-textarea {
+  background: var(--parchment);
+  color: var(--ink-ghost);
+  cursor: not-allowed;
+}
+
+.worksheet-field-summary-na {
+  color: var(--ink-ghost);
+  font-style: italic;
 }
 
 .worksheet-group-header {
