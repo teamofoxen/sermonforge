@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-05-04 — sprd C1 + C6 closure: sermon-level takeover + threshold parity confirmed
+
+- `src/App.jsx` — Sidebar no longer renders when `currentView === VIEW.Workspace`; the workspace fills the viewport (`.main-content` already `flex: 1`). The in-workspace topbar's existing `BackButton onClick={onClose}` is the single back affordance per the C1 spec; re-entry from Dashboard returns to the isolated world. Surface Contract #4 remains satisfied (Workspace is on EXPECTED_DEEP); critical write-error banner and OneDriveWarning alerts remain visible across views.
+- `docs/PROPOSALS/study-phase-redesign.md` — Implementation progress section updated to mark C5 substantially COMPLETE (commit `9daffff`), C6 COMPLETE implicitly through B-cuts (all four sub-phase boundary thresholds wired in B1.4 / B1.5 / B2.2 / B3.2 / B4.2; contract test parity already in place via `process-2-evidence-gated-ux.test.tsx` describe blocks per boundary), and C1 SHIPPED. Remaining C-items called out: C2 (throughline visualization), C4 (Background series-level inheritance, schema implications), workspace tour rewrite (Component 3); C3 stays SADI-gated; MPS Draft prompt rewrite is SADI-Step-2-gated.
+- 358 vitest green; Vite preview clean (Dashboard renders with Sidebar visible, confirming the conditional fires only on Workspace view); no sweep-the-house trigger.
+
+---
+
 ## 2026-05-04 — sprd C5: Review prompts + PC tier rewire to Phase 4 Field 3
 
 - `src/utils/reviewPrompts.js` — AIPanel "Review My Work" branches for Observe / Interpret / Redemptive Thread / Implications plus the full-study fallback rewired to use the centralized `<PHASE>_REVIEW_TASK` constants from `src/prompts/study.js` + `flattenToText(parseStructuredField(<column>), <PHASE>_FIELDS)`; drops retired-key references ("commands", "statements", "key words", "believers and unbelievers") and replaces raw JSON dumps with field-list-driven flattened text matching what StudyTab's per-phase Review buttons already use.

@@ -243,15 +243,17 @@ export default function App() {
       </div>
     )}
     <div className="app-shell">
-      <Sidebar
-        currentView={currentView}
-        onNavigate={navigate}
-        onOpenSermon={openSermon}
-        onOpenSeries={openPlanner}
-        onNewSeries={handleNewSeries}
-        theme={theme}
-        onToggleTheme={toggleTheme}
-      />
+      {currentView !== VIEW.Workspace && (
+        <Sidebar
+          currentView={currentView}
+          onNavigate={navigate}
+          onOpenSermon={openSermon}
+          onOpenSeries={openPlanner}
+          onNewSeries={handleNewSeries}
+          theme={theme}
+          onToggleTheme={toggleTheme}
+        />
+      )}
       <div className="main-content">
         <Suspense fallback={null}>
         {currentView === VIEW.Dashboard && (
