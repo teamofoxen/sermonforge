@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-04 — sprd: fold SFDI completion, lock binding scope, add A/B/C milestones and migration mapping
+
+- Folded sub/sfdi into sub/sprd at 3a1554f — SFDI walk completion (25 fields, 4 named outcomes, Process #6 activation) now on the SPRD branch.
+- Locked seven 2026-05-04 binding decisions in SPRD: migration policy (per-field legacy notes), PC card removal with B4, four-phase synthesis retired, SADI parallel-run, throughline without animation first, AI prompts phase-by-phase.
+- Added 13-milestone A/B/C implementation structure with depends-on and SADI gating status per milestone.
+- Added per-phase migration mapping tables as binding spec for Option C, covering Phases 1–4 plus PC card top-level columns.
+- Only C3 (Step 5 shell) is fully gated by SADI; everything else proceeds unblocked.
+
+---
+
 ## 2026-05-04 — sfdi: drift sweeps A+B established, remediation lands, Process #6 activated as Structural
 
 - Two SFDI validator scripts established at `scripts/sfdi-internal-consistency.py` (7 internal-structure criteria) and `scripts/sfdi-cross-doc-consistency.py` (7 cross-doc consistency criteria); both exit 0.
