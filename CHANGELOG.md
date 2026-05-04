@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-04 — sprd A1.1: spotlight rendering for Study fields
+
+- `SpotlightWorksheet` replaces `StructuredWorksheet`: one field active at a time (textarea + "Next question →" disabled-when-empty), others collapsed showing the answer or "Not yet answered" placeholder.
+- Initial active field is the first incomplete one (or the first field when all are complete); click any collapsed field to edit it.
+- Active textarea autofocuses on activation with cursor placed at the end of existing content.
+- New CSS for collapsed/active states — hover affordance on collapsed fields, gold left-border + parchment-warm background on the active spotlight.
+- Applies to all four sub-phases; Phase 4's two grouped worksheets render two parallel spotlights until B4's reshape collapses them to four fields.
+
+---
+
 ## 2026-05-04 — sprd A1.0: per-question envelope shape foundation
 
 - Storage shape inside `observations`/`interpretation`/`redemptive_thread`/`implications` JSON columns moves to per-field per-question envelopes `{value, na}` keyed by stable question identifiers; `studyFields.js` adds `getQuestionAnswer`, `setQuestionNA`, `getPrimaryAnswer`, `applyFieldValueMap`, `answeredQuestions`, `hasAnyAnswer` helpers.

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import { useTour } from "../contexts/TourContext";
 import { getOutline, serializeOutline, getFunctionalElements, serializeFunctionalElements, autoResize } from "../utils";
@@ -214,10 +214,94 @@ function FuncElem({ pointText, pointId, displayIndex, funcData, onUpdate, onUpda
 
 
 /**
- * StructuredWorksheet — renders a list of field definitions as labeled textareas.
- * Each field gets its own row with the question as the label and the hint as placeholder.
+ * SpotlightField — one field rendered in either spotlight (active) or
+ * collapsed-summary state. Active shows label + textarea + "Next question"
+ * button (disabled until answer is non-empty). Collapsed shows label + the
+ * pastor's answer (or "Not yet answered" placeholder) and is click-to-edit.
  */
-function StructuredWorksheet({ fields, data, onChange, legacyNotes }) {
+function SpotlightField({ field, isActive, isLast, value, onChange, onActivate, onNext }) {
+  const taRef = useRef(null);
+  useEffect(() => {
+    if (isActive && taRef.current) {
+      taRef.current.focus();
+      const len = taRef.current.value.length;
+      taRef.current.setSelectionRange(len, len);
+    }
+  }, [isActive]);
+
+  if (!isActive) {
+    const trimmed = value.trim();
+    return (
+      <div
+        className="worksheet-field worksheet-field-collapsed"
+        onClick={onActivate}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onActivate(); }
+        }}
+        role="button"
+        tabIndex={0}
+        aria-label={`Edit ${field.label}`}
+      >
+        <div className="worksheet-field-label">{field.label}</div>
+        <div className="worksheet-field-summary">
+          {trimmed
+            ? trimmed
+            : <span className="worksheet-field-summary-empty">Not yet answered</span>}
+        </div>
+      </div>
+    );
+  }
+
+  const canAdvance = !!value.trim();
+  return (
+    <div className="worksheet-field worksheet-field-active">
+      <label className="worksheet-field-label">{field.label}</label>
+      <textarea
+        className="field-textarea"
+        rows={3}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onInput={(e) => autoResize(e.target)}
+        ref={(el) => { taRef.current = el; autoResize(el); }}
+        placeholder={field.hint || ""}
+      />
+      {!isLast && (
+        <div className="spotlight-controls">
+          <PrimaryButton
+            size="sm"
+            disabled={!canAdvance}
+            title={canAdvance ? "" : "Answer the question to continue"}
+            onClick={onNext}
+          >
+            Next question →
+          </PrimaryButton>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * SpotlightWorksheet — renders a list of field definitions in spotlight pattern.
+ * One field is active (textarea + Next-question button); the rest are collapsed
+ * summaries. Initial active field is the first incomplete one (or the first
+ * field if all complete). Click a collapsed field to edit it.
+ */
+function SpotlightWorksheet({ fields, data, onChange, legacyNotes }) {
+  const initialActive = useMemo(() => {
+    const firstIncomplete = fields.find(f => !getPrimaryAnswer(data, f.key).trim());
+    return firstIncomplete?.key ?? fields[0]?.key ?? null;
+    // Compute once on mount; user actions own active state thereafter.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const [activeKey, setActiveKey] = useState(initialActive);
+
+  const advanceToNextField = (currentKey) => {
+    const idx = fields.findIndex(f => f.key === currentKey);
+    if (idx < 0 || idx >= fields.length - 1) return;
+    setActiveKey(fields[idx + 1].key);
+  };
+
   return (
     <div className="structured-worksheet">
       {legacyNotes && (
@@ -226,19 +310,17 @@ function StructuredWorksheet({ fields, data, onChange, legacyNotes }) {
           <div className="worksheet-legacy-content">{legacyNotes}</div>
         </div>
       )}
-      {fields.map((f) => (
-        <div key={f.key} className="worksheet-field">
-          <label className="worksheet-field-label">{f.label}</label>
-          <textarea
-            className="field-textarea"
-            rows={2}
-            value={getPrimaryAnswer(data, f.key)}
-            onChange={(e) => onChange(f.key, e.target.value)}
-            onInput={(e) => autoResize(e.target)}
-            ref={(el) => autoResize(el)}
-            placeholder={f.hint || ""}
-          />
-        </div>
+      {fields.map((f, idx) => (
+        <SpotlightField
+          key={f.key}
+          field={f}
+          isActive={f.key === activeKey}
+          isLast={idx === fields.length - 1}
+          value={getPrimaryAnswer(data, f.key)}
+          onChange={(value) => onChange(f.key, value)}
+          onActivate={() => setActiveKey(f.key)}
+          onNext={() => advanceToNextField(f.key)}
+        />
       ))}
     </div>
   );
@@ -914,7 +996,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
           {activeSubPhase === 1 && (
             <div className="sub-phase-body" data-tour-id="phase-1-worksheet">
               <p className="sub-phase-hint">Observe the text — what it says before what it means. Read and reread prayerfully.</p>
-              <StructuredWorksheet
+              <SpotlightWorksheet
                 fields={OBSERVE_FIELDS}
                 data={obsData}
                 onChange={(key, value) => updateStructured("observations", obsData, key, value)}
@@ -953,7 +1035,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
           {activeSubPhase === 2 && (
             <div className="sub-phase-body" data-tour-id="phase-2-worksheet">
               <p className="sub-phase-hint">Find the meaning of the text. Move from observation to interpretation.</p>
-              <StructuredWorksheet
+              <SpotlightWorksheet
                 fields={INTERPRET_FIELDS}
                 data={intData}
                 onChange={(key, value) => updateStructured("interpretation", intData, key, value)}
@@ -992,7 +1074,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
           {activeSubPhase === 3 && (
             <div className="sub-phase-body" data-tour-id="phase-3-worksheet">
               <p className="sub-phase-hint">Find the redemptive features. How does this text point to or depend on Christ?</p>
-              <StructuredWorksheet
+              <SpotlightWorksheet
                 fields={REDEMPTIVE_FIELDS}
                 data={redData}
                 onChange={(key, value) => updateStructured("redemptive_thread", redData, key, value)}
@@ -1097,7 +1179,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
 
               <div data-tour-id="implications-theological">
                 <div className="worksheet-group-header">Theological Significance</div>
-                <StructuredWorksheet
+                <SpotlightWorksheet
                   fields={IMPLICATIONS_THEOLOGICAL}
                   data={impData}
                   onChange={(key, value) => updateStructured("implications", impData, key, value)}
@@ -1107,7 +1189,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
 
               <div data-tour-id="implications-personal">
                 <div className="worksheet-group-header">Personal Implications</div>
-                <StructuredWorksheet
+                <SpotlightWorksheet
                   fields={IMPLICATIONS_PERSONAL}
                   data={impData}
                   onChange={(key, value) => updateStructured("implications", impData, key, value)}

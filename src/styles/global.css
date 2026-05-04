@@ -800,6 +800,52 @@ button {
   min-height: 56px;
 }
 
+/* Spotlight pattern — one field active, others collapsed showing answer. */
+.worksheet-field-collapsed {
+  cursor: pointer;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.worksheet-field-collapsed:hover {
+  background: var(--parchment-warm);
+  border-color: var(--parchment-deep);
+}
+
+.worksheet-field-collapsed:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: -1px;
+}
+
+.worksheet-field-summary {
+  font-family: 'Crimson Pro', serif;
+  font-size: 13px;
+  color: var(--ink-mid);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  margin-top: 2px;
+}
+
+.worksheet-field-summary-empty {
+  color: var(--ink-ghost);
+  font-style: italic;
+}
+
+.worksheet-field-active {
+  padding: 12px;
+  background: var(--parchment-warm);
+  border-left: 3px solid var(--gold);
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+.spotlight-controls {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
 .worksheet-group-header {
   font-family: 'Playfair Display', serif;
   font-size: 13px;
