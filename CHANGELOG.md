@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-04 — sprd: Phase 1/2/3 Review-button flattenToText fix
+
+- Phase 1 / 2 / 3 Review buttons in `StudyTab.jsx` previously built the AI-prompt "filled" string via `getPrimaryAnswer(data, f.key).trim()` per field, which silently returned `""` for multi-question fields (no `primary` question key).
+- Switched all three Review buttons to `flattenToText(data, FIELDS)` — same pattern B4.0 + B4.1 already applied to Phase 4's Review path.
+- Closes the B1.0-era multi-question bug across all four sub-phases — the AI now sees `[author, date, audience, genre]` for Background, `[before, after, impact, holy_spirit_intent]` for Context, `[where, when, how]` for Surface Questions, the canvas/paraphrase/synthesis-table values for Divisions, and the parallel multi-question content for Phase 2 (Deeper Context) and Phase 3 (This Passage and Christ, How the Passage Points to Christ, Our Need and God's Character).
+- No new tests; existing `flattenToText` coverage (B1.7) is sufficient.
+- 358 vitest total green; Vite preview compiled clean.
+
+---
+
 ## 2026-05-04 — sprd B4.2: Field 4 Implications Synthesis + Implications→MPT/MPS gate + PC card removal
 
 - Field 4 (Implications Synthesis) replaces its single primary question with the SFDI 2-question sequence: Q1 `implication_per_unit` is a `cumulative-synthesis-table` reusing B2.2/B3.2 cross-phase plumbing — extends `observations.divisions.thought_units` with the final writable column (`implication`) on top of Phase 1's three columns + Phase 2's `meaning` + Phase 3's `christ_connection` (all read-only), completing the four-phase cumulative table with six columns total. Q2 `synthesis` is a text-prompt stored in `implications.implications_synthesis.synthesis`.

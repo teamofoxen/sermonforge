@@ -909,11 +909,9 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                 <SecondaryButton
                   size="sm"
                   onClick={() => {
-                    const filled = OBSERVE_FIELDS
-                      .map(f => ({ f, v: getPrimaryAnswer(obsData, f.key).trim() }))
-                      .filter(({ v }) => v)
-                      .map(({ f, v }) => `${f.label}: ${v}`)
-                      .join("\n\n");
+                    // Use flattenToText so multi-question fields surface
+                    // (closes B1.0-era getPrimaryAnswer-only bug for Phase 1).
+                    const filled = flattenToText(obsData, OBSERVE_FIELDS);
                     fetchInline(
                       "observe",
                       `My observations:\n\n${filled || "(none yet)"}`,
@@ -963,11 +961,9 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                 <SecondaryButton
                   size="sm"
                   onClick={() => {
-                    const filled = INTERPRET_FIELDS
-                      .map(f => ({ f, v: getPrimaryAnswer(intData, f.key).trim() }))
-                      .filter(({ v }) => v)
-                      .map(({ f, v }) => `${f.label}: ${v}`)
-                      .join("\n\n");
+                    // Use flattenToText so multi-question fields surface
+                    // (closes B1.0-era getPrimaryAnswer-only bug for Phase 2).
+                    const filled = flattenToText(intData, INTERPRET_FIELDS);
                     fetchInline(
                       "interpret",
                       `My interpretation:\n\n${filled || "(none yet)"}`,
@@ -1021,14 +1017,12 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                 <SecondaryButton
                   size="sm"
                   onClick={() => {
-                    const filled = REDEMPTIVE_FIELDS
-                      .map(f => ({ f, v: getPrimaryAnswer(redData, f.key).trim() }))
-                      .filter(({ v }) => v)
-                      .map(({ f, v }) => `${f.label}: ${v}`)
-                      .join("\n\n");
+                    // Use flattenToText so multi-question fields surface
+                    // (closes B1.0-era getPrimaryAnswer-only bug for Phase 3).
+                    const filled = flattenToText(redData, REDEMPTIVE_FIELDS);
                     fetchInline(
                       "redemptive",
-                      `Redemptive thread answers:\n\n${filled}`,
+                      `Redemptive thread answers:\n\n${filled || "(none yet)"}`,
                       REDEMPTIVE_REVIEW_TASK,
                       PHASES.REDEMPTIVE_THREAD,
                     );
