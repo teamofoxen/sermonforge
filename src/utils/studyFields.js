@@ -435,24 +435,110 @@ export const REDEMPTIVE_FIELDS = [
 export const REDEMPTIVE_SUMMARY_KEY = "summary";
 
 // ── Phase 4: Implications ────────────────────────────────────────────────────
+//
+// Reshaped to 4 fields per SFDI Phase 4 walk (2026-05-04), shipped as SPRD
+// B4.0 + B4.1 (2026-05-04). The three-way conversation realized at field
+// level (Theological Significance + Personal Implications + Pastoral Context),
+// integrated by Field 4 (Implications Synthesis) as the named outcome:
+//   Theological Significance → Personal Implications → Pastoral Context
+//   → Implications Synthesis
+//
+// Aggressive consolidation realizing the SPRD/SFDI three-way conversation
+// commitment articulated in the charter. PC moves from parallel-track top-of-
+// workspace card to integrated voice in the conversation. The Compiled list
+// AI synthesis is retired — the Implications Synthesis IS the synthesis, in
+// the pastor's own voice (not AI-generated). The "Implications for Unbeliever"
+// slot is folded into Pastoral Context Q1 (the room includes everyone). Each
+// voice gets its dedicated field; the synthesis integrates all three.
+//
+// Retired keys from the prior shape: the 5 IMPLICATIONS_THEOLOGICAL keys
+// (about_god, about_ourselves, about_christ, timeless, doctrines), the 8
+// IMPLICATIONS_PERSONAL keys (examples, commands, errors, sins, promises,
+// new_thoughts, explore, convictions), and IMPLICATIONS_UNBELIEVER_KEY +
+// IMPLICATIONS_COMPILED_KEY top-level keys. Old data on retired keys is
+// preserved in the JSON column by `parseStructuredField` but no longer
+// renders. Per the defensive-only migration policy in SPRD § 9 (no production
+// sermons exist 2026-05-04), no auto-mapping logic ships; the per-key cross-
+// mapping in § 9 documents how it would land:
+//   - 5 IMPLICATIONS_THEOLOGICAL keys → `theological_significance` Q1–Q5
+//     (same question keys at SFDI's request — Merida's 5 questions preserved
+//     intact; only the field-grouping changes)
+//   - 8 IMPLICATIONS_PERSONAL keys   → `personal_implications.legacy_notes`
+//     (Merida's 8 questions consolidated into 4 verb-driven questions:
+//     Follow / Forsake / Receive / Settle, absorbing Examples+Commands /
+//     Errors+Sins / Promises+New Thoughts / Explore+Convictions)
+//   - IMPLICATIONS_UNBELIEVER_KEY    → `pastoral_context.legacy_notes`
+//     (folded into Field 3 Q1 "the room includes everyone")
+//   - IMPLICATIONS_COMPILED_KEY      → `implications_synthesis.legacy_notes`
+//     (Compiled list AI synthesis retired; Field 4 carries the synthesis
+//     in the pastor's own voice)
+//
+// Heavy-lifting fields with `FieldOverviewScreen` on first per-sermon entry
+// (B1.3 pattern):
+//   - Field 4 (Implications Synthesis) — overview frames the integration
+//     of the three voices and the Merida marinate moment. Per-unit
+//     cumulative-column extension (`implication`) + whole-passage Synthesis
+//     ship in B4.2 (single primary question at B4.0 + B4.1).
+//
+// `IMPLICATIONS_UNBELIEVER_KEY` and `IMPLICATIONS_COMPILED_KEY` are retained
+// as constants (not as iterated fields) so `flattenToText` can continue to
+// surface any legacy data through the context pipeline (defensive read path;
+// no production sermons exist).
 
-export const IMPLICATIONS_THEOLOGICAL = [
-  { key: "about_god",       label: "What does this text teach us about God?" },
-  { key: "about_ourselves", label: "What does it teach us about ourselves?" },
-  { key: "about_christ",    label: "What does it teach us about Christ?" },
-  { key: "timeless",        label: "What principles are timeless for us?" },
-  { key: "doctrines",       label: "What does the passage teach us about particular doctrines?" },
-];
-
-export const IMPLICATIONS_PERSONAL = [
-  { key: "examples",    label: "Are there examples to follow?" },
-  { key: "commands",    label: "Are there commands to keep?" },
-  { key: "errors",      label: "Are there errors to avoid?" },
-  { key: "sins",        label: "Are there sins to forsake?" },
-  { key: "promises",    label: "Are there gospel promises to claim?" },
-  { key: "new_thoughts", label: "Are there new thoughts about God to gain?" },
-  { key: "explore",     label: "Are there truths or doctrines to further explore?" },
-  { key: "convictions", label: "Are there convictions to be lived by?" },
+export const IMPLICATIONS_FIELDS = [
+  {
+    key: "theological_significance",
+    label: "Theological Significance",
+    hint: "Articulate the doctrinal content the text teaches — the first voice in the three-way conversation.",
+    questions: [
+      { key: "about_god",       prompt: "What does this text teach about God?" },
+      { key: "about_ourselves", prompt: "What does it teach about ourselves?" },
+      { key: "about_christ",    prompt: "What does it teach about Christ — his person, his work, his nature?" },
+      { key: "timeless",        prompt: "What principles in this text are timeless for us?" },
+      { key: "doctrines",       prompt: "What does the passage teach about particular doctrines?" },
+    ],
+  },
+  {
+    key: "personal_implications",
+    label: "Personal Implications",
+    hint: "Articulate what the text asks of the hearer — the second voice in the three-way conversation.",
+    questions: [
+      { key: "follow",  prompt: "What does the text call the hearer to do or follow? (Examples to imitate, commands to keep.)" },
+      { key: "forsake", prompt: "What does the text warn against? (Errors to avoid, sins to forsake.)" },
+      { key: "receive", prompt: "What does the text invite the hearer to receive? (Gospel promises to claim, fresh thoughts about God to gain.)" },
+      { key: "settle",  prompt: "What does the text ask the hearer to settle into? (Truths or doctrines to explore, convictions to live by.)" },
+    ],
+  },
+  {
+    key: "pastoral_context",
+    label: "Pastoral Context",
+    hint: "Name the specific room the text is landing in, and articulate how it lands — costly and gifted — for the people in that room. The third voice in the three-way conversation.",
+    questions: [
+      { key: "room_specifics", prompt: "Who in your room is this text speaking into? Name specific people or situations the text speaks into — believers and unbelievers, the wearied, the doubting, the hungry, the new, the long-faithful." },
+      { key: "cost_and_gift",  prompt: "For those specific people, what's the cost — what will be hard, costly, counter-intuitive? What's the gift — the comfort, hope, freedom, or invitation this text holds out for them?" },
+    ],
+  },
+  {
+    key: "implications_synthesis",
+    label: "Implications Synthesis",
+    hint: "Integrate the three voices for the whole passage — what does the text teach, what does it ask, and how does it land for the people in this room. One paragraph in your own voice.",
+    heavyLifting: true,
+    overview: {
+      title: "Implications Synthesis",
+      subtitle: "Field 4 of 4 · Implications",
+      paragraphs: [
+        "You've named what the text teaches (Theological Significance), what it asks (Personal Implications), and the specific room it's landing in (Pastoral Context). Three voices.",
+        "One more move closes Implications — and closes the Study work. Take what you've worked out and integrate it. For each thought unit — what does it ask of THIS hearer in THIS room? Drawing on the three voices.",
+        "Then, the whole passage. One paragraph. The Implications Synthesis. What does the text teach, what does it ask, and how does it land for the people in this room — all in one voice. Not three sections. One synthesis.",
+        "This is the marinate-output. Merida tells the pastor to back away after Implications and ponder before crafting the sermon. What you write here is what you sit with. MPT and MPS open against this synthesis (with the prior three named outcomes carried alongside) — no AI re-summary, no reaching back into raw worksheet content. The foundation has been earned.",
+      ],
+    },
+    // B4.2 will replace the single primary question with a 2-question
+    // sequence (`implication_per_unit` cumulative-synthesis-table extending
+    // the thought-unit array with the writable `implication` column +
+    // `synthesis` text-prompt) and wire the Implications → MPT/MPS
+    // composite gate.
+  },
 ];
 
 export const IMPLICATIONS_UNBELIEVER_KEY = "unbeliever";
@@ -827,7 +913,7 @@ export function flattenExegesis(sermon) {
   const obs  = flattenToText(parseStructuredField(sermon?.observations),      OBSERVE_FIELDS);
   const int  = flattenToText(parseStructuredField(sermon?.interpretation),    INTERPRET_FIELDS);
   const red  = flattenToText(parseStructuredField(sermon?.redemptive_thread), [...REDEMPTIVE_FIELDS]);
-  const imp  = flattenToText(parseStructuredField(sermon?.implications),      [...IMPLICATIONS_THEOLOGICAL, ...IMPLICATIONS_PERSONAL]);
+  const imp  = flattenToText(parseStructuredField(sermon?.implications),      IMPLICATIONS_FIELDS);
 
   const parts = [
     obs && `Observations: ${obs}`,

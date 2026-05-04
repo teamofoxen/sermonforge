@@ -17,10 +17,7 @@ import {
   INTERPRET_FIELDS,
   REDEMPTIVE_FIELDS,
   REDEMPTIVE_SUMMARY_KEY,
-  IMPLICATIONS_THEOLOGICAL,
-  IMPLICATIONS_PERSONAL,
-  IMPLICATIONS_UNBELIEVER_KEY,
-  IMPLICATIONS_COMPILED_KEY,
+  IMPLICATIONS_FIELDS,
   parseStructuredField,
   getPrimaryAnswer,
 } from "./studyFields";
@@ -44,14 +41,7 @@ export function getStepFieldConfig(step) {
         fieldDefs: [...REDEMPTIVE_FIELDS, { key: REDEMPTIVE_SUMMARY_KEY, label: "Summary" }],
       };
     case PHASES.IMPLICATIONS:
-      return {
-        type: "json", column: "implications", label: "Implications",
-        fieldDefs: [
-          ...IMPLICATIONS_THEOLOGICAL, ...IMPLICATIONS_PERSONAL,
-          { key: IMPLICATIONS_UNBELIEVER_KEY, label: "Implications for Unbelievers" },
-          { key: IMPLICATIONS_COMPILED_KEY,   label: "Compiled Implications" },
-        ],
-      };
+      return { type: "json", column: "implications", label: "Implications", fieldDefs: IMPLICATIONS_FIELDS };
     case STEPS.MPT_MPS:
       return {
         type: "mpt_mps", label: "MPT / MPS",

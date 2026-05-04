@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-04 — sprd B4.0 + B4.1: Phase 4 Implications reshape + StudyTab refactor
+
+- New `IMPLICATIONS_FIELDS` array realizes the SFDI 4-field shape — Theological Significance → Personal Implications → Pastoral Context → Implications Synthesis. The three-way conversation is now structural; Field 4 (Implications Synthesis) is heavy-lifting with overview, single-primary-question pending B4.2.
+- Multi-question sequences: Theological Significance `[about_god, about_ourselves, about_christ, timeless, doctrines]` (Merida's 5 preserved); Personal Implications `[follow, forsake, receive, settle]` (4 verb-driven questions absorbing Merida's 8); Pastoral Context `[room_specifics, cost_and_gift]`.
+- Old keys retire from rendering (`IMPLICATIONS_THEOLOGICAL` / `IMPLICATIONS_PERSONAL` arrays + `IMPLICATIONS_UNBELIEVER_KEY` + `IMPLICATIONS_COMPILED_KEY` slots); the unbeliever / compiled constants are retained so `flattenToText` continues to surface any legacy data through the context pipeline.
+- StudyTab Phase 4 block refactored: dual-`SpotlightWorksheet` + Implications-for-Unbeliever textarea + Compiled-Implications block + Compile-button + ProposalPanel collapsed into a single `SpotlightWorksheet` over `IMPLICATIONS_FIELDS`; Phase 4 Review-button "filled" builder switched to `flattenToText` (closes the B1.0-era multi-question bug for Phase 4).
+- 353 vitest total green (no test break); Vite preview compiled clean.
+
+---
+
 ## 2026-05-04 — sprd B3.2: Field 5 Christ-Connection Statement + RT→Implications composite gate
 
 - Field 5 (Christ-Connection Statement) replaces its single primary question with the SFDI 2-question sequence: Q1 `christ_per_unit` is a `cumulative-synthesis-table` reusing B2.2's cross-phase plumbing — extends `observations.divisions.thought_units` with the writable `christ_connection` column on top of Phase 1's three columns + Phase 2's `meaning` column (all read-only); Q2 `statement` is a text-prompt stored in `redemptive_thread.christ_connection_statement.statement`.

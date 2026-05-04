@@ -8,11 +8,11 @@ import { buildContext } from "../utils/contextBuilder";
 import {
   OBSERVE_FIELDS, INTERPRET_FIELDS,
   REDEMPTIVE_FIELDS,
-  IMPLICATIONS_THEOLOGICAL, IMPLICATIONS_PERSONAL,
-  IMPLICATIONS_UNBELIEVER_KEY, IMPLICATIONS_COMPILED_KEY,
+  IMPLICATIONS_FIELDS,
   parseStructuredField, serializeStructuredField,
   getPrimaryAnswer, setPrimaryAnswer, setQuestionAnswer, hasAnyAnswer,
   isQuestionNA, setQuestionNA, DEFAULT_QUESTION_KEY,
+  flattenToText,
 } from "../utils/studyFields";
 import SpotlightWorksheet from "./SpotlightWorksheet";
 import AdvanceGateChecklist from "./AdvanceGateChecklist";
@@ -25,7 +25,6 @@ import { buildSystemPrompt, appendTaskDirective } from "../prompts/sermon";
 import {
   FE_CHAT_SYSTEM,
   OBSERVE_REVIEW_TASK, INTERPRET_REVIEW_TASK, REDEMPTIVE_REVIEW_TASK, IMPLICATIONS_REVIEW_TASK,
-  COMPILE_IMPLICATIONS_TASK,
   MPT_DRAFT_TASK, MPS_DRAFT_WITH_PC_TASK, MPS_DRAFT_NO_PC_TASK, MPS_CHAT_TASK,
   POPULATE_SCRIPTURE_TASK,
   OUTLINE_REVIEW_TASK, CHALLENGE_MPT_TASK,
@@ -274,7 +273,6 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
   // overwritten by AI without a click.
   const [mptProposal, setMptProposal] = useState(null);
   const [mpsProposal, setMpsProposal] = useState(null);
-  const [impCompileProposal, setImpCompileProposal] = useState(null);
   // Populate Scripture proposal — holds the resolved fe-update + summary text
   // until the pastor accepts. Shape: { next, summary }.
   const [scriptureProposal, setScriptureProposal] = useState(null);
@@ -1053,124 +1051,27 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
             <div className="sub-phase-body" data-tour-id="phase-4-worksheet">
               <p className="sub-phase-hint">Concluding implications — how does this passage apply to us today?</p>
 
-              <div data-tour-id="implications-theological">
-                <div className="worksheet-group-header">Theological Significance</div>
-                <SpotlightWorksheet
-                  fields={IMPLICATIONS_THEOLOGICAL}
-                  data={impData}
-                  onChange={(fieldKey, qKey, value) => updateStructured("implications", impData, fieldKey, value, qKey)}
-                  onToggleNA={(fieldKey, qKey) => toggleStructuredNA("implications", impData, fieldKey, qKey)}
-                  legacyNotes={impData.legacy_notes}
-                  sermonId={sermon.id}
-                />
-              </div>
-
-              <div data-tour-id="implications-personal">
-                <div className="worksheet-group-header">Personal Implications</div>
-                <SpotlightWorksheet
-                  fields={IMPLICATIONS_PERSONAL}
-                  data={impData}
-                  onChange={(fieldKey, qKey, value) => updateStructured("implications", impData, fieldKey, value, qKey)}
-                  onToggleNA={(fieldKey, qKey) => toggleStructuredNA("implications", impData, fieldKey, qKey)}
-                  sermonId={sermon.id}
-                />
-              </div>
-
-              <div data-tour-id="implications-unbeliever">
-              <div className="worksheet-group-header">Implications for Unbelievers</div>
-              <div className="worksheet-field">
-                <textarea
-                  className="field-textarea"
-                  rows={2}
-                  value={getPrimaryAnswer(impData, IMPLICATIONS_UNBELIEVER_KEY)}
-                  onChange={(e) => updateStructured("implications", impData, IMPLICATIONS_UNBELIEVER_KEY, e.target.value)}
-                  onInput={(e) => autoResize(e.target)}
-                  ref={(el) => autoResize(el)}
-                  placeholder="What are some possible implications for unbelievers?"
-                />
-              </div>
-
-              {/* Compiled implications list — auto-generated or hand-written */}
-              <div className="worksheet-summary-block" data-tour-id="implications-compile">
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
-                  <label className="worksheet-field-label" style={{ marginBottom: 0 }}>Compiled Implications</label>
-                  <SecondaryButton
-                    size="sm"
-                    disabled={draftLoading !== null}
-                    onClick={async () => {
-                      setDraftLoading("imp_compile");
-                      setImpCompileProposal(null);
-                      try {
-                        const theo = IMPLICATIONS_THEOLOGICAL
-                          .map(f => ({ f, v: getPrimaryAnswer(impData, f.key).trim() }))
-                          .filter(({ v }) => v)
-                          .map(({ f, v }) => `${f.label} ${v}`)
-                          .join("\n");
-                        const pers = IMPLICATIONS_PERSONAL
-                          .map(f => ({ f, v: getPrimaryAnswer(impData, f.key).trim() }))
-                          .filter(({ v }) => v)
-                          .map(({ f, v }) => `${f.label} ${v}`)
-                          .join("\n");
-                        const unb = getPrimaryAnswer(impData, IMPLICATIONS_UNBELIEVER_KEY).trim();
-                        const step = PHASES.IMPLICATIONS;
-                        const context = buildContext({ sermon, step });
-                        const userRequest = `Implications to compile:\n\nTheological significance:\n${theo || "(none)"}\n\nPersonal implications:\n${pers || "(none)"}\n\nImplications for unbelievers:\n${unb || "(none)"}`;
-                        const userContent = context
-                          ? `CONTEXT:\n${context}\n\nUSER REQUEST:\n${userRequest}`
-                          : userRequest;
-                        const result = await sendAIMessage(
-                          [{ role: "user", content: userContent }],
-                          layerTask(COMPILE_IMPLICATIONS_TASK, step),
-                          step,
-                          sermon.id,
-                        );
-                        if (result.ok && result.text.trim()) setImpCompileProposal(result.text.trim());
-                      } catch (e) {
-                        console.error("[implications compile]", e);
-                      } finally { setDraftLoading(null); }
-                    }}
-                    style={{ fontSize: "12px" }}
-                  >
-                    {draftLoading === "imp_compile" ? "Thinking…" : "Compile →"}
-                  </SecondaryButton>
-                </div>
-                <textarea
-                  className="field-textarea"
-                  rows={4}
-                  value={getPrimaryAnswer(impData, IMPLICATIONS_COMPILED_KEY)}
-                  onChange={(e) => updateStructured("implications", impData, IMPLICATIONS_COMPILED_KEY, e.target.value)}
-                  onInput={(e) => autoResize(e.target)}
-                  ref={(el) => autoResize(el)}
-                  placeholder="A consolidated list of all implications from your study — theological, personal, and for unbelievers."
-                />
-                <ProposalPanel
-                  loading={draftLoading === "imp_compile"}
-                  proposal={impCompileProposal}
-                  label="AI proposes compiled implications"
-                  acceptLabel={getPrimaryAnswer(impData, IMPLICATIONS_COMPILED_KEY).trim() ? "Replace compiled list" : "Use this"}
-                  onAccept={() => {
-                    const next = setPrimaryAnswer(impData, IMPLICATIONS_COMPILED_KEY, impCompileProposal);
-                    onUpdate({ implications: serializeStructuredField(next) });
-                    setImpCompileProposal(null);
-                  }}
-                  onDiscard={() => setImpCompileProposal(null)}
-                />
-              </div>
-              </div>{/* /implications-unbeliever */}
+              <SpotlightWorksheet
+                fields={IMPLICATIONS_FIELDS}
+                data={impData}
+                onChange={(fieldKey, qKey, value) => updateStructured("implications", impData, fieldKey, value, qKey)}
+                onToggleNA={(fieldKey, qKey) => toggleStructuredNA("implications", impData, fieldKey, qKey)}
+                legacyNotes={impData.legacy_notes}
+                sermonId={sermon.id}
+              />
 
               <div style={{ marginTop: "8px" }}>
                 <SecondaryButton
                   size="sm"
                   onClick={() => {
-                    const allFields = [...IMPLICATIONS_THEOLOGICAL, ...IMPLICATIONS_PERSONAL]
-                      .map(f => ({ f, v: getPrimaryAnswer(impData, f.key).trim() }))
-                      .filter(({ v }) => v)
-                      .map(({ f, v }) => `${f.label} ${v}`)
-                      .join("\n\n");
-                    const compiled = getPrimaryAnswer(impData, IMPLICATIONS_COMPILED_KEY).trim();
+                    // Build the review prompt's "filled" content using
+                    // flattenToText so multi-question fields (Fields 1/2/3)
+                    // surface — closes the B1.0-era `getPrimaryAnswer`-only
+                    // bug for Phase 4's Review path.
+                    const filled = flattenToText(impData, IMPLICATIONS_FIELDS);
                     fetchInline(
                       "implications",
-                      `Implications:\n\n${allFields}\n\n${compiled ? `Compiled list: ${compiled}` : ""}`,
+                      `Implications:\n\n${filled || "(none yet)"}`,
                       IMPLICATIONS_REVIEW_TASK,
                       PHASES.IMPLICATIONS,
                     );

@@ -243,13 +243,34 @@ removed in B3.2; `REDEMPTIVE_SUMMARY_KEY` is no longer written to from any UI
 surface, but `flattenToText` continues to surface any legacy `summary` data
 through the context pipeline (defensive read path).
 
-**Phase 4 still pre-SFDI in code.** The `IMPLICATIONS_*` arrays in
-`src/utils/studyFields.js` reflect the pre-SFDI shape; B4 ships the reshape:
-
-- **Phase 4 (Implications) — 4 fields:** Theological Significance →
-  Personal Implications → Pastoral Context → Implications Synthesis.
-  The three-way conversation realized at field level; Compiled list AI
-  synthesis retired; Implications for Unbeliever folded into Pastoral Context.
+**Phase 4 SFDI-aligned in code as of SPRD B4.0 + B4.1 (2026-05-04).** New
+`IMPLICATIONS_FIELDS` array in `src/utils/studyFields.js` is the SFDI 4-field
+shape: Theological Significance → Personal Implications → Pastoral Context →
+Implications Synthesis. The three-way conversation is structural — three
+voices (Theological / Personal / PC) get dedicated fields; Field 4 integrates
+them as the named outcome. Multi-question sequences: Theological Significance
+`[about_god, about_ourselves, about_christ, timeless, doctrines]`; Personal
+Implications `[follow, forsake, receive, settle]` (4 verb-driven questions
+absorbing Merida's 8); Pastoral Context `[room_specifics, cost_and_gift]`.
+Field 4 (Implications Synthesis) is heavy-lifting with `FieldOverviewScreen`,
+single-primary-question at B4.0 + B4.1 — its 2-question sequence
+(`implication_per_unit` cumulative-synthesis-table adding the writable
+`implication` column on top of Phase 1/2/3 columns + `synthesis` text-prompt)
+plus Implications → MPT/MPS composite gate land in B4.2. Old keys retire
+from rendering: 5 `IMPLICATIONS_THEOLOGICAL` (now Field 1 questions — Merida's
+5 preserved), 8 `IMPLICATIONS_PERSONAL` (consolidated to Field 2's 4),
+`IMPLICATIONS_UNBELIEVER_KEY` (folded into Field 3 Q1 — the room includes
+everyone), `IMPLICATIONS_COMPILED_KEY` (retired AI synthesis; Field 4 carries
+the synthesis in pastor's voice). `IMPLICATIONS_UNBELIEVER_KEY` and
+`IMPLICATIONS_COMPILED_KEY` constants retained so `flattenToText` continues
+to surface any legacy data through the context pipeline (defensive read
+path). StudyTab Phase 4 block refactored: dual-`SpotlightWorksheet` (theological
++ personal groups) + Implications-for-Unbeliever textarea + Compiled-Implications
+block + Compile-button + ProposalPanel collapsed into a single
+`SpotlightWorksheet` over `IMPLICATIONS_FIELDS`. The Phase 4 Review-button
+"filled" builder switched to `flattenToText` so multi-question content
+surfaces — closes the B1.0-era `getPrimaryAnswer`-only bug for Phase 4 (the
+same fix is a candidate small follow-on cut for Phases 1/2/3 Review buttons).
 
 **Note:** the `applications` field (UI label: "Possible Implications" — renamed
 from "Possible Applications" in the Vocabulary cleanup pass; the JSON key stays
