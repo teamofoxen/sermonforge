@@ -191,7 +191,7 @@ question via a 72/28 flex row. Field 4 Divisions / Thought Units and Field
 9 Possible Implications are flagged heavy-lifting and open with
 `FieldOverviewScreen` on first per-sermon entry (B1.3).
 
-**Phase 2 SFDI-aligned in code as of SPRD B2.0 + B2.1 (2026-05-04).** `INTERPRET_FIELDS`
+**Phase 2 SFDI-aligned in code as of SPRD B2.0–B2.2 (2026-05-04).** `INTERPRET_FIELDS`
 in `src/utils/studyFields.js` is the SFDI 7-field shape: Deeper Context →
 Recurring Ideas → Character Purpose → Contrasts → Cross-References →
 Commentary Notes → Interpretation Synthesis. Three new keys: `deeper_context`
@@ -201,11 +201,18 @@ Commentary Notes → Interpretation Synthesis. Three new keys: `deeper_context`
 `characters`, `diagram` (cross-phase to Observe Field 4 Q1 canvas which
 absorbed the structural-diagram work), `summarize_parts`, `summarize_whole`.
 Field 1 Deeper Context carries a 2-question sequence (B2.1): `[unresolved,
-book_argument]`. Other Phase 2 fields are single-question for now; Field 7
-Interpretation Synthesis ships its heavy-lifting overview + 2 questions
-(`meaning_per_unit` cumulative-column synthesis-table extension with Meaning
-over Phase 1 columns, plus `meaning_whole` text-prompt) and the Interpret →
-Redemptive Thread composite gate in B2.2.
+book_argument]`. Field 7 Interpretation Synthesis is heavy-lifting (B2.2):
+opens with `FieldOverviewScreen` on first per-sermon entry; Q1
+`meaning_per_unit` is a new `cumulative-synthesis-table` kind that reads /
+writes the canonical thought-unit array in `observations.divisions.thought_units`
+— Phase 1 owns the spine, all four phases read+write this one array, with
+upstream columns rendered read-only and the writable `meaning` column owned
+by Phase 2. SpotlightWorksheet gains `crossPhaseRead` / `crossPhaseWrite`
+props plus a `crossPhaseSource` declaration on the question to plumb the
+cross-column read/write. The Interpret → Redemptive Thread composite gate
+in `evaluateAdvance` (`kind=sub_phase, fromIndex=2`) checks Field 7's
+composite (every thought-unit row has `meaning`; `meaning_whole` non-empty)
+and returns `{ gates, firstReason }` per B1.6's structured shape.
 
 **Phases 3/4 still pre-SFDI in code.** `REDEMPTIVE_FIELDS` and the
 `IMPLICATIONS_*` arrays in `src/utils/studyFields.js` reflect the pre-SFDI

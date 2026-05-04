@@ -233,6 +233,65 @@ function checkField4Composite(data) {
   return null;
 }
 
+// Field 7 (Interpretation Synthesis) composite gate for the Interpret →
+// Redemptive Thread boundary (B2.2). Q1 satisfied when every thought-unit row
+// in `observations.divisions.thought_units` has a non-empty `meaning` column.
+// Q2 satisfied when `interpretation.interpretation_synthesis.meaning_whole`
+// is non-empty. The thought-unit array is the canonical cross-phase artifact;
+// per SFDI Phase 2 Field 7 the Interpretation Synthesis cannot be N/A — it's
+// the named outcome — so no escape valve at the field level.
+function checkField7Composite(sermon) {
+  const obsData = parseStructuredField(sermon?.observations);
+  const intData = parseStructuredField(sermon?.interpretation);
+
+  const thoughtUnits = obsData?.divisions?.thought_units?.value;
+  if (!Array.isArray(thoughtUnits) || thoughtUnits.length === 0) {
+    return "Name at least one thought unit in Observe Field 4 before advancing.";
+  }
+  const allHaveMeaning = thoughtUnits.every(
+    (row) => row && typeof row.meaning === "string" && row.meaning.trim()
+  );
+  if (!allHaveMeaning) {
+    return "Write a Meaning entry beside every thought unit before advancing.";
+  }
+
+  if (!isQuestionAnswered(intData, "interpretation_synthesis", "meaning_whole")) {
+    return "Write the whole-passage meaning paragraph before advancing.";
+  }
+
+  return null;
+}
+
+// SFDI Interpret → Redemptive Thread threshold (per `study-field-definition-
+// initiative.md` § "The hard gate at the boundary" inside Phase 2). Returns
+// `{ gates, firstReason }` mirroring the Phase 1 threshold's shape. One
+// load-bearing field (Field 7); the gate carries Field 7's failing sub-reason
+// when unmet.
+function checkInterpretToRedemptiveThreshold(sermon) {
+  const intData = parseStructuredField(sermon?.interpretation);
+  if (!intData || typeof intData !== "object") {
+    return {
+      gates: [],
+      firstReason: "Add some content before advancing.",
+    };
+  }
+
+  const f7Reason = checkField7Composite(sermon);
+  const gates = [
+    {
+      key: "field_7_interpretation_synthesis",
+      label: "Interpretation Synthesis",
+      met: !f7Reason,
+      reason: f7Reason || undefined,
+    },
+  ];
+
+  return {
+    gates,
+    firstReason: f7Reason,
+  };
+}
+
 // SFDI Observe → Interpret threshold (per `study-field-definition-initiative
 // .md` § "The hard gate at the boundary"). Returns a structured object:
 //   {
@@ -308,7 +367,9 @@ export function evaluateAdvance(sermon, kind, fromIndex) {
   }
 
   // SFDI per-boundary thresholds layer on top of the empty-evidence baseline.
-  // Currently wired: Observe → Interpret (kind=sub_phase, fromIndex=1).
+  // Currently wired:
+  //   - Observe → Interpret      (kind=sub_phase, fromIndex=1) — B1.4 + B1.5
+  //   - Interpret → Redemptive   (kind=sub_phase, fromIndex=2) — B2.2
   // The threshold returns a structured `{gates, firstReason}` so the disabled-
   // Continue UI can render either the legacy single-line hint (firstReason)
   // or the multi-gate hover-checklist (gates) per B1.6.
@@ -321,8 +382,19 @@ export function evaluateAdvance(sermon, kind, fromIndex) {
         ...(result.gates.length > 0 ? { gates: result.gates } : {}),
       };
     }
-    // All gates met — surface the gates anyway so the UI can confirm a
-    // satisfied checklist if it wants to (currently unused by consumers).
+    if (result.gates.length > 0) {
+      return { ok: true, gates: result.gates };
+    }
+  }
+  if (kind === "sub_phase" && fromIndex === 2) {
+    const result = checkInterpretToRedemptiveThreshold(sermon);
+    if (result.firstReason) {
+      return {
+        ok: false,
+        reason: result.firstReason,
+        ...(result.gates.length > 0 ? { gates: result.gates } : {}),
+      };
+    }
     if (result.gates.length > 0) {
       return { ok: true, gates: result.gates };
     }

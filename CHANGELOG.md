@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-04 — sprd B2.2: Field 7 Interpretation Synthesis + Interpret→RT composite gate
+
+- Field 7 (Interpretation Synthesis) ships heavy-lifting overview + 2 questions: Q1 `meaning_per_unit` (new `cumulative-synthesis-table` kind reading/writing the canonical thought-unit array in `observations.divisions.thought_units`) and Q2 `meaning_whole` (text-prompt in interpretation column).
+- SpotlightWorksheet gains `crossPhaseRead` / `crossPhaseWrite` props plus a `crossPhaseSource` declaration on questions; cross-phase questions resolve their value upstream instead of from local field data, completeness checks the writable column, and the NA toggle is hidden for cumulative-synthesis-table (NA semantics live upstream).
+- StudyTab plumbs cross-phase props for Phase 2 only; the Phase 2 worksheet reads from observations and writes through `updateStructured` against the observations column.
+- `evaluateAdvance` extends with the Interpret → Redemptive Thread threshold (`kind=sub_phase, fromIndex=2`) — Field 7 composite gate (every thought-unit row has `meaning`, `meaning_whole` non-empty); returns `{ gates, firstReason }` per B1.6's structured shape.
+- 6 new SpotlightWorksheet cumulative-synthesis-table tests + 6 new Field 7 composite-gate unit tests; 348 vitest total green; Vite preview compiled clean.
+
+---
+
 ## 2026-05-04 — sprd B1.7: flattenToText multi-question fix
 
 - `flattenToText` now branches on `fieldQuestions(def)` — single-primary-question fields keep the legacy `Label: value` shape; multi-question fields render as a labeled block with each answered question on its own line under the field label.

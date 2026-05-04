@@ -736,3 +736,176 @@ describe("SpotlightWorksheet — kind dispatch", () => {
     expect(screen.queryByTestId("peripheral-reference-panel")).toBeNull();
   });
 });
+
+// ── Cumulative-synthesis-table cross-phase dispatch (B2.2) ─────────────────
+//
+// Phase 2 Field 7 Q1 reads/writes the canonical thought-unit array from
+// `observations.divisions.thought_units` via crossPhaseRead/crossPhaseWrite.
+// Q1's value is the upstream rows extended with a Meaning column (writable);
+// upstream columns render read-only via SynthesisTable's `columns` prop.
+
+const PHASE_2_FIELD_7 = {
+  key: "interpretation_synthesis",
+  label: "Interpretation Synthesis",
+  hint: "Articulate what the passage MEANS — per thought unit and as a whole — in your own voice.",
+  questions: [
+    {
+      key: "meaning_per_unit",
+      kind: "cumulative-synthesis-table",
+      prompt: "Beside each thought unit you named in Observe, write what it MEANS in your own voice.",
+      crossPhaseSource: {
+        column: "observations",
+        fieldKey: "divisions",
+        questionKey: "thought_units",
+      },
+      columns: [
+        { key: "thought_unit_summary", label: "Thought unit", kind: "textarea",    readOnly: true },
+        { key: "after_line",            label: "After line",  kind: "line-number", readOnly: true },
+        { key: "signal",                label: "Signal",      kind: "input",       readOnly: true },
+        { key: "meaning",               label: "Meaning",     kind: "textarea" },
+      ],
+    },
+    { key: "meaning_whole", prompt: "One paragraph. The whole passage's meaning." },
+  ],
+};
+
+describe("SpotlightWorksheet — cumulative-synthesis-table cross-phase dispatch", () => {
+  function renderField7({ phase2Data = {}, observations = {}, onChange = vi.fn(), onCrossPhaseWrite = vi.fn() } = {}) {
+    const onToggleNA = vi.fn();
+    const utils = render(
+      <SpotlightWorksheet
+        fields={[PHASE_2_FIELD_7]}
+        data={phase2Data}
+        onChange={onChange}
+        onToggleNA={onToggleNA}
+        crossPhaseRead={(column) => (column === "observations" ? observations : null)}
+        crossPhaseWrite={onCrossPhaseWrite}
+      />,
+    );
+    return { onChange, onCrossPhaseWrite, ...utils };
+  }
+
+  it("Q1 mounts SynthesisTable reading thought_units from the upstream observations column", () => {
+    const observations = {
+      divisions: {
+        thought_units: {
+          value: [
+            { thought_unit_summary: "Believers stand uncondemned in Christ.", after_line: "2", signal: "" },
+            { thought_unit_summary: "The Spirit's law sets them free.", after_line: "5", signal: "But" },
+          ],
+          na: false,
+        },
+      },
+    };
+    renderField7({ observations });
+    // Active question is meaning_per_unit (cumulative-synthesis-table).
+    const active = document.querySelector(".worksheet-question-active");
+    expect(active.getAttribute("data-question-key")).toBe("meaning_per_unit");
+    // SynthesisTable rendered, with Meaning column visible
+    expect(screen.getByTestId("synthesis-table")).toBeTruthy();
+    expect(screen.getByText("Meaning")).toBeTruthy();
+    // Upstream rows visible read-only
+    expect(screen.getByText("Believers stand uncondemned in Christ.")).toBeTruthy();
+    expect(screen.getByText("The Spirit's law sets them free.")).toBeTruthy();
+  });
+
+  it("editing the Meaning column writes back to observations via crossPhaseWrite (not local onChange)", () => {
+    const observations = {
+      divisions: {
+        thought_units: {
+          value: [
+            { thought_unit_summary: "Row 1", after_line: "1", signal: "" },
+          ],
+          na: false,
+        },
+      },
+    };
+    const { onChange, onCrossPhaseWrite } = renderField7({ observations });
+    // Find the writable Meaning textarea (the only non-readonly cell)
+    const meaningCell = document.querySelector(".synthesis-table-cell-meaning");
+    expect(meaningCell).toBeTruthy();
+    const textarea = meaningCell.querySelector("textarea");
+    fireEvent.change(textarea, { target: { value: "The author conveys God's mercy." } });
+    // crossPhaseWrite called with observations column targeting divisions.thought_units
+    expect(onCrossPhaseWrite).toHaveBeenCalled();
+    const lastCall = onCrossPhaseWrite.mock.calls[onCrossPhaseWrite.mock.calls.length - 1];
+    expect(lastCall[0]).toBe("observations");
+    expect(lastCall[1]).toBe("divisions");
+    expect(lastCall[2]).toBe("thought_units");
+    expect(Array.isArray(lastCall[3])).toBe(true);
+    expect(lastCall[3][0].meaning).toBe("The author conveys God's mercy.");
+    // Local onChange not called for cross-phase writes
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("NA toggle is hidden on cumulative-synthesis-table questions (NA semantics live upstream)", () => {
+    const observations = {
+      divisions: {
+        thought_units: {
+          value: [{ thought_unit_summary: "X", after_line: "1", signal: "" }],
+          na: false,
+        },
+      },
+    };
+    renderField7({ observations });
+    // Q1 active — no Mark not applicable button
+    expect(screen.queryByText("Mark not applicable")).toBeNull();
+  });
+
+  it("Next-question is disabled when no thought unit has a meaning entry yet", () => {
+    const observations = {
+      divisions: {
+        thought_units: {
+          value: [
+            { thought_unit_summary: "Row 1", after_line: "1", signal: "" },
+            { thought_unit_summary: "Row 2", after_line: "5", signal: "" },
+          ],
+          na: false,
+        },
+      },
+    };
+    renderField7({ observations });
+    const nextBtn = screen.getByText(/Next question →/).closest("button");
+    expect(nextBtn.disabled).toBe(true);
+  });
+
+  it("Next-question enables once at least one thought unit has a meaning entry (Q1 spotlight)", () => {
+    const observations = {
+      divisions: {
+        thought_units: {
+          value: [
+            { thought_unit_summary: "Row 1", after_line: "1", signal: "", meaning: "Author conveys mercy." },
+            { thought_unit_summary: "Row 2", after_line: "5", signal: "" },
+          ],
+          na: false,
+        },
+      },
+    };
+    renderField7({ observations });
+    // Q1 counts as "complete" (any meaning filled) so the spotlight starts
+    // on Q2. Click Q1 to make it active, then check Next is enabled.
+    const q1Row = document.querySelector('[data-question-key="meaning_per_unit"]');
+    fireEvent.click(q1Row);
+    const active = document.querySelector(".worksheet-question-active");
+    expect(active.getAttribute("data-question-key")).toBe("meaning_per_unit");
+    const nextBtn = screen.getByText(/Next question →/).closest("button");
+    expect(nextBtn.disabled).toBe(false);
+  });
+
+  it("first-incomplete spotlight skips Q1 when every thought unit already has meaning, lands on Q2", () => {
+    const observations = {
+      divisions: {
+        thought_units: {
+          value: [
+            { thought_unit_summary: "Row 1", after_line: "1", signal: "", meaning: "M1" },
+            { thought_unit_summary: "Row 2", after_line: "5", signal: "", meaning: "M2" },
+          ],
+          na: false,
+        },
+      },
+    };
+    renderField7({ observations });
+    const active = document.querySelector(".worksheet-question-active");
+    expect(active.getAttribute("data-question-key")).toBe("meaning_whole");
+  });
+});

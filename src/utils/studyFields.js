@@ -254,7 +254,48 @@ export const INTERPRET_FIELDS = [
   { key: "contrasts",               label: "Contrasts",               hint: "What contrasts has the author built into the passage? Name each — what's set against what — and say in your own words what each contrast is doing." },
   { key: "cross_refs",              label: "Cross-References",        hint: "Where else does Scripture speak to what this passage is saying? Move outward in concentric circles. For each, name what it adds." },
   { key: "commentary",              label: "Commentary Notes",        hint: "Now — last, to check, not to start — what do the commentaries say? Note insights that sharpen, confirm, or correct what you've worked out. Note where you disagree, and why." },
-  { key: "interpretation_synthesis", label: "Interpretation Synthesis", hint: "Articulate what the passage MEANS — per thought unit and as a whole — in your own voice. The Interpretation Set lives here." },
+  {
+    key: "interpretation_synthesis",
+    label: "Interpretation Synthesis",
+    hint: "Articulate what the passage MEANS — per thought unit and as a whole — in your own voice. The Interpretation Set lives here.",
+    heavyLifting: true,
+    overview: {
+      title: "Interpretation Synthesis",
+      subtitle: "Field 7 of 7 · Interpret",
+      paragraphs: [
+        "You've widened the lens, dissected what recurs, named character motives, surfaced the contrasts. You've let Scripture interpret Scripture and checked your reading against trusted readers, last.",
+        "One more move closes Interpret. Take what you've worked out and say it. For each thought unit you named in Observe — what does it MEAN? Not what it says (you did that in Observe). Not what it sounds like in your own words (paraphrase, also Observe). What it MEANS — what the author is conveying through it.",
+        "Then, the whole passage. One paragraph. The meaning, in your own voice.",
+        "What you produce here is the Interpretation Set. Phase 3 (Redemptive Thread) opens against it. Christ-connection deepens this; the meaning is the substrate.",
+      ],
+    },
+    questions: [
+      {
+        key: "meaning_per_unit",
+        kind: "cumulative-synthesis-table",
+        prompt: "Beside each thought unit you named in Observe, write what it MEANS in your own voice. One or two sentences each. Not what it says — what the author is conveying through it.",
+        // The cumulative thought-unit list is canonical in Phase 1's
+        // observations.divisions.thought_units. Phase 2 reads + writes the
+        // same array, adding a `meaning` column to each row. Phase 3 + 4
+        // extend this same array with christ_connection + implication.
+        crossPhaseSource: {
+          column: "observations",
+          fieldKey: "divisions",
+          questionKey: "thought_units",
+        },
+        columns: [
+          { key: "thought_unit_summary", label: "Thought unit", kind: "textarea",    readOnly: true },
+          { key: "after_line",            label: "After line",  kind: "line-number", readOnly: true },
+          { key: "signal",                label: "Signal",      kind: "input",       readOnly: true },
+          { key: "meaning",               label: "Meaning",     kind: "textarea",    placeholder: "What is the author conveying through this thought unit?" },
+        ],
+      },
+      {
+        key: "meaning_whole",
+        prompt: "One paragraph. The whole passage's meaning, in your own voice. What is the author saying through this passage about reality? This is the Interpretation Set. Phase 3 opens against it.",
+      },
+    ],
+  },
 ];
 
 // ── Phase 3: Redemptive Thread ───────────────────────────────────────────────

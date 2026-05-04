@@ -540,3 +540,165 @@ describe("SPRD A1.2 / B1.6: evaluateAdvance returns structured per-gate state at
     expect(result.gates).toBeUndefined();
   });
 });
+
+// SPRD B2.2 — Interpret → Redemptive Thread threshold. Field 7 (Interpretation
+// Synthesis) composite: every thought unit in observations.divisions.thought_units
+// has a non-empty `meaning` column AND meaning_whole paragraph is non-empty.
+describe("SPRD B2.2: Interpret → Redemptive Thread threshold (Field 7 composite)", () => {
+  const FILLED_THOUGHT_UNITS_NO_MEANING = {
+    sentence_layout: {
+      value: [
+        { text: "There is now no condemnation",       depth: 0, kind: "main" },
+        { text: "for those who are in Christ Jesus.", depth: 1, kind: "modifier" },
+      ],
+      na: false,
+    },
+    paraphrases: {
+      value: [{ main_sentence_id: "ms-0", paraphrase: "No condemnation now." }],
+      na: false,
+    },
+    thought_units: {
+      value: [
+        { thought_unit_summary: "Believers stand uncondemned.", after_line: "2", signal: "" },
+      ],
+      na: false,
+    },
+  };
+
+  const FILLED_THOUGHT_UNITS_WITH_MEANING = {
+    ...FILLED_THOUGHT_UNITS_NO_MEANING,
+    thought_units: {
+      value: [
+        { thought_unit_summary: "Believers stand uncondemned.", after_line: "2", signal: "", meaning: "The author declares freedom from judgment for those in Christ." },
+      ],
+      na: false,
+    },
+  };
+
+  it("returns ok=false at sub-phase 2 when no observations content (empty-evidence baseline)", async () => {
+    const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
+    const result: any = evaluateAdvance(
+      { id: "test", interpretation: "" },
+      "sub_phase",
+      2,
+    );
+    expect(result.ok).toBe(false);
+  });
+
+  it("returns ok=false at sub-phase 2 when thought_units exist but no meaning columns filled", async () => {
+    const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
+    const result: any = evaluateAdvance(
+      {
+        id: "test",
+        observations: JSON.stringify({ divisions: FILLED_THOUGHT_UNITS_NO_MEANING }),
+        interpretation: JSON.stringify({
+          interpretation_synthesis: {
+            meaning_whole: { value: "The whole-passage meaning paragraph.", na: false },
+          },
+        }),
+      },
+      "sub_phase",
+      2,
+    );
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/Meaning entry/i);
+    expect(result.gates).toHaveLength(1);
+    expect(result.gates[0].key).toBe("field_7_interpretation_synthesis");
+    expect(result.gates[0].met).toBe(false);
+  });
+
+  it("returns ok=false at sub-phase 2 when meanings filled but meaning_whole is empty", async () => {
+    const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
+    const result: any = evaluateAdvance(
+      {
+        id: "test",
+        observations: JSON.stringify({ divisions: FILLED_THOUGHT_UNITS_WITH_MEANING }),
+        // Interpret has some Phase 2 content so the empty-evidence baseline
+        // passes; the Field 7 composite gate is what should fire.
+        interpretation: JSON.stringify({
+          recurring_ideas: { primary: { value: "Death, life, mercy.", na: false } },
+          interpretation_synthesis: {
+            meaning_whole: { value: "", na: false },
+          },
+        }),
+      },
+      "sub_phase",
+      2,
+    );
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/whole-passage meaning paragraph/i);
+  });
+
+  it("returns ok=true at sub-phase 2 when every thought unit has meaning and meaning_whole is filled", async () => {
+    const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
+    const result: any = evaluateAdvance(
+      {
+        id: "test",
+        observations: JSON.stringify({ divisions: FILLED_THOUGHT_UNITS_WITH_MEANING }),
+        interpretation: JSON.stringify({
+          interpretation_synthesis: {
+            meaning_whole: { value: "The whole-passage meaning paragraph in pastor's voice.", na: false },
+          },
+        }),
+      },
+      "sub_phase",
+      2,
+    );
+    expect(result.ok).toBe(true);
+    expect(result.gates).toHaveLength(1);
+    expect(result.gates[0].met).toBe(true);
+  });
+
+  it("returns ok=false at sub-phase 2 when one of two thought units lacks meaning", async () => {
+    const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
+    const partialMeanings = {
+      ...FILLED_THOUGHT_UNITS_NO_MEANING,
+      thought_units: {
+        value: [
+          { thought_unit_summary: "Row 1", after_line: "2", signal: "", meaning: "M1" },
+          { thought_unit_summary: "Row 2", after_line: "5", signal: "" },  // no meaning
+        ],
+        na: false,
+      },
+    };
+    const result: any = evaluateAdvance(
+      {
+        id: "test",
+        observations: JSON.stringify({ divisions: partialMeanings }),
+        interpretation: JSON.stringify({
+          interpretation_synthesis: {
+            meaning_whole: { value: "Whole-passage paragraph.", na: false },
+          },
+        }),
+      },
+      "sub_phase",
+      2,
+    );
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/Meaning entry beside every thought unit/i);
+  });
+
+  it("returns ok=false at sub-phase 2 when thought_units array is empty (no spine to extend)", async () => {
+    const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
+    const result: any = evaluateAdvance(
+      {
+        id: "test",
+        observations: JSON.stringify({
+          divisions: {
+            ...FILLED_THOUGHT_UNITS_NO_MEANING,
+            thought_units: { value: [], na: false },
+          },
+        }),
+        interpretation: JSON.stringify({
+          interpretation_synthesis: {
+            meaning_whole: { value: "Whole-passage paragraph.", na: false },
+          },
+        }),
+      },
+      "sub_phase",
+      2,
+    );
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/at least one thought unit/i);
+  });
+});

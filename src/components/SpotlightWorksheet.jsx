@@ -43,6 +43,43 @@ function findCanvasValue(questions, fieldData, fieldKey) {
   return Array.isArray(v) ? v : [];
 }
 
+// Resolve the effective value for a question. For cross-phase questions
+// (cumulative-synthesis-table at Phase 2 / 3 / 4 reading the canonical
+// thought-unit array from `observations.divisions.thought_units`), the value
+// lives outside the active phase's data column — read it via crossPhaseRead.
+// Otherwise read from the local field data via getQuestionAnswer.
+function getEffectiveQuestionValue(question, data, fieldKey, crossPhaseRead) {
+  const src = question?.crossPhaseSource;
+  if (src && typeof crossPhaseRead === "function") {
+    const upstream = crossPhaseRead(src.column);
+    return upstream?.[src.fieldKey]?.[src.questionKey]?.value;
+  }
+  return getQuestionAnswer(data, fieldKey, question.key);
+}
+
+// Has the pastor put real content into this question? For text-prompt and
+// the three structured-exercise sub-shapes (canvas, paraphrase, synthesis-
+// table), `flattenAnswerValue` produces non-empty text whenever the value
+// has any answered content. The cumulative-synthesis-table is the exception:
+// its value is the full upstream + writable-column array, so flattenAnswerValue
+// would return non-empty as soon as any upstream row exists. Completeness
+// for cumulative-synthesis-table means "the writable column has ≥ 1 filled
+// row," not just "the array is non-empty."
+function questionHasContent(question, value) {
+  if (question?.kind === "cumulative-synthesis-table") {
+    if (!Array.isArray(value)) return false;
+    const writable = Array.isArray(question.columns)
+      ? question.columns.find((c) => !c.readOnly)
+      : null;
+    if (!writable) return false;
+    return value.some(
+      (row) =>
+        row && typeof row[writable.key] === "string" && row[writable.key].trim()
+    );
+  }
+  return !!flattenAnswerValue(value);
+}
+
 // Render a structured reference-panel section (the data shape lives in
 // studyFields.js so the field defs stay React-free per B1.3 pattern).
 function RefPanelSection({ section }) {
@@ -125,6 +162,28 @@ function renderOverviewBody(overview) {
 
 // ── Question completeness helpers ──────────────────────────────────────────
 
+// Question-aware completeness check. Cross-phase questions
+// (cumulative-synthesis-table) read their value via crossPhaseRead; everything
+// else reads from local field data. Cross-phase NA handling follows the
+// upstream column's NA flag — a Phase-1-marked-NA thought_units satisfies
+// Phase 2's Q1 because there's nothing to extend. Local NA still applies to
+// non-cross-phase questions per the existing pattern.
+function isQuestionCompleteFor(question, data, fieldKey, crossPhaseRead) {
+  const src = question?.crossPhaseSource;
+  if (src && typeof crossPhaseRead === "function") {
+    const upstream = crossPhaseRead(src.column);
+    if (upstream?.[src.fieldKey]?.[src.questionKey]?.na) return true;
+    const value = upstream?.[src.fieldKey]?.[src.questionKey]?.value;
+    return questionHasContent(question, value);
+  }
+  if (isQuestionNA(data, fieldKey, question.key)) return true;
+  const value = getQuestionAnswer(data, fieldKey, question.key);
+  return questionHasContent(question, value);
+}
+
+// Legacy back-compat shim used by older tests / callers — preserves the
+// `(data, fieldKey, questionKey)` signature for fields that don't have a
+// question-def in scope.
 function isQuestionComplete(data, fieldKey, questionKey) {
   if (isQuestionNA(data, fieldKey, questionKey)) return true;
   return !!flattenAnswerValue(getQuestionAnswer(data, fieldKey, questionKey));
@@ -133,9 +192,13 @@ function isQuestionComplete(data, fieldKey, questionKey) {
 // First incomplete question for a field, mirroring A1.1's first-incomplete-
 // field selection. Returns the first question's key when all are answered
 // or N/A — caller decides whether to render that as "active by default".
-export function firstIncompleteQuestionKey(questions, data, fieldKey) {
+//
+// Optional crossPhaseRead: when present, cross-phase questions
+// (cumulative-synthesis-table) consult the canonical upstream column for
+// completeness instead of the active phase's data.
+export function firstIncompleteQuestionKey(questions, data, fieldKey, crossPhaseRead) {
   for (const q of questions) {
-    if (!isQuestionComplete(data, fieldKey, q.key)) return q.key;
+    if (!isQuestionCompleteFor(q, data, fieldKey, crossPhaseRead)) return q.key;
   }
   return questions[0]?.key ?? null;
 }
@@ -212,6 +275,8 @@ function ActiveQuestionInput({
   fieldQuestionsArr,
   fieldData,
   taRefSetter,
+  crossPhaseRead,
+  crossPhaseWrite,
 }) {
   const kind = question.kind || "textarea";
 
@@ -246,6 +311,29 @@ function ActiveQuestionInput({
       />
     );
   }
+  if (kind === "cumulative-synthesis-table") {
+    // Phase 2/3/4 extend Phase 1's synthesis-table sub-shape with a writable
+    // column. The canonical thought-unit array lives in the upstream column
+    // declared by `question.crossPhaseSource`. Reads/writes go cross-phase
+    // via the crossPhaseRead / crossPhaseWrite props that StudyTab plumbs.
+    const src = question.crossPhaseSource;
+    const upstream = typeof crossPhaseRead === "function" ? crossPhaseRead(src?.column) : null;
+    const upstreamRows = upstream?.[src?.fieldKey]?.[src?.questionKey]?.value;
+    const cumulativeValue = Array.isArray(upstreamRows) ? upstreamRows : [];
+    const writeBack = (next) => {
+      if (typeof crossPhaseWrite === "function" && src) {
+        crossPhaseWrite(src.column, src.fieldKey, src.questionKey, next);
+      }
+    };
+    return (
+      <SynthesisTable
+        value={cumulativeValue}
+        onChange={writeBack}
+        columns={Array.isArray(question.columns) ? question.columns : undefined}
+        disabled={isNA}
+      />
+    );
+  }
 
   return (
     <textarea
@@ -270,9 +358,11 @@ function MultiQuestionActive({
   onToggleQuestionNA,
   onNextField,
   isLastField,
+  crossPhaseRead,
+  crossPhaseWrite,
 }) {
   const initialActiveQ = useMemo(
-    () => firstIncompleteQuestionKey(questions, data, field.key),
+    () => firstIncompleteQuestionKey(questions, data, field.key, crossPhaseRead),
     // Compute once on mount; user actions own active-question state thereafter.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
@@ -296,9 +386,20 @@ function MultiQuestionActive({
     return i >= 0 ? i : 0;
   })();
   const activeQ = questions[safeActiveIdx];
-  const activeValue = getQuestionAnswer(data, field.key, activeQ.key);
-  const activeIsNA = isQuestionNA(data, field.key, activeQ.key);
-  const canAdvance = activeIsNA || !!flattenAnswerValue(activeValue);
+  const activeIsCrossPhase = !!activeQ.crossPhaseSource;
+  const activeValue = getEffectiveQuestionValue(activeQ, data, field.key, crossPhaseRead);
+  // NA on cross-phase questions follows the upstream column's flag (Phase 2's
+  // view doesn't separately mark Phase 1's data as N/A). Local NA still
+  // applies elsewhere.
+  const activeIsNA = (() => {
+    if (activeIsCrossPhase) {
+      const src = activeQ.crossPhaseSource;
+      const upstream = typeof crossPhaseRead === "function" ? crossPhaseRead(src.column) : null;
+      return !!upstream?.[src.fieldKey]?.[src.questionKey]?.na;
+    }
+    return isQuestionNA(data, field.key, activeQ.key);
+  })();
+  const canAdvance = activeIsNA || questionHasContent(activeQ, activeValue);
   const isLastQ = safeActiveIdx === questions.length - 1;
   const showNextButton = !(isLastQ && isLastField);
 
@@ -341,15 +442,19 @@ function MultiQuestionActive({
                   fieldQuestionsArr={questions}
                   fieldData={data}
                   taRefSetter={(el) => { taRef.current = el; }}
+                  crossPhaseRead={crossPhaseRead}
+                  crossPhaseWrite={crossPhaseWrite}
                 />
                 <div className="spotlight-controls">
-                  <button
-                    type="button"
-                    className="spotlight-na-toggle"
-                    onClick={handleToggleNA}
-                  >
-                    {activeIsNA ? "Mark applicable" : "Mark not applicable"}
-                  </button>
+                  {!activeIsCrossPhase && (
+                    <button
+                      type="button"
+                      className="spotlight-na-toggle"
+                      onClick={handleToggleNA}
+                    >
+                      {activeIsNA ? "Mark applicable" : "Mark not applicable"}
+                    </button>
+                  )}
                   {showNextButton && (
                     <PrimaryButton
                       size="sm"
@@ -376,9 +481,34 @@ function MultiQuestionActive({
           }
 
           // Non-active question — collapsed row showing answer / N/A / pending.
-          const qValue = getQuestionAnswer(data, field.key, q.key);
-          const qIsNA = isQuestionNA(data, field.key, q.key);
-          const qFlat = flattenAnswerValue(qValue);
+          const qIsCrossPhase = !!q.crossPhaseSource;
+          const qValue = getEffectiveQuestionValue(q, data, field.key, crossPhaseRead);
+          const qIsNA = (() => {
+            if (qIsCrossPhase) {
+              const src = q.crossPhaseSource;
+              const upstream = typeof crossPhaseRead === "function" ? crossPhaseRead(src.column) : null;
+              return !!upstream?.[src.fieldKey]?.[src.questionKey]?.na;
+            }
+            return isQuestionNA(data, field.key, q.key);
+          })();
+          // For cumulative-synthesis-table, summary surfaces "X of Y units have
+          // meaning" rather than the flattened table text — the latter would
+          // dominate the collapsed row visually.
+          const qFlat = (() => {
+            if (q.kind === "cumulative-synthesis-table") {
+              if (!Array.isArray(qValue)) return "";
+              const writable = Array.isArray(q.columns)
+                ? q.columns.find((c) => !c.readOnly)
+                : null;
+              if (!writable) return "";
+              const total = qValue.length;
+              const filled = qValue.filter(
+                (r) => r && typeof r[writable.key] === "string" && r[writable.key].trim()
+              ).length;
+              return total === 0 ? "" : `${filled} of ${total} units have ${writable.label.toLowerCase()}`;
+            }
+            return flattenAnswerValue(qValue);
+          })();
           const isPending = !qIsNA && !qFlat;
 
           let summary;
@@ -427,9 +557,11 @@ function MultiQuestionActive({
 
 // ── Collapsed field rendering ──────────────────────────────────────────────
 
-function CollapsedField({ field, questions, data, onActivate }) {
+function CollapsedField({ field, questions, data, onActivate, crossPhaseRead }) {
   const isMulti = questions.length > 1;
-  const fieldFullyComplete = questions.every((q) => isQuestionComplete(data, field.key, q.key));
+  const fieldFullyComplete = questions.every((q) =>
+    isQuestionCompleteFor(q, data, field.key, crossPhaseRead)
+  );
 
   const collapsedClass = [
     "worksheet-field",
@@ -437,6 +569,45 @@ function CollapsedField({ field, questions, data, onActivate }) {
     isMulti ? "worksheet-field-collapsed-multi" : "",
     !fieldFullyComplete ? "worksheet-field-collapsed-incomplete" : "",
   ].filter(Boolean).join(" ");
+
+  // Render a per-question line for the multi-question collapsed summary.
+  // Cross-phase questions read their value via crossPhaseRead and surface a
+  // count-style line for cumulative-synthesis-table.
+  const renderQuestionLine = (q) => {
+    const isCrossPhase = !!q.crossPhaseSource;
+    const v = getEffectiveQuestionValue(q, data, field.key, crossPhaseRead);
+    const isNA = (() => {
+      if (isCrossPhase) {
+        const src = q.crossPhaseSource;
+        const upstream = typeof crossPhaseRead === "function" ? crossPhaseRead(src.column) : null;
+        return !!upstream?.[src.fieldKey]?.[src.questionKey]?.na;
+      }
+      return isQuestionNA(data, field.key, q.key);
+    })();
+    let flat;
+    if (q.kind === "cumulative-synthesis-table") {
+      if (!Array.isArray(v)) {
+        flat = "";
+      } else {
+        const writable = Array.isArray(q.columns)
+          ? q.columns.find((c) => !c.readOnly)
+          : null;
+        if (!writable || v.length === 0) {
+          flat = "";
+        } else {
+          const filled = v.filter(
+            (r) => r && typeof r[writable.key] === "string" && r[writable.key].trim()
+          ).length;
+          flat = `${filled} of ${v.length} units have ${writable.label.toLowerCase()}`;
+        }
+      }
+    } else {
+      flat = flattenAnswerValue(v);
+    }
+    if (isNA) return <span className="worksheet-field-summary-na">Not applicable</span>;
+    if (flat) return flat;
+    return <span className="worksheet-field-summary-empty">Not yet answered</span>;
+  };
 
   return (
     <div
@@ -456,32 +627,15 @@ function CollapsedField({ field, questions, data, onActivate }) {
       <div className="worksheet-field-label">{field.label}</div>
       {isMulti ? (
         <ul className="worksheet-field-multi-summary">
-          {questions.map((q) => {
-            const v = getQuestionAnswer(data, field.key, q.key);
-            const isNA = isQuestionNA(data, field.key, q.key);
-            const flat = flattenAnswerValue(v);
-            let line;
-            if (isNA) line = <span className="worksheet-field-summary-na">Not applicable</span>;
-            else if (flat) line = flat;
-            else line = <span className="worksheet-field-summary-empty">Not yet answered</span>;
-            return (
-              <li key={q.key} className="worksheet-field-multi-summary-line">
-                {line}
-              </li>
-            );
-          })}
+          {questions.map((q) => (
+            <li key={q.key} className="worksheet-field-multi-summary-line">
+              {renderQuestionLine(q)}
+            </li>
+          ))}
         </ul>
-      ) : (() => {
-        const q = questions[0];
-        const v = getQuestionAnswer(data, field.key, q.key);
-        const isNA = isQuestionNA(data, field.key, q.key);
-        const flat = flattenAnswerValue(v);
-        let summary;
-        if (isNA) summary = <span className="worksheet-field-summary-na">Not applicable</span>;
-        else if (flat) summary = flat;
-        else summary = <span className="worksheet-field-summary-empty">Not yet answered</span>;
-        return <div className="worksheet-field-summary">{summary}</div>;
-      })()}
+      ) : (
+        <div className="worksheet-field-summary">{renderQuestionLine(questions[0])}</div>
+      )}
     </div>
   );
 }
@@ -499,6 +653,8 @@ export function SpotlightField({
   onNextField,
   showOverview,
   onDismissOverview,
+  crossPhaseRead,
+  crossPhaseWrite,
 }) {
   const questions = fieldQuestions(field);
 
@@ -509,6 +665,7 @@ export function SpotlightField({
         questions={questions}
         data={data}
         onActivate={onActivate}
+        crossPhaseRead={crossPhaseRead}
       />
     );
   }
@@ -535,6 +692,8 @@ export function SpotlightField({
         onToggleQuestionNA={onToggleQuestionNA}
         onNextField={onNextField}
         isLastField={isLast}
+        crossPhaseRead={crossPhaseRead}
+        crossPhaseWrite={crossPhaseWrite}
       />
     );
   }
@@ -563,11 +722,13 @@ export default function SpotlightWorksheet({
   onToggleNA,
   legacyNotes,
   sermonId,
+  crossPhaseRead,
+  crossPhaseWrite,
 }) {
   const initialActive = useMemo(() => {
     const firstIncomplete = fields.find((f) => {
       const qs = fieldQuestions(f);
-      return qs.some((q) => !isQuestionComplete(data, f.key, q.key));
+      return qs.some((q) => !isQuestionCompleteFor(q, data, f.key, crossPhaseRead));
     });
     return firstIncomplete?.key ?? fields[0]?.key ?? null;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -661,6 +822,8 @@ export default function SpotlightWorksheet({
           onNextField={() => advanceToNextField(f.key)}
           showOverview={f.heavyLifting && !!f.overview && !overviewSeen.has(f.key)}
           onDismissOverview={() => markOverviewSeen(f.key)}
+          crossPhaseRead={crossPhaseRead}
+          crossPhaseWrite={crossPhaseWrite}
         />
       ))}
     </div>

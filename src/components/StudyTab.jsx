@@ -948,6 +948,19 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                 onToggleNA={(fieldKey, qKey) => toggleStructuredNA("interpretation", intData, fieldKey, qKey)}
                 legacyNotes={intData.legacy_notes}
                 sermonId={sermon.id}
+                crossPhaseRead={(column) => {
+                  // SPRD B2.2 — Phase 2 Field 7 Q1 (cumulative-synthesis-table)
+                  // reads the canonical thought-unit array from
+                  // observations.divisions.thought_units. Phase 3 + 4 will
+                  // extend this map as their cross-phase questions land.
+                  if (column === "observations") return obsData;
+                  return null;
+                }}
+                crossPhaseWrite={(column, fieldKey, qKey, value) => {
+                  if (column === "observations") {
+                    updateStructured("observations", obsData, fieldKey, value, qKey);
+                  }
+                }}
               />
               <div style={{ marginTop: "8px" }}>
                 <SecondaryButton
