@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-03 — sfdi: Phase 1 (Observe) walk complete — 11 → 9 fields, Observe → Interpret handoff articulated
+
+- Phase 1 reshape locked: 11 fields → 9 — merged former Notable Commands + Notable Statements into Commands and Declarations, retired Basic Outline (Field 4 thought units carry the proto-outline), reordered Main Characters ahead of Commands and Declarations.
+- Fields 5–9 ratified with full pastor-side framing (Main Characters, Commands and Declarations, Big Ideas, Obvious Point, Possible Implications); Field 9 heavy-lifting with pre-field overview and awareness-discipline framing.
+- Observation Set named as Observe's named outcome; load-bearing fields named (Field 4 composite, Field 8, Field 9); N/A escape valve pattern locked at field-level plus question-level granularity.
+- Observe → Interpret handoff articulated with composite hard-gate and "Continue to Interpret" button; Process Contract #6 ready to activate for Phase 1.
+- SPRD: Component 3 field count updated 11+9+7+14 → 9+9+7+14; Component 1 item 6 stale "Continue to Notable Commands" reference aligned to current state.
+
+---
+
 ## 2026-05-03 — docs: SFDI Field 4 expanded to three-question shape, SPRD Component 1 spec sharpened
 
 - SFDI Field 4 expanded from two to three questions: Q1 sentence layout (same), Q2 paraphrase blocks (NEW — rewrite each main sentence in own words), Q3 thought-unit synthesis table (was Q2, now three-column with pastor's own-words summary, no AI generation in the Thought-unit cell).
