@@ -1,6 +1,6 @@
 # Study Throughline — Vision Sheet
 
-Orientation sheet for SFDI in-session walks. Keep this in view.
+Orientation sheet. Originally written for SFDI in-session walks (2026-05-02 → 2026-05-04). With the four-sub-phase walk complete, the sheet now serves as orientation for SPRD downstream implementation work — Component 1 of the Isolated-World Workspace UX overhaul, the Implications restructure, PC card removal — and for any future SFDI refinement triggered by lived sermon-prep use. Keep this in view.
 
 ---
 

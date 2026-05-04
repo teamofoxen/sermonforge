@@ -158,10 +158,15 @@ these names. (See State Contract clause 5: *one name per concept*.)
    field-work that precedes it; every handoff is explicit. The pedagogical
    content — number of fields, wording, exact named-outcome text — may evolve.
    The structural integrity — that the throughline exists, holds, and produces
-   the named outcomes it claims — does not. The canonical articulation of
-   fields, named outcomes, and handoffs lives in the Study Field Definition
-   Initiative document; this clause activates when that document ships its
-   first per-field entries.
+   the named outcomes it claims — does not. The canonical articulation lives
+   in the Study Field Definition Initiative document at
+   `docs/PROPOSALS/study-field-definition-initiative.md`. As of 2026-05-04 that
+   document carries seven-slot entries for all 25 fields across the four
+   sub-phases, four named outcomes (Observation Set, Interpretation Set,
+   Christ-Connection Statement, Implications Synthesis), and four sub-phase
+   boundary handoffs (including the handoff out of Study into MPT/MPS). This
+   clause is therefore binding in full — the throughline's structural
+   integrity is testable against the SFDI document.
 
 ### 3. Mutation Contract — what happens when something changes
 

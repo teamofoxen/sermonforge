@@ -2,6 +2,25 @@
 
 ---
 
+## 2026-05-04 — sfdi: drift sweeps A+B established, remediation lands, Process #6 activated as Structural
+
+- Two SFDI validator scripts established at `scripts/sfdi-internal-consistency.py` (7 internal-structure criteria) and `scripts/sfdi-cross-doc-consistency.py` (7 cross-doc consistency criteria); both exit 0.
+- Seven SFDI doc edits remediate found drift: Phase 4 named-outcome header normalized, Phase 1 Field 4 overview marker brought to canonical pattern, PC progression markers added to three heavy-lifting fields, plus a new Field Pattern subsection codifying per-field-vs-phase-level PC marker convention.
+- One SPRD edit fixes stale Component 3 design-considerations field count (`9+9+7+14` → `9+7+5+4`) and stale "Phases 2–4 not yet walked" parenthetical.
+- Process Contract #6 moves from Inactive (pending SFDI) to Structural (SFDI scaffolding parsed by validator scripts); `docs/ENFORCEMENT_STATUS.md` Summary table updated to 17 structural clauses and 0 inactive.
+
+---
+
+## 2026-05-04 — sfdi: Phases 2–4 walked; SFDI structural completion satisfied across all four sub-phases
+
+- Phase 2 (Interpret) walked: 9 → 7 fields, Diagram retired, Summarize Parts + Summarize Whole merged into Interpretation Synthesis, Character Purpose name locked.
+- Phase 3 (Redemptive Thread) walked: 8 slots → 5 fields with three Merida questions restored (gospel-makes-possible, type-of-Christ, predictive-of-Christ), Christ-Connection Statement elevated as named outcome.
+- Phase 4 (Implications) walked: 15 slots → 4 fields realizing the three-way conversation (Theological Significance, Personal Implications, Pastoral Context) plus Implications Synthesis as named outcome.
+- Cumulative thought-unit table completed at 6 columns (one writable column added per phase); structural through-line of the workspace named in the Implications → MPT/MPS handoff.
+- Process Contract #6 activated — every field has a seven-slot entry, every sub-phase declares its named outcome, every boundary articulates its handoff; clause is now binding rather than vacuous.
+
+---
+
 ## 2026-05-03 — sfdi: Phase 1 (Observe) walk complete — 11 → 9 fields, Observe → Interpret handoff articulated
 
 - Phase 1 reshape locked: 11 fields → 9 — merged former Notable Commands + Notable Statements into Commands and Declarations, retired Basic Outline (Field 4 thought units carry the proto-outline), reordered Main Characters ahead of Commands and Declarations.

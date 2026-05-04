@@ -1,6 +1,6 @@
 # Study Field Definition Initiative (SFDI) — Charter
 
-**Status:** Active. Phase 1 (Observe) walk in progress as of 2026-05-02. Working SFDI document at [`study-field-definition-initiative.md`](./study-field-definition-initiative.md) holds the per-field entries, the Field Pattern, and walk state.
+**Status:** All four sub-phase walks complete as of 2026-05-04. Working SFDI document at [`study-field-definition-initiative.md`](./study-field-definition-initiative.md) holds 25 field entries, 4 named outcomes, and 4 sub-phase boundary handoffs (including the handoff out of Study into MPT/MPS). The structural completion test from "What completion looks like" below is satisfied; the experiential completion test is qualitative and lives in real sermon-prep use once SPRD Component 1 ships the workspace UX. Process Contract #6 in `docs/CORE.md` is now binding rather than vacuous.
 **Audience:** The lone developer of SermonForge, who is also a pastor and the pastor-user. Written in plain language, no engineering vocabulary required.
 **Date drafted:** 2026-04-30. Walk started 2026-05-02.
 

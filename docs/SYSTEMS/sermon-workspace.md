@@ -68,9 +68,12 @@ text. SFDI walks fields with this directionality in view.
 
 The detailed field-level work — which fields enact which voice in the Implications
 conversation, what the Implications Synthesis named outcome looks like, how the
-three-way conversation composes — is the work of the Study Field Definition
-Initiative (`docs/PROPOSALS/sfdi-charter.md`). The vision above is the canonical
-anchor SFDI walks against.
+three-way conversation composes — was the work of the Study Field Definition
+Initiative (`docs/PROPOSALS/sfdi-charter.md`). **As of 2026-05-04, SFDI's structural
+walk is complete** across all four sub-phases — the working SFDI document at
+`docs/PROPOSALS/study-field-definition-initiative.md` carries 25 field entries,
+4 named outcomes, and 4 handoffs. The vision above is the canonical anchor SFDI
+walked against; the working doc carries the resulting per-field substance.
 
 ---
 
@@ -82,26 +85,33 @@ a gate — the pastor can proceed without filling it.
 
 This card is the **anti-pattern the throughline replaces.** Its always-on placement
 frames PC as parallel-track orientation ("fill PC, then study"), which contradicts
-the design — text is driven toward PC, not the other way around. The card persists
-as an interim affordance until SFDI's Implications walkthrough lands the three-way
-conversation that absorbs PC's substance into the named-outcome work of the four
-sub-phases.
+the design — text is driven toward PC, not the other way around. **As of 2026-05-04
+the card's removal is actionable SPRD work** — SFDI Phase 4 Field 3 (Pastoral
+Context) carries the PC substance per-sermon as one voice in the three-way
+Implications conversation, making the workspace-top card structurally redundant.
 
 **Order of removal** (cross-referenced from `docs/PROPOSALS/sfdi-charter.md` and
 `docs/PROPOSALS/study-phase-redesign.md`):
 
-1. SFDI walks the four sub-phases, with anchors at Observe-end and Implications.
-2. Implications gets restructured per SFDI's discoveries.
+1. **SFDI walks the four sub-phases, with anchors at Observe-end and Implications.** *Complete 2026-05-04.*
+2. **Implications gets restructured per SFDI's discoveries.** SFDI Phase 4 defined
+   the four-field shape (Theological Significance, Personal Implications, Pastoral
+   Context, Implications Synthesis); SPRD ships the workspace UX restructure.
 3. *Then* the card comes off the workspace shell, the AI prompts shed their PC
    handling (the heaviest is the MPS Draft prompt's PC-weighting passage in
    `StudyTab.jsx`), and Tier 7 is removed from the context pipeline. PC's
    substance flows downstream through the named outcomes.
 
-**Open design question for SFDI Implications walkthrough:** do the three PC fields
-disappear entirely (PC's substance lives only in the work the pastor does within
-the four sub-phases), or do they persist somewhere off the workspace front
-(perhaps series-level, since The Room and The Cultural Moment are stable across
-multiple sermons in a series)?
+**Open design question for the card-removal pass** (raised before SFDI walks; SFDI
+Phase 4 partially settled by absorbing PC content into Field 3 but did not rule on
+the underlying three-field schema): do the three PC fields (`topic_theme`,
+`audience_assumptions`, `background_noise`) disappear entirely (PC's substance
+lives only in SFDI Field 3 per-sermon), or do they persist somewhere off the
+workspace front (perhaps series-level, since The Room and The Cultural Moment are
+stable across multiple sermons in a series)? The Implications for Unbeliever
+question was settled by Phase 4 (folded into Field 3 Q1 — the room includes
+everyone); the three PC fields' fate is the remaining design call when SPRD
+ships the card removal.
 
 **Three fields** (stored in `sermons` table, schema version 6):
 
@@ -120,9 +130,10 @@ multiple sermons in a series)?
 above the editable fields: series title, series big idea (only if present), section big idea (only if present).
 
 **Context pipeline (interim):** These three fields feed the `[THIS SERMON]` Tier 7
-of the AI context pipeline. Tier 7 is removed when the card is removed (post-SFDI
-Implications restructure). See `docs/SYSTEMS/context-pipeline.md` for tier budget
-and gating rules.
+of the AI context pipeline. Tier 7 is removed when the card is removed (now
+actionable SPRD work since SFDI Phase 4 walked 2026-05-04 — Field 3 Pastoral
+Context carries the substance). See `docs/SYSTEMS/context-pipeline.md` for tier
+budget and gating rules.
 
 **Save path:** All three are in the `SERMON_COLUMNS` allowlist and save through:
 `handleUpdate → debouncedSave → updateSermon IPC`
@@ -134,8 +145,9 @@ and gating rules.
 **If modifying Pastoral Context fields** (`topic_theme`, `audience_assumptions`, `background_noise`):
 also check `docs/SYSTEMS/context-pipeline.md` — the `[THIS SERMON]` tier section documents the
 always-on rule, content-gating logic, and 5000-char budget that govern how these fields reach the AI.
-Note: the `[THIS SERMON]` tier is the interim mechanism; it is removed when SFDI's Implications
-work lands and PC's substance flows through named outcomes instead.
+Note: the `[THIS SERMON]` tier is the interim mechanism; it is removed when SPRD ships the
+card-removal pass (now actionable since SFDI's Phase 4 walked 2026-05-04 — Field 3 Pastoral Context
+carries PC's substance, which flows through the Implications Synthesis named outcome).
 
 **If modifying structured exegesis JSON** (observations, interpretation, redemptive_thread, implications):
 also check `docs/SYSTEMS/context-pipeline.md` — the exegesis context section documents how
@@ -161,15 +173,34 @@ Field definitions live in `src/utils/studyFields.js`.
 9 fields in code today: `context`, `divisions`, `commands`, `statements`, `characters`, `big_ideas`,
 `obvious_point`, `basic_outline`, `applications`.
 
-**SFDI Phase 1 walk note (as of 2026-05-02):** the Observe walk has decided two
-additional fields that are not yet in code — **Background** (book-level world,
-positioned first) and **Surface Questions** (the W-battery sweep, positioned
-third). Working order is: Background → Context → Surface Questions → Divisions
-→ Commands → Statements → Characters → Big Ideas → Obvious Point → Basic
-Outline → Possible Implications. The code change to add the two new fields
-will land as part of the Isolated-World Workspace UX overhaul (see
-`docs/PROPOSALS/study-phase-redesign.md` section 8). Until then, `OBSERVE_FIELDS`
-in `src/utils/studyFields.js` reflects the current 9.
+**SFDI walk note (as of 2026-05-04 — all four sub-phases complete).** The SFDI
+working doc at `docs/PROPOSALS/study-field-definition-initiative.md` defines the
+canonical field structure across all four sub-phases. Code in `src/utils/studyFields.js`
+still reflects the pre-SFDI shape; the code change to align fields to SFDI's
+definitions will land as part of the Isolated-World Workspace UX overhaul
+(SPRD Component 1 — see `docs/PROPOSALS/study-phase-redesign.md` section 8).
+Per-sub-phase summary of SFDI's redesigned shape:
+
+- **Phase 1 (Observe) — 9 fields:** Background → Context → Surface Questions →
+  Divisions/Thought Units → Main Characters → Commands and Declarations →
+  Big Ideas → Obvious Point → Possible Implications. Two new fields
+  (Background, Surface Questions); Notable Commands + Notable Statements
+  merged into Commands and Declarations; Basic Outline retired.
+- **Phase 2 (Interpret) — 7 fields:** Deeper Context → Recurring Ideas →
+  Character Purpose → Contrasts → Cross-References → Commentary Notes →
+  Interpretation Synthesis. Diagram retired (Field 4 Q1 absorbed it);
+  Summarize Parts + Whole merged into Interpretation Synthesis.
+- **Phase 3 (Redemptive Thread) — 5 fields:** This Passage and Christ →
+  How the Passage Points to Christ → How the Gospel Makes This Possible →
+  Our Need and God's Character → Christ-Connection Statement. Three Merida
+  questions restored (gospel-makes-possible, type-of-Christ, predictive-of-Christ).
+- **Phase 4 (Implications) — 4 fields:** Theological Significance →
+  Personal Implications → Pastoral Context → Implications Synthesis.
+  The three-way conversation realized at field level; Compiled list AI
+  synthesis retired; Implications for Unbeliever folded into Pastoral Context.
+
+Until SPRD Component 1 ships, `OBSERVE_FIELDS`, `INTERPRET_FIELDS`, `REDEMPTIVE_FIELDS`,
+and `IMPLICATIONS_*` arrays in `src/utils/studyFields.js` reflect the pre-SFDI shape.
 
 **Note:** the `applications` field (UI label: "Possible Implications" — renamed
 from "Possible Applications" in the Vocabulary cleanup pass; the JSON key stays
@@ -197,12 +228,18 @@ voices, integrated, not orphaned to a top-of-workspace card. The named outcome
 of Implications is the **Implications Synthesis** — the integrated form of that
 conversation, which the pastor carries into MPT/MPS as the pastoral handoff.
 
-**Current state (pending SFDI restructure):** today's implementation has three
-parallel groups of fields and a Compiled-list AI button. The walkthrough work in
-SFDI is where the three-way conversation gets concretely articulated as fields
-and flow.
+**SFDI restructure complete (2026-05-04).** The three-way conversation is now
+defined at the field level in `docs/PROPOSALS/study-field-definition-initiative.md`
+Phase 4 — four fields (Theological Significance, Personal Implications, Pastoral
+Context, Implications Synthesis) consolidating the previous 15 slots. The
+Compiled-list AI synthesis is retired in the new shape (the Implications Synthesis
+IS the synthesis, in the pastor's own voice). Implications for Unbeliever is
+folded into Pastoral Context Q1 (the room includes everyone). The cumulative
+thought-unit table extends to a 6th column (Implication) in Phase 4 Field 4 Q1.
+**The pre-SFDI implementation persists in `src/utils/studyFields.js` until SPRD
+Component 1 ships the workspace UX.**
 
-**Today's fields:**
+**Today's fields (pre-SFDI implementation, still in code):**
 - **Theological Significance** (5 fields): `about_god`, `about_ourselves`, `about_christ`,
   `timeless`, `doctrines`
 - **Personal Implications** (8 fields — renamed from "Personal Application" in the Vocabulary cleanup pass; JSON keys stay): `examples`, `commands`, `errors`, `sins`, `promises`,
