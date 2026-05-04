@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-05-04 — sprd: reframe migration spec as defensive-only
+
+- Reframed § 9 (Per-phase migration mapping) header and intro from "binding spec for Option C" to defensive reference — no production sermons exist as of 2026-05-04, so no migration logic ships in A1 or B1–B4.
+- Reframed § Binding scope decisions decision #2 to mark migration policy as defensive-only; preserved the why-C-over-A-or-B reasoning as historical note.
+- Dropped legacy_notes parenthetical from A1 milestone row and migration-mapping sentence from B1 row in the implementation milestones table.
+
+---
+
 ## 2026-05-04 — sprd: fold SFDI completion, lock binding scope, add A/B/C milestones and migration mapping
 
 - Folded sub/sfdi into sub/sprd at 3a1554f — SFDI walk completion (25 fields, 4 named outcomes, Process #6 activation) now on the SPRD branch.
