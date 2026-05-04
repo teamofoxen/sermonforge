@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-05-04 — sprd B1.5: Field 4 wire-up + composite gate
+
+- Field 4 `divisions` gains a 3-question array (`sentence_layout` kind=canvas, `paraphrases` kind=paraphrase, `thought_units` kind=synthesis-table) with a structured `referencePanel` blob on Q1 (three rules + epistles/narrative/poetry tips, plain data — no JSX).
+- `SpotlightWorksheet` dispatches on `question.kind` to mount `IndentedSentenceCanvas` / `ParaphraseBlocks` / `SynthesisTable`; sibling canvas located via a `findCanvasValue` helper; `PeripheralReferencePanel` flanks the active question via 72/28 flex row when a `referencePanel` is present.
+- `evaluateAdvance`'s Observe → Interpret threshold extends with the Field 4 composite gate (Q1 ≥1 main + ≥1 modifier; Q2 every paraphrase filled; Q3 ≥1 row with Thought unit + After line, Signal allowed empty); SFDI N/A escape valve preserved per question.
+- Two contract test fixtures updated with shared `FIELD_4_MINIMAL_FILLED` / `FIELD_4_ALL_NA` substrates; 8 new SpotlightWorksheet kind-dispatch tests + 5 new composite-gate unit tests; 321 vitest total green.
+
+---
+
 ## 2026-05-04 — sprd B1.3 + B1.4: heavy-lifting overview + Observe→Interpret threshold
 
 - Field defs gain optional `heavyLifting` flag and `overview` blob (data-shape, not JSX); Field 4 Divisions and Field 9 Possible Implications carry SFDI verbatim overview content.

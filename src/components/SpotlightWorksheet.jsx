@@ -21,12 +21,74 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from "react"
 import { autoResize } from "../utils";
 import PrimaryButton from "./primitives/PrimaryButton";
 import FieldOverviewScreen from "./FieldOverviewScreen";
+import IndentedSentenceCanvas from "./IndentedSentenceCanvas";
+import ParaphraseBlocks from "./ParaphraseBlocks";
+import SynthesisTable from "./SynthesisTable";
+import PeripheralReferencePanel from "./PeripheralReferencePanel";
 import {
   fieldQuestions,
   getQuestionAnswer,
   isQuestionNA,
   flattenAnswerValue,
 } from "../utils/studyFields";
+
+// Find the canvas-kind question's value within a field's data sub-tree.
+// Structured-exercise sub-shapes that depend on the canvas (paraphrase blocks,
+// synthesis table) read it here rather than coupling to a hard-coded sibling
+// key — the question with `kind: "canvas"` is the source of truth.
+function findCanvasValue(questions, fieldData, fieldKey) {
+  const canvasQ = questions.find((q) => q.kind === "canvas");
+  if (!canvasQ) return [];
+  const v = getQuestionAnswer(fieldData, fieldKey, canvasQ.key);
+  return Array.isArray(v) ? v : [];
+}
+
+// Render a structured reference-panel section (the data shape lives in
+// studyFields.js so the field defs stay React-free per B1.3 pattern).
+function RefPanelSection({ section }) {
+  if (!section || typeof section !== "object") return null;
+  if (section.type === "rules") {
+    return (
+      <div className="ref-panel-section ref-panel-rules">
+        <ol>
+          {section.items.map((item, i) => (
+            <li key={i}>
+              <strong>{item.lead}</strong> — {item.body}
+            </li>
+          ))}
+        </ol>
+        {section.footnote && (
+          <p className="ref-panel-footnote"><em>Clarifier:</em> {section.footnote}</p>
+        )}
+      </div>
+    );
+  }
+  if (section.type === "heading" || section.type === "genre") {
+    return (
+      <div className={`ref-panel-section ref-panel-${section.type}`}>
+        {section.heading && <h4>{section.heading}</h4>}
+        {Array.isArray(section.paragraphs) &&
+          section.paragraphs.map((p, i) => <p key={i}>{p}</p>)}
+        {Array.isArray(section.items) && (
+          <ol>
+            {section.items.map((item, i) => <li key={i}>{item}</li>)}
+          </ol>
+        )}
+      </div>
+    );
+  }
+  return null;
+}
+
+function FieldReferencePanel({ panel }) {
+  if (!panel) return null;
+  return (
+    <PeripheralReferencePanel title={panel.title}>
+      {Array.isArray(panel.sections) &&
+        panel.sections.map((s, i) => <RefPanelSection key={i} section={s} />)}
+    </PeripheralReferencePanel>
+  );
+}
 
 // localStorage key prefix for per-sermon "have I shown this field's overview
 // yet?" tracking. SFDI Field Pattern: shown only on first entry to the field
@@ -138,6 +200,68 @@ function SingleQuestionActive({
 
 // ── Multi-question active rendering ────────────────────────────────────────
 
+// Render the input primitive for the active question, dispatched on kind.
+// Textarea is the back-compat default for text-prompt questions; the three
+// structured-exercise sub-shapes mount their A2.x primitives.
+function ActiveQuestionInput({
+  field,
+  question,
+  value,
+  isNA,
+  onChange,
+  fieldQuestionsArr,
+  fieldData,
+  taRefSetter,
+}) {
+  const kind = question.kind || "textarea";
+
+  if (kind === "canvas") {
+    return (
+      <IndentedSentenceCanvas
+        value={Array.isArray(value) ? value : []}
+        onChange={onChange}
+        disabled={isNA}
+      />
+    );
+  }
+  if (kind === "paraphrase") {
+    const canvas = findCanvasValue(fieldQuestionsArr, fieldData, field.key);
+    return (
+      <ParaphraseBlocks
+        canvas={canvas}
+        value={Array.isArray(value) ? value : []}
+        onChange={onChange}
+        disabled={isNA}
+      />
+    );
+  }
+  if (kind === "synthesis-table") {
+    const canvas = findCanvasValue(fieldQuestionsArr, fieldData, field.key);
+    return (
+      <SynthesisTable
+        value={Array.isArray(value) ? value : []}
+        onChange={onChange}
+        canvas={canvas}
+        disabled={isNA}
+      />
+    );
+  }
+
+  return (
+    <textarea
+      className="field-textarea"
+      rows={3}
+      value={typeof value === "string" ? value : ""}
+      onChange={(e) => onChange(e.target.value)}
+      onInput={(e) => autoResize(e.target)}
+      ref={taRefSetter}
+      placeholder={question.prompt || field.hint || ""}
+      disabled={isNA}
+      data-testid={`question-input-${field.key}-${question.key}`}
+    />
+  );
+}
+
 function MultiQuestionActive({
   field,
   questions,
@@ -201,26 +325,22 @@ function MultiQuestionActive({
       <ol className="worksheet-questions">
         {questions.map((q, idx) => {
           if (idx === safeActiveIdx) {
-            return (
-              <li
-                key={q.key}
-                className="worksheet-question worksheet-question-active"
-                data-question-key={q.key}
-              >
+            const hasRefPanel = !!q.referencePanel;
+            const activeContent = (
+              <div className="worksheet-question-content">
                 <div className="worksheet-question-indicator">
                   Question {idx + 1} of {questions.length}
                 </div>
                 {q.prompt && <div className="worksheet-question-prompt">{q.prompt}</div>}
-                <textarea
-                  className="field-textarea"
-                  rows={3}
-                  value={typeof activeValue === "string" ? activeValue : ""}
-                  onChange={(e) => onChangeQuestion(q.key, e.target.value)}
-                  onInput={(e) => autoResize(e.target)}
-                  ref={(el) => { taRef.current = el; }}
-                  placeholder={q.prompt || field.hint || ""}
-                  disabled={activeIsNA}
-                  data-testid={`question-input-${field.key}-${q.key}`}
+                <ActiveQuestionInput
+                  field={field}
+                  question={q}
+                  value={activeValue}
+                  isNA={activeIsNA}
+                  onChange={(next) => onChangeQuestion(q.key, next)}
+                  fieldQuestionsArr={questions}
+                  fieldData={data}
+                  taRefSetter={(el) => { taRef.current = el; }}
                 />
                 <div className="spotlight-controls">
                   <button
@@ -241,6 +361,16 @@ function MultiQuestionActive({
                     </PrimaryButton>
                   )}
                 </div>
+              </div>
+            );
+            return (
+              <li
+                key={q.key}
+                className={`worksheet-question worksheet-question-active${hasRefPanel ? " worksheet-question-with-panel" : ""}`}
+                data-question-key={q.key}
+              >
+                {activeContent}
+                {hasRefPanel && <FieldReferencePanel panel={q.referencePanel} />}
               </li>
             );
           }

@@ -130,20 +130,126 @@ function isQuestionAnswered(data, fieldKey, questionKey) {
   return !!flattenAnswerValue(getQuestionAnswer(data, fieldKey, questionKey));
 }
 
+// Field 4 composite-gate helpers (B1.5). Inlined here rather than imported
+// from ParaphraseBlocks.jsx to keep the util free of UI-layer dependencies.
+
+// True if the canvas value carries at least one main sentence (depth=0) that
+// has at least one indented modifier (depth>0) under it before the next
+// main sentence.
+function canvasHasMainWithModifier(canvas) {
+  if (!Array.isArray(canvas) || canvas.length === 0) return false;
+  let inMain = false;
+  for (const row of canvas) {
+    if (!row || typeof row !== "object") continue;
+    const depth = Number.isInteger(row.depth) && row.depth >= 0 ? row.depth : 0;
+    const text = typeof row.text === "string" ? row.text.trim() : "";
+    if (!text) continue;
+    if (depth === 0) {
+      inMain = true;
+    } else if (inMain && depth > 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// Count canvas main sentences (depth=0 rows with non-empty text). Mirrors
+// ParaphraseBlocks.groupMainSentences but counts only — and skips empty heads
+// since an empty main-sentence line shouldn't demand a paraphrase.
+function countCanvasMainSentences(canvas) {
+  if (!Array.isArray(canvas)) return 0;
+  let n = 0;
+  for (const row of canvas) {
+    if (!row || typeof row !== "object") continue;
+    const depth = Number.isInteger(row.depth) && row.depth >= 0 ? row.depth : 0;
+    const text = typeof row.text === "string" ? row.text.trim() : "";
+    if (depth === 0 && text) n++;
+  }
+  return n;
+}
+
+// True if every main-sentence id has a non-empty paraphrase. Paraphrase ids
+// are positional `ms-0`, `ms-1`, … aligned to canvas main sentences.
+function everyParaphraseFilled(paraphrases, mainSentenceCount) {
+  if (mainSentenceCount === 0) return false;
+  if (!Array.isArray(paraphrases)) return false;
+  for (let i = 0; i < mainSentenceCount; i++) {
+    const id = `ms-${i}`;
+    const entry = paraphrases.find((e) => e && e.main_sentence_id === id);
+    const p = entry && typeof entry.paraphrase === "string" ? entry.paraphrase.trim() : "";
+    if (!p) return false;
+  }
+  return true;
+}
+
+// True if at least one synthesis-table row has both Thought unit and After line
+// filled. Signal is allowed empty (final unit of a passage). Empty placeholder
+// rows from the primitive's empty-state don't count.
+function hasOneCompleteThoughtUnit(rows) {
+  if (!Array.isArray(rows) || rows.length === 0) return false;
+  for (const row of rows) {
+    if (!row || typeof row !== "object") continue;
+    const summary = typeof row.thought_unit_summary === "string" ? row.thought_unit_summary.trim() : "";
+    const after = row.after_line === undefined || row.after_line === null
+      ? ""
+      : String(row.after_line).trim();
+    if (summary && after) return true;
+  }
+  return false;
+}
+
+// Field 4 composite gate. Returns null when satisfied or a pastor-facing
+// reason string when not. SFDI N/A escape valve: a question marked N/A counts
+// as satisfied (the pastor may declare the sub-shape inapplicable).
+function checkField4Composite(data) {
+  const fieldKey = "divisions";
+
+  // Q1 — sentence_layout (canvas).
+  if (!isQuestionNA(data, fieldKey, "sentence_layout")) {
+    const canvas = getQuestionAnswer(data, fieldKey, "sentence_layout");
+    if (!canvasHasMainWithModifier(canvas)) {
+      return "Lay out the passage before advancing — at least one main sentence with an indented modifier under it.";
+    }
+  }
+
+  // Q2 — paraphrases. Every main sentence must have a non-empty paraphrase.
+  if (!isQuestionNA(data, fieldKey, "paraphrases")) {
+    const canvas = getQuestionAnswer(data, fieldKey, "sentence_layout");
+    const paraphrases = getQuestionAnswer(data, fieldKey, "paraphrases");
+    const mainCount = countCanvasMainSentences(canvas);
+    if (!everyParaphraseFilled(paraphrases, mainCount)) {
+      return "Rewrite each main sentence in your own words before advancing.";
+    }
+  }
+
+  // Q3 — thought_units. At least one complete row.
+  if (!isQuestionNA(data, fieldKey, "thought_units")) {
+    const rows = getQuestionAnswer(data, fieldKey, "thought_units");
+    if (!hasOneCompleteThoughtUnit(rows)) {
+      return "Name at least one thought unit (with the line it ends after) before advancing.";
+    }
+  }
+
+  return null;
+}
+
 // SFDI Observe → Interpret threshold (per `study-field-definition-initiative
 // .md` § "The hard gate at the boundary"). Returns null when satisfied or a
 // short pastor-facing reason string when not.
 //
-// Scope as of B1.4: Field 8 (Obvious Point) and Field 9 (Possible Implications)
-// are wired. Field 4's composite gate (Q1 canvas + Q2 paraphrases + Q3 thought
-// units) ships with B1.5 once the structured-exercise questions are mounted.
-// Per-field non-empty checks for Fields 1, 2, 3, 5, 6, 7 are deferred until
-// the SFDI baseline-tightening cut.
+// Scope as of B1.5: Field 4 composite (Q1 canvas + Q2 paraphrases + Q3 thought
+// units), Field 8 (Obvious Point), and Field 9 (Possible Implications) are
+// wired. Per-field non-empty checks for Fields 1, 2, 3, 5, 6, 7 are deferred
+// until the SFDI baseline-tightening cut.
 function checkObserveToInterpretThreshold(sermon) {
   const data = parseStructuredField(sermon?.observations);
   if (!data || typeof data !== "object") {
     return "Add some content before advancing.";
   }
+
+  // Field 4 — Divisions / Thought Units composite (B1.5).
+  const f4 = checkField4Composite(data);
+  if (f4) return f4;
 
   // Field 8 — Obvious Point. Single primary question; non-empty or N/A.
   if (!isQuestionAnswered(data, "obvious_point", DEFAULT_QUESTION_KEY)) {

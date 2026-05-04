@@ -24,6 +24,40 @@ import {
 //
 // Note: uses React.createElement instead of JSX (rolldown SSR transform).
 
+// SFDI Field 4 (Divisions / Thought Units) composite-gate substrate, used by
+// the "filled Observe" fixtures below. Minimum that satisfies the B1.5 gate:
+// canvas with one main + one modifier, one paraphrase, one complete thought-
+// unit row.
+const FIELD_4_MINIMAL_FILLED = {
+  sentence_layout: {
+    value: [
+      { text: "There is now no condemnation",       depth: 0, kind: "main" },
+      { text: "for those who are in Christ Jesus.", depth: 1, kind: "modifier" },
+    ],
+    na: false,
+  },
+  paraphrases: {
+    value: [
+      { main_sentence_id: "ms-0", paraphrase: "No condemnation now stands against believers in Christ." },
+    ],
+    na: false,
+  },
+  thought_units: {
+    value: [
+      { thought_unit_summary: "Believers stand uncondemned in Christ.", after_line: "2", signal: "" },
+    ],
+    na: false,
+  },
+};
+
+// All-N/A escape valve form, used by tests that target a specific gate other
+// than Field 4 and don't want to populate the canvas substrate.
+const FIELD_4_ALL_NA = {
+  sentence_layout: { value: "", na: true },
+  paraphrases:     { value: "", na: true },
+  thought_units:   { value: "", na: true },
+};
+
 describe("SPRD Q3 hard-gate UX: Continue button disabled when source empty", () => {
   beforeEach(() => {
     installTestSpine();
@@ -66,10 +100,10 @@ describe("SPRD Q3 hard-gate UX: Continue button disabled when source empty", () 
   });
 
   it("Continue is enabled at Observe when observations has content; no hint rendered", async () => {
-    // SFDI Observe → Interpret threshold (B1.4): Field 8 (obvious_point) and
-    // Field 9 (applications) must be filled in addition to the empty-evidence
-    // baseline. Field 9's `applications` is multi-question, so we provide the
-    // explicit envelope shape rather than a flat string.
+    // SFDI Observe → Interpret threshold (B1.4 + B1.5): Field 4 composite,
+    // Field 8 (obvious_point), and Field 9 (applications) must be filled in
+    // addition to the empty-evidence baseline. Multi-question fields use the
+    // explicit envelope shape.
     const sermonId = insertSermonRow({
       title: "Filled observe sermon",
       current_stage: STAGE.Study,
@@ -77,6 +111,7 @@ describe("SPRD Q3 hard-gate UX: Continue button disabled when source empty", () 
       current_sub_phase: SUB_PHASE.Observe,
       observations: JSON.stringify({
         context: "Romans 8:1 sets the believers in Christ Jesus.",
+        divisions: FIELD_4_MINIMAL_FILLED,
         obvious_point: "Believers are now in Christ Jesus, no longer condemned.",
         applications: {
           pressing:         { value: "The room needs to hear that condemnation is gone.", na: false },
@@ -127,6 +162,7 @@ describe("SPRD Q3 hard-gate UX: evaluateAdvance unit test", () => {
         id: "test",
         observations: JSON.stringify({
           context: "some content",
+          divisions: FIELD_4_MINIMAL_FILLED,
           obvious_point: "Plain-sense point.",
           applications: {
             pressing:         { value: "Pressing.",  na: false },
@@ -140,8 +176,8 @@ describe("SPRD Q3 hard-gate UX: evaluateAdvance unit test", () => {
     expect(result.ok).toBe(true);
   });
 
-  // SFDI Observe → Interpret threshold (B1.4) — load-bearing field gates beyond
-  // the empty-evidence baseline.
+  // SFDI Observe → Interpret threshold (B1.4 + B1.5) — load-bearing field gates
+  // beyond the empty-evidence baseline.
   it("returns ok=false at sub-phase 1 when Field 8 (Obvious Point) is empty", async () => {
     const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
     const result = evaluateAdvance(
@@ -149,6 +185,7 @@ describe("SPRD Q3 hard-gate UX: evaluateAdvance unit test", () => {
         id: "test",
         observations: JSON.stringify({
           context: "some content",
+          divisions: FIELD_4_ALL_NA,
           // obvious_point intentionally missing
           applications: {
             pressing:         { value: "Pressing.",  na: false },
@@ -170,6 +207,7 @@ describe("SPRD Q3 hard-gate UX: evaluateAdvance unit test", () => {
         id: "test",
         observations: JSON.stringify({
           context: "some content",
+          divisions: FIELD_4_ALL_NA,
           obvious_point: "Plain-sense point.",
           applications: {
             pressing: { value: "Pressing.", na: false },
@@ -191,6 +229,7 @@ describe("SPRD Q3 hard-gate UX: evaluateAdvance unit test", () => {
         id: "test",
         observations: JSON.stringify({
           context: "some content",
+          divisions: FIELD_4_ALL_NA,
           obvious_point: { primary: { value: "", na: true } },
           applications: {
             pressing:         { value: "Pressing.",  na: false },
@@ -211,10 +250,152 @@ describe("SPRD Q3 hard-gate UX: evaluateAdvance unit test", () => {
         id: "test",
         observations: JSON.stringify({
           context: "some content",
+          divisions: FIELD_4_ALL_NA,
           obvious_point: "Plain-sense point.",
           applications: {
             pressing:         { value: "", na: true },
             hard_and_hopeful: { value: "", na: true },
+          },
+        }),
+      },
+      "sub_phase",
+      1,
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  // SFDI Field 4 composite gate (B1.5) — Q1 canvas + Q2 paraphrases + Q3
+  // thought-unit table. All three required (or N/A) to advance.
+  it("returns ok=false at sub-phase 1 when Field 4 Q1 canvas has no main+modifier pair", async () => {
+    const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
+    const result = evaluateAdvance(
+      {
+        id: "test",
+        observations: JSON.stringify({
+          context: "some content",
+          divisions: {
+            // Canvas with only main sentences, no indented modifiers
+            sentence_layout: {
+              value: [{ text: "Just a main sentence.", depth: 0, kind: "main" }],
+              na: false,
+            },
+            paraphrases: { value: [{ main_sentence_id: "ms-0", paraphrase: "P." }], na: false },
+            thought_units: { value: [{ thought_unit_summary: "T.", after_line: "1", signal: "" }], na: false },
+          },
+          obvious_point: "Plain-sense point.",
+          applications: {
+            pressing:         { value: "Pressing.",  na: false },
+            hard_and_hopeful: { value: "Hard/hope.", na: false },
+          },
+        }),
+      },
+      "sub_phase",
+      1,
+    );
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/Lay out the passage/i);
+  });
+
+  it("returns ok=false at sub-phase 1 when Field 4 Q2 has a missing paraphrase for an existing main sentence", async () => {
+    const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
+    const result = evaluateAdvance(
+      {
+        id: "test",
+        observations: JSON.stringify({
+          context: "some content",
+          divisions: {
+            sentence_layout: {
+              value: [
+                { text: "Main A", depth: 0, kind: "main" },
+                { text: "modifier", depth: 1, kind: "modifier" },
+                { text: "Main B", depth: 0, kind: "main" },
+              ],
+              na: false,
+            },
+            // Only ms-0 paraphrased; ms-1 is missing
+            paraphrases: { value: [{ main_sentence_id: "ms-0", paraphrase: "Paraphrase A." }], na: false },
+            thought_units: { value: [{ thought_unit_summary: "T.", after_line: "1", signal: "" }], na: false },
+          },
+          obvious_point: "Plain-sense point.",
+          applications: {
+            pressing:         { value: "Pressing.",  na: false },
+            hard_and_hopeful: { value: "Hard/hope.", na: false },
+          },
+        }),
+      },
+      "sub_phase",
+      1,
+    );
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/Rewrite each main sentence/i);
+  });
+
+  it("returns ok=false at sub-phase 1 when Field 4 Q3 has no complete row", async () => {
+    const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
+    const result = evaluateAdvance(
+      {
+        id: "test",
+        observations: JSON.stringify({
+          context: "some content",
+          divisions: {
+            sentence_layout: {
+              value: [
+                { text: "Main A", depth: 0, kind: "main" },
+                { text: "modifier", depth: 1, kind: "modifier" },
+              ],
+              na: false,
+            },
+            paraphrases: { value: [{ main_sentence_id: "ms-0", paraphrase: "P." }], na: false },
+            // Row missing after_line
+            thought_units: { value: [{ thought_unit_summary: "T.", after_line: "", signal: "" }], na: false },
+          },
+          obvious_point: "Plain-sense point.",
+          applications: {
+            pressing:         { value: "Pressing.",  na: false },
+            hard_and_hopeful: { value: "Hard/hope.", na: false },
+          },
+        }),
+      },
+      "sub_phase",
+      1,
+    );
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/thought unit/i);
+  });
+
+  it("Field 4 Q3 with at least one complete row is sufficient (Signal allowed empty for final unit)", async () => {
+    const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
+    const result = evaluateAdvance(
+      {
+        id: "test",
+        observations: JSON.stringify({
+          context: "some content",
+          divisions: FIELD_4_MINIMAL_FILLED,  // signal is "" in the substrate; still satisfies
+          obvious_point: "Plain-sense point.",
+          applications: {
+            pressing:         { value: "Pressing.",  na: false },
+            hard_and_hopeful: { value: "Hard/hope.", na: false },
+          },
+        }),
+      },
+      "sub_phase",
+      1,
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  it("Field 4 all-N/A satisfies the composite (escape valve)", async () => {
+    const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
+    const result = evaluateAdvance(
+      {
+        id: "test",
+        observations: JSON.stringify({
+          context: "some content",
+          divisions: FIELD_4_ALL_NA,
+          obvious_point: "Plain-sense point.",
+          applications: {
+            pressing:         { value: "Pressing.",  na: false },
+            hard_and_hopeful: { value: "Hard/hope.", na: false },
           },
         }),
       },

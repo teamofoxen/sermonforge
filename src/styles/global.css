@@ -3262,6 +3262,46 @@ button {
   border-color: var(--parchment-deep);
 }
 
+/* When the active question carries a reference panel (Field 4 Q1), the
+   question content and panel sit in a flex row — content gets ~72%, panel
+   ~28% (panel sets its own flex-basis). On narrow viewports the panel
+   stacks below the content. */
+.worksheet-question-with-panel {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.worksheet-question-with-panel > .worksheet-question-content {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+@media (max-width: 980px) {
+  .worksheet-question-with-panel {
+    flex-direction: column;
+  }
+}
+
+/* Reference panel section formatting (Field 4's three rules + genre tips).
+   The panel layout primitive (PeripheralReferencePanel) renders the title
+   and aside chrome; these styles target the structured sections inside. */
+.ref-panel-section + .ref-panel-section {
+  margin-top: 12px;
+}
+
+.ref-panel-rules ol {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.ref-panel-footnote {
+  font-size: 13px;
+  color: var(--ink-mid);
+  margin-top: 8px;
+}
+
 .worksheet-question-collapsed {
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s;

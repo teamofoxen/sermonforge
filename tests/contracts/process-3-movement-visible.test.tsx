@@ -75,11 +75,32 @@ describe("Process Contract #3: movement is a visible event", () => {
       title: "Sub-phase visible movement test",
       current_stage: STAGE.Study,
       current_sub_phase: SUB_PHASE.Observe,
-      // SFDI Observe → Interpret threshold (B1.4): Field 8 (obvious_point) and
-      // Field 9 (applications) must be filled in addition to the empty-evidence
-      // baseline.
+      // SFDI Observe → Interpret threshold (B1.4 + B1.5): Field 4 (divisions
+      // composite), Field 8 (obvious_point), and Field 9 (applications) must
+      // be filled in addition to the empty-evidence baseline.
       observations: JSON.stringify({
         context: "The passage situates the reader after Romans 7's wretched-man cry.",
+        divisions: {
+          sentence_layout: {
+            value: [
+              { text: "There is now no condemnation",          depth: 0, kind: "main" },
+              { text: "for those who are in Christ Jesus.",    depth: 1, kind: "modifier" },
+            ],
+            na: false,
+          },
+          paraphrases: {
+            value: [
+              { main_sentence_id: "ms-0", paraphrase: "No condemnation now stands against believers in Christ." },
+            ],
+            na: false,
+          },
+          thought_units: {
+            value: [
+              { thought_unit_summary: "Believers stand uncondemned in Christ.", after_line: "2", signal: "" },
+            ],
+            na: false,
+          },
+        },
         obvious_point: "Believers in Christ are no longer under condemnation.",
         applications: {
           pressing:         { value: "The room is haunted by felt condemnation.",                  na: false },

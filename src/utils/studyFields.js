@@ -127,6 +127,61 @@ export const OBSERVE_FIELDS = [
         ],
       },
     },
+    questions: [
+      {
+        key: "sentence_layout",
+        kind: "canvas",
+        prompt: "Type the passage by hand. Pull each subject and main verb to the left margin. Indent modifiers under what they modify. Re-align coordinate clauses to the column of their coordinate.",
+        referencePanel: {
+          title: "The three rules",
+          sections: [
+            {
+              type: "rules",
+              items: [
+                { lead: "Subject + main verb", body: "pulled to the left margin. The spine of the clause." },
+                { lead: "Modifiers", body: "(adjectives, adverbs, prepositional phrases, subordinate clauses) — indent under what they modify." },
+                { lead: "Coordinate clauses", body: "(“and,” “but,” “or”) — re-align to the column of their coordinate. Same indent level as their peer." },
+              ],
+              footnote: "Main verb = the finite verb (carries tense, head of the clause). Participles, infinitives, and gerunds are modifiers.",
+            },
+            {
+              type: "heading",
+              heading: "Quick outline tips",
+              paragraphs: ["The three rules above are the operation across all genre. Here's how they apply by genre."],
+            },
+            {
+              type: "genre",
+              heading: "For epistles",
+              paragraphs: ["The three rules above, applied as written. Long sentences with cascading modifier chains; coordinate clauses joined by “and,” “but,” “or.”"],
+            },
+            {
+              type: "genre",
+              heading: "For narrative",
+              items: [
+                "Each main action → left margin. Most narrative clauses are actions; expect many lines at the margin.",
+                "Description and character info (“who was a Pharisee,” “now there was a famine”) → indent under what they describe.",
+                "Dialogue → indent under the speech verb. “He said” stays at the margin; the words spoken indent under it.",
+              ],
+            },
+            {
+              type: "genre",
+              heading: "For poetry",
+              paragraphs: ["Deferred for a future iteration."],
+            },
+          ],
+        },
+      },
+      {
+        key: "paraphrases",
+        kind: "paraphrase",
+        prompt: "Take each main sentence — every left-margin line you laid out above — and rewrite it in your own words. Translation, not summary.",
+      },
+      {
+        key: "thought_units",
+        kind: "synthesis-table",
+        prompt: "Look at the main sentences above. For each thought unit you find, write what the author is hammering home (in your own words), mark the line where it ends, and name what makes the seam — a subject shift, a “But…” that pivots, a scene change.",
+      },
+    ],
   },
   { key: "characters",            label: "Main Characters",           hint: "Who's acting in this passage? For each character, name their role." },
   { key: "commands_declarations", label: "Commands and Declarations", hint: "For each main sentence, name what kind of action it carries — a command (asking the hearer to do something) or a declaration (naming reality). Then say in your own words what the sentence is doing." },

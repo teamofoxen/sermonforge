@@ -174,14 +174,22 @@ Field definitions live in `src/utils/studyFields.js`.
 **SFDI-aligned in code as of SPRD B1.0 (2026-05-04).** `OBSERVE_FIELDS` in
 `src/utils/studyFields.js` is the SFDI 9-field shape: `background` → `context`
 → `surface_questions` → `divisions` → `characters` → `commands_declarations`
-→ `big_ideas` → `obvious_point` → `applications`. Four fields carry multi-
-question sequences (B1.2): Background `[author, date, audience, genre]`;
-Context `[before, after, impact, holy_spirit_intent]`; Surface Questions
-`[where, when, how]`; Possible Implications `[pressing, hard_and_hopeful]`.
-Field 4 Divisions / Thought Units and Field 9 Possible Implications are
-flagged heavy-lifting and open with `FieldOverviewScreen` on first per-sermon
-entry (B1.3). Field 4's three structured-exercise questions (canvas / paraphrase
-blocks / synthesis table) wire into the spotlight via B1.5.
+→ `big_ideas` → `obvious_point` → `applications`. Five fields carry multi-
+question sequences: four text-prompt (B1.2) — Background `[author, date,
+audience, genre]`; Context `[before, after, impact, holy_spirit_intent]`;
+Surface Questions `[where, when, how]`; Possible Implications `[pressing,
+hard_and_hopeful]` — plus Field 4 Divisions / Thought Units (B1.5) which
+carries three structured-exercise questions: `sentence_layout` (kind=canvas)
++ `paraphrases` (kind=paraphrase) + `thought_units` (kind=synthesis-table).
+SpotlightWorksheet's multi-question rendering dispatches on `question.kind`
+to mount the matching A2.x primitive (`IndentedSentenceCanvas` /
+`ParaphraseBlocks` / `SynthesisTable`); paraphrase + synthesis-table
+questions read the sibling canvas value via the field's `kind:"canvas"`
+question. Q1 carries a structured `referencePanel` (the SFDI three rules +
+genre tips for epistles / narrative / poetry) that flanks the active
+question via a 72/28 flex row. Field 4 Divisions / Thought Units and Field
+9 Possible Implications are flagged heavy-lifting and open with
+`FieldOverviewScreen` on first per-sermon entry (B1.3).
 
 **Phases 2/3/4 still pre-SFDI in code.** `INTERPRET_FIELDS`, `REDEMPTIVE_FIELDS`,
 and the `IMPLICATIONS_*` arrays in `src/utils/studyFields.js` reflect the
