@@ -53,7 +53,7 @@ SADI's two scope-steps **bracket** the body work (Steps 3-4). Steps 3 and 4 may 
 
 ---
 
-## How the cumulative table extends (open question)
+## How the cumulative table closes (RESOLVED 2026-05-04)
 
 SFDI's cumulative thought-unit table grew by one column per phase:
 
@@ -66,15 +66,13 @@ SFDI's cumulative thought-unit table grew by one column per phase:
 
 By Phase 4, six columns — the structural through-line of the workspace.
 
-**Open question for SADI walks:** does the table extend further?
+**RESOLVED 2026-05-04 in SADI's ratification walk:** the table **closes at 6 columns when Implications completes**. None of SADI's four anchor fields (MPT, MPS, Intro, Conclusion) extends it. Steps 2-5 read the table *whole*, not per-unit.
 
-- Does MPT read each thought unit and write something per-unit (e.g., "MPT-anchor")?
-- Does MPS write per-unit (e.g., "MPS-application")?
-- Does Outline (Step 3, not SADI scope) write per-unit (mapping thought units to outline points)?
+The reasoning: Steps 2-5 are unifications, not segmentations. MPT is one sentence about the *whole* text; MPS is one sentence about the *whole* sermon; Intro frames the whole listener for the whole body; Conclusion lands one call to the whole room. None are per-unit operations. The cumulative table was the *segmenting* discipline of Study; by Implications close, segmentation is complete. Step 2 onward is *unification*.
 
-These are walk-time decisions. If they extend the table, the structural through-line continues into Steps 2-5. If not, the table closes at six columns and Steps 2-5 reference it as a whole rather than per-unit.
+If a future initiative walks Steps 3 (Outline) or 4 (Functional Elements) and surfaces a need to extend the table — say, mapping thought units to outline points — nothing in SADI's ratifications forbids it. SADI just commits that *the four anchor fields* don't extend it.
 
-The cumulative-column pattern itself is established (SPRD Component 1 covers cumulative-column rendering). SADI walks decide *whether* and *what* to add.
+See working doc § SADI-wide commitments / Cumulative table closure for the full ruling.
 
 ---
 

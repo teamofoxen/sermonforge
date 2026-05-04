@@ -1,6 +1,6 @@
 # Sermon Anchor Definition Initiative (SADI) — Charter
 
-**Status:** Drafted 2026-05-04. No walks started yet. Working SADI document at [`sermon-anchor-definition-initiative.md`](./sermon-anchor-definition-initiative.md) will hold per-field entries as walks proceed.
+**Status:** Drafted 2026-05-04; **ratification walk complete 2026-05-04** (eleven structural rulings landed). Per-field content-design walks remain (overview body text, Q1-Q4 pastor-side framing copy, example outputs). Working SADI document at [`sermon-anchor-definition-initiative.md`](./sermon-anchor-definition-initiative.md) carries seven-slot entries for all four anchor fields, named-outcome declarations for both steps, handoff articulations, and a SADI-wide commitments section consolidating the cross-field rulings.
 **Audience:** The lone developer of SermonForge, who is also a pastor and the pastor-user. Written in plain language, no engineering vocabulary required.
 **Date drafted:** 2026-05-04. Modeled after SFDI (charter at [`sfdi-charter.md`](./sfdi-charter.md)) and SPRD (planning doc at [`study-phase-redesign.md`](./study-phase-redesign.md)).
 **Worktree:** `C:/Projects/SermonForge-sadi` on branch `sub/sadi` (forked from `sub/sfdi` so the SFDI completion is present locally).
@@ -162,16 +162,11 @@ What SADI surfaces that may extend SPRD:
 
 ## Relationship to enforcement
 
-Process Contract #6 (Study throughline is structural) was activated 2026-05-04 by SFDI's completion. SADI may either:
+Process Contract #6 (Study throughline is structural) was activated 2026-05-04 by SFDI's completion. **Resolved 2026-05-04 in SADI's ratification walk:** Process #6 extends to cover all workspace steps through Delivery (no separate Process #7 is created). The reasoning rests on the observation that there's only one throughline, running from Background (Phase 1 Field 1) all the way to Delivery — cutting it in half across two contracts would invent a seam where the pastor experiences none. See working doc § SADI-wide commitments / Process Contract #6 extension for the full rationale.
 
-- **Extend Process #6** to cover Steps 2 and 5 (the throughline runs all the way to Delivery, not just through Study)
-- **Trigger a new clause** (Process #7 — "the sermon-anchor structure is binding") that covers Step 2 + Step 5 specifically
+The CORE.md text edit (rewording "Study throughline" → "workspace throughline" and expanding the canonical-articulation pointer to include SADI alongside SFDI) is downstream of this charter and lands as a small SPRD-side or in-place edit; the ratification walk landed the working-doc commitment, the code-edit pass to CORE.md follows.
 
-Decision deferred to first SADI walk where the question naturally surfaces.
-
-The validator scripts at `scripts/sfdi-internal-consistency.py` and `scripts/sfdi-cross-doc-consistency.py` may extend to parse SADI scaffolding too, or SADI may get its own validator scripts modeled on SFDI's. Decided after SADI walks accumulate enough content to test against.
-
-The clause(s) activate when SADI ships its first per-field entries — until then, accurate but vacuous.
+The validator scripts at `scripts/sfdi-internal-consistency.py` and `scripts/sfdi-cross-doc-consistency.py` either extend to parse SADI scaffolding too, or SADI gets its own validator scripts modeled on SFDI's. Deferred until SADI's per-field content-design walks accumulate enough additional content to test against — the structural ratification alone is parseable by the existing SFDI-style approach but is small enough that a dedicated test pass may not yet be warranted.
 
 ---
 

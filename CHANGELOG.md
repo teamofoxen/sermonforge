@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-04 — sadi: ratification walk complete (11 structural rulings + doc propagation)
+
+- Eleven rulings ratified — named outcomes Main Point Pair (Step 2) + Sermon Frame (Step 5); cumulative table closes at 6 columns; Process #6 extends through Delivery; no field-N/A on the four anchors; MPT 2Q / MPS 3Q / Intro 4Q / Conclusion 4Q with locked question shapes; AI clarifies pastor's voice (doesn't author); pre-field overviews on MPS/Intro/Conclusion.
+- `sermon-anchor-definition-initiative.md` rewritten with SADI-wide commitments + seven-slot entries for all four anchors + within-step flow passes naming the outcomes + open questions Q1/Q2/Q5 RESOLVED.
+- Propagation across `sadi-charter.md` (status + enforcement), `sadi-throughline-vision.md` (cumulative-table now RESOLVED), `study-phase-redesign.md` (C3 + C5-partial unblocked), `ENFORCEMENT_STATUS.md` (new SADI section).
+- Sub/sadi rebased onto origin/main (CHANGELOG conflict resolved); 358 vitest green throughout; doc-only across the session.
+- Downstream-enabled: CORE.md Process #6 text edit, MPS_DRAFT prompt rewrite, Step 5 elevation — all unblocked by ratified SADI field defs.
+
+---
+
 ## 2026-05-04 — sadi: initial draft — Sermon Anchor Definition Initiative scaffolded on sub/sadi
 
 - New initiative SADI (Sermon Anchor Definition Initiative) drafted on branch `sub/sadi` (worktree at `C:/Projects/SermonForge-sadi`, forked from `sub/sfdi`).
