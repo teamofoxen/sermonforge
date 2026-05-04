@@ -59,7 +59,7 @@ A and B run in order. C items can fan out once Phase B is far enough along to te
 
 | ID | Milestone | What it does for the pastor | Depends on | SADI gating |
 |---|---|---|---|---|
-| **A0** | Branch alignment | The SPRD branch carries SFDI's completed work; binding scope and migration mapping are in the doc as authoritative spec. No code yet. | — | None |
+| **A0** | Branch alignment | The SPRD branch carries SFDI's completed work. Binding scope is in the doc; migration mapping is preserved as defensive reference (no production sermons exist 2026-05-04, so no migration logic ships). No code yet. | — | None |
 | **A1** | Component 1 — spotlight foundation | The Study tab stops being a stack of nine textareas. The pastor lands inside one field at a time, answering one question at a time, with a "Next question" button that's disabled until the current answer has content. Per-field gating expressions and per-question N/A escape valve land. Storage shape becomes per-question-keyed sub-objects from day one. | A0 | None |
 | **A2** | Component 1 — structured-exercise sub-shapes | The richer content tools heavy-lifting fields need: indented sentence canvas (Tab/Shift+Tab indent), paraphrase blocks, multi-column synthesis table with read-only/writable per-column policy, persistent peripheral reference panel, pre-field overview screen, paste-intercept (per-question), per-cell no-AI policy, genre-aware static reference content. | A1 | None |
 | **B1** | Phase 1 (Observe) reshape | Observe goes from 9 fields to 9 fields, but with two new ones (Background, Surface Questions), Commands+Statements merged, Basic Outline retired, Possible Implications brought into the awareness layer. Field 4 (Divisions / Thought Units) is the first heavy-lifting field — its three-question structured exercise builds the cumulative thought-unit table. | A1, A2 | None |
@@ -81,7 +81,7 @@ A and B run in order. C items can fan out once Phase B is far enough along to te
 
 Inside the Study tab, the pastor moves through four sub-phases — **Observe**, **Interpret**, **Redemptive Thread**, **Implications** — before drafting the main point of the sermon. The four are right in spirit (text → meaning → Christ → application) but broken in feel: each one looks like a separate worksheet, the pastor advances silently, the last one (Implications) crams three different jobs into one screen, and the part that should deepen progressively (Pastoral Context) sits as a permanent card at the top of the screen instead.
 
-This document covers eight sections in fixed order, plus three operational sections (the Scope map above, the Binding scope decisions above, the Implementation milestones above) and a binding migration spec (section 9 below) that sit alongside the eight as authoritative implementation matter.
+This document covers eight sections in fixed order, plus three operational sections (the Scope map above, the Binding scope decisions above, the Implementation milestones above) and a defensive migration mapping (section 9 below) that sits alongside the eight as reference if a future test fixture or import surfaces old data — no migration logic ships.
 
 The eight core sections:
 1. What's broken today (diagnostic snapshot from when SPRD was drafted; current state of each item lives in the scope map and section 8).
