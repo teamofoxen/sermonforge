@@ -138,6 +138,21 @@ export const IMPLICATIONS_COMPILED_KEY = "compiled";
 // Default question key used until a field's SFDI question sequence lands.
 export const DEFAULT_QUESTION_KEY = "primary";
 
+// Resolve a field def's question sequence. Fields with an explicit
+// `questions: [...]` array carry the SFDI-walked sequence; fields without
+// one collapse to a single primary-question entry whose prompt comes from
+// the field's `hint` (back-compat with B1.0 single-question shape).
+//
+// Each returned entry: { key, prompt, kind? }. `kind` defaults to "textarea"
+// at consumer level when absent; structured-exercise sub-shapes ("canvas",
+// "paraphrase", "synthesis-table") land as fields are wired in B1.2+.
+export function fieldQuestions(field) {
+  if (field && Array.isArray(field.questions) && field.questions.length > 0) {
+    return field.questions;
+  }
+  return [{ key: DEFAULT_QUESTION_KEY, prompt: field?.hint || "" }];
+}
+
 // Top-level keys reserved for non-field metadata (not iterated as fields).
 const RESERVED_TOP_KEYS = new Set(["legacy_notes"]);
 

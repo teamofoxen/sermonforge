@@ -3235,6 +3235,104 @@ button {
   outline-offset: 2px;
 }
 
+/* ── Multi-question spotlight (SPRD B1.1) ────────────────────────────────── */
+/* Multi-question fields render their questions as a vertical stack inside
+   the active-field container. The active question shows a textarea +
+   controls; siblings collapse to click-to-edit rows showing the answer,
+   N/A indicator, or "Not yet answered" placeholder. */
+
+.worksheet-questions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.worksheet-question {
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  background: transparent;
+  border: 1px solid transparent;
+}
+
+.worksheet-question-active {
+  background: var(--parchment);
+  border-color: var(--parchment-deep);
+}
+
+.worksheet-question-collapsed {
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.worksheet-question-collapsed:hover {
+  background: var(--parchment);
+  border-color: var(--parchment-deep);
+}
+
+.worksheet-question-collapsed:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: -1px;
+}
+
+.worksheet-question-pending {
+  opacity: 0.65;
+}
+
+.worksheet-question-indicator,
+.worksheet-question-collapsed-indicator {
+  font-family: 'Playfair Display', serif;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-ghost);
+  margin-bottom: 4px;
+}
+
+.worksheet-question-active .worksheet-question-indicator {
+  color: var(--gold);
+}
+
+.worksheet-question-prompt {
+  font-family: 'Crimson Pro', serif;
+  font-size: 14px;
+  color: var(--ink);
+  margin-bottom: 6px;
+  font-style: italic;
+}
+
+.worksheet-question-na .worksheet-question-collapsed-indicator {
+  color: var(--ink-ghost);
+}
+
+/* Multi-question collapsed-field summary (when the field itself is collapsed
+   — sibling fields outside the spotlight). Each question's answer is a row
+   in a list. */
+
+.worksheet-field-multi-summary {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.worksheet-field-multi-summary-line {
+  font-family: 'Crimson Pro', serif;
+  font-size: 13px;
+  color: var(--ink-mid);
+  padding: 2px 0;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.worksheet-field-multi-summary-line + .worksheet-field-multi-summary-line {
+  border-top: 1px dashed var(--parchment-deep);
+  margin-top: 4px;
+  padding-top: 4px;
+}
+
 /* ── Responsive ──────────────────────────────────────────────────────────── */
 @media (max-width: 980px) {
   .dash-grid { grid-template-columns: 1fr; }
