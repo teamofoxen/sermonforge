@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-04 — SPIP + SPIR scaffolds officially registered, calibrated, and rounded out
+
+- New `docs/PROPOSALS/study-phase-implementation-plan.md` (SPIP) and `docs/PROPOSALS/study-phase-implementation-remediation.md` (SPIR) added as load-bearing planning anchors for the Study redesign.
+- `docs/ANCHORS.md` extended with SADI, SPIP, SPIR registry entries.
+- SPIP and SPIR calibrated to current main, including Firings 2 and 3 ruled as fired-implicitly inside `b2ad01e` and SPIR risk 7 closed by the same atomic braiding.
+- Both docs gained a main-point thesis callout ("documentation agreement is the prerequisite for smooth implementation").
+- SPIR Bucket E (six ingestion-optimization audits) added; SPIP's pre-implementation audit pass procedure now starts with Phase 0 to run them ahead of Phases 1–3.
+
+---
+
 ## 2026-05-04 — sprd C3 + sadi per-field content walks + CORE #6 + MPS prompt rewrite (session wrap)
 
 - Phase 2: SADI per-field content-design walks landed for all four anchor fields — MPT, MPS, Intro, Conclusion — with overview blockquotes + Q-framings + Eph 2:1–5 worked example outputs in pastor-to-people voice.
