@@ -170,22 +170,25 @@ Four structured worksheet phases. Each phase:
 Field definitions live in `src/utils/studyFields.js`.
 
 #### Phase 1: Observe → `sermons.observations` (JSON)
-9 fields in code today: `context`, `divisions`, `commands`, `statements`, `characters`, `big_ideas`,
-`obvious_point`, `basic_outline`, `applications`.
 
-**SFDI walk note (as of 2026-05-04 — all four sub-phases complete).** The SFDI
-working doc at `docs/PROPOSALS/study-field-definition-initiative.md` defines the
-canonical field structure across all four sub-phases. Code in `src/utils/studyFields.js`
-still reflects the pre-SFDI shape; the code change to align fields to SFDI's
-definitions will land as part of the Isolated-World Workspace UX overhaul
-(SPRD Component 1 — see `docs/PROPOSALS/study-phase-redesign.md` section 8).
-Per-sub-phase summary of SFDI's redesigned shape:
+**SFDI-aligned in code as of SPRD B1.0 (2026-05-04).** `OBSERVE_FIELDS` in
+`src/utils/studyFields.js` is the SFDI 9-field shape: `background` → `context`
+→ `surface_questions` → `divisions` → `characters` → `commands_declarations`
+→ `big_ideas` → `obvious_point` → `applications`. Four fields carry multi-
+question sequences (B1.2): Background `[author, date, audience, genre]`;
+Context `[before, after, impact, holy_spirit_intent]`; Surface Questions
+`[where, when, how]`; Possible Implications `[pressing, hard_and_hopeful]`.
+Field 4 Divisions / Thought Units and Field 9 Possible Implications are
+flagged heavy-lifting and open with `FieldOverviewScreen` on first per-sermon
+entry (B1.3). Field 4's three structured-exercise questions (canvas / paraphrase
+blocks / synthesis table) wire into the spotlight via B1.5.
 
-- **Phase 1 (Observe) — 9 fields:** Background → Context → Surface Questions →
-  Divisions/Thought Units → Main Characters → Commands and Declarations →
-  Big Ideas → Obvious Point → Possible Implications. Two new fields
-  (Background, Surface Questions); Notable Commands + Notable Statements
-  merged into Commands and Declarations; Basic Outline retired.
+**Phases 2/3/4 still pre-SFDI in code.** `INTERPRET_FIELDS`, `REDEMPTIVE_FIELDS`,
+and the `IMPLICATIONS_*` arrays in `src/utils/studyFields.js` reflect the
+pre-SFDI shape; B2 / B3 / B4 ship the per-phase reshapes. Per-sub-phase
+summary of SFDI's redesigned shape (per `docs/PROPOSALS/study-field-definition
+-initiative.md`):
+
 - **Phase 2 (Interpret) — 7 fields:** Deeper Context → Recurring Ideas →
   Character Purpose → Contrasts → Cross-References → Commentary Notes →
   Interpretation Synthesis. Diagram retired (Field 4 Q1 absorbed it);
@@ -198,9 +201,6 @@ Per-sub-phase summary of SFDI's redesigned shape:
   Personal Implications → Pastoral Context → Implications Synthesis.
   The three-way conversation realized at field level; Compiled list AI
   synthesis retired; Implications for Unbeliever folded into Pastoral Context.
-
-Until SPRD Component 1 ships, `OBSERVE_FIELDS`, `INTERPRET_FIELDS`, `REDEMPTIVE_FIELDS`,
-and `IMPLICATIONS_*` arrays in `src/utils/studyFields.js` reflect the pre-SFDI shape.
 
 **Note:** the `applications` field (UI label: "Possible Implications" — renamed
 from "Possible Applications" in the Vocabulary cleanup pass; the JSON key stays
