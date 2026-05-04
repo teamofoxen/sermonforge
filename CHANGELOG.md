@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-04 — sadi: initial draft — Sermon Anchor Definition Initiative scaffolded on sub/sadi
+
+- New initiative SADI (Sermon Anchor Definition Initiative) drafted on branch `sub/sadi` (worktree at `C:/Projects/SermonForge-sadi`, forked from `sub/sfdi`).
+- Scope: 4 anchor fields — Step 2 (MPT, MPS = message anchor) + Step 5 (Intro, Conclusion = listener-contact anchor); modeled after SFDI's three-doc shape.
+- Three docs created: `docs/PROPOSALS/sadi-charter.md`, `docs/PROPOSALS/sadi-throughline-vision.md`, `docs/PROPOSALS/sermon-anchor-definition-initiative.md`.
+- Substrate: SFDI's Implications Synthesis is what MPT/MPS opens against; cumulative thought-unit table extension into Steps 2+5 is an open walk question.
+- No field walks started yet; per-field seven-slot entries land as walks proceed.
+
+---
+
 ## 2026-05-04 — docs: SPRD merge to main + workspace tour drift warning
 
 - `docs/PROPOSALS/study-phase-redesign.md` Status header rewritten to reflect SPRD's substantial shipping to `main` (commit `d6258ec`); remaining work (C2 / C4 / workspace tour rewrite) explicitly listed; SADI-gated items (C3 / MPS Draft prompt rewrite) called out.
