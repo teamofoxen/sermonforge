@@ -66,12 +66,23 @@ describe("SPRD Q3 hard-gate UX: Continue button disabled when source empty", () 
   });
 
   it("Continue is enabled at Observe when observations has content; no hint rendered", async () => {
+    // SFDI Observe → Interpret threshold (B1.4): Field 8 (obvious_point) and
+    // Field 9 (applications) must be filled in addition to the empty-evidence
+    // baseline. Field 9's `applications` is multi-question, so we provide the
+    // explicit envelope shape rather than a flat string.
     const sermonId = insertSermonRow({
       title: "Filled observe sermon",
       current_stage: STAGE.Study,
       current_step: STEP.Exegesis,
       current_sub_phase: SUB_PHASE.Observe,
-      observations: '{"context":"Romans 8:1 sets the believers in Christ Jesus."}',
+      observations: JSON.stringify({
+        context: "Romans 8:1 sets the believers in Christ Jesus.",
+        obvious_point: "Believers are now in Christ Jesus, no longer condemned.",
+        applications: {
+          pressing:         { value: "The room needs to hear that condemnation is gone.", na: false },
+          hard_and_hopeful: { value: "Hard: facing felt condemnation. Hopeful: it's already lifted in Christ.", na: false },
+        },
+      }),
     });
 
     const SermonWorkspaceMod = await import("../../src/components/SermonWorkspace");
@@ -109,10 +120,104 @@ describe("SPRD Q3 hard-gate UX: evaluateAdvance unit test", () => {
     expect(result.reason).toMatch(/add some content/i);
   });
 
-  it("returns ok=true for non-empty Observe sermon at sub-phase 1", async () => {
+  it("returns ok=true for non-empty Observe sermon at sub-phase 1 once SFDI threshold is met", async () => {
     const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
     const result = evaluateAdvance(
-      { id: "test", observations: '{"context":"some content"}' },
+      {
+        id: "test",
+        observations: JSON.stringify({
+          context: "some content",
+          obvious_point: "Plain-sense point.",
+          applications: {
+            pressing:         { value: "Pressing.",  na: false },
+            hard_and_hopeful: { value: "Hard/hope.", na: false },
+          },
+        }),
+      },
+      "sub_phase",
+      1,
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  // SFDI Observe → Interpret threshold (B1.4) — load-bearing field gates beyond
+  // the empty-evidence baseline.
+  it("returns ok=false at sub-phase 1 when Field 8 (Obvious Point) is empty", async () => {
+    const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
+    const result = evaluateAdvance(
+      {
+        id: "test",
+        observations: JSON.stringify({
+          context: "some content",
+          // obvious_point intentionally missing
+          applications: {
+            pressing:         { value: "Pressing.",  na: false },
+            hard_and_hopeful: { value: "Hard/hope.", na: false },
+          },
+        }),
+      },
+      "sub_phase",
+      1,
+    );
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/Obvious Point/i);
+  });
+
+  it("returns ok=false at sub-phase 1 when Field 9 (Possible Implications) has only one question filled", async () => {
+    const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
+    const result = evaluateAdvance(
+      {
+        id: "test",
+        observations: JSON.stringify({
+          context: "some content",
+          obvious_point: "Plain-sense point.",
+          applications: {
+            pressing: { value: "Pressing.", na: false },
+            // hard_and_hopeful intentionally missing
+          },
+        }),
+      },
+      "sub_phase",
+      1,
+    );
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/Possible Implications/i);
+  });
+
+  it("treats N/A on Field 8 as satisfied", async () => {
+    const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
+    const result = evaluateAdvance(
+      {
+        id: "test",
+        observations: JSON.stringify({
+          context: "some content",
+          obvious_point: { primary: { value: "", na: true } },
+          applications: {
+            pressing:         { value: "Pressing.",  na: false },
+            hard_and_hopeful: { value: "Hard/hope.", na: false },
+          },
+        }),
+      },
+      "sub_phase",
+      1,
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  it("treats N/A on both Field 9 questions as satisfied", async () => {
+    const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
+    const result = evaluateAdvance(
+      {
+        id: "test",
+        observations: JSON.stringify({
+          context: "some content",
+          obvious_point: "Plain-sense point.",
+          applications: {
+            pressing:         { value: "", na: true },
+            hard_and_hopeful: { value: "", na: true },
+          },
+        }),
+      },
       "sub_phase",
       1,
     );

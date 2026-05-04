@@ -75,8 +75,17 @@ describe("Process Contract #3: movement is a visible event", () => {
       title: "Sub-phase visible movement test",
       current_stage: STAGE.Study,
       current_sub_phase: SUB_PHASE.Observe,
-      // Non-empty source sub-phase content so Process #2 passes.
-      observations: '{"context":"The passage situates the reader after Romans 7\'s wretched-man cry."}',
+      // SFDI Observe → Interpret threshold (B1.4): Field 8 (obvious_point) and
+      // Field 9 (applications) must be filled in addition to the empty-evidence
+      // baseline.
+      observations: JSON.stringify({
+        context: "The passage situates the reader after Romans 7's wretched-man cry.",
+        obvious_point: "Believers in Christ are no longer under condemnation.",
+        applications: {
+          pressing:         { value: "The room is haunted by felt condemnation.",                  na: false },
+          hard_and_hopeful: { value: "Hard: it feels true. Hopeful: Christ has already lifted it.", na: false },
+        },
+      }),
     });
 
     const SermonWorkspaceMod = await import("../../src/components/SermonWorkspace");

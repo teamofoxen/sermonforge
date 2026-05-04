@@ -12,7 +12,14 @@
 // `evaluateAdvance` without UI changes.
 
 import { STAGE, STEP, SUB_PHASE } from "../core/contracts";
-import { parseStructuredField, answeredQuestions } from "./studyFields";
+import {
+  parseStructuredField,
+  answeredQuestions,
+  getQuestionAnswer,
+  isQuestionNA,
+  flattenAnswerValue,
+  DEFAULT_QUESTION_KEY,
+} from "./studyFields";
 
 const SUB_PHASE_BY_INDEX = [SUB_PHASE.Observe, SUB_PHASE.Interpret, SUB_PHASE.RedemptiveThread, SUB_PHASE.Implications];
 const STEP_BY_INDEX = [STEP.Exegesis, STEP.MPT_MPS, STEP.Outline, STEP.FunctionalElements];
@@ -98,10 +105,16 @@ export function buildStageEvidence(sermon, stage) {
 }
 
 // SPRD Q3 — evaluateAdvance returns the structural sufficiency check that the
-// disabled-Continue UI consumes. Today (Q3 pilot) it's the empty-evidence
-// baseline. SFDI's per-boundary thresholds will extend the body of this
-// function with coverage / structural completeness / synthesis presence checks
-// without changing its signature or UI consumers.
+// disabled-Continue UI consumes. Layered:
+//
+//   1. Empty-evidence baseline (Q3 pilot): something must be in the source
+//      position. Below this, every gate fails.
+//   2. SFDI per-boundary thresholds: stricter requirements at specific
+//      sub-phase boundaries — load-bearing fields must be filled (or N/A).
+//      The Observe → Interpret threshold ships in B1.4 (Field 8 + Field 9);
+//      the Field 4 composite extends it once B1.5 wires Field 4's three
+//      structured-exercise questions. Other phase boundaries remain on the
+//      baseline until SFDI's per-phase walks are wired in B2/B3/B4.
 //
 // kind: "sub_phase" | "step"
 // fromIndex: 1-4 (the source position's local index)
@@ -109,6 +122,45 @@ export function buildStageEvidence(sermon, stage) {
 // Special case: kind="sub_phase", fromIndex=4 — advancing out of Implications
 // is a STEP transition (Exegesis → MPT/MPS); evidence is the entire Exegesis
 // step's content, not just Implications.
+
+// Per-question completeness check shared with SpotlightWorksheet — a question
+// counts as "answered" when it has flat-text content OR is marked N/A.
+function isQuestionAnswered(data, fieldKey, questionKey) {
+  if (isQuestionNA(data, fieldKey, questionKey)) return true;
+  return !!flattenAnswerValue(getQuestionAnswer(data, fieldKey, questionKey));
+}
+
+// SFDI Observe → Interpret threshold (per `study-field-definition-initiative
+// .md` § "The hard gate at the boundary"). Returns null when satisfied or a
+// short pastor-facing reason string when not.
+//
+// Scope as of B1.4: Field 8 (Obvious Point) and Field 9 (Possible Implications)
+// are wired. Field 4's composite gate (Q1 canvas + Q2 paraphrases + Q3 thought
+// units) ships with B1.5 once the structured-exercise questions are mounted.
+// Per-field non-empty checks for Fields 1, 2, 3, 5, 6, 7 are deferred until
+// the SFDI baseline-tightening cut.
+function checkObserveToInterpretThreshold(sermon) {
+  const data = parseStructuredField(sermon?.observations);
+  if (!data || typeof data !== "object") {
+    return "Add some content before advancing.";
+  }
+
+  // Field 8 — Obvious Point. Single primary question; non-empty or N/A.
+  if (!isQuestionAnswered(data, "obvious_point", DEFAULT_QUESTION_KEY)) {
+    return "State the Obvious Point before advancing.";
+  }
+
+  // Field 9 — Possible Implications. Both questions (pressing,
+  // hard_and_hopeful) non-empty or N/A.
+  if (!isQuestionAnswered(data, "applications", "pressing")) {
+    return "Answer the Possible Implications questions before advancing.";
+  }
+  if (!isQuestionAnswered(data, "applications", "hard_and_hopeful")) {
+    return "Answer the Possible Implications questions before advancing.";
+  }
+
+  return null;
+}
 
 export function evaluateAdvance(sermon, kind, fromIndex) {
   if (!sermon) return { ok: false, reason: "" };
@@ -125,6 +177,14 @@ export function evaluateAdvance(sermon, kind, fromIndex) {
   if (!evidence) {
     return { ok: false, reason: "Add some content before advancing." };
   }
+
+  // SFDI per-boundary thresholds layer on top of the empty-evidence baseline.
+  // Currently wired: Observe → Interpret (kind=sub_phase, fromIndex=1).
+  if (kind === "sub_phase" && fromIndex === 1) {
+    const reason = checkObserveToInterpretThreshold(sermon);
+    if (reason) return { ok: false, reason };
+  }
+
   return { ok: true };
 }
 
