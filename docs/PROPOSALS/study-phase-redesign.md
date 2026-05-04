@@ -75,6 +75,17 @@ A and B run in order. C items can fan out once Phase B is far enough along to te
 
 **Sequencing reality:** A0 → A1 → A2 → B1 → B2 → B3 → B4 in strict order. After B4, C1, C2, C4, C5, C6 can fan out; C3 waits on SADI.
 
+**Implementation progress as of 2026-05-04:**
+
+- **A0** ✅ — branch fold sub/sfdi → sub/sprd at `3a1554f`.
+- **A1.0** ✅ — per-question envelope shape foundation, `{value, na}` per question, helpers + auto-coerce on read, no migration logic (commit `43877ca`).
+- **A1.1** ✅ — spotlight rendering, one field active at a time with "Next question →" disabled-when-empty, click-to-edit collapsed fields (commit `fb7b7e8`).
+- **A1.3** ✅ — per-question N/A toggle UI, "Mark not applicable" / "Mark applicable" alongside "Next question →" with distinct collapsed/active visuals (commit `87dab7c`).
+- **A1.2** ⏸️ — hover-checklist on disabled gates: deferred. With A1.0/A1.1's single-question fields, "any" and "all" gating collapse to the trivial empty-evidence case and a hover-checklist on a single-question gate is degenerate. Picks up when B1 introduces multi-question fields (Field 4's three-question composite gate is the precedent in SFDI).
+- **Next:** A2 — structured-exercise sub-shapes (canvas, paraphrase blocks, synthesis table, persistent peripheral reference panel, pre-field overview, paste-intercept, per-cell no-AI, genre-aware static reference).
+
+A1's substrate (storage shape, spotlight UX, N/A escape valve) is now in place across all four sub-phases. The remaining A1 sub-item (A1.2) is a UX detail that materially depends on B1's multi-question field shapes; tracking it under A1 keeps the scoping intent intact even though its execution slot moves to "after B1 lands."
+
 ---
 
 ## How to read this document
