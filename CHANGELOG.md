@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-04 — sprd B1: Phase 1 Observe reshape + multi-question rendering
+
+- `OBSERVE_FIELDS` reshaped to the SFDI 9-field Phase 1 shape — Background / Surface Questions / Commands and Declarations added; Basic Outline / Notable Commands / Notable Statements retired.
+- New `fieldQuestions(field)` helper resolves a field's question sequence with a single-primary fallback for back-compat.
+- `SpotlightField` + `SpotlightWorksheet` extracted to `src/components/SpotlightWorksheet.jsx` and refactored to render multi-question fields (per-question spotlight, "Question N of M" indicator, click-to-edit prior answers).
+- Worksheet API threads `qKey` explicitly via `onChange(fieldKey, qKey, value)` / `onToggleNA(fieldKey, qKey)`; StudyTab's `updateStructured` / `toggleStructuredNA` gain optional `qKey` parameter.
+- SFDI question sequences wired for Background (4Q), Context (4Q), Surface Questions (3Q), Possible Implications (2Q); 23 new component tests; 297 vitest total green.
+
+---
+
 ## 2026-05-04 — sprd A2: structured-exercise UI primitives complete
 
 - `studyFields.js` helpers tolerate the three SFDI structured-list value types plus the Phase 2-4 cumulative columns; new `flattenAnswerValue` threaded through `answeredQuestions`, `flattenToText`, and `applyFieldValueMap`.
