@@ -2940,6 +2940,148 @@ button {
   color: var(--ink-soft);
 }
 
+/* ── Synthesis table (SPRD A2.3) ─────────────────────────────────────────── */
+/* SFDI Field 4 Q3 sub-shape. Multi-column table where the pastor names the
+   meaningful artifact directly. Phase 1 ships three columns (Thought unit /
+   After line / Signal); cumulative phases append columns and mark prior
+   columns read-only. Paste allowed; AI generation in cells is the
+   load-bearing constraint, not paste. */
+
+.synthesis-table {
+  font-family: 'Crimson Pro', serif;
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.synthesis-table-grid {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.synthesis-table-th {
+  text-align: left;
+  font-family: 'Playfair Display', serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--parchment-deep);
+}
+
+.synthesis-table-th-after_line {
+  width: 110px;
+}
+
+.synthesis-table-th-actions {
+  width: 32px;
+}
+
+.synthesis-table-th-readonly {
+  color: var(--ink-ghost);
+  font-style: italic;
+}
+
+.synthesis-table-row + .synthesis-table-row .synthesis-table-cell {
+  border-top: 1px solid var(--parchment-deep);
+}
+
+.synthesis-table-cell {
+  padding: 6px 8px;
+  vertical-align: top;
+}
+
+.synthesis-table-input {
+  width: 100%;
+  border: 1px solid transparent;
+  background: var(--parchment-warm);
+  color: var(--ink);
+  padding: 6px 8px;
+  border-radius: var(--radius);
+  font-family: inherit;
+  font-size: 14px;
+  outline: none;
+  resize: vertical;
+}
+
+.synthesis-table-input:focus {
+  border-color: var(--gold);
+  background: var(--parchment);
+}
+
+.synthesis-table-input:disabled {
+  color: var(--ink-ghost);
+  cursor: not-allowed;
+}
+
+.synthesis-table-input-line-number {
+  text-align: center;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+}
+
+.synthesis-table-cell-readonly .synthesis-table-readonly-display {
+  padding: 6px 8px;
+  color: var(--ink-soft);
+  font-style: italic;
+  white-space: pre-wrap;
+  min-height: 1.5em;
+}
+
+.synthesis-table-delete-row {
+  border: none;
+  background: transparent;
+  color: var(--ink-ghost);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius);
+  transition: color 0.15s, background 0.15s;
+}
+
+.synthesis-table-delete-row:hover {
+  color: var(--crimson);
+  background: var(--parchment-warm);
+}
+
+.synthesis-table-delete-row:disabled {
+  color: var(--ink-ghost);
+  cursor: not-allowed;
+  background: transparent;
+}
+
+.synthesis-table-controls {
+  margin-top: 10px;
+}
+
+.synthesis-table-add-row {
+  border: 1px dashed var(--parchment-deep);
+  background: transparent;
+  color: var(--ink-soft);
+  padding: 6px 12px;
+  border-radius: var(--radius);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+}
+
+.synthesis-table-add-row:hover {
+  color: var(--ink);
+  border-color: var(--gold);
+  background: var(--parchment-warm);
+}
+
+.synthesis-table-add-row:disabled {
+  color: var(--ink-ghost);
+  border-color: var(--parchment-deep);
+  cursor: not-allowed;
+  background: transparent;
+}
+
 /* ── Responsive ──────────────────────────────────────────────────────────── */
 @media (max-width: 980px) {
   .dash-grid { grid-template-columns: 1fr; }
