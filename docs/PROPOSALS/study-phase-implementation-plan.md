@@ -8,6 +8,10 @@
 
 ---
 
+> **Documentation agreement is the prerequisite for smooth implementation.** SPIP and SPIR exist to lock that agreement in place before the code work begins. SPIP is the plan side — how the building happens. SPIR is the safety-net side — what could go wrong and what to do about it. Both serve the same underlying point: you don't build cleanly on top of docs that disagree with each other.
+
+---
+
 ## What SPIP is for
 
 SPRD says *what* the Study phase redesign is. SFDI says *what each Study field is*. SADI will say the same for the Main Preaching Thought / Statement work and for Intro/Conclusion. Together those three documents are the source of truth for the redesign's content and structural decisions.
@@ -127,6 +131,12 @@ The full audit roster lives in SPIR's audit plan section. The pre-implementation
 | Question key reference (Bucket A, doc layer) | Full | Scoped to Step 5's key set | Scoped to MPS Draft's key set |
 | Cross-doc consistency (Bucket A) | Full | Full | Full |
 | Backlog visibility (Bucket A) | Full | Full | Full |
+| Length and load-cost (Bucket E) | Full | Scoped to SADI's added content | Scoped to MPS Draft prompt size |
+| Section weight (Bucket E) | Full | Scoped to SADI's added content | n/a |
+| Redundancy (Bucket E) | Full | Scoped to SADI ↔ SPRD overlap | Scoped to SADI ↔ MPS Draft overlap |
+| Historical preservation (Bucket E) | Full | n/a | n/a |
+| Navigation (Bucket E) | Full | Scoped to SADI's added sections | n/a |
+| Plain-language drift (Bucket E) | Full | Full | Full |
 
 The mapping is first-cut. It will be refined once SADI's content is in hand and the C-milestone shapes settle.
 
@@ -144,7 +154,9 @@ Building the three Firing 1 standards is small work: a short ownership section a
 
 ### Procedure
 
-A pre-implementation audit pass runs in three phases.
+A pre-implementation audit pass runs in four phases.
+
+**Phase 0 — optimize ingestion.** Run the Bucket E ingestion-optimization audits against the doc set. The goal is to make sure the doc set is in shape to be audited efficiently — right size, right weight, no dead-weight redundancy, no orphan historical content, navigable, and free of plain-language drift. Findings here flow back to source docs (same routing as Phase 3), not to SPIR. Phase 0 closes when the Bucket E audits pass; Phase 1 starts only after.
 
 **Phase 1 — gather.** All planning documents (SFDI, SADI, SPRD) and operational documents (SPIP, SPIR, CHANGELOG, ENFORCEMENT_STATUS.md, CORE.md) are loaded as the working set. The current implementation snapshot from SPIP is included so the audit knows what has already shipped.
 
@@ -176,6 +188,7 @@ What's covered today, what's manual, what to build.
 - **`anchor-update` skill.** For applying ruling fixes back to SFDI / SADI / SPRD when the audit surfaces a real change to a load-bearing doc. Its per-section diff approval and immediate-commit discipline is exactly what the gate's "fix" resolution needs.
 - **`sweep-the-house` skill.** Covers Process Contract enforcement at the implementation layer; less directly relevant pre-implementation, but a reference for what the equivalent doc-layer check needs to verify.
 - **Manual sweep.** For backlog visibility (find every "deferred," "TBD," and open-ended marker across the doc set) and change surface accumulation (which is more judgment than mechanical check).
+- **Bucket E coverage.** `drift-sweep` covers the plain-language drift and partly the redundancy audits. Length and load-cost, section weight, historical preservation, and navigation are manual sweeps for now — judgment calls about doc shape rather than mechanical checks.
 - **No new tooling required for Firing 1.** The combination of existing skills plus manual passes covers what the first firing needs. If subsequent firings reveal a recurring audit shape that would benefit from dedicated tooling, build at that point — not speculatively.
 
 ### What this section commits to

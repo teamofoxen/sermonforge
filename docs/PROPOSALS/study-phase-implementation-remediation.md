@@ -8,6 +8,10 @@
 
 ---
 
+> **Documentation agreement is the prerequisite for smooth implementation.** SPIP and SPIR exist to lock that agreement in place before the code work begins. SPIP is the plan side — how the building happens. SPIR is the safety-net side — what could go wrong and what to do about it. Both serve the same underlying point: you don't build cleanly on top of docs that disagree with each other.
+
+---
+
 ## What SPIR is for
 
 The Study phase redesign is large, structurally ambitious, and bets heavily on a qualitative pedagogical claim — that the throughline will *feel earned* when the pastor walks through the redesigned Study phase. Many things will go wrong. Some are predictable now; others won't surface until real sermon prep happens under the new shape.
@@ -89,7 +93,7 @@ These are starting examples. Full SPIR will collect them all and add new ones as
 
 This section names the kinds of audits SPIR uses to catch risks before they ship and after they surface. The framing is verb-side — *what each audit does to the content* — without yet enumerating *what content it does it to*. Specific targets (which keys, which prompts, which milestones) get filled in when SPIP develops the per-milestone plan.
 
-Audits cluster into four buckets. The first three catch failures inside one initiative's surface. The fourth catches failures *between* initiatives — where SFDI, SADI, and SPRD braid together and friction accumulates at the seams.
+Audits cluster into five buckets. The first three catch failures inside one initiative's surface. The fourth catches failures *between* initiatives — where SFDI, SADI, and SPRD braid together and friction accumulates at the seams. The fifth catches failures of the doc set itself as a working surface — size, weight, redundancy, navigability, and voicing — so the audits in the other four buckets have a healthy substrate to run against.
 
 **Every audit checks against a fixed external reference.** This is the discipline that keeps the audit plan from becoming a divergent loop where the model keeps generating new findings each time it runs. Each audit names: what it checks (the operation), what *standard* it checks against (the external reference), and what *done* looks like (when the check terminates).
 
@@ -175,6 +179,28 @@ Run against the full document set and the integrated implementation. They catch 
 
 *Marker for full development — Prescriptive coverage audit.* To be added when SPIP develops its per-milestone prescriptive breakdowns. Verifies that every action item in SPIP traces bidirectionally to descriptive source content in SFDI / SPRD / SADI: every source section that calls for action has a corresponding SPIP action; every SPIP action traces back to a source section that justifies it. Catches both gaps (source content SPIP failed to translate) and over-prescription (SPIP making decisions no source content authorizes). *Standard:* the descriptive-to-prescriptive trace map between SPIP and the source docs. *Done when:* every entry in the trace map resolves in both directions.
 
+### Bucket E — Ingestion optimization audits
+
+Run against the doc set itself as a working surface. The risks Bucket E catches aren't about content correctness or content alignment — they're about whether the doc set is *shaped* in a way that the audits in Buckets A through D can actually run against efficiently. A bloated, redundant, or drifted doc set makes every audit above it more expensive and less reliable. **Bucket E runs in Phase 0 of every pre-implementation audit pass — before the audits in the other buckets begin — so they have a clean substrate to work with.**
+
+- **Length and load-cost audit.** Verifies that each doc in the set is sized for its job — not so long that loading it dominates audit cost, not so short that it's missing load-bearing content. Catches the case where a doc grew past its useful size and now slows every downstream audit.
+  *Standard:* a target size range per doc type (charter / working doc / planning doc / execution doc / remediation doc). *Done when:* every doc is within range, or every out-of-range doc has been ruled (split, condensed, or accepted with reason).
+
+- **Section weight audit.** Verifies that every section in every doc is pulling weight — actively load-bearing for the doc's purpose, not legacy filler kept for politeness. Catches the case where a section has gone dead but lingers.
+  *Standard:* bounded-subjective. Pastor judgment against a fixed checklist per doc (each section: is it referenced by something downstream? does it carry a decision, a definition, or a status that nothing else carries? would removing it break a known flow?). *Done when:* every section is either confirmed weight-bearing or removed/merged.
+
+- **Redundancy audit.** Verifies that the same content isn't sitting in more than one doc when only one of them owns it. Catches drift where two docs carried the same idea, then one updated and the other didn't.
+  *Standard:* the per-doc ownership declaration (one of the Standards to build below — once it exists, every cross-doc duplicate has a clear owner). *Done when:* every duplicated content fragment either resolves to a single owner with the others citing rather than restating, or has been flagged as intentional with reason.
+
+- **Historical preservation audit.** Verifies that historical content kept for reference is clearly marked as such, and that nothing live is mixed into archival material. Catches the case where old context bleeds into current decisions because the boundary between "was true then" and "is true now" got blurred.
+  *Standard:* explicit historical markers (status changes, dated archival sections, "as of YYYY-MM-DD" framing). *Done when:* every block of historical content carries an unambiguous "this is history" marker, and no live decisions live inside historical sections.
+
+- **Navigation audit.** Verifies that a reader landing in any doc can find what they need without reading sequentially front-to-back. Catches the case where the doc grew but the entry points didn't keep up.
+  *Standard:* bounded-subjective. Pastor judgment against a fixed checklist (table of contents present where length warrants? section headings predictable? cross-references resolve?). *Done when:* checklist completed.
+
+- **Plain-language drift audit.** Verifies that the voicing rule — plain English, no dev speak, applicational framing for the pastor-user — has held. Catches the slow creep where a doc starts plain and ends academic, or where one section drifted into engineering vocabulary while the rest stayed plain.
+  *Standard:* the voicing rule as recorded in the user's binding feedback (plain words; no academic/MBA tone; no engineering jargon as filler; no em-dash tic; applicational framing — "why does this matter for the pastor in SermonForge?"). *Done when:* every doc reads as one consistent pastor-facing voice. Failures get rewritten before the gate clears.
+
 ### Standards to build
 
 The audits above reference standards. Most exist in docs we've already written; a small number need to be built before the audits that depend on them can run convergently.
@@ -199,11 +225,11 @@ A first cut at the trigger schedule. The triggers are typed; specific milestone 
 |---|---|
 | Per sub-item commit | Test discipline check; Bucket A audit relevant to the surface touched |
 | Per main milestone finishing | Full Bucket A pass; Bucket B audits for surfaces touched |
-| Per phase-level milestone finishing | Bucket A + Bucket B + one Bucket C prep cycle |
+| Per phase-level milestone finishing | Bucket A + Bucket B + Bucket E full pass + one Bucket C prep cycle |
 | At a milestone that retires a data surface or an affordance | Orphan reader audit; relevant Bucket C retrospective on what was removed |
-| When a planning document updates | Doc-set drift audit |
+| When a planning document updates | Doc-set drift audit + Bucket E plain-language drift + length and load-cost |
 | Before any sub-item that braids two initiatives' work for the first time | Vocabulary alignment + boundary handoff + decision conflict |
-| Before a phase-level milestone | Process Contract braiding + change surface accumulation |
+| Before a phase-level milestone | Process Contract braiding + change surface accumulation + Bucket E full pass |
 | At any binding decision change | Decision conflict audit (forward and backward) |
 | After all milestones ship | Comprehensive sweep + multiple Bucket C prep cycles |
 
@@ -218,8 +244,9 @@ When a static, runtime, or integration audit fails — or when a qualitative ret
 - A comprehensive sweep skill exists for the post-implementation full pass.
 - A diff-focused sweep skill exists for the per-milestone backbone.
 - A single-target deep-analysis skill exists for when a specific risk needs root-cause investigation.
-- A doc-drift verification skill exists and covers part of the doc-set drift and cross-doc consistency audits.
+- A doc-drift verification skill exists and covers part of the doc-set drift and cross-doc consistency audits, plus the Bucket E plain-language drift and partly the redundancy audits.
 - Question key reference, prompt assembly snapshot, orphan reader, data structure integrity, gate behavior, defensive path, vocabulary alignment, boundary handoff, decision conflict, Process Contract braiding, and change surface accumulation audits don't have dedicated tooling. They'll be built as small focused checks when SPIP develops the per-milestone plan.
+- Bucket E length and load-cost, section weight, historical preservation, and navigation audits are manual sweeps for now — judgment calls about doc shape that don't yet warrant dedicated tooling. Build only if the manual cadence stops being practical.
 - Bucket C audits don't need tooling. They need a checklist and a habit.
 
 ### Where this section goes from here
