@@ -26,12 +26,14 @@ A **field** is an isolated focused workspace containing one or more **questions*
 
 - Same JSON columns (`observations`, `interpretation`, `redemptive_thread`, `implications`) — no schema change.
 - Each field's value becomes a sub-object keyed by stable question identifiers: `{question_key_1: "answer", question_key_2: "answer", ...}`.
+- For text-prompt questions, the answer is a string. For structured-exercise questions, the answer is a **structured list** — shape depends on the exercise. Field 4 establishes three shapes: `[{text, depth, kind}, ...]` for the indented sentence canvas, `[{main_sentence_id, paraphrase}, ...]` for the paraphrase blocks, and `[{thought_unit_summary, after_line, signal}, ...]` for the divisions / thought-unit table. The structured-list decision was settled 2026-05-03; downstream AI prompts read these lists as outlines, not as opaque strings.
 - The existing `legacy_notes` escape pattern in `parseStructuredField` absorbs pre-migration data (free-text blobs).
 
 ### Empty-evidence gate
 
 - **Default baseline:** "Field has any answer" satisfies today's empty-evidence rule (any one question answered counts as field-non-empty).
 - **Per-field override (SFDI rules):** SFDI may declare *all* questions in a field required (the field becomes load-bearing in a structural sense), or specific questions optional. Per-question requirements extend `evaluateAdvance` in `src/utils/studyAdvancement.js` without UI changes.
+- **Composite gating per question.** A question's "answered" check can be more than non-empty — it can require structural conditions on the answer. Field 4's Q1 satisfies when the canvas has at least one main sentence (level 0) with at least one indented modifier under it; Q2 satisfies when every paraphrase field is non-empty; Q3 satisfies when the thought-unit table has at least one complete row. The "Continue" button on the last question consults all questions' gates in composite. A **hover-checklist** on the disabled button surfaces which gate is unmet so the pastor isn't guessing.
 
 ### Vocabulary
 
@@ -41,9 +43,25 @@ A **field** is an isolated focused workspace containing one or more **questions*
 
 ### Structured-exercise questions
 
-Most questions in a field are text prompts answered in a textarea. Some questions are **structured exercises** — a canvas the pastor works inside, not a textarea they write into. Field 4 (Divisions / Thought Units) is the first walked example: its Q1 is an indented sentence-layout canvas; its Q2 is a small follow-up table that references line numbers from Q1.
+Most questions in a field are text prompts answered in a textarea. Some questions are **structured exercises** — a working surface the pastor operates inside rather than a textarea they write into. Three sub-shapes are walked in Field 4:
 
-The Field Pattern accommodates both. A field's question sequence may be any mix of text-prompt questions and structured-exercise questions. The "Next question" gating, the persistent prior-answer visibility, and the per-field empty-evidence override apply to either kind. The structured editor itself — Tab/Shift+Tab indent behavior, line-numbered gutter, level markers, paste-intercept, peripheral reference panel — is SPRD/Component-1 implementation work; SFDI declares only that the pattern *allows* the kind, not how it renders.
+1. **Indented sentence canvas (Field 4 Q1).** The pastor types the passage by hand. Tab / Shift+Tab change the line's structural depth (0–N). A peripheral reference panel beside the canvas surfaces genre-specific tips. An auto-generated line-number gutter; a level-0 visual marker on left-margin lines.
+2. **Paraphrase blocks (Field 4 Q2).** Each main sentence (level-0 line + its modifiers) from Q1 is presented as a read-only block, with a paraphrase field beneath it for the pastor's own-words rewrite. The original blocks stay visible while the pastor types into each paraphrase field.
+3. **Synthesis table (Field 4 Q3).** A multi-column table where the pastor names the meaningful artifact directly. Field 4's table is three columns: Thought unit (pastor's own-words summary), After line (autocomplete from canvas line numbers), Signal (free text). The Thought-unit cell is hand-written by the pastor — **no AI summarization in this cell**. AI may read the result downstream; AI does not generate it.
+
+A field's question sequence may be any mix of text-prompt and structured-exercise questions. The "Next question" gating, the persistent prior-answer visibility, and the per-field empty-evidence override apply to either kind.
+
+**Per-question paste rules.** A question may declare paste as **blocked** or **allowed**. Field 4 establishes the precedent: Q1 (canvas) blocks paste because the typing-by-hand IS the discipline; Q2 (paraphrase blocks) blocks paste because rewriting in the pastor's own words IS the discipline; Q3 (synthesis table) allows paste because synthesis is the discipline and the pastor may legitimately bring notes from elsewhere into the work — the AI block is the load-bearing constraint here, not paste.
+
+The structured editor itself — Tab/Shift+Tab indent behavior, line-numbered gutter, level markers, paste-intercept, peripheral reference panel, paraphrase-block layout, synthesis-table cells — is SPRD/Component-1 implementation work; SFDI declares only that the pattern *allows* each sub-shape, not how it renders.
+
+### Field intro overview
+
+For **heavy-lifting fields** — fields whose work is theologically substantive enough that the pastor needs the framing established before the questions begin — the field opens with a pre-question **overview screen**. The overview names what the field is for, why it matters for the sermon, and what work the pastor is about to do. After reading, the pastor clicks Begin and the questions open.
+
+The overview is shown only on **first entry** to the field for a given sermon. On re-entry (a sermon the pastor has worked before, returning to the field), the overview is skipped — the work is already there, per the re-entry behavior in Shape above.
+
+Not every field needs an overview. Most fields' framing lives in their question heading and the SFDI seven-slot entry. The overview is reserved for fields where the framing has to land before the work makes sense — typically the spine-finders, the synthesis fields, the load-bearing fields. Field 4 is the first walked example. Other heavy-lifting fields will be marked as the SFDI walks proceed.
 
 ### Where this lives structurally
 
@@ -166,24 +184,49 @@ The "outside-in" arc through the first four fields: world around the book (Backg
 
 ### Field 4 — Divisions / Thought Units
 
-**Status:** Ratified 2026-05-03.
+**Status:** Ratified 2026-05-03 in **three-question shape**. Initial two-question ratification was expanded the same day to insert Q2 (paraphrase) between the original Q1 (sentence layout) and the original Q2 (now Q3, find thought units with summarization).
 
 **Question sequence:**
 
 | # | Key | Prompt |
 |---|---|---|
 | 1 | `sentence_layout` | Type the passage by hand. Pull each subject and main verb to the left margin. Indent modifiers under what they modify. Re-align coordinate clauses to the column of their coordinate. |
-| 2 | `divisions` | Where does one main sentence end and the next begin? What signals each break? |
+| 2 | `paraphrases` | Take each main sentence — every left-margin line you laid out above — and rewrite it in your own words. Translation, not summary. |
+| 3 | `thought_units` | Look at the main sentences above. For each thought unit you find, write what the author is hammering home (in your own words), mark the line where it ends, and name what makes the seam — a subject shift, a "But..." that pivots, a scene change. |
 
 **Seven-slot entry:**
 
 - **Name:** Divisions / Thought Units. The slash-pair earns its place — *Thought Units* names the groups, *Divisions* names the boundaries between them. Two sides of the same operation.
-- **Intent:** The spine-finding field. The pastor types the passage by hand and lays out its sentence-level structure. The slowness is the point — typing by hand begins the marination and forces structural attention. SermonForge removes friction from hard work; it does not make hard work easy. What surfaces here becomes the spine of the sermon's outline. The expository commitment underneath: **the point of the text is the point of the sermon**. The work toward MPT and MPS starts here.
-- **Question sequence:** Sentence Layout → Divisions.
-- **What gets written:** Q1 produces an indented document — each line carries structural depth (level 0–N), with main sentences at the left margin and modifiers indented under what they modify. Q2 produces a small list of break locations (referenced by Q1's line numbers) and the signals (connective, subject change, scene change, genre marker) that mark each break.
-- **Role in sub-phase:** Fourth field. The spine-finding field — the load-bearing structural pass that turns the surface report into a propositional skeleton. Strong candidate for load-bearing at the Observe → Interpret threshold.
+- **Intent:** The spine-finding field, then the meaning-translating field, then the bones-naming field. Q1 surfaces the passage's structure visually. Q2 forces the pastor to engage with each main sentence on its own terms by rewriting it in their own voice. Q3 groups the main sentences into thought units and names what each one is hammering home. The expository commitment underneath: **the point of the text is the point of the sermon**. The work toward MPT and MPS starts here.
+- **Question sequence:** Sentence Layout → Rewrite each main sentence → Find the thought units.
+- **What gets written:** Q1 produces an indented document — each line carries structural depth (level 0–N), with main sentences at the left margin and modifiers indented under what they modify. Q2 produces one paraphrase per main sentence in the pastor's own voice. Q3 produces a small table of thought units — for each, the pastor's own-words summary, the line where it ends, and the signal that marks the seam to the next thought unit.
+- **Role in sub-phase:** Fourth field. The spine-finding-and-meaning field — the load-bearing work that turns the surface report into a propositional skeleton with the meaning of each main sentence held in the pastor's own voice. Strong candidate for load-bearing at the Observe → Interpret threshold.
 - **Connects from:** Surface Questions — having reported the passage's surface (where, when, how), now find the spine that holds it up.
-- **Connects to:** Notable Commands — having found the spine, look at the imperatives that drive each main sentence.
+- **Connects to:** Notable Commands — having found the spine and named the thought units, look at the imperatives that drive each main sentence.
+
+**Heavy-lifting field — opens with an overview** (see Field intro overview in the Field Pattern). Pastor-side copy:
+
+> ## Divisions / Thought Units
+> *Field 4 of 11 · Observe*
+>
+> The point of the sermon is the point of the text. The work of seeing what that point is starts here.
+>
+> Before you can preach the passage, you have to see how it's built. Which sentences carry the main weight. What's supporting them. Where one move ends and the next begins. How the passage flows.
+>
+> You're not building an outline. You're laying the foundation any outline will rest on. The bones of the passage are already there. Your job in this field is to make them visible.
+>
+> Three parts:
+> 1. Lay the passage out so the structure shows.
+> 2. Rewrite each main sentence in your own words.
+> 3. Find the thought units that anchor the passage.
+>
+> [ Begin ]
+
+**Q1 framing (above the canvas):**
+
+> ## Question 1 of 3 — Lay the passage out
+>
+> Main sentences to the left margin. Supporting words indented under them. As the structure surfaces, the bones of the passage start to show — and with them, the foundation any outline will rest on.
 
 **The three rules (the operation Q1 performs):**
 
@@ -207,11 +250,52 @@ The three rules are the operation across all genre. The reference panel beside t
 
 *For poetry* — deferred for a future iteration.
 
-**Vocabulary inside the field:** plain language ("main sentence," "supporting sentence") carries the user-facing surface; precise grammatical terms (subject, main verb, modifiers, coordinate clauses) live in the instruction bar and reference panel where precision is the panel's job. The field label "Divisions / Thought Units" is preserved.
+**Q2 framing (above the paraphrase blocks):**
 
-**Per-field empty-evidence override:** Both questions required to advance. Q1 satisfied when the canvas has at least one main sentence (level 0) with at least one indented modifier under it; Q2 satisfied when the divisions table has at least one non-empty row.
+> ## Question 2 of 3 — Rewrite each main sentence
+>
+> Take each main sentence — every left-margin line you laid out above — and rewrite it in your own words.
+>
+> Translation, not summary. One sentence in your voice for each one in the text. Don't compress, don't combine, don't skip ahead. The work pulls each sentence fresh into your hearing for this sermon, even on a passage you know cold.
 
-**Implementation pattern:** Field 4's Q1 is a structured-exercise question (see "Structured-exercise questions" in the Field Pattern). The structured editor (Tab/Shift+Tab structural indent, auto-generated gutter, level-0 visual marker, paste-intercept, peripheral reference panel, composite gating) is SPRD Component-1 implementation work.
+Q2's screen shows each main sentence (the level-0 line + its modifiers) as a read-only block, with a paraphrase field beneath each block. The pastor types their version into each. Tab moves between paraphrase fields. Paste blocked.
+
+**Q3 framing (above the thought-unit table):**
+
+> ## Question 3 of 3 — Find the thought units
+>
+> Put yourself in the original hearer's shoes. What is the author actually hammering home? If this passage were stripped to its bones, what would those bones be?
+>
+> Each one is a *thought unit* — a single thing the author wants the hearer to receive. The words around it are there to make it land.
+>
+> Look at the main sentences above. Some of them carry a thought unit; others are supporting work for one that started earlier. For each thought unit you find:
+>
+> - **Write what the author is hammering home, in your own words.** A short sentence. Not a phrase clipped from the passage — your own.
+> - Mark the line where it ends.
+> - Name what makes it a seam — a subject shift, a "But..." that pivots, a scene change.
+>
+> What you produce here is the foundation any outline will rest on.
+
+Q3's screen shows the synthesis table: three columns (Thought unit | After line | Signal). The Thought-unit cell is hand-written by the pastor — **no AI summarization in this cell, ever**. Paste is allowed in this question; the AI block is the load-bearing constraint, not paste.
+
+**Vocabulary inside the field:** plain language ("main sentence," "supporting sentence," "thought unit") carries the user-facing surface; precise grammatical terms (subject, main verb, modifiers, coordinate clauses) live in the instruction bar and reference panel where precision is the panel's job. The field label "Divisions / Thought Units" is preserved.
+
+**Per-field empty-evidence override (composite over three questions):** all three required to advance.
+
+- **Q1:** the canvas has at least one main sentence (level 0) with at least one indented modifier under it.
+- **Q2:** every paraphrase field has content.
+- **Q3:** the thought-unit table has at least one complete row (Thought unit + After line filled; Signal is allowed empty for the final thought unit of a passage, since nothing comes after it).
+
+The "Continue to Notable Commands" button activates only when all three gates are met. A hover-checklist on the disabled button surfaces which gate is unmet.
+
+**In-workspace behavior:**
+
+- **Q1 → Q2 → Q3 transitions** all editable from when each question's gate is met (Option B from session walk). The pastor toggles between the canvas, the paraphrase blocks, and the thought-unit table at their own pace. The questions feed each other in real time — laying out Q1 surfaces Q3 questions; rewriting Q2 surfaces refinements to Q1.
+- **Q3's table visible-but-greyed at State 0.** Tells the pastor what's coming before the canvas work satisfies Q1's gate.
+- **Continue button label:** "Continue to Notable Commands" — names the throughline at the moment of commit.
+- **Throughline node summary on completion:** the pastor's own-words thought-unit sentences, listed with line ranges. Example for Eph 2:1–5 — "(1) Without Christ, we were spiritually dead. *(lines 1–7)* / (2) The death wasn't isolated — every one of us was under wrath. *(lines 8–12)* / (3) But God acted. He made us alive in Christ. *(lines 13–18)*". The number of items equals the number of thought units the pastor named in Q3.
+
+**Implementation pattern:** All three of Field 4's questions are structured-exercise questions (see "Structured-exercise questions" in the Field Pattern). Q1 uses the indented sentence canvas sub-shape; Q2 uses the paraphrase blocks sub-shape; Q3 uses the synthesis table sub-shape. Tab/Shift+Tab structural indent on Q1, auto-generated line-number gutter, level-0 visual marker, paste-intercept on Q1 and Q2 (allowed on Q3), peripheral reference panel for Q1, composite gating, line-number autocomplete in Q3's "After line" cell, and the field intro overview pattern are all SPRD Component-1 implementation work.
 
 ---
 
