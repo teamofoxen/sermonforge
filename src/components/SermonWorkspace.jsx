@@ -22,6 +22,7 @@ import { autoResize } from "../utils";
 import DeleteButton from "./DeleteButton";
 import StudyTab from "./StudyTab";
 import OutlineTab from "./OutlineTab";
+import FrameTab from "./FrameTab";
 import ManuscriptTab from "./ManuscriptTab";
 import DeliveryTab from "./DeliveryTab";
 import AIPanel from "./AIPanel";
@@ -42,7 +43,8 @@ const TAB_LABELS = STAGE_LABELS;
 // localStorage migration — pre-vocabulary-completion stored values were
 // lowercase ("study"/"outline"/"manuscript"/"delivery"). Map them to the
 // canonical Stage values at read time so existing sermons restore the
-// correct tab on next mount.
+// correct tab on next mount. STAGE.Frame is brand-new in SPRD C3 (no legacy
+// lowercase value collides), so it isn't in the map.
 const LEGACY_TAB_MAP = {
   study: STAGE.Study,
   outline: STAGE.Blueprint,
@@ -499,6 +501,9 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpe
           )}
           {activeTab === STAGE.Blueprint && (
             <OutlineTab sermon={sermon} onUpdate={handleUpdate} onTabChange={handleTabChange} studySummaries={studySummaries} />
+          )}
+          {activeTab === STAGE.Frame && (
+            <FrameTab sermon={sermon} onUpdate={handleUpdate} onTabChange={handleTabChange} />
           )}
           {activeTab === STAGE.Manuscript && (
             <ManuscriptTab

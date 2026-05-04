@@ -26,8 +26,8 @@ import { randomUUID } from "node:crypto";
 // Mirror of the contract values from src/core/contracts.ts. Importing the
 // .ts directly would pull in browser-side IPC bridge code; safer to mirror
 // the small set the spine handler needs.
-export const STAGE = { Study: "Study", Blueprint: "Blueprint", Manuscript: "Manuscript", Delivery: "Delivery" } as const;
-export const STAGE_SEQUENCE = ["Study", "Blueprint", "Manuscript", "Delivery"] as const;
+export const STAGE = { Study: "Study", Blueprint: "Blueprint", Frame: "Frame", Manuscript: "Manuscript", Delivery: "Delivery" } as const;
+export const STAGE_SEQUENCE = ["Study", "Blueprint", "Frame", "Manuscript", "Delivery"] as const;
 export const STEP = { Exegesis: "Exegesis", MPT_MPS: "MPT_MPS", Outline: "Outline", FunctionalElements: "FunctionalElements" } as const;
 export const STEP_CANONICAL_SEQUENCE = ["Exegesis", "MPT_MPS", "Outline", "FunctionalElements"] as const;
 export const SUB_PHASE = { Observe: "Observe", Interpret: "Interpret", RedemptiveThread: "RedemptiveThread", Implications: "Implications" } as const;
@@ -44,11 +44,15 @@ export const SERMON_COLUMNS = new Set([
   "topic_theme", "audience_assumptions", "background_noise", "study_guide_note",
   "preaching_blocks", "manuscript_delivery", "last_tune_up",
   "current_stage", "current_step", "current_sub_phase",
+  // v18 — SPRD C3 Sermon Frame.
+  "sermon_frame",
 ]);
 
 export const STRUCTURED_FIELDS = new Set([
   "outline", "functional_elements", "observations", "interpretation",
   "redemptive_thread", "implications",
+  // v18 — SPRD C3 Sermon Frame.
+  "sermon_frame",
 ]);
 
 // ── In-memory state ──────────────────────────────────────────────────────────

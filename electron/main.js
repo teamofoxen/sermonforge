@@ -746,6 +746,24 @@ function runMigrations() {
     db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '17')");
     version = 17;
   }
+
+  if (version < 18) {
+    // v18: SPRD C3 — Sermon Frame elevation (SADI Step 5).
+    // Adds a JSON column for the elevated Step 5 field-data (Intro +
+    // Conclusion). Same envelope shape as the four Exegesis sub-phase
+    // columns (`{[fieldKey]: {[questionKey]: {value, na}}}`); renderer
+    // helpers (parseStructuredField / setQuestionAnswer / serialize)
+    // manage the shape. NULL is acceptable as the empty state — sermons
+    // created before this migration retain NULL until the pastor opens
+    // the new Frame tab and writes content.
+    const sermonInfo = queryAll("PRAGMA table_info(sermons)");
+    const have = new Set(sermonInfo.map(r => r.name));
+    if (!have.has("sermon_frame")) {
+      db.run("ALTER TABLE sermons ADD COLUMN sermon_frame TEXT DEFAULT NULL");
+    }
+    db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '18')");
+    version = 18;
+  }
 }
 
 // Verify the live schema matches the SERMON_COLUMNS / SERIES_COLUMNS allowlists

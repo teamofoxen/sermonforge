@@ -129,7 +129,7 @@ Two fields. Step 2's named outcome is the **Main Point Pair** (see *Within-step 
 
 ### Field 1 — MPT
 
-**Status:** Ratified 2026-05-04 in SADI ratification walk. Structural commitments locked; pastor-side framing copy and overview body text remain for content-design walk.
+**Status:** Ratified 2026-05-04 in SADI ratification walk; pastor-side content-design walk landed 2026-05-04 (Q1/Q2 framings + Eph 2:1–5 example output).
 
 **Question sequence:**
 
@@ -152,6 +152,34 @@ Two fields. Step 2's named outcome is the **Main Point Pair** (see *Within-step 
 
 **Pre-field overview:** None. MPT is light enough to enter directly — two questions, both in cognitive registers the pastor has rehearsed in SFDI Phase 3 Field 3 (Gospel Makes This Possible) and Phase 4 Field 1 (Theological Significance). The substrate is fresh from just-completed Implications. An overview here would be ceremonial rather than load-bearing.
 
+**Q1 framing (above the question):**
+
+> ## Question 1 of 2 — Draft
+>
+> You've looked at this text closely, worked out what it meant, traced where Christ shows up, and named what it asks of your people. Your synthesis paragraph sits right beside you, with all the work behind it.
+>
+> What did this text mean to its first hearers? Past tense. Author-intended.
+>
+> As many sentences as you need to get the substance right. Tightening is next.
+
+**Q2 framing (above the question):**
+
+> ## Question 2 of 2 — Tighten
+>
+> Take your Q1 draft (right above you) and fold it into one past-tense sentence. It doesn't need to be short — it needs to be *one sentence*. Long is fine if it holds together.
+>
+> This is your MPT. MPS will derive from it next.
+
+**Example output (Eph 2:1–5):**
+
+*Q1 Draft:*
+
+> Paul reminded the Ephesians that they had been dead in their sins — walking according to the world, driven by the desires of the flesh, by nature children of wrath. But God, rich in mercy and out of his great love, made them alive together with Christ even while they were still dead. Their salvation was God's act, not their work — by grace.
+
+*Q2 Tighten:*
+
+> Paul reminded the Ephesians that they had been dead in their sins, but God in his great love made them alive with Christ — purely by grace.
+
 **Per-field empty-evidence override:** composite gate over Q1 + Q2.
 
 - **Q1:** non-empty.
@@ -161,13 +189,11 @@ The "Continue to MPS" button activates only when both gates are met. (Unless the
 
 **AI affordance (per SADI-wide § *AI principle*):** MPT_DRAFT button on Q1 (existing — reads from Implications Synthesis). Tighten/Compress affordance on Q2 may land in implementation; reads Q1's output. Both go through the proposal pattern (Mutation Contract #2 inherited).
 
-*Pastor-side framing copy (overview blockquote, Q1/Q2 framings) deferred to per-field content-design walk.*
-
 ---
 
 ### Field 2 — MPS
 
-**Status:** Ratified 2026-05-04 in SADI ratification walk. Structural commitments locked; pastor-side framing copy and overview body text remain for content-design walk.
+**Status:** Ratified 2026-05-04 in SADI ratification walk; pastor-side content-design walk landed 2026-05-04 (pre-field overview + Q1/Q2/Q3 framings + Eph 2:1–5 example output).
 
 **Heavy-lifting field — opens with a pre-field overview** on first per-sermon entry.
 
@@ -191,13 +217,58 @@ The "Continue to MPS" button activates only when both gates are met. (Unless the
 
 **Per-question N/A:** Q1 and Q3 not N/A-able. **Q2 is N/A-able** with strict "satisfied another way" semantic — for texts where the Christ-Connection Statement was itself complicated (e.g., wisdom literature, OT prophetic texts where the Christ-connection works through different mechanisms than direct fulfillment), the pastor may have already ensured gospel-power upstream and the cross-comparison may surface nothing. Marking Q2 N/A means "I've done this check upstream and it didn't surface drift." It does NOT mean "I'm skipping the moralism guard."
 
-**Pre-field overview body framing** (content-design walk produces full text):
+**Pre-field overview (pastor-side copy):**
 
-- Names the three operations (translate, gospel-check, tighten).
-- Frames the relationship to MPT (derives, does not restate; MPT is the theological anchor).
-- Names the moralism-guard rationale: the call has to rest on what Christ has done.
-- Points to the Christ-Connection Statement as the canonical comparator at Q2.
-- Closes with autofocused Begin button.
+> ## MPS
+> *Field 2 of 2 · Step 2 (MPT/MPS Forge)*
+>
+> Your MPT is right beside you — what the text meant, in past tense. MPS turns that into the present: what the text means for *us today*. Present or future tense.
+>
+> Three moves: translate the MPT into present/future tense aimed at your people; check it against the Christ-Connection Statement to make sure the call rests on what Christ has done, not what the listener has to muster; tighten to one sentence.
+>
+> [ Begin ]
+
+**Q1 framing (above the question):**
+
+> ## Question 1 of 3 — Translate
+>
+> Your MPT sits right above you. Take it from past tense to present or future. Aim it at your people.
+>
+> As many sentences as you need to get the substance right. Gospel-check and tightening come next.
+
+**Q2 framing (above the question):**
+
+> ## Question 2 of 3 — Gospel-check
+>
+> Your Q1 draft is right above you. The Christ-Connection Statement sits to the right.
+>
+> Read them side by side. Does the call in your draft rest on what Christ has done, or has it slipped into "try harder" or "be better"? If it has, name the drift and rewrite until the gospel-power is visible.
+
+**Q3 framing (above the question):**
+
+> ## Question 3 of 3 — Tighten
+>
+> Fold your work into one present/future-tense sentence. The substance from Q1, the gospel-power from Q2 — both stay. It doesn't need to be short — it needs to be *one sentence*. Long is fine if it holds together.
+>
+> This is your MPS. Together with MPT, it forms the Main Point Pair — what Outline reads next.
+
+**Example output (Eph 2:1–5):**
+
+Drawing from the MPT above: *"Paul reminded the Ephesians that they had been dead in their sins, but God in his great love made them alive with Christ — purely by grace."*
+
+*Q1 Translate:*
+
+> We were dead in our sins. We need to wake up to that deadness and come alive in Christ by faith. We must step out of self-reliance and embrace what Christ has done for us — that's where life is.
+
+*Q2 Gospel-check:*
+
+> **Drift:** "We need to wake up" and "We must step out" and "embrace what Christ has done" all put the listener as the one mustering the response — but Eph 2:1–5 is precisely about people who CAN'T (dead people don't wake themselves up). The CCS for this passage names God as the one who raises the dead in his rich mercy. The MPS needs to land on God's action, with our reception as response, not initiation.
+>
+> **Rewrite:** We were dead in our sins. But God in his rich mercy has made us alive in Christ — and our part is to receive what God has already done, not muster it ourselves.
+
+*Q3 Tighten:*
+
+> We were dead in our sins, but God in his rich mercy has made us alive in Christ — and we receive by grace what we could never earn.
 
 **Per-field empty-evidence override:** composite gate over Q1 + Q2 + Q3.
 
@@ -210,8 +281,6 @@ The "Continue to Outline" button (the boundary out of Step 2) activates only whe
 **AI affordance (per SADI-wide § *AI principle*):** MPS_DRAFT button on Q1 (existing, post-rewrite reads MPT + Implications Synthesis directly — drops the ~400 words of PC weighting). Optional drift-surfacing AI on Q2 (advisory; surfaces moralism candidates; pastor decides). Optional Tighten/Compress affordance on Q3 (preserves Q1's substantive language). All go through the proposal pattern.
 
 **Downstream consumer note:** SPRD's MPS_DRAFT prompt rewrite is gated on this ratification. Once SADI's MPS field def is locked (now), SPRD-side work can rewrite `MPS_DRAFT_WITH_PC_TASK` to read from this field's structure. SADI does not write the prompt; SADI defines what the prompt reads.
-
-*Pastor-side framing copy (overview blockquote, Q1/Q2/Q3 framings, example outputs) deferred to per-field content-design walk.*
 
 ---
 
@@ -270,7 +339,7 @@ Two fields. Step 5's named outcome is the **Sermon Frame** (see *Within-step flo
 
 ### Field 1 — Intro
 
-**Status:** Ratified 2026-05-04 in SADI ratification walk. Structural commitments locked; pastor-side framing copy, overview body text, and example outputs remain for content-design walk.
+**Status:** Ratified 2026-05-04 in SADI ratification walk; pastor-side content-design walk landed 2026-05-04 (pre-field overview + Q1/Q2/Q3/Q4 framings + Eph 2:1–5 example output).
 
 **Heavy-lifting field — opens with a pre-field overview** on first per-sermon entry.
 
@@ -299,12 +368,70 @@ Two fields. Step 5's named outcome is the **Sermon Frame** (see *Within-step flo
 
 This also parallels MPS's structure: name the call, then gospel-empower the call. Q3 + Q4 here matches MPS Q1 + Q2 (translate, gospel_check) and Conclusion Q2 + Q3 (land_call, gospel_empower). **The "name the call, then gospel-empower it" pattern runs through all three anchors that touch listener-call.** That's the structural commitment against moralism, applied at every layer.
 
-**Pre-field overview body framing** (content-design walk produces full text):
+**Pre-field overview (pastor-side copy):**
 
-- Names the four operations (hook, bridge, expectations, redemptive note).
-- Names the order rationale (expectations before redemptive note — gospel-power answers what expectations raised).
-- Frames the role of Intro as listener-posture-setter, not summary-of-coming-points.
-- Closes with autofocused Begin button.
+> ## Intro
+> *Field 1 of 2 · Step 5 (Intro / Conclusion)*
+>
+> The body is built — your outline, your functional elements, your MPT and MPS right beside you. Intro is how the listener walks into the body. Not a summary, not a preview of the points — the listener's posture as they enter.
+>
+> Four moves: hook (grab attention from where the listener actually is); bridge (get from the hook into the text + MPT and MPS); expectations (name what the body will ask of them, so they're not blindsided); redemptive note (gospel-power that turns the call from burden into invitation).
+>
+> The redemptive note is the gospel anchor at the front door of the sermon. Expectations comes before it on purpose — name the call first, then ground it in what Christ has done. Same pattern MPS just walked.
+>
+> [ Begin ]
+
+**Q1 framing (above the question):**
+
+> ## Question 1 of 4 — Hook
+>
+> Your listener just walked in distracted — kids, traffic, the week behind them. The hook is your invitation in.
+>
+> Open with something that grabs attention from where they actually are. A story, an image, a question, a problem from lived experience. Let the room context inform it — the people, the moment, what's pressing in their lives.
+
+**Q2 framing (above the question):**
+
+> ## Question 2 of 4 — Bridge to text
+>
+> You've got their attention. Now bring them to the text.
+>
+> Transition from your hook into the passage. Land the MPT and MPS so the listener knows what this sermon is about. Both are right beside you.
+
+**Q3 framing (above the question):**
+
+> ## Question 3 of 4 — Expectations
+>
+> Tell the listener what's coming. Not the points — the *call*. What will the body ask them to see, believe, do, or become?
+>
+> Set this now so the body doesn't blindside them. The call comes from MPS; you're naming it up front so the listener can lean in.
+
+**Q4 framing (above the question):**
+
+> ## Question 4 of 4 — Redemptive note
+>
+> The expectation you just named could land as burden — "here's what you have to do." Name the gospel-shape that turns it into invitation instead. What has Christ done that makes this call good news?
+>
+> The Christ-Connection Statement sits to the right as your source. The listener should hear, before the body opens, that the call rests on grace.
+
+**Example output (Eph 2:1–5):**
+
+Drawing from the MPS above: *"We were dead in our sins, but God in his rich mercy has made us alive in Christ — and we receive by grace what we could never earn."*
+
+*Q1 Hook:*
+
+> Have you ever met someone who works hard at being good — really hard, all the time — and still walks around carrying the weight of not being enough? Maybe that someone is you. The harder they try, the heavier it gets. The bar always moves.
+
+*Q2 Bridge to text:*
+
+> Open your Bible to Ephesians chapter 2. Paul writes to the Christians in Ephesus and starts with a hard sentence: *"You were dead in your trespasses and sins."* Not weak. Not struggling. Dead. And then four words that change everything: *"But God."* This morning we're going to see that we were dead in our sins, but God in his rich mercy has made us alive in Christ — and we receive by grace what we could never earn.
+
+*Q3 Expectations:*
+
+> Here's what this sermon will ask of you: stop trying to earn what God has already given. The body will walk through Paul's argument — what we were, what God did, and what it means to receive resurrection-life as gift.
+
+*Q4 Redemptive note:*
+
+> If you hear "stop trying to earn" as one more thing you have to do, you've missed the gift. What Christ has done is the foundation: he has already made the dead alive. The call this morning isn't burden — it's invitation. You don't muster resurrection. You receive it.
 
 **Per-field empty-evidence override:** composite gate over Q1 + Q2 + Q3 + Q4.
 
@@ -315,13 +442,11 @@ This also parallels MPS's structure: name the call, then gospel-empower the call
 
 **AI affordance (per SADI-wide § *AI principle*):** AI Draft / AI Suggest affordances may land on each question; all go through the proposal pattern. No per-cell no-AI prescription. Where Q1 (hook) is concerned, AI surfaces hooks the *substrate* suggests (PC + Implications Synthesis grounded), not generic AI-generated illustration — the AI principle holds especially here since hook is the most generative-feeling cell.
 
-*Pastor-side framing copy (overview blockquote, Q1/Q2/Q3/Q4 framings, example outputs) deferred to per-field content-design walk.*
-
 ---
 
 ### Field 2 — Conclusion
 
-**Status:** Ratified 2026-05-04 in SADI ratification walk. Structural commitments locked; pastor-side framing copy, overview body text, and example outputs remain for content-design walk.
+**Status:** Ratified 2026-05-04 in SADI ratification walk; pastor-side content-design walk landed 2026-05-04 (pre-field overview + Q1/Q2/Q3/Q4 framings + Eph 2:1–5 example output).
 
 **Heavy-lifting field — opens with a pre-field overview** on first per-sermon entry.
 
@@ -352,19 +477,76 @@ This also parallels MPS's structure: name the call, then gospel-empower the call
 
 **The Christ-Connection Statement is referenced from MPS Q2, Intro Q4, AND Conclusion Q3** — three times across SADI's four fields. The CCS is the load-bearing gospel-power source for the whole listener-contact arc. SFDI's elevation of the CCS as a named outcome was structurally necessary for SADI's anti-moralism discipline to work.
 
-**Pre-field overview body framing** (content-design walk produces full text):
+**Pre-field overview (pastor-side copy):**
 
-- Names the four operations and the parallel structure with Intro.
-- Names the anti-recap discipline at Q1 explicitly ("summation, not point-by-point recap").
-- Frames the call-then-gospel-empower pattern at Q2/Q3 as the third anti-moralism guard in the work (the first being MPS Q2, the second being Intro Q4).
-- Frames Q4 closing posture as a required explicit choice with four valid options.
-- Closes with autofocused Begin button.
+> ## Conclusion
+> *Field 2 of 2 · Step 5 (Intro / Conclusion)*
+>
+> Intro framed how the listener walked into the body. Conclusion frames how they walk out. The body has done its work; the listener has heard the through-line. Now you land it.
+>
+> Four moves: summate (gather the whole arc into one landing — *not* a point-by-point recap; the body already walked the points); land the call (drawn from MPS, made concrete); gospel-empower (drawn from CCS); choose the closing posture (silence, song, prayer, or charge — a required pastoral choice).
+>
+> Gospel-empower is the engine. Without it, the landed call slides into a moralistic push — even with the body's gospel work behind it. With it, the listener walks out knowing the call rests on what Christ has done.
+>
+> [ Begin ]
+
+**Q1 framing (above the question):**
+
+> ## Question 1 of 4 — Summate
+>
+> The body just walked the listener through your points. They don't need them recapped — they just heard them.
+>
+> Pull the whole arc into one landing. What did the sermon say, all together? Speak from where the listener now is, after the body has done its work — not where they started.
+
+**Q2 framing (above the question):**
+
+> ## Question 2 of 4 — Land the call
+>
+> Intro Q3 set the expectation. The body delivered. Now land the call.
+>
+> Drawing from MPS — what is this sermon asking the listener to do, see, believe, or become? Make it concrete. Not abstract, not deferred. The listener should know exactly what they're being called to.
+
+**Q3 framing (above the question):**
+
+> ## Question 3 of 4 — Gospel-empower
+>
+> At MPS you checked your message anchor for moralism. Here you do the matched move at the listener's exit: build the gospel anchor that carries the call out the door with them.
+>
+> Name what Christ has done that makes the call possible — drawing from the Christ-Connection Statement to the right. The listener should walk out holding the gift, not a new burden to muster.
+
+**Q4 framing (above the question):**
+
+> ## Question 4 of 4 — Closing posture
+>
+> Every sermon ends in a posture, whether you choose it or not. Choose it explicitly.
+>
+> Four options: silence (let the gospel weight settle); song (corporate response); prayer (pastoral landing); charge (formal commission or blessing). Pick one and name what it specifically is — the silence cue, the song choice, the prayer text, the charge wording. Manuscript and delivery read this.
+
+**Example output (Eph 2:1–5):**
+
+Drawing from MPS, Intro Q3, and Intro Q4 above (pastor-to-people voice continues throughout):
+
+*Q1 Summate:*
+
+> Look at where you are. You arrived this morning maybe carrying that weight — the tireless work of being good enough. And here, in five short verses, Paul has shown you what God has done while you were dead. While you were powerless. While you couldn't lift a finger. *But God.* That's the word the whole sermon turns on — and the word the rest of your life turns on too.
+
+*Q2 Land the call:*
+
+> So here is what this morning calls you to: stop trying to earn what God has already given. Not someday. Today. Lay down the striving. The God who raised you from death is the God who holds you now. Receive that as gift.
+
+*Q3 Gospel-empower:*
+
+> Hear me clearly: this isn't another to-do. You're not being asked to muster anything. Christ has done it. He went into death for dead people and rose with them. The call to receive isn't a new burden — it's the gift you've already been given, made visible. Walk out of here today knowing the work is done.
+
+*Q4 Closing posture:*
+
+> **Posture: Prayer.**
+>
+> Pastoral closing prayer, extempore but anchored on three beats: (1) thanksgiving for what God has done while we were dead, (2) confession of our continued striving and surrender of it now, (3) commitment to receive the resurrection-life he has given. Approximately 90 seconds. Hold the silence after "Amen" for a beat before benediction.
 
 **Per-field empty-evidence override:** composite gate over Q1 + Q2 + Q3 + Q4. All four non-empty required (no N/A path). Q4 may carry an advisory structural check that the answer names one of silence/song/prayer/charge — surfaces a hint if not, but doesn't block. Pastor judgment wins if they describe a hybrid or innovate.
 
 **AI affordance (per SADI-wide § *AI principle*):** AI Draft / AI Suggest affordances may land on each question; all go through the proposal pattern. AI on Q1 surfaces summation candidates from the substrate (the four named outcomes + body content). AI on Q3 surfaces moralism drift; pastor decides. AI on Q4 surfaces posture-choice options grounded in the sermon's emotional/theological landing.
-
-*Pastor-side framing copy (overview blockquote, Q1/Q2/Q3/Q4 framings, example outputs) deferred to per-field content-design walk.*
 
 ---
 

@@ -2,6 +2,88 @@
 
 ---
 
+## 2026-05-04 — sprd C3 + sadi per-field content walks + CORE #6 + MPS prompt rewrite (session wrap)
+
+- Phase 2: SADI per-field content-design walks landed for all four anchor fields — MPT, MPS, Intro, Conclusion — with overview blockquotes + Q-framings + Eph 2:1–5 worked example outputs in pastor-to-people voice.
+- Phase 3 Item 1: CORE.md Process Contract #6 extended from "Study throughline" → "workspace throughline" per SADI Ruling 4; canonical-articulation pointer expanded to two documents (SFDI + SADI together).
+- Phase 3 Item 2: MPS_DRAFT prompt rewrite — three per-question prompts (Q1 Translate / Q2 Drift / Q3 Tighten) replace the WITH_PC/NO_PC pair; PC scaffolding fully retired from MPS draft path.
+- Phase 3 Item 3: SPRD C3 Sermon Frame elevation shipped — STAGE.Frame between Blueprint and Manuscript, v18 migration adds sermon_frame JSON column, new SERMON_FRAME_FIELDS + FrameTab + composite gate at Frame → Manuscript boundary, 15 new contract tests.
+- ENFORCEMENT_STATUS.md updated (Process #6 row + SADI section); 373 vitest green; sweep-the-house PASS; node --check on electron files clean.
+
+---
+
+## 2026-05-04 — sprd C3: Step 5 (Sermon Frame) elevated to its own workspace stage
+
+- New STAGE.Frame between Blueprint and Manuscript (display label "Sermon Frame"); `src/core/contracts.ts` Stage union + STAGE + STAGE_SEQUENCE + STAGE_LABELS extended; `electron/contracts.cjs` and `tests/contracts/_helpers/test-spine.ts` mirrored in lockstep; `SermonFrameUpdate` type added; `sermon_frame` added to SERMON_COLUMNS allowlist + STRUCTURED_FIELDS set.
+- v18 migration in `electron/main.js` adds `sermon_frame TEXT DEFAULT NULL` column (idempotent guard via PRAGMA table_info); pre-v18 sermons retain NULL until pastor opens the new tab.
+- New `src/utils/sermonFrameFields.js` exports SERMON_FRAME_FIELDS — Intro (4Q: hook/bridge_to_text/expectations/redemptive_note) + Conclusion (4Q: summate/land_call/gospel_empower/closing_posture) — with overview blockquotes and question prompts captured verbatim from SADI's per-field content-design walks.
+- New `src/components/FrameTab.jsx` renders SpotlightWorksheet over SERMON_FRAME_FIELDS + AdvanceGateChecklist; `src/components/SermonWorkspace.jsx` adds the 5th tab; `src/utils/studyAdvancement.js` gains STAGE_BY_INDEX, buildStageEvidence Frame branch, checkIntroComposite + checkConclusionComposite + checkSermonFrameToManuscriptThreshold (Intro Q4 N/A-with-strict-semantic; Conclusion no-N/A across the board), and "stage" kind routing in evaluateAdvance for the Frame → Manuscript boundary.
+- New `tests/contracts/sprd-c3-sermon-frame.test.tsx` (15 cases covering empty, partial, both-filled, per-question Intro Q1-Q4 and Conclusion Q1-Q4 gates, N/A semantics, and STAGE_BY_INDEX positioning). 373 vitest green; sweep-the-house PASS (State #2/#5 + Process #2/#6 + Surface #1 strengthen; no contract weakens).
+
+---
+
+## 2026-05-04 — sadi/sprd: MPS_DRAFT prompt rewrite — three per-question prompts replace WITH_PC/NO_PC pair
+
+- `src/prompts/study.js` retires `MPS_DRAFT_WITH_PC_TASK` (~270 words) and `MPS_DRAFT_NO_PC_TASK` (~110 words); adds three new scoped exports — `MPS_Q1_TRANSLATE_TASK` (translate MPT → present/future, pastor-to-people voice), `MPS_Q2_DRIFT_TASK` (surface moralism candidates against CCS, no rewrite), `MPS_Q3_TIGHTEN_TASK` (compress Q1+Q2 into one sentence preserving substance + gospel-power); PROMPT_VERSION 1.1.0 → 1.2.0.
+- `src/components/StudyTab.jsx` `generateMPS` simplified — removes `readPastoralContext` import + `pc`/`hasPC` dead-code lines + the WITH_PC/NO_PC ternary; existing single Draft button now wired to `MPS_Q1_TRANSLATE_TASK` until per-question MPS UI lands (SPRD work).
+- PC scaffolding fully retired from MPS draft path; PC's substance now reaches MPS through the Implications Synthesis (Phase 4 Field 4 named outcome) per SADI Step 2 ratification.
+- `MPS_Q2_DRIFT_TASK` and `MPS_Q3_TIGHTEN_TASK` exported for forward consumption by per-question UI; deliberate unused-export staging documented in study.js comment block.
+- `/sweep-the-house` PASS (Process #5 strengthens; Process #6 strengthens; Mutation #2 neutral; Principle strengthens); 358 vitest green.
+
+---
+
+## 2026-05-04 — core: Process Contract #6 extended to all workspace steps (per SADI Ruling 4)
+
+- `docs/CORE.md` Process Contract #6 retitled "The Study throughline is structural" → "The workspace throughline is structural"; outcome-scope clause widened from "Each Study sub-phase produces a named outcome" → "Each workspace step (and each Study sub-phase) produces a named outcome"; handoff language widened to "step or sub-phase boundary."
+- Canonical-articulation pointer expanded to two documents: SFDI carries Study (Step 1 — four sub-phases, 25 fields, four named outcomes); SADI carries Steps 2 (MPT/MPS) and 5 (Intro/Conclusion) with two named outcomes (Main Point Pair, Sermon Frame).
+- Binding scope updated: throughline's structural integrity is now testable against the SFDI document AND the SADI document together.
+- 358 vitest green; doc-only; no sweep trigger (CORE.md not in sweep-the-house path list).
+
+---
+
+## 2026-05-04 — sadi: Conclusion overview + Q3 sharpened (gospel-empower as engine; explicit MPS parallel)
+
+- `docs/PROPOSALS/sermon-anchor-definition-initiative.md` Conclusion overview restructured: anti-recap discipline folded into Q1's parenthetical inside the four-moves paragraph; new third paragraph elevates gospel-empower as the engine that distinguishes a closing call from a moralistic push.
+- Conclusion Q3 (Gospel-empower) framing rewritten to name the explicit MPS parallel ("At MPS you checked your message anchor for moralism. Here you do the matched move at the listener's exit") and to differentiate the verb shape — MPS Q2 is diagnostic (read / check / rewrite), Conclusion Q3 is generative (build / name / ground).
+- 358 vitest green; doc-only.
+
+---
+
+## 2026-05-04 — sadi: Conclusion content-design walk landed — all four anchor walks now complete
+
+- `docs/PROPOSALS/sermon-anchor-definition-initiative.md` Conclusion entry gains pre-field overview blockquote (three paragraphs, names the four moves and the anti-recap discipline), Q1 Summate framing, Q2 Land-the-call framing (linking back to Intro Q3 expectations), Q3 Gospel-empower framing (CCS as the comparator visible to the right), Q4 Closing-posture framing (silence/song/prayer/charge as a required pastoral choice).
+- Eph 2:1–5 worked example shows the four-move arc in pastor-to-people voice: Q1 "But God" through-line landing → Q2 "stop trying to earn" call → Q3 "the work is done" gospel-empowerment → Q4 explicit Prayer posture with three-beat content + 90-second timing + post-Amen silence cue.
+- All four SADI anchor walks now have pastor-side content-design copy in the working doc (MPT, MPS, Intro, Conclusion). Per-field content-design backlog cleared.
+- 358 vitest green; doc-only.
+
+---
+
+## 2026-05-04 — sadi: Intro content-design walk landed (overview + Q1/Q2/Q3/Q4 framings + Eph 2:1–5 example)
+
+- `docs/PROPOSALS/sermon-anchor-definition-initiative.md` Intro entry gains pre-field overview blockquote (three paragraphs, names the four moves with the expectations-before-redemptive-note order rationale and the redemptive-note-as-gospel-anchor framing), plus Q1 Hook, Q2 Bridge to text, Q3 Expectations, and Q4 Redemptive note framings.
+- Eph 2:1–5 worked example shows the four-move arc in pastor-to-people voice: Q1 carrying-the-weight hook → Q2 bridging into "But God" → Q3 stop-trying-to-earn expectation → Q4 gospel-empowerment ("you don't muster resurrection; you receive it").
+- Intro Status updated to reflect content-design walk landed; bulleted overview placeholder replaced by actual blockquote; deferred-stub line removed.
+- 358 vitest green; doc-only.
+
+---
+
+## 2026-05-04 — sadi: MPS content-design walk landed (overview + Q1/Q2/Q3 framings + Eph 2:1–5 example)
+
+- `docs/PROPOSALS/sermon-anchor-definition-initiative.md` MPS entry gains pre-field overview blockquote (two paragraphs, names the three moves with the moralism guard threaded into Q2's mention), Q1 Translate framing, Q2 Gospel-check framing (CCS as the comparator visible to the right), Q3 Tighten framing (dual preservation: substance from Q1 + gospel-power from Q2; same "one sentence ≠ short" guard as MPT Q2).
+- Eph 2:1–5 worked example shows Q1 with subtle moralism drift ("we need to wake up / we must step out") → Q2 catches the drift and rewrites in pastor-to-people voice → Q3 tightens to one preachable sentence.
+- MPS Status updated to reflect content-design walk landed; bulleted "what overview will cover" replaced by actual overview blockquote; deferred-stub line removed.
+- 358 vitest green; doc-only.
+
+---
+
+## 2026-05-04 — sadi: MPT content-design walk landed (Q1/Q2 framings + Eph 2:1–5 example)
+
+- `docs/PROPOSALS/sermon-anchor-definition-initiative.md` MPT entry gains Q1 framing blockquote (Draft), Q2 framing blockquote (Tighten — with explicit "doesn't need to be short — it needs to be one sentence" guard), and Eph 2:1–5 worked example showing Q1 multi-sentence draft → Q2 single-sentence compression.
+- MPT Status updated to reflect content-design walk landed 2026-05-04; deferred-stub line removed.
+- 358 vitest green; doc-only.
+
+---
+
 ## 2026-05-04 — sadi: ratification walk complete (11 structural rulings + doc propagation)
 
 - Eleven rulings ratified — named outcomes Main Point Pair (Step 2) + Sermon Frame (Step 5); cumulative table closes at 6 columns; Process #6 extends through Delivery; no field-N/A on the four anchors; MPT 2Q / MPS 3Q / Intro 4Q / Conclusion 4Q with locked question shapes; AI clarifies pastor's voice (doesn't author); pre-field overviews on MPS/Intro/Conclusion.

@@ -23,6 +23,9 @@ import {
 
 const SUB_PHASE_BY_INDEX = [SUB_PHASE.Observe, SUB_PHASE.Interpret, SUB_PHASE.RedemptiveThread, SUB_PHASE.Implications];
 const STEP_BY_INDEX = [STEP.Exegesis, STEP.MPT_MPS, STEP.Outline, STEP.FunctionalElements];
+// SPRD C3 — STAGE_BY_INDEX mirrors STAGE_SEQUENCE; used by evaluateAdvance
+// when kind === "stage" (currently only Frame → Manuscript at fromIndex=3).
+const STAGE_BY_INDEX = [STAGE.Study, STAGE.Blueprint, STAGE.Frame, STAGE.Manuscript, STAGE.Delivery];
 
 const SUB_PHASE_FIELD_MAP = {
   [SUB_PHASE.Observe]: "observations",
@@ -94,6 +97,13 @@ export function buildStageEvidence(sermon, stage) {
   }
   if (stage === STAGE.Blueprint) {
     return [sermon.outline, sermon.functional_elements].map(nonEmpty).filter((s) => s).join("\n");
+  }
+  if (stage === STAGE.Frame) {
+    // SPRD C3 — Sermon Frame stage. Evidence is the JSON column carrying
+    // Intro + Conclusion; presence is enough at the empty-evidence baseline.
+    // The composite gate (checkSermonFrameComposite) layers stricter
+    // requirements at the Frame → Manuscript boundary.
+    return nonEmpty(sermon.sermon_frame);
   }
   if (stage === STAGE.Manuscript) {
     return nonEmpty(sermon.manuscript);
@@ -291,6 +301,74 @@ function checkPhase4Field4Composite(sermon) {
   return null;
 }
 
+// SPRD C3 — Sermon Frame composite gate (Frame → Manuscript boundary).
+// Per SADI Step 5 ratification: Intro requires Q1+Q2+Q3 non-empty (no N/A)
+// and Q4 non-empty-or-N/A; Conclusion requires Q1+Q2+Q3+Q4 all non-empty
+// (no N/A path). Returns null when satisfied or a pastor-facing reason.
+function checkIntroComposite(frameData) {
+  if (!frameData || typeof frameData !== "object") {
+    return "Write the Intro fields before advancing.";
+  }
+  const fieldKey = "intro";
+  const required = ["hook", "bridge_to_text", "expectations"];
+  for (const qKey of required) {
+    if (!isQuestionAnswered(frameData, fieldKey, qKey)) {
+      return `Write the Intro ${qKey.replace(/_/g, " ")} answer before advancing.`;
+    }
+  }
+  // Q4 (redemptive_note) — non-empty OR explicit N/A (the SADI "satisfied
+  // another way" carve-out for redemptive hooks).
+  if (!isQuestionAnswered(frameData, fieldKey, "redemptive_note")) {
+    return "Write the Intro redemptive note (or mark it N/A if the hook itself was redemptive) before advancing.";
+  }
+  return null;
+}
+
+function checkConclusionComposite(frameData) {
+  if (!frameData || typeof frameData !== "object") {
+    return "Write the Conclusion fields before advancing.";
+  }
+  const fieldKey = "conclusion";
+  const required = ["summate", "land_call", "gospel_empower", "closing_posture"];
+  for (const qKey of required) {
+    // Conclusion is no-N/A across the board — N/A doesn't satisfy these.
+    const answered = !isQuestionNA(frameData, fieldKey, qKey)
+      && !!flattenAnswerValue(getQuestionAnswer(frameData, fieldKey, qKey));
+    if (!answered) {
+      return `Write the Conclusion ${qKey.replace(/_/g, " ")} answer before advancing.`;
+    }
+  }
+  return null;
+}
+
+function checkSermonFrameToManuscriptThreshold(sermon) {
+  const frameData = parseStructuredField(sermon?.sermon_frame);
+
+  const introReason = checkIntroComposite(frameData);
+  const conclusionReason = checkConclusionComposite(frameData);
+
+  const gates = [
+    {
+      key: "intro",
+      label: "Intro",
+      met: !introReason,
+      reason: introReason || undefined,
+    },
+    {
+      key: "conclusion",
+      label: "Conclusion",
+      met: !conclusionReason,
+      reason: conclusionReason || undefined,
+    },
+  ];
+
+  const firstFailing = gates.find((g) => !g.met);
+  return {
+    gates,
+    firstReason: firstFailing ? firstFailing.reason : null,
+  };
+}
+
 // SFDI Implications → MPT/MPS threshold (per `study-field-definition-
 // initiative.md` § "The hard gate at the boundary" inside Phase 4). Returns
 // `{ gates, firstReason }` mirroring B1.6's structured shape. One load-
@@ -479,6 +557,12 @@ export function evaluateAdvance(sermon, kind, fromIndex) {
     }
   } else if (kind === "step") {
     evidence = buildStepEvidence(sermon, canonicalStep(fromIndex));
+  } else if (kind === "stage") {
+    // SPRD C3 — stage transitions evaluated against stage evidence. Currently
+    // wired for Frame → Manuscript (the new boundary the Sermon Frame
+    // elevation introduces). Other stage boundaries continue to be evaluated
+    // by the legacy click-then-banner UX in SermonWorkspace.
+    evidence = buildStageEvidence(sermon, STAGE_BY_INDEX[fromIndex - 1]);
   }
   if (!evidence) {
     return { ok: false, reason: "Add some content before advancing." };
@@ -534,6 +618,23 @@ export function evaluateAdvance(sermon, kind, fromIndex) {
   }
   if (kind === "sub_phase" && fromIndex === 4) {
     const result = checkImplicationsToMPTMPSThreshold(sermon);
+    if (result.firstReason) {
+      return {
+        ok: false,
+        reason: result.firstReason,
+        ...(result.gates.length > 0 ? { gates: result.gates } : {}),
+      };
+    }
+    if (result.gates.length > 0) {
+      return { ok: true, gates: result.gates };
+    }
+  }
+
+  // SPRD C3 — Frame → Manuscript stage boundary composite gate.
+  // STAGE_BY_INDEX[2] === STAGE.Frame (1-indexed: Study=1, Blueprint=2,
+  // Frame=3, Manuscript=4, Delivery=5).
+  if (kind === "stage" && fromIndex === 3) {
+    const result = checkSermonFrameToManuscriptThreshold(sermon);
     if (result.firstReason) {
       return {
         ok: false,

@@ -15,11 +15,12 @@
 const STAGE = Object.freeze({
   Study: "Study",
   Blueprint: "Blueprint",
+  Frame: "Frame",
   Manuscript: "Manuscript",
   Delivery: "Delivery",
 });
 
-const STAGE_SEQUENCE = Object.freeze(["Study", "Blueprint", "Manuscript", "Delivery"]);
+const STAGE_SEQUENCE = Object.freeze(["Study", "Blueprint", "Frame", "Manuscript", "Delivery"]);
 
 const STEP = Object.freeze({
   Exegesis: "Exegesis",
@@ -66,6 +67,11 @@ const LOADING_VERB = Object.freeze({
 });
 
 // Schema column allowlists — canonical, mirrored from contracts.ts.
+// `outline` here is the database column name (the JSON column that holds
+// the sermon's outline data), not the pre-Pilot-B stage alias the
+// `canonical-stage-name` lint rule guards against. Same for STRUCTURED_FIELDS
+// below.
+/* eslint-disable sermonforge/canonical-stage-name */
 const SERMON_COLUMNS = Object.freeze(new Set([
   "title", "passage", "date", "preacher", "stage", "mpt", "mps",
   "observations", "interpretation", "redemptive_thread", "implications",
@@ -74,7 +80,10 @@ const SERMON_COLUMNS = Object.freeze(new Set([
   "topic_theme", "audience_assumptions", "background_noise", "study_guide_note",
   "preaching_blocks", "manuscript_delivery", "last_tune_up",
   "current_stage", "current_step", "current_sub_phase",
+  // v18 — SPRD C3 Sermon Frame.
+  "sermon_frame",
 ]));
+/* eslint-enable sermonforge/canonical-stage-name */
 
 const SERIES_COLUMNS = Object.freeze(new Set([
   "title", "color", "description", "year", "big_idea", "overview",
@@ -88,6 +97,8 @@ const SECTION_COLUMNS = Object.freeze(new Set([
   "title", "passage_range", "big_idea", "overview", "sort_order",
 ]));
 
+// `outline` here is the database column name, not the pre-Pilot-B stage alias.
+/* eslint-disable sermonforge/canonical-stage-name */
 const STRUCTURED_FIELDS = Object.freeze(new Set([
   "outline",
   "functional_elements",
@@ -95,7 +106,10 @@ const STRUCTURED_FIELDS = Object.freeze(new Set([
   "interpretation",
   "redemptive_thread",
   "implications",
+  // v18 — SPRD C3 Sermon Frame.
+  "sermon_frame",
 ]));
+/* eslint-enable sermonforge/canonical-stage-name */
 
 class ContractViolation extends Error {
   constructor(message, clause, code) {

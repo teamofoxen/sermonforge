@@ -151,22 +151,31 @@ these names. (See State Contract clause 5: *one name per concept*.)
    and conversational Chat interfaces where any content application is a
    separate, explicit, user-confirmed gesture — are outside this contract's
    enforcement scope and are governed directly by the Principle.*
-6. **The Study throughline is structural.** Each Study sub-phase produces a
-   named outcome by way of a throughline that runs through its fields and
-   crosses each sub-phase boundary by handoff. The throughline must be
-   coherent: every field contributes; every named outcome is built from the
-   field-work that precedes it; every handoff is explicit. The pedagogical
-   content — number of fields, wording, exact named-outcome text — may evolve.
-   The structural integrity — that the throughline exists, holds, and produces
-   the named outcomes it claims — does not. The canonical articulation lives
-   in the Study Field Definition Initiative document at
-   `docs/PROPOSALS/study-field-definition-initiative.md`. As of 2026-05-04 that
-   document carries seven-slot entries for all 25 fields across the four
-   sub-phases, four named outcomes (Observation Set, Interpretation Set,
-   Christ-Connection Statement, Implications Synthesis), and four sub-phase
-   boundary handoffs (including the handoff out of Study into MPT/MPS). This
-   clause is therefore binding in full — the throughline's structural
-   integrity is testable against the SFDI document.
+6. **The workspace throughline is structural.** Each workspace step (and
+   each Study sub-phase) produces a named outcome by way of a throughline
+   that runs through its fields and crosses each step or sub-phase boundary
+   by handoff. The throughline must be coherent: every field contributes;
+   every named outcome is built from the field-work that precedes it;
+   every handoff is explicit. The pedagogical content — number of fields,
+   wording, exact named-outcome text — may evolve. The structural integrity
+   — that the throughline exists, holds, and produces the named outcomes
+   it claims — does not. The canonical articulation lives across two
+   documents: the Study Field Definition Initiative document at
+   `docs/PROPOSALS/study-field-definition-initiative.md` carries Study
+   (Step 1 — the four sub-phases), and the Sermon Anchor Definition
+   Initiative document at
+   `docs/PROPOSALS/sermon-anchor-definition-initiative.md` carries Steps 2
+   (MPT/MPS) and 5 (Intro/Conclusion). As of 2026-05-04, SFDI carries
+   seven-slot entries for all 25 fields across the four Study sub-phases,
+   four named outcomes (Observation Set, Interpretation Set,
+   Christ-Connection Statement, Implications Synthesis), and four
+   sub-phase boundary handoffs (including the handoff out of Study into
+   MPT/MPS); SADI carries seven-slot entries for all four anchor fields
+   (MPT, MPS, Intro, Conclusion), two named outcomes (Main Point Pair for
+   Step 2; Sermon Frame for Step 5), and step-boundary handoff
+   articulations. This clause is therefore binding in full — the
+   throughline's structural integrity is testable against the SFDI
+   document AND the SADI document together.
 
 ### 3. Mutation Contract — what happens when something changes
 

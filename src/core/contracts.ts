@@ -43,22 +43,29 @@ export {
 } from "../constants/steps";
 
 // ── State Contract #2 — Stage (within-process position) ──────────────────────
-export type Stage = "Study" | "Blueprint" | "Manuscript" | "Delivery";
+// SPRD C3 (Phase 3 Item 3, 2026-05-04) added "Frame" between Blueprint and
+// Manuscript — the elevation of SADI Step 5 (Intro + Conclusion → Sermon
+// Frame). Pre-C3, Intro/Conclusion lived bundled inside the Manuscript stage;
+// the elevation gives the Sermon Frame its own workspace tab so the named
+// outcome is visible in the throughline.
+export type Stage = "Study" | "Blueprint" | "Frame" | "Manuscript" | "Delivery";
 
 export const STAGE = {
   Study: "Study",
   Blueprint: "Blueprint",
+  Frame: "Frame",
   Manuscript: "Manuscript",
   Delivery: "Delivery",
 } as const satisfies Record<Stage, Stage>;
 
 export const STAGE_SEQUENCE: readonly Stage[] = Object.freeze([
-  "Study", "Blueprint", "Manuscript", "Delivery",
+  "Study", "Blueprint", "Frame", "Manuscript", "Delivery",
 ]);
 
 export const STAGE_LABELS: Readonly<Record<Stage, string>> = Object.freeze({
   Study: "Study",
   Blueprint: "Blueprint",
+  Frame: "Sermon Frame",
   Manuscript: "Manuscript",
   Delivery: "Delivery",
 });
@@ -256,6 +263,11 @@ export type ImplicationsUpdate =
   | { op: "set_unbeliever"; value: string }
   | { op: "set_compiled"; value: string };
 
+// SPRD C3 — Sermon Frame (SADI Step 5: Intro + Conclusion). Same generic
+// keyed-JSON op pattern as the Exegesis sub-phase columns; the renderer
+// manages the per-field per-question envelope shape via setQuestionAnswer.
+export type SermonFrameUpdate = { op: "set"; questionKey: string; value: string };
+
 // ── Schema column allowlists (subsumed from src/constants/sermonColumns.js) ──
 //
 // These were previously duplicated across the renderer mirror and the main
@@ -272,6 +284,10 @@ export const SERMON_COLUMNS: ReadonlySet<string> = Object.freeze(new Set([
   "preaching_blocks", "manuscript_delivery", "last_tune_up",
   // v17 — canonical process position columns added by spine layer.
   "current_stage", "current_step", "current_sub_phase",
+  // v18 — Sermon Frame JSON column (SPRD C3, 2026-05-04). Holds Intro +
+  // Conclusion field-data per the SADI Step 5 ratification, in the same
+  // envelope shape as the four Exegesis sub-phase columns.
+  "sermon_frame",
 ])) as ReadonlySet<string>;
 
 export const SERIES_COLUMNS: ReadonlySet<string> = Object.freeze(new Set([
@@ -339,4 +355,6 @@ export const STRUCTURED_FIELDS: ReadonlySet<string> = Object.freeze(new Set([
   "interpretation",
   "redemptive_thread",
   "implications",
+  // v18 — SPRD C3 Sermon Frame (SADI Step 5).
+  "sermon_frame",
 ])) as ReadonlySet<string>;

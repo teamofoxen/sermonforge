@@ -1,4 +1,4 @@
-// PROMPT_VERSION: 1.1.0
+// PROMPT_VERSION: 1.2.0
 //
 // Centralized task directives for StudyTab AI calls (ACCI Item 8 / C1).
 // Each export below is a task-shaped string suitable for
@@ -9,7 +9,7 @@
 //
 // Naming convention: <SURFACE>_<ACTION>_TASK.
 
-export const PROMPT_VERSION = "1.1.0";
+export const PROMPT_VERSION = "1.2.0";
 
 // ── Step 1 (Exegesis) — phase reviews ──────────────────────────────────────
 // Pulled from inline strings under "Review →" buttons in StudyTab.jsx.
@@ -32,11 +32,19 @@ export const COMPILE_IMPLICATIONS_TASK = `Compile the theological-significance, 
 
 export const MPT_DRAFT_TASK = `Draft a Main Point of the Text (MPT) for this passage. The MPT is a single sentence in past tense summarizing what the author was saying to the original audience. The MPT must be historically grounded, past tense, and accurately reflect the author's original intent. Return only the sentence.`;
 
-// MPS draft — two variants matching the prior inline conditional. The
-// pastoral-context-aware variant adds the concentric-journey guidance.
-export const MPS_DRAFT_WITH_PC_TASK = `Draft a Main Point of the Sermon (MPS). The MPS is a single present-tense sentence that grows from the MPT — not a restatement. The MPT is the theological anchor; do not mirror its language. The sermon intro will move the congregation from the cultural world inward through the room to the claim — assume that journey has been made; the MPS does not retrace it. The MPS lands at The Sermon's Work: telegraph that claim, aimed at who is in the room. The Cultural Moment and The Room inform tone and angle only — they do not need to appear in the sentence. Express the underlying human condition in universal terms (e.g., fear, control, guilt, pride), not situational or cultural descriptors. If the MPT has sequential movements, render them as a forward-moving causal chain with one subject and one main verb, using no more than two subordinate clauses. Aim for 35–45 words. Every clause must add meaning; avoid filler connectors used only to reach length. Compress ruthlessly. Return only the sentence.`;
+// MPS — three per-question prompts (SADI Step 2 ratification + Phase 3 Item 2,
+// 2026-05-04). PC scaffolding retired; PC's substance is now integrated into
+// the Implications Synthesis (Phase 4 Field 4 named outcome) and reaches MPS
+// through it. Replaces the prior MPS_DRAFT_WITH_PC_TASK / MPS_DRAFT_NO_PC_TASK
+// pair (~400 words). Each prompt is scoped to one of the three SADI MPS
+// questions; the existing single field-level Draft button is wired to
+// MPS_Q1_TRANSLATE_TASK until per-question MPS UI lands (SPRD work).
 
-export const MPS_DRAFT_NO_PC_TASK = `Draft a Main Point of the Sermon (MPS). The MPS is a single present-tense sentence that grows from the MPT — not a restatement. The MPT is the theological anchor; do not mirror its language. If the MPT has sequential movements, render them as a forward-moving causal chain with one subject and one main verb, using no more than two subordinate clauses. Aim for 35–45 words. Every clause must add meaning; avoid filler connectors used only to reach length. Compress ruthlessly. Return only the sentence.`;
+export const MPS_Q1_TRANSLATE_TASK = `The pastor is at MPS Q1 (Translate). Help them translate the just-tightened MPT into present/future tense, aimed at the congregation. Read both substrates: the MPT (single past-tense sentence) and the Implications Synthesis paragraph (the integrated outcome of Phase 4 — the room-substance is already integrated there). Produce 2-3 sentences in present or future tense, in pastor-to-people voice (we / us / you), that translate the MPT's historical anchor into the room-facing call. Stay close to the MPT's substance and language. Do not yet tighten to one sentence — that is Q3. Do not yet check for moralism — that is Q2. This is the generative translate move only.`;
+
+export const MPS_Q2_DRIFT_TASK = `The pastor has drafted a Q1 translation of MPT into MPS. Read it side by side with the Christ-Connection Statement. Surface any moralism drift — phrases that put the listener as the one mustering the response ("we need to," "we must," "step out," "embrace what Christ has done") rather than receiving what God has already done. List each drift candidate as a short bullet: the phrase, why it drifts, and what the Christ-Connection Statement names God doing instead. Do NOT rewrite the MPS. Surface the candidates; the pastor decides which to address.`;
+
+export const MPS_Q3_TIGHTEN_TASK = `The pastor has drafted Q1 (translation) and worked through Q2 (gospel-check, with drift notes and any rewrite). Suggest a single present/future-tense sentence that compresses Q1 and Q2's work into one MPS, preserving both the substance from Q1 and the gospel-power surfaced in Q2. The single-sentence discipline is structural cohesion, not brevity — long is fine if it holds together. Stay in pastor-to-people voice (we / us / you). Do not introduce new substance; only fold what the pastor has already written.`;
 
 export const MPS_CHAT_TASK = `Refine the Main Point of the Sermon (MPS) with the pastor. The MPS must remain a single present-tense sentence that grows from the MPT. When pastoral context is provided, the MPS should move from the outside in: enter the cultural world first, narrow to this specific audience, then land the theological claim. Do not open with the theological answer — earn it. Respond concisely. If suggesting a revised MPS, present it on its own line prefixed with "Revised MPS:" so the pastor can apply it directly.`;
 

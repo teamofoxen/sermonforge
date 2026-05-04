@@ -4,7 +4,7 @@ import { useTour } from "../contexts/TourContext";
 import { getOutline, serializeOutline, getFunctionalElements, serializeFunctionalElements, autoResize } from "../utils";
 import { STEPS, PHASES, PHASE_SEQUENCE, STEP_SEQUENCE } from "../constants/steps";
 import { sendAIMessage } from "../utils/ai";
-import { buildContext, readPastoralContext } from "../utils/contextBuilder";
+import { buildContext } from "../utils/contextBuilder";
 import {
   OBSERVE_FIELDS, INTERPRET_FIELDS,
   REDEMPTIVE_FIELDS,
@@ -25,7 +25,7 @@ import { buildSystemPrompt, appendTaskDirective } from "../prompts/sermon";
 import {
   FE_CHAT_SYSTEM,
   OBSERVE_REVIEW_TASK, INTERPRET_REVIEW_TASK, REDEMPTIVE_REVIEW_TASK, IMPLICATIONS_REVIEW_TASK,
-  MPT_DRAFT_TASK, MPS_DRAFT_WITH_PC_TASK, MPS_DRAFT_NO_PC_TASK, MPS_CHAT_TASK,
+  MPT_DRAFT_TASK, MPS_Q1_TRANSLATE_TASK, MPS_CHAT_TASK,
   POPULATE_SCRIPTURE_TASK,
   OUTLINE_REVIEW_TASK, CHALLENGE_MPT_TASK,
   BRIEF_OBSERVE_TO_INTERPRET_TASK, BRIEF_INTERPRET_TO_REDEMPTIVE_TASK, BRIEF_REDEMPTIVE_TO_IMPLICATIONS_TASK,
@@ -380,15 +380,13 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
     setMpsProposal(null);
     try {
       const step = STEPS.MPT_MPS;
-      const pc     = readPastoralContext(sermon);
-      const hasPC  = !!(pc.room || pc.costAndGift);
       const context = buildContext({ sermon, step });
       const userContent = context
         ? `CONTEXT:\n${context}\n\nUSER REQUEST:\nDraft a Main Point of the Sermon (MPS) grounded in the MPT.`
         : "Draft a Main Point of the Sermon (MPS) grounded in the MPT.";
       const result = await sendAIMessage(
         [{ role: "user", content: userContent }],
-        layerTask(hasPC ? MPS_DRAFT_WITH_PC_TASK : MPS_DRAFT_NO_PC_TASK, step),
+        layerTask(MPS_Q1_TRANSLATE_TASK, step),
         step,
         sermon.id,
       );
