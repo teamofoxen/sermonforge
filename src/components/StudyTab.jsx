@@ -7,7 +7,7 @@ import { sendAIMessage } from "../utils/ai";
 import { buildContext } from "../utils/contextBuilder";
 import {
   OBSERVE_FIELDS, INTERPRET_FIELDS,
-  REDEMPTIVE_FIELDS, REDEMPTIVE_SUMMARY_KEY,
+  REDEMPTIVE_FIELDS,
   IMPLICATIONS_THEOLOGICAL, IMPLICATIONS_PERSONAL,
   IMPLICATIONS_UNBELIEVER_KEY, IMPLICATIONS_COMPILED_KEY,
   parseStructuredField, serializeStructuredField,
@@ -25,7 +25,7 @@ import { buildSystemPrompt, appendTaskDirective } from "../prompts/sermon";
 import {
   FE_CHAT_SYSTEM,
   OBSERVE_REVIEW_TASK, INTERPRET_REVIEW_TASK, REDEMPTIVE_REVIEW_TASK, IMPLICATIONS_REVIEW_TASK,
-  SYNTHESIZE_REDEMPTIVE_TASK, COMPILE_IMPLICATIONS_TASK,
+  COMPILE_IMPLICATIONS_TASK,
   MPT_DRAFT_TASK, MPS_DRAFT_WITH_PC_TASK, MPS_DRAFT_NO_PC_TASK, MPS_CHAT_TASK,
   POPULATE_SCRIPTURE_TASK,
   OUTLINE_REVIEW_TASK, CHALLENGE_MPT_TASK,
@@ -274,7 +274,6 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
   // overwritten by AI without a click.
   const [mptProposal, setMptProposal] = useState(null);
   const [mpsProposal, setMpsProposal] = useState(null);
-  const [redSummaryProposal, setRedSummaryProposal] = useState(null);
   const [impCompileProposal, setImpCompileProposal] = useState(null);
   // Populate Scripture proposal — holds the resolved fe-update + summary text
   // until the pastor accepts. Shape: { next, summary }.
@@ -1002,68 +1001,23 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                 onToggleNA={(fieldKey, qKey) => toggleStructuredNA("redemptive_thread", redData, fieldKey, qKey)}
                 legacyNotes={redData.legacy_notes}
                 sermonId={sermon.id}
+                crossPhaseRead={(column) => {
+                  // SPRD B3.2 — Phase 3 Field 5 Q1 (cumulative-synthesis-table)
+                  // reads the canonical thought-unit array from
+                  // observations.divisions.thought_units (Phase 3 adds the
+                  // `christ_connection` writable column on top of Phase 1's
+                  // upstream columns + Phase 2's `meaning` column, all rendered
+                  // read-only). Phase 4 will extend the same map to add the
+                  // `implication` writable column.
+                  if (column === "observations") return obsData;
+                  return null;
+                }}
+                crossPhaseWrite={(column, fieldKey, qKey, value) => {
+                  if (column === "observations") {
+                    updateStructured("observations", obsData, fieldKey, value, qKey);
+                  }
+                }}
               />
-
-              {/* Summary field — auto-synthesized or hand-written */}
-              <div className="worksheet-summary-block" data-tour-id="redemptive-synthesize">
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
-                  <label className="worksheet-field-label" style={{ marginBottom: 0 }}>Summary of Redemptive Features</label>
-                  <SecondaryButton
-                    size="sm"
-                    disabled={draftLoading !== null}
-                    onClick={async () => {
-                      setDraftLoading("red_summary");
-                      setRedSummaryProposal(null);
-                      try {
-                        const filled = REDEMPTIVE_FIELDS
-                          .map(f => ({ f, v: getPrimaryAnswer(redData, f.key).trim() }))
-                          .filter(({ v }) => v)
-                          .map(({ f, v }) => `${f.label}: ${v}`)
-                          .join("\n\n");
-                        const step = PHASES.REDEMPTIVE_THREAD;
-                        const context = buildContext({ sermon, step });
-                        const userRequest = `Redemptive feature answers to synthesize:\n\n${filled || "(none yet)"}\n\nSynthesize these into a cohesive 3–5 sentence summary.`;
-                        const userContent = context
-                          ? `CONTEXT:\n${context}\n\nUSER REQUEST:\n${userRequest}`
-                          : userRequest;
-                        const result = await sendAIMessage(
-                          [{ role: "user", content: userContent }],
-                          layerTask(SYNTHESIZE_REDEMPTIVE_TASK, step),
-                          step,
-                          sermon.id,
-                        );
-                        if (result.ok && result.text.trim()) setRedSummaryProposal(result.text.trim());
-                      } catch (e) {
-                        console.error("[redemptive synthesize]", e);
-                      } finally { setDraftLoading(null); }
-                    }}
-                    style={{ fontSize: "12px" }}
-                  >
-                    {draftLoading === "red_summary" ? "Thinking…" : "Synthesize →"}
-                  </SecondaryButton>
-                </div>
-                <textarea
-                  className="field-textarea"
-                  rows={3}
-                  value={getPrimaryAnswer(redData, REDEMPTIVE_SUMMARY_KEY)}
-                  onChange={(e) => updateStructured("redemptive_thread", redData, REDEMPTIVE_SUMMARY_KEY, e.target.value)}
-                  onInput={(e) => autoResize(e.target)}
-                  ref={(el) => autoResize(el)}
-                  placeholder="A cohesive summary of how this passage participates in redemptive history and points to Christ."
-                />
-                <ProposalPanel
-                  loading={draftLoading === "red_summary"}
-                  proposal={redSummaryProposal}
-                  label="AI proposes summary"
-                  acceptLabel={getPrimaryAnswer(redData, REDEMPTIVE_SUMMARY_KEY).trim() ? "Replace summary" : "Use this"}
-                  onAccept={() => {
-                    const next = setPrimaryAnswer(redData, REDEMPTIVE_SUMMARY_KEY, redSummaryProposal);
-                    onUpdate({ redemptive_thread: serializeStructuredField(next) });
-                    setRedSummaryProposal(null);
-                  }}
-                  onDiscard={() => setRedSummaryProposal(null)}
-                />
-              </div>
 
               <div style={{ marginTop: "8px" }}>
                 <SecondaryButton
@@ -1074,10 +1028,9 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                       .filter(({ v }) => v)
                       .map(({ f, v }) => `${f.label}: ${v}`)
                       .join("\n\n");
-                    const summary = getPrimaryAnswer(redData, REDEMPTIVE_SUMMARY_KEY).trim();
                     fetchInline(
                       "redemptive",
-                      `Redemptive thread answers:\n\n${filled}\n\n${summary ? `Summary: ${summary}` : ""}`,
+                      `Redemptive thread answers:\n\n${filled}`,
                       REDEMPTIVE_REVIEW_TASK,
                       PHASES.REDEMPTIVE_THREAD,
                     );

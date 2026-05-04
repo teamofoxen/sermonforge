@@ -326,11 +326,12 @@ export const INTERPRET_FIELDS = [
 //   - `need_for_christ` + `nature_of_god`       → `need_and_character.legacy_notes`
 //   - `jesus_hero`                              → `christ_connection_statement.legacy_notes`
 //
-// `REDEMPTIVE_SUMMARY_KEY` ("summary") is kept for back-compat with the
-// legacy "Summary of Redemptive Features" Synthesize block in StudyTab
-// until B3.2 elevates it into Field 5's structured-exercise wire-up. After
-// B3.2 the summary slot's data migrates into `christ_connection_statement
-// .legacy_notes` and the legacy block is removed.
+// `REDEMPTIVE_SUMMARY_KEY` ("summary") is no longer written to from any UI
+// surface as of B3.2 (the legacy "Summary of Redemptive Features" Synthesize
+// block was removed when Field 5's 2-question sequence + composite gate
+// shipped). The export is retained so `flattenToText` continues to surface
+// any legacy summary data through the context pipeline (defensive — no
+// production sermons exist 2026-05-04, but the read path stays graceful).
 //
 // Heavy-lifting fields with `FieldOverviewScreen` on first per-sermon entry
 // (B1.3 pattern):
@@ -402,9 +403,33 @@ export const REDEMPTIVE_FIELDS = [
         "Goldsworthy's evaluation question lives here: did this sermon testify to Christ? The Statement is what makes that answer yes. Phase 4 (Implications) opens against it. The Christological substance you articulate here gives Implications its weight.",
       ],
     },
-    // B3.2 will replace the single primary question with a 2-question
-    // sequence (`christ_per_unit` cumulative-synthesis-table + `statement`
-    // text-prompt) and wire the RT → Implications composite gate.
+    questions: [
+      {
+        key: "christ_per_unit",
+        kind: "cumulative-synthesis-table",
+        prompt: "Beside each thought unit (with its Meaning from Phase 2), write the Christ-connection. How does this thought unit point to Christ, find its weight in him, or get its answer from him?",
+        // Phase 3 extends the same canonical thought-unit array in
+        // observations.divisions.thought_units with a third writable column
+        // (christ_connection). Phase 1 + Phase 2 columns render read-only;
+        // Phase 4 will add `implication`.
+        crossPhaseSource: {
+          column: "observations",
+          fieldKey: "divisions",
+          questionKey: "thought_units",
+        },
+        columns: [
+          { key: "thought_unit_summary", label: "Thought unit",       kind: "textarea",    readOnly: true },
+          { key: "after_line",            label: "After line",        kind: "line-number", readOnly: true },
+          { key: "signal",                label: "Signal",            kind: "input",       readOnly: true },
+          { key: "meaning",               label: "Meaning",           kind: "textarea",    readOnly: true },
+          { key: "christ_connection",     label: "Christ-Connection", kind: "textarea",    placeholder: "How does this thought unit point to, find its weight in, or get its answer from Christ?" },
+        ],
+      },
+      {
+        key: "statement",
+        prompt: "One paragraph. How does the whole passage point to Christ — and how is Christ the hero of it? This is the Christ-Connection Statement. Phase 4 opens against it.",
+      },
+    ],
   },
 ];
 export const REDEMPTIVE_SUMMARY_KEY = "summary";

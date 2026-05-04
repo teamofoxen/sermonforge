@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-04 — sprd B3.2: Field 5 Christ-Connection Statement + RT→Implications composite gate
+
+- Field 5 (Christ-Connection Statement) replaces its single primary question with the SFDI 2-question sequence: Q1 `christ_per_unit` is a `cumulative-synthesis-table` reusing B2.2's cross-phase plumbing — extends `observations.divisions.thought_units` with the writable `christ_connection` column on top of Phase 1's three columns + Phase 2's `meaning` column (all read-only); Q2 `statement` is a text-prompt stored in `redemptive_thread.christ_connection_statement.statement`.
+- StudyTab plumbs `crossPhaseRead` / `crossPhaseWrite` to Phase 3's SpotlightWorksheet, mirroring the Phase 2 wire-up.
+- `evaluateAdvance` extends with the Redemptive Thread → Implications threshold (`kind=sub_phase, fromIndex=3`) — Field 5 composite gate (every thought-unit row has `christ_connection`, `statement` non-empty); returns `{ gates, firstReason }` per B1.6's structured shape.
+- Legacy "Summary of Redemptive Features" Synthesize block removed from StudyTab; `REDEMPTIVE_SUMMARY_KEY` is no longer written to from any UI surface, but `flattenToText` continues to surface any legacy summary data through the context pipeline. Dangling state and unused imports cleaned.
+- 5 new Field 5 composite-gate unit tests; 353 vitest total green; Vite preview compiled clean.
+
+---
+
 ## 2026-05-04 — sprd B3.0 + B3.1: Phase 3 Redemptive Thread reshape + multi-question sequences
 
 - `REDEMPTIVE_FIELDS` reordered to the SFDI 5-field shape: This Passage and Christ → How the Passage Points to Christ → How the Gospel Makes This Possible → Our Need and God's Character → Christ-Connection Statement.

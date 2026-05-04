@@ -702,3 +702,153 @@ describe("SPRD B2.2: Interpret → Redemptive Thread threshold (Field 7 composit
     expect(result.reason).toMatch(/at least one thought unit/i);
   });
 });
+
+// SPRD B3.2 — Redemptive Thread → Implications threshold. Field 5
+// (Christ-Connection Statement) composite: every thought unit row in
+// observations.divisions.thought_units has a non-empty `christ_connection`
+// column AND `redemptive_thread.christ_connection_statement.statement` is
+// non-empty.
+describe("SPRD B3.2: Redemptive Thread → Implications threshold (Field 5 composite)", () => {
+  const THOUGHT_UNITS_FULL = {
+    sentence_layout: {
+      value: [
+        { text: "There is now no condemnation",       depth: 0, kind: "main" },
+        { text: "for those who are in Christ Jesus.", depth: 1, kind: "modifier" },
+      ],
+      na: false,
+    },
+    paraphrases: {
+      value: [{ main_sentence_id: "ms-0", paraphrase: "No condemnation now." }],
+      na: false,
+    },
+  };
+
+  const tuRow = (extra: any = {}) => ({
+    thought_unit_summary: "Believers stand uncondemned.",
+    after_line: "2",
+    signal: "",
+    meaning: "The author declares freedom from judgment for those in Christ.",
+    ...extra,
+  });
+
+  it("returns ok=false at sub-phase 3 when no redemptive_thread content (empty-evidence baseline)", async () => {
+    const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
+    const result: any = evaluateAdvance(
+      { id: "test", redemptive_thread: "" },
+      "sub_phase",
+      3,
+    );
+    expect(result.ok).toBe(false);
+  });
+
+  it("returns ok=false at sub-phase 3 when thought_units lack christ_connection columns", async () => {
+    const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
+    const result: any = evaluateAdvance(
+      {
+        id: "test",
+        observations: JSON.stringify({
+          divisions: {
+            ...THOUGHT_UNITS_FULL,
+            thought_units: { value: [tuRow()], na: false },  // no christ_connection
+          },
+        }),
+        redemptive_thread: JSON.stringify({
+          christ_connection_statement: {
+            statement: { value: "Christ is the hero who acted while we were dead.", na: false },
+          },
+        }),
+      },
+      "sub_phase",
+      3,
+    );
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/Christ-Connection entry/i);
+    expect(result.gates).toHaveLength(1);
+    expect(result.gates[0].key).toBe("field_5_christ_connection_statement");
+    expect(result.gates[0].met).toBe(false);
+  });
+
+  it("returns ok=false at sub-phase 3 when christ_connection columns filled but statement is empty", async () => {
+    const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
+    const result: any = evaluateAdvance(
+      {
+        id: "test",
+        observations: JSON.stringify({
+          divisions: {
+            ...THOUGHT_UNITS_FULL,
+            thought_units: { value: [tuRow({ christ_connection: "Resurrection-with-Christ." })], na: false },
+          },
+        }),
+        // Some Phase 3 content so empty-evidence baseline passes; statement
+        // empty so the Field 5 gate fires.
+        redemptive_thread: JSON.stringify({
+          this_passage_and_christ: {
+            position: { value: "After. Christ has come.", na: false },
+          },
+          christ_connection_statement: {
+            statement: { value: "", na: false },
+          },
+        }),
+      },
+      "sub_phase",
+      3,
+    );
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/Christ-Connection Statement paragraph/i);
+  });
+
+  it("returns ok=true at sub-phase 3 when every thought unit has christ_connection and statement is filled", async () => {
+    const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
+    const result: any = evaluateAdvance(
+      {
+        id: "test",
+        observations: JSON.stringify({
+          divisions: {
+            ...THOUGHT_UNITS_FULL,
+            thought_units: { value: [tuRow({ christ_connection: "Christ raises the dead." })], na: false },
+          },
+        }),
+        redemptive_thread: JSON.stringify({
+          christ_connection_statement: {
+            statement: { value: "The whole passage turns on what Christ has done.", na: false },
+          },
+        }),
+      },
+      "sub_phase",
+      3,
+    );
+    expect(result.ok).toBe(true);
+    expect(result.gates).toHaveLength(1);
+    expect(result.gates[0].met).toBe(true);
+  });
+
+  it("returns ok=false at sub-phase 3 when one of two thought units lacks christ_connection", async () => {
+    const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
+    const result: any = evaluateAdvance(
+      {
+        id: "test",
+        observations: JSON.stringify({
+          divisions: {
+            ...THOUGHT_UNITS_FULL,
+            thought_units: {
+              value: [
+                tuRow({ christ_connection: "Christ raises the dead." }),
+                tuRow({ thought_unit_summary: "Row 2", after_line: "5" }),  // no christ_connection
+              ],
+              na: false,
+            },
+          },
+        }),
+        redemptive_thread: JSON.stringify({
+          christ_connection_statement: {
+            statement: { value: "Statement.", na: false },
+          },
+        }),
+      },
+      "sub_phase",
+      3,
+    );
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/Christ-Connection entry beside every thought unit/i);
+  });
+});

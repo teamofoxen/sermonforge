@@ -262,6 +262,65 @@ function checkField7Composite(sermon) {
   return null;
 }
 
+// Field 5 (Christ-Connection Statement) composite gate for the Redemptive
+// Thread → Implications boundary (B3.2). Q1 satisfied when every thought-
+// unit row in `observations.divisions.thought_units` has a non-empty
+// `christ_connection` column. Q2 satisfied when
+// `redemptive_thread.christ_connection_statement.statement` is non-empty.
+// Per SFDI Phase 3, the Christ-Connection Statement is the named outcome
+// and cannot be N/A.
+function checkField5Composite(sermon) {
+  const obsData = parseStructuredField(sermon?.observations);
+  const redData = parseStructuredField(sermon?.redemptive_thread);
+
+  const thoughtUnits = obsData?.divisions?.thought_units?.value;
+  if (!Array.isArray(thoughtUnits) || thoughtUnits.length === 0) {
+    return "Name at least one thought unit in Observe Field 4 before advancing.";
+  }
+  const allHaveChristConnection = thoughtUnits.every(
+    (row) =>
+      row && typeof row.christ_connection === "string" && row.christ_connection.trim()
+  );
+  if (!allHaveChristConnection) {
+    return "Write a Christ-Connection entry beside every thought unit before advancing.";
+  }
+
+  if (!isQuestionAnswered(redData, "christ_connection_statement", "statement")) {
+    return "Write the Christ-Connection Statement paragraph before advancing.";
+  }
+
+  return null;
+}
+
+// SFDI Redemptive Thread → Implications threshold (per `study-field-definition-
+// initiative.md` § "The hard gate at the boundary" inside Phase 3). Returns
+// `{ gates, firstReason }` mirroring B1.6's structured shape. One load-bearing
+// field (Field 5); the gate carries Field 5's failing sub-reason when unmet.
+function checkRedemptiveToImplicationsThreshold(sermon) {
+  const redData = parseStructuredField(sermon?.redemptive_thread);
+  if (!redData || typeof redData !== "object") {
+    return {
+      gates: [],
+      firstReason: "Add some content before advancing.",
+    };
+  }
+
+  const f5Reason = checkField5Composite(sermon);
+  const gates = [
+    {
+      key: "field_5_christ_connection_statement",
+      label: "Christ-Connection Statement",
+      met: !f5Reason,
+      reason: f5Reason || undefined,
+    },
+  ];
+
+  return {
+    gates,
+    firstReason: f5Reason,
+  };
+}
+
 // SFDI Interpret → Redemptive Thread threshold (per `study-field-definition-
 // initiative.md` § "The hard gate at the boundary" inside Phase 2). Returns
 // `{ gates, firstReason }` mirroring the Phase 1 threshold's shape. One
@@ -368,8 +427,9 @@ export function evaluateAdvance(sermon, kind, fromIndex) {
 
   // SFDI per-boundary thresholds layer on top of the empty-evidence baseline.
   // Currently wired:
-  //   - Observe → Interpret      (kind=sub_phase, fromIndex=1) — B1.4 + B1.5
-  //   - Interpret → Redemptive   (kind=sub_phase, fromIndex=2) — B2.2
+  //   - Observe → Interpret           (kind=sub_phase, fromIndex=1) — B1.4 + B1.5
+  //   - Interpret → Redemptive Thread (kind=sub_phase, fromIndex=2) — B2.2
+  //   - Redemptive Thread → Implications (kind=sub_phase, fromIndex=3) — B3.2
   // The threshold returns a structured `{gates, firstReason}` so the disabled-
   // Continue UI can render either the legacy single-line hint (firstReason)
   // or the multi-gate hover-checklist (gates) per B1.6.
@@ -388,6 +448,19 @@ export function evaluateAdvance(sermon, kind, fromIndex) {
   }
   if (kind === "sub_phase" && fromIndex === 2) {
     const result = checkInterpretToRedemptiveThreshold(sermon);
+    if (result.firstReason) {
+      return {
+        ok: false,
+        reason: result.firstReason,
+        ...(result.gates.length > 0 ? { gates: result.gates } : {}),
+      };
+    }
+    if (result.gates.length > 0) {
+      return { ok: true, gates: result.gates };
+    }
+  }
+  if (kind === "sub_phase" && fromIndex === 3) {
+    const result = checkRedemptiveToImplicationsThreshold(sermon);
     if (result.firstReason) {
       return {
         ok: false,
