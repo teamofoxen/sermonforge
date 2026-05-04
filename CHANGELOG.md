@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-05-03 — docs: SFDI Field 4 expanded to three-question shape, SPRD Component 1 spec sharpened
+
+- SFDI Field 4 expanded from two to three questions: Q1 sentence layout (same), Q2 paraphrase blocks (NEW — rewrite each main sentence in own words), Q3 thought-unit synthesis table (was Q2, now three-column with pastor's own-words summary, no AI generation in the Thought-unit cell).
+- SPRD Component 1 spec sharpened: structured-exercise sub-shapes catalog locked (canvas, paraphrase blocks, synthesis table), per-question paste rules replace per-field, structured-list storage DECIDED, hover-checklist required on disabled gate buttons, pre-field overview pattern for heavy-lifting fields, per-cell no-AI policy.
+- Pastor-side copy for Field 4 overview and Q1/Q2/Q3 framings landed in the SFDI working doc with softened framing ("bones of the text," "foundation any outline will rest on").
+- ANCHORS registry created at `docs/ANCHORS.md` listing the four SFDI/SPRD anchor docs governed by `/anchor-update`.
+
+---
+
 ## 2026-05-03 — docs: SFDI Field 4 ratified, SPRD Component 1 extended with structured-exercise question type
 
 - SFDI Field 4 (Divisions / Thought Units) ratified — seven-slot entry with three rules (subject + main verb → left margin; modifiers → indent; coordinates → align), Quick outline tips for epistles and narrative, and the expository commitment that "the point of the text is the point of the sermon."
