@@ -2848,6 +2848,98 @@ button {
   color: var(--ink-soft);
 }
 
+/* ── Paraphrase blocks (SPRD A2.2) ───────────────────────────────────────── */
+/* SFDI Field 4 Q2 sub-shape. Each main sentence the pastor laid out in Q1
+   appears as a read-only block; a paraphrase textarea below each captures
+   the pastor's own-words rewrite. Translation, not summary. Paste blocked. */
+
+.paraphrase-blocks {
+  font-family: 'Crimson Pro', serif;
+  font-size: 15px;
+  color: var(--ink);
+}
+
+.paraphrase-blocks-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.paraphrase-block {
+  background: var(--parchment-warm);
+  border: 1px solid var(--parchment-deep);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+}
+
+.paraphrase-block-original {
+  font-family: 'Crimson Pro', serif;
+  color: var(--ink-mid);
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed var(--parchment-deep);
+}
+
+.paraphrase-block-head {
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.paraphrase-block-modifier {
+  color: var(--ink-soft);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.paraphrase-block-input {
+  width: 100%;
+  resize: vertical;
+  border: 1px solid var(--parchment-deep);
+  background: var(--parchment);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  font-family: 'Crimson Pro', serif;
+  font-size: 15px;
+  color: var(--ink);
+  outline: none;
+  line-height: 1.5;
+}
+
+.paraphrase-block-input:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold);
+}
+
+.paraphrase-block-input:disabled {
+  color: var(--ink-ghost);
+  background: var(--parchment);
+  cursor: not-allowed;
+}
+
+.paraphrase-blocks-empty {
+  padding: 12px;
+  background: var(--parchment-warm);
+  border: 1px dashed var(--parchment-deep);
+  border-radius: var(--radius);
+}
+
+.paraphrase-blocks-empty-message {
+  margin: 0;
+  font-style: italic;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
+.paraphrase-blocks-paste-hint {
+  margin-top: 8px;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--ink-soft);
+}
+
 /* ── Responsive ──────────────────────────────────────────────────────────── */
 @media (max-width: 980px) {
   .dash-grid { grid-template-columns: 1fr; }
