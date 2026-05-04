@@ -432,3 +432,111 @@ describe("SPRD Q3 hard-gate UX: evaluateAdvance unit test", () => {
     expect(result.ok).toBe(false);
   });
 });
+
+// SPRD A1.2 / B1.6 — `evaluateAdvance` returns structured per-gate state
+// alongside the legacy `reason` string. The hover-checklist UI consumes
+// `gates` to surface every unmet condition at once; the legacy `reason`
+// stays as the first failing gate's pastor-facing message.
+describe("SPRD A1.2 / B1.6: evaluateAdvance returns structured per-gate state at the Observe → Interpret boundary", () => {
+  it("returns gates array with three load-bearing field entries when threshold is partially failing", async () => {
+    const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
+    const result: any = evaluateAdvance(
+      {
+        id: "test",
+        observations: JSON.stringify({
+          context: "some content",
+          divisions: FIELD_4_ALL_NA,        // met
+          // obvious_point intentionally missing → unmet
+          applications: {
+            pressing:         { value: "Pressing.",  na: false },
+            hard_and_hopeful: { value: "Hard/hope.", na: false },
+          },
+        }),
+      },
+      "sub_phase",
+      1,
+    );
+    expect(result.ok).toBe(false);
+    expect(Array.isArray(result.gates)).toBe(true);
+    expect(result.gates.length).toBe(3);
+    const keys = result.gates.map((g: { key: string }) => g.key);
+    expect(keys).toEqual([
+      "field_4_divisions",
+      "field_8_obvious_point",
+      "field_9_possible_implications",
+    ]);
+    const f4 = result.gates.find((g: { key: string }) => g.key === "field_4_divisions");
+    const f8 = result.gates.find((g: { key: string }) => g.key === "field_8_obvious_point");
+    const f9 = result.gates.find((g: { key: string }) => g.key === "field_9_possible_implications");
+    expect(f4.met).toBe(true);
+    expect(f8.met).toBe(false);
+    expect(f8.reason).toMatch(/Obvious Point/i);
+    expect(f9.met).toBe(true);
+    // First failing reason is Field 8's
+    expect(result.reason).toMatch(/Obvious Point/i);
+  });
+
+  it("returns gates with all three met when threshold is fully satisfied", async () => {
+    const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
+    const result: any = evaluateAdvance(
+      {
+        id: "test",
+        observations: JSON.stringify({
+          context: "some content",
+          divisions: FIELD_4_MINIMAL_FILLED,
+          obvious_point: "Plain-sense point.",
+          applications: {
+            pressing:         { value: "Pressing.",  na: false },
+            hard_and_hopeful: { value: "Hard/hope.", na: false },
+          },
+        }),
+      },
+      "sub_phase",
+      1,
+    );
+    expect(result.ok).toBe(true);
+    expect(Array.isArray(result.gates)).toBe(true);
+    expect(result.gates.every((g: { met: boolean }) => g.met)).toBe(true);
+  });
+
+  it("Field 4's gate carries its sub-question reason when the composite is unmet", async () => {
+    const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
+    const result: any = evaluateAdvance(
+      {
+        id: "test",
+        observations: JSON.stringify({
+          context: "some content",
+          divisions: {
+            sentence_layout: { value: [{ text: "Just a main sentence.", depth: 0, kind: "main" }], na: false },
+            paraphrases: { value: [{ main_sentence_id: "ms-0", paraphrase: "P." }], na: false },
+            thought_units: { value: [{ thought_unit_summary: "T.", after_line: "1", signal: "" }], na: false },
+          },
+          obvious_point: "Plain-sense point.",
+          applications: {
+            pressing:         { value: "Pressing.",  na: false },
+            hard_and_hopeful: { value: "Hard/hope.", na: false },
+          },
+        }),
+      },
+      "sub_phase",
+      1,
+    );
+    const f4 = result.gates.find((g: { key: string }) => g.key === "field_4_divisions");
+    expect(f4.met).toBe(false);
+    expect(f4.reason).toMatch(/Lay out the passage/i);
+  });
+
+  it("empty-evidence baseline returns no `gates` (single-gate degenerate path)", async () => {
+    const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
+    const result: any = evaluateAdvance(
+      { id: "test", observations: "" },
+      "sub_phase",
+      1,
+    );
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/add some content/i);
+    // No gates surfaced for the trivial empty-evidence path — the checklist
+    // UI falls back to the legacy single-line hint when gates is missing.
+    expect(result.gates).toBeUndefined();
+  });
+});

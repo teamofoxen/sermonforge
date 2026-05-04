@@ -15,6 +15,7 @@ import {
   isQuestionNA, setQuestionNA, DEFAULT_QUESTION_KEY,
 } from "../utils/studyFields";
 import SpotlightWorksheet from "./SpotlightWorksheet";
+import AdvanceGateChecklist from "./AdvanceGateChecklist";
 import OutlineBuilder from "./OutlineBuilder";
 import InlineAIResponse from "./InlineAIResponse";
 import ProposalPanel from "./ProposalPanel";
@@ -1233,14 +1234,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                 ? `Continue to ${PHASE_LABELS[activeSubPhase]} →`
                 : `Continue to ${STEP_LABELS[1]} →`}
             </PrimaryButton>
-            {!subPhaseSufficiency.ok && (
-              <div
-                data-testid="advance-hint"
-                style={{ marginTop: "6px", fontSize: "12px", color: "var(--ink-ghost)", fontStyle: "italic" }}
-              >
-                {subPhaseSufficiency.reason}
-              </div>
-            )}
+            <AdvanceGateChecklist sufficiency={subPhaseSufficiency} />
           </div>
         </div>
       )}
@@ -1438,14 +1432,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
             >
               {`Continue to ${STEP_LABELS[2]} →`}
             </PrimaryButton>
-            {!step2Sufficiency.ok && (
-              <div
-                data-testid="advance-hint"
-                style={{ marginTop: "6px", fontSize: "12px", color: "var(--ink-ghost)", fontStyle: "italic" }}
-              >
-                {step2Sufficiency.reason}
-              </div>
-            )}
+            <AdvanceGateChecklist sufficiency={step2Sufficiency} />
           </div>
         </div>
       )}
@@ -1599,14 +1586,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
               >
                 {`Continue to ${STEP_LABELS[3]} →`}
               </PrimaryButton>
-              {!step3Sufficiency.ok && (
-                <div
-                  data-testid="advance-hint"
-                  style={{ marginTop: "6px", fontSize: "12px", color: "var(--ink-ghost)", fontStyle: "italic" }}
-                >
-                  {step3Sufficiency.reason}
-                </div>
-              )}
+              <AdvanceGateChecklist sufficiency={step3Sufficiency} />
             </div>
           )}
         </div>

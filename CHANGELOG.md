@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-04 — sprd B1.6: AdvanceGateChecklist + structured per-gate state (closes A1.2)
+
+- `evaluateAdvance` now returns `{ ok, reason, gates? }` where `gates` is `[{key, label, met, reason?}]` per load-bearing field; the Observe → Interpret threshold surfaces three entries (Field 4 composite, Field 8 Obvious Point, Field 9 Possible Implications) with Field 4's failing sub-reason carried through.
+- New `AdvanceGateChecklist` component renders below the disabled Continue button: legacy `data-testid="advance-hint"` single-line shape when `gates ≤ 1` (back-compat with empty-evidence baseline), `data-testid="advance-gate-checklist"` `<ul>` with ✓ / ✗ + label + sub-reason when `gates > 1`.
+- All three Continue boundaries in `StudyTab.jsx` (sub-phase, step 2, step 3) wired through the new component; inline-style hint divs collapsed to a `.advance-hint` CSS class.
+- Button `title` attribute still carries `firstReason` so SFDI's "hover-checklist on the disabled button" gets both the discoverable inline form and the native-tooltip-on-hover form.
+- 4 new evaluateAdvance.gates unit tests + 6 new AdvanceGateChecklist component tests; 331 vitest total green; closes A1.2.
+
+---
+
 ## 2026-05-04 — sprd B1.5: Field 4 wire-up + composite gate
 
 - Field 4 `divisions` gains a 3-question array (`sentence_layout` kind=canvas, `paraphrases` kind=paraphrase, `thought_units` kind=synthesis-table) with a structured `referencePanel` blob on Q1 (three rules + epistles/narrative/poetry tips, plain data — no JSX).

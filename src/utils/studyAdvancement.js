@@ -234,38 +234,61 @@ function checkField4Composite(data) {
 }
 
 // SFDI Observe → Interpret threshold (per `study-field-definition-initiative
-// .md` § "The hard gate at the boundary"). Returns null when satisfied or a
-// short pastor-facing reason string when not.
-//
-// Scope as of B1.5: Field 4 composite (Q1 canvas + Q2 paraphrases + Q3 thought
-// units), Field 8 (Obvious Point), and Field 9 (Possible Implications) are
-// wired. Per-field non-empty checks for Fields 1, 2, 3, 5, 6, 7 are deferred
-// until the SFDI baseline-tightening cut.
+// .md` § "The hard gate at the boundary"). Returns a structured object:
+//   {
+//     gates: [{key, label, met, reason?}, ...],   // one entry per load-bearing field
+//     firstReason: string | null,                 // first failing gate's reason, or null
+//   }
+// The disabled-Continue UI reads `firstReason` for the legacy single-line
+// hint and `gates` for the hover-checklist (B1.6). Per SFDI, three gates:
+// Field 4 (composite), Field 8 (Obvious Point), Field 9 (Possible Implications).
+// SFDI N/A escape valve preserved per question.
 function checkObserveToInterpretThreshold(sermon) {
   const data = parseStructuredField(sermon?.observations);
   if (!data || typeof data !== "object") {
-    return "Add some content before advancing.";
+    return {
+      gates: [],
+      firstReason: "Add some content before advancing.",
+    };
   }
+
+  const gates = [];
 
   // Field 4 — Divisions / Thought Units composite (B1.5).
-  const f4 = checkField4Composite(data);
-  if (f4) return f4;
+  const f4Reason = checkField4Composite(data);
+  gates.push({
+    key: "field_4_divisions",
+    label: "Divisions / Thought Units",
+    met: !f4Reason,
+    reason: f4Reason || undefined,
+  });
 
   // Field 8 — Obvious Point. Single primary question; non-empty or N/A.
-  if (!isQuestionAnswered(data, "obvious_point", DEFAULT_QUESTION_KEY)) {
-    return "State the Obvious Point before advancing.";
-  }
+  const f8Met = isQuestionAnswered(data, "obvious_point", DEFAULT_QUESTION_KEY);
+  gates.push({
+    key: "field_8_obvious_point",
+    label: "Obvious Point",
+    met: f8Met,
+    reason: f8Met ? undefined : "State the Obvious Point before advancing.",
+  });
 
   // Field 9 — Possible Implications. Both questions (pressing,
   // hard_and_hopeful) non-empty or N/A.
-  if (!isQuestionAnswered(data, "applications", "pressing")) {
-    return "Answer the Possible Implications questions before advancing.";
-  }
-  if (!isQuestionAnswered(data, "applications", "hard_and_hopeful")) {
-    return "Answer the Possible Implications questions before advancing.";
-  }
+  const f9Met =
+    isQuestionAnswered(data, "applications", "pressing") &&
+    isQuestionAnswered(data, "applications", "hard_and_hopeful");
+  gates.push({
+    key: "field_9_possible_implications",
+    label: "Possible Implications",
+    met: f9Met,
+    reason: f9Met ? undefined : "Answer the Possible Implications questions before advancing.",
+  });
 
-  return null;
+  const firstFailing = gates.find((g) => !g.met);
+  return {
+    gates,
+    firstReason: firstFailing ? firstFailing.reason : null,
+  };
 }
 
 export function evaluateAdvance(sermon, kind, fromIndex) {
@@ -286,9 +309,23 @@ export function evaluateAdvance(sermon, kind, fromIndex) {
 
   // SFDI per-boundary thresholds layer on top of the empty-evidence baseline.
   // Currently wired: Observe → Interpret (kind=sub_phase, fromIndex=1).
+  // The threshold returns a structured `{gates, firstReason}` so the disabled-
+  // Continue UI can render either the legacy single-line hint (firstReason)
+  // or the multi-gate hover-checklist (gates) per B1.6.
   if (kind === "sub_phase" && fromIndex === 1) {
-    const reason = checkObserveToInterpretThreshold(sermon);
-    if (reason) return { ok: false, reason };
+    const result = checkObserveToInterpretThreshold(sermon);
+    if (result.firstReason) {
+      return {
+        ok: false,
+        reason: result.firstReason,
+        ...(result.gates.length > 0 ? { gates: result.gates } : {}),
+      };
+    }
+    // All gates met — surface the gates anyway so the UI can confirm a
+    // satisfied checklist if it wants to (currently unused by consumers).
+    if (result.gates.length > 0) {
+      return { ok: true, gates: result.gates };
+    }
   }
 
   return { ok: true };

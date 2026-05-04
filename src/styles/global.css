@@ -3284,6 +3284,63 @@ button {
   }
 }
 
+/* Disabled-Continue UX (SPRD A1.2 / B1.6). Single-gate path falls back to
+   a one-line italic hint; multi-gate path renders the structured checklist.
+   The button's title attribute carries the same first-failing reason for
+   the native-tooltip-on-hover path. */
+.advance-hint {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--ink-ghost);
+  font-style: italic;
+}
+
+.advance-gate-checklist {
+  list-style: none;
+  margin: 8px 0 0 0;
+  padding: 0;
+  font-size: 12px;
+  color: var(--ink-mid);
+  font-family: 'Crimson Pro', serif;
+}
+
+.advance-gate-item {
+  padding: 2px 0;
+  line-height: 1.5;
+}
+
+.advance-gate-item-met {
+  color: var(--ink-ghost);
+}
+
+.advance-gate-item-unmet {
+  color: var(--ink-mid);
+}
+
+.advance-gate-marker {
+  display: inline-block;
+  width: 16px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.advance-gate-item-met .advance-gate-marker {
+  color: var(--gold);
+}
+
+.advance-gate-item-unmet .advance-gate-marker {
+  color: var(--ink-mid);
+}
+
+.advance-gate-label {
+  font-weight: 500;
+}
+
+.advance-gate-reason {
+  font-style: italic;
+  color: var(--ink-ghost);
+}
+
 /* Reference panel section formatting (Field 4's three rules + genre tips).
    The panel layout primitive (PeripheralReferencePanel) renders the title
    and aside chrome; these styles target the structured sections inside. */
