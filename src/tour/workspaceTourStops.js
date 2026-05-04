@@ -14,13 +14,18 @@ import { STAGE } from "../core/contracts";
 const STUDY_BASE = { tab: STAGE.Study, drawerOpen: false };
 
 export const WORKSPACE_TOUR_STOPS = [
-  // ── Stops 1–10: workspace + AI overview + Pastoral Context ────────────────
+  // ── Stops 1–5: workspace + AI overview ────────────────────────────────────
+  // SPRD B4.2 — the previous Pastoral Context tour stops (always-in-the-room,
+  // pastoral-intelligence, cultural-moment, the-room, sermons-work) were
+  // removed when the PC card was lifted out of SermonWorkspace into Phase 4
+  // Field 3. The PC arc is now part of the Study walkthrough; tour rewrite
+  // is SPRD structural backlog (Component 3 · Throughline visualization).
   {
     id: "workspace-intro",
     anchorId: "workspace-title",
     title: "The Sermon Workspace.",
     body: "Where you go deep on one sermon. If a series is already in place, its big idea and context come with you here automatically. If not, the workspace stands on its own — start where you are.",
-    prerequisites: { ...STUDY_BASE, pcOpen: true },
+    prerequisites: STUDY_BASE,
   },
   {
     id: "ai-philosophy",
@@ -45,46 +50,11 @@ export const WORKSPACE_TOUR_STOPS = [
     prerequisites: { tab: STAGE.Study, drawerOpen: true },
   },
   {
-    id: "always-in-the-room",
-    anchorId: "pastoral-context-card",
-    title: "Always in the room.",
-    body: "One layer of that context — the cultural moment, the room, the sermon's work — is always sent to the AI, regardless of which step you're on. Three short fields at the top of every tab keep the AI from ever working in the abstract. We'll get to those in step 7.",
-    prerequisites: { tab: STAGE.Study, drawerOpen: true, pcOpen: true },
-  },
-  {
     id: "tuned-to-you",
     anchorId: "ai-panel",
     title: "Tuned to you.",
     body: "Over time, the AI surfaces your own rhetorical patterns — how you build outlines, what your MPTs tend to look like, the way you turn applications. Adaptive guidance, tuned to you specifically. Not a model being trained; your past work, surfaced when relevant.",
     prerequisites: { tab: STAGE.Study, drawerOpen: true },
-  },
-  {
-    id: "pastoral-intelligence",
-    anchorId: "pastoral-context-card",
-    title: "Pastoral Context.",
-    body: "Three short fields at the top of every tab, ordered from outside in: the cultural moment, the room, the sermon's work. They don't shape the sermon's content. They shape how the AI talks to you about it.",
-    prerequisites: { ...STUDY_BASE, pcOpen: true },
-  },
-  {
-    id: "cultural-moment",
-    anchorId: "pi-cultural-moment",
-    title: "The Cultural Moment.",
-    body: "What world is this congregation walking in from? What does culture believe, distort, or weaponize about this topic? The widest ring — what's already in the air before anyone takes a seat.",
-    prerequisites: { ...STUDY_BASE, pcOpen: true },
-  },
-  {
-    id: "the-room",
-    anchorId: "pi-the-room",
-    title: "The Room.",
-    body: "Who's in the room, and where are they? Where has this congregation drifted, and what do they currently believe? Posture, not demographics.",
-    prerequisites: { ...STUDY_BASE, pcOpen: true },
-  },
-  {
-    id: "sermons-work",
-    anchorId: "pi-sermons-work",
-    title: "The Sermon's Work.",
-    body: "What is this sermon trying to accomplish? What's the big claim, and where does the Gospel enter? The innermost ring — the pastoral aim. The AI keeps all three in mind every time you ask it anything; you never have to restate them.",
-    prerequisites: { ...STUDY_BASE, pcOpen: true },
   },
 
   // ── Stops 11–25: Study tab — Step 1 (Exegesis, four phases) ────────────────

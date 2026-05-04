@@ -79,8 +79,11 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpe
   // siblingIds is the ordered list of sermon IDs in the current sermon's
   // series. Empty array when the sermon has no series.
   const [siblingIds, setSiblingIds] = useState([]);
-  // Pastoral Context card — open when empty, collapsed when filled
-  const [pcOpen, setPcOpen] = useState(true);
+  // SPRD B4.2: PC card removed from workspace; PC substance now lives in
+  // Phase 4 Field 3 (Pastoral Context) per SFDI Phase 4 walk. The PC schema
+  // columns (background_noise, audience_assumptions, topic_theme) are
+  // preserved for legacy data; their content surfaces as Phase 4 Field 3
+  // legacy_notes on first open of a sermon under the new shape.
   const { active: tourActive, desiredUi } = useTour();
   const pendingIdRef = useRef(0);
 
@@ -95,10 +98,7 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpe
     if (typeof desiredUi.drawerOpen === "boolean" && desiredUi.drawerOpen !== drawerOpen) {
       setDrawerOpen(desiredUi.drawerOpen);
     }
-    if (typeof desiredUi.pcOpen === "boolean" && desiredUi.pcOpen !== pcOpen) {
-      setPcOpen(desiredUi.pcOpen);
-    }
-  }, [tourActive, desiredUi, activeTab, drawerOpen, pcOpen]);
+  }, [tourActive, desiredUi, activeTab, drawerOpen]);
   // Mirrors sermon state synchronously so captureMemory never reads a stale closure.
   const sermonRef = useRef(null);
   // Last hash captured — prevents duplicate memory writes when content hasn't changed.
@@ -138,10 +138,6 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpe
         setSermon(data);
         sermonRef.current = data;
         setSiblingIds(Array.isArray(siblings) ? siblings.map(s => s.id) : []);
-        // Auto-collapse PC card if any field already has content
-        if (data.topic_theme?.trim() || data.audience_assumptions?.trim() || data.background_noise?.trim()) {
-          setPcOpen(false);
-        }
         // Restore last active tab across restarts
         const savedTab = localStorage.getItem(`sermonforge_sermon_tab_${sermonId}`);
         const migratedTab = savedTab && (LEGACY_TAB_MAP[savedTab] || savedTab);
@@ -482,99 +478,12 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpe
       <div className="workspace-body">
         <div className="workspace-main">
 
-          {/* Pastoral Context orientation card — collapsible */}
-          <div className="card" data-tour-id="pastoral-context-card" style={{ margin: "16px 20px 0", padding: "0" }}>
-            {/* Header — always visible, click to toggle */}
-            <div
-              onClick={() => setPcOpen(v => !v)}
-              style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 16px", cursor: "pointer", userSelect: "none", gap: "12px" }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "12px", minWidth: 0, flex: 1 }}>
-                <span style={{ fontFamily: "'Playfair Display', serif", fontSize: "10px", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-ghost)", flexShrink: 0 }}>
-                  Pastoral Context
-                </span>
-                {!pcOpen && (
-                  <span style={{ fontSize: "12px", color: "var(--ink-soft)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                    {[
-                      sermon.topic_theme?.trim() && `${sermon.topic_theme.trim().slice(0, 40)}${sermon.topic_theme.trim().length > 40 ? "…" : ""}`,
-                      sermon.audience_assumptions?.trim() && `${sermon.audience_assumptions.trim().slice(0, 40)}${sermon.audience_assumptions.trim().length > 40 ? "…" : ""}`,
-                      sermon.background_noise?.trim() && `${sermon.background_noise.trim().slice(0, 40)}${sermon.background_noise.trim().length > 40 ? "…" : ""}`,
-                    ].filter(Boolean).join("  ·  ") || <span style={{ color: "var(--ink-ghost)", fontStyle: "italic" }}>No context set</span>}
-                  </span>
-                )}
-              </div>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
-                style={{ transform: pcOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s ease", flexShrink: 0, color: "var(--ink-ghost)" }}>
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
-            </div>
-
-            {/* Expanded body */}
-            {pcOpen && (
-              <div style={{ padding: "0 16px 14px", borderTop: "1px solid var(--parchment-deep)" }}>
-                {/* Read-only series context — series sermons only */}
-                {sermon.series_id && (sermon.series?.title || sermon.series?.big_idea || sermon.section?.big_idea) && (
-                  <div style={{ marginTop: "12px", marginBottom: "12px", background: "var(--parchment-warm)", border: "1px solid var(--parchment-deep)", borderRadius: "var(--radius)", padding: "10px 14px", fontSize: "13px" }}>
-                    {sermon.series?.title && (
-                      <div style={{ color: "var(--ink-ghost)", fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", marginBottom: "4px" }}>
-                        {sermon.series.title}
-                      </div>
-                    )}
-                    {sermon.series?.big_idea && (
-                      <div style={{ color: "var(--ink-mid)", marginBottom: sermon.section?.big_idea ? "6px" : "0" }}>
-                        <span style={{ color: "var(--ink-ghost)", fontSize: "11px" }}>Series big idea  </span>{sermon.series.big_idea}
-                      </div>
-                    )}
-                    {sermon.section?.big_idea && (
-                      <div style={{ color: "var(--ink-mid)" }}>
-                        <span style={{ color: "var(--ink-ghost)", fontSize: "11px" }}>Section big idea  </span>{sermon.section.big_idea}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Three editable fields — ordered outside in: Cultural Moment → The Room → The Sermon's Work */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "12px", marginTop: "12px" }}>
-                  <div data-tour-id="pi-cultural-moment">
-                    <label className="field-label">The Cultural Moment</label>
-                    <textarea
-                      className="field-textarea"
-                      value={sermon.background_noise || ""}
-                      onChange={e => handleUpdate({ background_noise: e.target.value })}
-                      onInput={(e) => autoResize(e.target)}
-                      ref={(el) => autoResize(el)}
-                      placeholder="What world is this congregation walking in from? What does culture believe, distort, or weaponize about this topic?"
-                      rows={1}
-                    />
-                  </div>
-                  <div data-tour-id="pi-the-room">
-                    <label className="field-label">The Room</label>
-                    <textarea
-                      className="field-textarea"
-                      value={sermon.audience_assumptions || ""}
-                      onChange={e => handleUpdate({ audience_assumptions: e.target.value })}
-                      onInput={(e) => autoResize(e.target)}
-                      ref={(el) => autoResize(el)}
-                      placeholder="Who's in the room and where are they? Where has this congregation drifted, and what do they currently believe?"
-                      rows={1}
-                    />
-                  </div>
-                  <div data-tour-id="pi-sermons-work">
-                    <label className="field-label">The Sermon's Work</label>
-                    <textarea
-                      className="field-textarea"
-                      value={sermon.topic_theme || ""}
-                      onChange={e => handleUpdate({ topic_theme: e.target.value })}
-                      onInput={(e) => autoResize(e.target)}
-                      ref={(el) => autoResize(el)}
-                      placeholder="What is this sermon trying to accomplish? What is the big claim, and where does the Gospel enter?"
-                      rows={1}
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+          {/* Pastoral Context card removed in SPRD B4.2 — its three text
+              fields (background_noise, audience_assumptions, topic_theme)
+              now surface as Phase 4 Field 3 (Pastoral Context) in the
+              SFDI three-way conversation. The schema columns are preserved
+              defensively so legacy data can migrate into Field 3's
+              legacy_notes on first open. */}
 
           {activeTab === STAGE.Study && (
             <StudyTab

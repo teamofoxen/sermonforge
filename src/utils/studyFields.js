@@ -533,11 +533,33 @@ export const IMPLICATIONS_FIELDS = [
         "This is the marinate-output. Merida tells the pastor to back away after Implications and ponder before crafting the sermon. What you write here is what you sit with. MPT and MPS open against this synthesis (with the prior three named outcomes carried alongside) — no AI re-summary, no reaching back into raw worksheet content. The foundation has been earned.",
       ],
     },
-    // B4.2 will replace the single primary question with a 2-question
-    // sequence (`implication_per_unit` cumulative-synthesis-table extending
-    // the thought-unit array with the writable `implication` column +
-    // `synthesis` text-prompt) and wire the Implications → MPT/MPS
-    // composite gate.
+    questions: [
+      {
+        key: "implication_per_unit",
+        kind: "cumulative-synthesis-table",
+        prompt: "Beside each thought unit (with its Meaning from Phase 2 and Christ-Connection from Phase 3), write the integrated implication. Drawing on Theological Significance + Personal Implications + Pastoral Context — what does this thought unit ask of the hearer in THIS room?",
+        // Phase 4 extends the same canonical thought-unit array in
+        // observations.divisions.thought_units with the final writable column
+        // (implication). Phase 1/2/3 columns render read-only.
+        crossPhaseSource: {
+          column: "observations",
+          fieldKey: "divisions",
+          questionKey: "thought_units",
+        },
+        columns: [
+          { key: "thought_unit_summary", label: "Thought unit",       kind: "textarea",    readOnly: true },
+          { key: "after_line",            label: "After line",        kind: "line-number", readOnly: true },
+          { key: "signal",                label: "Signal",            kind: "input",       readOnly: true },
+          { key: "meaning",               label: "Meaning",           kind: "textarea",    readOnly: true },
+          { key: "christ_connection",     label: "Christ-Connection", kind: "textarea",    readOnly: true },
+          { key: "implication",           label: "Implication",       kind: "textarea",    placeholder: "What does this thought unit ask of the hearer in THIS room?" },
+        ],
+      },
+      {
+        key: "synthesis",
+        prompt: "One paragraph. Integrate the three voices for the whole passage. What does the text teach, what does it ask, and how does it land for the people in this room — all in one voice. Not three sections. One synthesis. This is the Implications Synthesis. MPT/MPS opens against it.",
+      },
+    ],
   },
 ];
 

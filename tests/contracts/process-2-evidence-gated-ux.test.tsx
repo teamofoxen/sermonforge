@@ -411,15 +411,17 @@ describe("SPRD Q3 hard-gate UX: evaluateAdvance unit test", () => {
     expect(result.ok).toBe(false);
   });
 
-  it("returns ok=true for sub_phase=4 transition (Implications → MPT/MPS) when any Exegesis content exists", async () => {
-    // Sub-phase 4 advance is actually a STEP transition; evidence is whole Exegesis step.
+  it("returns ok=false for sub_phase=4 transition (Implications → MPT/MPS) when only Exegesis content exists but Field 4 composite isn't satisfied", async () => {
+    // Sub-phase 4 advance is a STEP transition (out of Study). B4.2 added the
+    // Field 4 (Implications Synthesis) composite gate at this boundary —
+    // bare "any Exegesis content" no longer satisfies it.
     const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
     const result = evaluateAdvance(
       { id: "test", observations: '{"context":"Some Observe content."}' },
       "sub_phase",
       4,
     );
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBe(false);
   });
 
   it("returns ok=false for step transition when source step has no content", async () => {
@@ -822,6 +824,11 @@ describe("SPRD B3.2: Redemptive Thread → Implications threshold (Field 5 compo
     expect(result.gates[0].met).toBe(true);
   });
 
+  // B4.2 — Phase 4 Field 4 (Implications Synthesis) composite gate placed
+  // here for symmetry with the other boundary tests. Tested below in its own
+  // describe block.
+  // (intentional placeholder — kept describe scoped above)
+
   it("returns ok=false at sub-phase 3 when one of two thought units lacks christ_connection", async () => {
     const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
     const result: any = evaluateAdvance(
@@ -850,5 +857,155 @@ describe("SPRD B3.2: Redemptive Thread → Implications threshold (Field 5 compo
     );
     expect(result.ok).toBe(false);
     expect(result.reason).toMatch(/Christ-Connection entry beside every thought unit/i);
+  });
+});
+
+// SPRD B4.2 — Implications → MPT/MPS threshold. Field 4 (Implications
+// Synthesis) composite: every thought-unit row in observations.divisions
+// .thought_units has a non-empty `implication` column AND
+// `implications.implications_synthesis.synthesis` is non-empty.
+describe("SPRD B4.2: Implications → MPT/MPS threshold (Field 4 composite)", () => {
+  const TU_FULL_BASE = {
+    sentence_layout: {
+      value: [
+        { text: "There is now no condemnation",       depth: 0, kind: "main" },
+        { text: "for those who are in Christ Jesus.", depth: 1, kind: "modifier" },
+      ],
+      na: false,
+    },
+    paraphrases: {
+      value: [{ main_sentence_id: "ms-0", paraphrase: "No condemnation now." }],
+      na: false,
+    },
+  };
+
+  const tuRowFull = (extra: any = {}) => ({
+    thought_unit_summary: "Believers stand uncondemned.",
+    after_line: "2",
+    signal: "",
+    meaning: "The author declares freedom from judgment for those in Christ.",
+    christ_connection: "Christ raises the dead.",
+    ...extra,
+  });
+
+  it("returns ok=false at sub-phase 4 when no implications content (empty-evidence baseline)", async () => {
+    const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
+    const result: any = evaluateAdvance(
+      { id: "test", implications: "" },
+      "sub_phase",
+      4,
+    );
+    expect(result.ok).toBe(false);
+  });
+
+  it("returns ok=false at sub-phase 4 when thought_units lack implication columns", async () => {
+    const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
+    const result: any = evaluateAdvance(
+      {
+        id: "test",
+        observations: JSON.stringify({
+          divisions: {
+            ...TU_FULL_BASE,
+            thought_units: { value: [tuRowFull()], na: false },  // no implication
+          },
+        }),
+        implications: JSON.stringify({
+          implications_synthesis: {
+            synthesis: { value: "Synthesis paragraph in pastor's voice.", na: false },
+          },
+        }),
+      },
+      "sub_phase",
+      4,
+    );
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/Implication entry/i);
+    expect(result.gates).toHaveLength(1);
+    expect(result.gates[0].key).toBe("field_4_implications_synthesis");
+    expect(result.gates[0].met).toBe(false);
+  });
+
+  it("returns ok=false at sub-phase 4 when implications filled but synthesis is empty", async () => {
+    const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
+    const result: any = evaluateAdvance(
+      {
+        id: "test",
+        observations: JSON.stringify({
+          divisions: {
+            ...TU_FULL_BASE,
+            thought_units: { value: [tuRowFull({ implication: "Receive the gift; cease earning." })], na: false },
+          },
+        }),
+        // Some Phase 4 content so empty-evidence baseline passes; synthesis
+        // empty so the Field 4 gate fires.
+        implications: JSON.stringify({
+          theological_significance: {
+            about_god: { value: "God is rich in mercy.", na: false },
+          },
+          implications_synthesis: {
+            synthesis: { value: "", na: false },
+          },
+        }),
+      },
+      "sub_phase",
+      4,
+    );
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/Implications Synthesis paragraph/i);
+  });
+
+  it("returns ok=true at sub-phase 4 when every thought unit has implication and synthesis is filled", async () => {
+    const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
+    const result: any = evaluateAdvance(
+      {
+        id: "test",
+        observations: JSON.stringify({
+          divisions: {
+            ...TU_FULL_BASE,
+            thought_units: { value: [tuRowFull({ implication: "Receive the gift; cease earning." })], na: false },
+          },
+        }),
+        implications: JSON.stringify({
+          implications_synthesis: {
+            synthesis: { value: "This passage teaches that humanity is dead apart from God's mercy …", na: false },
+          },
+        }),
+      },
+      "sub_phase",
+      4,
+    );
+    expect(result.ok).toBe(true);
+    expect(result.gates).toHaveLength(1);
+    expect(result.gates[0].met).toBe(true);
+  });
+
+  it("returns ok=false at sub-phase 4 when one of two thought units lacks implication", async () => {
+    const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
+    const result: any = evaluateAdvance(
+      {
+        id: "test",
+        observations: JSON.stringify({
+          divisions: {
+            ...TU_FULL_BASE,
+            thought_units: {
+              value: [
+                tuRowFull({ implication: "Receive the gift; cease earning." }),
+                tuRowFull({ thought_unit_summary: "Row 2", after_line: "5" }),  // no implication
+              ],
+              na: false,
+            },
+          },
+        }),
+        implications: JSON.stringify({
+          implications_synthesis: {
+            synthesis: { value: "Synthesis.", na: false },
+          },
+        }),
+      },
+      "sub_phase",
+      4,
+    );
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/Implication entry beside every thought unit/i);
   });
 });

@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-04 — sprd B4.2: Field 4 Implications Synthesis + Implications→MPT/MPS gate + PC card removal
+
+- Field 4 (Implications Synthesis) replaces its single primary question with the SFDI 2-question sequence: Q1 `implication_per_unit` is a `cumulative-synthesis-table` reusing B2.2/B3.2 cross-phase plumbing — extends `observations.divisions.thought_units` with the final writable column (`implication`) on top of Phase 1's three columns + Phase 2's `meaning` + Phase 3's `christ_connection` (all read-only), completing the four-phase cumulative table with six columns total. Q2 `synthesis` is a text-prompt stored in `implications.implications_synthesis.synthesis`.
+- StudyTab plumbs `crossPhaseRead` / `crossPhaseWrite` to Phase 4's `SpotlightWorksheet`, mirroring the Phase 2/3 wire-ups.
+- `evaluateAdvance` extends with the Implications → MPT/MPS threshold (`kind=sub_phase, fromIndex=4`) — Field 4 composite gate (every thought-unit row has `implication`, `synthesis` non-empty); returns `{ gates, firstReason }` per B1.6's structured shape.
+- Pastoral Context card removed from `SermonWorkspace.jsx` per the SPRD binding scope decision; PC schema columns preserved defensively, 5 PC-related tour stops removed from `workspaceTourStops.js` (tour rewrite is structural backlog under Component 3).
+- 5 new Field 4 composite-gate unit tests; 1 existing sub_phase=4 test rewritten as the composite tightens the baseline; 358 vitest total green; Vite preview compiled clean. **B-series field-defs reshape COMPLETE across all four sub-phases.**
+
+---
+
 ## 2026-05-04 — sprd B4.0 + B4.1: Phase 4 Implications reshape + StudyTab refactor
 
 - New `IMPLICATIONS_FIELDS` array realizes the SFDI 4-field shape — Theological Significance → Personal Implications → Pastoral Context → Implications Synthesis. The three-way conversation is now structural; Field 4 (Implications Synthesis) is heavy-lifting with overview, single-primary-question pending B4.2.
