@@ -4,8 +4,7 @@ import { getOutline, serializeOutline, getFunctionalElements, serializeFunctiona
 import { sendAIMessage } from "../utils/ai";
 import {
   parseStructuredField, flattenToText,
-  OBSERVE_FIELDS, INTERPRET_FIELDS, REDEMPTIVE_FIELDS,
-  IMPLICATIONS_THEOLOGICAL, IMPLICATIONS_PERSONAL,
+  OBSERVE_FIELDS, INTERPRET_FIELDS, REDEMPTIVE_FIELDS, IMPLICATIONS_FIELDS,
 } from "../utils/studyFields";
 import OutlineBuilder from "./OutlineBuilder";
 import InlineAIResponse from "./InlineAIResponse";
@@ -68,7 +67,7 @@ export default function OutlineTab({ sermon, onUpdate, onTabChange, studySummari
         `\nObservations:\n${flattenToText(obsData, OBSERVE_FIELDS) || "(none)"}`,
         `\nInterpretation:\n${flattenToText(intData, INTERPRET_FIELDS) || "(none)"}`,
         `\nRedemptive Thread:\n${flattenToText(redData, REDEMPTIVE_FIELDS) || "(none)"}`,
-        `\nImplications:\n${flattenToText(impData, [...IMPLICATIONS_THEOLOGICAL, ...IMPLICATIONS_PERSONAL]) || "(none)"}`,
+        `\nImplications:\n${flattenToText(impData, IMPLICATIONS_FIELDS) || "(none)"}`,
       ].join("\n");
       const result = await sendAIMessage(
         [{ role: "user", content: `${exegesisContext}\n\nPropose a sermon outline.` }],

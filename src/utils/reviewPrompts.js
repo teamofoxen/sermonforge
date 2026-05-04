@@ -12,7 +12,14 @@
 import { STEPS, PHASES } from "../constants/steps";
 import { STAGE } from "../core/contracts";
 import { getOutline } from "../utils";
-import { OUTLINE_REVIEW_TASK, CHALLENGE_MPT_TASK } from "../prompts/study";
+import {
+  OUTLINE_REVIEW_TASK, CHALLENGE_MPT_TASK,
+  OBSERVE_REVIEW_TASK, INTERPRET_REVIEW_TASK, REDEMPTIVE_REVIEW_TASK, IMPLICATIONS_REVIEW_TASK,
+} from "../prompts/study";
+import {
+  OBSERVE_FIELDS, INTERPRET_FIELDS, REDEMPTIVE_FIELDS, IMPLICATIONS_FIELDS,
+  parseStructuredField, flattenToText,
+} from "./studyFields";
 
 /**
  * Build the prompt and system message for the "Review My Work" action.
@@ -31,21 +38,39 @@ export function getReviewPrompt(tab, sermon, activeStep) {
   const mps = sermon?.mps || "";
 
   if (tab === STAGE.Study) {
-    const phasePrompts = {
-      [PHASES.OBSERVE]:
-        `Review these observations about ${passage}. Are the main features of the text captured — context, divisions, commands, statements, characters, big ideas? What is missing or underdeveloped?\n\nMy observations:\n${sermon?.observations || "(none)"}`,
-      [PHASES.INTERPRET]:
-        `Review this interpretation work on ${passage}. Does it move from observation to meaning correctly? Are contrasts, recurring ideas, and key words identified? What gaps remain?\n\nMy interpretation:\n${sermon?.interpretation || "(none)"}`,
-      [PHASES.REDEMPTIVE_THREAD]:
-        `Review this redemptive thread summary for ${passage}. Does it accurately locate this passage in redemptive history? Is Christ's role clear and textually grounded, not imported?\n\nMy redemptive thread notes:\n${sermon?.redemptive_thread || "(none)"}`,
-      [PHASES.IMPLICATIONS]:
-        `Review these implications drawn from ${passage}. Are they theologically grounded? Do they address both believers and unbelievers? Do they go deeper than behavioral steps?\n\nMy implications:\n${sermon?.implications || "(none)"}`,
-    };
-
-    if (activeStep && phasePrompts[activeStep]) {
+    if (activeStep === PHASES.OBSERVE) {
+      const obsData = parseStructuredField(sermon?.observations);
+      const filled = flattenToText(obsData, OBSERVE_FIELDS);
       return {
-        system: "Give direct, specific, constructive feedback as a biblical scholar and homiletics mentor would.",
-        prompt: phasePrompts[activeStep],
+        system: OBSERVE_REVIEW_TASK,
+        prompt: `Review observations for ${passage}.\n\nMy observations:\n${filled || "(none yet)"}`,
+      };
+    }
+
+    if (activeStep === PHASES.INTERPRET) {
+      const intData = parseStructuredField(sermon?.interpretation);
+      const filled = flattenToText(intData, INTERPRET_FIELDS);
+      return {
+        system: INTERPRET_REVIEW_TASK,
+        prompt: `Review interpretation work for ${passage}.\n\nMy interpretation:\n${filled || "(none yet)"}`,
+      };
+    }
+
+    if (activeStep === PHASES.REDEMPTIVE_THREAD) {
+      const redData = parseStructuredField(sermon?.redemptive_thread);
+      const filled = flattenToText(redData, REDEMPTIVE_FIELDS);
+      return {
+        system: REDEMPTIVE_REVIEW_TASK,
+        prompt: `Review redemptive-thread work for ${passage}.\n\nMy redemptive thread notes:\n${filled || "(none yet)"}`,
+      };
+    }
+
+    if (activeStep === PHASES.IMPLICATIONS) {
+      const impData = parseStructuredField(sermon?.implications);
+      const filled = flattenToText(impData, IMPLICATIONS_FIELDS);
+      return {
+        system: IMPLICATIONS_REVIEW_TASK,
+        prompt: `Review implications for ${passage}.\n\nMy implications:\n${filled || "(none yet)"}`,
       };
     }
 
@@ -93,10 +118,14 @@ export function getReviewPrompt(tab, sermon, activeStep) {
     }
 
     // Full study review (fallback)
+    const obsFlat = flattenToText(parseStructuredField(sermon?.observations),     OBSERVE_FIELDS);
+    const intFlat = flattenToText(parseStructuredField(sermon?.interpretation),   INTERPRET_FIELDS);
+    const redFlat = flattenToText(parseStructuredField(sermon?.redemptive_thread), REDEMPTIVE_FIELDS);
+    const impFlat = flattenToText(parseStructuredField(sermon?.implications),     IMPLICATIONS_FIELDS);
     return {
       system: "Review this study work as a biblical scholar and homiletics mentor would.",
       prompt:
-        `Review the study work for ${passage}.\n\nObservations: ${sermon?.observations || "(none)"}\n\nInterpretation: ${sermon?.interpretation || "(none)"}\n\nRedemptive thread: ${sermon?.redemptive_thread || "(none)"}\n\nImplications: ${sermon?.implications || "(none)"}\n\nMPT: ${mpt}\nMPS: ${mps}\n\nIs the exegetical work thorough? Is the MPT historically grounded? Does the MPS flow from the text?`,
+        `Review the study work for ${passage}.\n\nObservations:\n${obsFlat || "(none yet)"}\n\nInterpretation:\n${intFlat || "(none yet)"}\n\nRedemptive thread:\n${redFlat || "(none yet)"}\n\nImplications:\n${impFlat || "(none yet)"}\n\nMPT: ${mpt || "(none)"}\nMPS: ${mps || "(none)"}\n\nIs the exegetical work thorough? Is the MPT historically grounded? Does the MPS flow from the text?`,
     };
   }
 

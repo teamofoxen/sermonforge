@@ -6,7 +6,27 @@ import { CONTEXT_SECTIONS } from "../constants/contextSchema";
 import { STAGE } from "../core/contracts";
 import { getOutline, getFunctionalElements } from "../utils";
 import { getMemory } from "./memory";
-import { flattenExegesis } from "./studyFields";
+import { flattenExegesis, parseStructuredField, getQuestionAnswer } from "./studyFields";
+
+/**
+ * Read the pastoral-context substance from a sermon record.
+ *
+ * Post-B4.2: PC's substance lives in Phase 4 Field 3 (pastoral_context.room_specifics
+ * + cost_and_gift) inside the `implications` JSON column. The legacy top-level
+ * columns (background_noise / audience_assumptions / topic_theme) are retained in
+ * the schema but no longer written to from any UI surface; we no longer read
+ * them from the AI context tier.
+ *
+ * @param {object|null|undefined} sermon
+ * @returns {{ room: string, costAndGift: string }}
+ */
+export function readPastoralContext(sermon) {
+  const impParsed = parseStructuredField(sermon?.implications);
+  return {
+    room:        getQuestionAnswer(impParsed, "pastoral_context", "room_specifics").trim(),
+    costAndGift: getQuestionAnswer(impParsed, "pastoral_context", "cost_and_gift").trim(),
+  };
+}
 
 /**
  * Normalize a raw sermon record into a clean object with guaranteed shapes.
@@ -37,6 +57,8 @@ export function normalizeSermon(sermon) {
     ? { big_idea: sectionBigIdea }
     : null;
 
+  const pc = readPastoralContext(sermon);
+
   return {
     passage:             sermon?.passage             ?? "",
     mpt:                 sermon?.mpt                 ?? "",
@@ -45,35 +67,20 @@ export function normalizeSermon(sermon) {
     functionalElements:  getFunctionalElements(sermon),
     series,
     section,
-    topic_theme:          sermon?.topic_theme          ?? "",
-    audience_assumptions: sermon?.audience_assumptions ?? "",
-    background_noise:     sermon?.background_noise     ?? "",
+    pcRoom:              pc.room,
+    pcCostAndGift:       pc.costAndGift,
   };
 }
 
 /**
  * Compress exegesis fields into a single concise paragraph.
- * Skips any field that is empty. Returns "" if all fields are empty.
+ * Delegates to the structured flattener which knows about per-question fields.
  *
  * @param {object} sermon — raw or normalized sermon record
  * @returns {string}
  */
 export function summarizeExegesis(sermon) {
-  // Detect structured JSON in any exegesis column — if found, use the
-  // structured flattener which knows about per-question fields.
-  const cols = [sermon?.observations, sermon?.interpretation, sermon?.redemptive_thread, sermon?.implications];
-  const hasStructured = cols.some(c => typeof c === "string" && c.trim().startsWith("{"));
-  if (hasStructured) return flattenExegesis(sermon);
-
-  // Legacy plain-text path
-  const parts = [
-    sermon?.observations      && `Observations: ${sermon.observations.trim()}`,
-    sermon?.interpretation    && `Interpretation: ${sermon.interpretation.trim()}`,
-    sermon?.redemptive_thread && `Redemptive thread: ${sermon.redemptive_thread.trim()}`,
-    sermon?.implications      && `Implications: ${sermon.implications.trim()}`,
-  ].filter(Boolean);
-
-  return parts.join(" | ");
+  return flattenExegesis(sermon);
 }
 
 /**
@@ -485,15 +492,15 @@ export function buildTiers({ normalized, compressed, libraryChunks = [], theolog
   }
 
   // Tier 7 — pastoral context. Always-on (pastoralContext: true at every step).
-  // Gated by content, not step: only emits when at least one field has content.
-  // Budget: TIER_LIMITS.tier7 chars shared across the three fields; applied once
-  // to the joined string so no individual field is over-privileged.
+  // Source: Phase 4 Field 3 (implications.pastoral_context) — room_specifics
+  // and cost_and_gift. Gated by content, not step: only emits when at least
+  // one question has content. Budget: TIER_LIMITS.tier7 chars shared across
+  // both fields; applied once to the joined string.
   let tier7 = null;
   if (inc.pastoralContext) {
     const fields = [
-      normalized.background_noise?.trim()     && `The Cultural Moment: ${normalized.background_noise.trim()}`,
-      normalized.audience_assumptions?.trim() && `The Room: ${normalized.audience_assumptions.trim()}`,
-      normalized.topic_theme?.trim()          && `The Sermon's Work: ${normalized.topic_theme.trim()}`,
+      normalized.pcRoom        && `The Room: ${normalized.pcRoom}`,
+      normalized.pcCostAndGift && `The Sermon's Work: ${normalized.pcCostAndGift}`,
     ].filter(Boolean);
     if (fields.length > 0) {
       const joined = fields.join("\n");
@@ -958,10 +965,10 @@ export function buildAdaptiveHints(memory, step, sermonId) {
  */
 export function describeContext({ sermon, step, theologyMode = false }) {
   const sections = [];
+  const pc = readPastoralContext(sermon);
   const pcFields = [
-    sermon?.background_noise?.trim()     && "The Cultural Moment",
-    sermon?.audience_assumptions?.trim() && "The Room",
-    sermon?.topic_theme?.trim()          && "The Sermon's Work",
+    pc.room        && "The Room",
+    pc.costAndGift && "The Sermon's Work",
   ].filter(Boolean);
 
   if (theologyMode) {

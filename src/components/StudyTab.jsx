@@ -4,7 +4,7 @@ import { useTour } from "../contexts/TourContext";
 import { getOutline, serializeOutline, getFunctionalElements, serializeFunctionalElements, autoResize } from "../utils";
 import { STEPS, PHASES, PHASE_SEQUENCE, STEP_SEQUENCE } from "../constants/steps";
 import { sendAIMessage } from "../utils/ai";
-import { buildContext } from "../utils/contextBuilder";
+import { buildContext, readPastoralContext } from "../utils/contextBuilder";
 import {
   OBSERVE_FIELDS, INTERPRET_FIELDS,
   REDEMPTIVE_FIELDS,
@@ -380,7 +380,8 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
     setMpsProposal(null);
     try {
       const step = STEPS.MPT_MPS;
-      const hasPC = !!(sermon.background_noise?.trim() || sermon.audience_assumptions?.trim() || sermon.topic_theme?.trim());
+      const pc     = readPastoralContext(sermon);
+      const hasPC  = !!(pc.room || pc.costAndGift);
       const context = buildContext({ sermon, step });
       const userContent = context
         ? `CONTEXT:\n${context}\n\nUSER REQUEST:\nDraft a Main Point of the Sermon (MPS) grounded in the MPT.`

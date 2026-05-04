@@ -72,11 +72,13 @@ function activeTiers(t) {
 }
 
 // NORM with pastoral context fields populated.
+// Source: Phase 4 Field 3 (implications.pastoral_context) — room_specifics
+// + cost_and_gift; both surface on the normalized record as pcRoom /
+// pcCostAndGift via normalizeSermon().
 const NORM_WITH_PASTORAL = {
   ...NORM,
-  topic_theme:          "Lament",
-  audience_assumptions: "Congregation processing a recent unexpected death in the community.",
-  background_noise:     "Three families lost jobs this week; community is carrying grief and uncertainty.",
+  pcRoom:        "Congregation processing a recent unexpected death in the community; three families lost jobs this week.",
+  pcCostAndGift: "Naming this loss as lament rather than rushing to resolution. The gift: God meets the grief-bearing church in the lament psalms.",
 };
 
 // ── Memory that meets the threshold gate (≥1 pattern, ≥2 history items) ────────
@@ -434,8 +436,8 @@ describe("tier7 — pastoral context: always-on, content-gated", () => {
     }
   });
 
-  it("null when all three fields are empty", () => {
-    const normEmpty = { ...NORM, topic_theme: "", audience_assumptions: "", background_noise: "" };
+  it("null when both fields are empty", () => {
+    const normEmpty = { ...NORM, pcRoom: "", pcCostAndGift: "" };
     for (const step of [...STEP_SEQUENCE, ...PHASE_SEQUENCE]) {
       const t = tiers(step, normEmpty);
       expect(t.tier7).toBeNull();
@@ -451,16 +453,15 @@ describe("tier7 — pastoral context: always-on, content-gated", () => {
   });
 
   it("partial fill — only non-empty fields appear in output", () => {
-    const normPartial = { ...NORM, topic_theme: "Lament", audience_assumptions: "", background_noise: "" };
+    const normPartial = { ...NORM, pcRoom: "", pcCostAndGift: "Lament" };
     const t = tiers(STEPS.OUTLINE, normPartial);
     expect(t.tier7).not.toBeNull();
     expect(t.tier7).toContain("The Sermon's Work: Lament");
     expect(t.tier7).not.toContain("The Room:");
-    expect(t.tier7).not.toContain("The Cultural Moment:");
   });
 
-  it("single-word topic ('Lament') is included, not suppressed", () => {
-    const normSingleWord = { ...NORM, topic_theme: "Lament", audience_assumptions: "", background_noise: "" };
+  it("single-word value ('Lament') is included, not suppressed", () => {
+    const normSingleWord = { ...NORM, pcRoom: "", pcCostAndGift: "Lament" };
     const t = tiers(STEPS.MPT_MPS, normSingleWord);
     expect(t.tier7).not.toBeNull();
     expect(t.tier7).toContain("Lament");
@@ -474,9 +475,8 @@ describe("tier7 — pastoral context: always-on, content-gated", () => {
     expect(t.tier4).toBeNull();
   });
 
-  it("all three fields appear when all are populated", () => {
+  it("both fields appear when both are populated", () => {
     const t = tiers(STEPS.OUTLINE, NORM_WITH_PASTORAL);
-    expect(t.tier7).toContain("The Cultural Moment:");
     expect(t.tier7).toContain("The Room:");
     expect(t.tier7).toContain("The Sermon's Work:");
   });
@@ -485,7 +485,7 @@ describe("tier7 — pastoral context: always-on, content-gated", () => {
     const t = tiers(STEPS.OUTLINE, NORM_WITH_PASTORAL);
     const output = assembleContext(t);
     expect(output).toContain("[THIS SERMON]");
-    expect(output).toContain("The Sermon's Work: Lament");
+    expect(output).toContain("The Sermon's Work:");
   });
 
   it("[THIS SERMON] appears after [PASSAGE & MPT] and before [INTERPRETATION]", () => {
@@ -500,7 +500,7 @@ describe("tier7 — pastoral context: always-on, content-gated", () => {
   });
 
   it("[THIS SERMON] absent from assembleContext() when fields are empty", () => {
-    const normEmpty = { ...NORM, topic_theme: "", audience_assumptions: "", background_noise: "" };
+    const normEmpty = { ...NORM, pcRoom: "", pcCostAndGift: "" };
     const t = tiers(STEPS.OUTLINE, normEmpty);
     const output = assembleContext(t);
     expect(output).not.toContain("[THIS SERMON]");
@@ -508,37 +508,59 @@ describe("tier7 — pastoral context: always-on, content-gated", () => {
 });
 
 describe("normalizeSermon() — pastoral context fields", () => {
-  it("returns '' for topic_theme when sermon is null", () => {
-    expect(normalizeSermon(null).topic_theme).toBe("");
+  // Source: Phase 4 Field 3 (implications.pastoral_context). Surfaced on the
+  // normalized record as pcRoom / pcCostAndGift.
+
+  it("returns '' for pcRoom and pcCostAndGift when sermon is null", () => {
+    const n = normalizeSermon(null);
+    expect(n.pcRoom).toBe("");
+    expect(n.pcCostAndGift).toBe("");
   });
 
-  it("returns '' for audience_assumptions when sermon is null", () => {
-    expect(normalizeSermon(null).audience_assumptions).toBe("");
-  });
-
-  it("returns '' for background_noise when sermon is null", () => {
-    expect(normalizeSermon(null).background_noise).toBe("");
-  });
-
-  it("returns '' for each field when sermon has no pastoral fields", () => {
+  it("returns '' when sermon has no implications field", () => {
     const n = normalizeSermon({ passage: "Romans 8:1", mpt: "God frees sinners" });
-    expect(n.topic_theme).toBe("");
-    expect(n.audience_assumptions).toBe("");
-    expect(n.background_noise).toBe("");
+    expect(n.pcRoom).toBe("");
+    expect(n.pcCostAndGift).toBe("");
   });
 
-  it("returns '' when pastoral fields are null on the sermon", () => {
-    const n = normalizeSermon({ topic_theme: null, audience_assumptions: null, background_noise: null });
-    expect(n.topic_theme).toBe("");
-    expect(n.audience_assumptions).toBe("");
-    expect(n.background_noise).toBe("");
+  it("returns '' when implications is null", () => {
+    const n = normalizeSermon({ implications: null });
+    expect(n.pcRoom).toBe("");
+    expect(n.pcCostAndGift).toBe("");
   });
 
-  it("passes through non-empty values unchanged", () => {
-    const n = normalizeSermon({ topic_theme: "Doubt", audience_assumptions: "Seekers present", background_noise: "" });
-    expect(n.topic_theme).toBe("Doubt");
-    expect(n.audience_assumptions).toBe("Seekers present");
-    expect(n.background_noise).toBe("");
+  it("reads pcRoom from implications.pastoral_context.room_specifics", () => {
+    const implications = JSON.stringify({
+      pastoral_context: {
+        room_specifics: { value: "Seekers present", na: false },
+      },
+    });
+    const n = normalizeSermon({ implications });
+    expect(n.pcRoom).toBe("Seekers present");
+    expect(n.pcCostAndGift).toBe("");
+  });
+
+  it("reads pcCostAndGift from implications.pastoral_context.cost_and_gift", () => {
+    const implications = JSON.stringify({
+      pastoral_context: {
+        cost_and_gift: { value: "Costly: facing doubt; gift: God meets the doubting.", na: false },
+      },
+    });
+    const n = normalizeSermon({ implications });
+    expect(n.pcRoom).toBe("");
+    expect(n.pcCostAndGift).toBe("Costly: facing doubt; gift: God meets the doubting.");
+  });
+
+  it("treats N/A questions as empty", () => {
+    const implications = JSON.stringify({
+      pastoral_context: {
+        room_specifics: { value: "Some text", na: true },
+        cost_and_gift:  { value: "Other text", na: false },
+      },
+    });
+    const n = normalizeSermon({ implications });
+    expect(n.pcRoom).toBe("");
+    expect(n.pcCostAndGift).toBe("Other text");
   });
 });
 

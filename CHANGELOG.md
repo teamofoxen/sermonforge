@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-04 — sprd C5: Review prompts + PC tier rewire to Phase 4 Field 3
+
+- `src/utils/reviewPrompts.js` — AIPanel "Review My Work" branches for Observe / Interpret / Redemptive Thread / Implications plus the full-study fallback rewired to use the centralized `<PHASE>_REVIEW_TASK` constants from `src/prompts/study.js` + `flattenToText(parseStructuredField(<column>), <PHASE>_FIELDS)`; drops retired-key references ("commands", "statements", "key words", "believers and unbelievers") and replaces raw JSON dumps with field-list-driven flattened text matching what StudyTab's per-phase Review buttons already use.
+- `src/components/OutlineTab.jsx` — outline-builder exegesis context switched from retired Phase 4 key arrays (`IMPLICATIONS_THEOLOGICAL` + `IMPLICATIONS_PERSONAL`) to `IMPLICATIONS_FIELDS` so the outline AI sees Phase 4 work written under the new 4-field shape.
+- Pastoral Context tier (tier 7) rewired in `src/utils/contextBuilder.js` to read from Phase 4 Field 3 (`implications.pastoral_context.room_specifics` + `cost_and_gift`) instead of the removed-card schema columns; new exported `readPastoralContext(sermon) → { room, costAndGift }` helper consumed by `AIPanel.jsx` theology-mode pcLines and `StudyTab.jsx` `hasPC`; `normalizeSermon` surfaces `pcRoom` / `pcCostAndGift` instead of the legacy `topic_theme` / `audience_assumptions` / `background_noise` trio; `summarizeExegesis` legacy plain-text path removed (dead code post-A1.0 envelope shape).
+- `src/prompts/sermon.js` MESSAGE CONTEXT RULES THIS_SERMON line rewritten for the two-field shape — "The Room is who in this congregation the text is speaking into" / "The Sermon's Work is the cost and gift this text holds for those people" — replacing the old three-field Cultural Moment / Room / Sermon's Work framing tied to the removed PC card.
+- `src/utils/contextBuilder.test.js` fixtures + normalizeSermon PC tests rewritten against the new `pcRoom` / `pcCostAndGift` shape sourced from `implications.pastoral_context` JSON envelope (with N/A handling); 358 vitest total green; Vite preview compiled clean.
+
+---
+
 ## 2026-05-04 — sprd: Phase 1/2/3 Review-button flattenToText fix
 
 - Phase 1 / 2 / 3 Review buttons in `StudyTab.jsx` previously built the AI-prompt "filled" string via `getPrimaryAnswer(data, f.key).trim()` per field, which silently returned `""` for multi-question fields (no `primary` question key).

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import { autoResize } from "../utils";
 import { sendAIMessage } from "../utils/ai";
-import { buildContext, describeContext } from "../utils/contextBuilder";
+import { buildContext, describeContext, readPastoralContext } from "../utils/contextBuilder";
 import { captureResponsePatterns } from "../utils/memory";
 import { buildSystemPrompt, appendTaskDirective, getActiveRole, THEOLOGY_RESEARCH_PROMPT, INCORPORATE_REVISION_PROMPT } from "../prompts/sermon";
 import { formatChunkForLLM, dedupSources } from "../utils/theologyCitation";
@@ -220,14 +220,15 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
           // chunks under unrelated context tiers.
           // Instead: a stripped-down research prompt + sources-only message.
           // Pastoral Context (tier 7) IS preserved when present, since
-          // The Cultural Moment / The Room / The Sermon's Work shape *how* the
-          // research is read even in free-form mode.
+          // The Room and The Sermon's Work shape *how* the research is read
+          // even in free-form mode. Source: Phase 4 Field 3
+          // (implications.pastoral_context) per B4.2 reshape.
           const sourcesBlock = theologyChunks.join("\n\n");
           const passageLine = sermon?.passage ? `\nPASSAGE: ${sermon.passage}\n` : "";
+          const pc = readPastoralContext(sermon);
           const pcLines = [
-            sermon?.background_noise?.trim()     && `The Cultural Moment: ${sermon.background_noise.trim()}`,
-            sermon?.audience_assumptions?.trim() && `The Room: ${sermon.audience_assumptions.trim()}`,
-            sermon?.topic_theme?.trim()          && `The Sermon's Work: ${sermon.topic_theme.trim()}`,
+            pc.room        && `The Room: ${pc.room}`,
+            pc.costAndGift && `The Sermon's Work: ${pc.costAndGift}`,
           ].filter(Boolean);
           const pcBlock = pcLines.length > 0
             ? `\nPASTORAL CONTEXT:\n${pcLines.join("\n")}\n`
