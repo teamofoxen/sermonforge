@@ -11,6 +11,7 @@ import {
   IMPLICATIONS_THEOLOGICAL, IMPLICATIONS_PERSONAL,
   IMPLICATIONS_UNBELIEVER_KEY, IMPLICATIONS_COMPILED_KEY,
   parseStructuredField, serializeStructuredField,
+  getPrimaryAnswer, setPrimaryAnswer, hasAnyAnswer,
 } from "../utils/studyFields";
 import OutlineBuilder from "./OutlineBuilder";
 import InlineAIResponse from "./InlineAIResponse";
@@ -231,7 +232,7 @@ function StructuredWorksheet({ fields, data, onChange, legacyNotes }) {
           <textarea
             className="field-textarea"
             rows={2}
-            value={data[f.key] || ""}
+            value={getPrimaryAnswer(data, f.key)}
             onChange={(e) => onChange(f.key, e.target.value)}
             onInput={(e) => autoResize(e.target)}
             ref={(el) => autoResize(el)}
@@ -329,7 +330,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
   const impData = useMemo(() => parseStructuredField(sermon.implications), [sermon.implications]);
 
   const updateStructured = useCallback((column, currentData, key, value) => {
-    const next = { ...currentData, [key]: value };
+    const next = setPrimaryAnswer(currentData, key, value);
     onUpdate({ [column]: serializeStructuredField(next) });
   }, [onUpdate]);
 
@@ -924,8 +925,9 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                   size="sm"
                   onClick={() => {
                     const filled = OBSERVE_FIELDS
-                      .filter(f => obsData[f.key]?.trim())
-                      .map(f => `${f.label}: ${obsData[f.key].trim()}`)
+                      .map(f => ({ f, v: getPrimaryAnswer(obsData, f.key).trim() }))
+                      .filter(({ v }) => v)
+                      .map(({ f, v }) => `${f.label}: ${v}`)
                       .join("\n\n");
                     fetchInline(
                       "observe",
@@ -962,8 +964,9 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                   size="sm"
                   onClick={() => {
                     const filled = INTERPRET_FIELDS
-                      .filter(f => intData[f.key]?.trim())
-                      .map(f => `${f.label}: ${intData[f.key].trim()}`)
+                      .map(f => ({ f, v: getPrimaryAnswer(intData, f.key).trim() }))
+                      .filter(({ v }) => v)
+                      .map(({ f, v }) => `${f.label}: ${v}`)
                       .join("\n\n");
                     fetchInline(
                       "interpret",
@@ -1008,8 +1011,9 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                       setRedSummaryProposal(null);
                       try {
                         const filled = REDEMPTIVE_FIELDS
-                          .filter(f => redData[f.key]?.trim())
-                          .map(f => `${f.label}: ${redData[f.key].trim()}`)
+                          .map(f => ({ f, v: getPrimaryAnswer(redData, f.key).trim() }))
+                          .filter(({ v }) => v)
+                          .map(({ f, v }) => `${f.label}: ${v}`)
                           .join("\n\n");
                         const step = PHASES.REDEMPTIVE_THREAD;
                         const context = buildContext({ sermon, step });
@@ -1036,7 +1040,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                 <textarea
                   className="field-textarea"
                   rows={3}
-                  value={redData[REDEMPTIVE_SUMMARY_KEY] || ""}
+                  value={getPrimaryAnswer(redData, REDEMPTIVE_SUMMARY_KEY)}
                   onChange={(e) => updateStructured("redemptive_thread", redData, REDEMPTIVE_SUMMARY_KEY, e.target.value)}
                   onInput={(e) => autoResize(e.target)}
                   ref={(el) => autoResize(el)}
@@ -1046,9 +1050,9 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                   loading={draftLoading === "red_summary"}
                   proposal={redSummaryProposal}
                   label="AI proposes summary"
-                  acceptLabel={redData[REDEMPTIVE_SUMMARY_KEY]?.trim() ? "Replace summary" : "Use this"}
+                  acceptLabel={getPrimaryAnswer(redData, REDEMPTIVE_SUMMARY_KEY).trim() ? "Replace summary" : "Use this"}
                   onAccept={() => {
-                    const next = { ...redData, [REDEMPTIVE_SUMMARY_KEY]: redSummaryProposal };
+                    const next = setPrimaryAnswer(redData, REDEMPTIVE_SUMMARY_KEY, redSummaryProposal);
                     onUpdate({ redemptive_thread: serializeStructuredField(next) });
                     setRedSummaryProposal(null);
                   }}
@@ -1061,10 +1065,11 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                   size="sm"
                   onClick={() => {
                     const filled = REDEMPTIVE_FIELDS
-                      .filter(f => redData[f.key]?.trim())
-                      .map(f => `${f.label}: ${redData[f.key].trim()}`)
+                      .map(f => ({ f, v: getPrimaryAnswer(redData, f.key).trim() }))
+                      .filter(({ v }) => v)
+                      .map(({ f, v }) => `${f.label}: ${v}`)
                       .join("\n\n");
-                    const summary = redData[REDEMPTIVE_SUMMARY_KEY]?.trim() || "";
+                    const summary = getPrimaryAnswer(redData, REDEMPTIVE_SUMMARY_KEY).trim();
                     fetchInline(
                       "redemptive",
                       `Redemptive thread answers:\n\n${filled}\n\n${summary ? `Summary: ${summary}` : ""}`,
@@ -1115,7 +1120,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                 <textarea
                   className="field-textarea"
                   rows={2}
-                  value={impData[IMPLICATIONS_UNBELIEVER_KEY] || ""}
+                  value={getPrimaryAnswer(impData, IMPLICATIONS_UNBELIEVER_KEY)}
                   onChange={(e) => updateStructured("implications", impData, IMPLICATIONS_UNBELIEVER_KEY, e.target.value)}
                   onInput={(e) => autoResize(e.target)}
                   ref={(el) => autoResize(el)}
@@ -1135,14 +1140,16 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                       setImpCompileProposal(null);
                       try {
                         const theo = IMPLICATIONS_THEOLOGICAL
-                          .filter(f => impData[f.key]?.trim())
-                          .map(f => `${f.label} ${impData[f.key].trim()}`)
+                          .map(f => ({ f, v: getPrimaryAnswer(impData, f.key).trim() }))
+                          .filter(({ v }) => v)
+                          .map(({ f, v }) => `${f.label} ${v}`)
                           .join("\n");
                         const pers = IMPLICATIONS_PERSONAL
-                          .filter(f => impData[f.key]?.trim())
-                          .map(f => `${f.label} ${impData[f.key].trim()}`)
+                          .map(f => ({ f, v: getPrimaryAnswer(impData, f.key).trim() }))
+                          .filter(({ v }) => v)
+                          .map(({ f, v }) => `${f.label} ${v}`)
                           .join("\n");
-                        const unb = impData[IMPLICATIONS_UNBELIEVER_KEY]?.trim() || "";
+                        const unb = getPrimaryAnswer(impData, IMPLICATIONS_UNBELIEVER_KEY).trim();
                         const step = PHASES.IMPLICATIONS;
                         const context = buildContext({ sermon, step });
                         const userRequest = `Implications to compile:\n\nTheological significance:\n${theo || "(none)"}\n\nPersonal implications:\n${pers || "(none)"}\n\nImplications for unbelievers:\n${unb || "(none)"}`;
@@ -1168,7 +1175,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                 <textarea
                   className="field-textarea"
                   rows={4}
-                  value={impData[IMPLICATIONS_COMPILED_KEY] || ""}
+                  value={getPrimaryAnswer(impData, IMPLICATIONS_COMPILED_KEY)}
                   onChange={(e) => updateStructured("implications", impData, IMPLICATIONS_COMPILED_KEY, e.target.value)}
                   onInput={(e) => autoResize(e.target)}
                   ref={(el) => autoResize(el)}
@@ -1178,9 +1185,9 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                   loading={draftLoading === "imp_compile"}
                   proposal={impCompileProposal}
                   label="AI proposes compiled implications"
-                  acceptLabel={impData[IMPLICATIONS_COMPILED_KEY]?.trim() ? "Replace compiled list" : "Use this"}
+                  acceptLabel={getPrimaryAnswer(impData, IMPLICATIONS_COMPILED_KEY).trim() ? "Replace compiled list" : "Use this"}
                   onAccept={() => {
-                    const next = { ...impData, [IMPLICATIONS_COMPILED_KEY]: impCompileProposal };
+                    const next = setPrimaryAnswer(impData, IMPLICATIONS_COMPILED_KEY, impCompileProposal);
                     onUpdate({ implications: serializeStructuredField(next) });
                     setImpCompileProposal(null);
                   }}
@@ -1194,10 +1201,11 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                   size="sm"
                   onClick={() => {
                     const allFields = [...IMPLICATIONS_THEOLOGICAL, ...IMPLICATIONS_PERSONAL]
-                      .filter(f => impData[f.key]?.trim())
-                      .map(f => `${f.label} ${impData[f.key].trim()}`)
+                      .map(f => ({ f, v: getPrimaryAnswer(impData, f.key).trim() }))
+                      .filter(({ v }) => v)
+                      .map(({ f, v }) => `${f.label} ${v}`)
                       .join("\n\n");
-                    const compiled = impData[IMPLICATIONS_COMPILED_KEY]?.trim() || "";
+                    const compiled = getPrimaryAnswer(impData, IMPLICATIONS_COMPILED_KEY).trim();
                     fetchInline(
                       "implications",
                       `Implications:\n\n${allFields}\n\n${compiled ? `Compiled list: ${compiled}` : ""}`,
@@ -1251,7 +1259,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
             <div className="field-group" data-tour-id="mpt-field">
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "5px" }}>
                 <label className="field-label" style={{ marginBottom: 0 }}>Main Point of the Text (MPT)</label>
-                {(sermon.passage || Object.keys(obsData).some(k => k !== "legacy_notes" && obsData[k]?.trim())) && (
+                {(sermon.passage || hasAnyAnswer(obsData)) && (
                   <SecondaryButton
                     size="sm"
                     onClick={generateMPT}

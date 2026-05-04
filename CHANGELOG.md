@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-04 — sprd A1.0: per-question envelope shape foundation
+
+- Storage shape inside `observations`/`interpretation`/`redemptive_thread`/`implications` JSON columns moves to per-field per-question envelopes `{value, na}` keyed by stable question identifiers; `studyFields.js` adds `getQuestionAnswer`, `setQuestionNA`, `getPrimaryAnswer`, `applyFieldValueMap`, `answeredQuestions`, `hasAnyAnswer` helpers.
+- `evaluateAdvance` and `buildSubPhaseEvidence` read evidence via `answeredQuestions`, excluding N/A while preserving `legacy_notes`.
+- `StudyTab` textareas, `AIPanel` DiffModal/handleAcceptDiff, and `incorporateHelpers` adapt to the envelope shape through `getPrimaryAnswer` / `applyFieldValueMap`.
+- `parseStructuredField` auto-coerces older flat-string-per-field JSON on read (defensive, not a migration) and short-circuits when already envelope-shaped.
+- Aligned SPRD lines 62 and 84 wording with binding decision #2 — migration mapping is defensive reference, not authoritative spec.
+
+---
+
 ## 2026-05-04 — sprd: reframe migration spec as defensive-only
 
 - Reframed § 9 (Per-phase migration mapping) header and intro from "binding spec for Option C" to defensive reference — no production sermons exist as of 2026-05-04, so no migration logic ships in A1 or B1–B4.

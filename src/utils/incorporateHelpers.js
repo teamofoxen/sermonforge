@@ -22,6 +22,7 @@ import {
   IMPLICATIONS_UNBELIEVER_KEY,
   IMPLICATIONS_COMPILED_KEY,
   parseStructuredField,
+  getPrimaryAnswer,
 } from "./studyFields";
 
 /**
@@ -79,15 +80,22 @@ export function getCurrentFieldData(config, sermon) {
  * Build the incorporate prompt that asks the AI to revise current content
  * based on review feedback.
  *
- * @param {{ label: string, fieldDefs: Array<{ key: string, label: string }> }} config
- * @param {object} current       — current field values keyed by fieldDef.key
+ * For JSON-column configs, `current` is the new-shape per-field per-question
+ * envelope object; field values are read via getPrimaryAnswer. For mpt_mps,
+ * `current` is the flat {mpt, mps} object getCurrentFieldData returns.
+ *
+ * @param {{ type: string, label: string, fieldDefs: Array<{ key: string, label: string }> }} config
+ * @param {object} current       — current field data (envelope shape for JSON columns)
  * @param {string} reviewContent — the AI review text to incorporate
  * @returns {string}
  */
 export function buildIncorporatePrompt(config, current, reviewContent) {
   const keys = config.fieldDefs.map(f => f.key);
+  const valueOf = config.type === "mpt_mps"
+    ? (key) => current?.[key] || ""
+    : (key) => getPrimaryAnswer(current, key);
   const currentLabeled = config.fieldDefs
-    .map(f => `${f.label}: ${current[f.key] || "(empty)"}`)
+    .map(f => `${f.label}: ${valueOf(f.key) || "(empty)"}`)
     .join("\n");
 
   return (

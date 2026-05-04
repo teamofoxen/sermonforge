@@ -14,6 +14,8 @@ import {
 } from "../db/database";
 import {
   serializeStructuredField,
+  getPrimaryAnswer,
+  applyFieldValueMap,
 } from "../utils/studyFields";
 import {
   parseAIJson,
@@ -320,11 +322,12 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
 
   function handleAcceptDiff() {
     if (!diffData || !onUpdate) return;
-    const { config, proposed } = diffData;
+    const { config, current, proposed } = diffData;
     if (config.type === "mpt_mps") {
       onUpdate({ mpt: proposed.mpt ?? sermon?.mpt ?? "", mps: proposed.mps ?? sermon?.mps ?? "" });
     } else {
-      onUpdate({ [config.column]: serializeStructuredField(proposed) });
+      const next = applyFieldValueMap(current, proposed);
+      onUpdate({ [config.column]: serializeStructuredField(next) });
     }
     setDiffData(null);
   }
@@ -681,8 +684,14 @@ function IncorporateButton({ onClick, disabled }) {
 }
 
 function DiffModal({ config, current, proposed, onAccept, onDiscard }) {
+  // mpt_mps's `current` is flat {mpt, mps}; JSON-column configs carry the new
+  // per-field per-question envelope shape — read the primary answer for the
+  // diff comparison.
+  const readCurrent = config.type === "mpt_mps"
+    ? (key) => current?.[key] ?? ""
+    : (key) => getPrimaryAnswer(current, key);
   const changed = config.fieldDefs.filter(f => {
-    const oldVal = (current[f.key] || "").trim();
+    const oldVal = readCurrent(f.key).trim();
     const newVal = (proposed[f.key] || "").trim();
     return oldVal !== newVal;
   });
@@ -713,7 +722,7 @@ function DiffModal({ config, current, proposed, onAccept, onDiscard }) {
                   <div>
                     <div style={{ fontSize: "10px", color: "var(--ink-ghost)", marginBottom: "3px" }}>BEFORE</div>
                     <div style={{ background: "var(--parchment)", borderRadius: "4px", padding: "8px 10px", fontSize: "13px", color: "var(--ink-soft)", whiteSpace: "pre-wrap", minHeight: "40px" }}>
-                      {current[f.key] || <em style={{ opacity: 0.5 }}>empty</em>}
+                      {readCurrent(f.key) || <em style={{ opacity: 0.5 }}>empty</em>}
                     </div>
                   </div>
                   <div>

@@ -1,8 +1,29 @@
 // studyFields.js — Structured field definitions and helpers for the 4-phase exegesis worksheet.
 //
-// Each phase stores its data as JSON in the existing sermon column
-// (observations, interpretation, redemptive_thread, implications).
-// Legacy plain-text data is preserved in a "legacy_notes" key when detected.
+// On-disk shape per JSON column (observations / interpretation / redemptive_thread / implications):
+//
+//   sermon[column] = {
+//     [fieldKey]: {
+//       [questionKey]: { value: <string|list>, na: <boolean> },
+//       ...
+//     },
+//     ...,
+//     legacy_notes?: <string>
+//   }
+//
+// Each field is a sub-object keyed by stable question identifiers. Each
+// question's answer is an envelope `{value, na}`. For text-prompt questions
+// the value is a string; for structured-exercise questions (introduced when
+// the multi-question field shapes land) the value is a structured list.
+// na=true means the pastor explicitly marked the question as inapplicable;
+// N/A questions are not counted as evidence.
+//
+// Until SFDI's per-field question sequences land per-phase, every existing
+// field has one question keyed `primary` (DEFAULT_QUESTION_KEY).
+//
+// A free-text-only column value is preserved under `legacy_notes`. An older
+// flat string-per-field JSON shape is auto-coerced to envelope shape on read
+// — a defensive read path, not a migration; no production sermons exist.
 
 import { tryParse } from "../utils";
 
@@ -71,12 +92,118 @@ export const IMPLICATIONS_PERSONAL = [
 export const IMPLICATIONS_UNBELIEVER_KEY = "unbeliever";
 export const IMPLICATIONS_COMPILED_KEY = "compiled";
 
+// Default question key used until a field's SFDI question sequence lands.
+export const DEFAULT_QUESTION_KEY = "primary";
+
+// Top-level keys reserved for non-field metadata (not iterated as fields).
+const RESERVED_TOP_KEYS = new Set(["legacy_notes"]);
+
+// ── Per-question helpers ─────────────────────────────────────────────────────
+
+// Read a question's answer value. Returns "" when missing or N/A.
+export function getQuestionAnswer(fieldData, fieldKey, questionKey = DEFAULT_QUESTION_KEY) {
+  const field = fieldData?.[fieldKey];
+  if (!field || typeof field !== "object") return "";
+  const q = field[questionKey];
+  if (!q || typeof q !== "object") return "";
+  if (q.na) return "";
+  return q.value ?? "";
+}
+
+// Read a question's N/A flag.
+export function isQuestionNA(fieldData, fieldKey, questionKey = DEFAULT_QUESTION_KEY) {
+  const field = fieldData?.[fieldKey];
+  if (!field || typeof field !== "object") return false;
+  return !!field[questionKey]?.na;
+}
+
+// Set a question's answer value. Returns a new fieldData object (immutable).
+// Preserves the question's existing N/A flag.
+export function setQuestionAnswer(fieldData, fieldKey, questionKey, value) {
+  const next = { ...(fieldData || {}) };
+  const existingField = next[fieldKey] && typeof next[fieldKey] === "object" ? next[fieldKey] : {};
+  const existingQ = existingField[questionKey] && typeof existingField[questionKey] === "object" ? existingField[questionKey] : {};
+  next[fieldKey] = {
+    ...existingField,
+    [questionKey]: { value, na: !!existingQ.na },
+  };
+  return next;
+}
+
+// Set a question's N/A flag. When marked N/A, the value is preserved (so the
+// pastor can unmark and recover their work) but is not counted as evidence.
+export function setQuestionNA(fieldData, fieldKey, questionKey, na) {
+  const next = { ...(fieldData || {}) };
+  const existingField = next[fieldKey] && typeof next[fieldKey] === "object" ? next[fieldKey] : {};
+  const existingQ = existingField[questionKey] && typeof existingField[questionKey] === "object" ? existingField[questionKey] : {};
+  next[fieldKey] = {
+    ...existingField,
+    [questionKey]: { value: existingQ.value ?? "", na: !!na },
+  };
+  return next;
+}
+
+// Convenience: set the default question's value for a field.
+export function setPrimaryAnswer(fieldData, fieldKey, value) {
+  return setQuestionAnswer(fieldData, fieldKey, DEFAULT_QUESTION_KEY, value);
+}
+
+// Convenience: read the default question's value for a field.
+export function getPrimaryAnswer(fieldData, fieldKey) {
+  return getQuestionAnswer(fieldData, fieldKey, DEFAULT_QUESTION_KEY);
+}
+
+// Iterate all answered (non-N/A, non-empty) text-prompt values across a phase's
+// fields. Returns a flat list of {fieldKey, questionKey, value} entries.
+// Used by evidence-building and flattening helpers.
+export function answeredQuestions(fieldData) {
+  if (!fieldData || typeof fieldData !== "object") return [];
+  const out = [];
+  for (const [fieldKey, field] of Object.entries(fieldData)) {
+    if (RESERVED_TOP_KEYS.has(fieldKey)) continue;
+    if (!field || typeof field !== "object") continue;
+    for (const [questionKey, q] of Object.entries(field)) {
+      if (!q || typeof q !== "object") continue;
+      if (q.na) continue;
+      const v = q.value;
+      if (typeof v === "string" && v.trim()) {
+        out.push({ fieldKey, questionKey, value: v.trim() });
+      }
+      // Structured-exercise list values are not yet evidence-bearing here.
+    }
+  }
+  return out;
+}
+
+// True if the field-data has at least one answered (non-N/A, non-empty) question.
+export function hasAnyAnswer(fieldData) {
+  return answeredQuestions(fieldData).length > 0;
+}
+
+// Apply a flat {[fieldKey]: <string>} value map onto the new-shape data.
+// Each entry sets the primary question's value for the corresponding field.
+// Used by AI-incorporate flows that propose new values as a flat JSON object.
+export function applyFieldValueMap(fieldData, valueMap) {
+  let next = fieldData || {};
+  if (!valueMap || typeof valueMap !== "object") return next;
+  for (const [fieldKey, value] of Object.entries(valueMap)) {
+    if (typeof value === "string") {
+      next = setPrimaryAnswer(next, fieldKey, value);
+    }
+  }
+  return next;
+}
+
 // ── Parsing / Serializing ────────────────────────────────────────────────────
 
 /**
- * Parse a column value that may be structured JSON or legacy plain text.
- * Returns { ...fields } with string values.  Legacy plain text is stored
- * under the "legacy_notes" key so it's never lost.
+ * Parse a column value that may be:
+ *   (a) new-shape JSON: `{[fieldKey]: {[qKey]: {value, na}}, ...}`
+ *   (b) old-shape JSON: `{[fieldKey]: <string>, ...}`  ← coerced to (a)
+ *   (c) plain text:     ← preserved under `legacy_notes` (free-text fallback)
+ *
+ * Returns the new-shape object. Old-shape values are lifted to
+ * `{primary: {value: <string>, na: false}}` per field.
  */
 export function parseStructuredField(raw) {
   if (!raw || typeof raw !== "string") return {};
@@ -87,33 +214,81 @@ export function parseStructuredField(raw) {
   if (trimmed.startsWith("{")) {
     const parsed = tryParse(trimmed, null);
     if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-      return parsed;
+      return coerceToNewShape(parsed);
     }
   }
 
-  // Legacy plain text — preserve it
+  // Plain text — preserve as legacy_notes
   return { legacy_notes: trimmed };
 }
 
+// Lift any old-shape (string) field values to new-shape envelopes. Preserves
+// already-new-shape values and the legacy_notes key as-is.
+function coerceToNewShape(parsed) {
+  let needsCoercion = false;
+  for (const [k, v] of Object.entries(parsed)) {
+    if (RESERVED_TOP_KEYS.has(k)) continue;
+    if (typeof v === "string" || typeof v !== "object" || Array.isArray(v) || v === null) {
+      needsCoercion = true;
+      break;
+    }
+  }
+  if (!needsCoercion) return parsed;
+
+  const out = {};
+  for (const [k, v] of Object.entries(parsed)) {
+    if (RESERVED_TOP_KEYS.has(k)) {
+      out[k] = v;
+      continue;
+    }
+    if (typeof v === "string") {
+      out[k] = { [DEFAULT_QUESTION_KEY]: { value: v, na: false } };
+    } else if (v && typeof v === "object" && !Array.isArray(v)) {
+      out[k] = v;
+    }
+  }
+  return out;
+}
+
 /**
- * Serialize a structured field object to JSON string for storage.
- * Strips empty-string values to keep storage lean.
+ * Serialize the new-shape object to a JSON string. Strips empty questions
+ * (value is empty AND na is false) to keep storage lean. A field whose
+ * questions are all stripped is dropped. legacy_notes is preserved when
+ * non-empty.
  */
 export function serializeStructuredField(data) {
   if (!data || typeof data !== "object") return "";
   const cleaned = {};
-  for (const [k, v] of Object.entries(data)) {
-    if (typeof v === "string" && v.trim()) {
-      cleaned[k] = v;
+  for (const [fieldKey, field] of Object.entries(data)) {
+    if (RESERVED_TOP_KEYS.has(fieldKey)) {
+      if (typeof field === "string" && field.trim()) cleaned[fieldKey] = field;
+      continue;
+    }
+    if (!field || typeof field !== "object") continue;
+    const cleanedField = {};
+    for (const [qKey, q] of Object.entries(field)) {
+      if (!q || typeof q !== "object") continue;
+      const v = q.value;
+      const isEmptyString = typeof v === "string" && !v.trim();
+      const isEmptyList = Array.isArray(v) && v.length === 0;
+      const isMissing = v === undefined || v === null;
+      const isEmpty = isMissing || isEmptyString || isEmptyList;
+      // Keep N/A questions even with empty values — N/A is a deliberate signal.
+      if (q.na || !isEmpty) {
+        cleanedField[qKey] = { value: v ?? "", na: !!q.na };
+      }
+    }
+    if (Object.keys(cleanedField).length > 0) {
+      cleaned[fieldKey] = cleanedField;
     }
   }
   return Object.keys(cleaned).length > 0 ? JSON.stringify(cleaned) : "";
 }
 
 /**
- * Flatten a structured field object to plain text for the context pipeline.
- * Joins all non-empty values with labels derived from the field definitions.
- * Falls back to legacy_notes if present.
+ * Flatten a structured field to plain text for the context pipeline.
+ * Joins all answered (non-N/A, non-empty) text-prompt values with labels
+ * derived from the field defs. Falls back to legacy_notes if present.
  */
 export function flattenToText(data, fieldDefs) {
   if (!data || typeof data !== "object") return "";
@@ -121,27 +296,32 @@ export function flattenToText(data, fieldDefs) {
   const parts = [];
 
   // Legacy notes first
-  if (data.legacy_notes?.trim()) {
+  if (data.legacy_notes && typeof data.legacy_notes === "string" && data.legacy_notes.trim()) {
     parts.push(data.legacy_notes.trim());
   }
 
-  // Structured fields
+  // Defined fields in order — primary question only until per-field
+  // multi-question shapes land.
   for (const def of fieldDefs) {
-    const val = data[def.key];
-    if (val?.trim()) {
-      parts.push(`${def.label}: ${val.trim()}`);
+    const v = getPrimaryAnswer(data, def.key);
+    if (typeof v === "string" && v.trim()) {
+      parts.push(`${def.label}: ${v.trim()}`);
     }
   }
 
-  // Summary/compiled fields (Phase 3 & 4)
-  if (data[REDEMPTIVE_SUMMARY_KEY]?.trim()) {
-    parts.push(`Summary: ${data[REDEMPTIVE_SUMMARY_KEY].trim()}`);
+  // Phase 3 / Phase 4 special fields (legacy keys retained as fields with a
+  // `primary` question; values surface via getPrimaryAnswer).
+  const summary = getPrimaryAnswer(data, REDEMPTIVE_SUMMARY_KEY);
+  if (typeof summary === "string" && summary.trim()) {
+    parts.push(`Summary: ${summary.trim()}`);
   }
-  if (data[IMPLICATIONS_COMPILED_KEY]?.trim()) {
-    parts.push(`Compiled implications: ${data[IMPLICATIONS_COMPILED_KEY].trim()}`);
+  const compiled = getPrimaryAnswer(data, IMPLICATIONS_COMPILED_KEY);
+  if (typeof compiled === "string" && compiled.trim()) {
+    parts.push(`Compiled implications: ${compiled.trim()}`);
   }
-  if (data[IMPLICATIONS_UNBELIEVER_KEY]?.trim()) {
-    parts.push(`Implications for unbelievers: ${data[IMPLICATIONS_UNBELIEVER_KEY].trim()}`);
+  const unbeliever = getPrimaryAnswer(data, IMPLICATIONS_UNBELIEVER_KEY);
+  if (typeof unbeliever === "string" && unbeliever.trim()) {
+    parts.push(`Implications for unbelievers: ${unbeliever.trim()}`);
   }
 
   return parts.join("\n");

@@ -12,7 +12,7 @@
 // `evaluateAdvance` without UI changes.
 
 import { STAGE, STEP, SUB_PHASE } from "../core/contracts";
-import { parseStructuredField } from "./studyFields";
+import { parseStructuredField, answeredQuestions } from "./studyFields";
 
 const SUB_PHASE_BY_INDEX = [SUB_PHASE.Observe, SUB_PHASE.Interpret, SUB_PHASE.RedemptiveThread, SUB_PHASE.Implications];
 const STEP_BY_INDEX = [STEP.Exegesis, STEP.MPT_MPS, STEP.Outline, STEP.FunctionalElements];
@@ -32,15 +32,18 @@ export function canonicalStep(n) {
   return STEP_BY_INDEX[n - 1];
 }
 
+// Evidence joins all answered (non-N/A, non-empty) text-prompt values across
+// the phase's fields. Legacy free-text data still surfaces under data.legacy_notes.
 export function buildSubPhaseEvidence(sermon, subPhase) {
   const fieldName = SUB_PHASE_FIELD_MAP[subPhase];
   if (!fieldName || !sermon) return "";
   const data = parseStructuredField(sermon[fieldName]);
   if (!data || typeof data !== "object") return "";
-  return Object.values(data)
-    .filter((v) => v && String(v).trim())
-    .map((v) => String(v).trim())
-    .join("\n");
+  const parts = answeredQuestions(data).map((a) => a.value);
+  if (typeof data.legacy_notes === "string" && data.legacy_notes.trim()) {
+    parts.push(data.legacy_notes.trim());
+  }
+  return parts.join("\n");
 }
 
 export function buildStepEvidence(sermon, step) {
