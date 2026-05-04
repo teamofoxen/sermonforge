@@ -86,21 +86,21 @@ Every per-field walk produces a structured entry with seven slots:
 
 ## Phase 1: Observe
 
-### Field order (revised — 11 fields)
+### Field order (revised — 9 fields)
 
-1. **Background** *(new)*
+1. **Background** *(new — added 2026-05-03)*
 2. **Context**
-3. **Surface Questions** *(new)*
-4. Divisions / Thought Units
-5. Notable Commands
-6. Notable Statements
-7. Main Characters
-8. Big Ideas
-9. Obvious Point
-10. Basic Outline
-11. Possible Implications
+3. **Surface Questions** *(new — added 2026-05-03)*
+4. Divisions / Thought Units *(three-question shape, 2026-05-03)*
+5. Main Characters *(reordered ahead of Commands and Declarations, 2026-05-03)*
+6. Commands and Declarations *(merged from former Notable Commands + Notable Statements, 2026-05-03)*
+7. Big Ideas
+8. Obvious Point
+9. Possible Implications
 
-The "outside-in" arc through the first four fields: world around the book (Background) → where in the book (Context) → what's in the passage at the surface (Surface Questions) → how the passage is structured (Divisions).
+**Reshape from 11 to 9 fields, locked 2026-05-03:** Notable Commands + Notable Statements merged into Commands and Declarations (one binary classification, one synthesis table). Basic Outline retired; Field 4's thought units carry the proto-outline work into MPT/MPS and Step 3 (Construct an Outline). Main Characters reordered ahead of Commands and Declarations because pastoral attention notices subjects before classifying verbs.
+
+The "outside-in" arc through the first four fields: world around the book (Background) → where in the book (Context) → what's in the passage at the surface (Surface Questions) → how the passage is structured (Divisions). The lens cluster that follows (Main Characters → Commands and Declarations → Big Ideas) reads against Field 4's spine. Then the first synthesis (Obvious Point) and the bridge into Interpret (Possible Implications) close the segment.
 
 ---
 
@@ -202,12 +202,12 @@ The "outside-in" arc through the first four fields: world around the book (Backg
 - **What gets written:** Q1 produces an indented document — each line carries structural depth (level 0–N), with main sentences at the left margin and modifiers indented under what they modify. Q2 produces one paraphrase per main sentence in the pastor's own voice. Q3 produces a small table of thought units — for each, the pastor's own-words summary, the line where it ends, and the signal that marks the seam to the next thought unit.
 - **Role in sub-phase:** Fourth field. The spine-finding-and-meaning field — the load-bearing work that turns the surface report into a propositional skeleton with the meaning of each main sentence held in the pastor's own voice. Strong candidate for load-bearing at the Observe → Interpret threshold.
 - **Connects from:** Surface Questions — having reported the passage's surface (where, when, how), now find the spine that holds it up.
-- **Connects to:** Notable Commands — having found the spine and named the thought units, look at the imperatives that drive each main sentence.
+- **Connects to:** Main Characters — having found the spine and named the thought units, see who's acting in them.
 
 **Heavy-lifting field — opens with an overview** (see Field intro overview in the Field Pattern). Pastor-side copy:
 
 > ## Divisions / Thought Units
-> *Field 4 of 11 · Observe*
+> *Field 4 of 9 · Observe*
 >
 > The point of the sermon is the point of the text. The work of seeing what that point is starts here.
 >
@@ -286,43 +286,251 @@ Q3's screen shows the synthesis table: three columns (Thought unit | After line 
 - **Q2:** every paraphrase field has content.
 - **Q3:** the thought-unit table has at least one complete row (Thought unit + After line filled; Signal is allowed empty for the final thought unit of a passage, since nothing comes after it).
 
-The "Continue to Notable Commands" button activates only when all three gates are met. A hover-checklist on the disabled button surfaces which gate is unmet.
+The "Continue to Main Characters" button activates only when all three gates are met. A hover-checklist on the disabled button surfaces which gate is unmet.
 
 **In-workspace behavior:**
 
 - **Q1 → Q2 → Q3 transitions** all editable from when each question's gate is met (Option B from session walk). The pastor toggles between the canvas, the paraphrase blocks, and the thought-unit table at their own pace. The questions feed each other in real time — laying out Q1 surfaces Q3 questions; rewriting Q2 surfaces refinements to Q1.
 - **Q3's table visible-but-greyed at State 0.** Tells the pastor what's coming before the canvas work satisfies Q1's gate.
-- **Continue button label:** "Continue to Notable Commands" — names the throughline at the moment of commit.
+- **Continue button label:** "Continue to Main Characters" — names the throughline at the moment of commit.
 - **Throughline node summary on completion:** the pastor's own-words thought-unit sentences, listed with line ranges. Example for Eph 2:1–5 — "(1) Without Christ, we were spiritually dead. *(lines 1–7)* / (2) The death wasn't isolated — every one of us was under wrath. *(lines 8–12)* / (3) But God acted. He made us alive in Christ. *(lines 13–18)*". The number of items equals the number of thought units the pastor named in Q3.
 
 **Implementation pattern:** All three of Field 4's questions are structured-exercise questions (see "Structured-exercise questions" in the Field Pattern). Q1 uses the indented sentence canvas sub-shape; Q2 uses the paraphrase blocks sub-shape; Q3 uses the synthesis table sub-shape. Tab/Shift+Tab structural indent on Q1, auto-generated line-number gutter, level-0 visual marker, paste-intercept on Q1 and Q2 (allowed on Q3), peripheral reference panel for Q1, composite gating, line-number autocomplete in Q3's "After line" cell, and the field intro overview pattern are all SPRD Component-1 implementation work.
 
 ---
 
-### Fields 5–11
+### Field 5 — Main Characters
 
-Not yet walked. In current `OBSERVE_FIELDS` order:
+**Status:** Ratified 2026-05-03 in the reshape pass.
 
-- Notable Commands
-- Notable Statements
-- Main Characters
-- Big Ideas
-- Obvious Point
-- Basic Outline
-- Possible Implications
+**Question sequence:**
 
-**Forward-looking note from Field 4's ratification:** Field 4 surfaces the propositional spine of the passage. Fields 5–8 (Notable Commands, Notable Statements, Main Characters, Big Ideas) read against that spine — each examines *what kind of work* the main sentences are doing. Notable Commands looks for the imperatives that drive them; Notable Statements for the indicatives; Main Characters for the subjects acting through them; Big Ideas for the conceptual weight they carry. When each field is walked, its connects-from line should orient against the spine Field 4 produces, not against the passage in raw form.
+| # | Key | Prompt |
+|---|---|---|
+| 1 | `characters` | Who's acting in this passage? For each character, name their role. |
 
----
+**Seven-slot entry:**
 
-### Open items for the end-of-Observe within-sub-phase flow pass
+- **Name:** Main Characters
+- **Intent:** Name who's acting in the passage. Without this, the sermon's address is unclear — the pastor doesn't yet know whose story they're telling and whose ear they're pitching it to.
+- **Question sequence:** Identify Main Characters.
+- **What gets written:** A small list (or two-column table) of characters with their role in the passage in the pastor's own words. For Eph 2:1–5: *You/We* (the audience, once dead); *God* (rich in mercy, the actor of life); *Christ* (the means — God made us alive together with him).
+- **Role in sub-phase:** Fifth field. First lens on Field 4's spine — *who* is doing the work the spine surfaces.
+- **Connects from:** Divisions / Thought Units — having found the spine and named the bones, see who's acting in them.
+- **Connects to:** Commands and Declarations — having seen the actors, name what kind of action they're carrying.
 
-When all 11 Observe fields have per-field entries, the within-sub-phase flow pass takes a holistic look. Items already on the list:
-
-- **Reshape decisions:** any rename / merge / split / move / retire surfaced during per-field walks.
-- **Named outcome:** articulate the **Observation Set** — what it IS, how the 11 fields compose into it.
-- **Load-bearing fields:** which fields the empty-evidence threshold rests on at the Observe → Interpret boundary. **Field 4 (Divisions / Thought Units) is a strong candidate as of its 2026-05-03 ratification** — its spine-finding role makes the Observation Set without it largely incoherent.
+**Behavior:** Light field. No pre-field overview. Paste allowed. No AI in the role-naming cell — pastor's noticing is the discipline. N/A allowed when the passage genuinely has no distinct characters (rare; God or the speaker usually appears).
 
 ---
 
-*End of working document. Phases 2–4 (Interpret, Redemptive Thread, Implications) are not yet walked.*
+### Field 6 — Commands and Declarations
+
+**Status:** Ratified 2026-05-03 in the reshape pass. Merge from former Notable Commands + Notable Statements; new field name **Commands and Declarations** (chosen over the more grammatical "Verb Tenses" and the Merida-leaning "Imperatives and Indicatives" because it lands in pastor-language without losing precision).
+
+**Question sequence:**
+
+| # | Key | Prompt |
+|---|---|---|
+| 1 | `commands_and_declarations` | For each main sentence above, name what kind of action it carries — a command (the author is asking the hearer to do something) or a declaration (the author is naming reality). Then say in your own words what the sentence is doing. |
+
+**Seven-slot entry:**
+
+- **Name:** Commands and Declarations
+- **Intent:** Name what kind of action each main sentence in the spine carries. Imperatives drive (call to obedience). Indicatives declare (proclaim reality). The mix shapes how the passage preaches — gospel proclamation, ethical exhortation, narrative declaration, or a blend.
+- **Question sequence:** Identify Commands and Declarations.
+- **What gets written:** A row per main sentence with line, type (command or declaration), and what the sentence is doing in pastor's own words. For Eph 2:1–5, every main sentence is a declaration; the passage preaches as proclamation. For an exhortation passage like Eph 4:1–6, the mix shifts.
+- **Role in sub-phase:** Sixth field. Second lens on Field 4's spine — *what kind of action* the main sentences carry.
+- **Connects from:** Main Characters — having seen the actors, name what kind of action they're carrying.
+- **Connects to:** Big Ideas — having named the actions, surface the concepts the passage is wrestling with.
+
+**Behavior:** Light field. No overview. Paste allowed. No AI in the action-naming cell. N/A: rare. A borderline case (a command resting on a declaration, like "Be imitators of God, *as beloved children*") gets tagged with Type "Command (resting on declaration)" and a brief note. The pastor's call.
+
+---
+
+### Field 7 — Big Ideas
+
+**Status:** Ratified 2026-05-03 in the reshape pass. (Reordered from former position #8.)
+
+**Question sequence:**
+
+| # | Key | Prompt |
+|---|---|---|
+| 1 | `big_ideas` | What concepts is the passage wrestling with? List them. For each, a one-line note on how it shows up. |
+
+**Seven-slot entry:**
+
+- **Name:** Big Ideas
+- **Intent:** Surface the conceptual weight of the passage — the ideas the author is working with that connect to larger biblical theology. Without this, Interpret's "what does this mean?" reaches back into raw text instead of building on a named conceptual inventory.
+- **Question sequence:** List the big ideas.
+- **What gets written:** A list of concepts, each with a short one-line note. For Eph 2:1–5: spiritual death, wrath (cosmic and individual), mercy and love, union with Christ, grace as the means.
+- **Role in sub-phase:** Seventh field. Third lens on Field 4's spine — *what concepts* are at stake.
+- **Connects from:** Commands and Declarations — having named the actions, surface the concepts the passage is wrestling with.
+- **Connects to:** Obvious Point — having surfaced the concepts, state the plain-sense point.
+
+**Behavior:** Light field. No overview. Paste allowed. No AI in the cells. Distinct from Interpret's "Recurring Ideas" (themes recurring across the book) — Big Ideas is concepts of *this passage*. N/A: very rare; almost every passage carries concepts.
+
+---
+
+### Field 8 — Obvious Point
+
+**Status:** Ratified 2026-05-03 in the reshape pass. (Reordered from former position #9.)
+
+**Question sequence:**
+
+| # | Key | Prompt |
+|---|---|---|
+| 1 | `obvious_point` | State the plain-sense point of the passage in one sentence. |
+
+**Seven-slot entry:**
+
+- **Name:** Obvious Point
+- **Intent:** State the plain-sense point of the passage in one sentence. The pastor's first articulation of "what is this passage about?" — the proto-MPT. Catching the simple read before complexity layers in. If this is wrong, MPT will be wrong.
+- **Question sequence:** State the obvious point.
+- **What gets written:** One sentence in the pastor's own voice. Not a paraphrase of any single line — the synthesizing point of the whole passage. For Eph 2:1–5: "Even when we were spiritually dead and under God's wrath, God in his mercy made us alive together with Christ."
+- **Role in sub-phase:** Eighth field. The first synthesis move. Pulls together Field 4 (structure, meaning, bones) and the lens cluster (5–7) into a single articulation.
+- **Connects from:** Big Ideas — having surfaced the concepts, state the plain-sense point.
+- **Connects to:** Possible Implications — having stated the point, surface what it's starting to suggest about the room.
+
+**Behavior:** Light but pivotal. No overview needed. **Paste blocked. No AI.** The pastor's own voice is the discipline — same posture as Field 4 Q3. One sentence preferred; a short two-sentence answer allowed if the passage's point genuinely needs it. **Required-non-empty for the Observe → Interpret threshold.**
+
+---
+
+### Field 9 — Possible Implications
+
+**Status:** Ratified 2026-05-03 in the reshape pass. (Reordered from former position #11. Naming preserved for continuity; rename flagged as candidate during the Implications-phase walks.)
+
+**Heavy-lifting field — opens with a pre-field overview.**
+
+**Question sequence:**
+
+| # | Key | Prompt |
+|---|---|---|
+| 1 | `pressing` | What is the passage starting to press on for the people you're preaching to? |
+| 2 | `hard_and_hopeful` | What's hard here for the hearer? What's hopeful? |
+
+**Seven-slot entry:**
+
+- **Name:** Possible Implications
+- **Intent:** First surfacing of Pastoral Context into the awareness layer. The bridge into Interpret. The pastor names early sight — what the passage is starting to press on, what's hard, what's hopeful — without crossing into full application. The text is still leading.
+- **Question sequence:** Pressing → Hard / Hopeful.
+- **What gets written:** Short paragraphs or bullets in the pastor's own voice. Awareness-level. Not sermon points, not application lists. Early sight.
+- **Role in sub-phase:** Ninth and final field of Observe. The bridge into Interpret. Carries Pastoral Context into the next sub-phase as awareness, not as a precondition.
+- **Connects from:** Obvious Point — having stated the point, surface what it's starting to suggest about the room.
+- **Connects to:** Interpret (Phase 2) — opens against this awareness; Interpret deepens the work of seeing what the passage means with the room already in view.
+
+**Pre-field overview (pastor-side copy):**
+
+> ## Possible Implications
+> *Field 9 of 9 · Observe*
+>
+> You've worked your way through what the text says — its world, its location, its surface, its spine, its actors, its actions, its concepts, and its plain-sense point. The Observation Set is almost done.
+>
+> Before we leave Observe and step into Interpret, one more move. Look at the passage and ask: what is it starting to suggest about the room you're preaching to? What's it pressing on? What's hard? What's hopeful?
+>
+> Not full application yet. Application is its own work, later. Here we're naming early sight — the moments where the passage starts to feel weighty for the people in the pews. The first time pastoral context enters, while the text is still doing the leading.
+>
+> If you find yourself drafting application or making sermon points, ease back. This is awareness, not exhortation. The text is still ahead of you here.
+>
+> [ Begin ]
+
+**Q1 framing (above the pressing question):**
+
+> ## Question 1 of 2 — What's the passage pressing on?
+>
+> Look at the passage and the work you've done. What is it starting to suggest about the people you're preaching to? Where does it press in? What does it ask the hearer to face, embrace, or reckon with?
+
+**Q2 framing (above the hard/hopeful pair):**
+
+> ## Question 2 of 2 — What's hard? What's hopeful?
+>
+> Two early-sight questions, side by side.
+>
+> *What's hard here?* Where will the passage cut against the hearer? What might be uncomfortable, costly, or counter-intuitive?
+>
+> *What's hopeful?* Where's the gospel ground? What's the comfort, the promise, the invitation the passage holds out?
+
+**Behavior:** Heavy-lifting. Pre-field overview shown on first entry, skipped on re-entry. **Paste allowed; AI blocked.** The pastor's articulation is what carries the awareness layer; AI is a downstream reader. The discipline is *awareness, not application* — guardrail against pre-empting the Implications sub-phase. **Required-non-empty (both questions) for the Observe → Interpret threshold.**
+
+**Continue button label at completion:** "Continue to Interpret" — names the next sub-phase at the moment of commit. Distinct from the within-sub-phase Continue buttons (which name the next field): this button crosses the sub-phase boundary, so it names the boundary.
+
+---
+
+## Within-sub-phase flow pass for Observe
+
+### The Observation Set — Observe's named outcome
+
+The Observation Set is what the pastor walks away from Observe holding. It's not a single artifact; it's the layered understanding that lives in nine field entries plus the throughline node summaries.
+
+Composed:
+
+1. A framed book *(Background)*
+2. A located passage *(Context)*
+3. A surface report *(Surface Questions)*
+4. The spine, its meaning held in the pastor's own voice, and named thought units *(Divisions / Thought Units)*
+5. The actors named *(Main Characters)*
+6. The kind of action each main sentence carries *(Commands and Declarations)*
+7. The concepts at work *(Big Ideas)*
+8. The plain-sense point in one sentence *(Obvious Point)*
+9. Early sight of what the passage is pressing on, with hard and hopeful named *(Possible Implications)*
+
+When Observe completes, the throughline visualization shows nine earned nodes for the Phase 1 segment, with the Observation Set sitting at the end of the segment as a synthesizing callout. Process Contract #6 ("the Study throughline is structural") activates for Phase 1 here.
+
+### Load-bearing fields for the Observe → Interpret threshold
+
+Three fields are load-bearing. The hard gate at the boundary checks:
+
+- **Field 4 (Divisions / Thought Units)** — composite gate over its three questions (sentence layout + paraphrases + thought units). Without the spine + meaning + bones, the rest of Observe is loose.
+- **Field 8 (Obvious Point)** — single-sentence answer required. The plain-sense point is what Interpret deepens.
+- **Field 9 (Possible Implications)** — both questions required. The bridge has to actually exist before Interpret opens.
+
+Other fields (1, 2, 3, 5, 6, 7) are required-non-empty per the existing baseline rule, with per-field N/A escape valves where genuinely inapplicable.
+
+### Reshape decisions surfaced and locked 2026-05-03
+
+- **Merged:** Notable Commands + Notable Statements → Commands and Declarations. One binary classification, one synthesis table.
+- **Retired:** Basic Outline. Field 4's thought units carry the proto-outline work into MPT/MPS and Step 3.
+- **Reordered:** Main Characters moved ahead of Commands and Declarations. Subjects-first reading. Pastor notices who before classifying verbs.
+- **Field count:** 11 → 9.
+- **Possible Implications renaming:** flagged as candidate, deferred to Implications-phase walks (where the parallel "Implications" naming gets settled). Rename if needed then.
+
+### N/A escape valve pattern (locked 2026-05-03)
+
+A field declares N/A handling per question. Two patterns:
+
+- **Field-level N/A** — the entire field is allowed to be empty when the passage genuinely doesn't carry that kind of content (Background may be deferred for an unfamiliar one-off passage; Surface Questions may legitimately have no Where/When in epistles). The pastor explicitly marks the field N/A; the throughline visualization shows the node as deferred rather than missed.
+- **Question-level N/A** — within a field, a specific question may be N/A while others have content (Surface Questions Q1 Where may be N/A on an epistle while Q3 How is filled). The composite gate respects per-question N/A flags.
+
+In both cases, marking N/A is a deliberate gesture, not an absence. The pastor has to actively say "this doesn't apply" — they can't pass through silently. The discipline is preserved. The throughline shows the deferred mark; if the pastor returns later and finds the field does apply after all, they remove the N/A and fill it.
+
+---
+
+## The Observe → Interpret handoff
+
+Interpret opens not against the raw passage but against the Observation Set. What the next sub-phase reads:
+
+- **Field 4's structured spine, paraphrase, and thought units** — Interpret deepens the meaning the pastor has already begun to hold. The paraphrase from Q2 becomes a touchstone; Interpret asks "what did the author mean by this?" with the pastor's own articulation already in voice.
+- **Fields 5–7 (Main Characters, Commands and Declarations, Big Ideas)** — Interpret asks "what does this mean?" with the actors, action types, and concepts already named. Interpret doesn't reidentify them; it deepens.
+- **Field 8 (Obvious Point)** — Interpret pressure-tests the plain-sense point and refines it. The point is allowed to evolve through Interpret (and again through MPT) as understanding deepens; Field 8's role is to anchor the first articulation so the deepening can be felt.
+- **Field 9 (Possible Implications)** — Interpret carries the awareness layer forward. PC is no longer parallel-track or always-on; it's already in view as the pastor enters Interpret. The text is leading, the room is in awareness.
+
+Interpret's named outcome (the Interpretation Set) builds on the Observation Set — it doesn't replicate it. The pastor doesn't restart at Interpret; they deepen.
+
+### The hard gate at the boundary
+
+Process Contract #2 fires at the Observe → Interpret transition. The check:
+
+- Field 4's composite gate (Q1 canvas, Q2 paraphrases, Q3 thought units) — all three filled.
+- Field 8 (Obvious Point) — non-empty.
+- Field 9 (Possible Implications) — both questions non-empty.
+
+If any are unmet, the Continue button (label: **"Continue to Interpret"**) is disabled with a hover-checklist surfacing which gate is missing. Other fields (1, 2, 3, 5, 6, 7) are required-non-empty with per-field N/A allowed.
+
+### What's preserved across the boundary
+
+The throughline visualization shows the line continuing — Observe's nine nodes light up in sequence as the pastor worked through them; the line then arcs into Interpret's first node (whatever it is — to be defined when Phase 2 walks). The Observation Set sits at the end of the Observe segment as a callout the pastor can re-read at any time.
+
+The pastor doesn't lose the work. They carry it.
+
+---
+
+*End of Observe (Phase 1) walk. Phases 2–4 (Interpret, Redemptive Thread, Implications) are not yet walked.*
