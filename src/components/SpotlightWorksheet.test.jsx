@@ -6,7 +6,7 @@
 // single-question (A1.1 back-compat) and multi-question (SFDI Field Pattern)
 // rendering paths.
 
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import SpotlightWorksheet, {
   SpotlightField,
@@ -348,6 +348,186 @@ describe("SpotlightWorksheet — N/A advance behavior", () => {
     // Active question should advance to date (next question in same field)
     const activeQ = document.querySelector(".worksheet-question-active");
     expect(activeQ.getAttribute("data-question-key")).toBe("date");
+  });
+});
+
+// ── Heavy-lifting field overview gate (B1.3) ───────────────────────────────
+
+const HEAVY_LIFTING_FIELD = {
+  key: "divisions",
+  label: "Divisions / Thought Units",
+  hint: "Spine + meaning + bones.",
+  questions: [
+    { key: "sentence_layout", prompt: "Lay out the main sentences." },
+    { key: "paraphrases",     prompt: "Rewrite each in your own words." },
+    { key: "thought_units",   prompt: "Find the thought units." },
+  ],
+  heavyLifting: true,
+  overview: {
+    title: "Divisions / Thought Units",
+    subtitle: "Field 4 of 9 · Observe",
+    paragraphs: [
+      "The point of the sermon is the point of the text.",
+      "Make the bones visible.",
+    ],
+    list: {
+      intro: "Three parts:",
+      items: [
+        "Lay out the structure.",
+        "Rewrite each main sentence.",
+        "Find the thought units.",
+      ],
+    },
+  },
+};
+
+describe("SpotlightWorksheet — heavy-lifting field overview gate", () => {
+  beforeEach(() => {
+    // Clear localStorage between tests so the overview-seen state starts fresh.
+    if (typeof localStorage !== "undefined") localStorage.clear();
+  });
+
+  it("renders FieldOverviewScreen on first entry to a heavy-lifting field for the given sermon", () => {
+    render(
+      <SpotlightWorksheet
+        fields={[HEAVY_LIFTING_FIELD]}
+        data={{}}
+        onChange={vi.fn()}
+        onToggleNA={vi.fn()}
+        sermonId="sermon-1"
+      />,
+    );
+    expect(screen.getByTestId("field-overview-screen")).toBeTruthy();
+    expect(screen.getByText("Field 4 of 9 · Observe")).toBeTruthy();
+    expect(screen.getByText(/The point of the sermon is the point of the text/)).toBeTruthy();
+    // Body content includes the list intro + items
+    expect(screen.getByText("Three parts:")).toBeTruthy();
+    expect(screen.getByText("Lay out the structure.")).toBeTruthy();
+    // Active field's textarea is NOT yet rendered — overview blocks it
+    expect(document.querySelector(".worksheet-question-active")).toBeNull();
+  });
+
+  it("clicking Begin dismisses the overview and shows the active question", () => {
+    render(
+      <SpotlightWorksheet
+        fields={[HEAVY_LIFTING_FIELD]}
+        data={{}}
+        onChange={vi.fn()}
+        onToggleNA={vi.fn()}
+        sermonId="sermon-1"
+      />,
+    );
+    fireEvent.click(screen.getByText("Begin"));
+    // Overview is gone; active question is now rendered
+    expect(screen.queryByTestId("field-overview-screen")).toBeNull();
+    expect(document.querySelector(".worksheet-question-active")).toBeTruthy();
+  });
+
+  it("persists 'seen' across remount for the same sermonId", () => {
+    const { unmount } = render(
+      <SpotlightWorksheet
+        fields={[HEAVY_LIFTING_FIELD]}
+        data={{}}
+        onChange={vi.fn()}
+        onToggleNA={vi.fn()}
+        sermonId="sermon-1"
+      />,
+    );
+    fireEvent.click(screen.getByText("Begin"));
+    unmount();
+
+    // Remount with same sermonId — overview should be skipped.
+    render(
+      <SpotlightWorksheet
+        fields={[HEAVY_LIFTING_FIELD]}
+        data={{}}
+        onChange={vi.fn()}
+        onToggleNA={vi.fn()}
+        sermonId="sermon-1"
+      />,
+    );
+    expect(screen.queryByTestId("field-overview-screen")).toBeNull();
+    expect(document.querySelector(".worksheet-question-active")).toBeTruthy();
+  });
+
+  it("tracks 'seen' per-sermon — a different sermonId still shows the overview", () => {
+    // Pre-mark sermon-1 as seen
+    localStorage.setItem("sermonforge_field_overview_seen_sermon-1_divisions", "1");
+
+    render(
+      <SpotlightWorksheet
+        fields={[HEAVY_LIFTING_FIELD]}
+        data={{}}
+        onChange={vi.fn()}
+        onToggleNA={vi.fn()}
+        sermonId="sermon-2"
+      />,
+    );
+    // sermon-2 hasn't been seen — overview renders
+    expect(screen.getByTestId("field-overview-screen")).toBeTruthy();
+  });
+
+  it("does not render overview when sermonId is omitted (legacy callers)", () => {
+    render(
+      <SpotlightWorksheet
+        fields={[HEAVY_LIFTING_FIELD]}
+        data={{}}
+        onChange={vi.fn()}
+        onToggleNA={vi.fn()}
+      />,
+    );
+    expect(screen.queryByTestId("field-overview-screen")).toBeNull();
+    // Field renders directly into its active state
+    expect(document.querySelector(".worksheet-question-active")).toBeTruthy();
+  });
+
+  it("does not render overview for fields without an overview blob even when heavyLifting=true", () => {
+    const fieldNoOverview = {
+      ...HEAVY_LIFTING_FIELD,
+      overview: undefined,
+    };
+    render(
+      <SpotlightWorksheet
+        fields={[fieldNoOverview]}
+        data={{}}
+        onChange={vi.fn()}
+        onToggleNA={vi.fn()}
+        sermonId="sermon-1"
+      />,
+    );
+    expect(screen.queryByTestId("field-overview-screen")).toBeNull();
+    expect(document.querySelector(".worksheet-question-active")).toBeTruthy();
+  });
+
+  it("renders a non-heavy-lifting field's active state directly (no overview gate)", () => {
+    const lightField = { key: "context", label: "Context", hint: "Context note" };
+    render(
+      <SpotlightWorksheet
+        fields={[lightField]}
+        data={{}}
+        onChange={vi.fn()}
+        onToggleNA={vi.fn()}
+        sermonId="sermon-1"
+      />,
+    );
+    expect(screen.queryByTestId("field-overview-screen")).toBeNull();
+    expect(document.querySelector(".worksheet-field-active textarea")).toBeTruthy();
+  });
+
+  it("clicking Begin writes the seen flag to localStorage", () => {
+    render(
+      <SpotlightWorksheet
+        fields={[HEAVY_LIFTING_FIELD]}
+        data={{}}
+        onChange={vi.fn()}
+        onToggleNA={vi.fn()}
+        sermonId="sermon-1"
+      />,
+    );
+    fireEvent.click(screen.getByText("Begin"));
+    expect(
+      localStorage.getItem("sermonforge_field_overview_seen_sermon-1_divisions"),
+    ).toBe("1");
   });
 });
 

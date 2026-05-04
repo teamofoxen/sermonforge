@@ -905,6 +905,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                 onChange={(fieldKey, qKey, value) => updateStructured("observations", obsData, fieldKey, value, qKey)}
                 onToggleNA={(fieldKey, qKey) => toggleStructuredNA("observations", obsData, fieldKey, qKey)}
                 legacyNotes={obsData.legacy_notes}
+                sermonId={sermon.id}
               />
               <div style={{ marginTop: "8px" }}>
                 <SecondaryButton
@@ -945,6 +946,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                 onChange={(fieldKey, qKey, value) => updateStructured("interpretation", intData, fieldKey, value, qKey)}
                 onToggleNA={(fieldKey, qKey) => toggleStructuredNA("interpretation", intData, fieldKey, qKey)}
                 legacyNotes={intData.legacy_notes}
+                sermonId={sermon.id}
               />
               <div style={{ marginTop: "8px" }}>
                 <SecondaryButton
@@ -985,6 +987,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                 onChange={(fieldKey, qKey, value) => updateStructured("redemptive_thread", redData, fieldKey, value, qKey)}
                 onToggleNA={(fieldKey, qKey) => toggleStructuredNA("redemptive_thread", redData, fieldKey, qKey)}
                 legacyNotes={redData.legacy_notes}
+                sermonId={sermon.id}
               />
 
               {/* Summary field — auto-synthesized or hand-written */}
@@ -1091,6 +1094,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                   onChange={(fieldKey, qKey, value) => updateStructured("implications", impData, fieldKey, value, qKey)}
                   onToggleNA={(fieldKey, qKey) => toggleStructuredNA("implications", impData, fieldKey, qKey)}
                   legacyNotes={impData.legacy_notes}
+                  sermonId={sermon.id}
                 />
               </div>
 
@@ -1101,6 +1105,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                   data={impData}
                   onChange={(fieldKey, qKey, value) => updateStructured("implications", impData, fieldKey, value, qKey)}
                   onToggleNA={(fieldKey, qKey) => toggleStructuredNA("implications", impData, fieldKey, qKey)}
+                  sermonId={sermon.id}
                 />
               </div>
 

@@ -20,12 +20,46 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { autoResize } from "../utils";
 import PrimaryButton from "./primitives/PrimaryButton";
+import FieldOverviewScreen from "./FieldOverviewScreen";
 import {
   fieldQuestions,
   getQuestionAnswer,
   isQuestionNA,
   flattenAnswerValue,
 } from "../utils/studyFields";
+
+// localStorage key prefix for per-sermon "have I shown this field's overview
+// yet?" tracking. SFDI Field Pattern: shown only on first entry to the field
+// for a given sermon; skipped on re-entry.
+const OVERVIEW_SEEN_KEY_PREFIX = "sermonforge_field_overview_seen_";
+
+function overviewSeenKey(sermonId, fieldKey) {
+  return `${OVERVIEW_SEEN_KEY_PREFIX}${sermonId}_${fieldKey}`;
+}
+
+// Render a field def's overview body from its structured shape (paragraphs,
+// optional intro + ordered list). Lives next to FieldOverviewScreen because
+// only this surface knows the data shape; the primitive itself is shape-
+// agnostic and accepts any ReactNode children.
+function renderOverviewBody(overview) {
+  if (!overview) return null;
+  return (
+    <>
+      {Array.isArray(overview.paragraphs) &&
+        overview.paragraphs.map((p, i) => <p key={`p-${i}`}>{p}</p>)}
+      {overview.list && Array.isArray(overview.list.items) && (
+        <>
+          {overview.list.intro && <p>{overview.list.intro}</p>}
+          <ol>
+            {overview.list.items.map((item, i) => (
+              <li key={`li-${i}`}>{item}</li>
+            ))}
+          </ol>
+        </>
+      )}
+    </>
+  );
+}
 
 // ── Question completeness helpers ──────────────────────────────────────────
 
@@ -333,6 +367,8 @@ export function SpotlightField({
   onToggleQuestionNA,
   onActivate,
   onNextField,
+  showOverview,
+  onDismissOverview,
 }) {
   const questions = fieldQuestions(field);
 
@@ -344,6 +380,18 @@ export function SpotlightField({
         data={data}
         onActivate={onActivate}
       />
+    );
+  }
+
+  if (showOverview && field.heavyLifting && field.overview) {
+    return (
+      <FieldOverviewScreen
+        title={field.overview.title || field.label}
+        subtitle={field.overview.subtitle}
+        onBegin={onDismissOverview}
+      >
+        {renderOverviewBody(field.overview)}
+      </FieldOverviewScreen>
     );
   }
 
@@ -384,6 +432,7 @@ export default function SpotlightWorksheet({
   onChange,
   onToggleNA,
   legacyNotes,
+  sermonId,
 }) {
   const initialActive = useMemo(() => {
     const firstIncomplete = fields.find((f) => {
@@ -394,6 +443,52 @@ export default function SpotlightWorksheet({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const [activeKey, setActiveKey] = useState(initialActive);
+
+  // Per-sermon "have I shown this field's overview yet?" tracking. Heavy-
+  // lifting fields with an overview render the FieldOverviewScreen on first
+  // entry; clicking Begin marks it seen for this sermon. Skipped entirely
+  // when sermonId is missing (legacy callers; equivalent to "always seen").
+  const [overviewSeen, setOverviewSeen] = useState(() => {
+    const seen = new Set();
+    if (!sermonId) {
+      // No tracking → treat all overviews as already seen.
+      for (const f of fields) {
+        if (f.heavyLifting && f.overview) seen.add(f.key);
+      }
+      return seen;
+    }
+    for (const f of fields) {
+      if (!f.heavyLifting || !f.overview) continue;
+      try {
+        if (typeof localStorage !== "undefined" &&
+            localStorage.getItem(overviewSeenKey(sermonId, f.key)) === "1") {
+          seen.add(f.key);
+        }
+      } catch {
+        // localStorage unavailable — leave unseen so the overview renders.
+      }
+    }
+    return seen;
+  });
+
+  const markOverviewSeen = useCallback((fieldKey) => {
+    setOverviewSeen((prev) => {
+      if (prev.has(fieldKey)) return prev;
+      const next = new Set(prev);
+      next.add(fieldKey);
+      return next;
+    });
+    if (sermonId) {
+      try {
+        if (typeof localStorage !== "undefined") {
+          localStorage.setItem(overviewSeenKey(sermonId, fieldKey), "1");
+        }
+      } catch {
+        // localStorage write failure is non-fatal — in-memory Set still
+        // suppresses the overview for the rest of this session.
+      }
+    }
+  }, [sermonId]);
 
   const advanceToNextField = useCallback((currentKey) => {
     const idx = fields.findIndex((f) => f.key === currentKey);
@@ -434,6 +529,8 @@ export default function SpotlightWorksheet({
           onToggleQuestionNA={(qKey) => handleToggleNA(f.key, qKey)}
           onActivate={() => setActiveKey(f.key)}
           onNextField={() => advanceToNextField(f.key)}
+          showOverview={f.heavyLifting && !!f.overview && !overviewSeen.has(f.key)}
+          onDismissOverview={() => markOverviewSeen(f.key)}
         />
       ))}
     </div>

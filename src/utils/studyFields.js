@@ -105,7 +105,29 @@ export const OBSERVE_FIELDS = [
       { key: "how",   prompt: "How does this unfold?" },
     ],
   },
-  { key: "divisions",             label: "Divisions / Thought Units", hint: "How is the passage built? Lay out the main sentences, paraphrase them, and find the thought units that anchor it." },
+  {
+    key: "divisions",
+    label: "Divisions / Thought Units",
+    hint: "How is the passage built? Lay out the main sentences, paraphrase them, and find the thought units that anchor it.",
+    heavyLifting: true,
+    overview: {
+      title: "Divisions / Thought Units",
+      subtitle: "Field 4 of 9 · Observe",
+      paragraphs: [
+        "The point of the sermon is the point of the text. The work of seeing what that point is starts here.",
+        "Before you can preach the passage, you have to see how it's built. Which sentences carry the main weight. What's supporting them. Where one move ends and the next begins. How the passage flows.",
+        "You're not building an outline. You're laying the foundation any outline will rest on. The bones of the passage are already there. Your job in this field is to make them visible.",
+      ],
+      list: {
+        intro: "Three parts:",
+        items: [
+          "Lay the passage out so the structure shows.",
+          "Rewrite each main sentence in your own words.",
+          "Find the thought units that anchor the passage.",
+        ],
+      },
+    },
+  },
   { key: "characters",            label: "Main Characters",           hint: "Who's acting in this passage? For each character, name their role." },
   { key: "commands_declarations", label: "Commands and Declarations", hint: "For each main sentence, name what kind of action it carries — a command (asking the hearer to do something) or a declaration (naming reality). Then say in your own words what the sentence is doing." },
   { key: "big_ideas",             label: "Big Ideas",                 hint: "What concepts is the passage wrestling with? List them. For each, a one-line note on how it shows up." },
@@ -118,6 +140,17 @@ export const OBSERVE_FIELDS = [
       { key: "pressing",          prompt: "What is the passage starting to press on for the people you're preaching to?" },
       { key: "hard_and_hopeful",  prompt: "What's hard here for the hearer? What's hopeful?" },
     ],
+    heavyLifting: true,
+    overview: {
+      title: "Possible Implications",
+      subtitle: "Field 9 of 9 · Observe",
+      paragraphs: [
+        "You've worked your way through what the text says — its world, its location, its surface, its spine, its actors, its actions, its concepts, and its plain-sense point. The Observation Set is almost done.",
+        "Before we leave Observe and step into Interpret, one more move. Look at the passage and ask: what is it starting to suggest about the room you're preaching to? What's it pressing on? What's hard? What's hopeful?",
+        "Not full application yet. Application is its own work, later. Here we're naming early sight — the moments where the passage starts to feel weighty for the people in the pews. The first time pastoral context enters, while the text is still doing the leading.",
+        "If you find yourself drafting application or making sermon points, ease back. This is awareness, not exhortation. The text is still ahead of you here.",
+      ],
+    },
   },
 ];
 
