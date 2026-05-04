@@ -4,6 +4,51 @@
 > This spec carries forward from a design exploration session. The Series Planner
 > tour is a separate, later effort — do not entangle the two.
 
+> **DRIFT WARNING (2026-05-04):** SPRD's B4.2 cut removed the Pastoral Context
+> card from `SermonWorkspace.jsx` and consolidated PC's substance into Phase 4
+> Field 3 (Pastoral Context — `room_specifics` + `cost_and_gift`). SPRD's
+> B-series also reshaped the four Study sub-phases against SFDI's 25-field
+> walkthrough. As a result the locked content below is partially stale:
+>
+> - **Stops 7 / 8 / 9 / 10** (Pastoral Context as a 3-field concentric card with
+>   The Cultural Moment / The Room / The Sermon's Work) reference UI that no
+>   longer exists. PC is now a 2-question field inside Phase 4. The tour
+>   rewrite needs to either retire these stops or re-anchor them against the
+>   new Phase 4 Field 3 surface.
+> - **"PC fields are concentric outside-in"** decision under § Key decisions
+>   already made — superseded by SPRD's binding ruling that PC's substance
+>   flows through Phase 4 Field 3 (two questions, text-anchored framing).
+> - **Stop 14** (Phase 1 / Substance — "Characters. Big Ideas. The Obvious
+>   Point. Basic Outline. Possible Implications.") — Basic Outline retired in
+>   B1.0; the cumulative thought-unit table in Field 4 carries the proto-
+>   outline now. Re-anchor against the SFDI 9-field shape (Background, Context,
+>   Surface Questions, Divisions / Thought Units, Main Characters, Commands and
+>   Declarations, Big Ideas, Obvious Point, Possible Implications).
+> - **Stop 16** (Phase 2 / Shaping meaning) and **Stop 17** (Phase 2 / Outside
+>   voices) — Phase 2 reshape (B2.0) retired Diagram and merged Summarize Parts
+>   + Summarize Whole into Interpretation Synthesis. Re-anchor against the
+>   SFDI 7-field shape (Deeper Context, Recurring Ideas, Character Purpose,
+>   Contrasts, Cross-References, Commentary Notes, Interpretation Synthesis).
+> - **Stop 19** (Seven questions) — Phase 3 reshape (B3.0) consolidated 8 RT
+>   slots into 5 fields and restored 3 Merida questions. Re-anchor against the
+>   SFDI 5-field shape (This Passage and Christ, How the Passage Points to
+>   Christ, How the Gospel Makes This Possible, Our Need and God's Character,
+>   Christ-Connection Statement).
+> - **Stops 21–24** (Phase 4 — Theological / Personal / Unbeliever / Compile)
+>   — Phase 4 reshape (B4.0+B4.1) collapsed 15 slots into 4 fields, retired
+>   the Compile button (Implications Synthesis is now pastor-written, not
+>   AI-generated), and folded Unbeliever into Pastoral Context Q1. Re-anchor
+>   against the SFDI 4-field shape (Theological Significance, Personal
+>   Implications, Pastoral Context, Implications Synthesis) and the
+>   three-way-conversation framing.
+>
+> The other ~22 stops (workspace intro, AI philosophy, MPT/MPS, Outline,
+> Functional Elements, Manuscript audit tools, finish) are not affected by
+> SPRD's reshape and remain accurate against current code.
+>
+> The build session that implements this tour should reconcile the stale
+> stops first, then execute the locked content the rest carries.
+
 ---
 
 ## What we're building

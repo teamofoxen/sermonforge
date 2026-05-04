@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-05-04 — docs: SPRD merge to main + workspace tour drift warning
+
+- `docs/PROPOSALS/study-phase-redesign.md` Status header rewritten to reflect SPRD's substantial shipping to `main` (commit `d6258ec`); remaining work (C2 / C4 / workspace tour rewrite) explicitly listed; SADI-gated items (C3 / MPS Draft prompt rewrite) called out.
+- `docs/PROPOSALS/sermon-workspace-tour.md` gains a DRIFT WARNING block at the top calling out which of the 34 locked stops reference UI that SPRD's B-series + B4.2 retired (PC card stops 7-10; Phase 1 Basic Outline at stop 14; Phase 2 Diagram + Summarize Parts/Whole at stops 16-17; Phase 3 reshape at stop 19; Phase 4 Compile/Unbeliever at stops 21-24) so the tour-rewrite build session knows what to reconcile before implementing.
+- No code changes; doc-only.
+
+---
+
 ## 2026-05-04 — sprd C1 + C6 closure: sermon-level takeover + threshold parity confirmed
 
 - `src/App.jsx` — Sidebar no longer renders when `currentView === VIEW.Workspace`; the workspace fills the viewport (`.main-content` already `flex: 1`). The in-workspace topbar's existing `BackButton onClick={onClose}` is the single back affordance per the C1 spec; re-entry from Dashboard returns to the isolated world. Surface Contract #4 remains satisfied (Workspace is on EXPECTED_DEEP); critical write-error banner and OneDriveWarning alerts remain visible across views.
