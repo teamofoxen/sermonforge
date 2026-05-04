@@ -299,15 +299,113 @@ export const INTERPRET_FIELDS = [
 ];
 
 // ── Phase 3: Redemptive Thread ───────────────────────────────────────────────
+//
+// Reshaped to 5 fields per SFDI Phase 3 walk (2026-05-04), shipped as SPRD
+// B3.0 + B3.1 (2026-05-04). The Merida arc through the five fields:
+//   This Passage and Christ → How the Passage Points to Christ
+//   → How the Gospel Makes This Possible → Our Need and God's Character
+//   → Christ-Connection Statement
+//
+// Aggressive consolidation paired with restoration. Three clusters merged
+// (Position + Direct Christ-speech; Biblical Theme + Promise + restored Type
+// + restored Predictive; Need + Character). Three Merida questions restored
+// (Q4 gospel-makes-commands-possible, Q5 type-of-Christ, Q8 predictive-of-
+// Christ). Q3 (NT use of OT) folded into Field 1 as positional. Summary
+// slot elevated to Field 5 (Christ-Connection Statement) as the named
+// outcome. *Jesus the Hero of the Passage* absorbed into Field 5.
+//
+// Retired keys from the prior shape: `speaks_of_christ`, `relation_to_christ`,
+// `biblical_theme`, `promise`, `need_for_christ`, `nature_of_god`, `jesus_hero`
+// are no longer iterated as fields. Old data on retired keys is preserved
+// in the JSON column by `parseStructuredField` but no longer renders. Per
+// the defensive-only migration policy in SPRD § 9 (no production sermons
+// exist 2026-05-04), no auto-mapping logic ships; the per-key cross-mapping
+// in § 9 documents how it would land:
+//   - `speaks_of_christ` + `relation_to_christ` → `this_passage_and_christ.legacy_notes`
+//   - `biblical_theme` + `promise`              → `passage_points_to_christ.legacy_notes`
+//   - `need_for_christ` + `nature_of_god`       → `need_and_character.legacy_notes`
+//   - `jesus_hero`                              → `christ_connection_statement.legacy_notes`
+//
+// `REDEMPTIVE_SUMMARY_KEY` ("summary") is kept for back-compat with the
+// legacy "Summary of Redemptive Features" Synthesize block in StudyTab
+// until B3.2 elevates it into Field 5's structured-exercise wire-up. After
+// B3.2 the summary slot's data migrates into `christ_connection_statement
+// .legacy_notes` and the legacy block is removed.
+//
+// Heavy-lifting fields with `FieldOverviewScreen` on first per-sermon entry
+// (B1.3 pattern):
+//   - Field 2 (How the Passage Points to Christ) — overview frames the four
+//     pointing-mechanisms (theme, promise, type, predictive) and the
+//     anti-allegory discipline.
+//   - Field 5 (Christ-Connection Statement) — overview frames the synthesis
+//     work; per-unit cumulative-column extension + whole-passage Statement
+//     ship in B3.2 (single primary question at B3.0 + B3.1).
 
 export const REDEMPTIVE_FIELDS = [
-  { key: "speaks_of_christ",  label: "Does this text speak directly of Christ?",                          hint: "" },
-  { key: "relation_to_christ", label: "Where does it stand in relation to Christ?",                       hint: "Before, after, or transitional?" },
-  { key: "biblical_theme",    label: "Does the passage reveal a biblical theme that points to Christ?",    hint: "" },
-  { key: "promise",           label: "Does this passage show a promise that points to Christ?",            hint: "" },
-  { key: "need_for_christ",   label: "How does this passage show mankind's need for Christ?",              hint: "" },
-  { key: "nature_of_god",     label: "How does this passage reveal the nature of the God who provides redemption?", hint: "" },
-  { key: "jesus_hero",        label: "How is Jesus the hero of this passage?",                             hint: "" },
+  {
+    key: "this_passage_and_christ",
+    label: "This Passage and Christ",
+    hint: "Position the text vis-à-vis Christ. Locate it in the redemptive arc and surface explicit Christological content.",
+    questions: [
+      { key: "position",      prompt: "Where does this text stand in relation to Christ — before, after, or transitional? For OT passages, where does the New Testament pick this up?" },
+      { key: "direct_speech", prompt: "Does this text speak directly of Christ? If so, how?" },
+    ],
+  },
+  {
+    key: "passage_points_to_christ",
+    label: "How the Passage Points to Christ",
+    hint: "Trace the four kinds of Christological pointing the text may carry — biblical theme, promise, type, and predictive prophecy.",
+    heavyLifting: true,
+    overview: {
+      title: "How the Passage Points to Christ",
+      subtitle: "Field 2 of 5 · Redemptive Thread",
+      paragraphs: [
+        "You've positioned the text against Christ. Now look for how it points to him. Merida names four distinct ways a passage can point — biblical theme, promise, type, and predictive prophecy.",
+        "These are different in kind. A biblical theme is a recurring motif in Scripture that finds its weight in Christ (kingdom, presence, sacrifice, covenant, Word). A promise is an explicit word from God that finds its yes-and-amen in Christ. A type is a pattern or person that prefigures Christ — Adam, Melchizedek, Moses, David — with linguistic and thematic correspondence and escalation (Christ is the better one). Predictive prophecy explicitly foretells Christ's coming, death, or return.",
+        "Some passages carry all four. Some carry one. Some carry none of these directly — and that's fine. Mark N/A where the text genuinely doesn't carry that kind of pointing. Don't force.",
+        "The discipline: don't insert Christ where he isn't. Allegory makes unfounded leaps; typology requires patterns, linguistic correspondences, and interbiblical themes. The text leads.",
+      ],
+    },
+    questions: [
+      { key: "biblical_theme", prompt: "Does the passage carry a biblical theme that points to Christ? (Kingdom, presence of God, sacrificial system, covenants, Word of God, etc.)" },
+      { key: "promise",        prompt: "Does the passage hold or echo a promise of God that points to Christ?" },
+      { key: "type",           prompt: "Is there a type of Christ here? A pattern, linguistic correspondence, or interbiblical theme that finds escalation in Christ? (Adam, Melchizedek, Moses, David, etc.)" },
+      { key: "predictive",     prompt: "Is the passage predictive of Christ — coming, death, return?" },
+    ],
+  },
+  {
+    key: "gospel_makes_possible",
+    label: "How the Gospel Makes This Possible",
+    hint: "If this text calls the hearer to do, be, or trust something — how do the implications of the gospel make that possible? Access to God, indwelling Spirit, continual forgiveness, union with Christ.",
+  },
+  {
+    key: "need_and_character",
+    label: "Our Need and God's Character",
+    hint: "Pair what the text shows about human need for Christ with what it shows about God's character.",
+    questions: [
+      { key: "human_need",    prompt: "How does this passage show mankind's need for Christ?" },
+      { key: "god_character", prompt: "How does this passage reveal the nature of the God who provides redemption?" },
+    ],
+  },
+  {
+    key: "christ_connection_statement",
+    label: "Christ-Connection Statement",
+    hint: "How does the whole passage point to Christ — and how is Christ the hero of it? One paragraph, in your own voice.",
+    heavyLifting: true,
+    overview: {
+      title: "Christ-Connection Statement",
+      subtitle: "Field 5 of 5 · Redemptive Thread",
+      paragraphs: [
+        "You've positioned the text against Christ, traced how it points, grounded the gospel's enabling power, and named human need with God's character. The redemptive work is done.",
+        "One more move closes Redemptive Thread. Take what you've worked out and say it. For each thought unit — how does it point to Christ? Find its weight in him? Get its answer from him?",
+        "Then, the whole passage. One paragraph. The Christ-Connection Statement. How does the whole passage point to Christ — and how is Christ the hero of it?",
+        "Goldsworthy's evaluation question lives here: did this sermon testify to Christ? The Statement is what makes that answer yes. Phase 4 (Implications) opens against it. The Christological substance you articulate here gives Implications its weight.",
+      ],
+    },
+    // B3.2 will replace the single primary question with a 2-question
+    // sequence (`christ_per_unit` cumulative-synthesis-table + `statement`
+    // text-prompt) and wire the RT → Implications composite gate.
+  },
 ];
 export const REDEMPTIVE_SUMMARY_KEY = "summary";
 

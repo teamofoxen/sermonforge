@@ -214,15 +214,34 @@ in `evaluateAdvance` (`kind=sub_phase, fromIndex=2`) checks Field 7's
 composite (every thought-unit row has `meaning`; `meaning_whole` non-empty)
 and returns `{ gates, firstReason }` per B1.6's structured shape.
 
-**Phases 3/4 still pre-SFDI in code.** `REDEMPTIVE_FIELDS` and the
-`IMPLICATIONS_*` arrays in `src/utils/studyFields.js` reflect the pre-SFDI
-shape; B3 / B4 ship the per-phase reshapes. Per-sub-phase summary of SFDI's
-redesigned shape (per `docs/PROPOSALS/study-field-definition-initiative.md`):
+**Phase 3 SFDI-aligned in code as of SPRD B3.0 + B3.1 (2026-05-04).**
+`REDEMPTIVE_FIELDS` is the SFDI 5-field shape: This Passage and Christ →
+How the Passage Points to Christ → How the Gospel Makes This Possible →
+Our Need and God's Character → Christ-Connection Statement. Five new keys:
+`this_passage_and_christ` (merged from `speaks_of_christ` + `relation_to_christ`,
+folds in NT-use-of-OT), `passage_points_to_christ` (merged from `biblical_theme`
++ `promise` + restored Merida Q5 type + Q8 predictive), `gospel_makes_possible`
+(restored Merida Q4, anti-moralism move — new in SermonForge), `need_and_character`
+(merged from `need_for_christ` + `nature_of_god`), `christ_connection_statement`
+(elevation of former `summary` slot + absorbed `jesus_hero`). Seven keys retire
+from rendering: `speaks_of_christ`, `relation_to_christ`, `biblical_theme`,
+`promise`, `need_for_christ`, `nature_of_god`, `jesus_hero`. Three multi-question
+sequences (B3.1): This Passage and Christ `[position, direct_speech]`; How the
+Passage Points to Christ `[biblical_theme, promise, type, predictive]`; Our Need
+and God's Character `[human_need, god_character]`. Two heavy-lifting fields with
+`FieldOverviewScreen`: Field 2 (How the Passage Points to Christ) frames the
+four pointing-mechanisms and the anti-allegory discipline; Field 5
+(Christ-Connection Statement) frames the synthesis work — single-primary-question
+at B3.0 + B3.1, with the cumulative-synthesis-table `christ_per_unit` (Phase 3's
+writable column on the canonical thought-unit array) + `statement` text-prompt
++ RT → Implications composite gate landing in B3.2. The legacy
+"Summary of Redemptive Features" Synthesize block in StudyTab is preserved
+unchanged for B3.0 + B3.1 — deprecated in B3.2 as Field 5 absorbs the synthesis
+work and `REDEMPTIVE_SUMMARY_KEY` data migrates into Field 5's `legacy_notes`.
 
-- **Phase 3 (Redemptive Thread) — 5 fields:** This Passage and Christ →
-  How the Passage Points to Christ → How the Gospel Makes This Possible →
-  Our Need and God's Character → Christ-Connection Statement. Three Merida
-  questions restored (gospel-makes-possible, type-of-Christ, predictive-of-Christ).
+**Phase 4 still pre-SFDI in code.** The `IMPLICATIONS_*` arrays in
+`src/utils/studyFields.js` reflect the pre-SFDI shape; B4 ships the reshape:
+
 - **Phase 4 (Implications) — 4 fields:** Theological Significance →
   Personal Implications → Pastoral Context → Implications Synthesis.
   The three-way conversation realized at field level; Compiled list AI
@@ -241,11 +260,19 @@ yet leaving the text. See "The Study throughline" above.
 no longer render but are preserved on read for any pre-existing JSON.
 
 #### Phase 3: Redemptive Thread → `sermons.redemptive_thread` (JSON)
-7 question fields + 1 summary field (key: `"summary"`)
-- **"Synthesize →"** button: AI compiles all 7 answers into a cohesive redemptive summary.
-  Routes through the proposal pattern (since SPRD Q5, shipped 2026-05-01 via ACCI
-  Item A2 `2b0fa66`) — proposal panel, accept or discard. Summary is also
-  hand-editable.
+5 fields: `this_passage_and_christ`, `passage_points_to_christ`,
+`gospel_makes_possible`, `need_and_character`, `christ_connection_statement`
+(SPRD B3.0 + B3.1). Old keys `speaks_of_christ`, `relation_to_christ`,
+`biblical_theme`, `promise`, `need_for_christ`, `nature_of_god`, `jesus_hero`
+no longer render but are preserved on read for any pre-existing JSON.
+- **"Synthesize →"** button (legacy, scheduled for deprecation in B3.2): AI
+  compiles answers into a cohesive redemptive summary, written to the
+  `summary` slot (`REDEMPTIVE_SUMMARY_KEY`). Routes through the proposal
+  pattern (since SPRD Q5, shipped 2026-05-01 via ACCI Item A2 `2b0fa66`) —
+  proposal panel, accept or discard. Summary is hand-editable. After B3.2,
+  the synthesis work moves into Field 5 (Christ-Connection Statement) with
+  per-unit cumulative-synthesis-table + whole-passage Statement; the
+  `summary` slot data migrates into Field 5's `legacy_notes`.
 
 #### Phase 4: Implications → `sermons.implications` (JSON)
 

@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-04 — sprd B3.0 + B3.1: Phase 3 Redemptive Thread reshape + multi-question sequences
+
+- `REDEMPTIVE_FIELDS` reordered to the SFDI 5-field shape: This Passage and Christ → How the Passage Points to Christ → How the Gospel Makes This Possible → Our Need and God's Character → Christ-Connection Statement.
+- Five new keys (`this_passage_and_christ`, `passage_points_to_christ`, `gospel_makes_possible`, `need_and_character`, `christ_connection_statement`); seven keys retire from rendering (`speaks_of_christ`, `relation_to_christ`, `biblical_theme`, `promise`, `need_for_christ`, `nature_of_god`, `jesus_hero`).
+- Three multi-question sequences land via existing B1.1 SpotlightField rendering: Field 1 `[position, direct_speech]`; Field 2 `[biblical_theme, promise, type, predictive]` (heavy-lifting with overview); Field 4 `[human_need, god_character]`.
+- Field 5 (Christ-Connection Statement) ships heavy-lifting flag + overview blob, single-primary-question for now; its 2-question sequence (`christ_per_unit` cumulative-synthesis-table + `statement` text-prompt) and the RT → Implications composite gate land in B3.2 alongside deprecation of the legacy `summary` slot.
+- 348 vitest total green (no test break); Vite preview compiled clean.
+
+---
+
 ## 2026-05-04 — sprd B2.2: Field 7 Interpretation Synthesis + Interpret→RT composite gate
 
 - Field 7 (Interpretation Synthesis) ships heavy-lifting overview + 2 questions: Q1 `meaning_per_unit` (new `cumulative-synthesis-table` kind reading/writing the canonical thought-unit array in `observations.divisions.thought_units`) and Q2 `meaning_whole` (text-prompt in interpretation column).
