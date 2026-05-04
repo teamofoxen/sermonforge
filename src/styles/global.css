@@ -3140,6 +3140,101 @@ button {
   margin-bottom: 4px;
 }
 
+/* ── Field overview screen (SPRD A2.5) ───────────────────────────────────── */
+/* Pre-field overview shown on first entry to a heavy-lifting field. Title,
+   subtitle, body content (paragraphs + lists), and a single Begin button.
+   Reserve this layout for fields where the framing has to land before the
+   work makes sense — spine-finders, synthesis fields, named-outcome fields. */
+
+.field-overview-screen {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 32px 28px;
+  background: var(--parchment-warm);
+  border: 1px solid var(--parchment-deep);
+  border-left: 4px solid var(--gold);
+  border-radius: var(--radius);
+  font-family: 'Crimson Pro', serif;
+  color: var(--ink);
+}
+
+.field-overview-screen-header {
+  margin-bottom: 18px;
+  border-bottom: 1px dashed var(--parchment-deep);
+  padding-bottom: 14px;
+}
+
+.field-overview-screen-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0 0 6px 0;
+  letter-spacing: -0.01em;
+}
+
+.field-overview-screen-subtitle {
+  font-style: italic;
+  color: var(--ink-soft);
+  font-size: 14px;
+  margin: 0;
+}
+
+.field-overview-screen-body {
+  font-size: 16px;
+  line-height: 1.65;
+  color: var(--ink-mid);
+}
+
+.field-overview-screen-body > * + * {
+  margin-top: 14px;
+}
+
+.field-overview-screen-body p {
+  margin: 0;
+}
+
+.field-overview-screen-body ol,
+.field-overview-screen-body ul {
+  margin: 0;
+  padding-left: 24px;
+}
+
+.field-overview-screen-body li {
+  margin-bottom: 4px;
+}
+
+.field-overview-screen-controls {
+  margin-top: 24px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.field-overview-screen-begin {
+  background: var(--gold);
+  color: var(--parchment);
+  border: 1px solid var(--gold);
+  padding: 10px 24px;
+  font-family: 'Playfair Display', serif;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.field-overview-screen-begin:hover {
+  background: var(--gold-bright);
+  border-color: var(--gold-bright);
+}
+
+.field-overview-screen-begin:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
 /* ── Responsive ──────────────────────────────────────────────────────────── */
 @media (max-width: 980px) {
   .dash-grid { grid-template-columns: 1fr; }
