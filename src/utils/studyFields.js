@@ -73,15 +73,52 @@ import { tryParse } from "../utils";
 // land in subsequent B1.x cuts as the per-field walks are wired in.
 
 export const OBSERVE_FIELDS = [
-  { key: "background",            label: "Background",                hint: "What world was this book written into? Author, date, original audience and occasion, genre." },
-  { key: "context",               label: "Context",                   hint: "What comes before and after this passage, and how does that bearing shape what's happening here?" },
-  { key: "surface_questions",     label: "Surface Questions",         hint: "Where, when, and how does this take place? Stand on the surface of the text and report." },
+  {
+    key: "background",
+    label: "Background",
+    hint: "World the book was written into.",
+    questions: [
+      { key: "author",   prompt: "Who wrote this book?" },
+      { key: "date",     prompt: "When was it written?" },
+      { key: "audience", prompt: "Who was the original audience, and what occasion prompted the writing?" },
+      { key: "genre",    prompt: "What kind of literature is this?" },
+    ],
+  },
+  {
+    key: "context",
+    label: "Context",
+    hint: "Where in the book is this passage, and how does that shape what's happening here?",
+    questions: [
+      { key: "before",             prompt: "What happened before this passage?" },
+      { key: "after",              prompt: "What happens after?" },
+      { key: "impact",             prompt: "Do those answers impact what's happening in this passage? If so, how?" },
+      { key: "holy_spirit_intent", prompt: "Why do you think the Holy Spirit led the author to write (a) this passage, (b) in this place?" },
+    ],
+  },
+  {
+    key: "surface_questions",
+    label: "Surface Questions",
+    hint: "Stand on the surface and report basic situational facts.",
+    questions: [
+      { key: "where", prompt: "Where does this take place?" },
+      { key: "when",  prompt: "When does this take place?" },
+      { key: "how",   prompt: "How does this unfold?" },
+    ],
+  },
   { key: "divisions",             label: "Divisions / Thought Units", hint: "How is the passage built? Lay out the main sentences, paraphrase them, and find the thought units that anchor it." },
-  { key: "characters",            label: "Main Characters",           hint: "Who's acting in this passage? What roles do they play?" },
-  { key: "commands_declarations", label: "Commands and Declarations", hint: "What does the text command, and what does it declare? Imperatives and indicatives, named." },
-  { key: "big_ideas",             label: "Big Ideas",                 hint: "What major themes or ideas surface in this passage?" },
-  { key: "obvious_point",         label: "Obvious Point",             hint: "Is there an obvious point to the passage? State it plainly." },
-  { key: "applications",          label: "Possible Implications",     hint: "What is the passage starting to press on for the people you're preaching to? What's hard? What's hopeful?" },
+  { key: "characters",            label: "Main Characters",           hint: "Who's acting in this passage? For each character, name their role." },
+  { key: "commands_declarations", label: "Commands and Declarations", hint: "For each main sentence, name what kind of action it carries — a command (asking the hearer to do something) or a declaration (naming reality). Then say in your own words what the sentence is doing." },
+  { key: "big_ideas",             label: "Big Ideas",                 hint: "What concepts is the passage wrestling with? List them. For each, a one-line note on how it shows up." },
+  { key: "obvious_point",         label: "Obvious Point",             hint: "State the plain-sense point of the passage in one sentence." },
+  {
+    key: "applications",
+    label: "Possible Implications",
+    hint: "First surfacing of Pastoral Context — early sight, not full application.",
+    questions: [
+      { key: "pressing",          prompt: "What is the passage starting to press on for the people you're preaching to?" },
+      { key: "hard_and_hopeful",  prompt: "What's hard here for the hearer? What's hopeful?" },
+    ],
+  },
 ];
 
 // ── Phase 2: Interpret ───────────────────────────────────────────────────────
