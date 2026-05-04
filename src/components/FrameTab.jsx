@@ -51,10 +51,15 @@ export default function FrameTab({ sermon, onUpdate, onTabChange }) {
 
   // Frame stage is fromIndex=3 in STAGE_BY_INDEX (Study=1, Blueprint=2,
   // Frame=3, Manuscript=4, Delivery=5). evaluateAdvance returns
-  // {ok, reason?, gates?} per the established pattern.
+  // {ok, reason?, gates?} per the established pattern. Dep is the
+  // sermon_frame column only — the Frame → Manuscript gate reads nothing
+  // else off the sermon, so unrelated field edits shouldn't re-run it.
   const advance = useMemo(
     () => evaluateAdvance(sermon, "stage", 3),
-    [sermon]
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sermon_frame is
+    // the only field evaluateAdvance reads at fromIndex=3; passing the
+    // narrower dep avoids re-running the gate on unrelated sermon edits.
+    [sermon.sermon_frame]
   );
 
   const handleContinue = useCallback(() => {

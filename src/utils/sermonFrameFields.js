@@ -109,13 +109,9 @@ export const SERMON_FRAME_FIELDS = [
   },
 ];
 
-// Per-question N/A allowlist. A question key here may be marked N/A by the
-// pastor (with the strict "satisfied another way" semantic per SADI). All
-// other questions are not N/A-able and the toggle should not render.
-export const SERMON_FRAME_NA_ALLOWED = Object.freeze(new Set([
-  "intro.redemptive_note",
-]));
-
-export function isSermonFrameQuestionNAAllowed(fieldKey, questionKey) {
-  return SERMON_FRAME_NA_ALLOWED.has(`${fieldKey}.${questionKey}`);
-}
+// Per-question N/A semantics: only `intro.redemptive_note` may be marked N/A
+// by the pastor (with the strict "satisfied another way" semantic per SADI).
+// All other questions are not N/A-able. Today this rule is enforced at the
+// composite gate (`checkConclusionComposite` rejects N/A on any Conclusion
+// question). UI-side suppression of the N/A toggle on no-N/A questions is
+// the deferred UX polish; once that lands, an allowlist export can return.
