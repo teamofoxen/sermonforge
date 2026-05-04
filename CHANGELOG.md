@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-04 — sprd B2.0 + B2.1: Phase 2 Interpret reshape + Deeper Context question sequence
+
+- `INTERPRET_FIELDS` reordered to the SFDI 7-field shape: Deeper Context → Recurring Ideas → Character Purpose → Contrasts → Cross-References → Commentary Notes → Interpretation Synthesis.
+- Three new keys: `deeper_context` (refined from `context_impact`), `character_purpose` (refined from `characters`), `interpretation_synthesis` (merged from `summarize_parts` + `summarize_whole`); five keys retire from rendering (`context_impact`, `characters`, `diagram`, `summarize_parts`, `summarize_whole`).
+- Field 1 Deeper Context gains its 2-question SFDI sequence: `unresolved` ("What questions did Observe's Context leave open…") and `book_argument` ("How does this passage fit the book's overall argument…"); multi-question rendering picks up the existing B1.1 SpotlightField path automatically.
+- Old data on retired keys is preserved on read but no longer renders, per the defensive-only migration policy in SPRD § 9 (no production sermons exist).
+- 331 vitest total green (no test break); Vite preview compiled clean.
+
+---
+
 ## 2026-05-04 — sprd B1.6: AdvanceGateChecklist + structured per-gate state (closes A1.2)
 
 - `evaluateAdvance` now returns `{ ok, reason, gates? }` where `gates` is `[{key, label, met, reason?}]` per load-bearing field; the Observe → Interpret threshold surfaces three entries (Field 4 composite, Field 8 Obvious Point, Field 9 Possible Implications) with Field 4's failing sub-reason carried through.

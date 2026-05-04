@@ -191,16 +191,27 @@ question via a 72/28 flex row. Field 4 Divisions / Thought Units and Field
 9 Possible Implications are flagged heavy-lifting and open with
 `FieldOverviewScreen` on first per-sermon entry (B1.3).
 
-**Phases 2/3/4 still pre-SFDI in code.** `INTERPRET_FIELDS`, `REDEMPTIVE_FIELDS`,
-and the `IMPLICATIONS_*` arrays in `src/utils/studyFields.js` reflect the
-pre-SFDI shape; B2 / B3 / B4 ship the per-phase reshapes. Per-sub-phase
-summary of SFDI's redesigned shape (per `docs/PROPOSALS/study-field-definition
--initiative.md`):
+**Phase 2 SFDI-aligned in code as of SPRD B2.0 + B2.1 (2026-05-04).** `INTERPRET_FIELDS`
+in `src/utils/studyFields.js` is the SFDI 7-field shape: Deeper Context →
+Recurring Ideas → Character Purpose → Contrasts → Cross-References →
+Commentary Notes → Interpretation Synthesis. Three new keys: `deeper_context`
+(refined from `context_impact`), `character_purpose` (refined from
+`characters`), `interpretation_synthesis` (merged from `summarize_parts` +
+`summarize_whole`). Five keys retire from rendering: `context_impact`,
+`characters`, `diagram` (cross-phase to Observe Field 4 Q1 canvas which
+absorbed the structural-diagram work), `summarize_parts`, `summarize_whole`.
+Field 1 Deeper Context carries a 2-question sequence (B2.1): `[unresolved,
+book_argument]`. Other Phase 2 fields are single-question for now; Field 7
+Interpretation Synthesis ships its heavy-lifting overview + 2 questions
+(`meaning_per_unit` cumulative-column synthesis-table extension with Meaning
+over Phase 1 columns, plus `meaning_whole` text-prompt) and the Interpret →
+Redemptive Thread composite gate in B2.2.
 
-- **Phase 2 (Interpret) — 7 fields:** Deeper Context → Recurring Ideas →
-  Character Purpose → Contrasts → Cross-References → Commentary Notes →
-  Interpretation Synthesis. Diagram retired (Field 4 Q1 absorbed it);
-  Summarize Parts + Whole merged into Interpretation Synthesis.
+**Phases 3/4 still pre-SFDI in code.** `REDEMPTIVE_FIELDS` and the
+`IMPLICATIONS_*` arrays in `src/utils/studyFields.js` reflect the pre-SFDI
+shape; B3 / B4 ship the per-phase reshapes. Per-sub-phase summary of SFDI's
+redesigned shape (per `docs/PROPOSALS/study-field-definition-initiative.md`):
+
 - **Phase 3 (Redemptive Thread) — 5 fields:** This Passage and Christ →
   How the Passage Points to Christ → How the Gospel Makes This Possible →
   Our Need and God's Character → Christ-Connection Statement. Three Merida
@@ -217,8 +228,10 @@ surfaces in the awareness layer. The pastor begins to think pastorally without
 yet leaving the text. See "The Study throughline" above.
 
 #### Phase 2: Interpret → `sermons.interpretation` (JSON)
-9 fields: `context_impact`, `recurring_ideas`, `characters`, `contrasts`, `diagram`,
-`cross_refs`, `commentary`, `summarize_parts`, `summarize_whole`
+7 fields: `deeper_context`, `recurring_ideas`, `character_purpose`, `contrasts`,
+`cross_refs`, `commentary`, `interpretation_synthesis` (SPRD B2.0). Old keys
+`context_impact`, `characters`, `diagram`, `summarize_parts`, `summarize_whole`
+no longer render but are preserved on read for any pre-existing JSON.
 
 #### Phase 3: Redemptive Thread → `sermons.redemptive_thread` (JSON)
 7 question fields + 1 summary field (key: `"summary"`)

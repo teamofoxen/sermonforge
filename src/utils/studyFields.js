@@ -210,17 +210,51 @@ export const OBSERVE_FIELDS = [
 ];
 
 // ── Phase 2: Interpret ───────────────────────────────────────────────────────
+//
+// Reshaped to 7 fields per SFDI Phase 2 walk (2026-05-03), shipped as SPRD
+// B2.0 (2026-05-04). Merida four-part arc through the seven fields:
+//   Deeper Context → Recurring Ideas → Character Purpose → Contrasts
+//   → Cross-References → Commentary Notes (last, to check) → Interpretation Synthesis
+//
+// Retired keys from the prior shape: `context_impact`, `characters`, `diagram`,
+// `summarize_parts`, `summarize_whole` are no longer iterated as fields. Old
+// data carrying these keys stays in the JSON column (parseStructuredField
+// preserves them) but does not render. Per the defensive-only migration
+// policy in SPRD § 9 (no production sermons exist 2026-05-04), no auto-mapping
+// logic ships; the per-key cross-mapping in SPRD § 9 documents how it would
+// land if a future test fixture or import surfaces such data:
+//   - `context_impact` → `deeper_context.legacy_notes`
+//   - `characters`     → `character_purpose.legacy_notes`
+//   - `diagram`        → cross-phase move to Phase 1 Field 4
+//                        (`observations.divisions.legacy_notes`) because Q1's
+//                        canvas absorbed the structural-diagram work
+//   - `summarize_parts` + `summarize_whole` → merged into
+//                        `interpretation_synthesis.legacy_notes`
+//
+// B2.0 keeps a single primary question per field (multi-question wiring lands
+// in B2.1+ as the per-field walks are wired in). Field 1 Deeper Context will
+// gain its 2-question sequence (`unresolved`, `book_argument`) under B2.1;
+// Field 7 Interpretation Synthesis lands in B2.2 with the heavy-lifting
+// overview + 2 questions (`meaning_per_unit` extending the synthesis-table
+// sub-shape with a Meaning column, `meaning_whole` text-prompt). The Field 7
+// composite gate at the Interpret → Redemptive Thread threshold lands with B2.2.
 
 export const INTERPRET_FIELDS = [
-  { key: "context_impact",  label: "Context Impact",              hint: "How does the surrounding context shape the meaning of this passage? Note any unresolved questions from background study." },
-  { key: "recurring_ideas", label: "Recurring Ideas",             hint: "What ideas, words, or themes recur within this passage?" },
-  { key: "characters",      label: "Characters: Saying, Doing, Thinking", hint: "What are the characters saying, doing, thinking — and why?" },
-  { key: "contrasts",       label: "Contrasts",                   hint: "Are there any contrasts being made within the text? (e.g., wise vs. foolish, light vs. dark)" },
-  { key: "diagram",         label: "Diagram / Relationships",     hint: "Show the relationship between ideas or scenes in graphic or written form." },
-  { key: "cross_refs",      label: "Cross-References",            hint: "Write down notable cross-references here." },
-  { key: "commentary",      label: "Commentary Notes",            hint: "What do the commentaries say? Note key insights." },
-  { key: "summarize_parts", label: "Summarize the Parts",         hint: "Summarize each verse or paragraph in your own words." },
-  { key: "summarize_whole", label: "Summarize the Whole",         hint: "Summarize the entire text in your own words." },
+  {
+    key: "deeper_context",
+    label: "Deeper Context",
+    hint: "Pick up Observe's Context with study tools. Resolve open questions and widen the lens to book-wide literary context and authorial purpose.",
+    questions: [
+      { key: "unresolved",     prompt: "What questions did Observe's Context leave open that you can now answer with study tools in hand?" },
+      { key: "book_argument",  prompt: "How does this passage fit the book's overall argument? What does the author intend across the whole that bears on this passage?" },
+    ],
+  },
+  { key: "recurring_ideas",         label: "Recurring Ideas",         hint: "What ideas, words, or themes recur within this passage? For each, name what the recurrence is signaling about what the author is hammering home." },
+  { key: "character_purpose",       label: "Character Purpose",       hint: "For each character you named in Observe, what are they saying, doing, or thinking — and why? What is the author signaling through their action?" },
+  { key: "contrasts",               label: "Contrasts",               hint: "What contrasts has the author built into the passage? Name each — what's set against what — and say in your own words what each contrast is doing." },
+  { key: "cross_refs",              label: "Cross-References",        hint: "Where else does Scripture speak to what this passage is saying? Move outward in concentric circles. For each, name what it adds." },
+  { key: "commentary",              label: "Commentary Notes",        hint: "Now — last, to check, not to start — what do the commentaries say? Note insights that sharpen, confirm, or correct what you've worked out. Note where you disagree, and why." },
+  { key: "interpretation_synthesis", label: "Interpretation Synthesis", hint: "Articulate what the passage MEANS — per thought unit and as a whole — in your own voice. The Interpretation Set lives here." },
 ];
 
 // ── Phase 3: Redemptive Thread ───────────────────────────────────────────────
