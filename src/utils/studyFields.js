@@ -49,17 +49,39 @@
 import { tryParse } from "../utils";
 
 // ── Phase 1: Observe ─────────────────────────────────────────────────────────
+//
+// Reshaped to 9 fields per SFDI Phase 1 walk (2026-05-03), shipped as SPRD
+// B1.0 (2026-05-04). Outside-in arc through the first four fields:
+//   Background → Context → Surface Questions → Divisions / Thought Units
+// Then the lens cluster reads against Field 4's spine:
+//   Main Characters → Commands and Declarations → Big Ideas
+// First synthesis + bridge into Interpret close the segment:
+//   Obvious Point → Possible Implications
+//
+// Retired keys from the prior shape: `commands`, `statements`, `basic_outline`
+// are no longer iterated as fields. Old data carrying these keys stays in
+// the JSON column (parseStructuredField preserves them) but does not render
+// under any current field. Per the defensive-only migration policy in SPRD
+// § 9 (no production sermons exist 2026-05-04), no auto-mapping logic ships.
+// If a future test fixture or import surfaces such data, the per-key cross-
+// mapping in SPRD § 9 documents how it would land (commands + statements →
+// commands_declarations.legacy_notes; basic_outline → divisions.legacy_notes).
+//
+// B1.0 keeps a single primary question per field. Multi-question sequences
+// (Background's 4-question Author/Date/Audience/Genre, Surface Questions's
+// 3-question Where/When/How, Field 4's three structured sub-shapes, etc.)
+// land in subsequent B1.x cuts as the per-field walks are wired in.
 
 export const OBSERVE_FIELDS = [
-  { key: "context",       label: "Context",                    hint: "What comes before and after this passage? How does the surrounding context set up or follow from it?" },
-  { key: "divisions",     label: "Divisions / Thought Units",  hint: "What are the main divisions or thought units of the passage?" },
-  { key: "commands",      label: "Notable Commands",           hint: "What imperatives appear in the text? What is the author commanding?" },
-  { key: "statements",    label: "Notable Statements",         hint: "What indicatives stand out? What is the author declaring or asserting?" },
-  { key: "characters",    label: "Main Characters",            hint: "Who are the main characters? What roles do they play?" },
-  { key: "big_ideas",     label: "Big Ideas",                  hint: "What are the major themes or ideas surfacing in this passage?" },
-  { key: "obvious_point", label: "Obvious Point",              hint: "Is there an obvious point to the story or passage? State it plainly." },
-  { key: "basic_outline", label: "Basic Outline",              hint: "Begin forming a basic outline based on the text. This is a text outline — the argument structure of the passage itself. It will later inform your sermon outline in Step 3." },
-  { key: "applications",  label: "Possible Implications",      hint: "Write down any possible implications that surface from your study here." },
+  { key: "background",            label: "Background",                hint: "What world was this book written into? Author, date, original audience and occasion, genre." },
+  { key: "context",               label: "Context",                   hint: "What comes before and after this passage, and how does that bearing shape what's happening here?" },
+  { key: "surface_questions",     label: "Surface Questions",         hint: "Where, when, and how does this take place? Stand on the surface of the text and report." },
+  { key: "divisions",             label: "Divisions / Thought Units", hint: "How is the passage built? Lay out the main sentences, paraphrase them, and find the thought units that anchor it." },
+  { key: "characters",            label: "Main Characters",           hint: "Who's acting in this passage? What roles do they play?" },
+  { key: "commands_declarations", label: "Commands and Declarations", hint: "What does the text command, and what does it declare? Imperatives and indicatives, named." },
+  { key: "big_ideas",             label: "Big Ideas",                 hint: "What major themes or ideas surface in this passage?" },
+  { key: "obvious_point",         label: "Obvious Point",             hint: "Is there an obvious point to the passage? State it plainly." },
+  { key: "applications",          label: "Possible Implications",     hint: "What is the passage starting to press on for the people you're preaching to? What's hard? What's hopeful?" },
 ];
 
 // ── Phase 2: Interpret ───────────────────────────────────────────────────────
