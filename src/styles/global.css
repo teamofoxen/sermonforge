@@ -2766,6 +2766,88 @@ button {
   flex-shrink: 0;
 }
 
+/* ── Indented sentence canvas (SPRD A2.1) ────────────────────────────────── */
+/* SFDI Field 4 Q1 sub-shape. The pastor types each main sentence at the left
+   margin and indents modifiers under what they modify. Tab/Shift+Tab change
+   the active line's depth; the gutter renumbers automatically; a burgundy
+   marker draws on left-margin (depth=0) lines and disappears when those
+   lines indent. */
+
+.indented-canvas {
+  font-family: 'Crimson Pro', serif;
+  font-size: 15px;
+  color: var(--ink);
+  background: var(--parchment-warm);
+  border: 1px solid var(--parchment-deep);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+}
+
+.indented-canvas-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.indented-canvas-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 1px 0;
+}
+
+.indented-canvas-gutter {
+  flex-shrink: 0;
+  width: 28px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--ink-ghost);
+  text-align: right;
+  user-select: none;
+}
+
+.indented-canvas-marker {
+  flex-shrink: 0;
+  width: 3px;
+  align-self: stretch;
+  background: transparent;
+  border-radius: 1px;
+}
+
+.indented-canvas-row-main .indented-canvas-marker {
+  background: var(--crimson);
+}
+
+.indented-canvas-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  outline: none;
+  font: inherit;
+  color: var(--ink);
+  padding: 2px 4px;
+  border-radius: 2px;
+}
+
+.indented-canvas-input:focus {
+  outline: 2px solid var(--gold);
+  outline-offset: 1px;
+  background: var(--parchment);
+}
+
+.indented-canvas-input:disabled {
+  color: var(--ink-ghost);
+  cursor: not-allowed;
+}
+
+.indented-canvas-paste-hint {
+  margin-top: 8px;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--ink-soft);
+}
+
 /* ── Responsive ──────────────────────────────────────────────────────────── */
 @media (max-width: 980px) {
   .dash-grid { grid-template-columns: 1fr; }
