@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-04 — sprd B1.3 + B1.4: heavy-lifting overview + Observe→Interpret threshold
+
+- Field defs gain optional `heavyLifting` flag and `overview` blob (data-shape, not JSX); Field 4 Divisions and Field 9 Possible Implications carry SFDI verbatim overview content.
+- `SpotlightWorksheet` accepts a `sermonId` prop and tracks per-sermon overview-seen state in `localStorage`; heavy-lifting active fields render the A2.5 `FieldOverviewScreen` on first entry, dismissed by Begin click.
+- `evaluateAdvance` gains the SFDI Observe → Interpret threshold (Field 8 non-empty-or-N/A + Field 9 both questions non-empty-or-N/A) layered on top of the empty-evidence baseline; Field 4 composite waits for B1.5.
+- Each gate carries its own pastor-facing reason ("State the Obvious Point…" / "Answer the Possible Implications questions…"); N/A counts as satisfied per SFDI's escape valve.
+- Two contract test fixtures updated (process-2 + process-3) for the tighter threshold; 12 new tests; 309 vitest total green.
+
+---
+
 ## 2026-05-04 — sprd B1: Phase 1 Observe reshape + multi-question rendering
 
 - `OBSERVE_FIELDS` reshaped to the SFDI 9-field Phase 1 shape — Background / Surface Questions / Commands and Declarations added; Basic Outline / Notable Commands / Notable Statements retired.
