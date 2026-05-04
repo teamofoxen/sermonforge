@@ -13,10 +13,31 @@
 //
 // Each field is a sub-object keyed by stable question identifiers. Each
 // question's answer is an envelope `{value, na}`. For text-prompt questions
-// the value is a string; for structured-exercise questions (introduced when
-// the multi-question field shapes land) the value is a structured list.
-// na=true means the pastor explicitly marked the question as inapplicable;
-// N/A questions are not counted as evidence.
+// the value is a string; for structured-exercise questions the value is a
+// structured list. na=true means the pastor explicitly marked the question
+// as inapplicable; N/A questions are not counted as evidence.
+//
+// Three structured-list sub-shapes (SFDI Field 4 walked the precedent,
+// settled 2026-05-03):
+//
+//   - Indented sentence canvas (e.g. Field 4 Q1):
+//       [{text: <string>, depth: <integer>, kind: <string>}, ...]
+//
+//   - Paraphrase blocks (e.g. Field 4 Q2):
+//       [{main_sentence_id: <string>, paraphrase: <string>}, ...]
+//
+//   - Synthesis table (e.g. Field 4 Q3) — extended cumulatively across phases:
+//       Phase 1 builds: [{thought_unit_summary, after_line, signal}, ...]
+//       Phase 2 adds:   meaning
+//       Phase 3 adds:   christ_connection
+//       Phase 4 adds:   implication
+//       Final shape:    [{thought_unit_summary, after_line, signal,
+//                         meaning, christ_connection, implication}, ...]
+//
+// A2.0 is data-layer-only foundation: helpers tolerate the new value types
+// (parse / serialize / flatten / evidence). Per-sub-shape composite gates,
+// peripheral reference panels, paste-intercept, and the canvas/paraphrase/
+// table UI components land in subsequent A2.x sessions and B1+ field walks.
 //
 // Until SFDI's per-field question sequences land per-phase, every existing
 // field has one question keyed `primary` (DEFAULT_QUESTION_KEY).
@@ -153,9 +174,87 @@ export function getPrimaryAnswer(fieldData, fieldKey) {
   return getQuestionAnswer(fieldData, fieldKey, DEFAULT_QUESTION_KEY);
 }
 
-// Iterate all answered (non-N/A, non-empty) text-prompt values across a phase's
-// fields. Returns a flat list of {fieldKey, questionKey, value} entries.
-// Used by evidence-building and flattening helpers.
+// Flatten an answer value (string or structured list) to a single string.
+// Returns "" if the value is missing, empty, or otherwise has no content.
+//
+// Sub-shape detection inspects the first entry's keys:
+//   - synthesis table:   has `thought_unit_summary` (cumulative columns appended)
+//   - paraphrase blocks: has `paraphrase`
+//   - indented canvas:   has `text` (with `depth`)
+//   - unknown:           JSON.stringify fallback
+//
+// Output formats are evidence-text-oriented (consumed by AI prompts and
+// empty-evidence gates) — not the rendered display. Per-sub-shape display
+// rendering lands in the canvas/paraphrase/table components in later A2.x.
+export function flattenAnswerValue(value) {
+  if (typeof value === "string") return value.trim();
+  if (!Array.isArray(value) || value.length === 0) return "";
+
+  const first = value.find((e) => e && typeof e === "object") || null;
+  if (!first) return "";
+
+  const lines = [];
+
+  if ("thought_unit_summary" in first) {
+    for (const row of value) {
+      if (!row || typeof row !== "object") continue;
+      const summary = typeof row.thought_unit_summary === "string" ? row.thought_unit_summary.trim() : "";
+      if (!summary) continue;
+      const meta = [];
+      if (row.after_line !== undefined && row.after_line !== null && String(row.after_line).trim()) {
+        meta.push(`after line ${String(row.after_line).trim()}`);
+      }
+      if (typeof row.signal === "string" && row.signal.trim()) {
+        meta.push(`signal: ${row.signal.trim()}`);
+      }
+      const extras = [];
+      for (const key of ["meaning", "christ_connection", "implication"]) {
+        if (typeof row[key] === "string" && row[key].trim()) {
+          extras.push(`${key.replace(/_/g, " ")}: ${row[key].trim()}`);
+        }
+      }
+      const head = meta.length > 0 ? `${summary} (${meta.join(", ")})` : summary;
+      lines.push(extras.length > 0 ? `${head} — ${extras.join("; ")}` : head);
+    }
+    return lines.join("\n");
+  }
+
+  if ("paraphrase" in first) {
+    for (const row of value) {
+      if (!row || typeof row !== "object") continue;
+      const p = typeof row.paraphrase === "string" ? row.paraphrase.trim() : "";
+      if (p) lines.push(p);
+    }
+    return lines.join("\n");
+  }
+
+  if ("text" in first) {
+    for (const row of value) {
+      if (!row || typeof row !== "object") continue;
+      const t = typeof row.text === "string" ? row.text.trim() : "";
+      if (!t) continue;
+      const depth = Number.isInteger(row.depth) && row.depth > 0 ? row.depth : 0;
+      lines.push("  ".repeat(depth) + t);
+    }
+    return lines.join("\n");
+  }
+
+  // Unknown structured shape — defensive fallback so the data isn't silently
+  // dropped from evidence. Per-sub-shape branches above are added as new
+  // shapes are walked.
+  try {
+    const s = JSON.stringify(value);
+    return s && s !== "[]" ? s : "";
+  } catch {
+    return "";
+  }
+}
+
+// Iterate all answered (non-N/A, non-empty) questions across a phase's
+// fields. Returns a flat list of {fieldKey, questionKey, value} entries
+// where `value` is always a string — structured-list values are flattened
+// via flattenAnswerValue so consumers (evidence-building, flattening) can
+// treat all entries uniformly.
 export function answeredQuestions(fieldData) {
   if (!fieldData || typeof fieldData !== "object") return [];
   const out = [];
@@ -165,11 +264,10 @@ export function answeredQuestions(fieldData) {
     for (const [questionKey, q] of Object.entries(field)) {
       if (!q || typeof q !== "object") continue;
       if (q.na) continue;
-      const v = q.value;
-      if (typeof v === "string" && v.trim()) {
-        out.push({ fieldKey, questionKey, value: v.trim() });
+      const flat = flattenAnswerValue(q.value);
+      if (flat) {
+        out.push({ fieldKey, questionKey, value: flat });
       }
-      // Structured-exercise list values are not yet evidence-bearing here.
     }
   }
   return out;
@@ -180,14 +278,20 @@ export function hasAnyAnswer(fieldData) {
   return answeredQuestions(fieldData).length > 0;
 }
 
-// Apply a flat {[fieldKey]: <string>} value map onto the new-shape data.
+// Apply a flat {[fieldKey]: <string|list>} value map onto the new-shape data.
 // Each entry sets the primary question's value for the corresponding field.
 // Used by AI-incorporate flows that propose new values as a flat JSON object.
+//
+// Strings cover text-prompt fields (the AI's current shape). Arrays are
+// accepted for forward-compat with structured-exercise values; in practice
+// structured fields are written through their own per-question paths and
+// rarely flow through this map, but accepting both keeps the data layer
+// shape-agnostic.
 export function applyFieldValueMap(fieldData, valueMap) {
   let next = fieldData || {};
   if (!valueMap || typeof valueMap !== "object") return next;
   for (const [fieldKey, value] of Object.entries(valueMap)) {
-    if (typeof value === "string") {
+    if (typeof value === "string" || Array.isArray(value)) {
       next = setPrimaryAnswer(next, fieldKey, value);
     }
   }
@@ -287,8 +391,9 @@ export function serializeStructuredField(data) {
 
 /**
  * Flatten a structured field to plain text for the context pipeline.
- * Joins all answered (non-N/A, non-empty) text-prompt values with labels
- * derived from the field defs. Falls back to legacy_notes if present.
+ * Joins all answered (non-N/A, non-empty) primary-question values with
+ * labels derived from the field defs. Structured-list values are flattened
+ * via flattenAnswerValue. Falls back to legacy_notes if present.
  */
 export function flattenToText(data, fieldDefs) {
   if (!data || typeof data !== "object") return "";
@@ -303,26 +408,18 @@ export function flattenToText(data, fieldDefs) {
   // Defined fields in order — primary question only until per-field
   // multi-question shapes land.
   for (const def of fieldDefs) {
-    const v = getPrimaryAnswer(data, def.key);
-    if (typeof v === "string" && v.trim()) {
-      parts.push(`${def.label}: ${v.trim()}`);
-    }
+    const text = flattenAnswerValue(getPrimaryAnswer(data, def.key));
+    if (text) parts.push(`${def.label}: ${text}`);
   }
 
   // Phase 3 / Phase 4 special fields (legacy keys retained as fields with a
   // `primary` question; values surface via getPrimaryAnswer).
-  const summary = getPrimaryAnswer(data, REDEMPTIVE_SUMMARY_KEY);
-  if (typeof summary === "string" && summary.trim()) {
-    parts.push(`Summary: ${summary.trim()}`);
-  }
-  const compiled = getPrimaryAnswer(data, IMPLICATIONS_COMPILED_KEY);
-  if (typeof compiled === "string" && compiled.trim()) {
-    parts.push(`Compiled implications: ${compiled.trim()}`);
-  }
-  const unbeliever = getPrimaryAnswer(data, IMPLICATIONS_UNBELIEVER_KEY);
-  if (typeof unbeliever === "string" && unbeliever.trim()) {
-    parts.push(`Implications for unbelievers: ${unbeliever.trim()}`);
-  }
+  const summary = flattenAnswerValue(getPrimaryAnswer(data, REDEMPTIVE_SUMMARY_KEY));
+  if (summary) parts.push(`Summary: ${summary}`);
+  const compiled = flattenAnswerValue(getPrimaryAnswer(data, IMPLICATIONS_COMPILED_KEY));
+  if (compiled) parts.push(`Compiled implications: ${compiled}`);
+  const unbeliever = flattenAnswerValue(getPrimaryAnswer(data, IMPLICATIONS_UNBELIEVER_KEY));
+  if (unbeliever) parts.push(`Implications for unbelievers: ${unbeliever}`);
 
   return parts.join("\n");
 }
