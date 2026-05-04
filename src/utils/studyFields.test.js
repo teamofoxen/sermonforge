@@ -21,6 +21,7 @@ import {
   setQuestionNA,
   getQuestionAnswer,
   OBSERVE_FIELDS,
+  INTERPRET_FIELDS,
   DEFAULT_QUESTION_KEY,
 } from "./studyFields";
 
@@ -237,28 +238,85 @@ describe("answeredQuestions with structured-list values", () => {
 // ── flattenToText with list values ─────────────────────────────────────────
 
 describe("flattenToText with structured-list values", () => {
-  it("labels a list-valued primary answer with the field label", () => {
-    const data = setPrimaryAnswer({}, "divisions", CANVAS);
+  it("labels a list-valued multi-question answer with the field label and question key", () => {
+    // Field 4 (`divisions`) is multi-question after B1.5 — write to the
+    // `sentence_layout` (canvas-kind) question, not `primary`.
+    const data = setQuestionAnswer({}, "divisions", "sentence_layout", CANVAS);
     const out = flattenToText(data, OBSERVE_FIELDS);
     expect(out).toContain("Divisions / Thought Units:");
+    expect(out).toContain("sentence_layout:");
     expect(out).toContain("And you were dead");
-    expect(out).toContain("  in your trespasses and sins");
+    expect(out).toContain("in your trespasses and sins");
   });
 
   it("emits text-prompt and structured-list fields side by side", () => {
-    let data = setPrimaryAnswer({}, "context", "Sets up the new humanity argument.");
-    data = setPrimaryAnswer(data, "divisions", CANVAS);
+    // `context` is multi-question (B1.2): use a real question key.
+    let data = setQuestionAnswer({}, "context", "before", "Sets up the new humanity argument.");
+    data = setQuestionAnswer(data, "divisions", "sentence_layout", CANVAS);
     const out = flattenToText(data, OBSERVE_FIELDS);
-    expect(out).toContain("Context: Sets up the new humanity argument.");
+    expect(out).toContain("Context:");
+    expect(out).toContain("Sets up the new humanity argument.");
     expect(out).toContain("Divisions / Thought Units:");
   });
 
   it("preserves legacy_notes ahead of structured fields", () => {
     let data = { legacy_notes: "Old free-text observations from a 2025 sermon." };
-    data = setPrimaryAnswer(data, "divisions", CANVAS);
+    data = setQuestionAnswer(data, "divisions", "sentence_layout", CANVAS);
     const out = flattenToText(data, OBSERVE_FIELDS);
     expect(out.startsWith("Old free-text observations from a 2025 sermon.")).toBe(true);
     expect(out).toContain("Divisions / Thought Units:");
+  });
+});
+
+// ── flattenToText multi-question support (B1.7) ────────────────────────────
+
+describe("flattenToText surfaces multi-question fields under their field label", () => {
+  it("renders each answered question on its own line under the field label", () => {
+    let data = setQuestionAnswer({}, "background", "author", "Paul");
+    data = setQuestionAnswer(data, "background", "date", "60 AD");
+    data = setQuestionAnswer(data, "background", "audience", "Believers in Ephesus");
+    data = setQuestionAnswer(data, "background", "genre", "Epistle");
+    const out = flattenToText(data, OBSERVE_FIELDS);
+    expect(out).toContain("Background:");
+    expect(out).toContain("author: Paul");
+    expect(out).toContain("date: 60 AD");
+    expect(out).toContain("audience: Believers in Ephesus");
+    expect(out).toContain("genre: Epistle");
+  });
+
+  it("skips N/A questions in multi-question flattening", () => {
+    let data = setQuestionAnswer({}, "background", "author", "Paul");
+    data = setQuestionNA(data, "background", "date", true);
+    data = setQuestionAnswer(data, "background", "audience", "Ephesus");
+    const out = flattenToText(data, OBSERVE_FIELDS);
+    expect(out).toContain("author: Paul");
+    expect(out).toContain("audience: Ephesus");
+    expect(out).not.toContain("date:");
+  });
+
+  it("skips a multi-question field entirely when no questions are answered", () => {
+    const data = setQuestionAnswer({}, "context", "before", "");
+    const out = flattenToText(data, OBSERVE_FIELDS);
+    // No `Context:` block since no question carries content.
+    expect(out).not.toContain("Context:");
+  });
+
+  it("preserves single-primary-question back-compat for fields without a `questions` array", () => {
+    // Phase 1 Field 7 (`big_ideas`) is still single-primary in B1.0.
+    const data = setPrimaryAnswer({}, "big_ideas", "Death and life; mercy and wrath.");
+    const out = flattenToText(data, OBSERVE_FIELDS);
+    expect(out).toContain("Big Ideas: Death and life; mercy and wrath.");
+    // No multi-question block format for this field.
+    expect(out).not.toMatch(/Big Ideas:\n\s+primary:/);
+  });
+
+  it("multi-question Phase 2 deeper_context surfaces both questions", () => {
+    let data = setQuestionAnswer({}, "deeper_context", "unresolved", "Word usage of σάρξ in v. 3.");
+    data = setQuestionAnswer(data, "deeper_context", "book_argument", "The new humanity Paul is constructing.");
+    const out = flattenToText(data, INTERPRET_FIELDS);
+    expect(out).toContain("Deeper Context:");
+    expect(out).toContain("unresolved: Word usage of σάρξ in v. 3.");
+    expect(out).toContain("book_argument: The new humanity Paul is constructing.");
   });
 });
 

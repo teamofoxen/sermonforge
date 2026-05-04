@@ -587,9 +587,22 @@ export function serializeStructuredField(data) {
 
 /**
  * Flatten a structured field to plain text for the context pipeline.
- * Joins all answered (non-N/A, non-empty) primary-question values with
- * labels derived from the field defs. Structured-list values are flattened
- * via flattenAnswerValue. Falls back to legacy_notes if present.
+ * For each field def, joins all answered (non-N/A, non-empty) questions
+ * with labels derived from the field def + question key. Single-primary-
+ * question fields render as `Label: value` (back-compat). Multi-question
+ * fields render as a labeled block:
+ *
+ *   Field Label:
+ *     question_key_a: value
+ *     question_key_b: value
+ *
+ * Continuation lines from structured-list values are indented for
+ * readability. Falls back to legacy_notes if present.
+ *
+ * Closes the B1.5-era gap where multi-question fields (Phase 1's
+ * background / context / surface_questions / divisions / applications and
+ * Phase 2's deeper_context) produced empty flattened output because the
+ * earlier implementation only read the `primary` question key per field.
  */
 export function flattenToText(data, fieldDefs) {
   if (!data || typeof data !== "object") return "";
@@ -601,11 +614,33 @@ export function flattenToText(data, fieldDefs) {
     parts.push(data.legacy_notes.trim());
   }
 
-  // Defined fields in order — primary question only until per-field
-  // multi-question shapes land.
+  // Defined fields in order. Single-primary-question fields render as the
+  // legacy `Label: value` shape; multi-question fields render as a labeled
+  // block with each question's value underneath.
   for (const def of fieldDefs) {
-    const text = flattenAnswerValue(getPrimaryAnswer(data, def.key));
-    if (text) parts.push(`${def.label}: ${text}`);
+    const questions = fieldQuestions(def);
+    const isLegacySingle =
+      questions.length === 1 && questions[0].key === DEFAULT_QUESTION_KEY;
+
+    if (isLegacySingle) {
+      const text = flattenAnswerValue(getPrimaryAnswer(data, def.key));
+      if (text) parts.push(`${def.label}: ${text}`);
+      continue;
+    }
+
+    const lines = [];
+    for (const q of questions) {
+      if (isQuestionNA(data, def.key, q.key)) continue;
+      const text = flattenAnswerValue(getQuestionAnswer(data, def.key, q.key));
+      if (!text) continue;
+      // Indent continuation lines from multi-line structured values so the
+      // block stays readable.
+      const formatted = text.replace(/\n/g, "\n    ");
+      lines.push(`  ${q.key}: ${formatted}`);
+    }
+    if (lines.length > 0) {
+      parts.push(`${def.label}:\n${lines.join("\n")}`);
+    }
   }
 
   // Phase 3 / Phase 4 special fields (legacy keys retained as fields with a

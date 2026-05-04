@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-04 — sprd B1.7: flattenToText multi-question fix
+
+- `flattenToText` now branches on `fieldQuestions(def)` — single-primary-question fields keep the legacy `Label: value` shape; multi-question fields render as a labeled block with each answered question on its own line under the field label.
+- Closes a B1.5-era gap where multi-question Phase 1 fields (`background`, `context`, `surface_questions`, `divisions`, `applications`) and Phase 2's `deeper_context` produced empty flattened output, silently starving tier 4 / tier 5 AI context bodies.
+- N/A questions skipped per field; continuation lines from structured-list values (canvas / paraphrase / synthesis-table) are indented for readability.
+- 5 new unit tests under "flattenToText surfaces multi-question fields"; 3 existing tests rewritten to use new question keys (`divisions.sentence_layout`, `context.before`).
+- 336 vitest total green; Vite preview compiled clean.
+
+---
+
 ## 2026-05-04 — sprd B2.0 + B2.1: Phase 2 Interpret reshape + Deeper Context question sequence
 
 - `INTERPRET_FIELDS` reordered to the SFDI 7-field shape: Deeper Context → Recurring Ideas → Character Purpose → Contrasts → Cross-References → Commentary Notes → Interpretation Synthesis.
