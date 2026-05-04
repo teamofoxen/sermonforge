@@ -31,11 +31,59 @@ Items tagged *Structural — decided*, *Shipped*, *Structural — settled*, and 
 
 ---
 
+## Binding scope decisions — 2026-05-04
+
+Seven decisions settled this session. Recorded here as binding scope so future sessions don't re-litigate them.
+
+1. **Branch fold complete.** `sub/sfdi` was fast-forwarded into `sub/sprd` at commit `3a1554f`. SFDI's structural completion (25 fields, 53 questions, 4 named outcomes, 4 handoffs, the cumulative thought-unit table spec, Process #6 activation) is now part of the SPRD branch's working state. Implementation work proceeds on `sub/sprd` from this point.
+
+2. **Migration policy — Option C (per-field legacy notes).** When a sermon written under the pre-redesign field shape is opened under the new shape, the old data does not vanish, does not auto-fill the new questions, and does not pile into one phase-level blob. A per-key mapping table (section 9 below) names, for each existing key, the new field whose `legacy_notes` block holds it. The pastor opens the new field and sees a collapsed "Legacy notes from this sermon" block at the top; old work is visible exactly where it belongs. The new questions stay empty until the pastor fills them. Why C and not A or B: A scatters old work far from where it's needed; B auto-pre-fills questions whose meanings have drifted, which is actively wrong. C keeps old work findable without pretending the structure didn't change.
+
+3. **PC card removal lands with B4 (Phase 4 Implications reshape).** The card stays through B1, B2, B3. It comes down only when Phase 4 Field 3 (Pastoral Context) ships and carries PC's substance per-sermon at the field level. The three top-level columns the card writes to (`background_noise`, `audience_assumptions`, `topic_theme`) remain in the schema after B4 — the workspace card stops rendering, that's all. The columns' data surfaces as legacy notes inside Phase 4 Field 3 on first open of the sermon under the new shape.
+
+4. **The MPT/MPS four-phase synthesis is retired entirely.** Today, when the pastor advances out of Implications, the AI generates a four-phase synthesis covering all of Observe → Interpret → RT → Implications and renders it at the top of MPT/MPS. After B4, this is gone. Not moved as briefing. Not preserved in any form. The four named outcomes (Observation Set, Interpretation Set, Christ-Connection Statement, Implications Synthesis) are the substrate MPT/MPS opens against — these are the pastor's own articulations across four sub-phases, plus the cumulative thought-unit table. AI re-summary at the boundary substitutes for the marinate moment that the Implications Synthesis was always supposed to be. With the synthesis sitting properly inside Implications, the AI re-summary is unnecessary and counter to the redesign's commitment.
+
+5. **SADI runs in parallel; only C3 is fully gated.** The Sermon Anchor Definition Initiative (SADI) defines content for Step 2 (MPT/MPS) and Step 5 (Intro/Conclusion). SADI walks have not yet started. **C3 (Step 5 as its own workspace step) cannot ship until SADI's Step 5 walk lands** — the shell behavior depends on what fields and questions the walk surfaces. **C5 (AI prompt updates) has a partial dependency** — the MPS Draft prompt re-read against Process #4 needs SADI's Step 2 walk to define MPT/MPS's question shape, but the four inline review prompts (Observe / Interpret / RT / Implications) don't. C6 has no SADI dependency (SFDI fully defined the four sub-phase boundaries; SFDI made no commitment about MPT/MPS-internal gates that would need SADI). Everything else (A0–A2, B1–B4, C1, C2, C4) runs without SADI.
+
+6. **Component 3 ships without animation first.** SermonForge has no motion system today. Adding one to support Component 3's "field summary floats to throughline node" cue is a real cost — animation infrastructure, accessibility-respecting motion preferences, performance budgeting, the works. The decision: ship the throughline visualization first as a static line with nodes that fill as fields complete, no motion. The animation cue can be added as a separate later milestone if the static version proves underwhelming.
+
+7. **C5 lands phase-by-phase.** The inline review prompts read from per-phase data; each prompt's update lands when its phase's keys ship. Observe Review prompt updates with B1; Interpret Review with B2; RT Review with B3; Implications Review with B4. The MPS Draft re-read happens in its own pass after SADI's Step 2 walk. This avoids a single end-of-project prompt-rewrite session and keeps each phase's review prompt tested against the data shape it actually consumes.
+
+---
+
+## Implementation milestones (A/B/C structure)
+
+Thirteen milestones in three phases. **A** is the foundation (the new Study UX shell). **B** is the four sub-phase reshapes, one phase at a time. **C** is workspace polish — sermon-level takeover, throughline, Step 5, Background series inheritance, AI prompts, per-boundary thresholds.
+
+A and B run in order. C items can fan out once Phase B is far enough along to test against real field-level work — most C items don't depend on each other.
+
+| ID | Milestone | What it does for the pastor | Depends on | SADI gating |
+|---|---|---|---|---|
+| **A0** | Branch alignment | The SPRD branch carries SFDI's completed work; binding scope and migration mapping are in the doc as authoritative spec. No code yet. | — | None |
+| **A1** | Component 1 — spotlight foundation | The Study tab stops being a stack of nine textareas. The pastor lands inside one field at a time, answering one question at a time, with a "Next question" button that's disabled until the current answer has content. Per-field gating expressions and per-question N/A escape valve land. Storage shape becomes per-question-keyed sub-objects (legacy_notes preserves old data). | A0 | None |
+| **A2** | Component 1 — structured-exercise sub-shapes | The richer content tools heavy-lifting fields need: indented sentence canvas (Tab/Shift+Tab indent), paraphrase blocks, multi-column synthesis table with read-only/writable per-column policy, persistent peripheral reference panel, pre-field overview screen, paste-intercept (per-question), per-cell no-AI policy, genre-aware static reference content. | A1 | None |
+| **B1** | Phase 1 (Observe) reshape | Observe goes from 9 fields to 9 fields, but with two new ones (Background, Surface Questions), Commands+Statements merged, Basic Outline retired, Possible Implications brought into the awareness layer. Field 4 (Divisions / Thought Units) is the first heavy-lifting field — its three-question structured exercise builds the cumulative thought-unit table. Old `observations` data surfaces as per-field legacy notes per the migration mapping. | A1, A2 | None |
+| **B2** | Phase 2 (Interpret) reshape | Interpret goes from 9 fields to 7. Diagram retires (the canvas in Observe Field 4 absorbed the work). Summarize Parts + Whole merge into Interpretation Synthesis (heavy-lifting, opens with overview). Field 7 Q1 extends the cumulative table with a Meaning column, read-only Phase 1 columns visible alongside. | B1 | None |
+| **B3** | Phase 3 (Redemptive Thread) reshape | RT goes from 7 question-fields + summary slot to 5 fields. Two of Merida's pointing-to-Christ questions get restored (Type, Predictive). Gospel-makes-commands-possible becomes its own field (the anti-moralism move). The summary slot becomes the Christ-Connection Statement — the named outcome. Field 5 Q1 extends the cumulative table with a Christ-Connection column. | B2 | None |
+| **B4** | Phase 4 (Implications) reshape | Implications goes from 15 slots to 4 fields: Theological Significance, Personal Implications, Pastoral Context, Implications Synthesis. The three-way conversation lands at field level. **PC card stops rendering** (Field 3 carries PC's substance now). The Compiled list (AI-generated) is retired — Implications Synthesis is the pastor's own-voice paragraph. The four-phase synthesis at MPT/MPS opening is removed. Field 4 Q1 closes the cumulative table at six columns. | B3 | None |
+| **C1** | Sermon-level takeover (Component 2) | "Begin sermon" exits the regular app shell — sidebar, top nav, everything except the sermon workspace disappears. Single back affordance returns to the regular view. Re-entry from Dashboard goes back into the isolated world. | A2 (uses the spotlight UX) | None |
+| **C2** | Throughline visualization (Component 3, no animation) | A literal line on the screen across the Study tab. Each field is a node along the line; nodes fill in as fields complete. Named outcomes sit as callouts at the end of each sub-phase segment. Static — no animated cue from field to node yet. | At least B1; richer once all of B1–B4 ship | None |
+| **C3** | Step 5 (Intro/Conclusion) as its own workspace step | A fifth workspace step appears in the workspace step structure. Its content (which fields, which questions, what's heavy-lifting) follows what SADI's Step 5 walk surfaces. | SADI Step 5 walk | **Full** |
+| **C4** | Background series-level inheritance | A series carries its book's Background; each sermon in the series inherits and can override. Series-level Background entry surface; per-sermon override mechanism. The only milestone with potential schema implications. | B1 (Background field exists at per-sermon level first) | None |
+| **C5** | AI prompt updates | Each inline review prompt reads from the new question keys and phrases PC references conditionally. Lands phase-by-phase as each B-milestone's keys ship. The MPS Draft re-read against Process #4 happens in its own pass after SADI Step 2 walks. | Per-phase: B1 → Observe Review; B2 → Interpret Review; B3 → RT Review; B4 → Implications Review. MPS Draft → SADI Step 2 walk. | **Partial** (MPS Draft only) |
+| **C6** | evaluateAdvance per-boundary thresholds + tests + fixture parity | The richer per-boundary checks SFDI defined extend `evaluateAdvance`: Observe → Interpret (Field 4 composite + Field 8 + Field 9), Interpret → RT (Interpretation Synthesis composite), RT → Implications (Christ-Connection Statement composite), Implications → MPT/MPS (Implications Synthesis composite). Contract tests expand at sub-phase resolution; test fixture updates in the same change. | B1–B4 (the fields the thresholds check must exist) | None |
+
+**Sequencing reality:** A0 → A1 → A2 → B1 → B2 → B3 → B4 in strict order. After B4, C1, C2, C4, C5, C6 can fan out; C3 waits on SADI.
+
+---
+
 ## How to read this document
 
 Inside the Study tab, the pastor moves through four sub-phases — **Observe**, **Interpret**, **Redemptive Thread**, **Implications** — before drafting the main point of the sermon. The four are right in spirit (text → meaning → Christ → application) but broken in feel: each one looks like a separate worksheet, the pastor advances silently, the last one (Implications) crams three different jobs into one screen, and the part that should deepen progressively (Pastoral Context) sits as a permanent card at the top of the screen instead.
 
-This document covers eight sections in fixed order:
+This document covers eight sections in fixed order, plus three operational sections (the Scope map above, the Binding scope decisions above, the Implementation milestones above) and a binding migration spec (section 9 below) that sit alongside the eight as authoritative implementation matter.
+
+The eight core sections:
 1. What's broken today (diagnostic snapshot from when SPRD was drafted; current state of each item lives in the scope map and section 8).
 2. Named outcomes per sub-phase — structural framing (substance lives in SFDI).
 3. Evidence at each boundary — structural framing (substance lives in SFDI).
@@ -44,6 +92,8 @@ This document covers eight sections in fixed order:
 6. What the automated checks need to change.
 7. What changes on screen and in the AI.
 8. Q records, pilot landings, and structural backlog.
+
+The operational matter (Scope map, Binding scope decisions, Implementation milestones, Per-phase migration mapping) describes how the redesign is being executed. The eight core sections describe what the redesign is.
 
 A note on scope, settled before this document was written. The four sub-phases of Study, and the step out of Study into the main-point work, do not currently flow through the system that records, checks, and announces the pastor's movement through their sermon. They are silent screen-changes. The product owner has ruled that the redesign **routes them through that system** — they become real, recorded movements with checks and announcements. Every section of this document carries through assuming that scope.
 
@@ -387,6 +437,102 @@ Seven inline AI calls (Observe Review, Interpret Review, RT Review, Implications
 **Q9 — Three unused fields: clean up in the redesign or in a separate pass? — Closed. Handed off to audit triage.**
 
 `study_guide_note`, `preaching_blocks`, and `manuscript_delivery` exist in the schema and are listed as fields the central save-and-check logic is willing to write to, but they are not referenced anywhere in current Study or Exegesis code. They appear to be artifacts of older content models. Including them in the redesign would widen scope unnecessarily — they are mechanical cleanup, not behavioral redesign. The product owner has ruled that this hands off to the audit triage backlog. SPRD does not own this work.
+
+---
+
+## 9. Per-phase migration mapping (binding spec for Option C)
+
+When a sermon written under the pre-redesign field shape is opened under the new shape, each existing key's data lands in a specific new field's `legacy_notes` block. The pastor sees a collapsed "Legacy notes from this sermon" block at the top of that field; the new questions stay empty. This is the binding spec — the mapping is fixed, not derived per-session.
+
+Implementation note: legacy_notes lives inside the new sub-object stored at the JSON column. A migrated field's value looks like `{question_key_1: "", question_key_2: "", legacy_notes: "<old data>"}`. The same JSON column (observations / interpretation / redemptive_thread / implications) holds the new shape; no schema change.
+
+**Two cross-phase moves to flag.** Most mappings keep old data inside the same JSON column. Two do not:
+
+- Phase 2's retired `diagram` key migrates *into* Phase 1 Field 4 (Divisions / Thought Units) `legacy_notes` because the canvas in Observe Field 4 absorbed the structural-diagram work.
+- Phase 1's retired `basic_outline` key migrates *into* Phase 1 Field 4 (Divisions / Thought Units) `legacy_notes` because the thought-unit work in Field 4 carries the proto-outline forward.
+
+Cross-phase migration is explicit and one-time on first open of an old sermon under the new shape.
+
+### Phase 1 — Observe (`observations` JSON column)
+
+Existing keys (current `OBSERVE_FIELDS` plus `summary`/etc.) → new field's `legacy_notes`.
+
+| Existing key | Existing label | New field | Notes |
+|---|---|---|---|
+| `context` | Context | Field 2 — Context | Same field renamed conceptually; old single answer becomes legacy notes for the new four-question field |
+| `divisions` | Divisions / Thought Units | Field 4 — Divisions / Thought Units | New field is a three-question structured exercise; old single answer goes to legacy notes |
+| `commands` | Notable Commands | Field 6 — Commands and Declarations | Old field merged with `statements` into the new field; both old answers go to legacy notes (concatenated, labeled) |
+| `statements` | Notable Statements | Field 6 — Commands and Declarations | See above |
+| `characters` | Main Characters | Field 5 — Main Characters | Same conceptual field; old single answer becomes legacy notes |
+| `big_ideas` | Big Ideas | Field 7 — Big Ideas | Same conceptual field; old single answer becomes legacy notes |
+| `obvious_point` | Obvious Point | Field 8 — Obvious Point | Same conceptual field; old single answer becomes legacy notes |
+| `basic_outline` | Basic Outline | **Field 4 — Divisions / Thought Units** *(retired field; cross-key move)* | Field 4's thought-unit work carries the proto-outline forward; old data lands here |
+| `applications` | Possible Implications | Field 9 — Possible Implications | Same conceptual field (post-vocab-cleanup label); old single answer becomes legacy notes |
+
+**New fields with no legacy data:** Field 1 (Background), Field 3 (Surface Questions). Both start empty for migrated sermons; there's no existing key for either.
+
+### Phase 2 — Interpret (`interpretation` JSON column)
+
+| Existing key | Existing label | New field | Notes |
+|---|---|---|---|
+| `context_impact` | Context Impact | Field 1 — Deeper Context | Refined; old answer becomes legacy notes |
+| `recurring_ideas` | Recurring Ideas | Field 2 — Recurring Ideas | Same conceptual field; legacy notes |
+| `characters` | Characters: Saying / Doing / Thinking | Field 3 — Character Purpose | Refined to deepen Observe Field 5 from *who* to *why*; old answer becomes legacy notes |
+| `contrasts` | Contrasts | Field 4 — Contrasts | Same conceptual field; legacy notes |
+| `diagram` | Diagram / Relationships | **Phase 1 Observe Field 4 — Divisions / Thought Units** *(retired field; cross-phase move)* | Canvas in Observe Field 4 absorbed the structural-diagram work; old data migrates cross-phase |
+| `cross_refs` | Cross-References | Field 5 — Cross-References | Same conceptual field; legacy notes |
+| `commentary` | Commentary Notes | Field 6 — Commentary Notes | Same conceptual field; legacy notes |
+| `summarize_parts` | Summarize the Parts | Field 7 — Interpretation Synthesis | Old field merged into new synthesis field; both old answers go to legacy notes (concatenated, labeled) |
+| `summarize_whole` | Summarize the Whole | Field 7 — Interpretation Synthesis | See above |
+
+### Phase 3 — Redemptive Thread (`redemptive_thread` JSON column)
+
+| Existing key | Existing label | New field | Notes |
+|---|---|---|---|
+| `speaks_of_christ` | Does this text speak directly of Christ? | Field 1 — This Passage and Christ | Old field merged with `relation_to_christ` into the new field; both old answers go to legacy notes (concatenated, labeled) |
+| `relation_to_christ` | Where does it stand in relation to Christ? | Field 1 — This Passage and Christ | See above |
+| `biblical_theme` | Biblical theme that points to Christ | Field 2 — How the Passage Points to Christ | Old field merged with `promise` into new four-mechanism field (Theme/Promise/Type/Predictive); both old answers go to legacy notes |
+| `promise` | Promise that points to Christ | Field 2 — How the Passage Points to Christ | See above |
+| `need_for_christ` | Mankind's need for Christ | Field 4 — Our Need and God's Character | Old field merged with `nature_of_god` into new paired field; both old answers go to legacy notes |
+| `nature_of_god` | Nature of God who provides redemption | Field 4 — Our Need and God's Character | See above |
+| `jesus_hero` | How is Jesus the hero of this passage? | Field 5 — Christ-Connection Statement | Old field elevated into the named outcome; old answer becomes legacy notes |
+| `summary` (REDEMPTIVE_SUMMARY_KEY) | RT summary slot | Field 5 — Christ-Connection Statement | Old summary slot becomes the new structured field's two-question shape; old answer becomes legacy notes |
+
+**New field with no legacy data:** Field 3 (How the Gospel Makes This Possible) — restored from Merida; no existing key. Starts empty for migrated sermons.
+
+### Phase 4 — Implications (`implications` JSON column + PC top-level columns)
+
+| Existing key | Existing label | New field | Notes |
+|---|---|---|---|
+| `about_god` | About God | Field 1 — Theological Significance | Merge of 5 → 1; all five answers concatenate as legacy notes (labeled per old key) |
+| `about_ourselves` | About Ourselves | Field 1 — Theological Significance | See above |
+| `about_christ` | About Christ | Field 1 — Theological Significance | See above |
+| `timeless` | Timeless principles | Field 1 — Theological Significance | See above |
+| `doctrines` | Doctrines | Field 1 — Theological Significance | See above |
+| `examples` | Examples to follow | Field 2 — Personal Implications | Merge of 8 → 1 (with consolidation to 4 verb-driven questions); all eight answers concatenate as legacy notes (labeled per old key) |
+| `commands` | Commands to keep | Field 2 — Personal Implications | See above |
+| `errors` | Errors to avoid | Field 2 — Personal Implications | See above |
+| `sins` | Sins to forsake | Field 2 — Personal Implications | See above |
+| `promises` | Gospel promises to claim | Field 2 — Personal Implications | See above |
+| `new_thoughts` | New thoughts about God | Field 2 — Personal Implications | See above |
+| `explore` | Truths/doctrines to explore | Field 2 — Personal Implications | See above |
+| `convictions` | Convictions to live by | Field 2 — Personal Implications | See above |
+| `unbeliever` (IMPLICATIONS_UNBELIEVER_KEY) | Implications for unbelievers | Field 3 — Pastoral Context | Folded into PC per SFDI (the room includes unbelievers); old answer becomes legacy notes |
+| `compiled` (IMPLICATIONS_COMPILED_KEY) | AI-compiled list | Field 4 — Implications Synthesis | Compiled list retired (synthesis is now pastor-written, not AI-generated); old AI-generated text becomes legacy notes |
+
+**PC card top-level columns** (currently rendered in the workspace card; *not* inside `implications` JSON):
+
+| Existing column | Existing label | Migration destination | Notes |
+|---|---|---|---|
+| `background_noise` | The Cultural Moment | Phase 4 Field 3 — Pastoral Context (legacy notes) | Column itself remains in the schema; only the workspace card stops rendering. Data surfaces as legacy notes inside the new Field 3 on first open of the sermon under the new shape. Future cleanup pass may fold this column into Field 3's structured questions and retire the column entirely; that's deferred. |
+| `audience_assumptions` | The Room | Phase 4 Field 3 — Pastoral Context (legacy notes) | Same as above |
+| `topic_theme` | The Sermon's Work | Phase 4 Field 3 — Pastoral Context (legacy notes) | Same as above |
+
+**New field with no legacy data:** Field 4 (Implications Synthesis) for sermons that don't have an old `compiled` value. Starts empty for migrated sermons.
+
+### Migration timing
+
+Migration runs lazily — on first open of a sermon under the new shape, per phase. Phase-by-phase activation matches B1 → B2 → B3 → B4 sequencing: a sermon opened during the B2 release sees Phase 1 + Phase 2 in the new shape with legacy notes, and Phase 3 + Phase 4 still in the pre-redesign shape until B3 / B4 ship. No global one-shot migration script is required.
 
 ---
 
