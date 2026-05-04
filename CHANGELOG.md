@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-04 — sprd A2: structured-exercise UI primitives complete
+
+- `studyFields.js` helpers tolerate the three SFDI structured-list value types plus the Phase 2-4 cumulative columns; new `flattenAnswerValue` threaded through `answeredQuestions`, `flattenToText`, and `applyFieldValueMap`.
+- `IndentedSentenceCanvas` renders Field 4 Q1 — Tab/Shift+Tab depth without focus shift, auto-numbered gutter, burgundy level-0 marker, Enter splits at caret, Backspace at line-start decrements depth or merges, paste blocked.
+- `ParaphraseBlocks` renders Field 4 Q2 — `groupMainSentences(canvas)` produces read-only blocks (head + indented modifiers) with paraphrase textareas; orphan paraphrases preserved on canvas edits; paste blocked.
+- `SynthesisTable` renders Field 4 Q3 — three Phase 1 columns with after-line `<datalist>` autocomplete; per-column `readOnly` flag and cumulative-column data preservation for B2-B4 extensions; paste passes through.
+- `PeripheralReferencePanel` (28% flex-basis aside) and `FieldOverviewScreen` (autofocused Begin button) ship as the remaining Component-1 layout primitives; A2 catalog complete (item 6 hover-checklist remains A1.2, deferred to B1).
+
+---
+
 ## 2026-05-04 — sprd A1.3: per-question N/A toggle UI
 
 - `SpotlightField` gains a "Mark not applicable" / "Mark applicable" toggle next to "Next question →" — marking N/A advances to the next field, un-marking returns the pastor to edit.
