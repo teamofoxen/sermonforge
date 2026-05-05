@@ -1,20 +1,24 @@
 # Study Redesign Implementation Anchor (SRIA)
 
-**Status:** Re-entry index for the Study redesign work. Stripped down 2026-05-04.
+**Status:** Re-entry index for the Study redesign work. Updated 2026-05-04 after a code-vs-docs audit.
 
 ---
 
 ## App implementation status
 
-Code work is in flight. A0 / A1.0 / A1.1 / A1.3 / A2.0 / C1 / C3 / C5 / C6 shipped to `main` 2026-05-04. **Next up: A2.1 — indented sentence canvas component.**
+All **A** milestones (Component 1 foundation) and **B** milestones (the four sub-phase reshapes) are shipped and wired into the running app. **C1** (sermon-level takeover), **C3** (Sermon Frame stage), **C5** (AI prompt updates + MPS rewrite), and **C6** (per-boundary thresholds) shipped. CORE.md Process Contract #6 extended to "workspace throughline." SADI per-field content-design walks shipped.
+
+**Remaining:** C2 throughline visualization, C4 Background series-level inheritance, workspace tour rewrite.
+
+**Next:** pre-C2 stability check, then C2. See [SPIP § Next up](study-phase-implementation-plan.md#next-up--pre-c2-stability-check-then-c2).
 
 ---
 
 ## Docs
 
 - **SFDI** — content of every Study field. [Charter](sfdi-charter.md). [Working doc](study-field-definition-initiative.md). Done.
-- **SADI** — content of MPT / MPS / Intro / Conclusion. [Charter](sadi-charter.md). [Working doc](sermon-anchor-definition-initiative.md). Per-field walks landed in commit `b2ad01e`.
-- **SPRD** — structural redesign and A/B/C milestone framing. [Planning doc](study-phase-redesign.md). Substantially shipped; remaining: C2, C4, workspace tour rewrite.
+- **SADI** — content of MPT / MPS / Intro / Conclusion. [Charter](sadi-charter.md). [Working doc](sermon-anchor-definition-initiative.md). Per-field walks shipped in `b2ad01e`.
+- **SPRD** — structural redesign and A/B/C milestone framing. [Planning doc](study-phase-redesign.md).
 - **SPIP** — running implementation log plus next-up list. [Doc](study-phase-implementation-plan.md).
 - **SPIR** — running risk register. [Doc](study-phase-implementation-remediation.md).
 
@@ -30,7 +34,7 @@ The audience is the pastor-user. Drift gets caught and rewritten when noticed.
 
 ## I'm lost — where do I start?
 
-- What ships next → [SPIP § Next up](study-phase-implementation-plan.md#next-up--a21).
+- What ships next → [SPIP § Next up](study-phase-implementation-plan.md#next-up--pre-c2-stability-check-then-c2).
 - Something broke or surfaced friction → [SPIR](study-phase-implementation-remediation.md).
 - Why is a Study field shaped like this → [SFDI](study-field-definition-initiative.md).
 - Why is MPT / MPS / Intro / Conclusion shaped like this → [SADI](sermon-anchor-definition-initiative.md).

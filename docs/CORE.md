@@ -93,10 +93,15 @@ these names. (See State Contract clause 5: *one name per concept*.)
   sub-phase's fields and across sub-phase boundaries, producing the named
   outcomes that compose into a preaching foundation strong enough to support
   the Main Preaching Thought (MPT) and Main Preaching Statement (MPS).
-- **Pastoral Context (PC)** — three sermon-level fields: The Cultural Moment
-  (`background_noise`), The Room (`audience_assumptions`), The Sermon's Work
-  (`topic_theme`). Persistence column names follow engineering-side spelling;
-  contract language uses the human names.
+- **Pastoral Context (PC)** — the third voice in the Implications three-way
+  conversation. PC lives in Phase 4 Field 3 of Study, with two questions:
+  **The Room** (`room_specifics`) and **The Cost and Gift** (`cost_and_gift`).
+  Stored inside the `implications` JSON column at
+  `pastoral_context.room_specifics` / `pastoral_context.cost_and_gift`. Three
+  legacy schema columns (`topic_theme`, `audience_assumptions`,
+  `background_noise`) are retained for legacy data defensively but no longer
+  rendered or read by the AI context tier (rewired in SPRD B4.2 / C5,
+  2026-05-04).
 
 ### 1. State Contract — what exists, and where am I in it
 

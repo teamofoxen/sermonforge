@@ -77,77 +77,47 @@ walked against; the working doc carries the resulting per-field substance.
 
 ---
 
-## The Pastoral Context card (interim)
+## Pastoral Context — moved to Phase 4 Field 3
 
-Today's `SermonWorkspace.jsx` renders an always-on **Pastoral Context** card at the
-top of the workspace content area, visible at every tab and every step. It is never
-a gate — the pastor can proceed without filling it.
+The always-on Pastoral Context card at the top of `SermonWorkspace.jsx` was
+**removed in SPRD B4.2 (2026-05-04)**. PC now lives in Phase 4 Field 3 of Study
+(Implications) as one voice in the SFDI three-way conversation, with two
+questions:
 
-This card is the **anti-pattern the throughline replaces.** Its always-on placement
-frames PC as parallel-track orientation ("fill PC, then study"), which contradicts
-the design — text is driven toward PC, not the other way around. **As of 2026-05-04
-the card's removal is actionable SPRD work** — SFDI Phase 4 Field 3 (Pastoral
-Context) carries the PC substance per-sermon as one voice in the three-way
-Implications conversation, making the workspace-top card structurally redundant.
+| Question | Question key | Stored at |
+|----------|--------------|-----------|
+| The Room | `room_specifics` | `implications.pastoral_context.room_specifics.value` |
+| The Cost and Gift | `cost_and_gift` | `implications.pastoral_context.cost_and_gift.value` |
 
-**Order of removal** (cross-referenced from `docs/PROPOSALS/sfdi-charter.md` and
-`docs/PROPOSALS/study-phase-redesign.md`):
+The three legacy schema columns (`topic_theme`, `audience_assumptions`,
+`background_noise`) are retained in the schema defensively for legacy data but
+are no longer written to or rendered. The AI context tier (`[THIS SERMON]` /
+tier 7 in `docs/SYSTEMS/context-pipeline.md`) reads from the Phase 4 Field 3
+shape via `readPastoralContext(sermon)` in `src/utils/contextBuilder.js` (rewired
+in SPRD C5).
 
-1. **SFDI walks the four sub-phases, with anchors at Observe-end and Implications.** *Complete 2026-05-04.*
-2. **Implications gets restructured per SFDI's discoveries.** SFDI Phase 4 defined
-   the four-field shape (Theological Significance, Personal Implications, Pastoral
-   Context, Implications Synthesis); SPRD ships the workspace UX restructure.
-3. *Then* the card comes off the workspace shell, the AI prompts shed their PC
-   handling (the heaviest is the MPS Draft prompt's PC-weighting passage in
-   `StudyTab.jsx`), and Tier 7 is removed from the context pipeline. PC's
-   substance flows downstream through the named outcomes.
+**Save path:** Phase 4 Field 3 saves through the standard structured-field path —
+`SpotlightWorksheet onChange → setQuestionAnswer → updateSermon IPC` — writing
+into the `implications` JSON column under
+`pastoral_context.{room_specifics,cost_and_gift}`.
 
-**Open design question for the card-removal pass** (raised before SFDI walks; SFDI
-Phase 4 partially settled by absorbing PC content into Field 3 but did not rule on
-the underlying three-field schema): do the three PC fields (`topic_theme`,
-`audience_assumptions`, `background_noise`) disappear entirely (PC's substance
-lives only in SFDI Field 3 per-sermon), or do they persist somewhere off the
-workspace front (perhaps series-level, since The Room and The Cultural Moment are
-stable across multiple sermons in a series)? The Implications for Unbeliever
-question was settled by Phase 4 (folded into Field 3 Q1 — the room includes
-everyone); the three PC fields' fate is the remaining design call when SPRD
-ships the card removal.
-
-**Three fields** (stored in `sermons` table, schema version 6):
-
-| Field | Purpose |
-|-------|---------|
-| `topic_theme` | The territory this sermon enters: a doctrine, life situation, question, or felt need (e.g. grief, doubt, parenting, the problem of evil, union with Christ). |
-| `audience_assumptions` | What the pastor knows about who's in the room — their posture, context, what they're carrying. Situational awareness, not demographics. |
-| `background_noise` | External context only: news, cultural moment, community events, what's on everyone's mind before the sermon begins. |
-
-**UI behaviour (interim):**
-- Auto-collapses on load when any of the three fields has content (shows truncated snippets in header)
-- Expands on click
-- Collapse state is UI-only — the underlying data and context pipeline are unaffected
-
-**For series sermons** (`sermon.series_id` not null), the card displays read-only series context
-above the editable fields: series title, series big idea (only if present), section big idea (only if present).
-
-**Context pipeline (interim):** These three fields feed the `[THIS SERMON]` Tier 7
-of the AI context pipeline. Tier 7 is removed when the card is removed (now
-actionable SPRD work since SFDI Phase 4 walked 2026-05-04 — Field 3 Pastoral
-Context carries the substance). See `docs/SYSTEMS/context-pipeline.md` for tier
-budget and gating rules.
-
-**Save path:** All three are in the `SERMON_COLUMNS` allowlist and save through:
-`handleUpdate → debouncedSave → updateSermon IPC`
+**Migration policy:** Per SPRD § 9 defensive-only migration policy, no production
+sermons existed at the B4.2 cutover (2026-05-04), so no auto-mapping logic ships
+from the legacy columns into the new shape. Should legacy data surface, the
+per-key cross-mapping in SPRD § 9 documents how it would land
+(`background_noise` / `audience_assumptions` / `topic_theme` →
+`pastoral_context.legacy_notes`).
 
 ---
 
 ## Cross-System Dependencies
 
-**If modifying Pastoral Context fields** (`topic_theme`, `audience_assumptions`, `background_noise`):
-also check `docs/SYSTEMS/context-pipeline.md` — the `[THIS SERMON]` tier section documents the
-always-on rule, content-gating logic, and 5000-char budget that govern how these fields reach the AI.
-Note: the `[THIS SERMON]` tier is the interim mechanism; it is removed when SPRD ships the
-card-removal pass (now actionable since SFDI's Phase 4 walked 2026-05-04 — Field 3 Pastoral Context
-carries PC's substance, which flows through the Implications Synthesis named outcome).
+**If modifying Pastoral Context content** (Phase 4 Field 3 — `room_specifics` and
+`cost_and_gift`): also check `docs/SYSTEMS/context-pipeline.md` — the
+`[THIS SERMON]` tier section documents the always-on rule, content-gating logic,
+and 5000-char budget that govern how PC reaches the AI. Tier 7 reads from Phase 4
+Field 3 via `readPastoralContext(sermon)`; the legacy `topic_theme` /
+`audience_assumptions` / `background_noise` columns are no longer read by the tier.
 
 **If modifying structured exegesis JSON** (observations, interpretation, redemptive_thread, implications):
 also check `docs/SYSTEMS/context-pipeline.md` — the exegesis context section documents how

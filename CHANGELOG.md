@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-04 — post-SPRD doc-drift sweep + spip/sria refreshed to actual shipped state
+
+- `/sweep-the-multiverse` flagged a Surface #1 WARN for stale PC vocabulary in CORE.md and three system docs; this fix closes it.
+- CORE.md Canonical Vocabulary PC entry rewritten to the Phase 4 Field 3 two-question shape (`room_specifics` + `cost_and_gift`); legacy `topic_theme` / `audience_assumptions` / `background_noise` columns marked retained-but-unread.
+- `docs/SYSTEMS/sermon-workspace.md` "PC card (interim)" section replaced with "PC moved to Phase 4 Field 3"; cross-system dependency note updated.
+- `docs/SYSTEMS/context-pipeline.md` `normalizeSermon` extract list + tier 7 row + tier 7 rules + cross-system reference updated to reflect the C5 rewire (`readPastoralContext()` reads Phase 4 Field 3, not the legacy columns).
+- `docs/REFERENCE/schema.md` PC column descriptions reframed as legacy; added four missing rows (`current_stage`, `current_step`, `current_sub_phase` from v17 spine layer, `sermon_frame` from v18 SPRD C3); SPIP and SRIA refreshed to the actual A0–A2.5 / B1–B4 / C1 / C3 / C5 / C6 shipped state.
+
+---
+
 ## 2026-05-04 — spip + spir + sria stripped to implementation-doc shape
 
 - Stripped SPIP from 211 to ~55 lines: implementation log + A2.1 next + B/C backlog only.

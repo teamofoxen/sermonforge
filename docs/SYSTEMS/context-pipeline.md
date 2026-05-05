@@ -17,7 +17,10 @@ It returns a formatted string of labeled sections injected as the CONTEXT block 
 
 ### 1. normalizeSermon(sermon)
 Cleans raw sermon data for pipeline consumption. Extracts:
-- `topic_theme`, `audience_assumptions`, `background_noise` (Pastoral Context fields)
+- `pcRoom`, `pcCostAndGift` from Phase 4 Field 3 via `readPastoralContext(sermon)` —
+  reads `implications.pastoral_context.room_specifics` and `cost_and_gift`
+  (rewired in SPRD C5, 2026-05-04; the legacy `topic_theme` / `audience_assumptions` /
+  `background_noise` columns are no longer read here)
 - `series_motivation` and `redemptive_context` from `sermon.series` (series-level fields)
 
 ### 2. buildTiers(normalizedSermon, libraryChunks, theologyChunks)
@@ -31,7 +34,7 @@ Groups data into 7 priority tiers. Key tiers:
 | 4 | `[SERIES CONTEXT]` | 1200 chars | big_idea, series_motivation, redemptive_context, section big_idea via `summarizeSeries()` |
 | 5 | `[SUPPORTING MATERIAL]` | — | library chunks, theology chunks |
 | 6 | `[PASTOR CONTEXT]` | — | memory/adaptive context |
-| 7 | `[THIS SERMON]` | 5000 chars | topic_theme, audience_assumptions, background_noise |
+| 7 | `[THIS SERMON]` | 5000 chars | `pcRoom` + `pcCostAndGift` from Phase 4 Field 3 |
 
 **Tier 4 exclusions:** `book_background`, `book_argument`, `book_structure`, `emerging_big_idea`
 are deliberately excluded — they are too large for the per-sermon context budget and belong in
@@ -39,9 +42,12 @@ series planning only.
 
 **Tier 7 (`[THIS SERMON]`) rules:**
 - Always-on — never gated by step.
-- Gated by content: the section is only emitted when at least one field has content
-  (`text?.trim().length > 0`). Single-word entries like "Lament" are included.
-- Budget: 5000 chars across all three fields combined.
+- Gated by content: emitted only when at least one of the two fields has content
+  (`text?.trim().length > 0`).
+- Budget: 5000 chars across both fields combined.
+- Source: Phase 4 Field 3 (Pastoral Context) of the Study tab — the SFDI three-way
+  conversation. The legacy `topic_theme`/`audience_assumptions`/`background_noise`
+  columns remain in the schema for legacy data but are no longer read by this tier.
 
 ### 3. resolveIncludes(step)
 Gates which tiers are active for the current step. Tier 7 / `pastoralContext` is always `true`
@@ -110,9 +116,9 @@ It detects whether a field contains structured JSON or legacy plain text:
 — specifically the Book Study tab table showing which fields are excluded from per-sermon context
 and why. Silently adding an excluded field to tier 4 would overflow the context budget.
 
-**If modifying the `[THIS SERMON]` tier (tier 7):** also check `docs/SYSTEMS/sermon-workspace.md`
-— the Pastoral Context card (interim) section describes the field semantics and the always-on / content-gated
-rules that govern this tier.
+**If modifying the `[THIS SERMON]` tier (tier 7):** the source is Phase 4 Field 3
+(Pastoral Context) — see `readPastoralContext()` in `src/utils/contextBuilder.js`
+and the `pastoral_context` field in `IMPLICATIONS_FIELDS` in `src/utils/studyFields.js`.
 
 ---
 

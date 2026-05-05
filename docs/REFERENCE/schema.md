@@ -72,13 +72,17 @@ Current schema version: **13**
 | `post_sermon` | TEXT | |
 | `functional_elements` | TEXT | JSON object `{0:{explanation,application,illustration},...}` — keyed by outline point UUID |
 | `checklist` | TEXT | JSON object keyed by item label `{label:bool,...}` |
-| `topic_theme` | TEXT | Pastoral Context: the doctrine, situation, or felt need |
-| `audience_assumptions` | TEXT | Pastoral Context: who is in the room and what they carry |
-| `background_noise` | TEXT | Pastoral Context: external context (news, events, moment) |
+| `topic_theme` | TEXT | Legacy PC column (v6); retained defensively, no longer rendered or read by the AI context tier. PC's substance moved to Phase 4 Field 3 (`implications.pastoral_context.cost_and_gift`) in SPRD B4.2. |
+| `audience_assumptions` | TEXT | Legacy PC column (v6); retained defensively, no longer rendered or read by the AI context tier. PC's substance moved to Phase 4 Field 3 (`implications.pastoral_context.room_specifics`) in SPRD B4.2. |
+| `background_noise` | TEXT | Legacy PC column (v6); retained defensively, no longer rendered or read by the AI context tier. PC's substance is folded into Phase 4 Field 3 in SPRD B4.2. |
 | `study_guide_note` | TEXT | Short note orienting congregation readers to how this sermon fits the series arc |
 | `preaching_blocks` | TEXT | CMC (Contour-Mapped Compression) without-notes output; added v8 migration |
 | `manuscript_delivery` | TEXT | AI-formatted delivery manuscript; added v9 migration |
 | `last_tune_up` | TEXT | JSON `{content, ts}` snapshot of the most recent Final Tune-Up response; added v12 migration |
+| `current_stage` | TEXT | Canonical process position — stage; spine layer; added v17 migration |
+| `current_step` | TEXT | Canonical process position — Study step; spine layer; added v17 migration |
+| `current_sub_phase` | TEXT | Canonical process position — Study sub-phase; spine layer; added v17 migration |
+| `sermon_frame` | TEXT | JSON envelope for Step 5 (Intro / Conclusion) per SADI Step 5 ratification; same per-question shape as the four Exegesis sub-phase columns; added v18 migration (SPRD C3) |
 | `created_at` | TEXT | |
 | `updated_at` | TEXT | |
 
