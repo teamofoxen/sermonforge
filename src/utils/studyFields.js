@@ -50,40 +50,19 @@ import { tryParse } from "../utils";
 
 // ── Phase 1: Observe ─────────────────────────────────────────────────────────
 //
-// Reshaped to 9 fields per SFDI Phase 1 walk (2026-05-03), shipped as SPRD
-// B1.0 (2026-05-04). Outside-in arc through the first four fields:
-//   Background → Context → Surface Questions → Divisions / Thought Units
-// Then the lens cluster reads against Field 4's spine:
+// Outside-in arc through the first three fields:
+//   Context → Surface Questions → Divisions / Thought Units
+// Then the lens cluster reads against Field 3's spine:
 //   Main Characters → Commands and Declarations → Big Ideas
 // First synthesis + bridge into Interpret close the segment:
 //   Obvious Point → Possible Implications
 //
-// Retired keys from the prior shape: `commands`, `statements`, `basic_outline`
-// are no longer iterated as fields. Old data carrying these keys stays in
-// the JSON column (parseStructuredField preserves them) but does not render
-// under any current field. Per the defensive-only migration policy in SPRD
-// § 9 (no production sermons exist 2026-05-04), no auto-mapping logic ships.
-// If a future test fixture or import surfaces such data, the per-key cross-
-// mapping in SPRD § 9 documents how it would land (commands + statements →
-// commands_declarations.legacy_notes; basic_outline → divisions.legacy_notes).
-//
-// B1.0 keeps a single primary question per field. Multi-question sequences
-// (Background's 4-question Author/Date/Audience/Genre, Surface Questions's
-// 3-question Where/When/How, Field 4's three structured sub-shapes, etc.)
-// land in subsequent B1.x cuts as the per-field walks are wired in.
+// Retired keys: `commands`, `statements`, `basic_outline`, `background`. Old
+// data carrying these keys stays in the JSON column (parseStructuredField
+// preserves them) but does not render under any current field. No production
+// sermons exist (2026-05-04), so no auto-mapping logic ships.
 
 export const OBSERVE_FIELDS = [
-  {
-    key: "background",
-    label: "Background",
-    hint: "World the book was written into.",
-    questions: [
-      { key: "author",   prompt: "Who wrote this book?" },
-      { key: "date",     prompt: "When was it written?" },
-      { key: "audience", prompt: "Who was the original audience, and what occasion prompted the writing?" },
-      { key: "genre",    prompt: "What kind of literature is this?" },
-    ],
-  },
   {
     key: "context",
     label: "Context",
@@ -112,7 +91,6 @@ export const OBSERVE_FIELDS = [
     heavyLifting: true,
     overview: {
       title: "Divisions / Thought Units",
-      subtitle: "Field 4 of 9 · Observe",
       paragraphs: [
         "The point of the sermon is the point of the text. The work of seeing what that point is starts here.",
         "Before you can preach the passage, you have to see how it's built. Which sentences carry the main weight. What's supporting them. Where one move ends and the next begins. How the passage flows.",
@@ -198,7 +176,6 @@ export const OBSERVE_FIELDS = [
     heavyLifting: true,
     overview: {
       title: "Possible Implications",
-      subtitle: "Field 9 of 9 · Observe",
       paragraphs: [
         "You've worked your way through what the text says — its world, its location, its surface, its spine, its actors, its actions, its concepts, and its plain-sense point. The Observation Set is almost done.",
         "Before we leave Observe and step into Interpret, one more move. Look at the passage and ask: what is it starting to suggest about the room you're preaching to? What's it pressing on? What's hard? What's hopeful?",
@@ -249,6 +226,15 @@ export const INTERPRET_FIELDS = [
       { key: "book_argument",  prompt: "How does this passage fit the book's overall argument? What does the author intend across the whole that bears on this passage?" },
     ],
   },
+  {
+    key: "genre",
+    label: "Genre",
+    hint: "Name the literary form and let it set the lens. Optional — fill it in when genre is doing real interpretive work for this passage.",
+    questions: [
+      { key: "genre",  prompt: "What is the genre of this passage?" },
+      { key: "impact", prompt: "How might its genre impact interpretation?" },
+    ],
+  },
   { key: "recurring_ideas",         label: "Recurring Ideas",         hint: "What ideas, words, or themes recur within this passage? For each, name what the recurrence is signaling about what the author is hammering home." },
   { key: "character_purpose",       label: "Character Purpose",       hint: "For each character you named in Observe, what are they saying, doing, or thinking — and why? What is the author signaling through their action?" },
   { key: "contrasts",               label: "Contrasts",               hint: "What contrasts has the author built into the passage? Name each — what's set against what — and say in your own words what each contrast is doing." },
@@ -261,7 +247,6 @@ export const INTERPRET_FIELDS = [
     heavyLifting: true,
     overview: {
       title: "Interpretation Synthesis",
-      subtitle: "Field 7 of 7 · Interpret",
       paragraphs: [
         "You've widened the lens, dissected what recurs, named character motives, surfaced the contrasts. You've let Scripture interpret Scripture and checked your reading against trusted readers, last.",
         "One more move closes Interpret. Take what you've worked out and say it. For each thought unit you named in Observe — what does it MEAN? Not what it says (you did that in Observe). Not what it sounds like in your own words (paraphrase, also Observe). What it MEANS — what the author is conveying through it.",
@@ -359,7 +344,6 @@ export const REDEMPTIVE_FIELDS = [
     heavyLifting: true,
     overview: {
       title: "How the Passage Points to Christ",
-      subtitle: "Field 2 of 5 · Redemptive Thread",
       paragraphs: [
         "You've positioned the text against Christ. Now look for how it points to him. Merida names four distinct ways a passage can point — biblical theme, promise, type, and predictive prophecy.",
         "These are different in kind. A biblical theme is a recurring motif in Scripture that finds its weight in Christ (kingdom, presence, sacrifice, covenant, Word). A promise is an explicit word from God that finds its yes-and-amen in Christ. A type is a pattern or person that prefigures Christ — Adam, Melchizedek, Moses, David — with linguistic and thematic correspondence and escalation (Christ is the better one). Predictive prophecy explicitly foretells Christ's coming, death, or return.",
@@ -395,7 +379,6 @@ export const REDEMPTIVE_FIELDS = [
     heavyLifting: true,
     overview: {
       title: "Christ-Connection Statement",
-      subtitle: "Field 5 of 5 · Redemptive Thread",
       paragraphs: [
         "You've positioned the text against Christ, traced how it points, grounded the gospel's enabling power, and named human need with God's character. The redemptive work is done.",
         "One more move closes Redemptive Thread. Take what you've worked out and say it. For each thought unit — how does it point to Christ? Find its weight in him? Get its answer from him?",
@@ -525,7 +508,6 @@ export const IMPLICATIONS_FIELDS = [
     heavyLifting: true,
     overview: {
       title: "Implications Synthesis",
-      subtitle: "Field 4 of 4 · Implications",
       paragraphs: [
         "You've named what the text teaches (Theological Significance), what it asks (Personal Implications), and the specific room it's landing in (Pastoral Context). Three voices.",
         "One more move closes Implications — and closes the Study work. Take what you've worked out and integrate it. For each thought unit — what does it ask of THIS hearer in THIS room? Drawing on the three voices.",
@@ -562,6 +544,23 @@ export const IMPLICATIONS_FIELDS = [
     ],
   },
 ];
+
+// Auto-compute heavy-lifting overview subtitles from each field's position
+// in its phase array. Hand-maintained "Field N of M · Phase" literals drifted
+// each time a field was added or removed; deriving them keeps them honest.
+function annotateOverviewSubtitles(fields, phaseLabel) {
+  const total = fields.length;
+  fields.forEach((field, i) => {
+    if (field.overview) {
+      field.overview.subtitle = `Field ${i + 1} of ${total} · ${phaseLabel}`;
+    }
+  });
+}
+
+annotateOverviewSubtitles(OBSERVE_FIELDS, "Observe");
+annotateOverviewSubtitles(INTERPRET_FIELDS, "Interpret");
+annotateOverviewSubtitles(REDEMPTIVE_FIELDS, "Redemptive Thread");
+annotateOverviewSubtitles(IMPLICATIONS_FIELDS, "Implications");
 
 export const IMPLICATIONS_UNBELIEVER_KEY = "unbeliever";
 export const IMPLICATIONS_COMPILED_KEY = "compiled";

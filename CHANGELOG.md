@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-05 — workspace UX touch-ups + process #2 forward-only gate
+
+- New Sermon modal trimmed (Preacher field removed; CTA renamed "Forge Sermon"); Dashboard Resume Work rows gain a `<DeleteButton>`.
+- Observe `background` field retired; new optional `genre` field added to Interpret with two questions (genre identification, interpretive impact).
+- Process #2 empty-evidence gate scoped to `direction === "forward"` in `validateAndCommit`; backward retreat now ungated so newly created sermons aren't trapped on their first stage; `test-spine.ts` mirrored + new regression test.
+- Heavy-lifting overview subtitles in `studyFields.js` + `sermonFrameFields.js` auto-derive "Field N of M · Phase" from array position, eliminating hand-edit drift across 8 sites.
+- 374 vitest green; sweep-the-house PASS.
+
+---
+
 ## 2026-05-05 — test-spine fixture aligned with main.js boundary semantics
 
 - Scheduled weekly drift check found `tests/contracts/_helpers/test-spine.ts` diverging from `electron/main.js` on update / delete handlers and read-router sort orders.

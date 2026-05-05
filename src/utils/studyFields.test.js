@@ -272,26 +272,24 @@ describe("flattenToText with structured-list values", () => {
 
 describe("flattenToText surfaces multi-question fields under their field label", () => {
   it("renders each answered question on its own line under the field label", () => {
-    let data = setQuestionAnswer({}, "background", "author", "Paul");
-    data = setQuestionAnswer(data, "background", "date", "60 AD");
-    data = setQuestionAnswer(data, "background", "audience", "Believers in Ephesus");
-    data = setQuestionAnswer(data, "background", "genre", "Epistle");
+    let data = setQuestionAnswer({}, "surface_questions", "where", "Galilee");
+    data = setQuestionAnswer(data, "surface_questions", "when", "After the Sabbath");
+    data = setQuestionAnswer(data, "surface_questions", "how", "On a mountain, in front of disciples");
     const out = flattenToText(data, OBSERVE_FIELDS);
-    expect(out).toContain("Background:");
-    expect(out).toContain("author: Paul");
-    expect(out).toContain("date: 60 AD");
-    expect(out).toContain("audience: Believers in Ephesus");
-    expect(out).toContain("genre: Epistle");
+    expect(out).toContain("Surface Questions:");
+    expect(out).toContain("where: Galilee");
+    expect(out).toContain("when: After the Sabbath");
+    expect(out).toContain("how: On a mountain, in front of disciples");
   });
 
   it("skips N/A questions in multi-question flattening", () => {
-    let data = setQuestionAnswer({}, "background", "author", "Paul");
-    data = setQuestionNA(data, "background", "date", true);
-    data = setQuestionAnswer(data, "background", "audience", "Ephesus");
+    let data = setQuestionAnswer({}, "surface_questions", "where", "Galilee");
+    data = setQuestionNA(data, "surface_questions", "when", true);
+    data = setQuestionAnswer(data, "surface_questions", "how", "On a mountain");
     const out = flattenToText(data, OBSERVE_FIELDS);
-    expect(out).toContain("author: Paul");
-    expect(out).toContain("audience: Ephesus");
-    expect(out).not.toContain("date:");
+    expect(out).toContain("where: Galilee");
+    expect(out).toContain("how: On a mountain");
+    expect(out).not.toContain("when:");
   });
 
   it("skips a multi-question field entirely when no questions are answered", () => {

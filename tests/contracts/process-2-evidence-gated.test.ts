@@ -64,6 +64,35 @@ describe("Process Contract #2: movement gated by user evidence (non-legacy sermo
   });
 });
 
+describe("Process Contract #2: backward direction is not gated", () => {
+  beforeEach(() => {
+    installTestSpine();
+    resetTestSpine();
+    setLegacyEvidenceCutoff("2025-01-01T00:00:00.000Z");
+  });
+
+  // Backward movement is retreat, not advancement. The pastor must always
+  // be able to step back to add or revise content — the empty-evidence
+  // gate would otherwise trap a newly created sermon on the position it
+  // first navigated to. See SermonWorkspace.handleTabChange.
+  it("backward transition with empty evidence succeeds on a non-legacy sermon", async () => {
+    const sermonId = insertSermonRow({
+      title: "Test",
+      current_stage: STAGE.Frame,
+      created_at: new Date().toISOString(),
+    });
+    const bridge = (globalThis as any).electronAPI.spine;
+    const result = await bridge("transition-state", {
+      sermonId,
+      to: STAGE.Study,
+      evidence: "",
+      direction: "backward",
+      kind: "stage",
+    });
+    expect(result.ok).toBe(true);
+  });
+});
+
 describe("Process Contract #2: legacy carve-out", () => {
   beforeEach(() => {
     installTestSpine();

@@ -48,7 +48,6 @@ export const SERMON_FRAME_FIELDS = [
     heavyLifting: true,
     overview: {
       title: "Intro",
-      subtitle: "Field 1 of 2 · Step 5 (Intro / Conclusion)",
       paragraphs: [
         "The body is built — your outline, your functional elements, your MPT and MPS right beside you. Intro is how the listener walks into the body. Not a summary, not a preview of the points — the listener's posture as they enter.",
         "Four moves: hook (grab attention from where the listener actually is); bridge (get from the hook into the text + MPT and MPS); expectations (name what the body will ask of them, so they're not blindsided); redemptive note (gospel-power that turns the call from burden into invitation).",
@@ -81,7 +80,6 @@ export const SERMON_FRAME_FIELDS = [
     heavyLifting: true,
     overview: {
       title: "Conclusion",
-      subtitle: "Field 2 of 2 · Step 5 (Intro / Conclusion)",
       paragraphs: [
         "Intro framed how the listener walked into the body. Conclusion frames how they walk out. The body has done its work; the listener has heard the through-line. Now you land it.",
         "Four moves: summate (gather the whole arc into one landing — *not* a point-by-point recap; the body already walked the points); land the call (drawn from MPS, made concrete); gospel-empower (drawn from CCS); choose the closing posture (silence, song, prayer, or charge — a required pastoral choice).",
@@ -108,6 +106,15 @@ export const SERMON_FRAME_FIELDS = [
     ],
   },
 ];
+
+// Auto-compute heavy-lifting overview subtitles. The Frame phase has its own
+// label shape ("Step 5 (Intro / Conclusion)") because Frame is one workspace
+// step, not a four-phase walk; the helper takes the full label verbatim.
+SERMON_FRAME_FIELDS.forEach((field, i) => {
+  if (field.overview) {
+    field.overview.subtitle = `Field ${i + 1} of ${SERMON_FRAME_FIELDS.length} · Step 5 (Intro / Conclusion)`;
+  }
+});
 
 // Per-question N/A semantics: only `intro.redemptive_note` may be marked N/A
 // by the pastor (with the strict "satisfied another way" semantic per SADI).

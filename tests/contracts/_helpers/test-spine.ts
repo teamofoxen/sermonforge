@@ -297,7 +297,7 @@ function validateAndCommit(op: string, payload: any) {
       const row = sermons.get(sermonId);
       if (!row) return rejection("NOT_FOUND", "State #1", `Sermon ${sermonId} not found.`);
       const evidenceTrimmed = (evidence || "").trim();
-      if (!evidenceTrimmed && !isLegacy(row)) {
+      if (direction === "forward" && !evidenceTrimmed && !isLegacy(row)) {
         return rejection("PROCESS_2_EMPTY_EVIDENCE", "Process #2",
           "Process Contract #2 violation: movement is gated by user evidence — the constraint is the gate.");
       }

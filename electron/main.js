@@ -1371,8 +1371,12 @@ function validateAndCommit(op, payload) {
       if (!row) {
         return rejection("NOT_FOUND", "State #1", `Sermon ${sermonId} not found.`);
       }
+      // Process #2 (empty-evidence gate) only fires on forward movement.
+      // The constraint is "the system does not advance unless evidence
+      // exists" — backward navigation is retreat, not advancement, and
+      // must always be allowed so the pastor can return to fill in work.
       const evidenceTrimmed = (evidence || "").trim();
-      if (!evidenceTrimmed && !isLegacySermon(row)) {
+      if (direction === "forward" && !evidenceTrimmed && !isLegacySermon(row)) {
         return rejection(
           "PROCESS_2_EMPTY_EVIDENCE",
           "Process #2",

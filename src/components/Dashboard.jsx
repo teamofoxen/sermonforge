@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { loadTourSermon, getInProgressSermons } from "../core/spine";
+import { loadTourSermon, getInProgressSermons, deleteSermon } from "../core/spine";
 import { useTour } from "../contexts/TourContext";
 import { WORKSPACE_TOUR_STOPS } from "../tour/workspaceTourStops";
 import NewSermonModal from "./NewSermonModal";
@@ -7,6 +7,7 @@ import DashboardHeader from "./DashboardHeader";
 import DashboardChurchHistory from "./DashboardChurchHistory";
 import PrimaryButton from "./primitives/PrimaryButton";
 import TextButton from "./primitives/TextButton";
+import DeleteButton from "./primitives/DeleteButton";
 import { formatDate } from "../utils";
 
 function ArrowRightIcon() {
@@ -41,6 +42,13 @@ export default function Dashboard({ onOpenSermon, onNewSeries, onLeaveTour }) {
   const today = new Date().toISOString().slice(0, 10);
   const overdue = inProgress.filter((s) => s.date && s.date < today);
   const upcoming = inProgress.filter((s) => !s.date || s.date >= today).slice(0, 5);
+
+  async function handleDeleteSermon(id) {
+    await deleteSermon(id);
+    setInProgress((prev) =>
+      prev.some((s) => s.id === id) ? prev.filter((s) => s.id !== id) : prev,
+    );
+  }
 
   async function handleStartWorkspaceTour() {
     if (tourLoading) return;
@@ -147,6 +155,7 @@ export default function Dashboard({ onOpenSermon, onNewSeries, onLeaveTour }) {
               overdue={overdue}
               upcoming={upcoming}
               onOpenSermon={onOpenSermon}
+              onDeleteSermon={handleDeleteSermon}
             />
           </div>
 
@@ -182,7 +191,7 @@ export default function Dashboard({ onOpenSermon, onNewSeries, onLeaveTour }) {
 // When the preacher has nothing in flight, the tile renders an empty-state
 // pointing back to the hero "Build a sermon" tile.
 
-function ResumeWorkTile({ overdue, upcoming, onOpenSermon }) {
+function ResumeWorkTile({ overdue, upcoming, onOpenSermon, onDeleteSermon }) {
   const isEmpty = overdue.length === 0 && upcoming.length === 0;
 
   return (
@@ -205,7 +214,7 @@ function ResumeWorkTile({ overdue, upcoming, onOpenSermon }) {
                 Delivered without marking complete
               </div>
               {overdue.map((s) => (
-                <ResumeRow key={s.id} sermon={s} onOpen={onOpenSermon} flagged />
+                <ResumeRow key={s.id} sermon={s} onOpen={onOpenSermon} onDelete={onDeleteSermon} flagged />
               ))}
             </div>
           )}
@@ -220,7 +229,7 @@ function ResumeWorkTile({ overdue, upcoming, onOpenSermon }) {
                 </div>
               )}
               {upcoming.map((s) => (
-                <ResumeRow key={s.id} sermon={s} onOpen={onOpenSermon} />
+                <ResumeRow key={s.id} sermon={s} onOpen={onOpenSermon} onDelete={onDeleteSermon} />
               ))}
             </div>
           )}
@@ -230,7 +239,7 @@ function ResumeWorkTile({ overdue, upcoming, onOpenSermon }) {
   );
 }
 
-function ResumeRow({ sermon, onOpen, flagged }) {
+function ResumeRow({ sermon, onOpen, onDelete, flagged }) {
   return (
     <div
       role="button"
@@ -243,6 +252,7 @@ function ResumeRow({ sermon, onOpen, flagged }) {
         }
       }}
       style={{
+        display: "flex", alignItems: "center", gap: "10px",
         cursor: "pointer",
         padding: "8px 10px",
         borderRadius: "var(--radius)",
@@ -251,17 +261,22 @@ function ResumeRow({ sermon, onOpen, flagged }) {
         fontFamily: "'Crimson Pro', serif",
       }}
     >
-      <div style={{
-        fontSize: "13px", color: "var(--ink)", fontWeight: 600,
-        whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-      }}>
-        {sermon.title || "Untitled"}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{
+          fontSize: "13px", color: "var(--ink)", fontWeight: 600,
+          whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+        }}>
+          {sermon.title || "Untitled"}
+        </div>
+        <div style={{ fontSize: "11px", color: "var(--ink-ghost)", marginTop: "2px" }}>
+          {sermon.passage || "—"}
+          {sermon.date && <> · {formatDate(sermon.date)}</>}
+          {sermon.series_title && <> · {sermon.series_title}</>}
+        </div>
       </div>
-      <div style={{ fontSize: "11px", color: "var(--ink-ghost)", marginTop: "2px" }}>
-        {sermon.passage || "—"}
-        {sermon.date && <> · {formatDate(sermon.date)}</>}
-        {sermon.series_title && <> · {sermon.series_title}</>}
-      </div>
+      {onDelete && (
+        <DeleteButton small onDelete={() => onDelete(sermon.id)} />
+      )}
     </div>
   );
 }

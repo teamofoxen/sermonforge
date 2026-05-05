@@ -10,7 +10,6 @@ export default function NewSermonModal({ onClose, onCreated }) {
   const [title, setTitle] = useState("");
   const [passage, setPassage] = useState("");
   const [date, setDate] = useState("");
-  const [preacher, setPreacher] = useState("");
   const [seriesId, setSeriesId] = useState("");
   const [seriesList, setSeriesList] = useState([]);
   const [saving, setSaving] = useState(false);
@@ -31,7 +30,7 @@ export default function NewSermonModal({ onClose, onCreated }) {
     setSaving(true);
     setError(null);
     try {
-      const result = await createSermon({ name: title, passage, date, preacher, series_id: seriesId || null, is_one_off: seriesId ? 0 : 1 });
+      const result = await createSermon({ name: title, passage, date, series_id: seriesId || null, is_one_off: seriesId ? 0 : 1 });
       onCreated(result.id);
     } catch (e) {
       console.error(e);
@@ -82,16 +81,6 @@ export default function NewSermonModal({ onClose, onCreated }) {
           </div>
 
           <div className="field-group">
-            <label className="field-label">Preacher</label>
-            <input
-              className="field-input"
-              placeholder="Preacher name…"
-              value={preacher}
-              onChange={(e) => setPreacher(e.target.value)}
-            />
-          </div>
-
-          <div className="field-group">
             <label className="field-label">Series</label>
             <select
               className="field-input"
@@ -114,7 +103,7 @@ export default function NewSermonModal({ onClose, onCreated }) {
             onClick={handleCreate}
             disabled={!title.trim() || saving}
           >
-            {saving ? "Saving…" : "Create Sermon"}
+            {saving ? "Saving…" : "Forge Sermon"}
           </PrimaryButton>
         </div>
       </div>
