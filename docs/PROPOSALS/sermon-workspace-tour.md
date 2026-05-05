@@ -274,32 +274,75 @@ Both tours are available from the dashboard whenever you want to revisit.
 
 ---
 
-## Implementation questions to settle in the build session
+## Next iteration — throughline-first reframe (pending)
 
-1. **Spotlight anchoring** — by `data-tour-id` attributes on real elements, or
-   by a config that maps stop IDs to refs? `data-tour-id` is more decoupled but
-   leaves DOM fingerprints; refs are tighter but need wiring through every
-   touched component.
-2. **Tab/step navigation** — does the tour control `SermonWorkspace.activeTab`
-   and `StudyTab.step` directly, or via a tour-orchestrator hook that owns
-   navigation as side effects of stop changes?
-3. **Inactive-UI stops** — Stop 31 (Flow Coach), Stop 32 (Ear Check), Stop 33
-   (Tune-Up) target buttons that may live behind a closed AI drawer. Decide:
-   open the drawer for the tour, or point to where the button lives without
-   exposing it.
-4. **Persistence** — should "tour seen" be a localStorage flag? Should the
-   tour be replayable from the dashboard at any time?
-5. **Tour-sermon lifecycle** — seed on first tour launch (lazy) or on app
-   startup via migration? Lazy is simpler and avoids seeding for users who
-   never run the tour. The cleanup story (if a user wants to fully wipe tour
-   data) is also worth deciding.
+The 30 stops above are SFDI-reconciled (post-2026-05-05) but still structurally
+a **UI surface walk**: stop after stop introducing tabs, fields, and audit
+tools. A pastor finishing this tour learns *where things live* — not *how
+the discipline holds together*.
+
+The next iteration retires that frame. The workspace's central mechanic is the
+**throughline** — one cumulative thought-unit array carrying meaning forward
+across every Study sub-phase. Phase 1 Field 3 builds the rows; Phase 2 adds a
+`meaning` column; Phase 3 adds `christ_connection`; Phase 4 adds `implication`.
+Each sub-phase ends with a **named outcome** (Observation Set → Interpretation
+Set → Christ-Connection Statement → Implications Synthesis) that the next
+sub-phase opens against. The whole thing reaches MPT/MPS, then outline,
+functional elements, Frame, manuscript, delivery — all standing on the
+throughline that started in the synthesis table.
+
+A throughline-first tour walks that arc. ~15-18 stops; each carries weight
+without padding. Proposed shape (subject to redirect during the build):
+
+| # | Stop | Anchor | Purpose |
+|---|------|--------|---------|
+| 1 | Workspace shell | `workspace-title` | One-sentence framing |
+| 2 | **The throughline** | `ThroughlineRail` | The rail itself; one cumulative table threads through every sub-phase |
+| 3 | Phase 1 / outside-in | `phase-1-worksheet` | Context → Surface Questions → Divisions / Thought Units (Field 3 builds the rows) |
+| 4 | Phase 1 / lens cluster + bridge | `phase-1-worksheet` | Main Characters → Commands and Declarations → Big Ideas → Obvious Point → Possible Implications |
+| 5 | Phase 2 — extends the table | `interpretation-synthesis` | Each thought unit gets a `meaning` column; Interpretation Synthesis is the named outcome |
+| 6 | Phase 3 — extends the table | `christ-connection-statement` | Each thought unit gets a `christ_connection` column; Christ-Connection Statement is the named outcome |
+| 7 | Phase 4 — extends the table | `implications-synthesis` | Each thought unit gets an `implication` column; the three voices integrate; Implications Synthesis is the named outcome |
+| 8 | The four named outcomes | `ThroughlineRail` callouts | The hand-off arc — each becomes the substrate the next sub-phase opens against |
+| 9 | Step 2 — MPT/MPS as bridge | `mpt-field` / `mps-field` | Past-tense → present-tense; opens against the Implications Synthesis, not raw worksheet content |
+| 10 | Step 3 — Outline | `outline-builder` | Structure emerges from the throughline; AI as structural reviewer |
+| 11 | Step 4 — Functional Elements | `functional-elements` | Explanation / Application / Illustration per point |
+| 12 | **Step 5 — Frame (Intro + Conclusion)** | `phase-5-worksheet` (anchor TBD) | **Currently missing**; SADI Step 5 elevation. Hook → bridge → expectations → redemptive note; summate → land call → gospel-empower → closing posture |
+| 13 | Manuscript + audit tools | `stage-tab-manuscript` | Single stop with three sub-mentions (Flow Coach, Ear Check, Tune-Up) instead of three dedicated stops |
+| 14 | **Delivery overview** | `stage-tab-delivery` (anchor TBD) | **Currently missing**; the final stage |
+| 15 | AI woven through | (ambient) | Replaces the front-loaded 4-stop AI overview; mention the AI's posture-shifts inline at the relevant stops above |
+| 16 | Finish | (ambient) | Send-off + Series Planner pointer |
+
+Open decisions to settle in the build session:
+
+1. **AI overview placement.** Current tour front-loads 4 dedicated stops (`ai-philosophy`, `the-assistant`, `what-it-knows`, `tuned-to-you`). Reframe weaves these into the relevant phase stops. Risk: pastors don't get a clean "here's how the AI works" beat. Decide: keep one ambient AI stop early, or fully distribute.
+2. **Manuscript audit-tool collapse.** Three dedicated stops (Flow Coach, Ear Check, Tune-Up) → one stop with three sub-mentions. Risk: under-explanation of audit tools that pastors should know about. Decide: collapse, or keep as 3 stops.
+3. **New anchor IDs needed.** Step 5 / Frame and Delivery don't have `data-tour-id` attributes today. Add them in `FrameTab.jsx` and `DeliveryTab.jsx` as part of the rewrite.
+4. **Throughline rail anchor.** The new "throughline" stop (#2) and "named outcomes" stop (#8) both anchor on the `ThroughlineRail`. Need a single stable `data-tour-id="throughline-rail"` on the rail's outermost element.
+5. **Stop count — final answer.** The sketch lands at ~16 stops; final count depends on AI-overview and audit-tool decisions above. Accept range 14-18.
+
+The 30-stop locked content above is preserved as the **current shipping state**.
+The build session that lands the throughline-first reframe will replace it
+in `workspaceTourStops.js` with the new 14-18 stop array, mirror the spec
+content here, and update the count in the header comments + this preamble.
+
+---
+
+## Implementation questions (engine-level — already resolved)
+
+These were settled when the engine shipped 2026-04-28:
+
+1. **Spotlight anchoring** — `data-tour-id` attributes on real DOM elements. Decoupled, simple to extend. SpotlightWorksheet emits per-field anchors via `fieldKeyToTourId`.
+2. **Tab/step navigation** — prerequisite-driven. Each stop declares `prerequisites: { tab, drawerOpen, studyStep, studySubPhase, ... }`; `TourContext` exposes `desiredUi`; consumer surfaces (SermonWorkspace, StudyTab) align state when the tour is active.
+3. **Persistence** — `sf_tour_workspace_seen` localStorage flag, set on `complete`, cleared on `leave`. Replayable from the dashboard at any time.
+4. **Tour-sermon lifecycle** — seeded lazily by `db-loadTourSermon` on first dashboard click; delete-then-insert on every load (sample is for exploration, not persistent work); auto-sweeps stale `tour-*` rows.
 
 ---
 
 ## Out of scope for this spec
 
 - Series Planner tour (separate, later)
-- Delivery tab tour (the Delivery screen needs work first; tour will be added
-  after that refresh)
+- Delivery tab tour beyond the single overview stop in the throughline-first
+  rewrite (the Delivery screen still needs UX work; deeper coverage waits)
 - Field-by-field tour of the Manuscript tab (only Flow Coach, Ear Check,
   Tune-Up are explained at the audit-tool level)

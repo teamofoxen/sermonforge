@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-05-05 — Tour spec + SPIP next-iteration handoff
+
+- `sermon-workspace-tour.md` gains a "Next iteration — throughline-first reframe (pending)" section sketching a ~14-18 stop rebuild that anchors on the cumulative thought-unit table + named-outcomes arc instead of a UI-surface walk; current 30-stop locked content preserved as the shipping state.
+- `study-phase-implementation-plan.md` updated: pre-C2 stability check marked CLOSED, C2 throughline visualization marked SHIPPED, backlog reflects that SFDI-reconciliation of the existing tour is done and the throughline-first reframe is the remaining iteration.
+
+---
+
 ## 2026-05-05 — Workspace tour rewrite + thought-unit guardrails + dead-code retire
 
 - `workspaceTourStops.js` rewritten to 30 SFDI-aligned stops; spec doc (`sermon-workspace-tour.md`) mirrored; Phase 4 stops anchor on field-level `data-tour-id`s now emitted by `SpotlightWorksheet` at every field-rendering site.
