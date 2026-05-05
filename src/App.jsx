@@ -41,9 +41,9 @@ class ErrorBoundary extends Component {
         <div style={{
           display: "flex", flexDirection: "column", alignItems: "center",
           justifyContent: "center", height: "100vh", background: "var(--parchment)",
-          gap: "16px", fontFamily: "'Crimson Pro', serif",
+          gap: "16px", fontFamily: "var(--font-serif)",
         }}>
-          <h2 style={{ fontFamily: "'Playfair Display', serif", color: "var(--ink)", fontSize: "24px" }}>
+          <h2 style={{ fontFamily: "var(--font-serif)", color: "var(--ink)", fontSize: "24px" }}>
             Something went wrong
           </h2>
           <p style={{ color: "var(--ink-ghost)", fontSize: "14px", maxWidth: "400px", textAlign: "center" }}>

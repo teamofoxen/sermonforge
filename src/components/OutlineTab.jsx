@@ -184,7 +184,7 @@ export default function OutlineTab({ sermon, onUpdate, onTabChange, studySummari
                           </span>
                         </div>
                         {scripture && (
-                          <div style={{ paddingLeft: "20px", marginTop: "4px", fontSize: "13px", fontFamily: "'Crimson Pro', serif", fontStyle: "italic", color: "var(--ink-soft)", lineHeight: "1.6" }}>
+                          <div style={{ paddingLeft: "20px", marginTop: "4px", fontSize: "13px", fontFamily: "var(--font-serif)", fontStyle: "italic", color: "var(--ink-soft)", lineHeight: "1.6" }}>
                             {scripture}
                           </div>
                         )}

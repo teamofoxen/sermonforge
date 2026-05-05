@@ -265,7 +265,7 @@ export default function FeedbackModal({ currentView, onClose }) {
 
           {/* Feedback messages */}
           {successMsg && (
-            <p style={{ color: "var(--sage)", fontFamily: "'Crimson Pro', serif", fontSize: 14, margin: "8px 0 0" }}>
+            <p style={{ color: "var(--sage)", fontFamily: "var(--font-serif)", fontSize: 14, margin: "8px 0 0" }}>
               {successMsg}
             </p>
           )}

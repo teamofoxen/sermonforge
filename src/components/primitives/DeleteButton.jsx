@@ -27,7 +27,7 @@ export default function DeleteButton({ onDelete, label = "Delete", small = false
         style={{ display: "inline-flex", alignItems: "center", gap: "5px" }}
         onClick={(e) => e.stopPropagation()}
       >
-        <span style={{ fontSize, color: "var(--ink-soft)", fontFamily: "'Crimson Pro', serif" }}>
+        <span style={{ fontSize, color: "var(--ink-soft)", fontFamily: "var(--font-serif)" }}>
           Delete?
         </span>
         <button
@@ -35,7 +35,7 @@ export default function DeleteButton({ onDelete, label = "Delete", small = false
           style={{
             background: "var(--crimson)", color: "white", border: "none",
             borderRadius: "3px", padding, fontSize, cursor: "pointer",
-            fontFamily: "'Crimson Pro', serif",
+            fontFamily: "var(--font-serif)",
           }}
         >
           Yes
@@ -45,7 +45,7 @@ export default function DeleteButton({ onDelete, label = "Delete", small = false
           style={{
             background: "transparent", color: "var(--ink-ghost)",
             border: "1px solid var(--parchment-deep)", borderRadius: "3px",
-            padding, fontSize, cursor: "pointer", fontFamily: "'Crimson Pro', serif",
+            padding, fontSize, cursor: "pointer", fontFamily: "var(--font-serif)",
           }}
         >
           Cancel
@@ -60,7 +60,7 @@ export default function DeleteButton({ onDelete, label = "Delete", small = false
       style={{
         background: "transparent", color: "var(--ink-ghost)", border: "none",
         cursor: "pointer", padding: small ? "1px 4px" : "2px 6px",
-        fontSize, fontFamily: "'Crimson Pro', serif", borderRadius: "3px",
+        fontSize, fontFamily: "var(--font-serif)", borderRadius: "3px",
       }}
       title={label}
     >

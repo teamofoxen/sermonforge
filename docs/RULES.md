@@ -90,10 +90,10 @@ variables. Never hardcode these values anywhere else.
 ```
 
 **Typography:**
-- Playfair Display — headings, sermon titles, italic accents, delivery view
-- Crimson Pro — body text, labels, nav items, all prose
-- JetBrains Mono — passage references only
-- Loaded from Google Fonts.
+- IBM Plex Serif — headings, body copy, italic quotes, sermon manuscripts, AI markdown, all prose (the reading voice)
+- JetBrains Mono — wordmark, eyebrows, scripture refs, attributions, dates, all meta/labels (the structural voice)
+- IBM Plex Sans — reserve, available for any future dense-UI surface
+- Loaded from Google Fonts via `src/styles/typography.css`. Tokens: `--font-serif`, `--font-mono`, `--font-sans`.
 
 **Layout:**
 - Sidebar: 260px, `var(--ink)` background, gold gradient right border
@@ -106,7 +106,7 @@ variables. Never hardcode these values anywhere else.
 - `btn-ghost`: transparent, `parchment-deep` border
 - Cards: white background, `parchment-deep` border, `shadow-soft`
 - Stage badges: planning=sage, study=orange, outline=slate, writing=crimson, ready=green, archived=ghost
-- Big Idea box: ink background, gold quote watermark, Playfair italic
+- Big Idea box: ink background, gold quote watermark, IBM Plex Serif italic
 
 ---
 

@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-05 — type system + rule-flanked logo
+
+- New `src/styles/typography.css` defines `--font-serif` / `--font-mono` / `--font-sans` tokens and semantic classes (`.eyebrow`, `.scripture-ref`, `.attribution-*`, `.prose`, `.manuscript-body`, etc.); imported in `main.jsx` before `global.css`.
+- IBM Plex Serif replaces Crimson Pro and Playfair Display across `global.css`, two component CSS files, the electron loading splash, four brand SVG lockups, and ~20 JSX inline styles (now `var(--font-serif)`).
+- New `Logo.jsx` rule-flanked wordmark mounted in the sidebar (replaces the prior `<BrandLockup />` SVG iteration, which was untracked and is now removed).
+- `docs/RULES.md` typography section + `docs/PROPOSALS/sermon-workspace-tour.md` updated to the new system; orphaned `.brand-lockup` rules pruned from `global.css`.
+- Verified via preview: body computes IBM Plex Serif 16px / 1.6lh, headings IBM Plex Serif, wordmark + nav labels JetBrains Mono.
+
+---
+
 ## 2026-05-05 — workspace UX touch-ups + process #2 forward-only gate
 
 - New Sermon modal trimmed (Preacher field removed; CTA renamed "Forge Sermon"); Dashboard Resume Work rows gain a `<DeleteButton>`.

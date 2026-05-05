@@ -94,11 +94,11 @@ const backdrop = {
 const modal = {
   background: "var(--white)", border: "1px solid var(--parchment-deep)",
   borderRadius: "8px", padding: "32px 36px", maxWidth: "520px", width: "calc(100% - 48px)",
-  boxShadow: "0 8px 32px rgba(26,20,16,0.18)", fontFamily: "'Crimson Pro', serif",
+  boxShadow: "0 8px 32px rgba(26,20,16,0.18)", fontFamily: "var(--font-serif)",
 };
 
 const modalTitle = {
-  fontFamily: "'Playfair Display', serif",
+  fontFamily: "var(--font-serif)",
   fontSize: "20px", color: "var(--ink)", margin: "0 0 12px",
 };
 

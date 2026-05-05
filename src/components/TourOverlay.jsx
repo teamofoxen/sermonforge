@@ -142,12 +142,12 @@ export default function TourOverlay() {
           borderRadius: "var(--radius)",
           boxShadow: "0 12px 40px rgba(0,0,0,0.45)",
           padding: "20px 22px 18px",
-          fontFamily: "'Crimson Pro', serif",
+          fontFamily: "var(--font-serif)",
         }}
       >
         <div
           style={{
-            fontFamily: "'Crimson Pro', serif",
+            fontFamily: "var(--font-serif)",
             fontSize: "11px",
             letterSpacing: "0.12em",
             textTransform: "uppercase",
@@ -160,7 +160,7 @@ export default function TourOverlay() {
 
         <div
           style={{
-            fontFamily: "'Playfair Display', serif",
+            fontFamily: "var(--font-serif)",
             fontSize: "18px",
             fontWeight: 700,
             lineHeight: 1.3,

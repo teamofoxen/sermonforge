@@ -1,0 +1,239 @@
+/* ═══════════════════════════════════════════════════════════════════
+   SERMONFORGE TYPOGRAPHY SYSTEM
+   ───────────────────────────────────────────────────────────────────
+   Two voices, one humanist family.
+
+     JetBrains Mono       Structural voice
+                          → Wordmark, tagline, eyebrows, scripture refs,
+                            attributions, dates, numerics, all meta/labels
+
+     IBM Plex Serif       Reading voice
+                          → Headlines, body copy, quotes (italic),
+                            sermon manuscripts, AI markdown, tile blurbs,
+                            form inputs
+
+   Plex Serif is a humanist serif drawn alongside Plex Mono. Its
+   x-height, contrast, and italic temperament sit beside JetBrains Mono
+   without the proportion-clash that classical book serifs (Crimson Pro,
+   Playfair Display, Newsreader) created.
+
+   Crimson Pro and Playfair Display are no longer used.
+   ═════════════════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root {
+  /* ─── Family tokens ────────────────────────────────────────────── */
+  --font-serif: "IBM Plex Serif", Georgia, "Times New Roman", serif;
+  --font-sans:  "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono:  "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* ─── Scale tokens ─────────────────────────────────────────────── */
+  --fs-xs:    11px;
+  --fs-sm:    13px;
+  --fs-base:  16px;
+  --fs-md:    18px;
+  --fs-lg:    20px;
+  --fs-xl:    24px;
+  --fs-2xl:   28px;
+  --fs-3xl:   36px;
+  --fs-4xl:   48px;
+
+  /* ─── Tracking tokens (mono surfaces) ──────────────────────────── */
+  --ls-mono-tight: 0.04em;   /* wordmark */
+  --ls-mono-meta:  0.14em;   /* eyebrows, attributions, refs */
+  --ls-mono-tag:   0.18em;   /* small caps labels */
+  --ls-mono-wide:  0.28em;   /* tagline */
+
+  /* ─── Reading tokens (serif surfaces) ─────────────────────────── */
+  --ls-serif-tight: -0.018em;  /* large display headlines */
+  --ls-serif-snug:  -0.005em;  /* mid headlines, tile titles */
+  --lh-tight:  1.15;            /* display headlines */
+  --lh-snug:   1.35;            /* mid-size titles */
+  --lh-body:   1.6;             /* default body */
+  --lh-prose:  1.7;             /* long-form (manuscripts) */
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   BODY DEFAULT — IBM Plex Serif
+   ═══════════════════════════════════════════════════════════════════ */
+body {
+  font-family: var(--font-serif);
+  font-size: var(--fs-base);
+  line-height: var(--lh-body);
+  color: var(--ink);
+  font-feature-settings: "kern", "liga";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Form elements inherit the body voice */
+input, textarea, select, button {
+  font-family: inherit;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   HEADLINE SURFACES — IBM Plex Serif (replaces all Playfair)
+   ═══════════════════════════════════════════════════════════════════ */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  letter-spacing: var(--ls-serif-snug);
+  line-height: var(--lh-tight);
+  color: var(--ink);
+}
+h1 { font-size: var(--fs-3xl); letter-spacing: var(--ls-serif-tight); }
+h2 { font-size: var(--fs-2xl); }
+h3 { font-size: var(--fs-xl); }
+h4 { font-size: var(--fs-lg); line-height: var(--lh-snug); }
+
+/* ═══════════════════════════════════════════════════════════════════
+   STRUCTURAL SURFACES — JetBrains Mono
+   Anything that labels, indexes, attributes, references, or carries
+   a date / number / ID. The "machinery" voice.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Eyebrows — short caps labels above headlines */
+.eyebrow,
+.section-eyebrow {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: var(--fs-xs);
+  letter-spacing: var(--ls-mono-tag);
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  line-height: 1;
+}
+
+/* Field labels — uppercase letterspaced mono, the SermonForge house style */
+.field-label,
+.worksheet-field-label,
+.nav-section-label {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: var(--fs-xs);
+  letter-spacing: var(--ls-mono-tag);
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+/* Scripture references — gold pill, mono caps */
+.scripture-ref,
+.passage-ref {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: var(--fs-xs);
+  letter-spacing: var(--ls-mono-meta);
+  text-transform: uppercase;
+  color: var(--gold);
+  background: var(--gold-pale);
+  border: 1px solid rgba(184, 134, 11, 0.18);
+  border-radius: 3px;
+  padding: 4px 10px;
+  display: inline-block;
+}
+
+/* Attributions — preacher names, dates, citations */
+.attribution-name {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 10px;
+  letter-spacing: var(--ls-mono-meta);
+  text-transform: uppercase;
+  color: var(--ink-mid);
+}
+.attribution-dates {
+  font-family: var(--font-mono);
+  font-weight: 400;
+  font-size: 10px;
+  letter-spacing: var(--ls-mono-meta);
+  color: var(--ink-ghost);
+}
+
+/* Citation — the one place mono switches to italic serif (small).
+   Renders as a quiet aside next to the loud caps. */
+.attribution-citation {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: var(--fs-sm);
+  letter-spacing: 0.01em;
+  color: var(--ink-ghost);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   READING SURFACES — IBM Plex Serif
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* Quotes — Plex Serif italic. Mechanical italic, not calligraphic;
+   sits next to mono attributions cleanly. */
+.quote-text,
+blockquote {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: var(--fs-xl);
+  line-height: 1.45;
+  letter-spacing: -0.005em;
+  color: var(--ink);
+  text-wrap: pretty;
+  max-width: 60ch;
+}
+
+/* Long-form prose — sermon manuscripts, AI markdown */
+.prose,
+.manuscript-body,
+.ai-markdown {
+  font-family: var(--font-serif);
+  font-size: 17px;
+  line-height: var(--lh-prose);
+  color: var(--ink);
+  text-wrap: pretty;
+  max-width: 64ch;
+}
+.prose p,
+.manuscript-body p,
+.ai-markdown p {
+  margin: 0 0 14px;
+}
+.prose em,
+.manuscript-body em {
+  font-style: italic;
+  color: var(--gold-bright);
+}
+.prose strong,
+.manuscript-body strong {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+/* MPS / Big Idea — italic Plex Serif, smaller than the manuscript */
+.mps,
+.big-idea,
+.manuscript-mps {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--ink-mid);
+  text-wrap: pretty;
+  max-width: 70ch;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   UTILITY CLASSES
+   ═══════════════════════════════════════════════════════════════════ */
+.font-serif { font-family: var(--font-serif); }
+.font-sans  { font-family: var(--font-sans); }
+.font-mono  { font-family: var(--font-mono); }
+.italic     { font-style: italic; }
+.uppercase  { text-transform: uppercase; }
+
+.tracked-tight { letter-spacing: var(--ls-mono-tight); }
+.tracked-meta  { letter-spacing: var(--ls-mono-meta); }
+.tracked-tag   { letter-spacing: var(--ls-mono-tag); }
+.tracked-wide  { letter-spacing: var(--ls-mono-wide); }

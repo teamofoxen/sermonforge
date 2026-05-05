@@ -305,7 +305,7 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpe
             padding: "8px 16px",
             fontSize: "13px",
             color: "var(--ink-mid)",
-            fontFamily: "'Crimson Pro', serif",
+            fontFamily: "var(--font-serif)",
             cursor: "pointer",
           }}
           title="Click to dismiss"
@@ -577,28 +577,28 @@ function SermonHowItWorksModal({ onClose }) {
           }}
         >✕</IconButton>
         <h3 style={{
-          fontFamily: "'Playfair Display', serif", fontSize: "18px",
+          fontFamily: "var(--font-serif)", fontSize: "18px",
           color: "var(--ink)", marginBottom: "6px",
         }}>How the Sermon Workspace works</h3>
         <p style={{
           fontSize: "13px", color: "var(--ink-ghost)",
-          marginBottom: "24px", fontFamily: "'Crimson Pro', serif",
+          marginBottom: "24px", fontFamily: "var(--font-serif)",
         }}>Each sermon moves through four stages from exegesis to delivery.</p>
         <div style={{ overflowX: "auto" }}>
           <svg viewBox="0 0 860 336" style={{ width: "100%", height: "auto", display: "block" }}>
 
             {/* ── Stage boxes ─────────────────────────────────────────────────── */}
             <rect x="10" y="16" width="180" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
-            <text x="100" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "'Crimson Pro', serif", fontWeight: 600 }}>Study</text>
+            <text x="100" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "var(--font-serif)", fontWeight: 600 }}>Study</text>
 
             <rect x="230" y="16" width="180" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
-            <text x="320" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "'Crimson Pro', serif", fontWeight: 600 }}>Blueprint</text>
+            <text x="320" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "var(--font-serif)", fontWeight: 600 }}>Blueprint</text>
 
             <rect x="450" y="16" width="180" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
-            <text x="540" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "'Crimson Pro', serif", fontWeight: 600 }}>Manuscript</text>
+            <text x="540" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "var(--font-serif)", fontWeight: 600 }}>Manuscript</text>
 
             <rect x="670" y="16" width="180" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
-            <text x="760" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "'Crimson Pro', serif", fontWeight: 600 }}>Delivery</text>
+            <text x="760" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "var(--font-serif)", fontWeight: 600 }}>Delivery</text>
 
             {/* ── Between-stage arrows ────────────────────────────────────────── */}
             <text x="210" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-ghost)", fontSize: "14px" }}>→</text>
@@ -613,59 +613,59 @@ function SermonHowItWorksModal({ onClose }) {
 
             {/* ── Study sub-items (7) ──────────────────────────────────────────── */}
             <rect x="10" y="76" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="100" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Observe</text>
+            <text x="100" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Observe</text>
             <line x1="100" y1="104" x2="100" y2="112" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
 
             <rect x="10" y="112" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="100" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Interpret</text>
+            <text x="100" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Interpret</text>
             <line x1="100" y1="140" x2="100" y2="148" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
 
             <rect x="10" y="148" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="100" y="162" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Redemptive Thread</text>
+            <text x="100" y="162" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Redemptive Thread</text>
             <line x1="100" y1="176" x2="100" y2="184" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
 
             <rect x="10" y="184" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="100" y="198" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Implications</text>
+            <text x="100" y="198" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Implications</text>
             <line x1="100" y1="212" x2="100" y2="220" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
 
             <rect x="10" y="220" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="100" y="234" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>MPT / MPS</text>
+            <text x="100" y="234" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>MPT / MPS</text>
             <line x1="100" y1="248" x2="100" y2="256" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
 
             <rect x="10" y="256" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="100" y="270" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Outline</text>
+            <text x="100" y="270" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Outline</text>
             <line x1="100" y1="284" x2="100" y2="292" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
 
             <rect x="10" y="292" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="100" y="306" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Functional Elements</text>
+            <text x="100" y="306" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Functional Elements</text>
 
             {/* ── Outline sub-items (1) ────────────────────────────────────────── */}
             <rect x="230" y="76" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="320" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Outline Editor</text>
+            <text x="320" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Outline Editor</text>
 
             {/* ── Manuscript sub-items (2) ─────────────────────────────────────── */}
             <rect x="450" y="76" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="540" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Manuscript Editor</text>
+            <text x="540" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Manuscript Editor</text>
             <line x1="540" y1="104" x2="540" y2="112" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
 
             <rect x="450" y="112" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="540" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Tune-Up Engine</text>
+            <text x="540" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Tune-Up Engine</text>
 
             {/* ── Delivery sub-items (4) ───────────────────────────────────────── */}
             <rect x="670" y="76" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="760" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Delivery Notes</text>
+            <text x="760" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Delivery Notes</text>
             <line x1="760" y1="104" x2="760" y2="112" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
 
             <rect x="670" y="112" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="760" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Timing Notes</text>
+            <text x="760" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Timing Notes</text>
             <line x1="760" y1="140" x2="760" y2="148" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
 
             <rect x="670" y="148" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="760" y="162" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Post-Sermon</text>
+            <text x="760" y="162" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Post-Sermon</text>
             <line x1="760" y1="176" x2="760" y2="184" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
 
             <rect x="670" y="184" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="760" y="198" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Checklist</text>
+            <text x="760" y="198" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Checklist</text>
 
           </svg>
         </div>

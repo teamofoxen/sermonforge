@@ -26,6 +26,6 @@
     <path d="M512,0 C167.6,0 0,167.6 0,512 C0,856.4 167.6,1024 512,1024 C856.4,1024 1024,856.4 1024,512 C1024,167.6 856.4,0 512,0 Z" fill="url(#s)"></path>
   </g>
   </g>
-  <text x="600" y="940" text-anchor="middle" font-family="Playfair Display, Georgia, serif" font-size="160" font-weight="700" font-style="italic" fill="#d4a017">SermonForge</text>
+  <text x="600" y="940" text-anchor="middle" font-family="IBM Plex Serif, Georgia, serif" font-size="160" font-weight="700" font-style="italic" fill="#d4a017">SermonForge</text>
   <text x="600" y="1020" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="32" font-weight="500" fill="#8a7a6c" letter-spacing="8">CLARITY  THROUGH  CONSTRAINT</text>
 </svg>

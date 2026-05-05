@@ -1,0 +1,65 @@
+/* ─────────────────────────────────────────────────────────────────
+   SermonForge — Rule-Flanked Logo
+   Pairs with Logo.jsx. CSS Modules; class names are local.
+   Depends on the design tokens defined in global.css:
+     --gold, --gold-bright, --ink, --ink-mid, --ink-soft, --ink-ghost
+   And the JetBrains Mono @import (now in typography.css).
+   ───────────────────────────────────────────────────────────────── */
+
+.logo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+  line-height: 1;
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* Hairline rules — the "rule-flanked" treatment.
+   Width tracks size variant; opacity handled by tone. */
+.rule {
+  display: block;
+  height: 1px;
+  width: 64px;
+  background: currentColor;
+  opacity: 0.55;
+}
+
+/* Wordmark — JetBrains Mono Medium, slightly loosened tracking. */
+.word {
+  font-weight: 500;
+  letter-spacing: 0.04em;
+}
+
+/* Tagline — same family, tracked wide, uppercased. */
+.tag {
+  font-weight: 500;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+
+/* ─── SIZE VARIANTS ─────────────────────────────────────────────── */
+.size-sm .word { font-size: 14px; }
+.size-sm .tag  { font-size: 8px; letter-spacing: 0.24em; }
+.size-sm .rule { width: 48px; }
+.size-sm       { gap: 8px; }
+
+.size-md .word { font-size: 18px; }
+.size-md .tag  { font-size: 9px; }
+.size-md .rule { width: 64px; }
+
+.size-lg .word { font-size: 24px; letter-spacing: 0.05em; }
+.size-lg .tag  { font-size: 11px; letter-spacing: 0.32em; }
+.size-lg .rule { width: 88px; }
+.size-lg       { gap: 14px; }
+
+/* ─── TONE VARIANTS ─────────────────────────────────────────────── */
+.tone-gold .word { color: var(--gold-bright, #d4a017); }
+.tone-gold .tag  { color: var(--ink-ghost, #a8998a); }
+.tone-gold .rule { color: var(--gold, #b8860b); }
+
+.tone-ink .word { color: var(--ink, #1a1410); }
+.tone-ink .tag  { color: var(--ink-soft, #5a4a3c); }
+.tone-ink .rule { color: var(--ink-soft, #5a4a3c); opacity: 0.4; }

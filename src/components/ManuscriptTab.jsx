@@ -151,7 +151,7 @@ function LastTuneUpPanel({ saved }) {
         style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", cursor: "pointer", userSelect: "none" }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <span style={{ fontFamily: "'Playfair Display', serif", fontSize: "10px", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-ghost)" }}>
+          <span style={{ fontFamily: "var(--font-serif)", fontSize: "10px", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-ghost)" }}>
             Last Tune-Up
           </span>
           {ago && <span style={{ fontSize: "11px", color: "var(--ink-ghost)" }}>{ago}</span>}
@@ -273,7 +273,7 @@ export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading, onOpe
   };
 
   const sectionHeading = {
-    fontFamily: "'Playfair Display', serif",
+    fontFamily: "var(--font-serif)",
     fontSize: "15px",
     fontWeight: "700",
     color: "var(--ink)",

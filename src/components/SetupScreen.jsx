@@ -103,7 +103,7 @@ export default function SetupScreen({ onComplete }) {
     <div style={{
       display: "flex", alignItems: "flex-start", justifyContent: "center",
       height: "100vh", background: "var(--parchment)",
-      fontFamily: "'Crimson Pro', serif",
+      fontFamily: "var(--font-serif)",
       padding: "40px 16px",
       overflowY: "auto",
       boxSizing: "border-box",
@@ -121,7 +121,7 @@ export default function SetupScreen({ onComplete }) {
         {/* Header */}
         <div style={{ marginBottom: "28px", textAlign: "center" }}>
           <h1 style={{
-            fontFamily: "'Playfair Display', serif",
+            fontFamily: "var(--font-serif)",
             fontSize: "26px", color: "var(--ink)", fontWeight: 700, margin: "0 0 6px",
           }}>
             SermonForge
@@ -134,7 +134,7 @@ export default function SetupScreen({ onComplete }) {
         {/* ── Section 1: Claude API ───────────────────────────────────────── */}
         <div>
           <h2 style={{
-            fontFamily: "'Playfair Display', serif",
+            fontFamily: "var(--font-serif)",
             fontSize: "16px", color: "var(--ink)", margin: "0 0 4px",
           }}>
             1. Claude API key <span style={{ color: "var(--crimson-soft)", fontSize: "13px" }}>required</span>
@@ -167,7 +167,7 @@ export default function SetupScreen({ onComplete }) {
         {/* ── Section 2: ESV API ─────────────────────────────────────────── */}
         <div style={SECTION}>
           <h2 style={{
-            fontFamily: "'Playfair Display', serif",
+            fontFamily: "var(--font-serif)",
             fontSize: "16px", color: "var(--ink)", margin: "0 0 4px",
           }}>
             2. ESV API key <span style={{ color: "var(--ink-ghost)", fontSize: "13px" }}>optional</span>

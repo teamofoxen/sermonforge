@@ -208,7 +208,7 @@ export default function SeriesPlanner({ seriesId, onClose, onOpenSermon }) {
           background: `var(--${series.color || "gold"})`,
         }} />
         <div style={{
-          flex: 1, fontFamily: "'Playfair Display', serif", fontSize: "17px",
+          flex: 1, fontFamily: "var(--font-serif)", fontSize: "17px",
           fontWeight: "600", color: "var(--ink)", overflow: "hidden", whiteSpace: "nowrap", textOverflow: "ellipsis",
         }}>
           {series.title}
@@ -272,7 +272,7 @@ export default function SeriesPlanner({ seriesId, onClose, onOpenSermon }) {
             alignItems: "center",
             justifyContent: "space-between",
             gap: "12px",
-            fontFamily: "'Crimson Pro', serif",
+            fontFamily: "var(--font-serif)",
             fontSize: "13px",
             color: "var(--ink-mid)",
           }}
@@ -299,7 +299,7 @@ export default function SeriesPlanner({ seriesId, onClose, onOpenSermon }) {
             style={{
               background: "none", border: "none", cursor: "pointer",
               padding: "14px 18px", fontSize: "14px",
-              fontFamily: "'Crimson Pro', serif",
+              fontFamily: "var(--font-serif)",
               color: activeTab === tab.id ? "var(--gold)" : "var(--ink-soft)",
               borderBottom: activeTab === tab.id ? "2px solid var(--gold)" : "2px solid transparent",
               fontWeight: activeTab === tab.id ? "600" : "400",
@@ -519,7 +519,7 @@ function BookStudyTab({ series, onChange, drawerOpen, onOpenDrawer, onCloseDrawe
         {/* Book identity header */}
         <div style={{ marginBottom: "24px", padding: "14px 16px", background: "var(--parchment-warm)", border: "1px solid var(--parchment-deep)", borderRadius: "var(--radius)" }}>
           <input
-            style={{ ...inputStyle, fontFamily: "'Playfair Display', serif", fontSize: "18px", fontWeight: "600", marginBottom: (series.passage_range || series.canon_category) ? "6px" : "0" }}
+            style={{ ...inputStyle, fontFamily: "var(--font-serif)", fontSize: "18px", fontWeight: "600", marginBottom: (series.passage_range || series.canon_category) ? "6px" : "0" }}
             value={series.title || ""}
             onChange={(e) => onChange("title", e.target.value)}
             placeholder="Series Text"
@@ -684,7 +684,7 @@ function OverviewTab({ series, onChange, drawerOpen, onOpenDrawer, onCloseDrawer
         <div style={{ marginBottom: "20px" }}>
           <label style={labelStyle}>Series Title</label>
           <input
-            style={{ ...inputStyle, fontFamily: "'Playfair Display', serif", fontSize: "18px", marginBottom: "10px" }}
+            style={{ ...inputStyle, fontFamily: "var(--font-serif)", fontSize: "18px", marginBottom: "10px" }}
             value={series.title || ""}
             onChange={(e) => onChange("title", e.target.value)}
             placeholder="e.g. The Gospel of Luke: Reintroducing Jesus"
@@ -765,7 +765,7 @@ function OverviewTab({ series, onChange, drawerOpen, onOpenDrawer, onCloseDrawer
               }}>
                 <div style={{ ...labelStyle, marginBottom: "4px" }}>Working hypothesis from Book Study</div>
                 <div style={{
-                  fontSize: "14px", fontFamily: "'Crimson Pro', serif",
+                  fontSize: "14px", fontFamily: "var(--font-serif)",
                   color: "var(--ink-soft)", fontStyle: "italic", lineHeight: "1.6",
                 }}>
                   {series.emerging_big_idea}
@@ -936,7 +936,7 @@ function StructureTab({ series, sections, onChange, onSectionsChange, seriesId, 
             Build this yourself, paste from a commentary, or generate with AI.
           </p>
           <textarea
-            style={{ ...textareaStyle, fontFamily: "'Crimson Pro', serif", fontSize: "14px" }}
+            style={{ ...textareaStyle, fontFamily: "var(--font-serif)", fontSize: "14px" }}
             rows={5}
             value={series.structural_outline || ""}
             onChange={(e) => onChange("structural_outline", e.target.value)}
@@ -950,7 +950,7 @@ function StructureTab({ series, sections, onChange, onSectionsChange, seriesId, 
         <div>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
             <div>
-              <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: "15px", fontWeight: "600", color: "var(--ink)" }}>
+              <h3 style={{ fontFamily: "var(--font-serif)", fontSize: "15px", fontWeight: "600", color: "var(--ink)" }}>
                 Series Sections
               </h3>
               <p style={{ fontSize: "13px", color: "var(--ink-ghost)", marginTop: "2px" }}>
@@ -1012,7 +1012,7 @@ function SectionEditor({ section, index, total, expanded, onToggle, onChange, on
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 14px", cursor: "pointer" }} onClick={onToggle}>
         <span style={{ color: "var(--ink-ghost)", fontSize: "12px", width: "16px", textAlign: "center" }}>{index + 1}</span>
-        <span style={{ flex: 1, fontFamily: "'Playfair Display', serif", fontSize: "14px", color: section.title ? "var(--ink)" : "var(--ink-ghost)", fontStyle: section.title ? "normal" : "italic" }}>
+        <span style={{ flex: 1, fontFamily: "var(--font-serif)", fontSize: "14px", color: section.title ? "var(--ink)" : "var(--ink-ghost)", fontStyle: section.title ? "normal" : "italic" }}>
           {section.title || "Untitled Section"}
         </span>
         {section.passage_range && (
@@ -1229,7 +1229,7 @@ function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpen
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
           <div>
-            <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: "15px", fontWeight: "600", color: "var(--ink)" }}>
+            <h3 style={{ fontFamily: "var(--font-serif)", fontSize: "15px", fontWeight: "600", color: "var(--ink)" }}>
               Sermon Slots
             </h3>
             <p style={{ fontSize: "13px", color: "var(--ink-ghost)", marginTop: "2px" }}>
@@ -1248,7 +1248,7 @@ function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpen
               <div key={section.id}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
                   <div>
-                    <h4 style={{ fontFamily: "'Playfair Display', serif", fontSize: "14px", fontWeight: "600", color: "var(--ink-soft)" }}>
+                    <h4 style={{ fontFamily: "var(--font-serif)", fontSize: "14px", fontWeight: "600", color: "var(--ink-soft)" }}>
                       {section.title || "Untitled Section"}
                     </h4>
                     {section.passage_range && (
@@ -1278,7 +1278,7 @@ function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpen
             {/* Unassigned */}
             {unassigned.length > 0 && (
               <div>
-                <h4 style={{ fontFamily: "'Playfair Display', serif", fontSize: "14px", fontWeight: "600", color: "var(--ink-ghost)", marginBottom: "10px" }}>
+                <h4 style={{ fontFamily: "var(--font-serif)", fontSize: "14px", fontWeight: "600", color: "var(--ink-ghost)", marginBottom: "10px" }}>
                   Unassigned
                 </h4>
                 <SlotList slots={unassigned} onChange={handleSlotField} onDelete={handleDeleteSlot} onCommit={commitDraft} draftErrors={draftErrors} onClearError={clearDraftError} onOpenSermon={onOpenSermon} seriesId={seriesId} series={series} totalSlots={allSlots.length} sectionBigIdea="" />
@@ -1415,7 +1415,7 @@ function SlotRow({ slot, index, onChange, onDelete, onCommit, commitError, onCle
       <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 14px", cursor: "pointer" }} onClick={() => setExpanded(e => !e)}>
         <span style={{ color: "var(--ink-ghost)", fontSize: "12px", width: "16px" }}>{index + 1}</span>
         <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "12px", color: "var(--ink-soft)", minWidth: "90px" }}>
-          {slot.passage || <span style={{ color: "var(--ink-ghost)", fontStyle: "italic", fontFamily: "'Crimson Pro', serif" }}>No passage</span>}
+          {slot.passage || <span style={{ color: "var(--ink-ghost)", fontStyle: "italic", fontFamily: "var(--font-serif)" }}>No passage</span>}
         </span>
         <span style={{ flex: 1, fontSize: "14px", color: slot.title ? "var(--ink)" : "var(--ink-ghost)", fontStyle: slot.title ? "normal" : "italic" }}>
           {slot.title || "Untitled"}
@@ -1662,7 +1662,7 @@ function CalendarTab({ series, sections, sermons, calNotes, onChange, onSermonsC
                   }}>
                     <span style={{ fontSize: "12px", color: "var(--ink-ghost)", textAlign: "center" }}>{idx + 1}</span>
                     <div>
-                      <div style={{ fontSize: "13px", color: "var(--ink)", fontFamily: "'Playfair Display', serif", lineHeight: "1.2" }}>
+                      <div style={{ fontSize: "13px", color: "var(--ink)", fontFamily: "var(--font-serif)", lineHeight: "1.2" }}>
                         {sermon.title || <span style={{ color: "var(--ink-ghost)", fontStyle: "italic" }}>Untitled</span>}
                       </div>
                       {sermon.passage && (
@@ -1823,7 +1823,7 @@ function AIChatPanel({ messages, loading, input, onInputChange, onSubmit, placeh
         <textarea
           style={{
             width: "100%", border: "1px solid var(--parchment-deep)", borderRadius: "var(--radius)",
-            padding: "8px 10px", fontSize: "13px", fontFamily: "'Crimson Pro', serif",
+            padding: "8px 10px", fontSize: "13px", fontFamily: "var(--font-serif)",
             resize: "none", background: "var(--parchment-warm)", color: "var(--ink)",
             outline: "none", lineHeight: "1.5",
           }}
@@ -1867,7 +1867,7 @@ const inputStyle = {
   borderRadius: "var(--radius)",
   padding: "8px 10px",
   fontSize: "14px",
-  fontFamily: "'Crimson Pro', serif",
+  fontFamily: "var(--font-serif)",
   background: "var(--white)",
   color: "var(--ink)",
   outline: "none",
@@ -1922,31 +1922,31 @@ function SeriesHowItWorksModal({ onClose }) {
           }}
         >✕</IconButton>
         <h3 style={{
-          fontFamily: "'Playfair Display', serif", fontSize: "18px",
+          fontFamily: "var(--font-serif)", fontSize: "18px",
           color: "var(--ink)", marginBottom: "6px",
         }}>How the Series Planner works</h3>
         <p style={{
           fontSize: "13px", color: "var(--ink-ghost)",
-          marginBottom: "24px", fontFamily: "'Crimson Pro', serif",
+          marginBottom: "24px", fontFamily: "var(--font-serif)",
         }}>Plan and build a sermon series through five planning stages.</p>
         <div style={{ overflowX: "auto" }}>
           <svg viewBox="0 0 1080 228" style={{ width: "100%", height: "auto", display: "block" }}>
 
             {/* ── Stage boxes ─────────────────────────────────────────────────── */}
             <rect x="10" y="16" width="180" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
-            <text x="100" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "'Crimson Pro', serif", fontWeight: 600 }}>Book Study</text>
+            <text x="100" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "var(--font-serif)", fontWeight: 600 }}>Book Study</text>
 
             <rect x="230" y="16" width="180" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
-            <text x="320" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "'Crimson Pro', serif", fontWeight: 600 }}>Overview</text>
+            <text x="320" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "var(--font-serif)", fontWeight: 600 }}>Overview</text>
 
             <rect x="450" y="16" width="180" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
-            <text x="540" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "'Crimson Pro', serif", fontWeight: 600 }}>Structure</text>
+            <text x="540" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "var(--font-serif)", fontWeight: 600 }}>Structure</text>
 
             <rect x="670" y="16" width="180" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
-            <text x="760" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "'Crimson Pro', serif", fontWeight: 600 }}>Sermon Slots</text>
+            <text x="760" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "var(--font-serif)", fontWeight: 600 }}>Sermon Slots</text>
 
             <rect x="890" y="16" width="180" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
-            <text x="980" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "'Crimson Pro', serif", fontWeight: 600 }}>Calendar</text>
+            <text x="980" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "var(--font-serif)", fontWeight: 600 }}>Calendar</text>
 
             {/* ── Between-stage arrows ────────────────────────────────────────── */}
             <text x="210" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-ghost)", fontSize: "14px" }}>→</text>
@@ -1963,67 +1963,67 @@ function SeriesHowItWorksModal({ onClose }) {
 
             {/* ── Book Study sub-items (4) ────────────────────────────────────── */}
             <rect x="10" y="76" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="100" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Redemptive Context</text>
+            <text x="100" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Redemptive Context</text>
             <line x1="100" y1="104" x2="100" y2="112" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
 
             <rect x="10" y="112" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="100" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Book Background</text>
+            <text x="100" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Book Background</text>
             <line x1="100" y1="140" x2="100" y2="148" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
 
             <rect x="10" y="148" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="100" y="162" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Argument &amp; Structure</text>
+            <text x="100" y="162" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Argument &amp; Structure</text>
             <line x1="100" y1="176" x2="100" y2="184" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
 
             <rect x="10" y="184" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="100" y="198" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Working Big Idea</text>
+            <text x="100" y="198" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Working Big Idea</text>
 
             {/* ── Overview sub-items (4) ───────────────────────────────────────── */}
             <rect x="230" y="76" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="320" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>{"Title & identity"}</text>
+            <text x="320" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>{"Title & identity"}</text>
             <line x1="320" y1="104" x2="320" y2="112" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
 
             <rect x="230" y="112" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="320" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>{"Passage & dates"}</text>
+            <text x="320" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>{"Passage & dates"}</text>
             <line x1="320" y1="140" x2="320" y2="148" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
 
             <rect x="230" y="148" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="320" y="162" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Series Big Idea</text>
+            <text x="320" y="162" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Series Big Idea</text>
             <line x1="320" y1="176" x2="320" y2="184" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
 
             <rect x="230" y="184" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="320" y="198" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Series Overview</text>
+            <text x="320" y="198" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Series Overview</text>
 
             {/* ── Structure sub-items (2) ──────────────────────────────────────── */}
             <rect x="450" y="76" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="540" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Structural Outline</text>
+            <text x="540" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Structural Outline</text>
             <line x1="540" y1="104" x2="540" y2="112" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
 
             <rect x="450" y="112" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="540" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Series Sections</text>
+            <text x="540" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Series Sections</text>
 
             {/* ── Sermon Slots sub-items (3) ───────────────────────────────────── */}
             <rect x="670" y="76" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="760" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Sermon Slots</text>
+            <text x="760" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Sermon Slots</text>
             <line x1="760" y1="104" x2="760" y2="112" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
 
             <rect x="670" y="112" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="760" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Stage: planning</text>
+            <text x="760" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Stage: planning</text>
             <line x1="760" y1="140" x2="760" y2="148" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
 
             <rect x="670" y="148" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="760" y="162" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Promote to active</text>
+            <text x="760" y="162" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Promote to active</text>
 
             {/* ── Calendar sub-items (3) ───────────────────────────────────────── */}
             <rect x="890" y="76" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="980" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Date assignment</text>
+            <text x="980" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Date assignment</text>
             <line x1="980" y1="104" x2="980" y2="112" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
 
             <rect x="890" y="112" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="980" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>Liturgical seasons</text>
+            <text x="980" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Liturgical seasons</text>
             <line x1="980" y1="140" x2="980" y2="148" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
 
             <rect x="890" y="148" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="980" y="162" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "'Crimson Pro', serif" }}>AI Advisor</text>
+            <text x="980" y="162" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>AI Advisor</text>
 
           </svg>
         </div>
@@ -2087,11 +2087,11 @@ function StudyGuideModal({ series, sections, sermons, onClose }) {
           display: "flex", alignItems: "center", justifyContent: "center",
           width: "24px", height: "24px", borderRadius: "50%",
           background: "var(--gold)", color: "var(--white)",
-          fontSize: "12px", fontWeight: "700", fontFamily: "'Crimson Pro', serif",
+          fontSize: "12px", fontWeight: "700", fontFamily: "var(--font-serif)",
           flexShrink: 0,
         }}>{number}</span>
         <h3 style={{
-          fontFamily: "'Playfair Display', serif", fontSize: "16px",
+          fontFamily: "var(--font-serif)", fontSize: "16px",
           fontWeight: "600", color: "var(--ink)", margin: 0,
         }}>{title}</h3>
       </div>
@@ -2114,7 +2114,7 @@ function StudyGuideModal({ series, sections, sermons, onClose }) {
           <div style={{ paddingLeft: "16px" }}>
             {content.split(/\n+/).filter(p => p.trim()).map((para, i) => (
               <p key={i} style={{
-                fontSize: "14px", fontFamily: "'Crimson Pro', serif",
+                fontSize: "14px", fontFamily: "var(--font-serif)",
                 color: "var(--ink)", lineHeight: "1.7", margin: "0 0 8px",
               }}>
                 {para}
@@ -2148,7 +2148,7 @@ function StudyGuideModal({ series, sections, sermons, onClose }) {
                 </span>
               )}
               {sermon.title && (
-                <span style={{ fontFamily: "'Playfair Display', serif", fontSize: "14px", fontWeight: "600", color: "var(--ink)" }}>
+                <span style={{ fontFamily: "var(--font-serif)", fontSize: "14px", fontWeight: "600", color: "var(--ink)" }}>
                   {sermon.title}
                 </span>
               )}
@@ -2174,7 +2174,7 @@ function StudyGuideModal({ series, sections, sermons, onClose }) {
         </div>
         {sermon.study_guide_note && (
           <div style={{ paddingLeft: "28px" }}>
-            <p style={{ fontSize: "14px", fontFamily: "'Crimson Pro', serif", color: "var(--ink)", lineHeight: "1.6", margin: 0 }}>
+            <p style={{ fontSize: "14px", fontFamily: "var(--font-serif)", color: "var(--ink)", lineHeight: "1.6", margin: 0 }}>
               {sermon.study_guide_note}
             </p>
           </div>
@@ -2213,7 +2213,7 @@ function StudyGuideModal({ series, sections, sermons, onClose }) {
         {/* Header */}
         <div style={{ marginBottom: "24px", paddingRight: "32px" }}>
           <h2 style={{
-            fontFamily: "'Playfair Display', serif", fontSize: "20px",
+            fontFamily: "var(--font-serif)", fontSize: "20px",
             fontWeight: "600", color: "var(--ink)", marginBottom: "4px",
           }}>
             Study Guide Preview
@@ -2271,12 +2271,12 @@ function StudyGuideModal({ series, sections, sermons, onClose }) {
         {/* Footer */}
         <div style={{ marginTop: "28px", paddingTop: "20px", borderTop: "1px solid var(--parchment-deep)" }}>
           {exportResult?.ok && (
-            <div style={{ fontSize: "12px", color: "var(--sage)", marginBottom: "10px", fontFamily: "'Crimson Pro', serif" }}>
+            <div style={{ fontSize: "12px", color: "var(--sage)", marginBottom: "10px", fontFamily: "var(--font-serif)" }}>
               Saved to: {exportResult.filepath}
             </div>
           )}
           {exportResult && !exportResult.ok && (
-            <div style={{ fontSize: "12px", color: "var(--crimson-soft)", marginBottom: "10px", fontFamily: "'Crimson Pro', serif" }}>
+            <div style={{ fontSize: "12px", color: "var(--crimson-soft)", marginBottom: "10px", fontFamily: "var(--font-serif)" }}>
               Export failed: {exportResult.error}
             </div>
           )}

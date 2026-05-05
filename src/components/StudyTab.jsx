@@ -98,7 +98,7 @@ function SermonShapePreview({ sermon, outline, funcData }) {
 
   return (
     <div style={{ background: "var(--parchment-warm)", border: "1px solid var(--parchment-deep)", borderRadius: "var(--radius)", padding: "16px 20px", marginBottom: "20px", fontSize: "14px", color: "var(--ink-soft)" }}>
-      <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "11px", letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--ink-ghost)", marginBottom: "12px" }}>Sermon Shape</div>
+      <div style={{ fontFamily: "var(--font-serif)", fontSize: "11px", letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--ink-ghost)", marginBottom: "12px" }}>Sermon Shape</div>
 
       {hasIntro && (
         <div style={{ marginBottom: "12px" }}>
@@ -169,7 +169,7 @@ function FuncElem({ pointText, pointId, displayIndex, funcData, onUpdate, onUpda
             <div className="func-field-label">Scripture <span style={{ color: "var(--slate, #5a7a8a)", fontFamily: "'JetBrains Mono', monospace", fontSize: "11px" }}>(ESV)</span></div>
             <textarea
               className="field-textarea"
-              style={{ minHeight: "60px", fontFamily: "'Crimson Pro', serif", fontSize: "15px", fontStyle: "italic" }}
+              style={{ minHeight: "60px", fontFamily: "var(--font-serif)", fontSize: "15px", fontStyle: "italic" }}
               value={data.scripture}
               onChange={(e) => update("scripture", e.target.value)}
               onInput={(e) => autoResize(e.target)}
@@ -1580,7 +1580,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
               {populateScriptureMessage && (
                 <span style={{
                   fontSize: "12px",
-                  fontFamily: "'Crimson Pro', serif",
+                  fontFamily: "var(--font-serif)",
                   fontStyle: "italic",
                   color: populateScriptureMessage.tone === "error"
                     ? "#a04040"

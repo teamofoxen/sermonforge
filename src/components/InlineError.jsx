@@ -25,7 +25,7 @@ export default function InlineError({ children, onRetry, onDismiss, style }) {
         borderLeft: "3px solid var(--crimson-soft)",
         borderRadius: "6px",
         color: "var(--crimson-soft)",
-        fontFamily: "'Crimson Pro', serif",
+        fontFamily: "var(--font-serif)",
         fontSize: "13px",
         lineHeight: "1.4",
         display: "flex",

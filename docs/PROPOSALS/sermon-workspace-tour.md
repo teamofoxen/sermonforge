@@ -81,7 +81,7 @@ later effort — do not entangle the two.
   list query so it never appears on the dashboard. Seed on first launch
   (idempotent); open by ID when the tour starts.
 - **Visual language:** dark ink callout card (`var(--ink)` background) with a
-  2px gold top border, Playfair Display heading, Crimson Pro body. Spotlight is
+  2px gold top border, IBM Plex Serif heading, IBM Plex Serif body. Spotlight is
   a soft radial-gradient vignette (not a hard mask), with a subtle gold glow on
   the highlighted element. Step counter at the top of the card, gold "Next"
   button, understated "Skip tour" link.

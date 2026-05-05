@@ -72,7 +72,7 @@ export default function Calendar({ onOpenSermon }) {
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             <SecondaryButton size="sm" onClick={prevMonth}>← Prev</SecondaryButton>
-            <span style={{ fontFamily: "'Playfair Display', serif", fontSize: "18px", fontWeight: 600, minWidth: "180px", textAlign: "center" }}>
+            <span style={{ fontFamily: "var(--font-serif)", fontSize: "18px", fontWeight: 600, minWidth: "180px", textAlign: "center" }}>
               {MONTHS[viewMonth]} {viewYear}
             </span>
             <SecondaryButton size="sm" onClick={nextMonth}>Next →</SecondaryButton>

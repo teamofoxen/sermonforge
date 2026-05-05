@@ -28,7 +28,7 @@ export default function ProposalPanel({
         borderLeft: "3px solid var(--gold)",
         borderRadius: "6px",
         padding: "10px 14px",
-        fontFamily: "'Crimson Pro', serif",
+        fontFamily: "var(--font-serif)",
         fontSize: "14px",
         color: "var(--ink-mid)",
       }}

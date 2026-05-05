@@ -44,7 +44,7 @@ export function EmptyState({
         textAlign: "center",
         padding: "60px 32px",
         color: "var(--ink-ghost)",
-        fontFamily: "'Crimson Pro', serif",
+        fontFamily: "var(--font-serif)",
         gap: "8px",
         ...style,
       }}
@@ -56,7 +56,7 @@ export function EmptyState({
       )}
       <p
         style={{
-          fontFamily: "'Playfair Display', serif",
+          fontFamily: "var(--font-serif)",
           fontSize: "16px",
           color: "var(--ink-soft)",
           margin: 0,

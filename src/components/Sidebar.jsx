@@ -5,6 +5,7 @@ import NewSermonModal from "./NewSermonModal.jsx";
 import FeedbackModal from "./FeedbackModal.jsx";
 import IconButton from "./primitives/IconButton";
 import TextButton from "./primitives/TextButton";
+import Logo from "./Logo.jsx";
 
 const NAV_ITEMS = [
   {
@@ -99,8 +100,7 @@ export default function Sidebar({ currentView, onNavigate, onOpenSermon, onOpenS
   return (
     <aside className="sidebar">
       <div className="sidebar-logo">
-        <h1>SermonForge</h1>
-        <p>Sermon Prep Workspace</p>
+        <Logo size="md" tone="gold" />
       </div>
 
       <nav className="sidebar-nav">

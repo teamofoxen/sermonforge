@@ -602,7 +602,7 @@ function ContextSnapshotPanel({ open, onToggle, sermon, step, theologyMode, turn
           display: "flex",
           alignItems: "center",
           gap: "6px",
-          fontFamily: "'Crimson Pro', serif",
+          fontFamily: "var(--font-serif)",
         }}
       >
         <span aria-hidden="true" style={{ fontSize: "10px" }}>{open ? "▾" : "▸"}</span>

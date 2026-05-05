@@ -668,7 +668,7 @@ export default function DeliveryTab({ sermon, onUpdate }) {
             alignItems: "center",
             justifyContent: "space-between",
             gap: "12px",
-            fontFamily: "'Crimson Pro', serif",
+            fontFamily: "var(--font-serif)",
             fontSize: "13px",
             color: "var(--ink-mid)",
           }}

@@ -84,7 +84,7 @@ export default function Planning({ onOpenPlanner, onNewSeries }) {
                   background: "var(--parchment-warm)",
                   borderLeft: `3px solid ${CANON_COLORS[cat]}`,
                 }}>
-                  <div style={{ fontSize: "22px", fontWeight: "700", color: "var(--ink)", fontFamily: "'Playfair Display', serif" }}>
+                  <div style={{ fontSize: "22px", fontWeight: "700", color: "var(--ink)", fontFamily: "var(--font-serif)" }}>
                     {coverage[cat]}
                   </div>
                   <div style={{ fontSize: "12px", color: "var(--ink-soft)", marginTop: "2px", textTransform: "uppercase", letterSpacing: "0.06em" }}>
@@ -141,7 +141,7 @@ function SeriesCard({ series: s, sermonCount, onOpen, onDelete }) {
 
       {/* Title + status */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "8px", marginBottom: "6px" }}>
-        <div style={{ fontFamily: "'Playfair Display', serif", fontSize: "15px", fontWeight: "600", color: "var(--ink)", lineHeight: "1.3" }}>
+        <div style={{ fontFamily: "var(--font-serif)", fontSize: "15px", fontWeight: "600", color: "var(--ink)", lineHeight: "1.3" }}>
           {s.title}
         </div>
         <span style={{

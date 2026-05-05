@@ -40,12 +40,12 @@ export function LoadingState({
     ? {
         fontStyle: "italic",
         color: "var(--ink-ghost)",
-        fontFamily: "'Crimson Pro', serif",
+        fontFamily: "var(--font-serif)",
       }
     : {
         fontStyle: "italic",
         color: "var(--ink-ghost)",
-        fontFamily: "'Crimson Pro', serif",
+        fontFamily: "var(--font-serif)",
         padding: "8px 0",
         display: "block",
       };
