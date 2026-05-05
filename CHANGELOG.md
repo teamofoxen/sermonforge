@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-05-05 — ScripturePanel in-panel Bible search
+
+- `ScripturePanel` gains a search row under the header — input ("Bible search") + Go button — that reuses the existing `fetchPassage` IPC to load any reference without leaving the column.
+- "← Back to [sermon ref]" link surfaces whenever a lookup is active and returns the panel to the sermon's text in one click; Esc inside the input does the same.
+- Header reference + empty-state guard now read from the displayed reference, so the pastor always sees what's currently loaded.
+- CSS adds `.scripture-search`, `.scripture-search-input`, `.scripture-search-submit`, and `.scripture-back` using existing parchment / gold / ink-soft tokens.
+
+---
+
 ## 2026-05-05 — dark-mode --ink-ghost brightened globally
 
 - Dark-mode `--ink-ghost` raised from `#5a4c42` to `#bfb0a0`, restoring legibility for the dashboard guided-tour link, in-progress sermon dates, Delete buttons, preacher quote dates + citations, and every other muted text site app-wide.

@@ -4,14 +4,15 @@
 // exegetical questions; this column removes the "open passage popup" context
 // switch by making the passage always visible alongside the writing surface.
 //
-// Renders sermon.passage by calling the existing fetchPassage IPC.
+// Renders sermon.passage by calling the existing fetchPassage IPC. A search
+// input lets the pastor look up any reference (cross-reference, parallel,
+// echo) without leaving the column; "Back to [sermon ref]" returns them
+// to the sermon text in one click. Esc also returns.
 //
 // fetchPassage shape:
 //   { esv: <string|null>, esvPending: <bool>, esvError: <string|undefined> }
 // where esvPending=true means no ESV API key is configured.
 //
-// TODO (deferred per user 2026-05-04): scripture search / jump function so
-// pastors can quickly look up a different passage without leaving the column.
 // TODO (deferred): linked-verse highlight per active field — needs verseRange
 // per field def in studyFields.js.
 
@@ -45,9 +46,16 @@ export default function ScripturePanel({ passage, translation = "ESV" }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [searchInput, setSearchInput] = useState("");
+  const [lookupRef, setLookupRef] = useState("");
+
+  const sermonRef = (passage || "").trim();
+  const lookupTrimmed = lookupRef.trim();
+  const isLookup = !!lookupTrimmed && lookupTrimmed !== sermonRef;
+  const displayedRef = isLookup ? lookupTrimmed : sermonRef;
 
   useEffect(() => {
-    if (!passage || !passage.trim()) {
+    if (!displayedRef) {
       setData(null);
       setError(null);
       return;
@@ -56,7 +64,7 @@ export default function ScripturePanel({ passage, translation = "ESV" }) {
     setLoading(true);
     setError(null);
 
-    fetchPassage(passage)
+    fetchPassage(displayedRef)
       .then((result) => {
         if (cancelled) return;
         setData(result || {});
@@ -70,7 +78,26 @@ export default function ScripturePanel({ passage, translation = "ESV" }) {
       });
 
     return () => { cancelled = true; };
-  }, [passage]);
+  }, [displayedRef]);
+
+  const handleSubmit = (e) => {
+    e?.preventDefault?.();
+    const q = searchInput.trim();
+    if (!q) return;
+    setLookupRef(q);
+  };
+
+  const handleBackToSermon = () => {
+    setLookupRef("");
+    setSearchInput("");
+  };
+
+  const handleSearchKeyDown = (e) => {
+    if (e.key === "Escape" && isLookup) {
+      e.preventDefault();
+      handleBackToSermon();
+    }
+  };
 
   const segments = data?.esv ? parseEsvText(data.esv) : [];
   const pending = !!data?.esvPending;
@@ -79,9 +106,40 @@ export default function ScripturePanel({ passage, translation = "ESV" }) {
   return (
     <aside className="scripture-panel" aria-label="Scripture passage">
       <div className="scripture-header">
-        <span className="scripture-ref">{passage || "(no passage set)"}</span>
+        <span className="scripture-ref">{displayedRef || "(no passage set)"}</span>
         <span className="scripture-translation">{translation}</span>
       </div>
+
+      <form className="scripture-search" onSubmit={handleSubmit} role="search">
+        <input
+          type="text"
+          className="scripture-search-input"
+          placeholder="Bible search"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          onKeyDown={handleSearchKeyDown}
+          aria-label="Look up another Bible passage"
+        />
+        <button
+          type="submit"
+          className="scripture-search-submit"
+          aria-label="Look up passage"
+          disabled={!searchInput.trim()}
+        >
+          Go
+        </button>
+      </form>
+
+      {isLookup && sermonRef && (
+        <button
+          type="button"
+          className="scripture-back"
+          onClick={handleBackToSermon}
+          aria-label={`Back to sermon passage ${sermonRef}`}
+        >
+          ← Back to {sermonRef}
+        </button>
+      )}
 
       <div className="scripture-body">
         {loading && (
@@ -113,7 +171,7 @@ export default function ScripturePanel({ passage, translation = "ESV" }) {
             ))}
           </div>
         )}
-        {!loading && !error && !pending && !apiError && segments.length === 0 && passage && data && (
+        {!loading && !error && !pending && !apiError && segments.length === 0 && displayedRef && data && (
           <div className="scripture-status">Passage text not yet available.</div>
         )}
       </div>
