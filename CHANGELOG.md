@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-04 — spip + spir + sria stripped to implementation-doc shape
+
+- Stripped SPIP from 211 to ~55 lines: implementation log + A2.1 next + B/C backlog only.
+- Stripped SPIR from 281 to ~50 lines: 8 risk categories + 4 remediation patterns + empty surfacing-risks section.
+- Stripped SRIA from 131 to ~30 lines: pointer-only index over the four planning docs (SFDI/SADI/SPRD/SPIP).
+- Removed pre-implementation audit pass, Firing 1/2/3, Standards to Build, and audit Buckets A–E.
+- Framing fix: SPIP/SPIR no longer claim documentation agreement as the prerequisite for code work; they are now what their names said.
+
+---
+
 ## 2026-05-04 — sria registered as re-entry point for the Study redesign
 
 - New `docs/PROPOSALS/study-redesign-implementation-anchor.md` (SRIA) sits above the five planning docs (SFDI / SADI / SPRD / SPIP / SPIR) as a short re-entry point.
