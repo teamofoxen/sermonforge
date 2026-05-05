@@ -189,8 +189,6 @@ function applyStructuredUpdate(row: Row, field: string, update: any): string | {
   if (typeof current !== "object" || current === null || Array.isArray(current)) current = {};
   if (update.op === "set") { current[update.questionKey] = String(update.value || ""); return JSON.stringify(current); }
   if (update.op === "set_summary") { current.summary = String(update.value || ""); return JSON.stringify(current); }
-  if (update.op === "set_unbeliever") { current.unbeliever = String(update.value || ""); return JSON.stringify(current); }
-  if (update.op === "set_compiled") { current.compiled = String(update.value || ""); return JSON.stringify(current); }
   return rejection("STATE_5_BAD_OP", "State #5", `Unknown structured op: ${update.op}`);
 }
 

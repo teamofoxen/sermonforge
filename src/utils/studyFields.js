@@ -50,17 +50,20 @@ import { tryParse } from "../utils";
 
 // ── Phase 1: Observe ─────────────────────────────────────────────────────────
 //
-// Outside-in arc through the first three fields:
+// 8 fields. Outside-in arc through the first three fields:
 //   Context → Surface Questions → Divisions / Thought Units
 // Then the lens cluster reads against Field 3's spine:
 //   Main Characters → Commands and Declarations → Big Ideas
 // First synthesis + bridge into Interpret close the segment:
 //   Obvious Point → Possible Implications
 //
-// Retired keys: `commands`, `statements`, `basic_outline`, `background`. Old
-// data carrying these keys stays in the JSON column (parseStructuredField
+// Retired keys: `commands`, `statements`, `basic_outline`, `background`. The
+// `background` field (author/date/audience/genre) was retired 2026-05-05 —
+// the world-of-the-book layer was carrying weight better placed in series-
+// level Book Study (`book_background`) and in Phase 2's Genre field. Old
+// data carrying retired keys stays in the JSON column (parseStructuredField
 // preserves them) but does not render under any current field. No production
-// sermons exist (2026-05-04), so no auto-mapping logic ships.
+// sermons exist, so no auto-mapping logic ships.
 
 export const OBSERVE_FIELDS = [
   {
@@ -177,7 +180,7 @@ export const OBSERVE_FIELDS = [
     overview: {
       title: "Possible Implications",
       paragraphs: [
-        "You've worked your way through what the text says — its world, its location, its surface, its spine, its actors, its actions, its concepts, and its plain-sense point. The Observation Set is almost done.",
+        "You've worked your way through what the text says — its location, its surface, its spine, its actors, its actions, its concepts, and its plain-sense point. The Observation Set is almost done.",
         "Before we leave Observe and step into Interpret, one more move. Look at the passage and ask: what is it starting to suggest about the room you're preaching to? What's it pressing on? What's hard? What's hopeful?",
         "Not full application yet. Application is its own work, later. Here we're naming early sight — the moments where the passage starts to feel weighty for the people in the pews. The first time pastoral context enters, while the text is still doing the leading.",
         "If you find yourself drafting application or making sermon points, ease back. This is awareness, not exhortation. The text is still ahead of you here.",
@@ -188,9 +191,11 @@ export const OBSERVE_FIELDS = [
 
 // ── Phase 2: Interpret ───────────────────────────────────────────────────────
 //
-// Reshaped to 7 fields per SFDI Phase 2 walk (2026-05-03), shipped as SPRD
-// B2.0 (2026-05-04). Merida four-part arc through the seven fields:
-//   Deeper Context → Recurring Ideas → Character Purpose → Contrasts
+// 8 fields. Reshaped to 7 fields per SFDI Phase 2 walk (2026-05-03), shipped
+// as SPRD B2.0 (2026-05-04); Genre added 2026-05-05 as a light, optional
+// second-position field that lets the literary form set the lens before the
+// dissection work begins. Merida four-part arc through the eight fields:
+//   Deeper Context → Genre → Recurring Ideas → Character Purpose → Contrasts
 //   → Cross-References → Commentary Notes (last, to check) → Interpretation Synthesis
 //
 // Retired keys from the prior shape: `context_impact`, `characters`, `diagram`,
@@ -565,6 +570,23 @@ annotateOverviewSubtitles(IMPLICATIONS_FIELDS, "Implications");
 export const IMPLICATIONS_UNBELIEVER_KEY = "unbeliever";
 export const IMPLICATIONS_COMPILED_KEY = "compiled";
 
+// Cumulative-column keys written into the canonical thought-unit array
+// (`observations.divisions.thought_units`) by Phase 2 (`meaning`), Phase 3
+// (`christ_connection`), and Phase 4 (`implication`). Single source of truth
+// — `flattenAnswerValue` reads them when surfacing synthesis-table rows for
+// evidence text; `SynthesisTable` reads them to detect rows that carry
+// cross-phase work before allowing a destructive delete.
+export const CUMULATIVE_COLUMN_KEYS = Object.freeze(["meaning", "christ_connection", "implication"]);
+
+// Convert a snake_case field key to the kebab-case form used as a tour
+// anchor (`data-tour-id`) on rendered field blocks. Used by SpotlightWorksheet
+// at every field-rendering site and by `workspaceTourStops.js` `anchorId`s
+// at the field level — keeping the convention here means tour anchoring
+// stays honest across both surfaces.
+export function fieldKeyToTourId(fieldKey) {
+  return typeof fieldKey === "string" ? fieldKey.replace(/_/g, "-") : "";
+}
+
 // Default question key used until a field's SFDI question sequence lands.
 export const DEFAULT_QUESTION_KEY = "primary";
 
@@ -675,7 +697,7 @@ export function flattenAnswerValue(value) {
         meta.push(`signal: ${row.signal.trim()}`);
       }
       const extras = [];
-      for (const key of ["meaning", "christ_connection", "implication"]) {
+      for (const key of CUMULATIVE_COLUMN_KEYS) {
         if (typeof row[key] === "string" && row[key].trim()) {
           extras.push(`${key.replace(/_/g, " ")}: ${row[key].trim()}`);
         }
@@ -871,8 +893,8 @@ export function serializeStructuredField(data) {
  * readability. Falls back to legacy_notes if present.
  *
  * Closes the B1.5-era gap where multi-question fields (Phase 1's
- * background / context / surface_questions / divisions / applications and
- * Phase 2's deeper_context) produced empty flattened output because the
+ * context / surface_questions / divisions / applications and Phase 2's
+ * deeper_context / genre) produced empty flattened output because the
  * earlier implementation only read the `primary` question key per field.
  */
 export function flattenToText(data, fieldDefs) {

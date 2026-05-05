@@ -1,36 +1,62 @@
-// SynthesisTable — SFDI Field 4 Q3 sub-shape (SPRD A2.3).
+// SynthesisTable — SFDI Field 3 Q3 sub-shape (SPRD A2.3).
 //
-// A multi-column table where the pastor names the meaningful artifact
-// directly. Field 4's Phase 1 table is three columns:
-//   - Thought unit (own-words summary; no AI in this cell)
-//   - After line (autocomplete from canvas line numbers)
-//   - Signal (free text — the seam-marking signal)
+// Multi-column table where the pastor names the meaningful artifact in
+// their own voice. Phase 1's three columns (Thought unit, After line,
+// Signal) are extended downstream by Phase 2/3/4 with the cumulative
+// column keys exported from `studyFields.js`. Each phase's column is
+// writable in that phase's spotlight; upstream columns surface read-only
+// via the `columns` prop (each column may set `readOnly: true`).
 //
-// Storage shape per A2.0: `[{thought_unit_summary, after_line, signal}, ...]`.
-// Cumulative-column extension across phases:
-//   Phase 2 (Field 7 Q1) adds:  meaning
-//   Phase 3 (Field 5 Q1) adds:  christ_connection
-//   Phase 4 (Field 4 Q1) adds:  implication
-// Each phase's column is writable in that phase's spotlight; upstream
-// columns surface read-only. The component supports this via the
-// `columns` prop (each column may set `readOnly: true`).
+// Row identity is by object reference. Each row is a single object that
+// carries every column it has ever been written with. `updateCell` spreads
+// the existing row and merges the new key, so cumulative columns from
+// later phases are preserved across edits. There is no reorder UI; if
+// one is added, it must keep rows as units (don't rebuild rows from
+// per-column arrays) or attribution breaks.
 //
-// Paste is ALLOWED in this component — synthesis is the discipline; the
-// AI block (Q3 thought-unit cell, no AI generation) is the load-bearing
-// constraint. The component itself ships with no AI affordances; AI may
-// read these values downstream but does not write them.
+// Two destructive-edit guardrails (SPIP item 6, ratified 2026-05-05):
+//   - Delete on a row carrying cumulative cross-phase work surfaces a
+//     longer warning in the DeleteButton confirm step. Both paths route
+//     through the same Mutation #4 primitive — only the confirm copy
+//     changes by reversal cost.
+//   - After-line stale flag fires when the stored numeric value exceeds
+//     the current canvas line count. Free-text values like "v.5" are
+//     never flagged — only pure-numeric values that no longer point at
+//     a real canvas line.
 //
-// A2.3 ships the component in isolation. Wiring into Field 4 Q3 (with
-// the composite gate that requires at least one row with thought-unit +
-// after-line filled) is B1 work; later phases extend the columns prop.
+// Paste is ALLOWED — synthesis is the discipline; the no-AI block on
+// the thought-unit cell is the load-bearing constraint. The component
+// ships with no AI affordances.
 
 import React, { useId } from "react";
+import { CUMULATIVE_COLUMN_KEYS } from "../utils/studyFields";
+import DeleteButton from "./primitives/DeleteButton";
 
 export const PHASE_1_COLUMNS = Object.freeze([
   { key: "thought_unit_summary", label: "Thought unit", kind: "textarea",    placeholder: "What is the author hammering home, in your own words?" },
   { key: "after_line",            label: "After line",  kind: "line-number", placeholder: "1" },
   { key: "signal",                label: "Signal",      kind: "input",       placeholder: "Subject shift, transition, scene change…" },
 ]);
+
+function rowHasCumulativeContent(row) {
+  if (!row || typeof row !== "object") return false;
+  return CUMULATIVE_COLUMN_KEYS.some(
+    (k) => typeof row[k] === "string" && row[k].trim()
+  );
+}
+
+// Numeric after_line values pointing past the current canvas length are
+// stale. Free-text values (e.g. "v.5") parse to NaN and are never flagged
+// — the pastor has chosen a non-positional reference, which the canvas
+// can't validate.
+function isAfterLineStale(afterLine, canvasLineCount) {
+  if (typeof afterLine !== "string") return false;
+  const trimmed = afterLine.trim();
+  if (!trimmed) return false;
+  if (!/^\d+$/.test(trimmed)) return false;
+  const n = parseInt(trimmed, 10);
+  return n < 1 || n > canvasLineCount;
+}
 
 function emptyRowFor(columns) {
   const out = {};
@@ -144,18 +170,32 @@ export default function SynthesisTable({
                   );
                 }
                 if (col.kind === "line-number") {
+                  const stale = isAfterLineStale(v, canvasLineCount);
                   return (
                     <td key={col.key} className={cellClass} data-column={col.key}>
-                      <input
-                        className="synthesis-table-input synthesis-table-input-line-number"
-                        type="text"
-                        list={canvasLineCount > 0 ? datalistId : undefined}
-                        value={v}
-                        onChange={(e) => updateCell(rowIdx, col.key, e.target.value)}
-                        disabled={disabled}
-                        placeholder={col.placeholder || ""}
-                        aria-label={`${col.label}, row ${rowIdx + 1}`}
-                      />
+                      <div className="synthesis-table-line-number-wrap">
+                        <input
+                          className={`synthesis-table-input synthesis-table-input-line-number${stale ? " synthesis-table-input-stale" : ""}`}
+                          type="text"
+                          list={canvasLineCount > 0 ? datalistId : undefined}
+                          value={v}
+                          onChange={(e) => updateCell(rowIdx, col.key, e.target.value)}
+                          disabled={disabled}
+                          placeholder={col.placeholder || ""}
+                          aria-label={`${col.label}, row ${rowIdx + 1}`}
+                          aria-invalid={stale ? "true" : undefined}
+                        />
+                        {stale && (
+                          <span
+                            className="synthesis-table-line-number-stale"
+                            data-testid="after-line-stale"
+                            title={`Line shifted — canvas now has ${canvasLineCount} line${canvasLineCount === 1 ? "" : "s"}.`}
+                            aria-label={`Stale line number — canvas now has ${canvasLineCount} line${canvasLineCount === 1 ? "" : "s"}`}
+                          >
+                            ⚠
+                          </span>
+                        )}
+                      </div>
                     </td>
                   );
                 }
@@ -174,16 +214,29 @@ export default function SynthesisTable({
                 );
               })}
               <td className="synthesis-table-cell synthesis-table-cell-actions">
-                <button
-                  type="button"
-                  className="synthesis-table-delete-row"
-                  onClick={() => deleteRow(rowIdx)}
-                  disabled={disabled}
-                  aria-label={`Remove row ${rowIdx + 1}`}
-                  title="Remove row"
-                >
-                  ×
-                </button>
+                {disabled ? (
+                  <button
+                    type="button"
+                    className="synthesis-table-delete-row"
+                    disabled
+                    aria-label={`Remove row ${rowIdx + 1}`}
+                    title="Remove row"
+                  >
+                    ×
+                  </button>
+                ) : (
+                  <DeleteButton
+                    small
+                    label="×"
+                    ariaLabel={`Remove row ${rowIdx + 1}`}
+                    confirmLabel={
+                      rowHasCumulativeContent(row)
+                        ? "Has cross-phase work — delete?"
+                        : "Delete row?"
+                    }
+                    onDelete={() => deleteRow(rowIdx)}
+                  />
+                )}
               </td>
             </tr>
           ))}

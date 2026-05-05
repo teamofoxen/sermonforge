@@ -259,9 +259,7 @@ export type RedemptiveThreadUpdate =
   | { op: "set_summary"; value: string };
 
 export type ImplicationsUpdate =
-  | { op: "set"; questionKey: string; value: string }
-  | { op: "set_unbeliever"; value: string }
-  | { op: "set_compiled"; value: string };
+  | { op: "set"; questionKey: string; value: string };
 
 // SPRD C3 — Sermon Frame (SADI Step 5: Intro + Conclusion). Same generic
 // keyed-JSON op pattern as the Exegesis sub-phase columns; the renderer

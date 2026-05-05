@@ -1,63 +1,34 @@
 # Sermon Workspace Tour — Implementation Spec
 
-> Status: design locked, implementation pending. Authored 2026-04-28.
-> This spec carries forward from a design exploration session. The Series Planner
-> tour is a separate, later effort — do not entangle the two.
+> Status: design locked, implementation shipped (engine 2026-04-28; SFDI
+> reconciliation 2026-05-05). The Series Planner tour is a separate, later
+> effort — do not entangle the two.
 
-> **DRIFT WARNING (2026-05-04):** SPRD's B4.2 cut removed the Pastoral Context
-> card from `SermonWorkspace.jsx` and consolidated PC's substance into Phase 4
-> Field 3 (Pastoral Context — `room_specifics` + `cost_and_gift`). SPRD's
-> B-series also reshaped the four Study sub-phases against SFDI's 25-field
-> walkthrough. As a result the locked content below is partially stale:
->
-> - **Stops 7 / 8 / 9 / 10** (Pastoral Context as a 3-field concentric card with
->   The Cultural Moment / The Room / The Sermon's Work) reference UI that no
->   longer exists. PC is now a 2-question field inside Phase 4. The tour
->   rewrite needs to either retire these stops or re-anchor them against the
->   new Phase 4 Field 3 surface.
-> - **"PC fields are concentric outside-in"** decision under § Key decisions
->   already made — superseded by SPRD's binding ruling that PC's substance
->   flows through Phase 4 Field 3 (two questions, text-anchored framing).
-> - **Stop 14** (Phase 1 / Substance — "Characters. Big Ideas. The Obvious
->   Point. Basic Outline. Possible Implications.") — Basic Outline retired in
->   B1.0; the cumulative thought-unit table in Field 4 carries the proto-
->   outline now. Re-anchor against the SFDI 9-field shape (Background, Context,
->   Surface Questions, Divisions / Thought Units, Main Characters, Commands and
->   Declarations, Big Ideas, Obvious Point, Possible Implications).
-> - **Stop 16** (Phase 2 / Shaping meaning) and **Stop 17** (Phase 2 / Outside
->   voices) — Phase 2 reshape (B2.0) retired Diagram and merged Summarize Parts
->   + Summarize Whole into Interpretation Synthesis. Re-anchor against the
->   SFDI 7-field shape (Deeper Context, Recurring Ideas, Character Purpose,
->   Contrasts, Cross-References, Commentary Notes, Interpretation Synthesis).
-> - **Stop 19** (Seven questions) — Phase 3 reshape (B3.0) consolidated 8 RT
->   slots into 5 fields and restored 3 Merida questions. Re-anchor against the
->   SFDI 5-field shape (This Passage and Christ, How the Passage Points to
->   Christ, How the Gospel Makes This Possible, Our Need and God's Character,
->   Christ-Connection Statement).
-> - **Stops 21–24** (Phase 4 — Theological / Personal / Unbeliever / Compile)
->   — Phase 4 reshape (B4.0+B4.1) collapsed 15 slots into 4 fields, retired
->   the Compile button (Implications Synthesis is now pastor-written, not
->   AI-generated), and folded Unbeliever into Pastoral Context Q1. Re-anchor
->   against the SFDI 4-field shape (Theological Significance, Personal
->   Implications, Pastoral Context, Implications Synthesis) and the
->   three-way-conversation framing.
->
-> The other ~22 stops (workspace intro, AI philosophy, MPT/MPS, Outline,
-> Functional Elements, Manuscript audit tools, finish) are not affected by
-> SPRD's reshape and remain accurate against current code.
->
-> The build session that implements this tour should reconcile the stale
-> stops first, then execute the locked content the rest carries.
+> **Reconciliation note (2026-05-05):** The locked content below has been
+> rewritten to match the post-SPRD Study shape. Pastoral Context is no longer
+> a parallel-track card at the top of the workspace — it is Phase 4 Field 3
+> (`room_specifics` + `cost_and_gift`), the third voice in the three-way
+> conversation. Phase 1 carries 8 fields (SFDI shape), Phase 2 carries 8
+> fields (Genre added 2026-05-05), Phase 3 carries 5 fields, Phase 4 carries
+> 4 fields. The Compile button and the AI-generated Implications Synthesis
+> are retired — the Implications Synthesis and the Christ-Connection
+> Statement are pastor-written, anchored on the cumulative thought-unit
+> table. Tour count: 30 stops (was 34 in the original design; 5 PC-card
+> stops dropped; Unbeliever and Compile retired; Pastoral Context and
+> Implications Synthesis added; one Phase 3 stop renamed). The mock sermon
+> the tour walks is "The Hope That Does Not Disappoint" — Romans 5:1-5
+> (sermon ID `tour-romans-sermon-01`).
 
 ---
 
 ## What we're building
 
-A guided spotlight tour of the Sermon Workspace. Triggered from a "Tour Sermon
-Workspace" button on the Dashboard. The tour opens a tour-only sermon "The
-Upside-Down Kingdom" (Matthew 5:1–12, sermon ID `tour-sotm-sermon-01`) and walks
-through 34 stops. Each stop = a spotlight on a real element + a callout card
-explaining it. User clicks "Next" to advance; can skip anytime.
+A guided spotlight tour of the Sermon Workspace. Triggered from the Dashboard
+("Take the guided tour" inside the Explore SermonForge tile). The tour opens
+a tour-only sample sermon — "The Hope That Does Not Disappoint" (Romans 5:1-5,
+sermon ID `tour-romans-sermon-01`) — and walks through 30 stops. Each stop =
+a spotlight on a real element + a callout card explaining it. User clicks
+"Next" to advance; can leave anytime.
 
 The tour sermon is hidden from the Dashboard and Series Planner. It is seeded
 on first tour launch (idempotent), opened directly by ID when the tour starts,
@@ -76,21 +47,20 @@ later effort — do not entangle the two.
 - **Entry:** dashboard buttons in the page header — "Tour Sermon Workspace" and
   (later) "Tour Sermon Planner". The legacy "See Demo" button and the entire
   demo-mode annotation system have been removed; the tour replaces them.
-- **Tour data:** the tour ships with its own sermon ("The Upside-Down Kingdom",
-  Matthew 5:1–12). It uses a `tour-` ID prefix and is filtered out of every
-  list query so it never appears on the dashboard. Seed on first launch
-  (idempotent); open by ID when the tour starts.
+- **Tour data:** the tour ships with its own sample sermon ("The Hope That
+  Does Not Disappoint", Romans 5:1-5). It uses a `tour-` ID prefix and is
+  filtered out of every list query so it never appears on the dashboard. The
+  `load-tour-sermon` handler is delete-then-insert, so each tour launch wipes
+  any prior tour data and inserts a fresh copy — sample sermon updates take
+  effect on every click; auto-sweeps stale `tour-sotm-*` rows from the prior
+  Matthew 5 mock.
 - **Visual language:** dark ink callout card (`var(--ink)` background) with a
   2px gold top border, IBM Plex Serif heading, IBM Plex Serif body. Spotlight is
   a soft radial-gradient vignette (not a hard mask), with a subtle gold glow on
   the highlighted element. Step counter at the top of the card, gold "Next"
-  button, understated "Skip tour" link.
+  button, understated "Leave tour" link.
 - **Voice:** pastoral, plain, direct. No marketing-speak. Callout text is locked
   — copy verbatim.
-- **PC fields are concentric outside-in:** The Cultural Moment
-  (`background_noise`) → The Room (`audience_assumptions`) → The Sermon's Work
-  (`topic_theme`). The DB column names are unchanged; only the field labels
-  and ordering have been updated in the UI.
 
 ---
 
@@ -113,7 +83,7 @@ later effort — do not entangle the two.
 
 ---
 
-## The 34 stops (locked content)
+## The 30 stops (locked content)
 
 > Heading is bold. Body follows. Italic phrases are intentional emphasis on
 > field names or chip labels — preserve them in implementation.
@@ -142,174 +112,165 @@ main points, your full study, your outline, the series big idea and section,
 the pastoral situation, and supporting material. Seven layers of context,
 assembled fresh every time. You never have to re-explain.
 
-### Stop 5 — Always in the room
-**Always in the room.** One layer of that context — the cultural moment, the
-room, the sermon's work — is always sent to the AI, regardless of which step
-you're on. Three short fields at the top of every tab keep the AI from ever
-working in the abstract. We'll get to those in step 7.
-
-### Stop 6 — Tuned to you
+### Stop 5 — Tuned to you
 **Tuned to you.** Over time, the AI surfaces your own rhetorical patterns —
 how you build outlines, what your MPTs tend to look like, the way you turn
 applications. Adaptive guidance, tuned to you specifically. Not a model being
 trained; your past work, surfaced when relevant.
 
-### Stop 7 — Pastoral Context
-**Pastoral Context.** Three short fields at the top of every tab, ordered
-from outside in: the cultural moment, the room, the sermon's work. They don't
-shape the sermon's content. They shape how the AI talks to you about it.
-
-### Stop 8 — The Cultural Moment
-**The Cultural Moment.** What world is this congregation walking in from? What
-does culture believe, distort, or weaponize about this topic? The widest ring
-— what's already in the air before anyone takes a seat.
-
-### Stop 9 — The Room
-**The Room.** Who's in the room, and where are they? Where has this
-congregation drifted, and what do they currently believe? Posture, not
-demographics.
-
-### Stop 10 — The Sermon's Work
-**The Sermon's Work.** What is this sermon trying to accomplish? What's the
-big claim, and where does the Gospel enter? The innermost ring — the pastoral
-aim. The AI keeps all three in mind every time you ask it anything; you never
-have to restate them.
-
-### Stop 11 — Study tab
+### Stop 6 — Study tab
 **Study.** Four steps from text to sermon. Exegesis first, then the main
 points, then the outline, then the elements that make each point land.
 
-### Stop 12 — Step 1, Phase 1: Observe
-**Phase 1 — Observe.** Before you interpret, you observe. Nine questions take
-you through the passage systematically. Resist the urge to jump to meaning.
+### Stop 7 — Phase 1: Observe
+**Phase 1 — Observe.** Before you interpret, you observe. Eight fields walk
+you through the passage in order — outside-in, then a lens cluster, then the
+bridge into Interpret. Resist the urge to jump to meaning.
 
-### Stop 13 — Phase 1 / Surface
-**What the text says.** Context. Divisions. Commands. Statements. The surface
-of the passage — what surrounds it, where it breaks into units, what's
-commanded and what's declared. Get these right and the rest follows.
+### Stop 8 — Phase 1 / Surface
+**What the text says.** *Context. Surface Questions. Divisions / Thought
+Units.* Outside in: where this passage sits in the book, the situational
+facts on the surface, and how the passage breaks into thought units that
+anchor the rest of the work. Field 3 is the heaviest cut — the cumulative
+thought-unit table you'll extend in every later phase starts here.
 
-### Stop 14 — Phase 1 / Substance
-**What the text shows.** Characters. Big Ideas. The Obvious Point. Basic
-Outline. Possible Implications. Who's in the passage, what themes surface, and
-the question most pastors skip — is there an obvious point? State it plainly.
-Don't talk yourself out of it.
+### Stop 9 — Phase 1 / Substance
+**What the text shows.** *Main Characters. Commands and Declarations. Big
+Ideas. Obvious Point. Possible Implications.* The lens cluster reads against
+Field 3's spine — who's acting, what each main sentence is doing, what
+concepts surface. Then the question most pastors skip — is there an obvious
+point? State it plainly. Possible Implications close the segment by naming
+what the text is starting to press on for the room.
 
-### Stop 15 — Phase 2: Interpret
-**Phase 2 — Interpret.** Beneath the surface. Nine questions push from what
-the text says to what it means. This is where most of the work happens.
+### Stop 10 — Phase 2: Interpret
+**Phase 2 — Interpret.** Beneath the surface. Eight fields push from what the
+text says to what it means. This is where most of the work happens.
 
-### Stop 16 — Phase 2 / Shaping meaning
-**How meaning takes shape.** Context Impact. Recurring Ideas. Characters.
-Contrasts. Diagram. How surrounding context shapes meaning here. Words and
-ideas that recur — repetition in Scripture is rarely accidental. What
-characters are doing and why. The oppositions the author is setting up. The
-relationships between ideas, sketched out.
+### Stop 11 — Phase 2 / Shaping meaning
+**How meaning takes shape.** *Deeper Context. Genre. Recurring Ideas.
+Character Purpose. Contrasts.* Pick up Observe's Context with study tools in
+hand. Let genre set the lens. Then the dissection — what recurs, what each
+character is signaling, the oppositions the author has built into the passage.
 
-### Stop 17 — Phase 2 / Outside voices
-**Outside voices and your own.** Cross-References. Commentary. Summarize the
-Parts. Summarize the Whole. What the rest of Scripture says. What the
-commentaries say. Then verse by verse in your own words, and the whole passage
-in your own words. If you can't do the last two, interpretation isn't finished
-yet.
+### Stop 12 — Phase 2 / Outside voices, then your own
+**Outside voices, then your own.** *Cross-References. Commentary Notes.
+Interpretation Synthesis.* Let Scripture interpret Scripture. Check your
+reading against the commentaries — last, to confirm or correct, not to start.
+Then articulate what the passage MEANS in your own voice, per thought unit
+and as a whole. The Interpretation Set is the named outcome — Phase 3 opens
+against it.
 
-### Stop 18 — Phase 3: Redemptive Thread
-**Phase 3 — Redemptive Thread.** Every text points somewhere. Seven questions
-ask how this one points to Christ — directly or indirectly, by promise, by
-need, by the nature of the God who saves.
+### Stop 13 — Phase 3: Redemptive Thread
+**Phase 3 — Redemptive Thread.** Every text points somewhere. Five fields ask
+how this one points to Christ — by position, by theme or promise or type or
+prophecy, by the gospel's enabling power, by need, by the character of the
+God who saves.
 
-### Stop 19 — Seven questions
-**Seven ways to find Christ.** *Speaks of Christ directly. Stands before,
-after, or transitional to him. Reveals a biblical theme that points to him.
-Shows a promise. Shows mankind's need for him. Reveals the God who provides
-redemption. How is Jesus the hero of this passage?* Answer what you can. Leave
-the rest.
+### Stop 14 — Phase 3 / Five ways to find Christ
+**Five ways to find Christ.** *This Passage and Christ. How the Passage
+Points to Christ. How the Gospel Makes This Possible. Our Need and God's
+Character. Christ-Connection Statement.* Position the text against Christ.
+Trace the four pointing-mechanisms — biblical theme, promise, type, predictive
+prophecy. Ground the gospel's enabling power. Pair human need with God's
+character. The discipline: don't insert Christ where he isn't. Mark N/A where
+the text genuinely doesn't carry that kind of pointing.
 
-### Stop 20 — Synthesize
-**Synthesize.** When you've answered, the AI reads all seven and writes a
-cohesive redemptive summary. It's a draft — edit it, rework it, replace it.
-The goal isn't a perfect summary; it's a clear thread to pull through the
-sermon.
+### Stop 15 — Christ-Connection Statement
+**Christ-Connection Statement.** The named outcome of Redemptive Thread,
+written by you — not the AI. For each thought unit you named in Observe,
+write the Christ-connection in the cumulative table. Then close with one
+paragraph: how does the whole passage point to Christ, and how is Christ its
+hero? Phase 4 opens against this statement.
 
-### Stop 21 — Phase 4: Implications
+### Stop 16 — Phase 4: Implications
 **Phase 4 — Implications.** What does this text demand of the people in the
-room? Three categories follow — theological, personal, and what it means for
-someone who doesn't believe.
+room? Four fields — what the text teaches (Theological Significance), what
+it asks of the hearer (Personal Implications), the room it's landing in
+(Pastoral Context), and the synthesis that integrates all three (Implications
+Synthesis).
 
-### Stop 22 — Theological Significance
+### Stop 17 — Theological Significance
 **Theological Significance.** What this passage teaches about God, about
 ourselves, about Christ. Timeless principles. Particular doctrines. What's
 true here that would be true anywhere?
 
-### Stop 23 — Personal Implications
-**Personal Implications.** Eight angles — examples to follow, commands to keep,
-errors to avoid, sins to forsake, gospel promises to claim, new thoughts about
-God, doctrines to explore, convictions to live by. Most sermons go thin at
-application; this is where you get ahead of that.
+### Stop 18 — Personal Implications
+**Personal Implications.** Four verb-driven questions — what to *follow*
+(examples to imitate, commands to keep), what to *forsake* (errors to avoid,
+sins to leave), what to *receive* (gospel promises, fresh thoughts about
+God), and what to *settle* into (truths to explore, convictions to live by).
+Most sermons go thin at application; this is where you get ahead of that.
 
-### Stop 24 — Unbeliever + Compile
-**Unbeliever. Compile.** What does this text mean for someone who doesn't
-believe? Then click Compile — the AI consolidates every implication into a
-master list. You'll prune it, but nothing will get lost.
+### Stop 19 — Pastoral Context
+**Pastoral Context.** The third voice in the three-way conversation. Two
+questions: who in your room is this text speaking into — specific people,
+specific situations — and for those specific people, what's the cost (what
+will be hard, costly, counter-intuitive) and what's the gift (the comfort,
+hope, freedom, or invitation this text holds out). The text leads; the room
+enters here, by name.
 
-### Stop 25 — Step 2: MPT → MPS
-**Step 2 — MPT → MPS.** The two most important sentences in the sermon. Get
-these right and the outline writes itself. Get them wrong and no amount of
-clever structure will save it.
+### Stop 20 — Implications Synthesis
+**Implications Synthesis.** The Study work closes here, in your voice. For
+each thought unit, integrate the three voices — what the text teaches, what
+it asks of the hearer, how it lands in this room. Then one paragraph for the
+whole passage. This is the marinate-output. MPT and MPS open against it.
 
-### Stop 26 — MPT
+### Stop 21 — Step 2: MPT → MPS
+**Step 2 — MPT → MPS.** The two most important sentences in the sermon — they
+anchor everything else. Get these right and the outline largely writes itself.
+
+### Stop 22 — MPT
 **Main Point of the Text.** Past tense. What the author meant, in their
 context, for their original audience. Not yet about your congregation. Stay in
 the text.
 
-### Stop 27 — MPS
+### Stop 23 — MPS
 **Main Point of the Sermon.** Present tense. What this text means for your
 congregation today. The bridge from then to now. The MPS must grow from the
 MPT — not invent a new claim. The AI here is a challenger, not a collaborator.
 *Challenge My MPT* and *Check MPT→MPS Chain* are the chips you'll use most.
 
-### Stop 28 — Step 3: Outline
+### Stop 24 — Step 3: Outline
 **Step 3 — Outline.** Structure should emerge from exegesis, not be imposed
 on it. Add and reorder points until the argument moves cleanly from your MPT
 to your MPS. *Review Outline* sends it to the AI for structural feedback —
 whether each point derives from the text, whether the progression actually
 moves, whether the structure serves the MPS.
 
-### Stop 29 — Step 4: Functional Elements
+### Stop 25 — Step 4: Functional Elements
 **Step 4 — Functional Elements.** For each outline point: Explanation,
 Application, Illustration. Every point needs all three to land. *Review E/A/I
 Balance* asks the AI to audit each point — whether the explanation is
 sufficient, whether the application is gospel-rooted, whether the illustration
 clarifies or distracts. Worth running before the manuscript.
 
-### Stop 30 — Manuscript
+### Stop 26 — Manuscript
 **Manuscript.** Where the sermon becomes prose. Sections, transitions, full
 text. Three audit tools live here, each doing something different. Use them
 after the manuscript is drafted, not before.
 
-### Stop 31 — Flow Coach
+### Stop 27 — Flow Coach
 **Flow Coach.** Walks you through every transition in the manuscript, one at
 a time. *Does this section land? Does the next one pick up cleanly? Is there
 a gap?* One step per response, so the feedback stays manageable. Use it when
 the sermon reads in pieces instead of moving.
 
-### Stop 32 — Ear Check
+### Stop 28 — Ear Check
 **Ear Check.** Reads the manuscript for what will be heard, not just read. It
 scans for two things: *structural orphans* — passages that have drifted from
 the argument — and *speakability flags* — sentences that will lose the room
 when spoken aloud. Theological precision is fine; unintelligibility isn't.
 
-### Stop 33 — Tune-Up
+### Stop 29 — Tune-Up
 **Tune-Up.** A full audit in three phases. *Snapshot* describes what the
 sermon is actually doing. *Alignment Map* grades how well it serves the MPT
 and MPS. *Patch Plan* gives specific edits, marked inline. It preserves your
 voice and stays within 10% of your original length. Use it when the sermon is
 ready for a hard look.
 
-### Stop 34 — Finish
+### Stop 30 — Finish
 **That's the workspace.** This is one sermon. The Series Planner holds many.
 Both tours are available from the dashboard whenever you want to revisit.
-*Buttons: Finish Tour · Take the Series Planner Tour (disabled until that tour
-exists).*
 
 ---
 

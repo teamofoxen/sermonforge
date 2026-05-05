@@ -2307,8 +2307,8 @@ button {
   font-family: 'IBM Plex Serif', serif;
   font-style: italic;
   font-weight: 400;
-  font-size: 24px;
-  line-height: 1.35;
+  font-size: 17px;
+  line-height: 1.4;
   color: var(--ink);
   letter-spacing: -0.005em;
   text-wrap: pretty;
@@ -2317,11 +2317,11 @@ button {
 .verse-text::before {
   content: "\201C";
   font-family: 'IBM Plex Serif', serif;
-  font-size: 48px;
+  font-size: 32px;
   color: var(--gold);
   position: absolute;
-  left: -28px;
-  top: -8px;
+  left: -22px;
+  top: -4px;
   line-height: 1;
   opacity: 0.55;
 }
@@ -2406,8 +2406,8 @@ button {
   font-family: 'IBM Plex Serif', serif;
   font-style: italic;
   font-weight: 400;
-  font-size: 22px;
-  line-height: 1.3;
+  font-size: 16px;
+  line-height: 1.4;
   color: var(--ink);
   letter-spacing: -0.005em;
   text-wrap: pretty;
@@ -2417,11 +2417,11 @@ button {
 .quote-text::before {
   content: "\201C";
   font-family: 'IBM Plex Serif', serif;
-  font-size: 48px;
+  font-size: 32px;
   color: var(--gold);
   position: absolute;
-  left: -28px;
-  top: -8px;
+  left: -22px;
+  top: -4px;
   line-height: 1;
   opacity: 0.55;
 }
@@ -2489,16 +2489,16 @@ button {
 
 .dash-tile {
   position: relative;
-  min-height: 200px;
+  min-height: 160px;
   background: var(--white);
   border: 1px solid var(--parchment-deep);
   border-radius: var(--radius-lg);
-  padding: 24px 28px;
+  padding: 18px 22px;
   box-shadow: var(--shadow-soft);
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -2567,16 +2567,16 @@ button {
 
 .tile-title {
   font-family: 'IBM Plex Serif', serif;
-  font-size: 26px;
+  font-size: 19px;
   font-weight: 600;
   color: var(--ink);
-  line-height: 1.1;
+  line-height: 1.15;
   letter-spacing: -0.005em;
   margin: 0;
 }
 .tile-title-lg {
-  font-size: 36px;
-  line-height: 1.05;
+  font-size: 26px;
+  line-height: 1.1;
   letter-spacing: -0.01em;
 }
 .tile-title em {
@@ -2587,8 +2587,8 @@ button {
 
 .tile-blurb {
   font-family: 'IBM Plex Serif', serif;
-  font-size: 15px;
-  line-height: 1.55;
+  font-size: 13.5px;
+  line-height: 1.5;
   color: var(--ink-mid);
   flex: 1;
   text-wrap: pretty;
@@ -2606,10 +2606,10 @@ button {
 .btn-hero {
   background: var(--gold);
   color: var(--white);
-  padding: 11px 22px;
+  padding: 9px 18px;
   border-radius: var(--radius);
   font-family: 'IBM Plex Serif', serif;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 500;
   letter-spacing: 0.02em;
   border: none;
@@ -3050,6 +3050,23 @@ button {
   text-align: center;
   font-family: 'JetBrains Mono', monospace;
   font-size: 13px;
+}
+
+.synthesis-table-line-number-wrap {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.synthesis-table-input-stale {
+  border-color: var(--crimson);
+}
+
+.synthesis-table-line-number-stale {
+  color: var(--crimson);
+  font-size: 13px;
+  cursor: help;
+  user-select: none;
 }
 
 .synthesis-table-cell-readonly .synthesis-table-readonly-display {

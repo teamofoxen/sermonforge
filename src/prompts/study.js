@@ -22,12 +22,6 @@ export const REDEMPTIVE_REVIEW_TASK = `Evaluate this redemptive-historical work 
 
 export const IMPLICATIONS_REVIEW_TASK = `Review these implications as a homiletics mentor would. Are the theological claims well-grounded? Are the applications gospel-rooted rather than behavior-driven? Are any obvious implications missing?`;
 
-// ── Step 1 (Exegesis) — synthesis / compile (proposal-pattern paths from A2)
-
-export const SYNTHESIZE_REDEMPTIVE_TASK = `Synthesize the redemptive-feature answers into a cohesive 3–5 sentence summary of how the passage participates in redemptive history and points to Christ. Ground every claim in the text. Return only the summary.`;
-
-export const COMPILE_IMPLICATIONS_TASK = `Compile the theological-significance, personal-implications, and unbeliever-implications inputs into a single consolidated list. Each item is one clear, actionable sentence. Group naturally without repeating. Include both theological and practical implications. Each item must be grounded in the text, gospel-rooted, and congregation-facing.`;
-
 // ── Step 2 (MPT/MPS Forge) ─────────────────────────────────────────────────
 
 export const MPT_DRAFT_TASK = `Draft a Main Point of the Text (MPT) for this passage. The MPT is a single sentence in past tense summarizing what the author was saying to the original audience. The MPT must be historically grounded, past tense, and accurately reflect the author's original intent. Return only the sentence.`;

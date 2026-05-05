@@ -1,4 +1,4 @@
-// Workspace tour — 35-stop guided tour through the Sermon Workspace.
+// Workspace tour — 30-stop guided tour through the Sermon Workspace.
 //
 // Locked content from docs/PROPOSALS/sermon-workspace-tour.md. Body strings are
 // rendered as markdown by TourOverlay — italics (*…*) preserve the spec's
@@ -8,6 +8,12 @@
 // orchestrator (TourContext + workspace observers) aligns SermonWorkspace and
 // StudyTab state when the tour is active. Tab keys come from `STAGE` in
 // `src/core/contracts.ts` (post-vocabulary-completion canonical names).
+//
+// 2026-05-05 — content reconciled with SPRD/SFDI Study reshape: Phase 1 = 8
+// fields, Phase 2 = 8 fields (Genre added), Phase 3 = 5 fields, Phase 4 = 4
+// fields including Pastoral Context as the third voice. Unbeliever + Compile
+// stops retired; Pastoral Context + Implications Synthesis stops added. Tour
+// walks the Romans 5:1-5 sample sermon (`tour-romans-sermon-01`).
 
 import { STAGE } from "../core/contracts";
 
@@ -15,11 +21,6 @@ const STUDY_BASE = { tab: STAGE.Study, drawerOpen: false };
 
 export const WORKSPACE_TOUR_STOPS = [
   // ── Stops 1–5: workspace + AI overview ────────────────────────────────────
-  // SPRD B4.2 — the previous Pastoral Context tour stops (always-in-the-room,
-  // pastoral-intelligence, cultural-moment, the-room, sermons-work) were
-  // removed when the PC card was lifted out of SermonWorkspace into Phase 4
-  // Field 3. The PC arc is now part of the Study walkthrough; tour rewrite
-  // is SPRD structural backlog (Component 3 · Throughline visualization).
   {
     id: "workspace-intro",
     anchorId: "workspace-title",
@@ -57,7 +58,7 @@ export const WORKSPACE_TOUR_STOPS = [
     prerequisites: { tab: STAGE.Study, drawerOpen: true },
   },
 
-  // ── Stops 11–25: Study tab — Step 1 (Exegesis, four phases) ────────────────
+  // ── Stops 6–20: Study tab — Step 1 (Exegesis, four phases) ────────────────
   {
     id: "study-tab",
     anchorId: "stage-tab-study",
@@ -69,102 +70,102 @@ export const WORKSPACE_TOUR_STOPS = [
     id: "phase-1-observe",
     anchorId: "phase-1-worksheet",
     title: "Phase 1 — Observe.",
-    body: "Before you interpret, you observe. Nine questions take you through the passage systematically. Resist the urge to jump to meaning.",
+    body: "Before you interpret, you observe. Eight fields walk you through the passage in order — outside-in, then a lens cluster, then the bridge into Interpret. Resist the urge to jump to meaning.",
     prerequisites: { ...STUDY_BASE, studyStep: 1, studySubPhase: 1 },
   },
   {
     id: "phase-1-surface",
     anchorId: "phase-1-worksheet",
     title: "What the text says.",
-    body: "Context. Divisions. Commands. Statements. The surface of the passage — what surrounds it, where it breaks into units, what's commanded and what's declared. Get these right and the rest follows.",
+    body: "*Context. Surface Questions. Divisions / Thought Units.* Outside in: where this passage sits in the book, the situational facts on the surface, and how the passage breaks into thought units that anchor the rest of the work. Field 3 is the heaviest cut — the cumulative thought-unit table you'll extend in every later phase starts here.",
     prerequisites: { ...STUDY_BASE, studyStep: 1, studySubPhase: 1 },
   },
   {
     id: "phase-1-substance",
     anchorId: "phase-1-worksheet",
     title: "What the text shows.",
-    body: "Characters. Big Ideas. The Obvious Point. Basic Outline. Possible Implications. Who's in the passage, what themes surface, and the question most pastors skip — is there an obvious point? State it plainly. Don't talk yourself out of it.",
+    body: "*Main Characters. Commands and Declarations. Big Ideas. Obvious Point. Possible Implications.* The lens cluster reads against Field 3's spine — who's acting, what each main sentence is doing, what concepts surface. Then the question most pastors skip — is there an obvious point? State it plainly. Possible Implications close the segment by naming what the text is starting to press on for the room.",
     prerequisites: { ...STUDY_BASE, studyStep: 1, studySubPhase: 1 },
   },
   {
     id: "phase-2-interpret",
     anchorId: "phase-2-worksheet",
     title: "Phase 2 — Interpret.",
-    body: "Beneath the surface. Nine questions push from what the text says to what it means. This is where most of the work happens.",
+    body: "Beneath the surface. Eight fields push from what the text says to what it means. This is where most of the work happens.",
     prerequisites: { ...STUDY_BASE, studyStep: 1, studySubPhase: 2 },
   },
   {
     id: "phase-2-shaping",
     anchorId: "phase-2-worksheet",
     title: "How meaning takes shape.",
-    body: "Context Impact. Recurring Ideas. Characters. Contrasts. Diagram. How surrounding context shapes meaning here. Words and ideas that recur — repetition in Scripture is rarely accidental. What characters are doing and why. The oppositions the author is setting up. The relationships between ideas, sketched out.",
+    body: "*Deeper Context. Genre. Recurring Ideas. Character Purpose. Contrasts.* Pick up Observe's Context with study tools in hand. Let genre set the lens. Then the dissection — what recurs, what each character is signaling, the oppositions the author has built into the passage.",
     prerequisites: { ...STUDY_BASE, studyStep: 1, studySubPhase: 2 },
   },
   {
     id: "phase-2-voices",
     anchorId: "phase-2-worksheet",
-    title: "Outside voices and your own.",
-    body: "Cross-References. Commentary. Summarize the Parts. Summarize the Whole. What the rest of Scripture says. What the commentaries say. Then verse by verse in your own words, and the whole passage in your own words. If you can't do the last two, interpretation isn't finished yet.",
+    title: "Outside voices, then your own.",
+    body: "*Cross-References. Commentary Notes. Interpretation Synthesis.* Let Scripture interpret Scripture. Check your reading against the commentaries — last, to confirm or correct, not to start. Then articulate what the passage MEANS in your own voice, per thought unit and as a whole. The Interpretation Set is the named outcome — Phase 3 opens against it.",
     prerequisites: { ...STUDY_BASE, studyStep: 1, studySubPhase: 2 },
   },
   {
     id: "phase-3-redemptive",
     anchorId: "phase-3-worksheet",
     title: "Phase 3 — Redemptive Thread.",
-    body: "Every text points somewhere. Seven questions ask how this one points to Christ — directly or indirectly, by promise, by need, by the nature of the God who saves.",
+    body: "Every text points somewhere. Five fields ask how this one points to Christ — by position, by theme or promise or type or prophecy, by the gospel's enabling power, by need, by the character of the God who saves.",
     prerequisites: { ...STUDY_BASE, studyStep: 1, studySubPhase: 3 },
   },
   {
-    id: "seven-questions",
+    id: "phase-3-fields",
     anchorId: "phase-3-worksheet",
-    title: "Seven ways to find Christ.",
-    body: "*Speaks of Christ directly. Stands before, after, or transitional to him. Reveals a biblical theme that points to him. Shows a promise. Shows mankind's need for him. Reveals the God who provides redemption. How is Jesus the hero of this passage?* Answer what you can. Leave the rest.",
+    title: "Five ways to find Christ.",
+    body: "*This Passage and Christ. How the Passage Points to Christ. How the Gospel Makes This Possible. Our Need and God's Character. Christ-Connection Statement.* Position the text against Christ. Trace the four pointing-mechanisms — biblical theme, promise, type, predictive prophecy. Ground the gospel's enabling power. Pair human need with God's character. The discipline: don't insert Christ where he isn't. Mark N/A where the text genuinely doesn't carry that kind of pointing.",
     prerequisites: { ...STUDY_BASE, studyStep: 1, studySubPhase: 3 },
   },
   {
-    id: "synthesize",
-    anchorId: "redemptive-synthesize",
-    title: "Synthesize.",
-    body: "When you've answered, the AI reads all seven and writes a cohesive redemptive summary. It's a draft — edit it, rework it, replace it. The goal isn't a perfect summary; it's a clear thread to pull through the sermon.",
+    id: "christ-connection-statement",
+    anchorId: "phase-3-worksheet",
+    title: "Christ-Connection Statement.",
+    body: "The named outcome of Redemptive Thread, written by you — not the AI. For each thought unit you named in Observe, write the Christ-connection in the cumulative table. Then close with one paragraph: how does the whole passage point to Christ, and how is Christ its hero? Phase 4 opens against this statement.",
     prerequisites: { ...STUDY_BASE, studyStep: 1, studySubPhase: 3 },
   },
   {
     id: "phase-4-implications",
     anchorId: "phase-4-worksheet",
     title: "Phase 4 — Implications.",
-    body: "What does this text demand of the people in the room? Three categories follow — theological, personal, and what it means for someone who doesn't believe.",
+    body: "What does this text demand of the people in the room? Four fields — what the text teaches (Theological Significance), what it asks of the hearer (Personal Implications), the room it's landing in (Pastoral Context), and the synthesis that integrates all three (Implications Synthesis).",
     prerequisites: { ...STUDY_BASE, studyStep: 1, studySubPhase: 4 },
   },
   {
     id: "theological-significance",
-    anchorId: "implications-theological",
+    anchorId: "theological-significance",
     title: "Theological Significance.",
     body: "What this passage teaches about God, about ourselves, about Christ. Timeless principles. Particular doctrines. What's true here that would be true anywhere?",
     prerequisites: { ...STUDY_BASE, studyStep: 1, studySubPhase: 4 },
   },
   {
     id: "personal-implications",
-    anchorId: "implications-personal",
+    anchorId: "personal-implications",
     title: "Personal Implications.",
-    body: "Eight angles — examples to follow, commands to keep, errors to avoid, sins to forsake, gospel promises to claim, new thoughts about God, doctrines to explore, convictions to live by. Most sermons go thin at application; this is where you get ahead of that.",
+    body: "Four verb-driven questions — what to *follow* (examples to imitate, commands to keep), what to *forsake* (errors to avoid, sins to leave), what to *receive* (gospel promises, fresh thoughts about God), and what to *settle* into (truths to explore, convictions to live by). Most sermons go thin at application; this is where you get ahead of that.",
     prerequisites: { ...STUDY_BASE, studyStep: 1, studySubPhase: 4 },
   },
   {
-    id: "unbeliever",
-    anchorId: "implications-unbeliever",
-    title: "Implications for Unbelievers.",
-    body: "What does this text mean for someone who doesn't believe? Don't skip it — this is where the gospel meets the room from the outside in.",
+    id: "pastoral-context",
+    anchorId: "pastoral-context",
+    title: "Pastoral Context.",
+    body: "The third voice in the three-way conversation. Two questions: who in your room is this text speaking into — specific people, specific situations — and for those specific people, what's the cost (what will be hard, costly, counter-intuitive) and what's the gift (the comfort, hope, freedom, or invitation this text holds out). The text leads; the room enters here, by name.",
     prerequisites: { ...STUDY_BASE, studyStep: 1, studySubPhase: 4 },
   },
   {
-    id: "compile",
-    anchorId: "implications-compile",
-    title: "Compile.",
-    body: "Click Compile — the AI consolidates every implication into a master list. You'll prune it, but nothing will get lost.",
+    id: "implications-synthesis",
+    anchorId: "implications-synthesis",
+    title: "Implications Synthesis.",
+    body: "The Study work closes here, in your voice. For each thought unit, integrate the three voices — what the text teaches, what it asks of the hearer, how it lands in this room. Then one paragraph for the whole passage. This is the marinate-output. MPT and MPS open against it.",
     prerequisites: { ...STUDY_BASE, studyStep: 1, studySubPhase: 4 },
   },
 
-  // ── Stops 26–30: Study tab — Steps 2, 3, 4 ─────────────────────────────────
+  // ── Stops 21–25: Study tab — Steps 2, 3, 4 ─────────────────────────────────
   {
     id: "step-2-mpt-mps",
     anchorId: "study-step-pill-2",
@@ -201,7 +202,7 @@ export const WORKSPACE_TOUR_STOPS = [
     prerequisites: { ...STUDY_BASE, studyStep: 4 },
   },
 
-  // ── Stops 31–35: Manuscript tab + finish ───────────────────────────────────
+  // ── Stops 26–30: Manuscript tab + finish ───────────────────────────────────
   {
     id: "manuscript",
     anchorId: "stage-tab-manuscript",

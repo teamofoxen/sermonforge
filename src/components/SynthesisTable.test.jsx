@@ -128,30 +128,149 @@ describe("SynthesisTable — add / delete row", () => {
     ]);
   });
 
-  it("removes a row when the delete button is clicked (keeps remaining rows)", () => {
+  it("removes a row when the delete button is confirmed (two-step DeleteButton flow)", () => {
     const { onChange } = setup({
       value: [
         { thought_unit_summary: "First",  after_line: "3", signal: "" },
         { thought_unit_summary: "Second", after_line: "7", signal: "" },
       ],
     });
-    const deleteBtn = screen.getByLabelText("Remove row 1");
-    fireEvent.click(deleteBtn);
+    fireEvent.click(screen.getByLabelText("Remove row 1"));
+    fireEvent.click(screen.getByText("Yes"));
     expect(onChange).toHaveBeenCalledWith([
       { thought_unit_summary: "Second", after_line: "7", signal: "" },
     ]);
   });
 
-  it("clicking delete on the last remaining row resets it to empty (never zero rows)", () => {
+  it("does not delete when the user cancels the confirm step", () => {
+    const { onChange } = setup({
+      value: [
+        { thought_unit_summary: "First",  after_line: "3", signal: "" },
+        { thought_unit_summary: "Second", after_line: "7", signal: "" },
+      ],
+    });
+    fireEvent.click(screen.getByLabelText("Remove row 1"));
+    fireEvent.click(screen.getByText("Cancel"));
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("clicking delete (and confirming) on the last remaining row resets it to empty (never zero rows)", () => {
     const { onChange } = setup({
       value: [
         { thought_unit_summary: "Only one", after_line: "3", signal: "shift" },
       ],
     });
     fireEvent.click(screen.getByLabelText("Remove row 1"));
+    fireEvent.click(screen.getByText("Yes"));
     expect(onChange).toHaveBeenCalledWith([
       { thought_unit_summary: "", after_line: "", signal: "" },
     ]);
+  });
+});
+
+// ── Cumulative-content delete confirm copy (SPIP item 6 Q2) ───────────────
+
+describe("SynthesisTable — delete-with-cumulative-content guardrail", () => {
+  it("shows a heightened confirm label when the row carries Phase 2/3/4 work", () => {
+    setup({
+      value: [
+        { thought_unit_summary: "First",  after_line: "3", signal: "", meaning: "Phase 2 wrote this." },
+        { thought_unit_summary: "Second", after_line: "7", signal: "" },
+      ],
+    });
+    fireEvent.click(screen.getByLabelText("Remove row 1"));
+    expect(screen.getByText("Has cross-phase work — delete?")).toBeTruthy();
+  });
+
+  it("uses the standard confirm label when the row has no cumulative content", () => {
+    setup({
+      value: [
+        { thought_unit_summary: "First",  after_line: "3", signal: "" },
+        { thought_unit_summary: "Second", after_line: "7", signal: "" },
+      ],
+    });
+    fireEvent.click(screen.getByLabelText("Remove row 1"));
+    expect(screen.getByText("Delete row?")).toBeTruthy();
+    expect(screen.queryByText(/cross-phase work/)).toBeNull();
+  });
+
+  it("treats whitespace-only cumulative values as empty (standard confirm)", () => {
+    setup({
+      value: [
+        { thought_unit_summary: "First",  after_line: "3", signal: "", meaning: "   ", implication: "" },
+        { thought_unit_summary: "Second", after_line: "7", signal: "" },
+      ],
+    });
+    fireEvent.click(screen.getByLabelText("Remove row 1"));
+    expect(screen.getByText("Delete row?")).toBeTruthy();
+    expect(screen.queryByText(/cross-phase work/)).toBeNull();
+  });
+
+  it("cancelling the heightened confirm leaves the row in place", () => {
+    const { onChange } = setup({
+      value: [
+        { thought_unit_summary: "First",  after_line: "3", signal: "", christ_connection: "Phase 3 wrote this." },
+        { thought_unit_summary: "Second", after_line: "7", signal: "" },
+      ],
+    });
+    fireEvent.click(screen.getByLabelText("Remove row 1"));
+    fireEvent.click(screen.getByText("Cancel"));
+    expect(onChange).not.toHaveBeenCalled();
+  });
+});
+
+// ── After-line stale flag (SPIP item 6 Q3) ─────────────────────────────────
+
+describe("SynthesisTable — after_line stale flag", () => {
+  it("renders a stale flag when the after_line value exceeds the canvas line count", () => {
+    setup({
+      value: [{ thought_unit_summary: "Drift unit", after_line: "9", signal: "" }],
+      canvas: [
+        { text: "1", depth: 0 },
+        { text: "2", depth: 0 },
+        { text: "3", depth: 0 },
+      ],
+    });
+    expect(screen.getByTestId("after-line-stale")).toBeTruthy();
+    const input = getInputForCell(0, "after_line");
+    expect(input.classList.contains("synthesis-table-input-stale")).toBe(true);
+    expect(input.getAttribute("aria-invalid")).toBe("true");
+  });
+
+  it("does not flag when the after_line value matches an existing canvas line", () => {
+    setup({
+      value: [{ thought_unit_summary: "Anchored unit", after_line: "2", signal: "" }],
+      canvas: [
+        { text: "1", depth: 0 },
+        { text: "2", depth: 0 },
+        { text: "3", depth: 0 },
+      ],
+    });
+    expect(screen.queryByTestId("after-line-stale")).toBeNull();
+    const input = getInputForCell(0, "after_line");
+    expect(input.classList.contains("synthesis-table-input-stale")).toBe(false);
+  });
+
+  it("does not flag free-text after_line values (e.g. 'v.5')", () => {
+    setup({
+      value: [{ thought_unit_summary: "Verse-ref unit", after_line: "v.5", signal: "" }],
+      canvas: [
+        { text: "1", depth: 0 },
+        { text: "2", depth: 0 },
+      ],
+    });
+    expect(screen.queryByTestId("after-line-stale")).toBeNull();
+  });
+
+  it("does not flag empty after_line values", () => {
+    setup({
+      value: [{ thought_unit_summary: "Pending", after_line: "", signal: "" }],
+      canvas: [
+        { text: "1", depth: 0 },
+        { text: "2", depth: 0 },
+      ],
+    });
+    expect(screen.queryByTestId("after-line-stale")).toBeNull();
   });
 });
 

@@ -30,6 +30,7 @@ import {
   getQuestionAnswer,
   isQuestionNA,
   flattenAnswerValue,
+  fieldKeyToTourId,
 } from "../utils/studyFields";
 
 // Find the canvas-kind question's value within a field's data sub-tree.
@@ -226,7 +227,11 @@ function SingleQuestionActive({
 
   const canAdvance = isNA || !!String(value || "").trim();
   return (
-    <div className={`worksheet-field worksheet-field-active${isNA ? " worksheet-field-na" : ""}`}>
+    <div
+      className={`worksheet-field worksheet-field-active${isNA ? " worksheet-field-na" : ""}`}
+      data-field-key={field.key}
+      data-tour-id={fieldKeyToTourId(field.key)}
+    >
       <label className="worksheet-field-label">{field.label}</label>
       <textarea
         className="field-textarea"
@@ -378,7 +383,20 @@ function MultiQuestionActive({
       const len = taRef.current.value.length;
       taRef.current.setSelectionRange(len, len);
     }
-  }, [activeQKey]);
+    // Keep the active question centered in the workspace scroll area as
+    // siblings collapse above and below it. Without this the just-answered
+    // question retains the visual center and the new active box drifts down,
+    // forcing the pastor to scroll on every advance.
+    const fieldEl = typeof document !== "undefined"
+      ? document.querySelector(`[data-field-key="${field.key}"]`)
+      : null;
+    const activeQEl = fieldEl
+      ? fieldEl.querySelector(`[data-question-key="${activeQKey}"]`)
+      : null;
+    if (activeQEl && typeof activeQEl.scrollIntoView === "function") {
+      activeQEl.scrollIntoView({ block: "center", behavior: "smooth" });
+    }
+  }, [activeQKey, field.key]);
 
   // Defensive: if activeQKey somehow falls out of the questions list, snap
   // back to the first question.
@@ -422,6 +440,7 @@ function MultiQuestionActive({
     <div
       className={`worksheet-field worksheet-field-active worksheet-field-multi${activeIsNA ? " worksheet-field-na" : ""}`}
       data-field-key={field.key}
+      data-tour-id={fieldKeyToTourId(field.key)}
     >
       <label className="worksheet-field-label">{field.label}</label>
       <ol className="worksheet-questions">
@@ -629,6 +648,7 @@ function CollapsedField({ field, questions, data, onActivate, crossPhaseRead }) 
       tabIndex={0}
       aria-label={`Edit ${field.label}`}
       data-field-key={field.key}
+      data-tour-id={fieldKeyToTourId(field.key)}
     >
       <div className="worksheet-field-label">{field.label}</div>
       {isMulti ? (
@@ -678,14 +698,18 @@ export function SpotlightField({
   }
 
   if (showOverview && field.heavyLifting && field.overview) {
+    // Wrap so SpotlightWorksheet's scroll-into-view lookup (by data-field-key)
+    // can find the active overview screen and center it on first entry.
     return (
-      <FieldOverviewScreen
-        title={field.overview.title || field.label}
-        subtitle={field.overview.subtitle}
-        onBegin={onDismissOverview}
-      >
-        {renderOverviewBody(field.overview)}
-      </FieldOverviewScreen>
+      <div data-field-key={field.key}>
+        <FieldOverviewScreen
+          title={field.overview.title || field.label}
+          subtitle={field.overview.subtitle}
+          onBegin={onDismissOverview}
+        >
+          {renderOverviewBody(field.overview)}
+        </FieldOverviewScreen>
+      </div>
     );
   }
 
@@ -733,6 +757,16 @@ export default function SpotlightWorksheet({
   crossPhaseRead,
   crossPhaseWrite,
   hideFutureQuestions = false,
+  // External request to spotlight a specific field (e.g., from a click on the
+  // ThroughlineRail). The token re-fires the sync effect even when the same
+  // key is requested twice in a row; key alone wouldn't change between
+  // identical clicks. Both default to null when no rail request is in flight.
+  requestedActiveFieldKey = null,
+  requestActiveToken = null,
+  // Reports the currently-spotlighted field upward so the parent can drive
+  // the throughline rail's "current" highlight off the actual active field
+  // (instead of a first-incomplete heuristic).
+  onActiveFieldKeyChange,
 }) {
   const initialActive = useMemo(() => {
     const firstIncomplete = fields.find((f) => {
@@ -795,6 +829,39 @@ export default function SpotlightWorksheet({
     if (idx < 0 || idx >= fields.length - 1) return;
     setActiveKey(fields[idx + 1].key);
   }, [fields]);
+
+  // Sync internal active field to an external request (rail click). Depends on
+  // requestActiveToken so identical-key clicks re-fire; key alone wouldn't
+  // change. The activeKey-change effect below handles the scroll-into-view.
+  useEffect(() => {
+    if (!requestedActiveFieldKey) return;
+    if (!fields.some((f) => f.key === requestedActiveFieldKey)) return;
+    setActiveKey(requestedActiveFieldKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requestActiveToken]);
+
+  // Report the spotlighted field upward (mount + every change) so the rail
+  // can mark it "current". Stable callback identity isn't required — React
+  // is happy to re-run when the parent passes the same setter reference.
+  useEffect(() => {
+    if (typeof onActiveFieldKeyChange === "function") {
+      onActiveFieldKeyChange(activeKey);
+    }
+  }, [activeKey, onActiveFieldKeyChange]);
+
+  // When the active field changes (cross-field advance, single-question Next,
+  // collapsed-row click), scroll the new active field into the center of the
+  // workspace scroll area. Within-field question advances are handled by
+  // MultiQuestionActive's own effect, which targets the active question more
+  // precisely; this top-level effect is the safety net for fields that don't
+  // mount MultiQuestionActive (single-question fields, FieldOverviewScreen).
+  useEffect(() => {
+    if (!activeKey || typeof document === "undefined") return;
+    const el = document.querySelector(`[data-field-key="${activeKey}"]`);
+    if (el && typeof el.scrollIntoView === "function") {
+      el.scrollIntoView({ block: "center", behavior: "smooth" });
+    }
+  }, [activeKey]);
 
   const handleToggleNA = useCallback((fieldKey, qKey) => {
     const wasNA = isQuestionNA(data, fieldKey, qKey);

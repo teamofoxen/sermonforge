@@ -10,16 +10,30 @@ import { useState } from "react";
 // shape, not CTA shape.
 //
 // API:
-//   onDelete  — called on the user's "Yes" confirm
-//   label     — text shown on the trigger button (default "Delete")
-//   small     — compact sizing for use inside cards
+//   onDelete      — called on the user's "Yes" confirm
+//   label         — visible text on the trigger button (default "Delete")
+//   confirmLabel  — text shown beside Yes/Cancel in the confirming state (default "Delete?").
+//                   Use a longer label when reversal cost is higher (e.g. row carries
+//                   cross-phase work). Keeps Mutation #4 alignment without bypassing
+//                   this primitive for warning copy.
+//   ariaLabel     — accessibility name override for the trigger button. Falls back to
+//                   `label`. Use when the visible label is a glyph (×) and screen
+//                   readers need a verbose name ("Remove row 3").
+//   small         — compact sizing for use inside cards or table rows
 //
 // Always calls e.stopPropagation() so it works inside clickable cards.
-export default function DeleteButton({ onDelete, label = "Delete", small = false }) {
+export default function DeleteButton({
+  onDelete,
+  label = "Delete",
+  confirmLabel = "Delete?",
+  ariaLabel,
+  small = false,
+}) {
   const [confirming, setConfirming] = useState(false);
 
   const fontSize = small ? "11px" : "12px";
   const padding  = small ? "1px 6px" : "2px 8px";
+  const triggerName = ariaLabel || label;
 
   if (confirming) {
     return (
@@ -28,7 +42,7 @@ export default function DeleteButton({ onDelete, label = "Delete", small = false
         onClick={(e) => e.stopPropagation()}
       >
         <span style={{ fontSize, color: "var(--ink-soft)", fontFamily: "var(--font-serif)" }}>
-          Delete?
+          {confirmLabel}
         </span>
         <button
           onClick={(e) => { e.stopPropagation(); setConfirming(false); onDelete(); }}
@@ -62,7 +76,8 @@ export default function DeleteButton({ onDelete, label = "Delete", small = false
         cursor: "pointer", padding: small ? "1px 4px" : "2px 6px",
         fontSize, fontFamily: "var(--font-serif)", borderRadius: "3px",
       }}
-      title={label}
+      title={triggerName}
+      aria-label={triggerName}
     >
       {label}
     </button>

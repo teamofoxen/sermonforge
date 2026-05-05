@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-05 — Workspace tour rewrite + thought-unit guardrails + dead-code retire
+
+- `workspaceTourStops.js` rewritten to 30 SFDI-aligned stops; spec doc (`sermon-workspace-tour.md`) mirrored; Phase 4 stops anchor on field-level `data-tour-id`s now emitted by `SpotlightWorksheet` at every field-rendering site.
+- `SynthesisTable` gains two destructive-edit guardrails — heightened delete-confirm copy when a row carries cumulative cross-phase work, and ⚠ stale flag when `after_line` exceeds canvas line count.
+- `DeleteButton` extended with `confirmLabel` + `ariaLabel` props so SynthesisTable's row-delete routes through the canonical Mutation #4 primitive instead of `window.confirm`.
+- `studyFields.js` exports new `CUMULATIVE_COLUMN_KEYS` + `fieldKeyToTourId` — single source of truth replaces three duplicated literals across SynthesisTable + SpotlightWorksheet.
+- Retired: dead `set_unbeliever`/`set_compiled` mutation ops + type-union entries; dead `SYNTHESIZE_REDEMPTIVE_TASK` + `COMPILE_IMPLICATIONS_TASK` orphan prompts; 383 vitest green.
+
+---
+
 ## 2026-05-05 — Sample sermon Phase 1 gate fix + gate-key SFDI renumber
 
 - `tourData.js` paraphrases: IDs corrected to `ms-0`..`ms-5` with six entries so Field 3 Q2 composite gate passes against the six canvas main sentences.

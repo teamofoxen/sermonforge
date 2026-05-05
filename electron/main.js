@@ -1179,14 +1179,6 @@ function applyStructuredUpdate(row, field, update) {
     current.summary = String(update.value || "");
     return JSON.stringify(current);
   }
-  if (update.op === "set_unbeliever") {
-    current.unbeliever = String(update.value || "");
-    return JSON.stringify(current);
-  }
-  if (update.op === "set_compiled") {
-    current.compiled = String(update.value || "");
-    return JSON.stringify(current);
-  }
   return rejection("STATE_5_BAD_OP", "State #5", `Unknown structured op: ${update.op}`);
 }
 
