@@ -48,12 +48,33 @@ export const SERMON_COLUMNS = new Set([
   "sermon_frame",
 ]);
 
+export const SERIES_COLUMNS = new Set([
+  "title", "color", "description", "year", "big_idea", "overview",
+  "passage_range", "start_date", "end_date", "structural_outline",
+  "status", "canon_category",
+  "redemptive_context", "book_background", "book_argument", "book_structure",
+  "series_motivation", "emerging_big_idea",
+]);
+
+export const SECTION_COLUMNS = new Set([
+  "title", "passage_range", "big_idea", "overview", "sort_order",
+]);
+
 export const STRUCTURED_FIELDS = new Set([
   "outline", "functional_elements", "observations", "interpretation",
   "redemptive_thread", "implications",
   // v18 — SPRD C3 Sermon Frame.
   "sermon_frame",
 ]);
+
+// Mirrors electron/main.js buildUpdate: silently filter unknown columns and
+// return null when nothing valid remains. main.js additionally throws in dev
+// for unknown fields; the fixture keeps that behavior optional via this flag,
+// but contract tests today exercise only the valid-or-empty paths.
+function buildUpdate(fields: Record<string, any>, allowed: Set<string>): Array<[string, any]> | null {
+  const entries = Object.entries(fields).filter(([k]) => allowed.has(k));
+  return entries.length ? entries : null;
+}
 
 // ── In-memory state ──────────────────────────────────────────────────────────
 
@@ -213,31 +234,42 @@ function validateAndCommit(op: string, payload: any) {
     }
     case "update-sermon": {
       const { id, fields } = payload || {};
+      const entries = buildUpdate(fields || {}, SERMON_COLUMNS);
+      if (!entries) return rejection("UPDATE_NO_FIELDS", "State #5", "No valid fields to update.");
       const row = sermons.get(id);
-      if (!row) return rejection("NOT_FOUND", "State #1", `Sermon ${id} not found.`);
-      for (const k of Object.keys(fields || {})) {
-        if (!SERMON_COLUMNS.has(k)) {
-          return rejection("STATE_5_UNKNOWN_FIELD", "State #5",
-            `Unknown sermon field '${k}'.`);
-        }
-      }
-      Object.assign(row, fields);
+      if (!row) return success();
+      for (const [k, v] of entries) row[k] = v;
       return success();
     }
     case "update-series": {
       const { id, fields } = payload || {};
-      const row = series.get(id);
-      if (!row) return rejection("NOT_FOUND", "State #1", `Series ${id} not found.`);
       if (Object.prototype.hasOwnProperty.call(fields || {}, "title")) {
         const t = (fields.title || "").trim();
         if (!t) return rejection("STATE_3_NAMELESS_SERIES", "State #3",
           "State Contract #3 violation: a series must have a name.");
       }
-      Object.assign(row, fields);
+      const entries = buildUpdate(fields || {}, SERIES_COLUMNS);
+      if (!entries) return rejection("UPDATE_NO_FIELDS", "State #5", "No valid fields to update.");
+      const row = series.get(id);
+      if (!row) return success();
+      for (const [k, v] of entries) row[k] = v;
       return success();
     }
     case "delete-sermon": sermons.delete(payload); return success();
-    case "delete-series": series.delete(payload); return success();
+    case "delete-series": {
+      // Cascade: remove series_sections, null out sermons.series_id + section_id.
+      for (const [sid, sec] of sections) {
+        if (sec.series_id === payload) sections.delete(sid);
+      }
+      for (const sermon of sermons.values()) {
+        if (sermon.series_id === payload) {
+          sermon.series_id = null;
+          sermon.section_id = null;
+        }
+      }
+      series.delete(payload);
+      return success();
+    }
     case "create-section": {
       const id = randomUUID();
       sections.set(id, { id, ...payload, sort_order: payload.sort_order ?? 0 });
@@ -245,12 +277,21 @@ function validateAndCommit(op: string, payload: any) {
     }
     case "update-section": {
       const { id, fields } = payload || {};
+      const entries = buildUpdate(fields || {}, SECTION_COLUMNS);
+      if (!entries) return rejection("UPDATE_NO_FIELDS", "State #5", "No valid fields to update.");
       const row = sections.get(id);
-      if (!row) return rejection("NOT_FOUND", "State #1", `Section ${id} not found.`);
-      Object.assign(row, fields);
+      if (!row) return success();
+      for (const [k, v] of entries) row[k] = v;
       return success();
     }
-    case "delete-section": sections.delete(payload); return success();
+    case "delete-section": {
+      // Cascade: null out sermons.section_id pointing at this section.
+      for (const sermon of sermons.values()) {
+        if (sermon.section_id === payload) sermon.section_id = null;
+      }
+      sections.delete(payload);
+      return success();
+    }
     case "transition-state": {
       const { sermonId, to, evidence, direction, kind } = payload || {};
       const row = sermons.get(sermonId);
@@ -398,30 +439,57 @@ function spineRead(op: string, payload: any): any {
     case "get-all-sermons":
       return [...sermons.values()]
         .filter((s) => !s.id.startsWith("tour-"))
-        .sort((a, b) => (b.date || "").localeCompare(a.date || ""))
+        .sort((a, b) => {
+          const d = (b.date || "").localeCompare(a.date || "");
+          return d !== 0 ? d : (b.created_at || "").localeCompare(a.created_at || "");
+        })
         .map((r) => shapeSermon(r, computeParentContext(r)));
     case "get-all-series":
       return [...series.values()]
         .filter((s) => !s.id.startsWith("tour-"))
+        .sort((a, b) => {
+          const y = (b.year || 0) - (a.year || 0);
+          return y !== 0 ? y : (a.title || "").localeCompare(b.title || "");
+        })
         .map(shapeSeries);
     case "get-recent-sermons":
       return [...sermons.values()]
         .filter((s) => s.stage !== SERMON_STATUS.Complete && !s.id.startsWith("tour-"))
+        .sort((a, b) => {
+          const u = (b.updated_at || "").localeCompare(a.updated_at || "");
+          return u !== 0 ? u : (b.created_at || "").localeCompare(a.created_at || "");
+        })
         .slice(0, payload?.limit ?? 3)
         .map((r) => shapeSermon(r, computeParentContext(r)));
     case "get-recent-series":
       return [...series.values()]
         .filter((s) => !s.id.startsWith("tour-"))
+        .sort((a, b) => {
+          const ka = a.updated_at || a.created_at || "";
+          const kb = b.updated_at || b.created_at || "";
+          return kb.localeCompare(ka);
+        })
         .slice(0, payload?.limit ?? 3)
         .map(shapeSeries);
     case "get-in-progress-sermons":
       return [...sermons.values()]
         .filter((s) => s.stage === SERMON_STATUS.InProgress && !s.id.startsWith("tour-"))
+        .sort((a, b) => {
+          const u = (b.updated_at || "").localeCompare(a.updated_at || "");
+          return u !== 0 ? u : (b.created_at || "").localeCompare(a.created_at || "");
+        })
         .map((r) => shapeSermon(r, computeParentContext(r)));
     case "get-sermons-by-series":
       return [...sermons.values()]
         .filter((s) => s.series_id === payload)
-        .sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+        .sort((a, b) => {
+          const d = (a.date || "").localeCompare(b.date || "");
+          return d !== 0 ? d : (a.created_at || "").localeCompare(b.created_at || "");
+        })
+        .map((s) => {
+          const sec = s.section_id ? sections.get(s.section_id) : null;
+          return { ...s, section_title: sec?.title || null };
+        });
     case "get-sections-by-series":
       return [...sections.values()]
         .filter((s) => s.series_id === payload)

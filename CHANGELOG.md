@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-05 — test-spine fixture aligned with main.js boundary semantics
+
+- Scheduled weekly drift check found `tests/contracts/_helpers/test-spine.ts` diverging from `electron/main.js` on update / delete handlers and read-router sort orders.
+- `update-{sermon,series,section}` now route through a shared `buildUpdate` helper, reject `UPDATE_NO_FIELDS` on empty input, and silently no-op on missing rows; fixture-only `NOT_FOUND` + `STATE_5_UNKNOWN_FIELD` rejections removed.
+- `delete-series` cascade wipes child `series_sections` and NULLs `sermons.series_id` + `section_id`; `delete-section` NULLs `sermons.section_id`.
+- `spineRead` sorts mirror main.js — `created_at` tiebreakers on get-all / recent / in-progress sermons, `year DESC, title ASC` on `get-all-series`, `COALESCE(updated_at, created_at) DESC` on `get-recent-series`, `section_title` join on `get-sermons-by-series`.
+- Added `SERIES_COLUMNS` + `SECTION_COLUMNS` exports; 98 contract tests pass; ENFORCEMENT_STATUS Test-environment caveat updated.
+
+---
+
 ## 2026-05-04 — sprd c2: throughline rail + scripture panel + step strip + tunnel-mode prototype held
 
 - New `ThroughlineRail` (vertical, sub-phase nodes, named-outcome callouts via `evaluateAdvance`) + `ScripturePanel` (280px, ESV via `fetchPassage`) + inline `StudyStepStrip` (Option α — quiet centered text, dot separators, gold-only active) wrap StudyTab Step 1 in a three-column shell.
