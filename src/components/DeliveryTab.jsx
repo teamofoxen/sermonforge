@@ -646,7 +646,7 @@ export default function DeliveryTab({ sermon, onUpdate }) {
   }
 
   return (
-    <>
+    <div data-tour-id="delivery-overview">
       <div style={{ marginBottom: "20px", fontSize: "13px", color: "var(--ink-ghost)", fontStyle: "italic" }}>
         Three ways to stand at the pulpit. Format the manuscript for reading aloud, review the preaching outline, or compress everything into memory blocks for preaching without notes.
       </div>
@@ -713,6 +713,6 @@ export default function DeliveryTab({ sermon, onUpdate }) {
           </SecondaryButton>
         </div>
       )}
-    </>
+    </div>
   );
 }

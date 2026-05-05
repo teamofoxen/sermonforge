@@ -1,23 +1,29 @@
 # Sermon Workspace Tour — Implementation Spec
 
 > Status: design locked, implementation shipped (engine 2026-04-28; SFDI
-> reconciliation 2026-05-05). The Series Planner tour is a separate, later
-> effort — do not entangle the two.
+> reconciliation 2026-05-05; throughline-first reframe 2026-05-05). The
+> Series Planner tour is a separate, later effort — do not entangle the
+> two.
 
-> **Reconciliation note (2026-05-05):** The locked content below has been
-> rewritten to match the post-SPRD Study shape. Pastoral Context is no longer
-> a parallel-track card at the top of the workspace — it is Phase 4 Field 3
-> (`room_specifics` + `cost_and_gift`), the third voice in the three-way
-> conversation. Phase 1 carries 8 fields (SFDI shape), Phase 2 carries 8
-> fields (Genre added 2026-05-05), Phase 3 carries 5 fields, Phase 4 carries
-> 4 fields. The Compile button and the AI-generated Implications Synthesis
-> are retired — the Implications Synthesis and the Christ-Connection
+> **Throughline-first reframe (2026-05-05):** The locked content below is
+> the 17-stop throughline-anchored narrative. The tour walks the
+> cumulative thought-unit table from Phase 1 Field 3 through Phase 4, then
+> MPT/MPS → Outline → Functional Elements → Frame (Intro + Conclusion) →
+> Manuscript → Delivery, anchoring on the four named outcomes (Observation
+> Set → Interpretation Set → Christ-Connection Statement → Implications
+> Synthesis). The pre-reframe 30-stop UI-surface-walk is retired — it
+> taught pastors *where things lived* but not *how the discipline held
+> together*. Substrate stable: tour engine (2026-04-28), mock sermon,
+> per-field anchors, ThroughlineRail (SPRD C2, 2026-05-04), and SFDI
+> Phase 1/2/3/4 + SADI Step 5 field shapes are all locked and shipping.
+> Phase 1 carries 8 fields (Background retired 2026-05-05), Phase 2
+> carries 8 fields (Genre at slot 2), Phase 3 carries 5 fields, Phase 4
+> carries 4 fields with Pastoral Context as the third voice in the
+> three-way conversation. The Compile button and AI-generated Implications
+> Synthesis are retired — the Implications Synthesis and Christ-Connection
 > Statement are pastor-written, anchored on the cumulative thought-unit
-> table. Tour count: 30 stops (was 34 in the original design; 5 PC-card
-> stops dropped; Unbeliever and Compile retired; Pastoral Context and
-> Implications Synthesis added; one Phase 3 stop renamed). The mock sermon
-> the tour walks is "The Hope That Does Not Disappoint" — Romans 5:1-5
-> (sermon ID `tour-romans-sermon-01`).
+> table. The mock sermon the tour walks is "The Hope That Does Not
+> Disappoint" — Romans 5:1-5 (sermon ID `tour-romans-sermon-01`).
 
 ---
 
@@ -26,7 +32,7 @@
 A guided spotlight tour of the Sermon Workspace. Triggered from the Dashboard
 ("Take the guided tour" inside the Explore SermonForge tile). The tour opens
 a tour-only sample sermon — "The Hope That Does Not Disappoint" (Romans 5:1-5,
-sermon ID `tour-romans-sermon-01`) — and walks through 30 stops. Each stop =
+sermon ID `tour-romans-sermon-01`) — and walks through 17 stops. Each stop =
 a spotlight on a real element + a callout card explaining it. User clicks
 "Next" to advance; can leave anytime.
 
@@ -66,265 +72,217 @@ later effort — do not entangle the two.
 
 ## Codebase touchpoints
 
-- `src/components/Dashboard.jsx` — "Tour Sermon Workspace" button (already
-  present, currently disabled) needs to be wired up to launch the tour
-- `src/components/SermonWorkspace.jsx` — top-level workspace; tab orchestration;
-  the tour needs to drive tab switches
-- `src/components/StudyTab.jsx` — exegesis phases, MPT/MPS, outline, functional
-  elements steps
+- `src/components/Dashboard.jsx` — "Tour Sermon Workspace" button launches
+  the tour
+- `src/components/SermonWorkspace.jsx` — top-level workspace; tab
+  orchestration; tour drives tab switches via `desiredUi`
+- `src/components/StudyTab.jsx` — exegesis phases, MPT/MPS, outline,
+  functional elements steps; consumes `desiredUi.studyStep` /
+  `desiredUi.studySubPhase`
+- `src/components/ThroughlineRail.jsx` — vertical rail tracking the
+  cumulative thought-unit table; anchored at
+  `data-tour-id="throughline-rail"` for stops 3 and 9
+- `src/components/FrameTab.jsx` — Step 5 (Sermon Frame: Intro +
+  Conclusion); anchored at `data-tour-id="frame-worksheet"` for stops 13
+  and 14
+- `src/components/DeliveryTab.jsx` — Delivery surfaces (Manuscript /
+  Preaching Outline / Without Notes); anchored at
+  `data-tour-id="delivery-overview"` for stop 16
 - `src/components/ManuscriptTab.jsx` — Flow Coach, Ear Check, Tune-Up
-- `src/components/AIPanel.jsx` — must be openable from tour state
-- New: a `TourContext` (or similar) to own the cursor and prerequisite-driven
-  navigation; a `tourData.js` module under `electron/` for the tour sermon
-  content; a `db-loadTourSermon` IPC handler + preload exposure; list-query
-  filters (`id NOT LIKE 'tour-%'`) on series and sermon list queries
-- `src/styles/global.css` — design system tokens (use only these; no new colors,
-  no new fonts)
+- `src/components/AIPanel.jsx` — openable from tour state
+- `src/tour/workspaceTourStops.js` — the 17-stop array; `TourContext`
+  drives prerequisite-aligned UI state for each stop
+- `electron/tourData.js` + `db-loadTourSermon` IPC handler — tour sermon
+  seeding (delete-then-insert per launch); list-query filters
+  (`id NOT LIKE 'tour-%'`) keep the sample out of normal lists
+- `src/styles/global.css` — design system tokens (use only these; no new
+  colors, no new fonts)
 
 ---
 
-## The 30 stops (locked content)
+## The 17 stops (locked content)
 
 > Heading is bold. Body follows. Italic phrases are intentional emphasis on
 > field names or chip labels — preserve them in implementation.
 
-### Stop 1 — Workspace intro
-**The Sermon Workspace.** Where you go deep on one sermon. If a series is
-already in place, its big idea and context come with you here automatically.
-If not, the workspace stands on its own — start where you are.
+### Stop 1 — Workspace shell
+**The Sermon Workspace.** Where you go deep on one sermon. Series context
+comes with you here automatically if a series is in place. If not, the
+workspace stands on its own — start where you are.
 
-### Stop 2 — AI philosophy
-**SermonForge doesn't write your sermons. It forces them.** Through a method.
-Against the text. Into the pastoral moment. The AI works inside those
-constraints — it challenges, audits, synthesizes. It doesn't replace the
-discipline; it stress-tests it. Every response is shaped by what you've actually
-done.
+### Stop 2 — AI philosophy (ambient)
+**SermonForge doesn't write your sermons. It forces them.** Through a
+method. Against the text. Into the pastoral moment. The AI's posture shifts
+with where you are — collaborator during exegesis, challenger at the main
+points, structural reviewer at the outline, auditor at the manuscript.
+Every response is shaped by what you've actually done. It doesn't replace
+the discipline; it stress-tests it.
 
-### Stop 3 — The Assistant
-**The Assistant.** Chat anytime, at any step. The AI's posture shifts with
-where you are — collaborator during exegesis, challenger at the main points,
-structural reviewer at the outline, auditor at the manuscript. You're not
-talking to one assistant; you're talking to the right one for the moment.
+### Stop 3 — The throughline
+**The throughline.** Down the left of the Study tab, a vertical rail
+tracks one cumulative thought-unit table. Phase 1 builds the rows. Phase 2
+adds a *meaning* column. Phase 3 adds *Christ-connection*. Phase 4 adds
+*implication*. By the time MPT and MPS open, the table holds the
+propositional skeleton with bones, signal, meaning, Christ-connection, and
+integrated implication — all in one structural artifact. Each sub-phase
+ends with a **named outcome** the next opens against. You don't lose the
+work. You carry it.
 
-### Stop 4 — What it already knows
-**What it already knows.** Before any response, the AI has the passage, your
-main points, your full study, your outline, the series big idea and section,
-the pastoral situation, and supporting material. Seven layers of context,
-assembled fresh every time. You never have to re-explain.
+### Stop 4 — Phase 1 / outside-in
+**Phase 1 — Observe (outside-in).** *Context. Surface Questions. Divisions
+/ Thought Units.* Where the passage sits in the book; the situational
+facts on the surface; then Field 3 — the heaviest cut. Lay the passage out
+by hand, paraphrase each main sentence in your own voice, name the thought
+units. **Field 3 builds the rows of the throughline table.** Resist the
+urge to jump to meaning.
 
-### Stop 5 — Tuned to you
-**Tuned to you.** Over time, the AI surfaces your own rhetorical patterns —
-how you build outlines, what your MPTs tend to look like, the way you turn
-applications. Adaptive guidance, tuned to you specifically. Not a model being
-trained; your past work, surfaced when relevant.
+### Stop 5 — Phase 1 / lens cluster + bridge
+**Phase 1 — Observe (lens cluster + bridge).** *Main Characters. Commands
+and Declarations. Big Ideas. Obvious Point. Possible Implications.* The
+lens cluster reads against Field 3's spine — who's acting, what each main
+sentence is doing, what concepts surface. Then the question most pastors
+skip — is there an obvious point? State it plainly. Possible Implications
+close the segment by naming what the text is pressing on for the room.
+Phase 1's named outcome: the **Observation Set**.
 
-### Stop 6 — Study tab
-**Study.** Four steps from text to sermon. Exegesis first, then the main
-points, then the outline, then the elements that make each point land.
+### Stop 6 — Phase 2 — extends the table
+**Phase 2 — Interpret.** *Deeper Context. Genre. Recurring Ideas.
+Character Purpose. Contrasts. Cross-References. Commentary Notes.
+Interpretation Synthesis.* Pick up Observe's Context with study tools in
+hand. Let genre set the lens. Dissect what's inside. Open the canon. Check
+trusted readers — last, to confirm or correct, not to start. Then
+articulate what the passage MEANS in your own voice, per thought unit and
+as a whole. **Each thought unit gets a *meaning* column added to the
+throughline table here.** Interpret's named outcome: the **Interpretation
+Set**.
 
-### Stop 7 — Phase 1: Observe
-**Phase 1 — Observe.** Before you interpret, you observe. Eight fields walk
-you through the passage in order — outside-in, then a lens cluster, then the
-bridge into Interpret. Resist the urge to jump to meaning.
-
-### Stop 8 — Phase 1 / Surface
-**What the text says.** *Context. Surface Questions. Divisions / Thought
-Units.* Outside in: where this passage sits in the book, the situational
-facts on the surface, and how the passage breaks into thought units that
-anchor the rest of the work. Field 3 is the heaviest cut — the cumulative
-thought-unit table you'll extend in every later phase starts here.
-
-### Stop 9 — Phase 1 / Substance
-**What the text shows.** *Main Characters. Commands and Declarations. Big
-Ideas. Obvious Point. Possible Implications.* The lens cluster reads against
-Field 3's spine — who's acting, what each main sentence is doing, what
-concepts surface. Then the question most pastors skip — is there an obvious
-point? State it plainly. Possible Implications close the segment by naming
-what the text is starting to press on for the room.
-
-### Stop 10 — Phase 2: Interpret
-**Phase 2 — Interpret.** Beneath the surface. Eight fields push from what the
-text says to what it means. This is where most of the work happens.
-
-### Stop 11 — Phase 2 / Shaping meaning
-**How meaning takes shape.** *Deeper Context. Genre. Recurring Ideas.
-Character Purpose. Contrasts.* Pick up Observe's Context with study tools in
-hand. Let genre set the lens. Then the dissection — what recurs, what each
-character is signaling, the oppositions the author has built into the passage.
-
-### Stop 12 — Phase 2 / Outside voices, then your own
-**Outside voices, then your own.** *Cross-References. Commentary Notes.
-Interpretation Synthesis.* Let Scripture interpret Scripture. Check your
-reading against the commentaries — last, to confirm or correct, not to start.
-Then articulate what the passage MEANS in your own voice, per thought unit
-and as a whole. The Interpretation Set is the named outcome — Phase 3 opens
-against it.
-
-### Stop 13 — Phase 3: Redemptive Thread
-**Phase 3 — Redemptive Thread.** Every text points somewhere. Five fields ask
-how this one points to Christ — by position, by theme or promise or type or
-prophecy, by the gospel's enabling power, by need, by the character of the
-God who saves.
-
-### Stop 14 — Phase 3 / Five ways to find Christ
-**Five ways to find Christ.** *This Passage and Christ. How the Passage
+### Stop 7 — Phase 3 — extends the table
+**Phase 3 — Redemptive Thread.** *This Passage and Christ. How the Passage
 Points to Christ. How the Gospel Makes This Possible. Our Need and God's
 Character. Christ-Connection Statement.* Position the text against Christ.
-Trace the four pointing-mechanisms — biblical theme, promise, type, predictive
-prophecy. Ground the gospel's enabling power. Pair human need with God's
-character. The discipline: don't insert Christ where he isn't. Mark N/A where
-the text genuinely doesn't carry that kind of pointing.
+Trace the four pointing-mechanisms — biblical theme, promise, type,
+predictive prophecy. Ground the gospel's enabling power against moralism.
+Pair human need with God's character. **Each thought unit gets a
+*Christ-connection* column added.** Phase 3's named outcome — written by
+you, not the AI — is the **Christ-Connection Statement**.
 
-### Stop 15 — Christ-Connection Statement
-**Christ-Connection Statement.** The named outcome of Redemptive Thread,
-written by you — not the AI. For each thought unit you named in Observe,
-write the Christ-connection in the cumulative table. Then close with one
-paragraph: how does the whole passage point to Christ, and how is Christ its
-hero? Phase 4 opens against this statement.
+### Stop 8 — Phase 4 — extends the table
+**Phase 4 — Implications.** *Theological Significance. Personal
+Implications. Pastoral Context. Implications Synthesis.* What the text
+teaches. What it asks of the hearer — *follow, forsake, receive, settle.*
+The room concretely named — who this text is speaking into, what's costly
+and what's gift. The text leads the first two voices; the room enters as
+the third. **Each thought unit gets an *implication* column — completing
+the table to six columns.** Phase 4's named outcome — pastor-written, no
+AI substitute — is the **Implications Synthesis**. The marinate-output.
 
-### Stop 16 — Phase 4: Implications
-**Phase 4 — Implications.** What does this text demand of the people in the
-room? Four fields — what the text teaches (Theological Significance), what
-it asks of the hearer (Personal Implications), the room it's landing in
-(Pastoral Context), and the synthesis that integrates all three (Implications
-Synthesis).
+### Stop 9 — The four named outcomes
+**The four named outcomes.** Look at the rail. Four callouts mark the
+hand-off arc: **Observation Set → Interpretation Set → Christ-Connection
+Statement → Implications Synthesis.** Each one is what the next sub-phase
+opens against — not raw worksheet content. By Phase 4's close, you're
+holding four pastor-written articulations plus the six-column table.
+That's the substrate MPT and MPS open against. No AI re-summary. Your
+work, accumulated and visible.
 
-### Stop 17 — Theological Significance
-**Theological Significance.** What this passage teaches about God, about
-ourselves, about Christ. Timeless principles. Particular doctrines. What's
-true here that would be true anywhere?
+### Stop 10 — Step 2: MPT → MPS
+**Step 2 — MPT → MPS.** The two most important sentences in the sermon.
+**MPT** in past tense — what the author meant for the original audience.
+**MPS** in present or future tense — what this text means for *this*
+congregation. The bridge from then to now. MPS's gospel-check reads
+against the Christ-Connection Statement: does the call rest on what
+Christ has done, or has it slipped into "try harder"? AI here is a
+challenger — *Challenge My MPT* and *Check MPT→MPS Chain* are the chips
+you'll use most. Step 2's named outcome: the **Main Point Pair**.
 
-### Stop 18 — Personal Implications
-**Personal Implications.** Four verb-driven questions — what to *follow*
-(examples to imitate, commands to keep), what to *forsake* (errors to avoid,
-sins to leave), what to *receive* (gospel promises, fresh thoughts about
-God), and what to *settle* into (truths to explore, convictions to live by).
-Most sermons go thin at application; this is where you get ahead of that.
+### Stop 11 — Step 3: Outline
+**Step 3 — Outline.** Structure emerges from the throughline, not imposed
+on it. Add and reorder points until the argument moves cleanly from MPT
+to MPS. *Review Outline* sends it to the AI for structural feedback —
+does each point derive from the text, does the progression actually move,
+does the structure serve the MPS?
 
-### Stop 19 — Pastoral Context
-**Pastoral Context.** The third voice in the three-way conversation. Two
-questions: who in your room is this text speaking into — specific people,
-specific situations — and for those specific people, what's the cost (what
-will be hard, costly, counter-intuitive) and what's the gift (the comfort,
-hope, freedom, or invitation this text holds out). The text leads; the room
-enters here, by name.
-
-### Stop 20 — Implications Synthesis
-**Implications Synthesis.** The Study work closes here, in your voice. For
-each thought unit, integrate the three voices — what the text teaches, what
-it asks of the hearer, how it lands in this room. Then one paragraph for the
-whole passage. This is the marinate-output. MPT and MPS open against it.
-
-### Stop 21 — Step 2: MPT → MPS
-**Step 2 — MPT → MPS.** The two most important sentences in the sermon — they
-anchor everything else. Get these right and the outline largely writes itself.
-
-### Stop 22 — MPT
-**Main Point of the Text.** Past tense. What the author meant, in their
-context, for their original audience. Not yet about your congregation. Stay in
-the text.
-
-### Stop 23 — MPS
-**Main Point of the Sermon.** Present tense. What this text means for your
-congregation today. The bridge from then to now. The MPS must grow from the
-MPT — not invent a new claim. The AI here is a challenger, not a collaborator.
-*Challenge My MPT* and *Check MPT→MPS Chain* are the chips you'll use most.
-
-### Stop 24 — Step 3: Outline
-**Step 3 — Outline.** Structure should emerge from exegesis, not be imposed
-on it. Add and reorder points until the argument moves cleanly from your MPT
-to your MPS. *Review Outline* sends it to the AI for structural feedback —
-whether each point derives from the text, whether the progression actually
-moves, whether the structure serves the MPS.
-
-### Stop 25 — Step 4: Functional Elements
+### Stop 12 — Step 4: Functional Elements
 **Step 4 — Functional Elements.** For each outline point: Explanation,
-Application, Illustration. Every point needs all three to land. *Review E/A/I
-Balance* asks the AI to audit each point — whether the explanation is
-sufficient, whether the application is gospel-rooted, whether the illustration
-clarifies or distracts. Worth running before the manuscript.
+Application, Illustration. Every point needs all three to land. *Review
+E/A/I Balance* asks the AI to audit each point — is the explanation
+sufficient, is the application gospel-rooted, does the illustration
+clarify or distract? Worth running before the manuscript.
 
-### Stop 26 — Manuscript
-**Manuscript.** Where the sermon becomes prose. Sections, transitions, full
-text. Three audit tools live here, each doing something different. Use them
-after the manuscript is drafted, not before.
+### Stop 13 — Step 5: Frame — Intro
+**Step 5 — Frame: Intro.** Four moves to walk the listener into the body.
+*Hook* — open from where the listener actually is. *Bridge to text* —
+land the MPT and MPS. *Expectations* — name what the body will ask of
+them, so they're not blindsided. *Redemptive note* — the gospel-shape
+that turns the call from burden into invitation. The order is deliberate:
+name the call first, then gospel-empower it. The same anti-moralism
+pattern MPS just walked.
 
-### Stop 27 — Flow Coach
-**Flow Coach.** Walks you through every transition in the manuscript, one at
-a time. *Does this section land? Does the next one pick up cleanly? Is there
-a gap?* One step per response, so the feedback stays manageable. Use it when
-the sermon reads in pieces instead of moving.
+### Stop 14 — Step 5: Frame — Conclusion
+**Step 5 — Frame: Conclusion.** Four moves to land the body's call.
+*Summate* — pull the whole arc into one landing in the voice of where the
+listener now is, not a point-by-point recap. *Land the call* — concrete,
+drawn from MPS. *Gospel-empower* — drawn from the Christ-Connection
+Statement, so the listener walks out holding the gift, not a new burden.
+*Closing posture* — silence, song, prayer, or charge, named explicitly.
+Step 5's named outcome: the **Sermon Frame**.
 
-### Stop 28 — Ear Check
-**Ear Check.** Reads the manuscript for what will be heard, not just read. It
-scans for two things: *structural orphans* — passages that have drifted from
-the argument — and *speakability flags* — sentences that will lose the room
-when spoken aloud. Theological precision is fine; unintelligibility isn't.
+### Stop 15 — Manuscript
+**Manuscript.** Where the sermon becomes prose. Three audit tools live
+here — use them after the manuscript is drafted, not before. *Flow Coach*
+walks every transition one at a time, asking whether each section lands
+and the next picks up cleanly. *Ear Check* scans for structural orphans
+and speakability flags — what will be heard, not just read. *Tune-Up*
+runs a full three-phase audit — Snapshot, Alignment Map, Patch Plan —
+preserving your voice and staying within 10% of length.
 
-### Stop 29 — Tune-Up
-**Tune-Up.** A full audit in three phases. *Snapshot* describes what the
-sermon is actually doing. *Alignment Map* grades how well it serves the MPT
-and MPS. *Patch Plan* gives specific edits, marked inline. It preserves your
-voice and stays within 10% of your original length. Use it when the sermon is
-ready for a hard look.
+### Stop 16 — Delivery
+**Delivery.** Three ways to stand at the pulpit. *Manuscript* formatted
+for reading aloud, *Preaching Outline* for the lectern, *Without Notes*
+compressed into memory blocks. The closing posture you chose at Frame:
+Conclusion shapes the physical close. After the sermon is preached, this
+is where you mark it complete.
 
-### Stop 30 — Finish
-**That's the workspace.** This is one sermon. The Series Planner holds many.
-Both tours are available from the dashboard whenever you want to revisit.
+### Stop 17 — Finish
+**That's the workspace.** One sermon, throughline-first. The Series
+Planner holds many. Both tours are available from the dashboard whenever
+you want to revisit.
 
 ---
 
-## Next iteration — throughline-first reframe (pending)
+## Throughline-first reframe — what changed (2026-05-05)
 
-The 30 stops above are SFDI-reconciled (post-2026-05-05) but still structurally
-a **UI surface walk**: stop after stop introducing tabs, fields, and audit
-tools. A pastor finishing this tour learns *where things live* — not *how
-the discipline holds together*.
+The pre-reframe 30-stop tour was SFDI-reconciled but structurally a UI
+surface walk — stop after stop introducing tabs, fields, and audit tools.
+Pastors finished it knowing *where things lived*, not *how the discipline
+held together*.
 
-The next iteration retires that frame. The workspace's central mechanic is the
-**throughline** — one cumulative thought-unit array carrying meaning forward
-across every Study sub-phase. Phase 1 Field 3 builds the rows; Phase 2 adds a
-`meaning` column; Phase 3 adds `christ_connection`; Phase 4 adds `implication`.
-Each sub-phase ends with a **named outcome** (Observation Set → Interpretation
-Set → Christ-Connection Statement → Implications Synthesis) that the next
-sub-phase opens against. The whole thing reaches MPT/MPS, then outline,
-functional elements, Frame, manuscript, delivery — all standing on the
-throughline that started in the synthesis table.
+The 17-stop tour above is the throughline-anchored replacement. Five
+shape-changing decisions landed in the build session:
 
-A throughline-first tour walks that arc. ~15-18 stops; each carries weight
-without padding. Proposed shape (subject to redirect during the build):
+1. **AI overview distributed.** The four front-loaded AI stops
+   (`ai-philosophy`, `the-assistant`, `what-it-knows`, `tuned-to-you`)
+   collapse to one ambient framing stop (Stop 2). The AI's posture-shifts
+   are named inline at the relevant phase / step stops where they apply.
+2. **Manuscript audit tools collapsed.** Flow Coach, Ear Check, and
+   Tune-Up move from three dedicated stops to one Manuscript stop (Stop
+   15) with each tool named in italics with a half-sentence each.
+3. **Frame elevated to two stops.** SADI Step 5's Intro and Conclusion
+   become first-class tour stops (Stops 13 and 14) — they were absent
+   from the pre-reframe tour. Anchor:
+   `data-tour-id="frame-worksheet"` on `FrameTab`'s outer wrapper.
+4. **Delivery added as a stop.** A first-class Delivery stop (Stop 16)
+   with anchor `data-tour-id="delivery-overview"` on `DeliveryTab`.
+5. **Throughline rail anchored.** A single stable
+   `data-tour-id="throughline-rail"` on `ThroughlineRail`'s outer
+   `<aside>` carries Stops 3 and 9 (the rail itself + the four named
+   outcomes).
 
-| # | Stop | Anchor | Purpose |
-|---|------|--------|---------|
-| 1 | Workspace shell | `workspace-title` | One-sentence framing |
-| 2 | **The throughline** | `ThroughlineRail` | The rail itself; one cumulative table threads through every sub-phase |
-| 3 | Phase 1 / outside-in | `phase-1-worksheet` | Context → Surface Questions → Divisions / Thought Units (Field 3 builds the rows) |
-| 4 | Phase 1 / lens cluster + bridge | `phase-1-worksheet` | Main Characters → Commands and Declarations → Big Ideas → Obvious Point → Possible Implications |
-| 5 | Phase 2 — extends the table | `interpretation-synthesis` | Each thought unit gets a `meaning` column; Interpretation Synthesis is the named outcome |
-| 6 | Phase 3 — extends the table | `christ-connection-statement` | Each thought unit gets a `christ_connection` column; Christ-Connection Statement is the named outcome |
-| 7 | Phase 4 — extends the table | `implications-synthesis` | Each thought unit gets an `implication` column; the three voices integrate; Implications Synthesis is the named outcome |
-| 8 | The four named outcomes | `ThroughlineRail` callouts | The hand-off arc — each becomes the substrate the next sub-phase opens against |
-| 9 | Step 2 — MPT/MPS as bridge | `mpt-field` / `mps-field` | Past-tense → present-tense; opens against the Implications Synthesis, not raw worksheet content |
-| 10 | Step 3 — Outline | `outline-builder` | Structure emerges from the throughline; AI as structural reviewer |
-| 11 | Step 4 — Functional Elements | `functional-elements` | Explanation / Application / Illustration per point |
-| 12 | **Step 5 — Frame (Intro + Conclusion)** | `phase-5-worksheet` (anchor TBD) | **Currently missing**; SADI Step 5 elevation. Hook → bridge → expectations → redemptive note; summate → land call → gospel-empower → closing posture |
-| 13 | Manuscript + audit tools | `stage-tab-manuscript` | Single stop with three sub-mentions (Flow Coach, Ear Check, Tune-Up) instead of three dedicated stops |
-| 14 | **Delivery overview** | `stage-tab-delivery` (anchor TBD) | **Currently missing**; the final stage |
-| 15 | AI woven through | (ambient) | Replaces the front-loaded 4-stop AI overview; mention the AI's posture-shifts inline at the relevant stops above |
-| 16 | Finish | (ambient) | Send-off + Series Planner pointer |
-
-Open decisions to settle in the build session:
-
-1. **AI overview placement.** Current tour front-loads 4 dedicated stops (`ai-philosophy`, `the-assistant`, `what-it-knows`, `tuned-to-you`). Reframe weaves these into the relevant phase stops. Risk: pastors don't get a clean "here's how the AI works" beat. Decide: keep one ambient AI stop early, or fully distribute.
-2. **Manuscript audit-tool collapse.** Three dedicated stops (Flow Coach, Ear Check, Tune-Up) → one stop with three sub-mentions. Risk: under-explanation of audit tools that pastors should know about. Decide: collapse, or keep as 3 stops.
-3. **New anchor IDs needed.** Step 5 / Frame and Delivery don't have `data-tour-id` attributes today. Add them in `FrameTab.jsx` and `DeliveryTab.jsx` as part of the rewrite.
-4. **Throughline rail anchor.** The new "throughline" stop (#2) and "named outcomes" stop (#8) both anchor on the `ThroughlineRail`. Need a single stable `data-tour-id="throughline-rail"` on the rail's outermost element.
-5. **Stop count — final answer.** The sketch lands at ~16 stops; final count depends on AI-overview and audit-tool decisions above. Accept range 14-18.
-
-The 30-stop locked content above is preserved as the **current shipping state**.
-The build session that lands the throughline-first reframe will replace it
-in `workspaceTourStops.js` with the new 14-18 stop array, mirror the spec
-content here, and update the count in the header comments + this preamble.
+Stop count locked at 17 (range 14-18 from the design phase). Phase 1
+retains two stops (outside-in + lens cluster) because Field 3 alone
+carries the heaviest cut of the tour; the other phases collapse to one
+stop apiece since the rail teaches the cumulative-table mechanic and each
+phase stop only needs to teach what *that* phase contributes.
 
 ---
 
@@ -342,7 +300,7 @@ These were settled when the engine shipped 2026-04-28:
 ## Out of scope for this spec
 
 - Series Planner tour (separate, later)
-- Delivery tab tour beyond the single overview stop in the throughline-first
-  rewrite (the Delivery screen still needs UX work; deeper coverage waits)
+- Delivery tab tour beyond the single overview stop (the Delivery screen
+  still needs UX work; deeper coverage waits)
 - Field-by-field tour of the Manuscript tab (only Flow Coach, Ear Check,
-  Tune-Up are explained at the audit-tool level)
+  Tune-Up are mentioned at the audit-tool level inside Stop 15)

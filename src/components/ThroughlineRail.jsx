@@ -21,7 +21,7 @@
 // ("current" rather than "active" — the canonical-stage-name lint forbids
 // raw "active" strings since it's a pre-Pilot-B sermon-status alias.)
 
-import React, { useRef, useState } from "react";
+import React, { useState } from "react";
 import "./throughline.css";
 
 function tooltipText(field) {
@@ -31,6 +31,12 @@ function tooltipText(field) {
   return field.preview || "—";
 }
 
+// Tooltip uses position: fixed (CSS) so x / y are viewport coordinates and
+// the tooltip is unaffected by the rail's overflow-y scroll offset. Earlier
+// code positioned it absolutely inside the scrolled rail, which made the
+// tooltip drift away from the node by scrollTop pixels — descriptions
+// appeared next to the wrong node (or off-screen entirely for nodes lower
+// in the rail).
 function Tooltip({ x, y, field }) {
   return (
     <div className="tl-tooltip" style={{ left: x, top: y }} role="tooltip">
@@ -70,10 +76,9 @@ export default function ThroughlineRail({
   onFieldClick,
 }) {
   const [hover, setHover] = useState(null);
-  const containerRef = useRef(null);
 
   return (
-    <aside className="tl-rail" ref={containerRef} aria-label="Study throughline">
+    <aside className="tl-rail" aria-label="Study throughline" data-tour-id="throughline-rail">
       <div className="tl-subphases">
         {subPhases.map((sp, spIdx) => {
           const isLast = spIdx === subPhases.length - 1;
@@ -105,12 +110,12 @@ export default function ThroughlineRail({
                           }
                           onEnter={(e) => {
                             const target = e.currentTarget;
-                            if (!target || !containerRef.current) return;
+                            if (!target) return;
                             const r = target.getBoundingClientRect();
-                            const cr = containerRef.current.getBoundingClientRect();
+                            // Viewport coordinates — tooltip is position:fixed.
                             setHover({
-                              x: r.right - cr.left,
-                              y: r.top + r.height / 2 - cr.top,
+                              x: r.right,
+                              y: r.top + r.height / 2,
                               field,
                             });
                           }}

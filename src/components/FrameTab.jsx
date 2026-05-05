@@ -68,7 +68,7 @@ export default function FrameTab({ sermon, onUpdate, onTabChange }) {
   }, [advance.ok, onTabChange]);
 
   return (
-    <div style={{ padding: "20px", maxWidth: "1100px", margin: "0 auto" }}>
+    <div data-tour-id="frame-worksheet" style={{ padding: "20px", maxWidth: "1100px", margin: "0 auto" }}>
       <SpotlightWorksheet
         fields={SERMON_FRAME_FIELDS}
         data={frameData}

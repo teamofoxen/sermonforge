@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-05 — Workspace tour throughline-first rewrite (17 stops)
+
+- `workspaceTourStops.js` rewritten to 17 throughline-first stops; walks the cumulative thought-unit table + four named outcomes through MPT/MPS → Outline → Functional Elements → Frame → Manuscript → Delivery.
+- New anchors: `throughline-rail` on `ThroughlineRail`, `frame-worksheet` on `FrameTab`, `delivery-overview` on `DeliveryTab`.
+- AI overview distributed (one ambient stop + inline mentions vs. four front-loaded); Manuscript audit tools collapsed to one stop with three sub-mentions; Frame elevated to two stops (Intro + Conclusion).
+- `sermon-workspace-tour.md` mirrored — 17-stop locked content replaces 30-stop UI walk; "Next iteration (pending)" retired with closure note.
+- `ThroughlineRail` tooltip position fix (viewport coordinates via `position:fixed`) bundled in; 383 vitest green.
+
+---
+
 ## 2026-05-05 — Tour spec + SPIP next-iteration handoff
 
 - `sermon-workspace-tour.md` gains a "Next iteration — throughline-first reframe (pending)" section sketching a ~14-18 stop rebuild that anchors on the cumulative thought-unit table + named-outcomes arc instead of a UI-surface walk; current 30-stop locked content preserved as the shipping state.
