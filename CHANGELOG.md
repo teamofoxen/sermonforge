@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-05-05 — dark-mode --ink-ghost brightened globally
+
+- Dark-mode `--ink-ghost` raised from `#5a4c42` to `#bfb0a0`, restoring legibility for the dashboard guided-tour link, in-progress sermon dates, Delete buttons, preacher quote dates + citations, and every other muted text site app-wide.
+- Removed the now-redundant `[data-theme="dark"] .sidebar` override since the global value covers the sidebar's darker background equally well.
+- Verified via preview: guided-tour link, quote dates ("354–430"), quote citation ("Confessions XII.14"), sidebar tagline, Navigation label, Send feedback, and footer all resolve to the brightened value.
+
+---
+
 ## 2026-05-05 — dark-mode legibility: sidebar muted text + gold-pale globally
 
 - `[data-theme="dark"] .sidebar` overrides `--ink-ghost` to `#bfb0a0` so the always-dark sidebar's tagline, "Navigation" label, "SermonForge v1.0" footer, "Send feedback" link, and theme-toggle icon read clearly.

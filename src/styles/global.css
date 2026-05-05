@@ -39,7 +39,7 @@
   --ink: #d8cfc5;
   --ink-mid: #b8a898;
   --ink-soft: #8a7a6c;
-  --ink-ghost: #5a4c42;
+  --ink-ghost: #bfb0a0;
   --parchment: #1a1614;
   --parchment-warm: #201c18;
   --parchment-deep: #2a2420;
@@ -59,12 +59,6 @@
   --sage-pale: #1e2e1c;
   --slate-pale: #1c2430;
   --crimson-pale: #2e1414;
-}
-
-/* Sidebar is always dark — keep its muted text readable when dark theme
-   retargets --ink-ghost at a parchment-tuned value. */
-[data-theme="dark"] .sidebar {
-  --ink-ghost: #bfb0a0;
 }
 
 html, body, #root {
