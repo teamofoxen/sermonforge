@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-05-05 — dark-mode legibility: sidebar muted text + gold-pale globally
+
+- `[data-theme="dark"] .sidebar` overrides `--ink-ghost` to `#bfb0a0` so the always-dark sidebar's tagline, "Navigation" label, "SermonForge v1.0" footer, "Send feedback" link, and theme-toggle icon read clearly.
+- Dark-mode `--gold-pale` redefined from `#3a2e0a` to `#f0e4b8`, restoring visibility for the "+ New Sermon"/"+ New Series" sidebar items, the dashboard header rule + tile hover border, sermon/illustration/filter/AI-suggestion hover borders, blockquote left rule, AIPanel italic helper text, tour preview SVG fills, and passage-ref / pmb-id chip backgrounds.
+- Verified via preview at boot in dark mode: all affected elements now resolve to the brightened values.
+
+---
+
 ## 2026-05-05 — type system + rule-flanked logo
 
 - New `src/styles/typography.css` defines `--font-serif` / `--font-mono` / `--font-sans` tokens and semantic classes (`.eyebrow`, `.scripture-ref`, `.attribution-*`, `.prose`, `.manuscript-body`, etc.); imported in `main.jsx` before `global.css`.
