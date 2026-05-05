@@ -2,6 +2,7 @@
 
 Load-bearing strategic documents that span multiple sessions and anchor downstream work. Updates to these files use the `/anchor-update` workflow.
 
+- docs/PROPOSALS/study-redesign-implementation-anchor.md — SRIA; re-entry point for the Study redesign work, points into SFDI / SADI / SPRD / SPIP / SPIR
 - docs/PROPOSALS/sfdi-charter.md — SFDI charter; the why, boundaries, and approach
 - docs/PROPOSALS/study-field-definition-initiative.md — SFDI working doc; per-field entries accumulate here
 - docs/PROPOSALS/study-phase-redesign.md — SPRD planning doc; structural layer of the Study redesign
