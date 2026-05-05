@@ -47,7 +47,7 @@ describe("AdvanceGateChecklist", () => {
           ok: false,
           reason: "Lay out the passage before advancing.",
           gates: [
-            { key: "field_4_divisions", label: "Divisions / Thought Units", met: false, reason: "Lay out the passage before advancing." },
+            { key: "field_3_divisions", label: "Divisions / Thought Units", met: false, reason: "Lay out the passage before advancing." },
           ],
         }}
       />,
@@ -63,9 +63,9 @@ describe("AdvanceGateChecklist", () => {
           ok: false,
           reason: "State the Obvious Point before advancing.",
           gates: [
-            { key: "field_4_divisions",            label: "Divisions / Thought Units", met: true },
-            { key: "field_8_obvious_point",        label: "Obvious Point",             met: false, reason: "State the Obvious Point before advancing." },
-            { key: "field_9_possible_implications", label: "Possible Implications",    met: true },
+            { key: "field_3_divisions",            label: "Divisions / Thought Units", met: true },
+            { key: "field_7_obvious_point",        label: "Obvious Point",             met: false, reason: "State the Obvious Point before advancing." },
+            { key: "field_8_possible_implications", label: "Possible Implications",    met: true },
           ],
         }}
       />,
@@ -76,17 +76,17 @@ describe("AdvanceGateChecklist", () => {
     const items = checklist.querySelectorAll(".advance-gate-item");
     expect(items.length).toBe(3);
     // Met / unmet markers
-    const f4 = checklist.querySelector('[data-gate-key="field_4_divisions"]');
-    const f8 = checklist.querySelector('[data-gate-key="field_8_obvious_point"]');
-    expect(f4.getAttribute("data-gate-met")).toBe("true");
-    expect(f8.getAttribute("data-gate-met")).toBe("false");
-    expect(f4.textContent).toContain("✓");
-    expect(f8.textContent).toContain("✗");
+    const f3 = checklist.querySelector('[data-gate-key="field_3_divisions"]');
+    const f7 = checklist.querySelector('[data-gate-key="field_7_obvious_point"]');
+    expect(f3.getAttribute("data-gate-met")).toBe("true");
+    expect(f7.getAttribute("data-gate-met")).toBe("false");
+    expect(f3.textContent).toContain("✓");
+    expect(f7.textContent).toContain("✗");
     // Unmet gate's sub-reason rendered alongside its label
-    expect(f8.textContent).toContain("Obvious Point");
-    expect(f8.textContent).toContain("State the Obvious Point before advancing.");
+    expect(f7.textContent).toContain("Obvious Point");
+    expect(f7.textContent).toContain("State the Obvious Point before advancing.");
     // Met gate does NOT show a reason (even if one is present)
-    expect(f4.textContent).not.toContain("—");
+    expect(f3.textContent).not.toContain("—");
   });
 
   it("checklist exposes both label and reason text per unmet gate so the pastor can see what's missing at a glance", () => {
@@ -96,9 +96,9 @@ describe("AdvanceGateChecklist", () => {
           ok: false,
           reason: "Lay out the passage before advancing.",
           gates: [
-            { key: "field_4_divisions",            label: "Divisions / Thought Units", met: false, reason: "Lay out the passage before advancing — at least one main sentence with an indented modifier under it." },
-            { key: "field_8_obvious_point",        label: "Obvious Point",             met: false, reason: "State the Obvious Point before advancing." },
-            { key: "field_9_possible_implications", label: "Possible Implications",    met: false, reason: "Answer the Possible Implications questions before advancing." },
+            { key: "field_3_divisions",            label: "Divisions / Thought Units", met: false, reason: "Lay out the passage before advancing — at least one main sentence with an indented modifier under it." },
+            { key: "field_7_obvious_point",        label: "Obvious Point",             met: false, reason: "State the Obvious Point before advancing." },
+            { key: "field_8_possible_implications", label: "Possible Implications",    met: false, reason: "Answer the Possible Implications questions before advancing." },
           ],
         }}
       />,

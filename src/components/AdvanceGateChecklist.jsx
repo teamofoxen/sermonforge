@@ -4,7 +4,7 @@
 // position is empty or only one gate is in play, the checklist falls back
 // to the legacy single-line hint (data-testid="advance-hint") so the
 // existing contract tests + UX continue to work. When multiple gates exist
-// (Field 4 + Field 8 + Field 9 at the Observe → Interpret boundary today;
+// (Field 3 + Field 7 + Field 8 at the Observe → Interpret boundary today;
 // the same shape will extend to other boundaries as B2/B3/B4 wire their
 // thresholds), the component renders a structured checklist with ✓ / ✗
 // per gate plus the gate's pastor-facing sub-reason for each unmet gate.

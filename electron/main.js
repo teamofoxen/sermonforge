@@ -1564,52 +1564,51 @@ function validateAndCommit(op, payload) {
     }
 
     case "load-tour-sermon": {
-      const { SERIES_ID, SERMON_ID, series, sermon } = require("./tourData");
-      const seriesExists = queryOne("SELECT id FROM series  WHERE id = ?", [SERIES_ID]);
-      const sermonExists = queryOne("SELECT id FROM sermons WHERE id = ?", [SERMON_ID]);
-      if (seriesExists && sermonExists) return success({ sermonId: SERMON_ID, created: false });
+      const { SERMON_ID, series, sermon } = require("./tourData");
+      // Sample sermon is regenerated on every load. The mock is for
+      // exploration, not work the pastor builds on; resetting on each
+      // click ensures schema/content updates take effect immediately
+      // and sweeps any stale `tour-*` rows from a prior mock version.
       db.run("BEGIN");
       try {
-        if (!seriesExists) {
-          db.run(
-            `INSERT INTO series (
-              id, title, color, description, year,
-              big_idea, overview, passage_range, start_date, end_date,
-              structural_outline, status, canon_category,
-              redemptive_context, book_background, book_argument,
-              book_structure, series_motivation, emerging_big_idea
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-            [
-              series.id, series.title, series.color, series.description, series.year,
-              series.big_idea, series.overview, series.passage_range, series.start_date, series.end_date,
-              series.structural_outline, series.status, series.canon_category,
-              series.redemptive_context, series.book_background, series.book_argument,
-              series.book_structure, series.series_motivation, series.emerging_big_idea,
-            ],
-          );
-        }
-        if (!sermonExists) {
-          db.run(
-            `INSERT INTO sermons (
-              id, series_id, is_one_off, title, passage, date, stage,
-              mpt, mps,
-              observations, interpretation, redemptive_thread, implications,
-              outline, functional_elements,
-              manuscript, delivery_notes, timing_notes,
-              study_guide_note, sermon_frame,
-              current_stage, current_step, current_sub_phase
-            ) VALUES (?,?,0,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-            [
-              sermon.id, sermon.series_id, sermon.title, sermon.passage, sermon.date, sermon.stage,
-              sermon.mpt, sermon.mps,
-              sermon.observations, sermon.interpretation, sermon.redemptive_thread, sermon.implications,
-              sermon.outline, sermon.functional_elements,
-              sermon.manuscript, sermon.delivery_notes, sermon.timing_notes,
-              sermon.study_guide_note, sermon.sermon_frame,
-              STAGE.Study, STEP.Exegesis, SUB_PHASE.Observe,
-            ],
-          );
-        }
+        db.run("DELETE FROM sermons WHERE id LIKE 'tour-%'");
+        db.run("DELETE FROM series  WHERE id LIKE 'tour-%'");
+        db.run(
+          `INSERT INTO series (
+            id, title, color, description, year,
+            big_idea, overview, passage_range, start_date, end_date,
+            structural_outline, status, canon_category,
+            redemptive_context, book_background, book_argument,
+            book_structure, series_motivation, emerging_big_idea
+          ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+          [
+            series.id, series.title, series.color, series.description, series.year,
+            series.big_idea, series.overview, series.passage_range, series.start_date, series.end_date,
+            series.structural_outline, series.status, series.canon_category,
+            series.redemptive_context, series.book_background, series.book_argument,
+            series.book_structure, series.series_motivation, series.emerging_big_idea,
+          ],
+        );
+        db.run(
+          `INSERT INTO sermons (
+            id, series_id, is_one_off, title, passage, date, stage,
+            mpt, mps,
+            observations, interpretation, redemptive_thread, implications,
+            outline, functional_elements,
+            manuscript, delivery_notes, timing_notes,
+            study_guide_note, sermon_frame,
+            current_stage, current_step, current_sub_phase
+          ) VALUES (?,?,0,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+          [
+            sermon.id, sermon.series_id, sermon.title, sermon.passage, sermon.date, sermon.stage,
+            sermon.mpt, sermon.mps,
+            sermon.observations, sermon.interpretation, sermon.redemptive_thread, sermon.implications,
+            sermon.outline, sermon.functional_elements,
+            sermon.manuscript, sermon.delivery_notes, sermon.timing_notes,
+            sermon.study_guide_note, sermon.sermon_frame,
+            STAGE.Study, STEP.Exegesis, SUB_PHASE.Observe,
+          ],
+        );
         db.run("COMMIT");
       } catch (e) {
         db.run("ROLLBACK");

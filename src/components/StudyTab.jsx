@@ -276,7 +276,22 @@ function firstIncompleteFieldKey(defs, data) {
   return defs[0]?.key ?? null;
 }
 
-function deriveFieldNodes(defs, data, activeFieldKey) {
+// Map from boundary-gate keys (used in evaluateAdvance for load-bearing fields)
+// to the actual OBSERVE/INTERPRET/REDEMPTIVE/IMPLICATIONS field keys those
+// gates check. Lets the rail honor the gate's strict composite verdict instead
+// of the lenient "any-content-per-question" count, which previously rendered
+// Divisions / Thought Units as "complete" while the boundary still failed (Q2
+// requires every main-sentence-id to carry a non-empty paraphrase, etc.).
+const GATE_KEY_TO_FIELD_KEY = {
+  field_3_divisions: "divisions",
+  field_7_obvious_point: "obvious_point",
+  field_8_possible_implications: "applications",
+  field_8_interpretation_synthesis: "interpretation_synthesis",
+  field_5_christ_connection_statement: "christ_connection_statement",
+  field_4_implications_synthesis: "implications_synthesis",
+};
+
+function deriveFieldNodes(defs, data, activeFieldKey, gateByFieldKey) {
   return defs.map((def) => {
     const qs = fieldQuestions(def);
     const total = qs.length;
@@ -289,7 +304,14 @@ function deriveFieldNodes(defs, data, activeFieldKey) {
     // "current" rather than "active" because the canonical-stage-name lint
     // forbids raw "active" strings (it's a pre-Pilot-B sermon-status alias).
     // Throughline node states: empty | in-progress | current | complete | na.
+    // For load-bearing fields, the boundary gate's strict composite verdict
+    // overrides the lenient per-question count — otherwise the rail showed
+    // a field as "complete" while Continue stayed disabled because the
+    // composite check (e.g., paraphrase per main sentence) wasn't satisfied.
+    const gateMet = gateByFieldKey ? gateByFieldKey[def.key] : undefined;
     if (def.key === activeFieldKey) state = "current";
+    else if (gateMet === false) state = answered === 0 ? "empty" : "in-progress";
+    else if (gateMet === true) state = "complete";
     else if (answered === 0) state = "empty";
     else if (answered === total) state = "complete";
     else state = "in-progress";
@@ -312,7 +334,7 @@ function deriveFieldNodes(defs, data, activeFieldKey) {
   });
 }
 
-function buildRailSubPhases(sermon, obsData, intData, redData, impData, activeIdx) {
+function buildRailSubPhases(sermon, obsData, intData, redData, impData, activeIdx, currentActiveFieldKey) {
   const phases = [
     { id: "observe", label: "Observe",
       named_outcome: "Observation Set",
@@ -333,10 +355,34 @@ function buildRailSubPhases(sermon, obsData, intData, redData, impData, activeId
   ];
   return phases.map((p) => {
     const isActive = p.idx === activeIdx;
-    const activeFieldKey = isActive ? firstIncompleteFieldKey(p.defs, p.data) : null;
-    const fields = deriveFieldNodes(p.defs, p.data, activeFieldKey);
+    // Prefer the worksheet's actually-spotlighted field. Fall back to the
+    // first-incomplete heuristic only when the worksheet hasn't reported
+    // yet (e.g., during the first render after a sub-phase change). Validate
+    // the reported key against this phase's fields so a stale key from a
+    // previously-active phase doesn't bleed across.
+    const reportedKeyValid =
+      isActive &&
+      currentActiveFieldKey &&
+      p.defs.some((d) => d.key === currentActiveFieldKey);
+    const activeFieldKey = isActive
+      ? (reportedKeyValid ? currentActiveFieldKey : firstIncompleteFieldKey(p.defs, p.data))
+      : null;
+    // Pull the boundary gate verdict per load-bearing field so the rail
+    // matches the Continue button's strict composite checks.
+    let advance = null;
     let done = false;
-    try { done = !!evaluateAdvance(sermon, "sub_phase", p.idx)?.ok; } catch { /* defensive */ }
+    try {
+      advance = evaluateAdvance(sermon, "sub_phase", p.idx);
+      done = !!advance?.ok;
+    } catch { /* defensive */ }
+    const gateByFieldKey = {};
+    if (advance && Array.isArray(advance.gates)) {
+      for (const g of advance.gates) {
+        const fk = GATE_KEY_TO_FIELD_KEY[g.key];
+        if (fk) gateByFieldKey[fk] = !!g.met;
+      }
+    }
+    const fields = deriveFieldNodes(p.defs, p.data, activeFieldKey, gateByFieldKey);
     return {
       id: p.id, label: p.label,
       named_outcome: p.named_outcome,
@@ -360,6 +406,17 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
   // evidence on a non-legacy sermon), this state surfaces a small banner near
   // the Continue button. Q3 will replace this with proper hard-gate UX.
   const [advanceError, setAdvanceError] = useState(null);
+
+  // Throughline-rail click target. When the pastor clicks a field label or
+  // node in the rail, we jump the worksheet's spotlight to that field. The
+  // token lets the SpotlightWorksheet's effect re-fire even when the same
+  // field is clicked twice in a row (key alone wouldn't change).
+  const [railRequest, setRailRequest] = useState(null);
+
+  // Reported back from the active SpotlightWorksheet. Drives the rail's
+  // "current" highlight so it tracks the actually-spotlighted field instead
+  // of always pointing at the first-incomplete heuristic.
+  const [currentActiveFieldKey, setCurrentActiveFieldKey] = useState(null);
 
   useEffect(() => {
     localStorage.setItem(`sermonforge_study_step_${sermon.id}`, activeStep);
@@ -786,6 +843,20 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
     onStepChange?.(STEP_SEQUENCE[step - 1]);
   }
 
+  // Rail click → jump the worksheet to the clicked field (and the clicked
+  // sub-phase, if different). jumpToSubPhase handles the transition gating;
+  // if it rejects, railRequest is still set but only consumed by the
+  // worksheet whose phase matches, so it's a harmless no-op for the
+  // unchanged-active phase.
+  async function handleRailFieldClick(subPhaseId, fieldKey) {
+    const target = SUB_PHASE_IDS.indexOf(subPhaseId) + 1;
+    if (target < 1 || target > 4) return;
+    if (target !== activeSubPhase) {
+      await jumpToSubPhase(target);
+    }
+    setRailRequest({ phase: target, key: fieldKey, token: Date.now() });
+  }
+
   async function jumpToSubPhase(phase) {
     setAdvanceError(null);
     if (phase === activeSubPhase) return;
@@ -952,7 +1023,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
 
   // SPRD C2 — vertical throughline rail data. Computed every render off the
   // four parsed phase columns. Cheap (just iteration over the field defs).
-  const railSubPhases = buildRailSubPhases(sermon, obsData, intData, redData, impData, activeSubPhase);
+  const railSubPhases = buildRailSubPhases(sermon, obsData, intData, redData, impData, activeSubPhase, currentActiveFieldKey);
 
   return (
     <div className="study-tab-shell">
@@ -961,6 +1032,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
         <ThroughlineRail
           subPhases={railSubPhases}
           activeSubPhaseId={activeStep === 1 ? SUB_PHASE_IDS[activeSubPhase - 1] : null}
+          onFieldClick={handleRailFieldClick}
         />
         <div className="study-write-col">
           <div className="study-write-inner">
@@ -1002,6 +1074,9 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                 onToggleNA={(fieldKey, qKey) => toggleStructuredNA("observations", obsData, fieldKey, qKey)}
                 legacyNotes={obsData.legacy_notes}
                 sermonId={sermon.id}
+                requestedActiveFieldKey={railRequest?.phase === 1 ? railRequest.key : null}
+                requestActiveToken={railRequest?.phase === 1 ? railRequest.token : null}
+                onActiveFieldKeyChange={setCurrentActiveFieldKey}
               />
               <div style={{ marginTop: "8px" }}>
                 <SecondaryButton
@@ -1041,7 +1116,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                 legacyNotes={intData.legacy_notes}
                 sermonId={sermon.id}
                 crossPhaseRead={(column) => {
-                  // SPRD B2.2 — Phase 2 Field 7 Q1 (cumulative-synthesis-table)
+                  // SPRD B2.2 — Phase 2 Field 8 Q1 (cumulative-synthesis-table)
                   // reads the canonical thought-unit array from
                   // observations.divisions.thought_units. Phase 3 + 4 will
                   // extend this map as their cross-phase questions land.
@@ -1053,6 +1128,9 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                     updateStructured("observations", obsData, fieldKey, value, qKey);
                   }
                 }}
+                requestedActiveFieldKey={railRequest?.phase === 2 ? railRequest.key : null}
+                requestActiveToken={railRequest?.phase === 2 ? railRequest.token : null}
+                onActiveFieldKeyChange={setCurrentActiveFieldKey}
               />
               <div style={{ marginTop: "8px" }}>
                 <SecondaryButton
@@ -1107,6 +1185,9 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                     updateStructured("observations", obsData, fieldKey, value, qKey);
                   }
                 }}
+                requestedActiveFieldKey={railRequest?.phase === 3 ? railRequest.key : null}
+                requestActiveToken={railRequest?.phase === 3 ? railRequest.token : null}
+                onActiveFieldKeyChange={setCurrentActiveFieldKey}
               />
 
               <div style={{ marginTop: "8px" }}>
@@ -1161,6 +1242,9 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                     updateStructured("observations", obsData, fieldKey, value, qKey);
                   }
                 }}
+                requestedActiveFieldKey={railRequest?.phase === 4 ? railRequest.key : null}
+                requestActiveToken={railRequest?.phase === 4 ? railRequest.token : null}
+                onActiveFieldKeyChange={setCurrentActiveFieldKey}
               />
 
               <div style={{ marginTop: "8px" }}>

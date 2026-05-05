@@ -121,8 +121,8 @@ export function buildStageEvidence(sermon, stage) {
 //      position. Below this, every gate fails.
 //   2. SFDI per-boundary thresholds: stricter requirements at specific
 //      sub-phase boundaries — load-bearing fields must be filled (or N/A).
-//      The Observe → Interpret threshold ships in B1.4 (Field 8 + Field 9);
-//      the Field 4 composite extends it once B1.5 wires Field 4's three
+//      The Observe → Interpret threshold ships in B1.4 (Field 7 + Field 8);
+//      the Field 3 composite extends it once B1.5 wires Field 3's three
 //      structured-exercise questions. Other phase boundaries remain on the
 //      baseline until SFDI's per-phase walks are wired in B2/B3/B4.
 //
@@ -140,7 +140,7 @@ function isQuestionAnswered(data, fieldKey, questionKey) {
   return !!flattenAnswerValue(getQuestionAnswer(data, fieldKey, questionKey));
 }
 
-// Field 4 composite-gate helpers (B1.5). Inlined here rather than imported
+// Field 3 composite-gate helpers (B1.5). Inlined here rather than imported
 // from ParaphraseBlocks.jsx to keep the util free of UI-layer dependencies.
 
 // True if the canvas value carries at least one main sentence (depth=0) that
@@ -208,10 +208,10 @@ function hasOneCompleteThoughtUnit(rows) {
   return false;
 }
 
-// Field 4 composite gate. Returns null when satisfied or a pastor-facing
+// Field 3 composite gate. Returns null when satisfied or a pastor-facing
 // reason string when not. SFDI N/A escape valve: a question marked N/A counts
 // as satisfied (the pastor may declare the sub-shape inapplicable).
-function checkField4Composite(data) {
+function checkField3Composite(data) {
   const fieldKey = "divisions";
 
   // Q1 — sentence_layout (canvas).
@@ -243,20 +243,20 @@ function checkField4Composite(data) {
   return null;
 }
 
-// Field 7 (Interpretation Synthesis) composite gate for the Interpret →
+// Field 8 (Interpretation Synthesis) composite gate for the Interpret →
 // Redemptive Thread boundary (B2.2). Q1 satisfied when every thought-unit row
 // in `observations.divisions.thought_units` has a non-empty `meaning` column.
 // Q2 satisfied when `interpretation.interpretation_synthesis.meaning_whole`
 // is non-empty. The thought-unit array is the canonical cross-phase artifact;
-// per SFDI Phase 2 Field 7 the Interpretation Synthesis cannot be N/A — it's
+// per SFDI Phase 2 Field 8 the Interpretation Synthesis cannot be N/A — it's
 // the named outcome — so no escape valve at the field level.
-function checkField7Composite(sermon) {
+function checkField8Composite(sermon) {
   const obsData = parseStructuredField(sermon?.observations);
   const intData = parseStructuredField(sermon?.interpretation);
 
   const thoughtUnits = obsData?.divisions?.thought_units?.value;
   if (!Array.isArray(thoughtUnits) || thoughtUnits.length === 0) {
-    return "Name at least one thought unit in Observe Field 4 before advancing.";
+    return "Name at least one thought unit in Observe Field 3 before advancing.";
   }
   const allHaveMeaning = thoughtUnits.every(
     (row) => row && typeof row.meaning === "string" && row.meaning.trim()
@@ -285,7 +285,7 @@ function checkPhase4Field4Composite(sermon) {
 
   const thoughtUnits = obsData?.divisions?.thought_units?.value;
   if (!Array.isArray(thoughtUnits) || thoughtUnits.length === 0) {
-    return "Name at least one thought unit in Observe Field 4 before advancing.";
+    return "Name at least one thought unit in Observe Field 3 before advancing.";
   }
   const allHaveImplication = thoughtUnits.every(
     (row) => row && typeof row.implication === "string" && row.implication.trim()
@@ -412,7 +412,7 @@ function checkField5Composite(sermon) {
 
   const thoughtUnits = obsData?.divisions?.thought_units?.value;
   if (!Array.isArray(thoughtUnits) || thoughtUnits.length === 0) {
-    return "Name at least one thought unit in Observe Field 4 before advancing.";
+    return "Name at least one thought unit in Observe Field 3 before advancing.";
   }
   const allHaveChristConnection = thoughtUnits.every(
     (row) =>
@@ -472,19 +472,19 @@ function checkInterpretToRedemptiveThreshold(sermon) {
     };
   }
 
-  const f7Reason = checkField7Composite(sermon);
+  const f8Reason = checkField8Composite(sermon);
   const gates = [
     {
-      key: "field_7_interpretation_synthesis",
+      key: "field_8_interpretation_synthesis",
       label: "Interpretation Synthesis",
-      met: !f7Reason,
-      reason: f7Reason || undefined,
+      met: !f8Reason,
+      reason: f8Reason || undefined,
     },
   ];
 
   return {
     gates,
-    firstReason: f7Reason,
+    firstReason: f8Reason,
   };
 }
 
@@ -496,7 +496,7 @@ function checkInterpretToRedemptiveThreshold(sermon) {
 //   }
 // The disabled-Continue UI reads `firstReason` for the legacy single-line
 // hint and `gates` for the hover-checklist (B1.6). Per SFDI, three gates:
-// Field 4 (composite), Field 8 (Obvious Point), Field 9 (Possible Implications).
+// Field 3 (composite), Field 7 (Obvious Point), Field 8 (Possible Implications).
 // SFDI N/A escape valve preserved per question.
 function checkObserveToInterpretThreshold(sermon) {
   const data = parseStructuredField(sermon?.observations);
@@ -509,34 +509,34 @@ function checkObserveToInterpretThreshold(sermon) {
 
   const gates = [];
 
-  // Field 4 — Divisions / Thought Units composite (B1.5).
-  const f4Reason = checkField4Composite(data);
+  // Field 3 — Divisions / Thought Units composite (B1.5).
+  const f3Reason = checkField3Composite(data);
   gates.push({
-    key: "field_4_divisions",
+    key: "field_3_divisions",
     label: "Divisions / Thought Units",
-    met: !f4Reason,
-    reason: f4Reason || undefined,
+    met: !f3Reason,
+    reason: f3Reason || undefined,
   });
 
-  // Field 8 — Obvious Point. Single primary question; non-empty or N/A.
-  const f8Met = isQuestionAnswered(data, "obvious_point", DEFAULT_QUESTION_KEY);
+  // Field 7 — Obvious Point. Single primary question; non-empty or N/A.
+  const f7Met = isQuestionAnswered(data, "obvious_point", DEFAULT_QUESTION_KEY);
   gates.push({
-    key: "field_8_obvious_point",
+    key: "field_7_obvious_point",
     label: "Obvious Point",
-    met: f8Met,
-    reason: f8Met ? undefined : "State the Obvious Point before advancing.",
+    met: f7Met,
+    reason: f7Met ? undefined : "State the Obvious Point before advancing.",
   });
 
-  // Field 9 — Possible Implications. Both questions (pressing,
+  // Field 8 — Possible Implications. Both questions (pressing,
   // hard_and_hopeful) non-empty or N/A.
-  const f9Met =
+  const f8Met =
     isQuestionAnswered(data, "applications", "pressing") &&
     isQuestionAnswered(data, "applications", "hard_and_hopeful");
   gates.push({
-    key: "field_9_possible_implications",
+    key: "field_8_possible_implications",
     label: "Possible Implications",
-    met: f9Met,
-    reason: f9Met ? undefined : "Answer the Possible Implications questions before advancing.",
+    met: f8Met,
+    reason: f8Met ? undefined : "Answer the Possible Implications questions before advancing.",
   });
 
   const firstFailing = gates.find((g) => !g.met);

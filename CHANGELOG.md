@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-05-05 — Sample sermon Phase 1 gate fix + gate-key SFDI renumber
+
+- `tourData.js` paraphrases: IDs corrected to `ms-0`..`ms-5` with six entries so Field 3 Q2 composite gate passes against the six canvas main sentences.
+- `load-tour-sermon` handler now delete-then-insert (always fresh) so sample-sermon updates take effect on each click; auto-sweeps stale `tour-sotm-*` rows from the prior mock.
+- Gate keys renumbered to current SFDI: `field_4_divisions` → `field_3_divisions`, `field_8_obvious_point` → `field_7_obvious_point`, `field_9_possible_implications` → `field_8_possible_implications`, `field_7_interpretation_synthesis` → `field_8_interpretation_synthesis`.
+- Internal function/variable names + inline comments + test constants/titles aligned (`checkField4/7Composite` → `checkField3/8Composite`, `FIELD_4_*` → `FIELD_3_*`); 374 vitest green.
+
+---
+
 ## 2026-05-05 — Explore SermonForge tile on Dashboard
 
 - New bottom-right `Explore SermonForge` tile (eyebrow `Look around`) holds the orientation paths on their own surface alongside Resume work; the hero "Build a sermon" tile is now single-action.

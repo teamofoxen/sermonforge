@@ -24,11 +24,11 @@ import {
 //
 // Note: uses React.createElement instead of JSX (rolldown SSR transform).
 
-// SFDI Field 4 (Divisions / Thought Units) composite-gate substrate, used by
+// SFDI Field 3 (Divisions / Thought Units) composite-gate substrate, used by
 // the "filled Observe" fixtures below. Minimum that satisfies the B1.5 gate:
 // canvas with one main + one modifier, one paraphrase, one complete thought-
 // unit row.
-const FIELD_4_MINIMAL_FILLED = {
+const FIELD_3_MINIMAL_FILLED = {
   sentence_layout: {
     value: [
       { text: "There is now no condemnation",       depth: 0, kind: "main" },
@@ -51,8 +51,8 @@ const FIELD_4_MINIMAL_FILLED = {
 };
 
 // All-N/A escape valve form, used by tests that target a specific gate other
-// than Field 4 and don't want to populate the canvas substrate.
-const FIELD_4_ALL_NA = {
+// than Field 3 and don't want to populate the canvas substrate.
+const FIELD_3_ALL_NA = {
   sentence_layout: { value: "", na: true },
   paraphrases:     { value: "", na: true },
   thought_units:   { value: "", na: true },
@@ -100,8 +100,8 @@ describe("SPRD Q3 hard-gate UX: Continue button disabled when source empty", () 
   });
 
   it("Continue is enabled at Observe when observations has content; no hint rendered", async () => {
-    // SFDI Observe → Interpret threshold (B1.4 + B1.5): Field 4 composite,
-    // Field 8 (obvious_point), and Field 9 (applications) must be filled in
+    // SFDI Observe → Interpret threshold (B1.4 + B1.5): Field 3 composite,
+    // Field 7 (obvious_point), and Field 8 (applications) must be filled in
     // addition to the empty-evidence baseline. Multi-question fields use the
     // explicit envelope shape.
     const sermonId = insertSermonRow({
@@ -111,7 +111,7 @@ describe("SPRD Q3 hard-gate UX: Continue button disabled when source empty", () 
       current_sub_phase: SUB_PHASE.Observe,
       observations: JSON.stringify({
         context: "Romans 8:1 sets the believers in Christ Jesus.",
-        divisions: FIELD_4_MINIMAL_FILLED,
+        divisions: FIELD_3_MINIMAL_FILLED,
         obvious_point: "Believers are now in Christ Jesus, no longer condemned.",
         applications: {
           pressing:         { value: "The room needs to hear that condemnation is gone.", na: false },
@@ -162,7 +162,7 @@ describe("SPRD Q3 hard-gate UX: evaluateAdvance unit test", () => {
         id: "test",
         observations: JSON.stringify({
           context: "some content",
-          divisions: FIELD_4_MINIMAL_FILLED,
+          divisions: FIELD_3_MINIMAL_FILLED,
           obvious_point: "Plain-sense point.",
           applications: {
             pressing:         { value: "Pressing.",  na: false },
@@ -178,14 +178,14 @@ describe("SPRD Q3 hard-gate UX: evaluateAdvance unit test", () => {
 
   // SFDI Observe → Interpret threshold (B1.4 + B1.5) — load-bearing field gates
   // beyond the empty-evidence baseline.
-  it("returns ok=false at sub-phase 1 when Field 8 (Obvious Point) is empty", async () => {
+  it("returns ok=false at sub-phase 1 when Field 7 (Obvious Point) is empty", async () => {
     const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
     const result = evaluateAdvance(
       {
         id: "test",
         observations: JSON.stringify({
           context: "some content",
-          divisions: FIELD_4_ALL_NA,
+          divisions: FIELD_3_ALL_NA,
           // obvious_point intentionally missing
           applications: {
             pressing:         { value: "Pressing.",  na: false },
@@ -200,14 +200,14 @@ describe("SPRD Q3 hard-gate UX: evaluateAdvance unit test", () => {
     expect(result.reason).toMatch(/Obvious Point/i);
   });
 
-  it("returns ok=false at sub-phase 1 when Field 9 (Possible Implications) has only one question filled", async () => {
+  it("returns ok=false at sub-phase 1 when Field 8 (Possible Implications) has only one question filled", async () => {
     const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
     const result = evaluateAdvance(
       {
         id: "test",
         observations: JSON.stringify({
           context: "some content",
-          divisions: FIELD_4_ALL_NA,
+          divisions: FIELD_3_ALL_NA,
           obvious_point: "Plain-sense point.",
           applications: {
             pressing: { value: "Pressing.", na: false },
@@ -222,14 +222,14 @@ describe("SPRD Q3 hard-gate UX: evaluateAdvance unit test", () => {
     expect(result.reason).toMatch(/Possible Implications/i);
   });
 
-  it("treats N/A on Field 8 as satisfied", async () => {
+  it("treats N/A on Field 7 as satisfied", async () => {
     const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
     const result = evaluateAdvance(
       {
         id: "test",
         observations: JSON.stringify({
           context: "some content",
-          divisions: FIELD_4_ALL_NA,
+          divisions: FIELD_3_ALL_NA,
           obvious_point: { primary: { value: "", na: true } },
           applications: {
             pressing:         { value: "Pressing.",  na: false },
@@ -243,14 +243,14 @@ describe("SPRD Q3 hard-gate UX: evaluateAdvance unit test", () => {
     expect(result.ok).toBe(true);
   });
 
-  it("treats N/A on both Field 9 questions as satisfied", async () => {
+  it("treats N/A on both Field 8 questions as satisfied", async () => {
     const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
     const result = evaluateAdvance(
       {
         id: "test",
         observations: JSON.stringify({
           context: "some content",
-          divisions: FIELD_4_ALL_NA,
+          divisions: FIELD_3_ALL_NA,
           obvious_point: "Plain-sense point.",
           applications: {
             pressing:         { value: "", na: true },
@@ -264,9 +264,9 @@ describe("SPRD Q3 hard-gate UX: evaluateAdvance unit test", () => {
     expect(result.ok).toBe(true);
   });
 
-  // SFDI Field 4 composite gate (B1.5) — Q1 canvas + Q2 paraphrases + Q3
+  // SFDI Field 3 composite gate (B1.5) — Q1 canvas + Q2 paraphrases + Q3
   // thought-unit table. All three required (or N/A) to advance.
-  it("returns ok=false at sub-phase 1 when Field 4 Q1 canvas has no main+modifier pair", async () => {
+  it("returns ok=false at sub-phase 1 when Field 3 Q1 canvas has no main+modifier pair", async () => {
     const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
     const result = evaluateAdvance(
       {
@@ -296,7 +296,7 @@ describe("SPRD Q3 hard-gate UX: evaluateAdvance unit test", () => {
     expect(result.reason).toMatch(/Lay out the passage/i);
   });
 
-  it("returns ok=false at sub-phase 1 when Field 4 Q2 has a missing paraphrase for an existing main sentence", async () => {
+  it("returns ok=false at sub-phase 1 when Field 3 Q2 has a missing paraphrase for an existing main sentence", async () => {
     const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
     const result = evaluateAdvance(
       {
@@ -330,7 +330,7 @@ describe("SPRD Q3 hard-gate UX: evaluateAdvance unit test", () => {
     expect(result.reason).toMatch(/Rewrite each main sentence/i);
   });
 
-  it("returns ok=false at sub-phase 1 when Field 4 Q3 has no complete row", async () => {
+  it("returns ok=false at sub-phase 1 when Field 3 Q3 has no complete row", async () => {
     const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
     const result = evaluateAdvance(
       {
@@ -363,14 +363,14 @@ describe("SPRD Q3 hard-gate UX: evaluateAdvance unit test", () => {
     expect(result.reason).toMatch(/thought unit/i);
   });
 
-  it("Field 4 Q3 with at least one complete row is sufficient (Signal allowed empty for final unit)", async () => {
+  it("Field 3 Q3 with at least one complete row is sufficient (Signal allowed empty for final unit)", async () => {
     const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
     const result = evaluateAdvance(
       {
         id: "test",
         observations: JSON.stringify({
           context: "some content",
-          divisions: FIELD_4_MINIMAL_FILLED,  // signal is "" in the substrate; still satisfies
+          divisions: FIELD_3_MINIMAL_FILLED,  // signal is "" in the substrate; still satisfies
           obvious_point: "Plain-sense point.",
           applications: {
             pressing:         { value: "Pressing.",  na: false },
@@ -384,14 +384,14 @@ describe("SPRD Q3 hard-gate UX: evaluateAdvance unit test", () => {
     expect(result.ok).toBe(true);
   });
 
-  it("Field 4 all-N/A satisfies the composite (escape valve)", async () => {
+  it("Field 3 all-N/A satisfies the composite (escape valve)", async () => {
     const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
     const result = evaluateAdvance(
       {
         id: "test",
         observations: JSON.stringify({
           context: "some content",
-          divisions: FIELD_4_ALL_NA,
+          divisions: FIELD_3_ALL_NA,
           obvious_point: "Plain-sense point.",
           applications: {
             pressing:         { value: "Pressing.",  na: false },
@@ -447,7 +447,7 @@ describe("SPRD A1.2 / B1.6: evaluateAdvance returns structured per-gate state at
         id: "test",
         observations: JSON.stringify({
           context: "some content",
-          divisions: FIELD_4_ALL_NA,        // met
+          divisions: FIELD_3_ALL_NA,        // met
           // obvious_point intentionally missing → unmet
           applications: {
             pressing:         { value: "Pressing.",  na: false },
@@ -463,18 +463,18 @@ describe("SPRD A1.2 / B1.6: evaluateAdvance returns structured per-gate state at
     expect(result.gates.length).toBe(3);
     const keys = result.gates.map((g: { key: string }) => g.key);
     expect(keys).toEqual([
-      "field_4_divisions",
-      "field_8_obvious_point",
-      "field_9_possible_implications",
+      "field_3_divisions",
+      "field_7_obvious_point",
+      "field_8_possible_implications",
     ]);
-    const f4 = result.gates.find((g: { key: string }) => g.key === "field_4_divisions");
-    const f8 = result.gates.find((g: { key: string }) => g.key === "field_8_obvious_point");
-    const f9 = result.gates.find((g: { key: string }) => g.key === "field_9_possible_implications");
-    expect(f4.met).toBe(true);
-    expect(f8.met).toBe(false);
-    expect(f8.reason).toMatch(/Obvious Point/i);
-    expect(f9.met).toBe(true);
-    // First failing reason is Field 8's
+    const f3 = result.gates.find((g: { key: string }) => g.key === "field_3_divisions");
+    const f7 = result.gates.find((g: { key: string }) => g.key === "field_7_obvious_point");
+    const f8 = result.gates.find((g: { key: string }) => g.key === "field_8_possible_implications");
+    expect(f3.met).toBe(true);
+    expect(f7.met).toBe(false);
+    expect(f7.reason).toMatch(/Obvious Point/i);
+    expect(f8.met).toBe(true);
+    // First failing reason is Field 7's
     expect(result.reason).toMatch(/Obvious Point/i);
   });
 
@@ -485,7 +485,7 @@ describe("SPRD A1.2 / B1.6: evaluateAdvance returns structured per-gate state at
         id: "test",
         observations: JSON.stringify({
           context: "some content",
-          divisions: FIELD_4_MINIMAL_FILLED,
+          divisions: FIELD_3_MINIMAL_FILLED,
           obvious_point: "Plain-sense point.",
           applications: {
             pressing:         { value: "Pressing.",  na: false },
@@ -501,7 +501,7 @@ describe("SPRD A1.2 / B1.6: evaluateAdvance returns structured per-gate state at
     expect(result.gates.every((g: { met: boolean }) => g.met)).toBe(true);
   });
 
-  it("Field 4's gate carries its sub-question reason when the composite is unmet", async () => {
+  it("Field 3's gate carries its sub-question reason when the composite is unmet", async () => {
     const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
     const result: any = evaluateAdvance(
       {
@@ -523,9 +523,9 @@ describe("SPRD A1.2 / B1.6: evaluateAdvance returns structured per-gate state at
       "sub_phase",
       1,
     );
-    const f4 = result.gates.find((g: { key: string }) => g.key === "field_4_divisions");
-    expect(f4.met).toBe(false);
-    expect(f4.reason).toMatch(/Lay out the passage/i);
+    const f3 = result.gates.find((g: { key: string }) => g.key === "field_3_divisions");
+    expect(f3.met).toBe(false);
+    expect(f3.reason).toMatch(/Lay out the passage/i);
   });
 
   it("empty-evidence baseline returns no `gates` (single-gate degenerate path)", async () => {
@@ -543,10 +543,10 @@ describe("SPRD A1.2 / B1.6: evaluateAdvance returns structured per-gate state at
   });
 });
 
-// SPRD B2.2 — Interpret → Redemptive Thread threshold. Field 7 (Interpretation
+// SPRD B2.2 — Interpret → Redemptive Thread threshold. Field 8 (Interpretation
 // Synthesis) composite: every thought unit in observations.divisions.thought_units
 // has a non-empty `meaning` column AND meaning_whole paragraph is non-empty.
-describe("SPRD B2.2: Interpret → Redemptive Thread threshold (Field 7 composite)", () => {
+describe("SPRD B2.2: Interpret → Redemptive Thread threshold (Field 8 composite)", () => {
   const FILLED_THOUGHT_UNITS_NO_MEANING = {
     sentence_layout: {
       value: [
@@ -605,7 +605,7 @@ describe("SPRD B2.2: Interpret → Redemptive Thread threshold (Field 7 composit
     expect(result.ok).toBe(false);
     expect(result.reason).toMatch(/Meaning entry/i);
     expect(result.gates).toHaveLength(1);
-    expect(result.gates[0].key).toBe("field_7_interpretation_synthesis");
+    expect(result.gates[0].key).toBe("field_8_interpretation_synthesis");
     expect(result.gates[0].met).toBe(false);
   });
 
@@ -616,7 +616,7 @@ describe("SPRD B2.2: Interpret → Redemptive Thread threshold (Field 7 composit
         id: "test",
         observations: JSON.stringify({ divisions: FILLED_THOUGHT_UNITS_WITH_MEANING }),
         // Interpret has some Phase 2 content so the empty-evidence baseline
-        // passes; the Field 7 composite gate is what should fire.
+        // passes; the Field 8 composite gate is what should fire.
         interpretation: JSON.stringify({
           recurring_ideas: { primary: { value: "Death, life, mercy.", na: false } },
           interpretation_synthesis: {

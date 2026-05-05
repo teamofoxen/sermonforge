@@ -129,9 +129,12 @@ const sermon = {
       },
       paraphrases: {
         value: [
-          { main_sentence_id: "s1", paraphrase: "Because God has already declared us righteous through faith, we now stand in real peace with him — and the road we took to get here was Jesus." },
-          { main_sentence_id: "s2", paraphrase: "Jesus is also the one who has brought us into this open standing of grace, where we are now firmly planted, and where the only fitting response is to celebrate the future glory God has promised." },
-          { main_sentence_id: "s3", paraphrase: "And not only that — even our sufferings become reasons to celebrate, because we know suffering is doing real work in us: it builds endurance, endurance shapes character, and character grows hope — a hope that will never make us look like fools, because the love of God has already been poured into us by the Holy Spirit he gave us." },
+          { main_sentence_id: "ms-0", paraphrase: "Because God has already declared us righteous through faith," },
+          { main_sentence_id: "ms-1", paraphrase: "we now stand in real peace with him — and that peace was secured for us by Jesus." },
+          { main_sentence_id: "ms-2", paraphrase: "Through Jesus we have also been brought into this open standing of grace, where we are now firmly planted." },
+          { main_sentence_id: "ms-3", paraphrase: "And the only fitting response is to celebrate the glory God has promised." },
+          { main_sentence_id: "ms-4", paraphrase: "Not only that, but even our sufferings become reasons to celebrate, because we know suffering produces endurance, endurance produces character, and character produces hope." },
+          { main_sentence_id: "ms-5", paraphrase: "And this hope will never shame us, because God's love has already been poured into our hearts by the Holy Spirit he gave us." },
         ],
         na: false,
       },
