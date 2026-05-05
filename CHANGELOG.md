@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-04 — sprd c2: throughline rail + scripture panel + step strip + tunnel-mode prototype held
+
+- New `ThroughlineRail` (vertical, sub-phase nodes, named-outcome callouts via `evaluateAdvance`) + `ScripturePanel` (280px, ESV via `fetchPassage`) + inline `StudyStepStrip` (Option α — quiet centered text, dot separators, gold-only active) wrap StudyTab Step 1 in a three-column shell.
+- Sermon Shape card, sub-phase tab row, step pills, and sub-phase intent paragraphs retired from StudyTab; rail + step strip replace them.
+- `ScripturePanel` shape-mismatch fix — reads `result.esv` string, parses `[N]` verse markers into superscripts, handles `esvPending` and `esvError` states.
+- `browserPreviewMock` added to `src/core/spine.ts` returns mock sermon shapes for browser-only Vite preview rendering; production path unchanged.
+- Tunnel-mode prototype (linear-reveal UX with Begin screen + horizontal sub-phase chips + hidden future) designed, built, and held; design captured at `docs/PROPOSALS/tunnel-mode.md` for future consideration.
+
+---
+
 ## 2026-05-04 — post-SPRD doc-drift sweep + spip/sria refreshed to actual shipped state
 
 - `/sweep-the-multiverse` flagged a Surface #1 WARN for stale PC vocabulary in CORE.md and three system docs; this fix closes it.

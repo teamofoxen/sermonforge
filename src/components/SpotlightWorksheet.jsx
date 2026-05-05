@@ -360,6 +360,7 @@ function MultiQuestionActive({
   isLastField,
   crossPhaseRead,
   crossPhaseWrite,
+  hideFutureQuestions = false,
 }) {
   const initialActiveQ = useMemo(
     () => firstIncompleteQuestionKey(questions, data, field.key, crossPhaseRead),
@@ -425,6 +426,11 @@ function MultiQuestionActive({
       <label className="worksheet-field-label">{field.label}</label>
       <ol className="worksheet-questions">
         {questions.map((q, idx) => {
+          // Tunnel-mode: hide future questions inside a field. Past +
+          // active stay visible (the existing collapsed/spotlit logic
+          // below renders them); future are not rendered at all.
+          if (hideFutureQuestions && idx > safeActiveIdx) return null;
+
           if (idx === safeActiveIdx) {
             const hasRefPanel = !!q.referencePanel;
             const activeContent = (
@@ -655,6 +661,7 @@ export function SpotlightField({
   onDismissOverview,
   crossPhaseRead,
   crossPhaseWrite,
+  hideFutureQuestions = false,
 }) {
   const questions = fieldQuestions(field);
 
@@ -694,6 +701,7 @@ export function SpotlightField({
         isLastField={isLast}
         crossPhaseRead={crossPhaseRead}
         crossPhaseWrite={crossPhaseWrite}
+        hideFutureQuestions={hideFutureQuestions}
       />
     );
   }
@@ -724,6 +732,7 @@ export default function SpotlightWorksheet({
   sermonId,
   crossPhaseRead,
   crossPhaseWrite,
+  hideFutureQuestions = false,
 }) {
   const initialActive = useMemo(() => {
     const firstIncomplete = fields.find((f) => {
@@ -824,6 +833,7 @@ export default function SpotlightWorksheet({
           onDismissOverview={() => markOverviewSeen(f.key)}
           crossPhaseRead={crossPhaseRead}
           crossPhaseWrite={crossPhaseWrite}
+          hideFutureQuestions={hideFutureQuestions}
         />
       ))}
     </div>

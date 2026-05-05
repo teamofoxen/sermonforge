@@ -1,0 +1,82 @@
+/* ScripturePanel — pinned right-column passage view for Study.
+   SPRD C2 (2026-05-04). All colors from existing global.css tokens. */
+
+.scripture-panel {
+  width: 280px;
+  flex-shrink: 0;
+  height: 100%;
+  background: var(--parchment);
+  overflow-y: auto;
+  padding: 18px 20px 40px;
+  font-family: 'Crimson Pro', Georgia, serif;
+  border-left: 1px solid var(--parchment-deep);
+}
+
+.scripture-panel::-webkit-scrollbar { width: 4px; }
+.scripture-panel::-webkit-scrollbar-track { background: transparent; }
+.scripture-panel::-webkit-scrollbar-thumb { background: var(--parchment-deep); border-radius: 2px; }
+
+.scripture-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--parchment-deep);
+  margin-bottom: 16px;
+  gap: 8px;
+}
+.scripture-ref {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.scripture-translation {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  color: var(--ink-ghost);
+  flex-shrink: 0;
+}
+
+.scripture-body {
+  font-family: 'Crimson Pro', serif;
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--ink);
+}
+
+.scripture-status {
+  font-style: italic;
+  color: var(--ink-ghost);
+  font-size: 13px;
+}
+.scripture-error { color: var(--crimson); }
+.scripture-pending { color: var(--ink-soft); }
+
+.scripture-prose {
+  text-align: justify;
+  hyphens: auto;
+}
+
+.scripture-segment {
+  display: inline;
+}
+
+.scripture-verse-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  color: var(--gold);
+  vertical-align: super;
+  margin-right: 3px;
+  margin-left: 2px;
+  line-height: 1;
+  font-weight: 500;
+}
+.scripture-segment:first-child .scripture-verse-num { margin-left: 0; }

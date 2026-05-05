@@ -36,7 +36,7 @@
 
 import {
   Stage, Step, SubPhase, Sermon, Series,
-  STAGE_SEQUENCE, STEP_CANONICAL_SEQUENCE, SUB_PHASE_CANONICAL_SEQUENCE,
+  STAGE, STAGE_SEQUENCE, STEP_CANONICAL_SEQUENCE, SUB_PHASE_CANONICAL_SEQUENCE,
   MUTATION_KIND, STRUCTURED_FIELDS,
   OutlineUpdate, FunctionalElementUpdate,
   ObservationUpdate, InterpretationUpdate,
@@ -66,13 +66,70 @@ const READ_OPS_RETURNING_ARRAY: ReadonlySet<string> = new Set([
   "get-sections-by-series",
 ]);
 
+// Browser-preview mock — returns enough shape to let the workspace render
+// when there's no Electron preload (Vite-only). Real data requires Electron.
+// SPRD C2 (2026-05-04): added create-sermon + get-sermon paths so the
+// throughline rail can be visually verified end-to-end in the browser preview.
+const PREVIEW_MOCK_SERMON_ID = "preview-mock-sermon";
+function browserPreviewMock(op: string, payload?: unknown): unknown {
+  if (op === "create-sermon") {
+    return { id: PREVIEW_MOCK_SERMON_ID };
+  }
+  if (op === "create-series") {
+    return { id: "preview-mock-series" };
+  }
+  if (op === "get-sermon") {
+    return {
+      id: PREVIEW_MOCK_SERMON_ID,
+      title: "Throughline Preview",
+      passage: "Philippians 3:1-11",
+      date: null,
+      preacher: null,
+      stage: STAGE.Study,
+      mpt: "",
+      mps: "",
+      observations: "",
+      interpretation: "",
+      redemptive_thread: "",
+      implications: "",
+      outline: "",
+      manuscript: "",
+      delivery_notes: "",
+      timing_notes: "",
+      post_sermon: "",
+      functional_elements: "",
+      checklist: "",
+      series_id: null,
+      section_id: null,
+      is_one_off: 1,
+      topic_theme: "",
+      audience_assumptions: "",
+      background_noise: "",
+      study_guide_note: "",
+      preaching_blocks: "",
+      manuscript_delivery: "",
+      last_tune_up: "",
+      sermon_frame: "",
+      current_stage: STAGE.Study,
+      current_step: "exegesis",
+      current_sub_phase: "observe",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      position: { stage: STAGE.Study, step: "exegesis", sub_phase: "observe" },
+      parentContext: null,
+      legacy: false,
+    };
+  }
+  return null;
+}
+
 async function call<T>(op: string, payload?: unknown): Promise<T> {
   const bridge = getBridge();
   if (!bridge) {
     // Browser-preview fallback: no Electron preload. Return safe defaults so
     // UI-only verification still renders. Real data requires the Electron shell.
     if (READ_OPS_RETURNING_ARRAY.has(op)) return [] as unknown as T;
-    return null as unknown as T;
+    return browserPreviewMock(op, payload) as T;
   }
   const raw = await bridge(op, payload);
   // Mutation ops return IpcResult envelopes; reads return raw values.

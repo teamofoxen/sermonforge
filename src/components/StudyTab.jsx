@@ -13,9 +13,14 @@ import {
   getPrimaryAnswer, setPrimaryAnswer, setQuestionAnswer, hasAnyAnswer,
   isQuestionNA, setQuestionNA, DEFAULT_QUESTION_KEY,
   flattenToText,
+  fieldQuestions, getQuestionAnswer, flattenAnswerValue,
 } from "../utils/studyFields";
 import SpotlightWorksheet from "./SpotlightWorksheet";
 import AdvanceGateChecklist from "./AdvanceGateChecklist";
+import ThroughlineRail from "./ThroughlineRail";
+import ScripturePanel from "./ScripturePanel";
+// Tunnel-mode prototype (TunnelView, SubPhaseTrail) was reverted 2026-05-04;
+// design captured at docs/PROPOSALS/tunnel-mode.md for future consideration.
 import OutlineBuilder from "./OutlineBuilder";
 import InlineAIResponse from "./InlineAIResponse";
 import ProposalPanel from "./ProposalPanel";
@@ -219,6 +224,127 @@ function FuncElem({ pointText, pointId, displayIndex, funcData, onUpdate, onUpda
 // in B1.1 (2026-05-04) and gained multi-question rendering support. The new
 // onChange / onToggleNA contracts thread qKey explicitly so multi-question
 // fields can write to the right envelope.
+
+// ── ThroughlineRail data derivation (SPRD C2, 2026-05-04) ──────────────────
+// Builds the subPhases prop for ThroughlineRail from the four phase columns.
+// Field state: empty (no questions answered) → in-progress (some) → complete
+// (all answered or NA) → active (currently spotlighted, approximated as the
+// first incomplete field). Named-outcome "done" uses evaluateAdvance — the
+// same per-boundary gate that unblocks Continue.
+
+const SUB_PHASE_IDS = ["observe", "interpret", "redemptive", "implications"];
+
+// Study step navigation strip — sits below stage tabs in the workspace top
+// chrome (Option A). Pulled out of the rail so the throughline is the rail's
+// only job and travels parallel with field advancement.
+const STUDY_STEPS = [
+  { id: 1, label: "Exegesis" },
+  { id: 2, label: "MPT / MPS" },
+  { id: 3, label: "Outline" },
+  { id: 4, label: "Functional Elements" },
+];
+
+function StudyStepStrip({ activeStep, onStepChange }) {
+  return (
+    <div className="study-step-strip" role="tablist" aria-label="Study step">
+      {STUDY_STEPS.map((s) => (
+        <button
+          key={s.id}
+          type="button"
+          role="tab"
+          aria-selected={activeStep === s.id}
+          className={`study-step ${activeStep === s.id ? "active" : ""}`}
+          onClick={() => onStepChange(s.id)}
+        >
+          <span className="study-step-num">{s.id}</span>
+          <span className="study-step-label">{s.label}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function firstIncompleteFieldKey(defs, data) {
+  for (const def of defs) {
+    const qs = fieldQuestions(def);
+    const allDone = qs.every((q) =>
+      isQuestionNA(data, def.key, q.key) ||
+      !!flattenAnswerValue(getQuestionAnswer(data, def.key, q.key))
+    );
+    if (!allDone) return def.key;
+  }
+  return defs[0]?.key ?? null;
+}
+
+function deriveFieldNodes(defs, data, activeFieldKey) {
+  return defs.map((def) => {
+    const qs = fieldQuestions(def);
+    const total = qs.length;
+    const answered = qs.filter((q) =>
+      isQuestionNA(data, def.key, q.key) ||
+      !!flattenAnswerValue(getQuestionAnswer(data, def.key, q.key))
+    ).length;
+
+    let state;
+    // "current" rather than "active" because the canonical-stage-name lint
+    // forbids raw "active" strings (it's a pre-Pilot-B sermon-status alias).
+    // Throughline node states: empty | in-progress | current | complete | na.
+    if (def.key === activeFieldKey) state = "current";
+    else if (answered === 0) state = "empty";
+    else if (answered === total) state = "complete";
+    else state = "in-progress";
+
+    let preview = "";
+    if (state === "in-progress") {
+      preview = `${answered} of ${total} questions answered.`;
+    } else if (state === "complete" || state === "current") {
+      for (const q of qs) {
+        const v = getQuestionAnswer(data, def.key, q.key);
+        const flat = flattenAnswerValue(v);
+        if (flat) {
+          preview = flat.length > 80 ? `${flat.slice(0, 80)}…` : flat;
+          break;
+        }
+      }
+    }
+
+    return { key: def.key, label: def.label, state, preview };
+  });
+}
+
+function buildRailSubPhases(sermon, obsData, intData, redData, impData, activeIdx) {
+  const phases = [
+    { id: "observe", label: "Observe",
+      named_outcome: "Observation Set",
+      prompt: "Observe the text — what it says before what it means.",
+      defs: OBSERVE_FIELDS, data: obsData, idx: 1 },
+    { id: "interpret", label: "Interpret",
+      named_outcome: "Interpretation Set",
+      prompt: "Find the meaning of the text. Move from observation to interpretation.",
+      defs: INTERPRET_FIELDS, data: intData, idx: 2 },
+    { id: "redemptive", label: "Redemptive Thread",
+      named_outcome: "Christ-Connection Statement",
+      prompt: "Find the redemptive features. How does this text point to or depend on Christ?",
+      defs: REDEMPTIVE_FIELDS, data: redData, idx: 3 },
+    { id: "implications", label: "Implications",
+      named_outcome: "Implications Synthesis",
+      prompt: "Concluding implications — how does this passage apply to us today?",
+      defs: IMPLICATIONS_FIELDS, data: impData, idx: 4 },
+  ];
+  return phases.map((p) => {
+    const isActive = p.idx === activeIdx;
+    const activeFieldKey = isActive ? firstIncompleteFieldKey(p.defs, p.data) : null;
+    const fields = deriveFieldNodes(p.defs, p.data, activeFieldKey);
+    let done = false;
+    try { done = !!evaluateAdvance(sermon, "sub_phase", p.idx)?.ok; } catch { /* defensive */ }
+    return {
+      id: p.id, label: p.label,
+      named_outcome: p.named_outcome,
+      prompt: p.prompt,
+      fields, done,
+    };
+  });
+}
 
 export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChange, onTabChange, onSummaryGenerated, onMovement }) {
   const { active: tourActive, desiredUi } = useTour();
@@ -824,29 +950,20 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
   const step2Sufficiency = evaluateAdvance(sermon, "step", 2);
   const step3Sufficiency = evaluateAdvance(sermon, "step", 3);
 
+  // SPRD C2 — vertical throughline rail data. Computed every render off the
+  // four parsed phase columns. Cheap (just iteration over the field defs).
+  const railSubPhases = buildRailSubPhases(sermon, obsData, intData, redData, impData, activeSubPhase);
+
   return (
-    <div className="study-stage-container">
-
-      {/* ── Step indicator ── */}
-      <div className="step-indicator" data-tour-id="study-step-indicator">
-        {STEP_LABELS.map((label, i) => {
-          const step = i + 1;
-          const status = step < activeStep ? "done" : step === activeStep ? "current" : "future";
-          return (
-            <button
-              key={step}
-              data-tour-id={`study-step-pill-${step}`}
-              className={`step-pill step-pill-${status}`}
-              onClick={() => jumpToStep(step)}
-            >
-              <span className="step-pill-num">{step}</span>
-              <span className="step-pill-label">{label}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      <SermonShapePreview sermon={sermon} outline={outline} funcData={funcData} />
+    <div className="study-tab-shell">
+      <StudyStepStrip activeStep={activeStep} onStepChange={jumpToStep} />
+      <div className="study-three-col">
+        <ThroughlineRail
+          subPhases={railSubPhases}
+          activeSubPhaseId={activeStep === 1 ? SUB_PHASE_IDS[activeSubPhase - 1] : null}
+        />
+        <div className="study-write-col">
+          <div className="study-write-inner">
 
       {advanceError && (
         <div
@@ -871,23 +988,6 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
       {/* ── Step 1: Exegesis ── */}
       {activeStep === 1 && (
         <div className="study-step-active">
-          <div className="subphase-indicator" data-tour-id="study-subphase-indicator">
-            {PHASE_LABELS.map((label, i) => {
-              const phase = i + 1;
-              const status = phase < activeSubPhase ? "done" : phase === activeSubPhase ? "current" : "future";
-              return (
-                <button
-                  key={phase}
-                  data-tour-id={`study-subphase-pill-${phase}`}
-                  className={`subphase-pill subphase-pill-${status}`}
-                  onClick={() => jumpToSubPhase(phase)}
-                >
-                  {phase < activeSubPhase && <span className="subphase-check">✓ </span>}
-                  {label}
-                </button>
-              );
-            })}
-          </div>
 
           {activeSubPhase === 2 && <SummaryBlock summaryKey="p2" {...summaryProps} />}
           {activeSubPhase === 3 && <SummaryBlock summaryKey="p3" {...summaryProps} />}
@@ -895,7 +995,6 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
 
           {activeSubPhase === 1 && (
             <div className="sub-phase-body" data-tour-id="phase-1-worksheet">
-              <p className="sub-phase-hint">Observe the text — what it says before what it means. Read and reread prayerfully.</p>
               <SpotlightWorksheet
                 fields={OBSERVE_FIELDS}
                 data={obsData}
@@ -934,7 +1033,6 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
 
           {activeSubPhase === 2 && (
             <div className="sub-phase-body" data-tour-id="phase-2-worksheet">
-              <p className="sub-phase-hint">Find the meaning of the text. Move from observation to interpretation.</p>
               <SpotlightWorksheet
                 fields={INTERPRET_FIELDS}
                 data={intData}
@@ -986,7 +1084,6 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
 
           {activeSubPhase === 3 && (
             <div className="sub-phase-body" data-tour-id="phase-3-worksheet">
-              <p className="sub-phase-hint">Find the redemptive features. How does this text point to or depend on Christ?</p>
               <SpotlightWorksheet
                 fields={REDEMPTIVE_FIELDS}
                 data={redData}
@@ -1042,8 +1139,6 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
 
           {activeSubPhase === 4 && (
             <div className="sub-phase-body" data-tour-id="phase-4-worksheet">
-              <p className="sub-phase-hint">Concluding implications — how does this passage apply to us today?</p>
-
               <SpotlightWorksheet
                 fields={IMPLICATIONS_FIELDS}
                 data={impData}
@@ -1629,6 +1724,10 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
         </div>
       )}
 
+          </div>
+        </div>
+        <ScripturePanel passage={sermon.passage} />
+      </div>
     </div>
   );
 }
