@@ -1596,16 +1596,16 @@ function validateAndCommit(op, payload) {
               observations, interpretation, redemptive_thread, implications,
               outline, functional_elements,
               manuscript, delivery_notes, timing_notes,
-              topic_theme, audience_assumptions, background_noise, study_guide_note,
+              study_guide_note, sermon_frame,
               current_stage, current_step, current_sub_phase
-            ) VALUES (?,?,0,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+            ) VALUES (?,?,0,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
             [
               sermon.id, sermon.series_id, sermon.title, sermon.passage, sermon.date, sermon.stage,
               sermon.mpt, sermon.mps,
               sermon.observations, sermon.interpretation, sermon.redemptive_thread, sermon.implications,
               sermon.outline, sermon.functional_elements,
               sermon.manuscript, sermon.delivery_notes, sermon.timing_notes,
-              sermon.topic_theme, sermon.audience_assumptions, sermon.background_noise, sermon.study_guide_note,
+              sermon.study_guide_note, sermon.sermon_frame,
               STAGE.Study, STEP.Exegesis, SUB_PHASE.Observe,
             ],
           );

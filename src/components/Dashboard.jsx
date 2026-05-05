@@ -3,8 +3,8 @@ import { loadTourSermon, getInProgressSermons, deleteSermon } from "../core/spin
 import { useTour } from "../contexts/TourContext";
 import { WORKSPACE_TOUR_STOPS } from "../tour/workspaceTourStops";
 import NewSermonModal from "./NewSermonModal";
-import DashboardHeader from "./DashboardHeader";
-import DashboardChurchHistory from "./DashboardChurchHistory";
+import DashboardVerseCarousel from "./DashboardVerseCarousel";
+import DashboardPreacherQuote from "./DashboardPreacherQuote";
 import PrimaryButton from "./primitives/PrimaryButton";
 import TextButton from "./primitives/TextButton";
 import DeleteButton from "./primitives/DeleteButton";
@@ -22,7 +22,7 @@ function ArrowRightIcon() {
 export default function Dashboard({ onOpenSermon, onNewSeries, onLeaveTour }) {
   const { start: startTour } = useTour();
   const [showNewModal, setShowNewModal] = useState(false);
-  const [tourLoading, setTourLoading] = useState(false);
+  const [loadingAction, setLoadingAction] = useState(null); // null | 'tour' | 'sample'
   const [inProgress, setInProgress] = useState([]);
 
   // State Contract #6: in-progress work is queryable from the front door.
@@ -50,28 +50,30 @@ export default function Dashboard({ onOpenSermon, onNewSeries, onLeaveTour }) {
     );
   }
 
-  async function handleStartWorkspaceTour() {
-    if (tourLoading) return;
-    setTourLoading(true);
+  async function openSampleSermon({ launchTour }) {
+    if (loadingAction) return;
+    setLoadingAction(launchTour ? "tour" : "sample");
     try {
       const result = await loadTourSermon();
       if (result?.sermonId && onOpenSermon) {
         onOpenSermon(result.sermonId);
-        setTimeout(() => startTour(WORKSPACE_TOUR_STOPS, {
-          onLeave: onLeaveTour,
-          seenKey: "sf_tour_workspace_seen",
-        }), 250);
+        if (launchTour) {
+          setTimeout(() => startTour(WORKSPACE_TOUR_STOPS, {
+            onLeave: onLeaveTour,
+            seenKey: "sf_tour_workspace_seen",
+          }), 250);
+        }
       }
     } catch (e) {
-      console.error("Failed to start workspace tour:", e);
+      console.error(launchTour ? "Failed to start workspace tour:" : "Failed to open sample sermon:", e);
     } finally {
-      setTourLoading(false);
+      setLoadingAction(null);
     }
   }
 
   return (
     <>
-      <DashboardHeader />
+      <DashboardVerseCarousel />
 
       <div className="page-body dash-page-body">
         <div className="dash-content">
@@ -115,11 +117,21 @@ export default function Dashboard({ onOpenSermon, onNewSeries, onLeaveTour }) {
                   className="tile-meta tile-meta-button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleStartWorkspaceTour();
+                    openSampleSermon({ launchTour: true });
                   }}
-                  disabled={tourLoading}
+                  disabled={!!loadingAction}
                 >
-                  {tourLoading ? "Loading…" : "or take the guided tour →"}
+                  {loadingAction === "tour" ? "Loading…" : "or take the guided tour →"}
+                </TextButton>
+                <TextButton
+                  className="tile-meta tile-meta-button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openSampleSermon({ launchTour: false });
+                  }}
+                  disabled={!!loadingAction}
+                >
+                  {loadingAction === "sample" ? "Loading…" : "or open a sample sermon →"}
                 </TextButton>
               </div>
             </div>
@@ -159,7 +171,7 @@ export default function Dashboard({ onOpenSermon, onNewSeries, onLeaveTour }) {
             />
           </div>
 
-          <DashboardChurchHistory />
+          <DashboardPreacherQuote />
         </div>
       </div>
 
@@ -258,7 +270,7 @@ function ResumeRow({ sermon, onOpen, onDelete, flagged }) {
         borderRadius: "var(--radius)",
         background: "var(--parchment-warm)",
         borderLeft: flagged ? "3px solid var(--crimson-soft)" : "3px solid var(--gold)",
-        fontFamily: "'Crimson Pro', serif",
+        fontFamily: "var(--font-serif)",
       }}
     >
       <div style={{ flex: 1, minWidth: 0 }}>

@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-05-05 — Open sample sermon entry + Romans 5 mock rewrite
+
+- New Dashboard "or open a sample sermon →" button loads the mock without launching the tour overlay; `loadingAction` state gives each button its own loading label and disables both during the in-flight IPC.
+- `electron/tourData.js` rewritten as Romans 5:1-5 ("The Hope That Does Not Disappoint") in the new envelope shape `{value, na}` per question across all four exegesis columns plus `sermon_frame` (intro/conclusion); IDs renamed to `tour-romans-2026` / `tour-romans-sermon-01`.
+- Canonical `observations.divisions.thought_units` array carries a four-unit throughline (Standing → Pivot → Chain → Anchor) with cumulative `meaning` / `christ_connection` / `implication` columns demonstrating SFDI/SPRD cross-phase synthesis.
+- `load-tour-sermon` INSERT in `electron/main.js` swaps retired legacy PC columns (`topic_theme`, `audience_assumptions`, `background_noise`) for `sermon_frame`; placeholder count adjusted from 25 to 23.
+
+---
+
 ## 2026-05-05 — ScripturePanel in-panel Bible search
 
 - `ScripturePanel` gains a search row under the header — input ("Bible search") + Go button — that reuses the existing `fetchPassage` IPC to load any reference without leaving the column.
