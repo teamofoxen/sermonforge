@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-04 — sria registered as re-entry point for the Study redesign
+
+- New `docs/PROPOSALS/study-redesign-implementation-anchor.md` (SRIA) sits above the five planning docs (SFDI / SADI / SPRD / SPIP / SPIR) as a short re-entry point.
+- Ten sections covering what this is, working rule, doc map, where things stand, the arc end-to-end, readiness gate, status table, agent leverage, skills list, and "I'm lost" pointers.
+- Readiness gate section names the three Standards to Build (per-doc ownership declaration, canonical vocabulary glossary, Bucket C checklists) as the next concrete steps before Firing 1.
+- `docs/ANCHORS.md` extended with the SRIA entry at the top of the registry list.
+- Plain-English voicing rule bound as a callout; SPIR's Bucket E plain-language drift audit polices it.
+
+---
+
 ## 2026-05-04 — SPIP + SPIR scaffolds officially registered, calibrated, and rounded out
 
 - New `docs/PROPOSALS/study-phase-implementation-plan.md` (SPIP) and `docs/PROPOSALS/study-phase-implementation-remediation.md` (SPIR) added as load-bearing planning anchors for the Study redesign.
