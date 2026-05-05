@@ -113,26 +113,6 @@ export default function Dashboard({ onOpenSermon, onNewSeries, onLeaveTour }) {
                 >
                   Build sermon <ArrowRightIcon />
                 </PrimaryButton>
-                <TextButton
-                  className="tile-meta tile-meta-button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openSampleSermon({ launchTour: true });
-                  }}
-                  disabled={!!loadingAction}
-                >
-                  {loadingAction === "tour" ? "Loading…" : "or take the guided tour →"}
-                </TextButton>
-                <TextButton
-                  className="tile-meta tile-meta-button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    openSampleSermon({ launchTour: false });
-                  }}
-                  disabled={!!loadingAction}
-                >
-                  {loadingAction === "sample" ? "Loading…" : "or open a sample sermon →"}
-                </TextButton>
               </div>
             </div>
 
@@ -169,6 +149,32 @@ export default function Dashboard({ onOpenSermon, onNewSeries, onLeaveTour }) {
               onOpenSermon={onOpenSermon}
               onDeleteSermon={handleDeleteSermon}
             />
+
+            {/* EXPLORE — orientation paths for new pastors. */}
+            <div className="dash-tile tile-secondary" style={{ display: "flex", flexDirection: "column" }}>
+              <div className="tile-eyebrow tile-eyebrow-soft">Look&nbsp;around</div>
+              <h3 className="tile-title">Explore SermonForge.</h3>
+              <p className="tile-blurb">
+                Walk the workspace with the guided tour, or open a fully-filled
+                sample sermon to poke around at your own pace.
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "auto" }}>
+                <TextButton
+                  className="tile-meta tile-meta-button"
+                  onClick={() => openSampleSermon({ launchTour: true })}
+                  disabled={!!loadingAction}
+                >
+                  {loadingAction === "tour" ? "Loading…" : "Take the guided tour →"}
+                </TextButton>
+                <TextButton
+                  className="tile-meta tile-meta-button"
+                  onClick={() => openSampleSermon({ launchTour: false })}
+                  disabled={!!loadingAction}
+                >
+                  {loadingAction === "sample" ? "Loading…" : "Open a sample sermon →"}
+                </TextButton>
+              </div>
+            </div>
           </div>
 
           <DashboardPreacherQuote />

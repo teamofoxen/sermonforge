@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-05-05 — Explore SermonForge tile on Dashboard
+
+- New bottom-right `Explore SermonForge` tile (eyebrow `Look around`) holds the orientation paths on their own surface alongside Resume work; the hero "Build a sermon" tile is now single-action.
+- The tile holds two stacked `TextButton`s — `Take the guided tour →` and `Open a sample sermon →` — each with its own per-action loading label backed by `loadingAction`.
+- 2×2 dash-grid fills cleanly: `Build a sermon / Build a series / Where you left off / Explore SermonForge`.
+
+---
+
 ## 2026-05-05 — Open sample sermon entry + Romans 5 mock rewrite
 
 - New Dashboard "or open a sample sermon →" button loads the mock without launching the tour overlay; `loadingAction` state gives each button its own loading label and disables both during the in-flight IPC.
