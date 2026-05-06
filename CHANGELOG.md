@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-05 — Simplify /end-session governance: preflight script + thin skill + doc trim
+
+- New `scripts/preflight.sh` orchestrates `drift-check.sh` + sweep-trigger advisory + staging hygiene as STEP 1 of `/end-session`.
+- `CLAUDE.md` 99 → 61 lines: duplicated CHANGELOG rules and Execution Gates prose removed; trigger-path list now lives in `preflight.sh` only.
+- `end-session` SKILL.md 102 → 64 lines: STEP 2 enforcement checklist collapsed, STEP 2.5 doc-drift table dropped (now handled by `drift-check.sh`).
+- `docs/ENFORCEMENT_STATUS.md` "Last verified" run-on paragraph trimmed to one line + six-bullet current-state; six stale `scripts/sfdi-*.py` paths repointed to `scripts/archive/`.
+- `drift-check.sh` skips `docs/ARCHIVE/*` and `docs/PROPOSALS/*` in C1; C7c recognizes intentional historical-retention markers.
+
+---
+
 ## 2026-05-05 — Field 3 Sprint 2 Session 2: unified-canvas UI rebuild
 
 - New `IndentedSentenceCanvas` renders the unified row shape — text + depth + inline paraphrase (main rows only) + "+ Mark as thought-unit end" affordance with inline editor and filled-state cap line + italic right-margin callout.

@@ -39,60 +39,23 @@ build. **Do not load CHANGELOG.md by default on every session.**
 
 ---
 
-## CHANGELOG Rules
-
-When updating CHANGELOG.md:
-
-- MAX 5 bullet points
-- Each bullet must be one sentence
-- Only include changes from the current session
-- Do NOT restate or summarize previous entries
-- Do NOT explain rationale or intent
-- Do NOT mention unchanged files
-- Total output must remain under 120 words
-
-Required format:
-
-## [Unreleased]
-- change
-- change
-- change
-
-Enforcement:
-
-- If these constraints are violated, the output is incorrect
-- Prioritize brevity over completeness
-- Do not expand scope beyond explicitly requested changes
-
----
-
 ## Authority
 
 If code and these documents diverge, the code is considered incorrect unless an explicit
 rationale exists.
 
+CHANGELOG format and discipline are owned by [`.claude/skills/end-session/SKILL.md`](.claude/skills/end-session/SKILL.md). Do not duplicate those rules here.
+
 ---
 
-## Execution Gates
+## Commit gates
 
-Run `/sweep-the-house` before commit **only** if the diff touches:
+`scripts/preflight.sh` runs from the `/end-session` skill before every commit. It enforces:
 
-- `electron/main.js` or `electron/preload.js` (IPC, schema, save path)
-- `src/utils/contextBuilder.js` (context tier logic, tier budgets)
-- `src/utils/ai.js` or any file in `src/prompts/` (AI flow + system prompts)
-- `src/db/database.js` exported wrapper functions (IPC boundary)
-- Migration files or any change that adds/modifies a `sermons` column
+- **Sweep required** when the staged diff touches contract-sensitive paths (see [`scripts/preflight.sh`](scripts/preflight.sh) for the exact list — kept in one place, not two).
+- **Drift check** via [`scripts/drift-check.sh`](scripts/drift-check.sh) (broken refs, stale skill mentions, IPC/schema reference sanity).
+- **Staging hygiene** — no `git add .`-shaped patterns reaching the index.
 
-For everything else (UI, styling, copy, component refactors, docs, skills, memory, CLAUDE.md itself), skip the sweep and go straight to `/end-session`.
+If preflight fails, the commit does not proceed. Do not bypass it; fix the finding.
 
-### When the sweep runs
-
-- STATUS = FAIL → STOP, fix the finding, re-run.
-- STATUS = WARN → STOP and ask before continuing.
-- STATUS = PASS → continue or run `/end-session`.
-
-### Hard Rules
-
-- The trigger is the path, not the size — a one-line edit to `electron/main.js` still requires the sweep.
-- Never commit or push while in a failing sweep state.
-- `/sweep-the-room` has been retired; its checks are a strict subset of `/sweep-the-house`.
+When `/sweep-the-house` runs and emits FAIL or WARN, stop and resolve before continuing. PASS continues to `/end-session`.

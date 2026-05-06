@@ -8,6 +8,7 @@ FAIL=0
 DOCS_DIR="docs"
 
 # C1 — Internal .md links point to files that exist
+# Skips docs/ARCHIVE/* (intentionally frozen, may reference moved/deleted files).
 echo "=== C1: broken internal .md links ==="
 C1_FAIL=0
 while IFS= read -r line; do
@@ -15,6 +16,11 @@ while IFS= read -r line; do
   rest="${line#*:}"
   lineno="${rest%%:*}"
   match="${rest#*:}"
+  # Skip archive docs (frozen historical material) and proposal docs
+  # (describe future state; may have nested markdown link syntax that confuses the link regex).
+  if [[ "$file" == *"/ARCHIVE/"* ]] || [[ "$file" == *"/PROPOSALS/"* ]]; then
+    continue
+  fi
   # Extract markdown link targets like [text](path.md) or [text](path.md#anchor)
   echo "$match" | grep -oE '\(([^)]+\.md)(#[^)]*)?\)' | while read -r raw; do
     raw_clean="${raw#(}"
@@ -51,8 +57,8 @@ while IFS= read -r line; do
   rest="${line#*:}"
   lineno="${rest%%:*}"
   match="${rest#*:}"
-  # Skip proposal docs (describe future state)
-  if [[ "$file" == *"/PROPOSALS/"* ]]; then
+  # Skip proposal docs (describe future state) and archive docs (describe past state)
+  if [[ "$file" == *"/PROPOSALS/"* ]] || [[ "$file" == *"/ARCHIVE/"* ]]; then
     continue
   fi
   # Extract backtick-quoted paths starting with electron/, src/, scripts/, migrations/
@@ -184,7 +190,10 @@ fi
 # Also check for the old "/sweep-the-room" reference — CLAUDE.md says it's retired
 echo ""
 echo "=== C7b: retired skill references (sweep-the-room) ==="
-ROOM_REFS=$(grep -rn "sweep-the-room" "$DOCS_DIR" CLAUDE.md 2>/dev/null | grep -v "retired" | grep -v "has been retired" || true)
+ROOM_REFS=$(grep -rn "sweep-the-room" "$DOCS_DIR" CLAUDE.md 2>/dev/null \
+  | grep -v "/ARCHIVE/" \
+  | grep -v "retired" \
+  | grep -v "has been retired" || true)
 if [[ -n "$ROOM_REFS" ]]; then
   echo "STALE REFERENCES TO RETIRED SKILL:"
   echo "$ROOM_REFS"
@@ -193,16 +202,21 @@ else
   echo "none (or only retirement notice)"
 fi
 
-# Check for CLAUDE_original.md references — commit 29dedf9 dropped this
+# Check for CLAUDE_original.md references — commit 29dedf9 dropped this.
+# Intentional historical-retention contexts are allowed; only flag genuinely dead refs.
 echo ""
 echo "=== C7c: dead CLAUDE_original.md references ==="
-DEAD_REFS=$(grep -rn "CLAUDE_original" "$DOCS_DIR" CLAUDE.md 2>/dev/null || true)
+DEAD_REFS=$(grep -rn "CLAUDE_original" "$DOCS_DIR" CLAUDE.md 2>/dev/null \
+  | grep -v "/ARCHIVE/" \
+  | grep -v "historical reference" \
+  | grep -v "original monolithic" \
+  | grep -v "retained for" || true)
 if [[ -n "$DEAD_REFS" ]]; then
   echo "DEAD REFERENCES:"
   echo "$DEAD_REFS"
   FAIL=1
 else
-  echo "none"
+  echo "none (or only historical retention notice)"
 fi
 
 echo ""
