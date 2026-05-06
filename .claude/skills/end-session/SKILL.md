@@ -33,6 +33,35 @@ If **any** were touched, update `docs/ENFORCEMENT_STATUS.md` before continuing:
 - If new validation logic was added to `validateAndCommit` or `spineRead` in `electron/main.js`, confirm the test fixture at `tests/contracts/_helpers/test-spine.ts` was updated in the same session and note any drift.
 - Update the "Last verified" date at the top of the document.
 
+## STEP 2.5 — DOC-DRIFT CHECKPOINT
+
+Scan the staged diff (and any newly modified files this session) for paths with known doc obligations. For each trigger hit, surface the candidate doc to the pastor before continuing to STEP 3.
+
+| If the diff touches… | Surface for update to… |
+|---|---|
+| `electron/main.js` migration block (`ALTER TABLE`, new column) | `docs/REFERENCE/schema.md` |
+| `SERMON_COLUMNS` allowlist (any of the three mirrors) | `docs/REFERENCE/schema.md` |
+| `src/utils/studyFields.js` field definitions (add/remove/rename a field or question) | `docs/PROPOSALS/study-field-definition-initiative.md` (the 25 Study fields) |
+| `src/utils/sadiAnchorFields.js` field definitions | `docs/PROPOSALS/sermon-anchor-definition-initiative.md` (Step 2 fields) |
+| `src/utils/sermonFrameFields.js` field definitions | `docs/PROPOSALS/sermon-anchor-definition-initiative.md` (Step 5 fields) |
+| New STAGE / STEP / SUB_PHASE value in `src/core/contracts.ts` | `docs/CORE.md` Canonical Vocabulary + `docs/ENFORCEMENT_STATUS.md` |
+| New IPC channel in `electron/preload.js` or `electron/main.js` IPC handlers | `docs/REFERENCE/ipc-channels.md` |
+| `src/components/SpotlightWorksheet.jsx` Field Pattern changes (new question kind, new sub-shape) | SFDI working doc § The Field Pattern |
+| `docs/CORE.md` clause edit | `docs/ENFORCEMENT_STATUS.md` (Last verified date + clause table row) |
+| Workspace tour stops in `src/tour/workspaceTourStops.js` | `docs/PROPOSALS/sermon-workspace-tour.md` |
+| AI prompt changes in `src/prompts/study.js` or `src/prompts/sermon.js` | `docs/PROPOSALS/study-phase-redesign.md` (only if structural commitment changes) — typically just `CHANGELOG.md` |
+| `src/utils/studyAdvancement.js` new boundary gate | the boundary's owning working doc (SFDI for sub-phase boundaries; SADI for step boundaries) |
+
+**How to surface:** for each trigger hit, ask the pastor in plain language: "This commit touches X. Should Y be updated to match?" Possible replies:
+
+- **"Yes"** → pause, update Y in the same staged diff, then continue.
+- **"Already updated"** → continue (the doc is in the staged diff already; verify before moving on).
+- **"Defer because Z"** → continue, but append a line `Doc deferred: <doc> — <reason>` to the commit body so the deferral is recorded in git history.
+
+If **no triggers hit**, skip to STEP 3 silently.
+
+This checkpoint is a **nudge, not a hard gate**. The pastor decides whether to update inline, defer (with reason in commit), or skip. The goal is to catch drift candidates before the diff is sealed; the goal is NOT to block the commit.
+
 ## STEP 3 — UPDATE CHANGELOG
 
 Prepend ONE new section to the top of `CHANGELOG.md`, immediately after the first `---`.

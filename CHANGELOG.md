@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-05 — Consolidate SPRD docs: archive SPIP, trim planning doc, add doc-drift checkpoint to /end-session
+
+- SPIP archived to `docs/ARCHIVE/study-phase-implementation-plan.md` — every section now CLOSED/SHIPPED/RESOLVED; `ANCHORS.md` row dropped.
+- SPRD planning doc trimmed from 579 lines / 122 KB to 110 lines / 9.6 KB — kept implementation milestones table, eight-question rulings, four structural commitments, cross-doc relationships; dropped historical reasoning, vocabulary glossary, screen/AI knock-on detail, per-milestone log (all live in git history).
+- `SynthesisTable.jsx` + test cleaned of stale `SPIP item 6` attribution comments.
+- `/end-session` skill gained **STEP 2.5 — DOC-DRIFT CHECKPOINT** — a soft-prompt nudge listing doc-update obligations triggered by the staged diff (schema changes, field defs, contracts, IPC, tour stops, AI prompts, advancement gates).
+- 383 vitest green.
+
+---
+
 ## 2026-05-05 — SADI Step 2 plumbing: MPT/MPS as SpotlightWorksheet fields (v19)
 
 - New `src/utils/sadiAnchorFields.js` defines `MAIN_POINT_PAIR_FIELDS` (MPT 2Q draft/tighten, MPS 3Q translate/gospel_check/tighten) with question prompts and overview lifted from the SADI working doc.

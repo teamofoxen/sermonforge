@@ -1,579 +1,110 @@
 # Study Phase Re-Design (SPRD) — Planning Document
 
-**Status:** **Substantially shipped to `main` 2026-05-04 (commit `d6258ec`).** A0 / A1 / A2 / B-series (B1.0–B4.2) / C5 / C6 / C1 all landed. The mechanical work — field-defs reshape, structured-exercise primitives, four sub-phase boundary thresholds, AI-prompt rewires against new keys, PC tier rewire to Phase 4 Field 3, sermon-level takeover — is complete on `main`. **SADI ratification walk completed 2026-05-04** on `sub/sadi`, locking eleven structural rulings for Steps 2 (MPT/MPS) and 5 (Intro/Conclusion); see `docs/PROPOSALS/sermon-anchor-definition-initiative.md`. The C3 (Step 5 elevation) and C5-partial (MPS Draft prompt rewrite) gates are now unblocked at the field-def level — both can proceed against the locked SADI field defs even before per-field content-design walks land. **Remaining work (carry forward on new feature branches off `main`):** **C2** (throughline visualization, no-animation first), **C3** (Step 5 elevation — SADI structurally unblocked; per-field overview body text + Q1-Q4 framing copy may land first or in parallel), **C4** (Background series-level inheritance, schema implications, sweep-the-house trigger), **C5-partial — MPS_DRAFT prompt rewrite** (drops ~400 words of PC weighting; reads MPS Q1/Q2/Q3 directly per SADI's ratified field def), **CORE.md Process #6 text edit** (per Ruling 4 — extends "Study throughline" → "workspace throughline" through Delivery, expands canonical-articulation pointer to include SADI alongside SFDI), **workspace tour rewrite** (Component 3 of the structural backlog — locked content at `docs/PROPOSALS/sermon-workspace-tour.md` needs re-anchoring against current code substrate; see drift warning at the top of that spec). The content layer — what each named outcome IS, what 'enough' looks like at each specific boundary — moved into SFDI and is defined for all four sub-phases. Sections 2 and 3 below carry only the structural framing; the substance lives in SFDI. SFDI working document at `docs/PROPOSALS/study-field-definition-initiative.md` (1,506 lines; 25 field entries + 4 named outcomes + 4 handoffs + structural completion section).
+**Status:** SHIPPED. All A/B/C milestones complete by 2026-05-05. Workspace tour rewrite shipped 2026-05-05 (17 throughline-first stops). SADI Step 2 plumbing shipped 2026-05-05 (commit `0d98abd`). C4 closed by Phase 1 Background field retirement 2026-05-05. SPIP archived; per-milestone implementation history lives in git log + `CHANGELOG.md`. SFDI structural walks complete; SADI ratification + content-design walks complete.
 
-**Question state after revision:** Q1 landed 2026-05-02 (commit `c87c307`). Q3 landed 2026-05-02 (commit `ec3f960`). Q8 closed 2026-05-02 — ruling (b) advisory carve-out; the seven inline Review/Chat buttons are governed by the Principle directly, outside Process #5's enforcement scope. Q4 settled (old-sermon exemption scoped to the original empty-evidence rule). Q5 shipped 2026-05-01 via ACCI Item A2 (`2b0fa66`). Q7 structural half decided (Implications stays as one step with three voices); content half merged into SFDI. Q9 closed and handed off to audit triage. Q2, Q3b, Q6 merged into SFDI.
+This document is now a structural reference rather than a forward-looking plan. It preserves the load-bearing commitments and the eight design-question rulings; the rich design reasoning lives in git history and the SFDI/SADI working docs.
 
-**Audience:** The lone developer of SermonForge, who is also a pastor and the pastor-user. Written so that every term and phrase lands without needing engineering vocabulary.
-**Date drafted:** 2026-04-30. Revised 2026-05-02.
-
----
-
-## Scope map — structural ownership
-
-Read this before the sections below. SPRD owns the structural layer of the redesign. The content layer has merged into SFDI.
-
-| Item | Disposition |
-|---|---|
-| Q1 — spine-routed sub-phase + step transitions | **Landed 2026-05-02** (commit `c87c307`) |
-| Q3 — hard gates with synthesis presence | **Landed 2026-05-02** (commit `ec3f960`) — disabled-Continue UX layer; SFDI thresholds extend `evaluateAdvance` later |
-| Q5 — Synthesize and Compile through proposal pattern | Shipped 2026-05-01 (ACCI Item A2, `2b0fa66`) |
-| Q7 — Implications as one step with three voices | Structural half: decided. Content half: merged into SFDI. |
-| Q4 — old-sermon exemption scope | Structural — settled (scope to original rule) |
-| Q9 — three vestigial fields cleanup | Closed (handed off to audit triage) |
-| Q8 — inline AI Reviews through the spine | Closed 2026-05-02 — ruling (b) advisory carve-out |
-| Step 5 (Intro/Conclusion) as its own workspace step | Structural — scope extension (see section 7) |
-| PC card removal | Structural — sequenced after Q7 structural half lands |
-
-**Content work merged into SFDI.** Section 2 (canonical artifacts per sub-phase), section 3 (evidence sufficiency thresholds), Q2 (reshape), Q3b (N/A escape valve), Q6 (PC modulation in AI prompts), and Q7 content half (which fields enact which voice in Implications) all moved to SFDI's scope. Sections 2 and 3 in this document now carry only the structural framing, with pointers to SFDI for substance. The merged Q's are retired from this document's open-questions list (section 8). See [docs/PROPOSALS/sfdi-charter.md](sfdi-charter.md) for the absorbed scope and the boundary articulation.
-
-Items tagged *Structural — decided*, *Shipped*, *Structural — settled*, and *Closed* are ready to plan into implementation in any order; section 8 holds the per-Q records. **As of 2026-05-02 no items remain tagged *Structural — open*** — Q1, Q3, and Q8 all settled this date; Q4, Q5, Q7-structural, Q9 settled previously; Q2, Q3b, Q6, Q7-content merged into SFDI. **As of 2026-05-04, SFDI's content walk is complete across all four sub-phases — the remaining structural backlog items (Implications restructure shipping, Step 5 as its own workspace step, PC card removal, Implications Synthesis as named outcome, the Isolated-World Workspace UX overhaul, and Background field series-level inheritance) are now actionable rather than gated.** The content layer of the redesign now lives entirely in SFDI.
-
----
-
-## Binding scope decisions — 2026-05-04
-
-Seven decisions settled this session. Recorded here as binding scope so future sessions don't re-litigate them.
-
-1. **Branch fold complete.** `sub/sfdi` was fast-forwarded into `sub/sprd` at commit `3a1554f`. SFDI's structural completion (25 fields, 53 questions, 4 named outcomes, 4 handoffs, the cumulative thought-unit table spec, Process #6 activation) is now part of the SPRD branch's working state. Implementation work proceeds on `sub/sprd` from this point.
-
-2. **Migration policy — defensive only (no production sermons exist 2026-05-04).** As of 2026-05-04 there are no production sermons under the pre-redesign field shape — the user is the only pastor-user, and sermons in the database during development are throwaway test sermons. No migration logic ships as part of A1 or B1–B4. The new question-keyed shape is used from day one for every sermon. Section 9 documents how migration *would* work as defensive reference if a future test fixture or import surfaces old data, but is not a required implementation deliverable. *Historical note on the policy choice:* Option C (per-field legacy notes) was chosen over A (phase-level blob) and B (key-by-key auto-pre-fill) because A scatters old work far from where it's needed and B auto-pre-fills questions whose meanings have drifted. If migration ever becomes real, C is the right floor.
-
-3. **PC card removal lands with B4 (Phase 4 Implications reshape).** The card stays through B1, B2, B3. It comes down only when Phase 4 Field 3 (Pastoral Context) ships and carries PC's substance per-sermon at the field level. The three top-level columns the card writes to (`background_noise`, `audience_assumptions`, `topic_theme`) remain in the schema after B4 — the workspace card stops rendering, that's all. The columns' data surfaces as legacy notes inside Phase 4 Field 3 on first open of the sermon under the new shape.
-
-4. **The MPT/MPS four-phase synthesis is retired entirely.** Today, when the pastor advances out of Implications, the AI generates a four-phase synthesis covering all of Observe → Interpret → RT → Implications and renders it at the top of MPT/MPS. After B4, this is gone. Not moved as briefing. Not preserved in any form. The four named outcomes (Observation Set, Interpretation Set, Christ-Connection Statement, Implications Synthesis) are the substrate MPT/MPS opens against — these are the pastor's own articulations across four sub-phases, plus the cumulative thought-unit table. AI re-summary at the boundary substitutes for the marinate moment that the Implications Synthesis was always supposed to be. With the synthesis sitting properly inside Implications, the AI re-summary is unnecessary and counter to the redesign's commitment.
-
-5. **SADI ratification walk complete 2026-05-04; C3 and the C5 partial are unblocked.** The Sermon Anchor Definition Initiative (SADI) defines content for Step 2 (MPT/MPS) and Step 5 (Intro/Conclusion). The structural ratification walk landed eleven rulings 2026-05-04 on `sub/sadi` — named outcomes (Main Point Pair, Sermon Frame), question shapes (MPT 2Q, MPS 3Q, Intro 4Q, Conclusion 4Q), composite gates, AI principle (clarify the pastor's voice; don't author it), Process #6 extension to all workspace steps through Delivery. **C3 (Step 5 as its own workspace step) is now structurally unblocked** — SADI's Intro and Conclusion field defs are locked. **C5-partial (MPS Draft prompt rewrite) is unblocked** — SADI's MPS 3Q field def gives the prompt the substrate to read instead of running ~400 words of PC weighting through one AI generation. Per-field content-design walks (overview body text, pastor-side Q1-Q4 framing copy, example outputs) are the optional SADI-extension layer that may land before code or in parallel; the structural ratification alone is sufficient to begin C3 + C5-partial implementation. C6 has no SADI dependency (SFDI fully defined the four sub-phase boundaries). Everything else (A0–A2, B1–B4, C1, C2, C4) runs without SADI.
-
-6. **Component 3 ships without animation first.** SermonForge has no motion system today. Adding one to support Component 3's "field summary floats to throughline node" cue is a real cost — animation infrastructure, accessibility-respecting motion preferences, performance budgeting, the works. The decision: ship the throughline visualization first as a static line with nodes that fill as fields complete, no motion. The animation cue can be added as a separate later milestone if the static version proves underwhelming.
-
-7. **C5 lands phase-by-phase.** The inline review prompts read from per-phase data; each prompt's update lands when its phase's keys ship. Observe Review prompt updates with B1; Interpret Review with B2; RT Review with B3; Implications Review with B4. The MPS Draft re-read happens in its own pass after SADI's Step 2 walk. This avoids a single end-of-project prompt-rewrite session and keeps each phase's review prompt tested against the data shape it actually consumes.
+**Audience:** The lone developer of SermonForge, who is also a pastor and the pastor-user.
+**Date drafted:** 2026-04-30. Trimmed to structural reference: 2026-05-05.
 
 ---
 
 ## Implementation milestones (A/B/C structure)
 
-Thirteen milestones in three phases. **A** is the foundation (the new Study UX shell). **B** is the four sub-phase reshapes, one phase at a time. **C** is workspace polish — sermon-level takeover, throughline, Step 5, ~~Background series inheritance~~ (closed 2026-05-05 by Background field retirement), AI prompts, per-boundary thresholds.
+Thirteen milestones in three phases. **A** = the new Study UX shell. **B** = the four sub-phase reshapes. **C** = workspace polish.
 
-A and B run in order. C items can fan out once Phase B is far enough along to test against real field-level work — most C items don't depend on each other.
-
-| ID | Milestone | What it does for the pastor | Depends on | SADI gating |
-|---|---|---|---|---|
-| **A0** | Branch alignment | The SPRD branch carries SFDI's completed work. Binding scope is in the doc; migration mapping is preserved as defensive reference (no production sermons exist 2026-05-04, so no migration logic ships). No code yet. | — | None |
-| **A1** | Component 1 — spotlight foundation | The Study tab stops being a stack of nine textareas. The pastor lands inside one field at a time, answering one question at a time, with a "Next question" button that's disabled until the current answer has content. Per-field gating expressions and per-question N/A escape valve land. Storage shape becomes per-question-keyed sub-objects from day one. | A0 | None |
-| **A2** | Component 1 — structured-exercise sub-shapes | The richer content tools heavy-lifting fields need: indented sentence canvas (Tab/Shift+Tab indent), paraphrase blocks, multi-column synthesis table with read-only/writable per-column policy, persistent peripheral reference panel, pre-field overview screen, paste-intercept (per-question), per-cell no-AI policy, genre-aware static reference content. | A1 | None |
-| **B1** | Phase 1 (Observe) reshape | Observe goes from 9 fields to 8 fields. Originally added Background + Surface Questions, merged Commands+Statements, retired Basic Outline, brought Possible Implications into the awareness layer. **Background field retired 2026-05-05** — substance moved to series-level Book Study and Phase 2 Genre. Field 3 (Divisions / Thought Units) is the first heavy-lifting field — its three-question structured exercise builds the cumulative thought-unit table. | A1, A2 | None |
-| **B2** | Phase 2 (Interpret) reshape | Interpret goes from 9 fields to 8 (originally 7; Genre added 2026-05-05 as a light, optional second-position field). Diagram retires (the canvas in Observe Field 3 absorbed the work). Summarize Parts + Whole merge into Interpretation Synthesis (heavy-lifting, opens with overview). Field 8 Q1 extends the cumulative table with a Meaning column, read-only Phase 1 columns visible alongside. | B1 | None |
-| **B3** | Phase 3 (Redemptive Thread) reshape | RT goes from 7 question-fields + summary slot to 5 fields. Two of Merida's pointing-to-Christ questions get restored (Type, Predictive). Gospel-makes-commands-possible becomes its own field (the anti-moralism move). The summary slot becomes the Christ-Connection Statement — the named outcome. Field 5 Q1 extends the cumulative table with a Christ-Connection column. | B2 | None |
-| **B4** | Phase 4 (Implications) reshape | Implications goes from 15 slots to 4 fields: Theological Significance, Personal Implications, Pastoral Context, Implications Synthesis. The three-way conversation lands at field level. **PC card stops rendering** (Field 3 carries PC's substance now). The Compiled list (AI-generated) is retired — Implications Synthesis is the pastor's own-voice paragraph. The four-phase synthesis at MPT/MPS opening is removed. Field 4 Q1 closes the cumulative table at six columns. | B3 | None |
-| **C1** | Sermon-level takeover (Component 2) | "Begin sermon" exits the regular app shell — sidebar, top nav, everything except the sermon workspace disappears. Single back affordance returns to the regular view. Re-entry from Dashboard goes back into the isolated world. | A2 (uses the spotlight UX) | None |
-| **C2** | Throughline visualization (Component 3, no animation) | A literal line on the screen across the Study tab. Each field is a node along the line; nodes fill in as fields complete. Named outcomes sit as callouts at the end of each sub-phase segment. Static — no animated cue from field to node yet. | At least B1; richer once all of B1–B4 ship | None |
-| **C3** | Step 5 (Intro/Conclusion) as its own workspace step | A fifth workspace step appears in the workspace step structure. Content shape follows SADI Step 5 ratifications: Intro 4Q (hook, bridge_to_text, expectations, redemptive_note), Conclusion 4Q (summate, land_call, gospel_empower, closing_posture); both heavy-lifting with overviews; Sermon Frame as named outcome. | SADI Step 5 walk | **Unblocked 2026-05-04** (structural ratification complete; per-field content-design walks optional) |
-| **C4** | ~~Background series-level inheritance~~ — **CLOSED 2026-05-05** | The Phase 1 Background field was retired 2026-05-05; per-sermon entry of author/date/audience/genre carried friction without proportionate exegetical gain. Substance now lives in series-level Book Study (`book_background`, already inheritable) and Phase 2 Genre. C4 closes by obviating itself. | — | — |
-| **C5** | AI prompt updates | Each inline review prompt reads from the new question keys and phrases PC references conditionally. Lands phase-by-phase as each B-milestone's keys ship. **MPS Draft re-read unblocked 2026-05-04** — reads SADI's ratified MPS Q1/Q2/Q3 field def directly; drops the ~400 words of PC weighting in `MPS_DRAFT_WITH_PC_TASK`. | Per-phase: B1 → Observe Review; B2 → Interpret Review; B3 → RT Review; B4 → Implications Review. MPS Draft → SADI Step 2 walk (now ratified). | **Unblocked 2026-05-04** (MPS Draft rewrite ready against ratified SADI field def) |
-| **C6** | evaluateAdvance per-boundary thresholds + tests + fixture parity | The richer per-boundary checks SFDI defined extend `evaluateAdvance`: Observe → Interpret (Field 4 composite + Field 8 + Field 9), Interpret → RT (Interpretation Synthesis composite), RT → Implications (Christ-Connection Statement composite), Implications → MPT/MPS (Implications Synthesis composite). Contract tests expand at sub-phase resolution; test fixture updates in the same change. | B1–B4 (the fields the thresholds check must exist) | None |
-
-**Sequencing reality:** A0 → A1 → A2 → B1 → B2 → B3 → B4 in strict order. After B4, C1, C2, C5, C6 can fan out. **As of 2026-05-04, C3 (Step 5 elevation) is also unblocked** — SADI's structural ratification gives C3 the field defs it needs. **C4 closed 2026-05-05** by Background field retirement.
-
-**Implementation progress as of 2026-05-04:**
-
-- **A0** ✅ — branch fold sub/sfdi → sub/sprd at `3a1554f`.
-- **A1.0** ✅ — per-question envelope shape foundation, `{value, na}` per question, helpers + auto-coerce on read, no migration logic (commit `43877ca`).
-- **A1.1** ✅ — spotlight rendering, one field active at a time with "Next question →" disabled-when-empty, click-to-edit collapsed fields (commit `fb7b7e8`).
-- **A1.3** ✅ — per-question N/A toggle UI, "Mark not applicable" / "Mark applicable" alongside "Next question →" with distinct collapsed/active visuals (commit `87dab7c`).
-- **A1.2** ✅ — hover-checklist on disabled gates: shipped under B1.6 (2026-05-04) once Field 4's composite gate gave the disabled-Continue UX a real multi-condition shape to surface. See B1.6 entry below for the structured gate-state plumbing and the `AdvanceGateChecklist` component.
-- **A2.0** ✅ — structured-exercise sub-shapes data-layer foundation. `studyFields.js` helpers tolerate the three structured-list value types (canvas `{text, depth, kind}`, paraphrase `{main_sentence_id, paraphrase}`, synthesis table `{thought_unit_summary, after_line, signal}` plus the cumulative-column extensions). New `flattenAnswerValue` helper produces evidence text per sub-shape (and via JSON fallback for unknown shapes); `answeredQuestions`, `flattenToText`, and `applyFieldValueMap` are threaded through it so structured-list questions count as evidence and surface in context flatten. 28 new unit tests; 197 vitest total green.
-- **A2.1** ✅ — indented sentence canvas component (`src/components/IndentedSentenceCanvas.jsx`). Lands in isolation against A2.0's storage shape; B1 wires it into Field 4 Q1. Tab / Shift+Tab change the active line's depth (0–N) without moving focus out of the canvas; depth clamps at `maxDepth` and 0. Auto-numbered, non-editable line-number gutter; burgundy level-0 visual marker draws on left-margin lines and disappears on indent. Enter splits the line at the caret; Backspace at line-start decrements depth (or merges with previous line when already at depth 0). Paste and drag-and-drop blocked with a quiet inline hint — typing-by-hand IS the discipline. `kind` field derived from depth on every emit (`main` for depth=0, `modifier` otherwise) so callers needn't track it. 23 new component tests; 220 vitest total green.
-- **A2.2** ✅ — paraphrase blocks component (`src/components/ParaphraseBlocks.jsx`). Lands in isolation against A2.0's storage shape; B1 wires it into Field 4 Q2. The exported `groupMainSentences(canvas)` helper walks an A2.1 canvas value and produces `[{id, head, modifiers}, ...]` — each level-0 line plus the depth>0 lines that follow until the next level-0 line. The component renders one block per main sentence (read-only original head + indented modifier lines, dashed separator) with a paraphrase textarea below; Tab moves focus between paraphrase fields by default browser tab order. Paste and drop blocked with the same quiet inline hint pattern. Empty canvas (or canvas with only orphan modifiers) renders an empty-state hint pointing back to Q1. Orphan paraphrases (entries whose `main_sentence_id` no longer matches any current block) are preserved in the value array on edits — the pastor's work isn't lost when the canvas is restructured. 18 new component tests; 238 vitest total green.
-- **A2.3** ✅ — synthesis table component (`src/components/SynthesisTable.jsx`). Lands in isolation against A2.0's storage shape; B1 wires it into Field 4 Q3 and B2/B3/B4 extend its `columns` prop with the cumulative meaning / christ_connection / implication columns. Phase 1 columns shipped via the exported `PHASE_1_COLUMNS` constant (Thought unit textarea, After line line-number input, Signal input). After-line input ties to a `<datalist>` autocomplete sourced from canvas line count when canvas is non-empty (no datalist when canvas empty); free-typed line numbers are accepted (pastor may work ahead of the canvas). Per-column `readOnly: true` flag renders cells as a non-editable display — the cumulative-column extension reuses this for upstream columns. Cumulative-column data not currently in the `columns` prop is preserved on row updates (re-entry from later phases doesn't lose data). Paste passes through unblocked because synthesis is the discipline; the AI block is the load-bearing constraint and lives at the prompt-wiring layer. Add/delete row controls; deleting the last row resets it to empty rather than rendering zero rows. 18 new component tests; 256 vitest total green.
-- **A2.4** ✅ — persistent peripheral reference panel (`src/components/PeripheralReferencePanel.jsx`). Layout primitive that sits beside a heavy-lifting field's primary work surface. Renders an `<aside role="complementary">` with optional title heading and arbitrary children body; aria-label falls back to "Reference panel" when no title. CSS sets `flex-basis: 28%` and a min-width of 220px so the panel takes 28% of the field's horizontal layout when used inside a flex row, leaving 72% for the primary surface. Never-collapse / never-internal-scroll / never-animate are properties of the styling — no disclosure toggle, no internal `overflow` scroll, no transitions. The panel structure is content-only — no buttons, inputs, or AI affordances rendered from the primitive itself; field-specific content (Field 4's three rules, "For epistles" / "For narrative" sections, etc.) lives in the field-wiring layer in B1. 8 new component tests; 264 vitest total green.
-- **A2.5** ✅ — pre-field overview screen (`src/components/FieldOverviewScreen.jsx`). Renders title + optional subtitle + arbitrary body content + a Begin button that fires `onBegin`. Begin button autofocuses on mount so the pastor can press Enter after reading. Custom `beginLabel` accepted; aria-label falls back to "Field overview" when no title. The "first entry only / skip on re-entry" tracking is the parent's job — StudyTab knows whether the field has been visited for the current sermon; A2.5 is the rendering primitive. Field-specific overview content (Field 4's "The point of the sermon is the point of the text…" + the three-parts list) lives in the field-wiring layer in B1; not every field gets an overview (reserve for spine-finders, synthesis fields, named-outcome fields). 10 new component tests; 274 vitest total green.
-
-**A2 is effectively complete.** The Component 1 extension catalog from SPRD § 8 is shipped: structured-editor canvas (A2.1, items 1–3), peripheral reference panel (A2.4, item 4), paste-intercept per-question (A2.1 + A2.2 enforce, A2.3 explicitly passes paste through, item 5), structured-list storage shape (A2.0, item 7), genre-aware static guidance container (A2.4 layout + content lives in B1 wiring, item 8), pre-field overview screen (A2.5, item 9), per-cell no-AI policy (inherent — no AI affordances rendered from any A2.x component, item 10). The remaining catalog item (item 6, composite per-field advancement gating with hover-checklist on the disabled gate button) is A1.2, deferred until B1 introduces multi-question fields where "any" / "all" gates become non-trivial.
-
-A1's substrate (storage shape, spotlight UX, N/A escape valve) plus A2's structured-exercise UI primitives are now in place across all four sub-phases.
-
-- **B1.0** ✅ — Phase 1 (Observe) field-defs reshape (`src/utils/studyFields.js`). `OBSERVE_FIELDS` reordered to the SFDI 9-field shape: Background → Context → Surface Questions → Divisions / Thought Units → Main Characters → Commands and Declarations → Big Ideas → Obvious Point → Possible Implications. Three new keys ship: `background`, `surface_questions`, `commands_declarations`. Three keys retire from rendering: `commands`, `statements`, `basic_outline`. Single primary question per field (multi-question wiring is B1.1+); spotlight UX from A1.1 iterates the new shape unchanged. Old data carrying retired keys is preserved in the JSON column by `parseStructuredField` but no longer renders under any current field — per the defensive-only migration policy in § 9 (no production sermons exist 2026-05-04), no auto-mapping logic ships; the per-key cross-mapping in § 9 documents how it would land if a future test fixture or import surfaces such data. 274 vitest total green; Vite preview compiled clean with no console / server errors.
-- **B1.1** ✅ — multi-question field rendering. New `fieldQuestions(field)` helper in `studyFields.js` resolves a field def's question sequence (returns `field.questions` if present, otherwise `[{key: "primary", prompt: field.hint}]` for back-compat with B1.0 single-question shape). `SpotlightField` + `SpotlightWorksheet` extracted from `StudyTab.jsx` into `src/components/SpotlightWorksheet.jsx` and gained multi-question rendering: when an active field has `questions.length > 1`, it renders an internal vertical list with one question's textarea active and siblings as click-to-edit collapsed rows; "Question N of M" indicator per question; the first incomplete question is the spotlight on field activation; clicking a prior collapsed question makes it active. "Next question →" advances within the field for non-last questions, advances to the next field on the last question (mirrors A1.1's field-level pattern), and is hidden on the absolute last question of the absolute last field. N/A toggle is per-question; marking N/A advances within a multi-question field (or to the next field for single-question fields, preserving A1.3). Worksheet's `onChange` / `onToggleNA` contracts thread `qKey` explicitly: `onChange(fieldKey, qKey, value)`, `onToggleNA(fieldKey, qKey)`. StudyTab's `updateStructured` / `toggleStructuredNA` accept an optional `qKey` (defaults to `"primary"` for back-compat with the legacy textarea call sites that target single-question fields by key). 23 new component tests; 297 vitest total green; Vite preview compiled clean.
-- **B1.2** ✅ — SFDI question sequences wired into the four text-prompt multi-question Phase 1 fields. Background gains `[author, date, audience, genre]`. Context gains `[before, after, impact, holy_spirit_intent]`. Surface Questions gains `[where, when, how]`. Possible Implications gains `[pressing, hard_and_hopeful]`. Each field's `questions` array carries `{key, prompt}` per SFDI Phase 1 walk; the multi-question SpotlightField rendering from B1.1 picks them up automatically. The other Phase 1 fields stay single-question for now: Field 4 Divisions ships its three structured-exercise questions in B1.5 against A2.x primitives; Field 5 Main Characters and Field 8 Obvious Point are single-question per SFDI; Field 6 Commands and Declarations is single-question with a structured table that lands in a later B1 cut; Field 7 Big Ideas is single-question per SFDI. 297 vitest total green (no test break); Vite preview compiled clean.
-- **B1.3** ✅ — heavy-lifting flag + pre-field overview wiring. Field defs gain optional `heavyLifting: true` flag and an `overview: {title, subtitle, paragraphs, list?}` blob (data-shape — not JSX — so `studyFields.js` stays React-free). Field 4 Divisions / Thought Units and Field 9 Possible Implications are marked heavy-lifting per SFDI (Background is single-question light-touch per Field Pattern; SFDI does not flag it). `SpotlightWorksheet` accepts a `sermonId` prop and tracks per-sermon "have I shown this field's overview yet?" in `localStorage` under `sermonforge_field_overview_seen_{sermonId}_{fieldKey}` — read on mount, written on Begin click. When a heavy-lifting field is active and not yet seen, `SpotlightField` renders the A2.5 `FieldOverviewScreen` instead of the active question; clicking Begin marks it seen and the active question takes over (textarea autofocus from A1.1 still fires). Legacy callers that omit `sermonId` skip the gate (treat all overviews as already seen) — no behavioral change for non-spotlight worksheets. 8 new component tests; 305 vitest total green; Vite preview compiled clean.
-- **B1.4** ✅ — `evaluateAdvance` per-boundary threshold for Observe → Interpret (partial). SFDI § "The hard gate at the boundary" defines the threshold as Field 4 composite + Field 8 (Obvious Point) non-empty + Field 9 (Possible Implications) both questions non-empty. B1.4 ships the Field 8 and Field 9 gates layered on top of the existing empty-evidence baseline; the Field 4 composite waits for B1.5 wiring (the canvas / paraphrase / synthesis-table data shapes need to be live before the composite check has anything to read). The threshold layers cleanly: empty-evidence first (returns "Add some content"), then Field 8/9 specific gates (each with its own pastor-facing reason — "State the Obvious Point before advancing." / "Answer the Possible Implications questions before advancing."). N/A on Field 8 or N/A on both Field 9 questions counts as satisfied — the SFDI N/A escape valve is preserved. Existing UI consumers (the disabled-Continue button + click-then-banner fallback) read these reasons unchanged. Two contract test fixtures updated (`process-2-evidence-gated-ux.test.tsx` "filled Observe" case, `process-3-movement-visible.test.tsx` sub-phase boundary); 4 new threshold-specific unit tests; 309 vitest total green.
-- **B1.5** ✅ — Field 4 (Divisions / Thought Units) wire-up. The heaviest B1 cut. Field 4's `OBSERVE_FIELDS` def gains a `questions` array carrying `sentence_layout` (kind=`canvas`), `paraphrases` (kind=`paraphrase`), and `thought_units` (kind=`synthesis-table`); Q1 carries a structured `referencePanel` blob (the three rules + genre tips for epistles / narrative / poetry) per the field def — data shape only, no JSX, so `studyFields.js` stays React-free. `SpotlightWorksheet`'s multi-question active rendering dispatches on `question.kind`: `textarea` (default, back-compat) renders the existing field-textarea; `canvas` mounts `IndentedSentenceCanvas`; `paraphrase` mounts `ParaphraseBlocks` reading the sibling canvas via a `findCanvasValue` helper that locates the field's `kind: "canvas"` question; `synthesis-table` mounts `SynthesisTable` with the same canvas as autocomplete source. When the active question carries a `referencePanel` blob, a flex row wraps content (~72%) and `PeripheralReferencePanel` (~28%); on viewports ≤980px the panel stacks below. `evaluateAdvance`'s `checkObserveToInterpretThreshold` extends with the Field 4 composite gate ahead of Field 8 / Field 9: Q1 satisfied when the canvas has ≥1 main sentence with ≥1 indented modifier under it; Q2 satisfied when every main-sentence id has a non-empty paraphrase; Q3 satisfied when ≥1 row has Thought unit + After line filled (Signal allowed empty for the final unit). SFDI N/A escape valve preserved per question — N/A on a Field 4 sub-question skips its check. Two existing fixtures updated (`process-2-evidence-gated-ux.test.tsx` "filled Observe" + 4 unit tests, `process-3-movement-visible.test.tsx` sub-phase boundary) with shared `FIELD_4_MINIMAL_FILLED` / `FIELD_4_ALL_NA` substrates; 8 new SpotlightWorksheet kind-dispatch component tests; 5 new Field 4 composite gate unit tests; 321 vitest total green; Vite preview compiled clean.
-- **B1.6** ✅ — A1.2 hover-checklist on the disabled Continue gate. `evaluateAdvance` returns `{ ok, reason, gates? }` where `gates` is an array of per-load-bearing-field entries `{key, label, met, reason?}`. At the Observe → Interpret boundary, three gates surface: Field 4 (Divisions / Thought Units) — composite over Q1/Q2/Q3, with Field 4's failing sub-reason carried through; Field 8 (Obvious Point); Field 9 (Possible Implications). New `AdvanceGateChecklist` component (`src/components/AdvanceGateChecklist.jsx`) renders below the disabled Continue button: when `gates` is missing or has ≤1 entry, falls back to the legacy single-line `data-testid="advance-hint"` (preserves contract-test assertions and the empty-evidence baseline UX); when `gates.length > 1`, renders a `<ul data-testid="advance-gate-checklist">` with ✓ / ✗ markers, gate label, and each unmet gate's pastor-facing sub-reason. The button's `title` attribute still carries `firstReason` for native-tooltip-on-hover, so SFDI's "hover-checklist on the disabled button" gets both the discoverable inline form and the hover form. Wired into all three sub-phase / step Continue boundaries in `StudyTab.jsx` (`subPhaseSufficiency`, `step2Sufficiency`, `step3Sufficiency`); the inline-style hint divs collapsed to the new `.advance-hint` CSS class for parity. 4 new evaluateAdvance.gates unit tests in `process-2-evidence-gated-ux.test.tsx`; 6 new AdvanceGateChecklist component tests; 331 vitest total green; Vite preview compiled clean. Closes A1.2 (the deferred hover-checklist on multi-condition gates).
-- **B2.0 + B2.1** ✅ — Phase 2 (Interpret) field-defs reshape + Deeper Context 2-question sequence (`src/utils/studyFields.js`), shipped together as one cut. `INTERPRET_FIELDS` reordered to the SFDI 7-field shape: Deeper Context → Recurring Ideas → Character Purpose → Contrasts → Cross-References → Commentary Notes → Interpretation Synthesis. Three new keys: `deeper_context` (refined from `context_impact`), `character_purpose` (refined from `characters`; key disambiguates from Phase 1 Field 5 `characters` in observations), `interpretation_synthesis` (merged from `summarize_parts` + `summarize_whole`). Five keys retire from rendering: `context_impact`, `characters`, `diagram` (cross-phase migrated by spec — Observe Field 4 Q1 canvas absorbed the structural-diagram work), `summarize_parts`, `summarize_whole`. B2.1 wires Field 1 Deeper Context's 2-question sequence per SFDI: `unresolved` ("What questions did Observe's Context leave open that you can now answer with study tools in hand?") and `book_argument` ("How does this passage fit the book's overall argument? What does the author intend across the whole that bears on this passage?"). Multi-question sequence picks up the existing B1.1 SpotlightField rendering automatically — no new components. The other Phase 2 fields stay single-question for now: Recurring Ideas / Character Purpose / Contrasts / Cross-References / Commentary Notes are single-question per SFDI; Field 7 Interpretation Synthesis ships its heavy-lifting overview + 2 questions (cumulative-column synthesis-table Q1 with Meaning + Phase 1 columns read-only, plus Q2 text-prompt) in B2.2 alongside the Interpret → Redemptive Thread composite gate. Old data carrying retired keys is preserved in the JSON column by `parseStructuredField` but no longer renders — per the defensive-only migration policy in § 9 (no production sermons exist 2026-05-04), no auto-mapping logic ships; the per-key cross-mapping in § 9 documents how it would land. 331 vitest total green (no test break); Vite preview compiled clean with no console / server errors.
-- **B1.7** ✅ — `flattenToText` multi-question fix (`src/utils/studyFields.js`). Closes a B1.5-era gap where multi-question fields (Phase 1's `background` / `context` / `surface_questions` / `divisions` / `applications`, plus Phase 2's `deeper_context`) produced empty flattened output because `flattenToText` only read the `primary` question key per field. The chain `contextBuilder.summarizeExegesis → flattenExegesis → flattenToText` is what feeds tier 4 / tier 5 context bodies; before this fix, the AI saw exegesis content only from legacy single-question fields (`characters`, `commands_declarations`, `big_ideas`, `obvious_point`, all Phase 3 fields, all Phase 4 fields) and silently missed everything else. Fix: the function now branches on `fieldQuestions(def)` — single-primary-question fields render as `Label: value` (back-compat), multi-question fields render as a labeled block with each answered question on its own line under the field label. Continuation lines from structured-list values (canvas / paraphrase / synthesis-table) are indented for readability. N/A questions skipped per field. `studyFields.js` is not a sweep-the-house trigger path; `contextBuilder.js` itself is unchanged. 5 new unit tests (`flattenToText surfaces multi-question fields under their field label`); 3 existing flattenToText tests updated to write under the new question keys (`divisions.sentence_layout`, `context.before`); 336 vitest total green; Vite preview compiled clean.
-- **B2.2** ✅ — Field 7 Interpretation Synthesis wire-up + Interpret → Redemptive Thread composite gate. The heavy-lifting field opens with `FieldOverviewScreen` on first per-sermon entry (B1.3 pattern). Q1 (`meaning_per_unit`) is a new question kind `cumulative-synthesis-table` that reads / writes the canonical thought-unit array in `observations.divisions.thought_units` (Phase 1 owns the spine; all four phases read+write this one array — the option-1 single-source-of-truth decision). Q2 (`meaning_whole`) is a text-prompt question stored in `interpretation.interpretation_synthesis.meaning_whole`. The cumulative-synthesis-table dispatcher mounts `SynthesisTable` with the question's `columns` prop — Phase 1's `thought_unit_summary` / `after_line` / `signal` columns are rendered read-only, and the writable `meaning` column is the one Phase 2 owns; A2.3's "preserve unknown columns" feature carries the cumulative shape forward. SpotlightWorksheet gains `crossPhaseRead(column) → parsed structured field` and `crossPhaseWrite(column, fieldKey, qKey, value) → void` props plus a `crossPhaseSource: { column, fieldKey, questionKey }` declaration on the question; cross-phase questions resolve their value through these instead of the local field data. Completeness for cumulative-synthesis-table is "the writable column has ≥1 filled row" (not "the array is non-empty," which would be vacuously true once Phase 1's thought_units exist). NA toggle is hidden on cumulative-synthesis-table questions — NA semantics live upstream (Phase 1's NA flag on `thought_units`). StudyTab plumbs `crossPhaseRead` / `crossPhaseWrite` only for the Phase 2 worksheet (other phases pass undefined). The composite gate at the Interpret → Redemptive Thread boundary (`evaluateAdvance` with `kind=sub_phase, fromIndex=2`) reads from observations (every `thought_units` row has non-empty `meaning`) and from interpretation (`meaning_whole` non-empty); returns `{ gates, firstReason }` mirroring B1.6's structured shape. One load-bearing field at this boundary (Field 7); the gate carries Field 7's failing sub-reason. 6 new SpotlightWorksheet cumulative-synthesis-table tests + 6 new Field 7 composite gate unit tests; 348 vitest total green; Vite preview compiled clean.
-- **B3.0 + B3.1** ✅ — Phase 3 (Redemptive Thread) field-defs reshape + multi-question sequences shipped together as one cut (`src/utils/studyFields.js`). `REDEMPTIVE_FIELDS` reordered to the SFDI 5-field shape: This Passage and Christ → How the Passage Points to Christ → How the Gospel Makes This Possible → Our Need and God's Character → Christ-Connection Statement. Five new keys: `this_passage_and_christ` (merged from `speaks_of_christ` + `relation_to_christ`, folds in NT-use-of-OT for OT passages), `passage_points_to_christ` (merged from `biblical_theme` + `promise` + restored Merida Q5 type-of-Christ + Q8 predictive-of-Christ), `gospel_makes_possible` (restored Merida Q4, the anti-moralism move — not previously in SermonForge), `need_and_character` (merged from `need_for_christ` + `nature_of_god`), `christ_connection_statement` (elevation of former `summary` slot + absorbed `jesus_hero`). Seven keys retire from rendering: `speaks_of_christ`, `relation_to_christ`, `biblical_theme`, `promise`, `need_for_christ`, `nature_of_god`, `jesus_hero`. B3.1 wires three multi-question sequences per SFDI: This Passage and Christ `[position, direct_speech]`; How the Passage Points to Christ `[biblical_theme, promise, type, predictive]`; Our Need and God's Character `[human_need, god_character]`. Two heavy-lifting fields ship their `FieldOverviewScreen` content (B1.3 pattern): Field 2 (How the Passage Points to Christ) frames the four pointing-mechanisms and the anti-allegory discipline; Field 5 (Christ-Connection Statement) frames the synthesis work. Field 5 is single-primary-question at B3.0 + B3.1 — its 2-question sequence (`christ_per_unit` cumulative-synthesis-table extending the thought-unit array with a third writable `christ_connection` column + `statement` text-prompt) plus the RT → Implications composite gate land in B3.2. The legacy "Summary of Redemptive Features" Synthesize block in StudyTab is preserved unchanged for B3.0 + B3.1 — it'll be deprecated in B3.2 as Field 5 absorbs the synthesis work and `REDEMPTIVE_SUMMARY_KEY` data migrates into Field 5's `legacy_notes`. Old data on retired keys is preserved in the JSON column by `parseStructuredField` but no longer renders — per the defensive-only migration policy in § 9 (no production sermons exist), no auto-mapping logic ships; the per-key cross-mapping in § 9 documents how it would land. 348 vitest total green (no test break); Vite preview compiled clean.
-- **B3.2** ✅ — Field 5 (Christ-Connection Statement) wire-up + Redemptive Thread → Implications composite gate. Field 5's single primary question is replaced by the SFDI 2-question sequence: Q1 `christ_per_unit` is a `cumulative-synthesis-table` reusing the B2.2 cross-phase plumbing — extends `observations.divisions.thought_units` with a third writable column (`christ_connection`) on top of Phase 1's three columns + Phase 2's `meaning` column (all rendered read-only). Q2 `statement` is a text-prompt stored in `redemptive_thread.christ_connection_statement.statement`. Composite gate at the Redemptive Thread → Implications boundary (`evaluateAdvance` with `kind=sub_phase, fromIndex=3`): every thought-unit row has a non-empty `christ_connection` column AND `statement` non-empty; returns `{ gates, firstReason }` per B1.6 shape. One load-bearing field at this boundary (Field 5); the gate carries Field 5's failing sub-reason. StudyTab plumbs `crossPhaseRead` / `crossPhaseWrite` to Phase 3's `SpotlightWorksheet` (mirroring the Phase 2 wire-up). The legacy "Summary of Redemptive Features" Synthesize block in StudyTab is removed — `REDEMPTIVE_SUMMARY_KEY` is no longer written to from any UI surface, but the export is retained so `flattenToText` continues to surface any legacy `summary` data through the context pipeline (defensive read path; no production sermons exist). Dangling state (`redSummaryProposal`) and unused imports (`SYNTHESIZE_REDEMPTIVE_TASK`, `REDEMPTIVE_SUMMARY_KEY`) cleaned out of `StudyTab.jsx`. 5 new Field 5 composite-gate unit tests; 353 vitest total green; Vite preview compiled clean.
-- **B4.0 + B4.1** ✅ — Phase 4 (Implications) reshape + StudyTab refactor shipped together as one cut. New `IMPLICATIONS_FIELDS` array (`src/utils/studyFields.js`) realizes the SFDI 4-field shape: Theological Significance → Personal Implications → Pastoral Context → Implications Synthesis. The three-way conversation is now structural — three voices (Theological / Personal / PC) get dedicated fields; the synthesis integrates them. Multi-question sequences for the three voices: Theological Significance `[about_god, about_ourselves, about_christ, timeless, doctrines]` (5 Merida questions preserved intact); Personal Implications `[follow, forsake, receive, settle]` (4 verb-driven questions absorbing Merida's 8 personal-application questions); Pastoral Context `[room_specifics, cost_and_gift]`. Implications Synthesis (Field 4) is heavy-lifting with `FieldOverviewScreen` overview content; single primary question at B4.0 + B4.1 — its 2-question sequence (`implication_per_unit` cumulative-synthesis-table extending the thought-unit array with the writable `implication` column on top of Phase 1/2/3 columns + `synthesis` text-prompt) plus the Implications → MPT/MPS composite gate land in B4.2. Old keys retire from rendering: 5 `IMPLICATIONS_THEOLOGICAL` keys (now Field 1 questions — Merida's 5 preserved), 8 `IMPLICATIONS_PERSONAL` keys (consolidated into Field 2's 4), `IMPLICATIONS_UNBELIEVER_KEY` (folded into Field 3 Q1 "the room includes everyone"), `IMPLICATIONS_COMPILED_KEY` (retired AI synthesis — Field 4 carries the synthesis in pastor's voice). `IMPLICATIONS_UNBELIEVER_KEY` and `IMPLICATIONS_COMPILED_KEY` constants retained so `flattenToText` continues to surface any legacy data through the context pipeline. StudyTab Phase 4 block refactored: dual-`SpotlightWorksheet` (theological + personal groups) + Implications-for-Unbeliever textarea + Compiled-Implications block + Compile-button + ProposalPanel collapsed into a single `SpotlightWorksheet` over `IMPLICATIONS_FIELDS`. Dangling state (`impCompileProposal`) and unused imports (`COMPILE_IMPLICATIONS_TASK`, the four legacy constants) cleaned. The Phase 4 Review-button "filled" builder switched to `flattenToText(impData, IMPLICATIONS_FIELDS)` — closes the B1.0-era `getPrimaryAnswer`-only bug for Phase 4 (Phases 1/2/3 Review buttons remain candidates for the same fix in a small follow-on cut). `flattenExegesis` and `incorporateHelpers.js` updated to use `IMPLICATIONS_FIELDS`. Old data on retired keys is preserved in the JSON column by `parseStructuredField` but no longer renders — per the defensive-only migration policy in § 9 (no production sermons exist), no auto-mapping logic ships. 353 vitest total green (no test break); Vite preview compiled clean.
-- **B4.2** ✅ — Field 4 (Implications Synthesis) wire-up + Implications → MPT/MPS composite gate + PC card removal. Field 4's single primary question replaced by the SFDI 2-question sequence: Q1 `implication_per_unit` is a `cumulative-synthesis-table` reusing B2.2 / B3.2 cross-phase plumbing — extends `observations.divisions.thought_units` with the final writable column (`implication`) on top of Phase 1's three columns + Phase 2's `meaning` + Phase 3's `christ_connection` (all rendered read-only); the cumulative table is now complete across all four phases (six columns total, one writable per phase). Q2 `synthesis` is a text-prompt stored in `implications.implications_synthesis.synthesis`. Composite gate at the Implications → MPT/MPS boundary (`evaluateAdvance` with `kind=sub_phase, fromIndex=4`): every thought-unit row has a non-empty `implication` column AND `synthesis` non-empty; returns `{ gates, firstReason }` per B1.6's structured shape. One load-bearing field at this boundary (Field 4); the gate carries Field 4's failing sub-reason. StudyTab plumbs `crossPhaseRead` / `crossPhaseWrite` to Phase 4's `SpotlightWorksheet` (mirroring the Phase 2 / 3 wire-ups). **Pastoral Context card removed from `SermonWorkspace.jsx`** per the binding scope decision in § Binding scope decisions (Q4 ruling on PC progressive entry): the card's three text fields (`background_noise`, `audience_assumptions`, `topic_theme`) now surface their substance in Phase 4 Field 3 (Pastoral Context) per SFDI's three-way conversation; the schema columns are preserved defensively so legacy data can migrate into Field 3's `legacy_notes` on first open. The 5 PC-related workspace tour stops (`always-in-the-room`, `pastoral-intelligence`, `cultural-moment`, `the-room`, `sermons-work`) and the `pcOpen` prerequisite are removed from `workspaceTourStops.js` and `SermonWorkspace.jsx`; the PC arc is now part of the Study walkthrough (a tour rewrite is SPRD structural backlog under Component 3 · Throughline visualization). The previously-passing test "returns ok=true for sub_phase=4 transition when any Exegesis content exists" is rewritten — the Field 4 composite gate now requires the named outcome to be filled, not just any-content-anywhere. 5 new Field 4 composite-gate unit tests; 358 vitest total green; Vite preview compiled clean.
-- **Phases 1/2/3 Review-button `flattenToText` fix** ✅ — small follow-on (`src/components/StudyTab.jsx`). The Phase 1 / 2 / 3 Review buttons' `filled` builders previously read each field's value via `getPrimaryAnswer(data, f.key).trim()`, which silently returned `""` for multi-question fields (no `primary` question key). Switched all three to `flattenToText(data, FIELDS)` — the same fix that landed in B4.0 + B4.1 for Phase 4's Review path. Closes the B1.0-era bug across all four sub-phases. No new tests (existing flattenToText coverage from B1.7 is sufficient); 358 vitest total green; Vite preview compiled clean.
-- **C5 (AI prompt updates) substantially COMPLETE** ✅ — commit `9daffff` on `sub/sprd`. Closes the post-B-series drift across all AI surfaces that had been silently reading retired keys or removed-card schema columns. (1) `src/utils/reviewPrompts.js` — AIPanel "Review My Work" branches for all 4 study phases + the full-study fallback rewired to use the centralized `<PHASE>_REVIEW_TASK` constants from `src/prompts/study.js` + `flattenToText(parseStructuredField(<column>), <PHASE>_FIELDS)`, dropping retired-key references ("commands", "statements", "key words", "believers and unbelievers") and replacing raw JSON dumps with field-list-driven flattened text. (2) `src/components/OutlineTab.jsx` — outline-builder exegesis context switched from retired Phase 4 key arrays (`IMPLICATIONS_THEOLOGICAL` + `IMPLICATIONS_PERSONAL`) to `IMPLICATIONS_FIELDS`. (3) PC tier rewire — `src/utils/contextBuilder.js` tier 7 reads from Phase 4 Field 3 (`implications.pastoral_context.room_specifics` + `cost_and_gift`) instead of removed-card schema columns; new exported `readPastoralContext(sermon) → { room, costAndGift }` helper consumed by `AIPanel.jsx` theology-mode pcLines and `StudyTab.jsx` `hasPC`; `normalizeSermon` surfaces `pcRoom` / `pcCostAndGift` instead of the legacy `topic_theme` / `audience_assumptions` / `background_noise` trio; `summarizeExegesis` legacy plain-text path removed (dead code post-A1.0 envelope shape). (4) `src/prompts/sermon.js` MESSAGE CONTEXT RULES THIS_SERMON line rewritten for the two-field shape — "The Room is who in this congregation the text is speaking into" / "The Sermon's Work is the cost and gift this text holds for those people" — replacing the old three-field framing tied to the removed PC card. `contextBuilder.test.js` fixtures + normalizeSermon PC tests rewritten against the new shape; sweep-the-house PASS twice (initial + post-cleanup); 358 vitest green; Vite preview clean. **MPS Draft prompt rewrite (~400 words of PC weighting in `MPS_DRAFT_WITH_PC_TASK`) is NOT in C5 scope per § Implementation milestones — SADI-gated until SADI Step 2 walks ratify the MPT/MPS field defs.**
-- **C6 (evaluateAdvance per-boundary thresholds + tests + fixture parity) COMPLETE implicitly through B-cuts** ✅. All four sub-phase boundary thresholds shipped piecemeal during B-series and are wired in `src/utils/studyAdvancement.js`: Observe → Interpret (Field 4 composite + Field 8 + Field 9) in B1.4 + B1.5; Interpret → Redemptive Thread (Field 7 composite) in B2.2; Redemptive Thread → Implications (Field 5 composite) in B3.2; Implications → MPT/MPS (Field 4 composite) in B4.2. All four return `{ gates, firstReason }` per B1.6's structured shape. Contract test parity: `tests/contracts/process-2-evidence-gated-ux.test.tsx` carries describe blocks for each of the four thresholds with the new question-keyed envelope shape; `tests/contracts/process-3-movement-visible.test.tsx` exercises the visible-movement contract through one boundary (Observe → Interpret) using the new shape (sufficient — visible-movement behavior is the same at every boundary). No additional code or fixture work was required; C6 is closed without a dedicated cut.
-- **C1 (sermon-level takeover / Component 2) SHIPPED** ✅ — `src/App.jsx`. When `currentView === VIEW.Workspace`, `Sidebar` no longer renders; `.main-content` (already `flex: 1`) fills the viewport. The pastor enters an isolated workspace world with only the in-workspace topbar (which already carries the single back affordance via `BackButton onClick={onClose}`); re-entry from Dashboard returns to the isolated world. No new top nav existed in the regular shell to also hide — Sidebar was the entire navigation surface. Surface Contract #4's "you are here" remains satisfied (Workspace is on EXPECTED_DEEP per `tests/contracts/surface-4-you-are-here.test.ts`); critical write-error banner and OneDriveWarning alerts remain visible across views (correctly — they're alerts, not navigation). 358 vitest green; Vite preview clean (Dashboard still renders with Sidebar visible, confirms conditional).
-- **Next:** remaining C-items can fan out — **C2** (throughline visualization, no-animation first; depends ≥B1, richer once B1–B4 done), **C3** (Step 5 elevation — structurally unblocked 2026-05-04 by SADI ratification; consumes Intro/Conclusion field defs), ~~**C4** (Background series-level inheritance)~~ — **CLOSED 2026-05-05** (Background field retired; substance moved to series-level Book Study + Phase 2 Genre), **C5-partial** (MPS_DRAFT prompt rewrite — unblocked 2026-05-04 by SADI MPS ratification; reads MPS Q1/Q2/Q3 directly), **CORE.md Process #6 text edit** (per SADI Ruling 4 — small doc-only edit extending the contract from "Study throughline" to "workspace throughline" through Delivery). **Workspace tour rewrite** (Component 3 of structural backlog) is the other high-leverage candidate — tour predates SFDI walkthrough, references retired PC anchors; locked spec lives at `docs/PROPOSALS/sermon-workspace-tour.md`.
-
----
-
-## How to read this document
-
-Inside the Study tab, the pastor moves through four sub-phases — **Observe**, **Interpret**, **Redemptive Thread**, **Implications** — before drafting the main point of the sermon. The four are right in spirit (text → meaning → Christ → application) but broken in feel: each one looks like a separate worksheet, the pastor advances silently, the last one (Implications) crams three different jobs into one screen, and the part that should deepen progressively (Pastoral Context) sits as a permanent card at the top of the screen instead.
-
-This document covers eight sections in fixed order, plus three operational sections (the Scope map above, the Binding scope decisions above, the Implementation milestones above) and a defensive migration mapping (section 9 below) that sits alongside the eight as reference if a future test fixture or import surfaces old data — no migration logic ships.
-
-The eight core sections:
-1. What's broken today (diagnostic snapshot from when SPRD was drafted; current state of each item lives in the scope map and section 8).
-2. Named outcomes per sub-phase — structural framing (substance lives in SFDI).
-3. Evidence at each boundary — structural framing (substance lives in SFDI).
-4. How Pastoral Context should enter Study.
-5. What the rules document needs to say.
-6. What the automated checks need to change.
-7. What changes on screen and in the AI.
-8. Q records, pilot landings, and structural backlog.
-
-The operational matter (Scope map, Binding scope decisions, Implementation milestones, Per-phase migration mapping) describes how the redesign is being executed. The eight core sections describe what the redesign is.
-
-A note on scope, settled before this document was written. The four sub-phases of Study, and the step out of Study into the main-point work, do not currently flow through the system that records, checks, and announces the pastor's movement through their sermon. They are silent screen-changes. The product owner has ruled that the redesign **routes them through that system** — they become real, recorded movements with checks and announcements. Every section of this document carries through assuming that scope.
-
----
-
-## Vocabulary you'll see throughout
-
-These terms recur. Defined once here, then used freely in the sections that follow.
-
-- **The sermon record** — the bundle of data saved for one sermon. Lives in a local file on the pastor's machine; SermonForge does not store sermons in the cloud.
-- **A field (or slot)** — a named place inside the sermon record. `observations` is one field; `redemptive_thread` is another. Each field holds whatever data belongs to that part of the work.
-- **The schema** — the master list of which fields exist on a sermon. Changing the schema (renaming, adding, or removing fields) requires care because it affects every existing sermon. **The redesign in this document does not require a schema change** — every shape change can be done inside existing fields.
-- **A migration** — a one-time, planned change to the schema that runs automatically the next time the app starts. SermonForge has 17 migrations already; each one made a structural change. The redesign in this document does not require a migration; reshape decisions (rename, merge, split, retire fields) are SFDI's territory and may or may not eventually need a migration depending on what SFDI's walks surface.
-- **JSON** — a way of stuffing several pieces of structured data into a single field. The `observations` field, for example, isn't nine separate fields in the database — it's one field that holds a JSON bundle with nine named pieces inside it. This matters because adding new pieces to a JSON bundle does not require a schema change; only adding a whole new field does.
-- **`CORE.md`** — the rules-of-the-app document. It lists four families of rules: Surface (what the user sees), Process (how the user moves through work), State (how data is structured and tracked), and Mutation (how changes happen). Within each family, rules are numbered. "Process Contract #2" means rule #2 inside the Process family.
-- **The central save-and-check logic** — the part of the code that runs every time the pastor changes anything. Its job is two-step: first it runs the rules from `CORE.md` against the change to make sure the change is allowed, then it saves the change to the sermon record. Some AI write paths today **bypass** this logic — they save without going through the rules. That bypass is one of the load-bearing problems in section 1.
-- **Test (or automated check)** — a small piece of code that exercises a part of the app and checks the result is right. Tests run every time anything in the codebase changes; if a test fails, something is broken. Tests are the safety net.
-- **Test fixture** — a stand-in for the central save-and-check logic that lets tests run without needing the real database. The fixture must behave identically to the real logic, or tests pass against the fake while the real app breaks.
-- **AI prompt** — the instructions sent to the AI before it generates a response. Each AI button in SermonForge has its own prompt. The prompt names what the AI should do, what context it should consider, and what shape of response to return.
-- **The proposal pattern** — the design where the AI's output appears in a separate panel labeled "Proposed," and the pastor clicks **Accept** or **Discard**. The opposite is **direct-write**, where the AI silently overwrites the pastor's existing work in the field.
-- **MPT / MPS** — *Main Preaching Thought* and *Main Preaching Statement*. The two short sentences the pastor drafts after Study: MPT captures what the passage *is about* in its own context; MPS captures what *this sermon* is doing for *this congregation* with this passage.
-- **Pastoral Context (PC)** — three text fields the pastor fills out about *the room they're preaching to*: **The Cultural Moment** (what culture is doing with this topic), **The Room** (who's in the pews and where they are), and **The Sermon's Work** (what this sermon is trying to accomplish).
-- **Toast** — a small notification that appears briefly in the corner of the screen and fades on its own. Used for movement events: "You advanced to Interpret."
-- **Marker** — an invisible label embedded in the screen that automated tests can find. Tests use markers to confirm "yes, the right thing happened on screen." The pastor never sees them.
-
----
-
-## 1. What's broken today
-
-*Diagnostic snapshot from when SPRD was drafted (April 2026). Some items have shipped since — most notably Q5 (Synthesize and Compile direct-writes were converted to the proposal pattern via ACCI Item A2 on 2026-05-01). The scope map at the top and section 8's Q tagging carry current state; section 1 is preserved as the diagnostic record that motivated SPRD.*
-
-The four sub-phases share a common pattern — a stack of question fields, a Continue button, an optional Review button — but each is supposed to be doing different theological work. Three problems compound. **Implications is under-designed**: three concerns are conflated, no check fires when the pastor advances, and there is no Implications-only summary moment. **Sub-phase advancement is silent**: the pastor crosses an invisible boundary every time. **Two AI buttons silently overwrite the pastor's writing**: Redemptive Synthesize and Implications Compile bypass the central save-and-check logic. None of this forces a schema change to fix.
-
-| Sub-phase | What the user does | What gets saved | What advances does | What's broken |
-|---|---|---|---|---|
-| **Observe** | Fills nine textareas (Context, Divisions, Commands, Statements, Characters, Big Ideas, Obvious Point, Outline, Applications). Optional Review button asks the AI to comment. | Each answer saves into the `observations` field of the sermon record (the field holds a JSON bundle with one piece per question). Empty answers are removed before saving. | Continue increments a counter on screen. Nothing is recorded anywhere that Observe is finished. The AI generates a bullet summary that appears at the top of Interpret. | Pastoral Context sits as a card at the top of the workspace at all times — the spec says PC should "begin to enter awareness" here, but nothing in the screen signals that. The pastor can press Continue with all nine fields blank. |
-| **Interpret** | Sees the AI bullet summary of Observe at the top. Fills nine more textareas (Context Impact, Recurring Ideas, Characters, Contrasts, Diagram, Cross-Refs, Commentary, Summarize Parts, Summarize Whole). Optional Review. | Saves into the `interpretation` field, same JSON-bundle pattern as Observe. | Continue increments the counter. Silent. AI generates a bullet summary that appears at the top of Redemptive Thread. | Reads as a second worksheet, not a deepening. The actual Observe notes aren't visible — only the AI bullet summary. No PC progression. No check fires on advance. |
-| **Redemptive Thread** | Sees the bullet summary of Interpret. Fills seven textareas about how this passage points to Christ. A separate **Synthesize →** button asks the AI to write a 3–5 sentence summary, which is **immediately written into the summary box** with no chance to accept or reject. Optional Review. | Saves the seven question answers, plus the AI-written summary, into the `redemptive_thread` field. | Continue increments the counter. Silent. AI generates a bullet summary that appears at the top of Implications. | The Synthesize button silently overwrites whatever was in the summary box. Same shape as Implications' Compile button but different operation. No PC texture affordance. No check fires. |
-| **Implications** | Sees the bullet summary of Redemptive Thread. Fills three groups of fields: Theological Significance (5), Personal Implications (8), Implications for Unbelievers (1). A **Compile →** button asks the AI to consolidate everything into a master list, which is **immediately written into a Compiled box** without review. Continue label says "Continue to MPT / MPS →". | Saves the question answers, the unbeliever field, and the compiled list into the `implications` field. | Continue advances **out of Study**. AI generates a four-phase synthesis (covering all of Observe, Interpret, RT, and Implications) that appears at the top of MPT/MPS — there is no Implications-only summary anywhere. | Five problems compound: three concerns conflated; no check fires; Compile and Synthesize use the same UI for different jobs; no fully-integrated PC affordance; no Implications-only reflection moment. |
-
-**Implications classification.** Most of what's broken in Implications is screen design and behavior — missing checks, missing PC affordance, ambiguous buttons. The one underlying smell: there is no slot in Implications meant to hold "an Implications-only summary." The four-phase synthesis is occupying the spot where that summary should be. Fixing this is a small change to the JSON bundle inside an existing field. **No schema change is required.**
-
-**Through-line today.** The theology is right (text → meaning → Christ → us). The experience is four worksheets with bullet summaries between them, no visible movement, optional and silently-applied AI writes at two of the four sub-phases, and a final sub-phase that does three jobs at once and then hands off without reflection.
-
----
-
-## 2. Named outcomes per sub-phase (structural framing)
-
-The through-line, in one sentence: **each sub-phase produces a named piece of work that the next sub-phase deepens, and the four together compose a preaching foundation strong enough that MPT and MPS can be drafted without reaching back into raw worksheet content.**
-
-Three structural commitments live in SPRD:
-
-- **Each sub-phase has exactly one named outcome.** Not several artifacts in parallel. One. The sub-phase isn't finished until that outcome holds.
-- **The named outcome sits inside the sub-phase, not after it.** It is the work of the sub-phase, produced as the field-work composes — not an interstitial step between sub-phases.
-- **The handoff to the next sub-phase carries the named outcome forward.** The next sub-phase opens against it; the prior named outcome is the substrate the next work builds on.
-
-The substance — what each named outcome IS, what fields produce it, how the field-work composes into it — lives in SFDI. The Orientation section at the top of `docs/PROPOSALS/sfdi-charter.md` carries the working set of named outcomes (Observation Set, Interpretation Set, Christ-Connection Statement, Implications Synthesis); SFDI's per-field walks deepen them. The names are subject to refinement during SFDI walks.
-
-**Two structural notes on shape that SPRD owns:**
-
-- The Christ-Connection Statement and the Implications Synthesis already exist as save-slots inside their parent fields (`summary` inside `redemptive_thread`; `compiled` inside `implications`). The redesign does not need to add new slots — it needs to make those slots **the named outcome of their sub-phase** rather than an optional add-on.
-- Implications today carries a hidden second outcome: the four-phase synthesis that fires on Continue. That synthesis is doing a job (briefing the pastor before MPT/MPS) but doing it in the wrong place — it shows up *after* the pastor has already left Implications, with no Implications-only reflection inside the sub-phase. Once the Implications Synthesis sits properly inside Implications as its named outcome, the four-phase synthesis can either go away or move to MPT/MPS as briefing. Section 7 carries the screen-side disposition.
-
----
-
-## 3. Evidence at each boundary (structural framing)
-
-Two structural commitments live in SPRD:
-
-- **Every sub-phase boundary fires a hard gate.** Continue is hard-disabled with a clear "you can't advance until X" message when the work is insufficient. Soft guidance was rejected (see Q3 in section 8) because it pushes the consequence downstream into MPT/MPS, where the substrate is already weakened.
-- **The kinds of checks available are coverage, structural completeness, and synthesis presence.** *Coverage* — a portion of the fields completed. *Structural completeness* — named load-bearing fields filled. *Synthesis presence* — a non-empty named-outcome slot that is the result of synthesis, not pasted from a single question field. The synthesis-producing boundaries (RT → Implications and Implications → MPT/MPS) use synthesis presence as their primary check; the earlier boundaries use coverage and structural completeness.
-
-What constitutes 'enough' at each specific boundary — which fields are load-bearing, what synthesis presence looks like in practice for each named outcome, how the N/A escape valve works per field — lives in SFDI. SFDI's within-sub-phase flow pass names the load-bearing fields; SFDI's between-sub-phase pass articulates the threshold's substance. The structural commitments above are what SPRD owns.
-
-**A note on Process Contract #2.** The rule about evidence-gated movement ("you must have something to show") fires at three resolutions — sub-phase, step, and stage. SPRD names that the rule fires at each resolution and which kinds of checks are available; SFDI names what each specific boundary's check is.
-
----
-
-## 4. How Pastoral Context should enter Study
-
-Process Contract #4 — the "Pastoral Context follows the text" rule — says PC should enter Study progressively as the pastor's understanding of the text deepens: awareness in Observe, marination in Interpret, texture in Redemptive Thread, full integration in Implications. **Today PC doesn't behave that way.** It sits as a card pinned to the top of the workspace at every step. All three PC fields are always editable. The pastor can fill PC before reading the passage at all. The card's prominent placement makes it feel like parallel-track orientation — "fill PC, then study" — which is the opposite of what the rule requires.
-
-| Sub-phase | Today | After the redesign |
-|---|---|---|
-| **Observe** | All three PC fields visible and editable at the top of the workspace. The AI Observe Review prompt does not mention PC. | The PC card is minimized by default. **The Cultural Moment** and **The Room** are open if the pastor wants to capture quick situational awareness. **The Sermon's Work** is greyed out — the text hasn't shaped it yet. The AI Observe Review prompt still does not mention PC. |
-| **Interpret** | Same uniform PC card. The AI Interpret Review prompt does not mention PC. | The PC card surfaces actively as the pastor enters Interpret. **The Sermon's Work** becomes editable — the pastor names a working hypothesis of what the sermon may do. The AI Interpret Review prompt may consult PC as marination context, never as a precondition. |
-| **Redemptive Thread** | Same uniform PC card. The AI prompts at this sub-phase do not mention PC. | All three PC fields fully active. PC adds *texture* to the redemptive logic. AI prompts at this sub-phase may consult PC to pressure-test whether the Christ-connection lands in *this room* — never as a gate. |
-| **Implications** | Same uniform PC card. The AI prompts at this sub-phase do not mention PC. | PC visibly drives the implications work — the application direction, the urgency, the address to unbelievers. AI prompts at this sub-phase fully integrate PC. This is the only sub-phase where PC is *expected*, and even here PC absence does not lock the sub-phase. |
-
-**Two non-negotiable rules the redesign must hold:**
-
-1. **PC remains optional input.** PC absence must never lock Study or any sub-phase. The current shell-level guarantee (PC absent ≠ Study locked) is already in tests; the progressive model adds shape between the guarantees but does not weaken them.
-2. **AI prompts must treat PC as enrichment, never as a precondition.** Every prompt that references PC must phrase it as conditional — "if available, consider this; if not, evaluate from a general perspective." The MPS Draft prompt — the one used when the AI drafts the Main Preaching Statement — is currently the heaviest PC-leaning prompt in SermonForge (the prompt is roughly 400 words, mostly about how to weight PC). The redesign must not let that pattern propagate to earlier sub-phases without the conditional phrasing.
-
-**Anti-pattern being replaced:** the uniform always-on PC card.
-**What replaces it (in spirit, not in screen design):** an affordance whose visibility, editability, and AI weight track the four-stage progression so the pastor can *see* PC deepening alongside the text-work, not running parallel to it.
-
----
-
-## 5. What the rules document needs to say
-
-`CORE.md` is the rules-of-the-app document. Five rules need updates and one needs a fork the product owner has to settle. **The headline shift: today the rules speak only at the stage level (Study → Blueprint → Manuscript → Delivery); the redesign extends them to speak at the sub-phase level for the rules about evidence (Process #2), visibility (Process #3), and Pastoral Context (Process #4).** None of the rules are entirely new — all are extensions or clarifications.
-
-For each edit below, the existing rule is paraphrased (the prior investigation cited but did not quote in full). The proposed replacement should be treated as a *direction*, not the final wording.
-
-### Process Contract #2 — the "you must have something to show" rule
-
-**Original text (pre-redesign):** A pastor cannot advance from one stage to the next unless they have something non-empty in the previous stage's fields. Sermons created before April 2026 are exempt (the "old-sermon exemption").
-
-**What it now says (Q1 landed 2026-05-02):** The check fires at three resolutions — sub-phase, step, and stage. The empty-evidence baseline applies at every resolution, with the legacy carve-out scoped to the original rule per Q4. Q3 added the disabled-Continue UX layer at sub-phase + step Continue buttons. The substance of "what counts as enough" beyond non-empty (coverage at the early boundaries, synthesis presence at the synthesis-producing boundaries, the N/A escape valve per field) lives in SFDI; SFDI's per-boundary thresholds extend `evaluateAdvance` in `src/utils/studyAdvancement.js` without UI changes.
-
-**Why.** Pre-redesign the check was binary (something / nothing) at one level (stage). The redesign's whole point — gating sub-phase advancement, preventing weak work from reaching MPT/MPS — depended on this rule having something to say at the sub-phase level. That now happens.
-
-### Process Contract #3 — the "movement must be visible" rule
-
-**Original text (pre-redesign):** When a pastor crosses a stage boundary, the screen acknowledges it (a visible toast, plus an invisible marker so the safety-net tests can confirm it happened, plus a record in the sermon's audit trail). Sub-phase movement was not in scope.
-
-**What it now says (Q1 landed 2026-05-02):** Sub-phase movement also gets acknowledged via the `data-testid="movement-event"` marker bubbled from `StudyTab.jsx` through `SermonWorkspace.jsx`'s `onMovement` callback. The marker fires on sub-phase + step movements at all three resolutions.
-
-**Why.** Pre-Q1, sub-phase advancement was silent and the new evidence checks would have produced rejections without context. The pastor needed to see the boundary they crossed. That now happens.
-
-### Process Contract #4 — the "Pastoral Context follows the text" rule
-
-**Today it says:** PC is optional. PC absence does not lock Study. The progressive model (awareness → marination → texture → integration) is named in `sermon-workspace.md` (one of the system spec documents) but is not enforced by the rule itself.
-
-**What it should say:** SPRD adds two structural commitments now: (1) **PC absence does not lock Study or any sub-phase** — already binding, now extended to sub-phase resolution; (2) **AI prompts treat PC as enrichment, never as a precondition** — binding at the prompt-contract layer. Both ship with the structural redesign.
-
-**Deferred small ruling — wait for SFDI.** Whether the per-sub-phase PC progression itself becomes a binding rule (CORE.md specifies, per sub-phase, what PC content is read by AI prompts and what affordance is visible) or stays as descriptive guidance — that ruling depends on what PC content SFDI's per-field walks surface. If SFDI defines per-field PC content cleanly, the rule can bind that content; if PC remains diffuse across fields, descriptive is honest. The ruling is small and structural — made after SFDI lands.
-
-**Why.** Today the rule under-specifies. The two structural commitments above can land now without waiting for SFDI. The progressive model's binding-vs-descriptive question is small enough to defer.
-
-### Process Contract #5 — the "AI augments, doesn't substitute" rule
-
-**Today it says:** When the AI proposes a write into a field, the proposal is rejected if the field is empty. The check fires through the central save-and-check logic.
-
-**What it should say (settled 2026-05-02):** Q8 ruling (b) — the rule explicitly names inline reviews and conversational AI interfaces (the seven inline calls: Observe Review, Interpret Review, RT Review, Implications Review, MPS Chat, Outline Suggest, FE Chat) as advisory and out of scope; CORE.md Process #5 now carries the explicit scope note naming the substitutive `ai_proposal`/`ai_apply` mutation cycle as the enforcement target.
-
-**Why.** Before the Q8 carve-out landed, the rule spoke loudly about one class of AI write (the Draft buttons) and was silent about the seven inline AI calls — the silence functioned as an implicit carve-out without saying so. Q8 settled this by making the carve-out explicit rather than implicit.
-
-### Mutation Contract #2 — the "AI writes go through the proposal pattern" rule
-
-**Today it says:** Writes to sermon fields go through the central save-and-check logic, which enforces three things: the user's edits are never silently overwritten by the AI ("user typing wins"); the pastor sees a clear indication when a save happens or fails; and the AI cannot propose a write into an empty field.
-
-**What it should say:** The rule's coverage is now complete in code — Synthesize (Redemptive Thread) and Compile (Implications) were converted to the proposal pattern on 2026-05-01 via ACCI Item A2 (`2b0fa66`), alongside four other previously-bypassed AI write paths (see Q5 in section 8 for the closure). The rule's text in `CORE.md` should be updated to acknowledge that all AI write paths are now under the rule, and to record the previously-tolerated direct-writes as resolved violations rather than ongoing carve-outs.
-
-**Why.** Q5's resolution by execution closed the largest behavior gap. The CORE.md text update is bookkeeping that aligns the written rule with the now-cleaner code.
-
----
-
-## 6. What the automated checks need to change
-
-The automated checks ("tests") are the safety net. Each check enforces one of the rules in `CORE.md`. When the rules extend to the sub-phase level, the checks have to extend too — and the test fixture (the stand-in for the central save-and-check logic that lets the tests run without a real database) has to be updated in the same change so the safety net keeps working.
-
-**Status as of 2026-05-02.** Q1 (commit `c87c307`) extended Process #1, #2, and #3 contract tests to sub-phase + step resolutions. Q3 (commit `ec3f960`) added `process-2-evidence-gated-ux.test.tsx` covering the disabled-Continue UI plus the unit tests for `evaluateAdvance`. Q5 closed by execution (ACCI A2 `2b0fa66`). Q8 closed as advisory carve-out — no new check needed. Process #4 per-sub-phase progression checks remain deferred to SFDI. Per-boundary threshold tests beyond non-empty wait for SFDI's per-field thresholds.
-
-The first column in the table below lists test file names — these are how the team refers to specific checks. The body of each row is plain language; the file names are reference labels. **Rows are preserved as the prospective record SPRD planned;** the Status column above gives the current state.
-
-| Test file (label) | What changes | Disposition | Rule it enforces | Test fixture also updates? |
-|---|---|---|---|---|
-| `process-1-monotonic.test.ts` | Sub-phase backward movement isn't tested today. The redesign needs to clarify whether backward sub-phase navigation is allowed; the test grows accordingly. | Clarify, then expand | Process #1 | No |
-| `process-1-monotonic.test.ts` | Step backward movement (out of MPT/MPS back into Study) isn't tested today. Same clarification needed. | Clarify, then expand | Process #1 | No |
-| `process-2-evidence-gated.test.ts` | Today's check accepts any non-empty answer at the stage boundary. Section 3's categories make non-empty-but-insufficient answers now fail. New rejection codes implied. | Expand | Process #2 | **Yes** |
-| `process-2-evidence-gated.test.ts` | No check today for sub-phase boundaries with empty or insufficient evidence. New checks added. | New | Process #2 | **Yes** |
-| `process-2-evidence-gated.test.ts` | No check today that the old-sermon exemption stays scoped to the original empty-evidence rule (i.e., that the new sub-phase categories DO fire on old sermons when the pastor crosses a new boundary). New check asserts the Q4 ruling. | New | Process #2 | No |
-| `process-3-movement-visible.test.tsx` | A new check asserts the visibility marker fires when a sub-phase boundary is crossed. | New | Process #3 | **Yes** |
-| `process-3-movement-visible.test.tsx` | An existing check that scans the codebase for the visibility marker may go stale if a new marker variant is introduced for sub-phase. | Expand | Process #3 | No |
-| `process-4-pc-follows-text.test.tsx` | Existing check (PC absence does not lock Study) remains valid; extends to sub-phase resolution under the SPRD structural commitment. | Expand | Process #4 | No |
-| `process-4-pc-follows-text.test.tsx` | New check that AI prompts treat PC as enrichment never as a precondition (the SPRD prompt-contract commitment) — fires regardless of whether per-sub-phase modulation is binding or descriptive. | New | Process #4 | No |
-| `process-4-pc-follows-text.test.tsx` | Per-sub-phase PC progression checks (binding modulation) — wait for SFDI, then for the small structural ruling deferred in section 5's Process #4 fork. | Deferred | Process #4 | Conditional |
-| `process-5-ai-augments.test.ts` | Existing check (AI proposal on empty field rejects) remains valid. | Unchanged | Process #5 | No |
-| `process-5-ai-augments.test.ts` | Q8 settled as (b) advisory carve-out — no new check needed. | Unchanged | Process #5 | No |
-
-**Standing fixture-parity rule.** Any change to the central save-and-check logic must update the test fixture in the same code change. The redesign's most invasive shape — making sub-phase movement a real recorded boundary, returning per-sub-phase rejection codes, returning a visibility flag for sub-phase boundaries, optionally adding a save path for AI Reviews — implicates the test fixture in three of the rows above. Any redesign work that touches the central logic carries a fixture-update obligation in the same code change.
-
----
-
-## 7. What changes on screen and in the AI
-
-The screen, prompts, and navigation surfaces all see knock-on changes from sections 2–4. This section names *what changes* per surface and *why*; it does not design any surface. Items that should hand off to a separate cleanup pass are listed for handoff only.
-
-**Status as of 2026-05-02.** Sub-phase movement visibility, Continue button enable/disable based on evidence, and sub-phase transition routing through the spine all landed via Q1 + Q3 (commits `c87c307`, `ec3f960`). Synthesize/Compile prompt edits shipped via ACCI A2 (`2b0fa66`). PC card removal, Implications restructure, and Step 5 as its own workspace step remain backlog (sequenced behind SFDI). The **Isolated-World Workspace UX overhaul** (sermon-level takeover + field-level spotlight + throughline visualization) is the umbrella SPRD commitment for the larger workspace experience redesign — see section 8 for the full description.
-
-### The workspace shell (the always-on parts of the screen)
-
-| Change | Reason |
-|---|---|
-| Replace the always-on Pastoral Context card at the top of the workspace with an affordance whose visibility tracks the section 4 progressive model. **Sequenced after the Implications restructure (Q7 structural half) lands** — PC needs the three-voice conversation in Implications to have a place to go before the card comes down. | The current placement frames PC as parallel-track orientation, contradicting "follows the text." |
-| Sub-phase movement becomes a visible event — some form of marker, toast, or banner so the pastor sees they crossed a boundary. | Today sub-phase advancement is silent. With new evidence checks firing, the pastor needs to see the boundary they crossed. |
-| The Continue button at each sub-phase is enabled or disabled based on the section 3 evidence checks. | Today Continue is always enabled. Without this binding, section 3 is decorative. |
-
-### The Study tab (the four worksheets)
-
-| Change | Reason |
-|---|---|
-| Disambiguate **Synthesize** (Redemptive Thread) and **Compile** (Implications) so they don't present as the same affordance for different operations. | Today both are AI write buttons that look and act alike but mean different things. This violates Surface Contract #2 — the rule that buttons of the same shape do the same thing. |
-| Make the **Implications Synthesis** the named outcome of the Implications sub-phase — sitting inside Implications as the work that produces it, not as a separate step between Implications and MPT/MPS. The today-on-Continue four-phase synthesis is the displaced thing; once the Implications Synthesis sits properly inside Implications, the four-phase synthesis can either go away or move to MPT/MPS as briefing. | Today the four-phase synthesis fires on Continue and substitutes for any reflection on Implications alone. The pastor never sees an Implications-only handoff. Reframing the Implications Synthesis as the sub-phase's named outcome (rather than as a separate post-Implications step) closes that gap without inserting a new step. |
-| Optionally make earlier-phase content (Observe, Interpret) reachable from later sub-phases — not just the AI bullet summary. | Today the only back-reference at later sub-phases is the AI summary; the actual question fields are hidden. The spec calls for "deepening," which requires being able to look back. |
-| Restructure Implications as one sub-phase whose internal shape is a three-way conversation between Theological Significance, Personal Implications, and Pastoral Context. (Q7 structural half — decided. Unbeliever folds into PC because "the room" includes them.) The field-level work — which fields enact which voice — is SFDI's; this row commits only to the structural shape. | Implications today carries three orphaned groups with no internal structure. The three-way conversation is the structural form that lets the Implications Synthesis emerge as a real named outcome rather than as a compiled list. |
-
-### AI prompts
-
-| Change | Reason |
-|---|---|
-| Each inline review prompt (Observe Review, Interpret Review, RT Review, Implications Review) must phrase any PC reference as conditional ("if available, consider; if not, evaluate from a general perspective"). | Section 4 introduces PC at later sub-phases, and that introduction must not propagate the heavy MPS-style PC weighting. |
-| Synthesize and Compile prompt edits — already shipped 2026-05-01 (ACCI Item A2, `2b0fa66`). Both prompts now produce a *proposed* synthesis the user accepts or discards. Recorded here for completeness. | Closed by execution. |
-| The MPS Draft prompt — already the heaviest PC-leaning prompt in SermonForge — should be re-read against the section 4 rule that PC must remain optional input. | The prompt is the cleanest example of one teetering on "PC is prerequisite." The redesign does not need to rewrite it but must verify it passes the rule. |
-
-### Sub-phase navigation
-
-| Change | Reason |
-|---|---|
-| Sub-phase transitions route through the central save-and-check logic. They inherit the visibility marker, evidence checks, and the sermon's audit trail. | This follows from the Q1 ruling (route through the central logic). |
-| The Continue label asymmetry at Implications ("Continue to MPT / MPS →" rather than plain "Continue") is consistent with the step transition being meaningfully different. The redesign does not need to change the label, but should confirm it's intentional. | Noted for completeness — not a redesign target. |
-
-### Workspace step structure
-
-Scope extension to original SPRD; surfaced during SFDI synthesis. The original SPRD framing covered the four sub-phases of Study and the step out of Study into MPT/MPS. The full sermon-prep arc that the named-outcomes framing supports has Step 5 (Intro/Conclusion) as its own work, with its own named outcome — not bundled into a later step.
-
-| Change | Reason |
-|---|---|
-| **Step 5 (Intro/Conclusion) becomes its own workspace step** rather than bundled into Manuscript or another later step. Sequenced after the Implications restructure lands. | Today intro and conclusion are not first-class steps in the workspace. Bundling them into Manuscript flattens the named-outcome structure SPRD's section 2 framing supports. As its own step, Step 5 produces its own named outcome (the framed sermon — opener, MPT/MPS landing, and conclusion's response) that the rest of the manuscript work stands on. |
-
-### Items to hand off to a separate cleanup pass (no design here)
-
-| Item | Why hand off |
-|---|---|
-| Three database fields (`study_guide_note`, `preaching_blocks`, `manuscript_delivery`) that exist in the schema and are listed as fields the central save-and-check logic is willing to write to, but **are not referenced anywhere in current Study or Exegesis code**. | Likely artifacts of older content models. Cleanup is mechanical and unrelated to the redesign's behavioral work. |
-| Sub-phase visibility marker naming conventions. | An infrastructure detail for whoever implements the markers, not a redesign question. |
-
----
-
-## 8. Q records, pilot landings, and structural backlog
-
-Each Q below carries a disposition tag — *Structural — decided*, *Structural — settled this revision*, *Merged into SFDI*, *Closed*, *Shipped*, or *Landed* — that records the Q's resolution. **As of 2026-05-02 no Q remains in the *Structural — open* state**; all Q-records are kept here as the historical answer-trail. The structural backlog (Implications restructure, Step 5, PC card removal, Implications Synthesis named outcome, Isolated-World Workspace UX overhaul) is sequenced behind SFDI and lives in the "Pilot landings and what's next" subsection below.
-
-### Pilot landings and what's next
-
-**Q1 spine routing — landed 2026-05-02 (commit `c87c307`).** The first structural pilot. `StudyTab.advanceSubPhase` / `advanceStep` / `jumpToStep` / `jumpToSubPhase` and `SermonWorkspace.handleTabChange` route through `transitionState`. Process #1 (monotonic) and Process #2 (empty-evidence) fire at all three resolutions (stage, step, sub-phase). Process #3 visibility marker bubbles sub-phase + step movements via `onMovement`. Contract tests extended to sub-phase + step coverage.
-
-**Q3 hard-gate UX — landed 2026-05-02 (commit `ec3f960`).** The disabled-Continue UX layer. Continue buttons render `disabled` with a `title` attribute and inline hint when the source position is empty; pastors see the gate before the click rather than the click-then-banner cycle. Stage tabs and breadcrumb pills keep Q1's click-then-banner UX (per the Q3 ruling that tabs/pills are navigation, not commitment). The new `src/utils/studyAdvancement.js` is the SFDI threshold hook point — `evaluateAdvance(sermon, kind, fromIndex)` gets richer when SFDI lands per-boundary thresholds, no UI changes needed.
-
-**Q8 inline AI Reviews — closed 2026-05-02. Ruling (b) advisory carve-out.** The seven inline AI calls (Observe Review, Interpret Review, RT Review, Implications Review, MPS Chat, Outline Suggest, FE Chat) are a deliberate carve-out from Process Contract #5's enforcement scope. CORE.md Process #5 now explicitly limits its enforcement to the substitutive `ai_proposal`/`ai_apply` mutation cycle; advisory AI interfaces are governed by the Principle directly. ENFORCEMENT_STATUS.md Process #5 row names the seven sites as the scoped carve-out. No code change.
-
-**Remaining structural backlog (now actionable since SFDI's content walk completed 2026-05-04):** the Implications restructure (Q7 structural half) — three-way conversation now defined at field level (SFDI Phase 4 Fields 1–4); Step 5 (Intro/Conclusion) as its own workspace step; PC card removal — Phase 4 Field 3 carries the substance, card is now redundant; the Implications Synthesis as the named outcome of the Implications sub-phase — defined as SFDI Phase 4 Field 4; **Background field series-level inheritance** (added from SFDI Phase 1 Field 1 ratification — series carries the book's Background, each sermon inherits and can override; needs data model for series-level Background entry + UI surface + per-sermon override mechanism); and the **Isolated-World Workspace UX overhaul** (see below). All items have SFDI content to implement against.
-
-**Isolated-World Workspace UX overhaul — added 2026-05-02 (SPRD scope, gated on SFDI).** A coordinated workspace UX redesign with three components. The umbrella principle: the sermon is its own isolated world. The pastor is *in* the work, not surveying an inventory.
-
-*Component 1 — Field-level spotlight.* Each field is an isolated focused workspace with one or more sequential **questions** inside. Only the current question is presented for answering; prior answers persist visibly; "Next question" advances under the same disabled-when-empty hard-gate posture as Q3. The pattern is canonical SFDI artifact (see `docs/PROPOSALS/study-field-definition-initiative.md` → "The Field Pattern"). SPRD ships the spotlight UX, sequential question rendering, persistent-prompt input shape, "Next question" affordance, and the storage shape change (each field's value becomes a sub-object keyed by stable question identifiers; same JSON columns, no schema migration). The empty-evidence gate may extend to per-question requirements once SFDI rules per-field whether all questions are required or some are optional; that extension lives in `evaluateAdvance` in `src/utils/studyAdvancement.js`.
-
-*Component 1 — extension for structured-exercise questions (added 2026-05-03 from SFDI Field 4 walk; sub-shapes catalog and per-question affordances refined the same day).* SFDI's Field Pattern addendum recognizes a second question type alongside the default text-prompt: **structured-exercise questions** — a working surface the pastor operates inside rather than a textarea they write into. Three sub-shapes are walked in Field 4: (a) **indented sentence canvas** (Q1), (b) **paraphrase blocks** (Q2 — each main sentence shown read-only with a paraphrase field beneath), (c) **synthesis table** (Q3 — multi-column table where the pastor names the meaningful artifact directly; Field 4's table is three columns: Thought unit, After line, Signal). Field 4 is also the first walked example of a multi-question structured-exercise field — three questions, three different sub-shapes. Component 1's spec extends to cover the affordances all three sub-shapes require. The items below are drawn from the Field 4 walk and generalize to future structured-exercise fields.
-
-1. **Structured-editor canvas.** The canvas is not a textarea. **Tab** and **Shift+Tab** change the line's logical indent level (0–N), not text content; Tab does not move focus out of the canvas. Each level renders at a fixed em-offset. Leading spaces typed at line-start are treated as content, not indent — the pastor cannot fake an indent. The structure is machine-readable so downstream prompts can read it.
-
-2. **Auto-generated, non-editable line-number gutter.** Numbers re-flow as lines are added, deleted, or restructured. The gutter is referenced by other sub-elements in the same field (Field 4's divisions table references Q1's line numbers via an "After line" autocomplete), so per-field internal cross-reference between sub-elements is part of the pattern.
-
-3. **Level-0 visual marker rendered from indent metadata.** A thin colored marker (e.g., the burgundy bar in the Field 4 mockup) draws automatically on lines at the left margin and disappears when those lines indent. The pastor never toggles it. Whether main-margin lines should also carry slightly heavier weight is an open visual decision.
-
-4. **Persistent peripheral reference panel.** A field can hold a panel beside the canvas that is always visible, never collapses, never scrolls, never animates. Sized roughly 28% of horizontal width; the canvas takes the remaining 72%. The panel is content-only (no inputs); its job is peripheral guidance (e.g., Field 4's three rules + Quick outline tips). New sub-element type alongside canvas and question prompts.
-
-5. **Paste-intercept enforcement — per-question opt-in property.** A question can declare "no copy-paste here." When set, the keyboard paste shortcut is intercepted with a quiet inline message; drag-and-drop of text is rejected. Per-question, not per-field — Field 4 walks the precedent: Q1 (canvas) blocks paste because typing-by-hand IS the discipline; Q2 (paraphrase blocks) blocks paste because rewriting in the pastor's own words IS the discipline; Q3 (synthesis table) allows paste because synthesis is the discipline and the pastor may legitimately bring notes from elsewhere into the work.
-
-6. **Composite per-field advancement gating.** The per-field empty-evidence override (SFDI Field Pattern) needs implementation richer than "field has any answer." For Field 4: the "Continue to Main Characters" button activates only when all three questions' gates are met — Q1 (canvas has at least one main sentence with at least one indented modifier), Q2 (every paraphrase field has content), Q3 (thought-unit table has at least one complete row). Component 1 supports per-field gating expressions of this shape. **Hover-checklist on the disabled gate button is required, not optional** — surfaces which gate is unmet so the pastor isn't guessing. Field 4 walks the precedent.
-
-7. **Storage shape for structured-exercise questions — DECIDED 2026-05-03: structured list.** Each structured-exercise question saves as a structured list shape appropriate to its sub-shape. Field 4 establishes three shapes:
-   - Canvas (Q1): `[{text, depth, kind}, ...]` — every line saves with its words plus its indent level and a kind tag.
-   - Paraphrase blocks (Q2): `[{main_sentence_id, paraphrase}, ...]` — references Q1's main-sentence IDs.
-   - Synthesis table (Q3): `[{thought_unit_summary, after_line, signal}, ...]` — the pastor's own-words summary plus the line where each unit ends plus the seam-marking signal.
-
-   Structured list was chosen over single-string-with-whitespace so downstream AI prompts can read these as outlines, not as opaque blobs of text with funny spacing. Reading work for the prompts that consume them is part of the implementation.
-
-   **Cumulative-column extension across phases (added 2026-05-04 from SFDI Phases 2/3/4 walks).** The synthesis table sub-shape (Field 3 Q3) is extended in subsequent phases — each phase adds one writable column, with all prior columns rendered read-only. By Phase 4, the per-thought-unit list has six columns:
-   - Phase 1 Field 3 Q3 (Observe) builds: `{thought_unit_summary, after_line, signal}`
-   - Phase 2 Field 8 Q1 (Interpret) adds: `meaning`
-   - Phase 3 Field 5 Q1 (Redemptive Thread) adds: `christ_connection`
-   - Phase 4 Field 4 Q1 (Implications) adds: `implication`
-
-   Final per-thought-unit shape: `[{thought_unit_summary, after_line, signal, meaning, christ_connection, implication}, ...]`. Component 1 implementation must support per-column read-only/writable rendering (each phase's column is writable in that phase's spotlight, read-only when surfaced from upstream phases). The cumulative-column pattern is the **structural through-line of the workspace** — Process Contract #6 ("the Study throughline is structural") is made literal in this growing artifact.
-
-8. **Genre-aware static guidance is permitted, not a mode toggle.** The reference panel can present genre-specific content (Field 4's "For epistles" / "For narrative" tips) as static, sectioned content. The field's *shape* doesn't change by genre; only the panel content has genre sub-sections. Future fields with genre-uneven application should use this static pattern rather than reaching for a mode-switch.
-
-9. **Pre-field overview screen — for heavy-lifting fields.** Some fields' framing is theologically substantive enough that the pastor needs the framing established before the questions begin. The field opens with a pre-question overview screen that names what the field is for, why it matters for the sermon, and what work the pastor is about to do. After reading, the pastor clicks Begin and the questions open. Shown only on first entry to the field for a given sermon; skipped on re-entry. Field 4 walks the precedent. Other heavy-lifting fields will be marked as the SFDI walks proceed; not every field gets one.
-
-10. **Per-cell no-AI policy.** A structured-exercise question's cell (or a paraphrase field, or any per-question writing surface) can declare "no AI generation in this cell." The cell is hand-written by the pastor only; AI may read the result downstream but does not write into it. Distinct from paste-intercept — this is an AI-generation block, not a paste block. Field 4's Q3 thought-unit cell walks the precedent: pastor's own-words summary, no AI button, no proposal panel, no draft suggestion. The synthesis IS the pastor's work; the AI is a downstream reader, not an upstream writer.
-
-*Component 2 — Sermon-level takeover.* "Begin sermon" (out of the new-sermon modal) exits the regular app shell. The Sermon Workspace fills the entire app surface — sidebar, top nav, everything else disappears. A single back affordance (the canonical `<BackButton>` primitive — Surface #5) returns to the regular view. Re-entering a sermon (e.g., from the Dashboard Resume Work tile) takes the pastor back into its isolated world.
-
-*Component 3 — Throughline visualization.* A literal visual line in the workspace surface representing the throughline. All fields in the active sub-phase are attached as nodes along the line. As each field completes, its summary appears in a dedicated panel (positioning unfixed — left, right, wherever the design lands), and an animated cue moves from the field to its node on the line. When a sub-phase completes, the line advances and the next sub-phase's throughline begins with the same pattern. **This makes Process Contract #6 ("the Study throughline is structural") literally visible** — the throughline is no longer just a contractual abstraction but a line on the screen the pastor watches earn its named outcomes.
-
-*Design considerations flagged but not settled:* (a) the throughline shape itself (vertical timeline, horizontal progress bar, branching tree, river, path) — handles 8+8+5+4 sub-phase fields plus MPT/MPS/Outline/FE/Step 5 differently (counts reflect SFDI walk completion 2026-05-04 and the Background-retired / Genre-added shape lockdown 2026-05-05); defer to design phase. (b) animation infrastructure is new — SermonForge today has no motion system; the field-summary-floats-to-throughline-node cue introduces it. (c) panel positioning (where the field summaries live and where the throughline visualization lives) is a layout design decision deferred to the design phase. (d) sermon-level takeover may need a non-disruptive escape for in-progress sermons (e.g., notification interrupts) — defer.
-
-*Strengthens contracts:* Surface #4 (you-are-here) materially — the throughline IS the you-are-here at the sermon level; Process #6 (Study throughline is structural) — gets a visual representation; State #6 (in-progress queryable from front door) — re-entry into the isolated world deepens what "queryable" means.
-
----
-
-**Q1 — Sub-phase and step transitions: real recorded movements with checks and announcements, or silent screen-changes? — Landed 2026-05-02 (commit `c87c307`).**
-
-The redesign routes both through the central save-and-check logic. `StudyTab.jsx` (`advanceSubPhase` / `advanceStep` / `jumpToStep` / `jumpToSubPhase`) and `SermonWorkspace.jsx` (`handleTabChange`) call `transitionState` with source-position content as evidence. Process #1 (monotonic) and Process #2 (empty-evidence with legacy carve-out) fire at all three resolutions. The Process #3 visibility marker fires on sub-phase + step movements via the new `onMovement` callback bubbled from StudyTab. Contract tests extended to sub-phase + step coverage. See `docs/ENFORCEMENT_STATUS.md` per-clause table for current Process #1/#2/#3 status.
-
-**Q2 — Reshape the data, or work within the current shapes? — Merged into SFDI.**
-
-Reshape decisions need field-level evidence; SFDI's per-field walks are exactly that evidence. Rename, merge, split, move, retire are already named in the SFDI charter as outcomes the per-field walks may surface. Retired from SPRD's open-questions list. *The structural fact that no schema change is forced by the redesign — adding new pieces inside a JSON bundle, splitting a slot, adding sub-fields all work without a migration — is the part SPRD still owns.*
-
-**Q3 — At sub-phase boundaries: hard gates or soft guidance? — Landed 2026-05-02 (commit `ec3f960`).**
-
-Hard gates. The disabled-Continue UX layer in StudyTab consumes `evaluateAdvance(sermon, kind, fromIndex)` from `src/utils/studyAdvancement.js`; Continue buttons render `disabled` with a `title` attribute and inline hint when the source position is empty. Stage tabs and breadcrumb pills keep Q1's click-then-banner UX (rulings 1 and 2: navigation, not commitment). Today's enforcement is the empty-evidence baseline at the source position; SFDI's per-boundary thresholds (coverage at the early boundaries, synthesis presence at the synthesis-producing boundaries, the N/A escape valve per field) extend `evaluateAdvance` later — no UI changes needed when they land. The remaining N/A handling — what to do when a field is genuinely inapplicable to a passage — sits in SFDI's scope as Q3b.
-
-**Q3b — N/A escape valve: how should fields that don't apply to a given passage be handled? — Merged into SFDI.**
-
-The N/A determination is field-specific (a parable has no genealogy; a wisdom psalm has no narrative characters; an epistle has no story arc). SFDI's per-field walk is where each field's "what counts as legitimately N/A" gets named. Retired from SPRD. *The structural fact that hard gates require an escape valve to avoid forcing filler — and that the escape valve itself fires through the central save-and-check logic — is the part SPRD still owns.*
-
-**Q4 — Old sermons and the new evidence rules: free pass forever, or only on the original rule? — Structural — settled this revision.**
-
-**Ruling:** the old-sermon exemption stays scoped to the original empty-evidence rule. The new categories of check (coverage, structural completeness, synthesis presence) apply to every sermon regardless of creation date — but only fire at boundaries the pastor *crosses* during their session. A pastor reading a 2025 sermon they don't advance through never hits the new gates. Only when they touch a new boundary do they encounter it.
-
-**Why scoped, not extended.** Extending the exemption to all new categories creates a permanent two-tier system: old sermons remain frictionless forever, new sermons live under the redesign's rules. That's a tax on every piece of new work and a permanent artifact in the codebase. Scoping the exemption to the original rule means the redesign's contract holds uniformly, and the pastor only encounters the new gates when they're actually working — not as a surprise on a sermon they're just opening to reread.
-
-**Alternative considered.** Free pass forever for old sermons. Rejected because the value (frictionless re-entry into old work) is small relative to the cost (permanent two-tier rules).
-
-**Q5 — Synthesize and Compile direct-writes: violation to fix, or carve-out to document? — Shipped 2026-05-01.**
-
-ACCI Item A2 (`2b0fa66`) closed this question by execution. Synthesize (Redemptive Thread) and Compile (Implications) now route through the proposal pattern — proposal panel, accept or discard, central save-and-check logic. Four other previously-bypassed AI write paths were converted in the same change. The Mutation Contract #2 violation is gone from production code.
-
-**Q6 — Pastoral Context in AI prompts: modulated per sub-phase, or uniformly available? — Merged into SFDI.**
-
-PC modulation depends on knowing what PC content each field actually carries. SFDI's per-field walks define that content; the modulation question becomes "which fields carry PC content that the AI reads at this sub-phase," answered as a natural product of the per-field work. Retired from SPRD. *The structural fact that AI prompts must treat PC as enrichment never as a precondition — and that this rule applies whether PC ends up modulated or uniform — is the part SPRD still owns (see section 4 and Process Contract #4 in section 5).*
-
-**Q7 — Implications after the redesign: one coherent step, or split into separate sub-phases? — Structural half: decided. Content half: merged into SFDI.**
-
-**Structural ruling:** restructure, not split. Implications stays as one sub-phase, but its internal shape becomes a three-way conversation between Theological Significance, Personal Implications, and Pastoral Context. PC moves from orphaned-to-the-top-of-the-workspace into the conversation as one of three voices. The named outcome of the sub-phase — the Implications Synthesis — is the integrated form of that conversation.
-
-**Content layer (which fields enact which voice; how the conversation composes into the Implications Synthesis) lives in SFDI.** Until SFDI lands those entries, the structural half is a renamed shell without the field-level work that makes the renaming substantive. That's why the Implications restructure isn't proposed as the first structural pilot.
-
-Single coherent step keeps the four-sub-phase shape intact and forces the synthesis to do the unifying work. Splitting was rejected because adding sub-phases touches navigation, the position-tracking columns added in v17, and tests — and the three concerns are theologically related, not independent.
-
-**Q8 — Inline AI Review buttons: route through the central save-and-check logic, or stay as advisory? — Closed 2026-05-02. Ruling: (b) advisory carve-out.**
-
-Seven inline AI calls (Observe Review, Interpret Review, RT Review, Implications Review, MPS Chat, Outline Suggest, FE Chat) bypass the central save-and-check logic and live in screen-only state. The ruling: these are a deliberate advisory carve-out, not a Process #5 violation to fix. Process Contract #5's enforcement was always about substitutive AI writes (the `ai_proposal`/`ai_apply` mutation cycle that proposes content directly to sermon fields); the seven inline calls are advisory or conversational interfaces where any content application is a separate, explicit, user-confirmed gesture. Routing them through the spine would invent a mutation kind that doesn't mutate, with no contract benefit.
-
-**What landed 2026-05-02.** CORE.md Process #5 gained an explicit scope note naming the substitutive enforcement target and the advisory carve-out; ENFORCEMENT_STATUS.md Process #5 row names the seven sites as the scoped carve-out. Documentation only — no code change. Commit `79f3fd9`.
-
-**Q9 — Three unused fields: clean up in the redesign or in a separate pass? — Closed. Handed off to audit triage.**
-
-`study_guide_note`, `preaching_blocks`, and `manuscript_delivery` exist in the schema and are listed as fields the central save-and-check logic is willing to write to, but they are not referenced anywhere in current Study or Exegesis code. They appear to be artifacts of older content models. Including them in the redesign would widen scope unnecessarily — they are mechanical cleanup, not behavioral redesign. The product owner has ruled that this hands off to the audit triage backlog. SPRD does not own this work.
-
----
-
-## 9. Per-phase migration mapping (defensive spec — no production sermons exist 2026-05-04)
-
-**As of 2026-05-04, there are no production sermons under the pre-redesign field shape.** The user is the only pastor-user; sermons in the database during development are throwaway test sermons. **No migration logic ships as part of A1 or B1–B4.** The new question-keyed shape is used from day one for every sermon.
-
-This section is **defensive reference**, not load-bearing implementation work. It documents how migration *would* work if a future test fixture, sermon import, or unforeseen legacy data surfaces under the old shape. The `legacy_notes` key already exists in `parseStructuredField` as a generic preservation fallback — that's enough infrastructure to cover the unforeseen case without per-key mapping code being written. The per-phase tables and cross-phase notes below are kept as the reference a future migration pass would draw from.
-
-Implementation note (defensive): if migration ever becomes real, `legacy_notes` lives inside the new sub-object stored at the JSON column. A migrated field's value would look like `{question_key_1: "", question_key_2: "", legacy_notes: "<old data>"}`. The same JSON column (observations / interpretation / redemptive_thread / implications) holds the new shape; no schema change.
-
-**Two cross-phase moves to flag.** Most mappings keep old data inside the same JSON column. Two do not:
-
-- Phase 2's retired `diagram` key migrates *into* Phase 1 Field 3 (Divisions / Thought Units) `legacy_notes` because the canvas in Observe Field 3 absorbed the structural-diagram work.
-- Phase 1's retired `basic_outline` key migrates *into* Phase 1 Field 3 (Divisions / Thought Units) `legacy_notes` because the thought-unit work in Field 3 carries the proto-outline forward.
-
-Cross-phase migration is explicit and one-time on first open of an old sermon under the new shape.
-
-### Phase 1 — Observe (`observations` JSON column)
-
-Existing keys (current `OBSERVE_FIELDS` plus `summary`/etc.) → new field's `legacy_notes`.
-
-| Existing key | Existing label | New field | Notes |
+| ID | Milestone | What shipped | Status |
 |---|---|---|---|
-| `context` | Context | Field 2 — Context | Same field renamed conceptually; old single answer becomes legacy notes for the new four-question field |
-| `divisions` | Divisions / Thought Units | Field 4 — Divisions / Thought Units | New field is a three-question structured exercise; old single answer goes to legacy notes |
-| `commands` | Notable Commands | Field 6 — Commands and Declarations | Old field merged with `statements` into the new field; both old answers go to legacy notes (concatenated, labeled) |
-| `statements` | Notable Statements | Field 5 — Commands and Declarations | See above |
-| `characters` | Main Characters | Field 4 — Main Characters | Same conceptual field; old single answer becomes legacy notes |
-| `big_ideas` | Big Ideas | Field 6 — Big Ideas | Same conceptual field; old single answer becomes legacy notes |
-| `obvious_point` | Obvious Point | Field 7 — Obvious Point | Same conceptual field; old single answer becomes legacy notes |
-| `basic_outline` | Basic Outline | **Field 3 — Divisions / Thought Units** *(retired field; cross-key move)* | Field 3's thought-unit work carries the proto-outline forward; old data lands here |
-| `applications` | Possible Implications | Field 8 — Possible Implications | Same conceptual field (post-vocab-cleanup label); old single answer becomes legacy notes |
-
-**New fields with no legacy data:** Field 2 (Surface Questions). Starts empty for migrated sermons; there's no existing key. (Phase 1 Background field retired 2026-05-05; never had legacy data because no production sermons existed under the new shape before its removal.)
-
-### Phase 2 — Interpret (`interpretation` JSON column)
-
-| Existing key | Existing label | New field | Notes |
-|---|---|---|---|
-| `context_impact` | Context Impact | Field 1 — Deeper Context | Refined; old answer becomes legacy notes |
-| `recurring_ideas` | Recurring Ideas | Field 3 — Recurring Ideas | Same conceptual field; legacy notes |
-| `characters` | Characters: Saying / Doing / Thinking | Field 4 — Character Purpose | Refined to deepen Observe Field 4 from *who* to *why*; old answer becomes legacy notes |
-| `contrasts` | Contrasts | Field 5 — Contrasts | Same conceptual field; legacy notes |
-| `diagram` | Diagram / Relationships | **Phase 1 Observe Field 3 — Divisions / Thought Units** *(retired field; cross-phase move)* | Canvas in Observe Field 3 absorbed the structural-diagram work; old data migrates cross-phase |
-| `cross_refs` | Cross-References | Field 6 — Cross-References | Same conceptual field; legacy notes |
-| `commentary` | Commentary Notes | Field 7 — Commentary Notes | Same conceptual field; legacy notes |
-| `summarize_parts` | Summarize the Parts | Field 8 — Interpretation Synthesis | Old field merged into new synthesis field; both old answers go to legacy notes (concatenated, labeled) |
-| `summarize_whole` | Summarize the Whole | Field 8 — Interpretation Synthesis | See above |
-
-### Phase 3 — Redemptive Thread (`redemptive_thread` JSON column)
-
-| Existing key | Existing label | New field | Notes |
-|---|---|---|---|
-| `speaks_of_christ` | Does this text speak directly of Christ? | Field 1 — This Passage and Christ | Old field merged with `relation_to_christ` into the new field; both old answers go to legacy notes (concatenated, labeled) |
-| `relation_to_christ` | Where does it stand in relation to Christ? | Field 1 — This Passage and Christ | See above |
-| `biblical_theme` | Biblical theme that points to Christ | Field 2 — How the Passage Points to Christ | Old field merged with `promise` into new four-mechanism field (Theme/Promise/Type/Predictive); both old answers go to legacy notes |
-| `promise` | Promise that points to Christ | Field 2 — How the Passage Points to Christ | See above |
-| `need_for_christ` | Mankind's need for Christ | Field 4 — Our Need and God's Character | Old field merged with `nature_of_god` into new paired field; both old answers go to legacy notes |
-| `nature_of_god` | Nature of God who provides redemption | Field 4 — Our Need and God's Character | See above |
-| `jesus_hero` | How is Jesus the hero of this passage? | Field 5 — Christ-Connection Statement | Old field elevated into the named outcome; old answer becomes legacy notes |
-| `summary` (REDEMPTIVE_SUMMARY_KEY) | RT summary slot | Field 5 — Christ-Connection Statement | Old summary slot becomes the new structured field's two-question shape; old answer becomes legacy notes |
-
-**New field with no legacy data:** Field 3 (How the Gospel Makes This Possible) — restored from Merida; no existing key. Starts empty for migrated sermons.
-
-### Phase 4 — Implications (`implications` JSON column + PC top-level columns)
-
-| Existing key | Existing label | New field | Notes |
-|---|---|---|---|
-| `about_god` | About God | Field 1 — Theological Significance | Merge of 5 → 1; all five answers concatenate as legacy notes (labeled per old key) |
-| `about_ourselves` | About Ourselves | Field 1 — Theological Significance | See above |
-| `about_christ` | About Christ | Field 1 — Theological Significance | See above |
-| `timeless` | Timeless principles | Field 1 — Theological Significance | See above |
-| `doctrines` | Doctrines | Field 1 — Theological Significance | See above |
-| `examples` | Examples to follow | Field 2 — Personal Implications | Merge of 8 → 1 (with consolidation to 4 verb-driven questions); all eight answers concatenate as legacy notes (labeled per old key) |
-| `commands` | Commands to keep | Field 2 — Personal Implications | See above |
-| `errors` | Errors to avoid | Field 2 — Personal Implications | See above |
-| `sins` | Sins to forsake | Field 2 — Personal Implications | See above |
-| `promises` | Gospel promises to claim | Field 2 — Personal Implications | See above |
-| `new_thoughts` | New thoughts about God | Field 2 — Personal Implications | See above |
-| `explore` | Truths/doctrines to explore | Field 2 — Personal Implications | See above |
-| `convictions` | Convictions to live by | Field 2 — Personal Implications | See above |
-| `unbeliever` (IMPLICATIONS_UNBELIEVER_KEY) | Implications for unbelievers | Field 3 — Pastoral Context | Folded into PC per SFDI (the room includes unbelievers); old answer becomes legacy notes |
-| `compiled` (IMPLICATIONS_COMPILED_KEY) | AI-compiled list | Field 4 — Implications Synthesis | Compiled list retired (synthesis is now pastor-written, not AI-generated); old AI-generated text becomes legacy notes |
-
-**PC card top-level columns** (currently rendered in the workspace card; *not* inside `implications` JSON):
-
-| Existing column | Existing label | Migration destination | Notes |
-|---|---|---|---|
-| `background_noise` | The Cultural Moment | Phase 4 Field 3 — Pastoral Context (legacy notes) | Column itself remains in the schema; only the workspace card stops rendering. Data surfaces as legacy notes inside the new Field 3 on first open of the sermon under the new shape. Future cleanup pass may fold this column into Field 3's structured questions and retire the column entirely; that's deferred. |
-| `audience_assumptions` | The Room | Phase 4 Field 3 — Pastoral Context (legacy notes) | Same as above |
-| `topic_theme` | The Sermon's Work | Phase 4 Field 3 — Pastoral Context (legacy notes) | Same as above |
-
-**New field with no legacy data:** Field 4 (Implications Synthesis) for sermons that don't have an old `compiled` value. Starts empty for migrated sermons.
-
-### Migration timing
-
-Migration runs lazily — on first open of a sermon under the new shape, per phase. Phase-by-phase activation matches B1 → B2 → B3 → B4 sequencing: a sermon opened during the B2 release sees Phase 1 + Phase 2 in the new shape with legacy notes, and Phase 3 + Phase 4 still in the pre-redesign shape until B3 / B4 ship. No global one-shot migration script is required.
+| **A0** | Branch alignment | sub/sfdi → sub/sprd at `3a1554f` | ✅ |
+| **A1** | Component 1 — spotlight foundation | per-question envelope shape; one field active at a time; "Next question" disabled-when-empty; per-question N/A toggle | ✅ |
+| **A2** | Component 1 — structured-exercise sub-shapes | indented sentence canvas; paraphrase blocks; synthesis table; peripheral reference panel; pre-field overview screen; per-cell no-AI policy | ✅ |
+| **B1** | Phase 1 (Observe) reshape | 8 fields after Background retirement (originally 9); Field 3 Divisions / Thought Units is the heavy-lifting field building the cumulative thought-unit table | ✅ |
+| **B2** | Phase 2 (Interpret) reshape | 8 fields after Genre addition (originally 7); Field 7 Interpretation Synthesis extends cumulative table with Meaning column | ✅ |
+| **B3** | Phase 3 (Redemptive Thread) reshape | 5 fields; Field 5 Christ-Connection Statement is the named outcome; cumulative table extends with Christ-Connection column | ✅ |
+| **B4** | Phase 4 (Implications) reshape | 4 fields; three-way conversation (Theological / Personal / PC) at field level; Field 4 Implications Synthesis closes cumulative table at 6 columns; PC card removed | ✅ |
+| **C1** | Sermon-level takeover (Component 2) | Sidebar hidden when `currentView === VIEW.Workspace`; single back affordance returns | ✅ |
+| **C2** | Throughline visualization (Component 3) | `ThroughlineRail.jsx` — vertical sub-phase rail with field nodes + named-outcome callouts driven by `evaluateAdvance`; static (no animation) | ✅ |
+| **C3** | Step 5 Sermon Frame elevation | new STAGE.Frame between Blueprint and Manuscript; v18 migration adds `sermon_frame` column; `FrameTab.jsx` reuses SpotlightWorksheet over Intro 4Q + Conclusion 4Q | ✅ |
+| **C4** | ~~Background series-level inheritance~~ | CLOSED 2026-05-05 by Background field retirement — substance moved to series-level Book Study + Phase 2 Genre | ✅ closed |
+| **C5** | AI prompt updates | per-phase Review prompts rewired to phase field arrays + flattenToText; tier 7 PC reads Phase 4 Field 3; MPS_DRAFT three per-question prompts replace WITH_PC/NO_PC pair | ✅ |
+| **C6** | evaluateAdvance per-boundary thresholds | four sub-phase composite gates wired through B1–B4 cuts; renderer-side via `studyAdvancement.js`; B1.6 introduced the `{gates, firstReason}` structured shape | ✅ |
+| **Tour rewrite** | Workspace tour — throughline-first reframe | 17 stops walking the cumulative thought-unit table + four named outcomes through MPT/MPS → Outline → FE → Frame → Manuscript → Delivery | ✅ |
+| **SADI Step 2 plumbing** | MPT/MPS as proper SADI fields (post-SPRD follow-on) | new `sadiAnchorFields.js`; v19 `main_point_pair` envelope; SpotlightWorksheet over MPT 2Q + MPS 3Q; composite gate at Step 2 → Step 3 | ✅ |
 
 ---
 
-*End of SPRD planning document.*
+## Final rulings (eight design questions)
+
+| Q | Ruling | Date | Anchor |
+|---|---|---|---|
+| **Q1** | Spine-routed sub-phase + step transitions through `applyMutation` | 2026-05-02 | commit `c87c307` |
+| **Q2** | Reshape decisions (rename / merge / split / retire) live in SFDI walks | merged | SFDI working doc |
+| **Q3** | Hard-disabled Continue with pastor-facing reason; SFDI per-boundary thresholds extend `evaluateAdvance` | 2026-05-02 | commit `ec3f960` |
+| **Q3b** | Per-field N/A escape valve, scoped per question; gate-aware | merged | SFDI walks |
+| **Q4** | Old-sermon exemption stays scoped to the original empty-evidence rule | settled | — |
+| **Q5** | Synthesize + Compile direct-writes converted to proposal pattern | 2026-05-01 | ACCI A2, commit `2b0fa66` |
+| **Q6** | PC modulation in AI prompts driven by SFDI per-field PC content | merged | SFDI working doc |
+| **Q7** | Implications is one step with three voices (Theological / Personal / PC); content half lives in SFDI | structural settled | — |
+| **Q8** | Inline AI Reviews are advisory carve-out; CORE.md Process #5 enforcement scoped to substitutive `ai_proposal`/`ai_apply` cycle | 2026-05-02 | CORE.md |
+| **Q9** | Three vestigial fields cleanup handed off to audit triage | closed | audit triage memory |
+
+---
+
+## Structural commitments (the load-bearing four)
+
+### 1. Named outcomes per sub-phase
+
+Each sub-phase produces exactly one named outcome that the next sub-phase opens against. The named outcome sits *inside* the sub-phase, not after it. The handoff to the next sub-phase carries it forward.
+
+Current set (refined during SFDI walks):
+- Observe → **Observation Set**
+- Interpret → **Interpretation Set**
+- Redemptive Thread → **Christ-Connection Statement**
+- Implications → **Implications Synthesis**
+
+Substance lives in SFDI. Names may refine if SFDI lived-use surfaces issues.
+
+### 2. Evidence at each boundary
+
+Every sub-phase boundary fires a hard gate. Continue is hard-disabled with a clear "you can't advance until X" message when the work is insufficient. Three kinds of checks: **coverage**, **structural completeness**, **synthesis presence**.
+
+The synthesis-producing boundaries (Interpret → RT, RT → Implications, Implications → MPT/MPS) use synthesis presence as their primary check. Earlier boundaries (Observe → Interpret) use coverage + structural completeness. Per-boundary thresholds live in SFDI; renderer-side gate via `evaluateAdvance` in `src/utils/studyAdvancement.js`. Same shape now extended to Step 2 → Step 3 via SADI Step 2 plumbing.
+
+### 3. Pastoral Context enters progressively
+
+PC progression: **awareness** (Observe) → **marination** (Interpret) → **texture** (Redemptive Thread) → **integration** (Implications). PC is one of three voices in Implications, not a parallel always-on card.
+
+Two non-negotiables:
+1. **PC absence never locks Study or any sub-phase.** Shell-level guarantee preserved at every resolution.
+2. **AI prompts treat PC as enrichment, never as a precondition.** Every prompt that references PC phrases it conditionally. Tier 7 reads Phase 4 Field 3 (`pastoral_context.room_specifics` + `cost_and_gift`); the legacy three-column card is retired.
+
+### 4. Isolated-world workspace UX overhaul
+
+Three components, all shipped:
+1. **Field-level spotlight** — one field active at a time with sequential questions; siblings collapsed; persistent prompts; "Next question" affordance disabled-when-empty.
+2. **Sermon-level app-takeover** — Sidebar hidden when in Workspace view; single back affordance.
+3. **Throughline visualization** — vertical rail with field nodes, named-outcome callouts, hover-checklist on disabled gate. Static (no animation).
+
+---
+
+## Migration policy
+
+**Defensive only.** No production sermons exist as of 2026-05-04, so no migration logic shipped. The new question-keyed envelope shape is used from day one for every sermon. `parseStructuredField` carries a `legacy_notes` defensive path for unforeseen old data; no per-key auto-mapping logic was written.
+
+If migration ever becomes real, **Option C (per-field legacy_notes)** is the spec — chosen over phase-level blob (scatters work) and per-key auto-pre-fill (auto-fills questions whose meaning has drifted).
+
+---
+
+## Cross-doc relationships
+
+- **SFDI** owns content of Study fields. Charter (with Orientation): [`sfdi-charter.md`](sfdi-charter.md). Working doc (the 25 fields): [`study-field-definition-initiative.md`](study-field-definition-initiative.md).
+- **SADI** owns content of anchor fields. Charter (with Orientation): [`sadi-charter.md`](sadi-charter.md). Working doc (the 4 anchor fields): [`sermon-anchor-definition-initiative.md`](sermon-anchor-definition-initiative.md).
+- **CORE.md Process Contract #6** binds the workspace throughline to SFDI + SADI together.
+- **ENFORCEMENT_STATUS.md** records current verification of every clause.
+- **Sermon workspace system doc** ([`docs/SYSTEMS/sermon-workspace.md`](../SYSTEMS/sermon-workspace.md)) carries the verbatim PC progression articulation.
+- **Tour spec** ([`sermon-workspace-tour.md`](sermon-workspace-tour.md)) carries the 17 throughline-first stops.
+- **Archived implementation log** ([`docs/ARCHIVE/study-phase-implementation-plan.md`](../ARCHIVE/study-phase-implementation-plan.md)) preserves the per-milestone shipping record.
+
+---
+
+*End of trimmed SPRD planning document. Per-milestone reasoning, decision narrative, vocabulary glossary, screen-and-AI knock-on detail, and the full Q-record reasoning chain were dropped 2026-05-05 — all live in git history and the SFDI/SADI working docs. Restore from git if a future audit needs them.*

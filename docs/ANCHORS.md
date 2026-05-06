@@ -6,4 +6,3 @@ Load-bearing strategic documents that span multiple sessions and anchor downstre
 - docs/PROPOSALS/study-field-definition-initiative.md — SFDI working doc; per-field entries accumulate here
 - docs/PROPOSALS/study-phase-redesign.md — SPRD planning doc; structural layer of the Study redesign
 - docs/PROPOSALS/sermon-anchor-definition-initiative.md — SADI working doc; per-field content-design for Step 2 (MPT/MPS) and Step 5 (Intro/Conclusion)
-- docs/PROPOSALS/study-phase-implementation-plan.md — SPIP; remaining work plus lived-use watch list for the Study redesign

@@ -168,7 +168,7 @@ describe("SynthesisTable — add / delete row", () => {
   });
 });
 
-// ── Cumulative-content delete confirm copy (SPIP item 6 Q2) ───────────────
+// ── Cumulative-content delete confirm copy ────────────────────────────────
 
 describe("SynthesisTable — delete-with-cumulative-content guardrail", () => {
   it("shows a heightened confirm label when the row carries Phase 2/3/4 work", () => {
@@ -219,7 +219,7 @@ describe("SynthesisTable — delete-with-cumulative-content guardrail", () => {
   });
 });
 
-// ── After-line stale flag (SPIP item 6 Q3) ─────────────────────────────────
+// ── After-line stale flag ─────────────────────────────────────────────────
 
 describe("SynthesisTable — after_line stale flag", () => {
   it("renders a stale flag when the after_line value exceeds the canvas line count", () => {

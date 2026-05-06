@@ -14,7 +14,7 @@
 // one is added, it must keep rows as units (don't rebuild rows from
 // per-column arrays) or attribution breaks.
 //
-// Two destructive-edit guardrails (SPIP item 6, ratified 2026-05-05):
+// Two destructive-edit guardrails:
 //   - Delete on a row carrying cumulative cross-phase work surfaces a
 //     longer warning in the DeleteButton confirm step. Both paths route
 //     through the same Mutation #4 primitive — only the confirm copy
