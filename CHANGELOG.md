@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-06 — Tour seed migrated to unified-canvas shape; cross-doc validator drift edits actually landed
+
+- `electron/tourData.js` Field 3 divisions block converted from the legacy three-question shape (`sentence_layout` / `paraphrases` / `thought_units` with verse-reference `after_line`s like `"v.2"`) to the unified-canvas shape: 15 canvas rows with stable `tour-rom5-row-N` IDs, inline paraphrase per main row, three thought-unit-end markers attached to main rows (Standing on row 6, merged Pivot+Chain on row 8, Anchor on row 12) — fixes the silent migration failure where `Number("v.2")` is `NaN` so unit-ends never attached after defensive read-merge.
+- Pivot (u2) and Chain (u3) merged into one thought unit because ratification 3 attaches `thought_unit_end` to main rows only and the chain modifiers sit under one main row; `meaning` / `christ_connection` / `implication` from both legacy entries combined.
+- Materialized `thought_units` array in the seed now carries `_canvas_row_id` back-pointers and integer `after_line` values matching the canvas; Phase 2/3/4 cumulative-synthesis-tables read this array unchanged.
+- Cross-doc validator's actual drift-remediation edits (C2/C3 narrowed, C4/C6 retired) — described in the previous commit's message but escaped the staging — now properly committed; both validators green at 7/7 + 6/6.
+- Memory: Look-around UX (Idea 4) closed in `project_open_feedback.md`; `MEMORY.md` index hook updated; tour seed migration was the last piece.
+
+---
+
 ## 2026-05-06 — Cross-doc SFDI validator drift remediation + un-archive
 
 - `scripts/sfdi-cross-doc-consistency.py` un-archived alongside the internal-consistency validator; both now live in `scripts/` and pass against current docs (7/7 + 6/6).

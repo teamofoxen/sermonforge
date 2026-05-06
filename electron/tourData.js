@@ -40,17 +40,18 @@ const OP = {
   p3: "c0a1b2c3-0000-0000-0000-000000000003",
 };
 
-// ── Thought-unit IDs (canonical throughline) ─────────────────────────────────
+// ── Canvas row IDs (canonical throughline) ───────────────────────────────────
 //
-// One stable ID per unit. Phases 2/3/4 don't write their own arrays — they
-// extend these rows with meaning, christ_connection, and implication.
+// Phase 4 Sprint 2 unified-canvas shape: each canvas row carries a stable id
+// that doubles as the cross-phase merge key. Rows that carry a
+// `thought_unit_end` marker are reflected in the materialized
+// `divisions.thought_units` array via `_canvas_row_id` matching that id;
+// Phases 2/3/4 extend those rows with meaning / christ_connection /
+// implication. Stable strings (not random UUIDs) so the seed loads
+// deterministically — random UUIDs are fine in production where the canvas
+// is hand-typed, but a fixture wants reproducibility.
 
-const TU = {
-  u1: "tu-rom5-0000-0001",
-  u2: "tu-rom5-0000-0002",
-  u3: "tu-rom5-0000-0003",
-  u4: "tu-rom5-0000-0004",
-};
+const ROW_ID = (n) => `tour-rom5-row-${n}`;
 
 // ── Series ─────────────────────────────────────────────────────────────────────
 
@@ -107,71 +108,93 @@ const sermon = {
       how: { value: "Paul opens the new section with 'therefore' (v.1), drawing a logical inference. He uses three perfect-tense or stative verbs to declare what is already true (have peace, have obtained access, stand), then a present-tense verb of response (rejoice — repeated in v.2 and v.3a). Verse 3b introduces a participial chain (knowing that…) building cause-and-effect through endurance, character, and hope. Verse 5 anchors the chain with a perfect-passive verb: God's love HAS BEEN poured.", na: false },
     },
     divisions: {
-      sentence_layout: {
+      // Phase 4 Sprint 2 unified-canvas shape: structure + inline paraphrase
+      // (per main row) + optional thought_unit_end on main rows. The
+      // materialized `thought_units` array below is what Phase 2/3/4
+      // cumulative-synthesis-tables read cross-phase; it stays in lockstep
+      // with the canvas via `_canvas_row_id` back-pointers.
+      //
+      // Thought-unit attachment notes: u1 ("Standing") attaches to the row
+      // closing v.1-2 territory ("and we rejoice"). The legacy seed had two
+      // distinct units inside v.3-4 ("Pivot" — the kauchaomai reuse, and
+      // "Chain" — the suffering→endurance→character→hope climax) but
+      // ratification 3 attaches thought_unit_end to main rows only, and the
+      // chain modifiers all sit under one main row ("Not only that, but we
+      // rejoice in our sufferings"). The two are merged into one unit
+      // ("Pivot + chain") that attaches to that main row. u4 ("Anchor")
+      // attaches to v.5's main row ("and hope does not put us to shame").
+      canvas: {
         value: [
-          { text: "Therefore, having been justified by faith,", depth: 0, kind: "main" },
-          { text: "we have peace with God", depth: 0, kind: "main" },
-          { text: "through our Lord Jesus Christ.", depth: 1, kind: "modifier" },
-          { text: "Through him also we have obtained access by faith", depth: 0, kind: "main" },
-          { text: "into this grace in which we stand,", depth: 1, kind: "modifier" },
-          { text: "and we rejoice", depth: 0, kind: "coordinate" },
-          { text: "in hope of the glory of God.", depth: 1, kind: "modifier" },
-          { text: "Not only that, but we rejoice in our sufferings,", depth: 0, kind: "main" },
-          { text: "knowing that suffering produces endurance,", depth: 1, kind: "modifier" },
-          { text: "and endurance produces character,", depth: 1, kind: "modifier" },
-          { text: "and character produces hope,", depth: 1, kind: "modifier" },
-          { text: "and hope does not put us to shame,", depth: 0, kind: "coordinate" },
-          { text: "because God's love has been poured into our hearts", depth: 1, kind: "modifier" },
-          { text: "through the Holy Spirit", depth: 2, kind: "modifier" },
-          { text: "who has been given to us.", depth: 2, kind: "modifier" },
-        ],
-        na: false,
-      },
-      paraphrases: {
-        value: [
-          { main_sentence_id: "ms-0", paraphrase: "Because God has already declared us righteous through faith," },
-          { main_sentence_id: "ms-1", paraphrase: "we now stand in real peace with him — and that peace was secured for us by Jesus." },
-          { main_sentence_id: "ms-2", paraphrase: "Through Jesus we have also been brought into this open standing of grace, where we are now firmly planted." },
-          { main_sentence_id: "ms-3", paraphrase: "And the only fitting response is to celebrate the glory God has promised." },
-          { main_sentence_id: "ms-4", paraphrase: "Not only that, but even our sufferings become reasons to celebrate, because we know suffering produces endurance, endurance produces character, and character produces hope." },
-          { main_sentence_id: "ms-5", paraphrase: "And this hope will never shame us, because God's love has already been poured into our hearts by the Holy Spirit he gave us." },
+          { id: ROW_ID(1),  text: "Therefore, having been justified by faith,",                  depth: 0, kind: "main",
+            paraphrase: "Because God has already declared us righteous through faith," },
+          { id: ROW_ID(2),  text: "we have peace with God",                                       depth: 0, kind: "main",
+            paraphrase: "we now stand in real peace with him — and that peace was secured for us by Jesus." },
+          { id: ROW_ID(3),  text: "through our Lord Jesus Christ.",                               depth: 1, kind: "modifier",
+            paraphrase: "" },
+          { id: ROW_ID(4),  text: "Through him also we have obtained access by faith",           depth: 0, kind: "main",
+            paraphrase: "Through Jesus we have also been brought into this open standing of grace, where we are now firmly planted." },
+          { id: ROW_ID(5),  text: "into this grace in which we stand,",                           depth: 1, kind: "modifier",
+            paraphrase: "" },
+          { id: ROW_ID(6),  text: "and we rejoice",                                               depth: 0, kind: "main",
+            paraphrase: "And the only fitting response is to celebrate the glory God has promised.",
+            thought_unit_end: {
+              summary: "Standing — what justification has already done",
+              signal: "three perfect/stative verbs (have peace, have obtained access, stand) declare a settled state",
+            } },
+          { id: ROW_ID(7),  text: "in hope of the glory of God.",                                 depth: 1, kind: "modifier",
+            paraphrase: "" },
+          { id: ROW_ID(8),  text: "Not only that, but we rejoice in our sufferings,",             depth: 0, kind: "main",
+            paraphrase: "Not only that, but even our sufferings become reasons to celebrate, because we know suffering produces endurance, endurance produces character, and character produces hope.",
+            thought_unit_end: {
+              summary: "Pivot + chain — rejoicing in suffering because of what it produces",
+              signal: "kauchaomai reused from v.2 (now applied to suffering), then Greek climax: suffering → endurance → character → hope",
+            } },
+          { id: ROW_ID(9),  text: "knowing that suffering produces endurance,",                   depth: 1, kind: "modifier",
+            paraphrase: "" },
+          { id: ROW_ID(10), text: "and endurance produces character,",                            depth: 1, kind: "modifier",
+            paraphrase: "" },
+          { id: ROW_ID(11), text: "and character produces hope,",                                 depth: 1, kind: "modifier",
+            paraphrase: "" },
+          { id: ROW_ID(12), text: "and hope does not put us to shame,",                           depth: 0, kind: "main",
+            paraphrase: "And this hope will never shame us, because God's love has already been poured into our hearts by the Holy Spirit he gave us.",
+            thought_unit_end: {
+              summary: "Anchor — why this hope does not put us to shame",
+              signal: "perfect-passive verb 'has been poured' — settled action by another agent",
+            } },
+          { id: ROW_ID(13), text: "because God's love has been poured into our hearts",           depth: 1, kind: "modifier",
+            paraphrase: "" },
+          { id: ROW_ID(14), text: "through the Holy Spirit",                                      depth: 2, kind: "modifier",
+            paraphrase: "" },
+          { id: ROW_ID(15), text: "who has been given to us.",                                    depth: 2, kind: "modifier",
+            paraphrase: "" },
         ],
         na: false,
       },
       thought_units: {
         value: [
           {
-            id: TU.u1,
             thought_unit_summary: "Standing — what justification has already done",
-            after_line: "v.2",
+            after_line: 6,
             signal: "three perfect/stative verbs (have peace, have obtained access, stand) declare a settled state",
+            _canvas_row_id: ROW_ID(6),
             meaning: "Paul opens not with command but with description. The believer's life under God is already secured — peace is had, access is obtained, grace is stood in. The only verb of response is rejoice. Suffering does not threaten this standing; v.1-2 is the floor every later verb stands on.",
             christ_connection: "Every 'we have' is mediated 'through our Lord Jesus Christ.' The believer stands in a grace they did not earn and cannot lose because Christ secured it on the cross and now lives to keep them in it.",
             implication: "Before any call to endure, anchor the listener in what is already true. The Christian under pressure is not someone who must climb back to peace; they are someone who has not yet noticed they are already standing on it.",
           },
           {
-            id: TU.u2,
-            thought_unit_summary: "Pivot — the same rejoicing now turned toward suffering",
-            after_line: "v.3a",
-            signal: "kauchaomai repeated from v.2 — Paul deliberately reuses the verb",
-            meaning: "Same word as 'rejoice in hope of glory' (v.2), now applied to suffering. Paul refuses to let pain become the deepest word about the believer's life. The boast does not change subjects when life turns hard.",
-            christ_connection: "The believer can rejoice in suffering because Christ has already reframed suffering as the road of the Servant who entered glory through it — the road the disciple now walks behind him.",
-            implication: "Rejoicing in suffering is not denial of pain. It is the refusal to grant suffering the final word over a life that has already been claimed by the gospel. This is honest joy, not stoic performance.",
+            thought_unit_summary: "Pivot + chain — rejoicing in suffering because of what it produces",
+            after_line: 8,
+            signal: "kauchaomai reused from v.2 (now applied to suffering), then Greek climax: suffering → endurance → character → hope",
+            _canvas_row_id: ROW_ID(8),
+            meaning: "Paul reuses the same verb (kauchaomai) from v.2 — refusing to let pain become the deepest word about the believer's life — and then builds a logical chain showing what suffering actually does: it works, slowly, through endurance and character, into hope. The boast does not change subjects when life turns hard, and the chain has no shortcuts; the slow path is the whole point.",
+            christ_connection: "Christ has reframed suffering as the road of the Servant who entered glory through it — and the chain Paul names is the very pattern of Christ's own life (suffering, faithfulness, vindication). The Spirit conforms the believer to that same shape (cf. Rom 8:29); what looks like loss is the very hand of God reshaping a person into the likeness of his Son.",
+            implication: "Rejoicing in suffering is not denial of pain — it is the refusal to grant suffering the final word over a life already claimed by the gospel. And honest joy means naming to the room that there are no shortcuts: the hope you long for is produced at the end of the chain you are dreading. God is not wasting your suffering; he is using it to grow the very thing you most want.",
           },
           {
-            id: TU.u3,
-            thought_unit_summary: "Chain — what suffering actually produces",
-            after_line: "v.4",
-            signal: "Greek climax — each link is the cause of the next (suffering → endurance → character → hope)",
-            meaning: "Paul builds a logical chain. Suffering does not just happen; it works. And what it works for is hope — but only via the slow path through endurance and character. There are no shortcuts; the chain is the whole point.",
-            christ_connection: "This is the pattern of Christ's own life — suffering, faithfulness, vindication. The Spirit is conforming the believer to that same shape (cf. Rom 8:29). What looks like loss is the very hand of God reshaping a person into the likeness of his Son.",
-            implication: "Name to the room: there are no shortcuts. The hope you are longing for is the very thing produced at the end of the chain you are dreading. God is not wasting your suffering; he is using it to grow the very thing you most want.",
-          },
-          {
-            id: TU.u4,
             thought_unit_summary: "Anchor — why this hope does not put us to shame",
-            after_line: "v.5",
+            after_line: 12,
             signal: "perfect-passive verb 'has been poured' — settled action by another agent",
+            _canvas_row_id: ROW_ID(12),
             meaning: "Paul does not ground hope in the strength of the believer's endurance but in a love already poured in by the Spirit. The hope's reliability is not the believer's grip on God but God's love already given. The chain of v.3-4 produces hope, but v.5 explains why that hope holds: the Spirit, the love, the One who gave them.",
             christ_connection: "The Spirit who pours God's love into hearts is the Spirit of the risen Christ. The same love that sent the Son to the cross (v.8) is the love now indwelling the believer. The cross is not behind us; it is in us, by the Spirit.",
             implication: "The believer in suffering does not have to manufacture hope. Hope is held by Someone Else; their job is to remember Whose love is already in them. This is what makes pastoral care under pressure possible — you are not asking people to summon hope. You are asking them to receive the love already poured in.",

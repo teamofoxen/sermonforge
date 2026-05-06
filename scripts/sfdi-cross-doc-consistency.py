@@ -81,20 +81,23 @@ results.append(("C1 — Named outcomes spelled identically across all docs", "FA
 
 
 # ---------------------------------------------------------------------------
-# C2 — Canonical vocabulary terms present in SFDI, SPRD, workspace
+# C2 — Canonical vocabulary terms present in SFDI + workspace
+# (SPRD dropped 2026-05-06 — the SPRD planning doc was trimmed from 579 to
+# 110 lines on 2026-05-05; vocabulary now lives in SFDI and the workspace
+# system doc, not in the thin progress doc that SPRD became.)
 # ---------------------------------------------------------------------------
 canonical_terms = [
     "field", "question", "answer", "sub-phase",
     "throughline", "named outcome", "handoff", "Pastoral Context",
 ]
 c2 = []
-for doc_key in ["SFDI", "SPRD", "workspace"]:
+for doc_key in ["SFDI", "workspace"]:
     text_lower = content[doc_key].lower()
     for term in canonical_terms:
         if term.lower() not in text_lower:
             c2.append(f"MISSING term '{term}' in {doc_key}")
 
-results.append(("C2 — Canonical vocabulary present in SFDI/SPRD/workspace", "FAIL" if c2 else "PASS", c2, []))
+results.append(("C2 — Canonical vocabulary present in SFDI + workspace", "FAIL" if c2 else "PASS", c2, []))
 
 
 # ---------------------------------------------------------------------------
@@ -125,15 +128,17 @@ for pat, desc in ws_checks:
         c3.append(f"workspace: missing pattern for {desc}  (regex: {pat})")
 
 sprd_text = content["SPRD"]
-clog = content["CHANGELOG"]  # used below in C4
 for stale in ["9+9+7+14", "11+9+7+14", "9+7+5+4"]:
     if stale in sprd_text:
         for ln, line in enumerate(sprd_text.splitlines(), 1):
             if stale in line:
                 c3.append(f"SPRD:{ln} — stale field count '{stale}' — {line.strip()[:120]}")
 
-if "8+8+5+4" not in sprd_text:
-    c3.append("SPRD: missing canonical '8+8+5+4' Component 3 field-count")
+# 2026-05-06: SPRD-specific "8+8+5+4 Component 3 field-count must appear"
+# check dropped — SPRD was trimmed to a thin progress doc 2026-05-05 and no
+# longer carries Component 3 framing. The 8+8+5+4 shape stays verified by the
+# SFDI field-order regex, the workspace per-phase shape patterns, and the
+# state_memory per-phase counts above.
 
 sm = content["state_memory"]
 for cstr in ["Phase 1 Observe: 8", "Phase 2 Interpret: 8", "Phase 3 RT: 5", "Phase 4 Implications: 4"]:
@@ -144,51 +149,17 @@ results.append(("C3 — Per-phase field counts (8, 8, 5, 4) consistent", "FAIL" 
 
 
 # ---------------------------------------------------------------------------
-# C4 — Status date 2026-05-04 referenced consistently
+# C4 — RETIRED 2026-05-06.
+# Original criterion locked a single canonical date (2026-05-04 — the SFDI
+# walks-completion day) across SFDI / charter / SPRD / state_memory /
+# MEMORY.md / CHANGELOG status lines. Brittle by design: every subsequent
+# session that touches a status surface bumps that doc's most recent date,
+# breaking the synchronization the criterion expected. The Field 3 unified-
+# canvas refactor (2026-05-05 → 2026-05-06) is the third such drift.
+# Synchronization across docs is partly covered by C1 (named outcomes spelled
+# the same) and C3 (per-phase counts agree); a date-locked check adds noise
+# without adding signal.
 # ---------------------------------------------------------------------------
-c4 = []
-date_required = "2026-05-04"
-
-m = re.search(r"\*\*Status:\*\*[^\n]+", sfdi)
-if not m:
-    c4.append("SFDI: no Status line found")
-elif date_required not in m.group():
-    c4.append(f"SFDI status line missing {date_required}: {m.group().strip()[:120]}")
-
-charter = content["charter"]
-m = re.search(r"\*\*Status:\*\*[^\n]+", charter)
-if not m:
-    c4.append("Charter: no Status line found")
-elif date_required not in m.group():
-    c4.append(f"Charter status line missing {date_required}: {m.group().strip()[:120]}")
-
-m = re.search(r"\*\*Status:\*\*[^\n]+", sprd_text)
-if not m:
-    c4.append("SPRD: no Status line found")
-elif date_required not in m.group():
-    c4.append(f"SPRD status line missing {date_required}: {m.group().strip()[:120]}")
-
-m = re.search(r"^description:[^\n]+", sm, re.MULTILINE)
-if not m:
-    c4.append("state_memory: no description in frontmatter")
-elif date_required not in m.group():
-    c4.append(f"state_memory frontmatter missing {date_required}: {m.group().strip()[:120]}")
-
-mem_text = content["MEMORY"]
-state_entry = None
-for line in mem_text.splitlines():
-    if "project_sprd_sfdi_state.md" in line:
-        state_entry = line
-        break
-if not state_entry:
-    c4.append("MEMORY.md: no project_sprd_sfdi_state.md entry found")
-elif date_required not in state_entry:
-    c4.append(f"MEMORY.md entry missing {date_required}: {state_entry.strip()[:120]}")
-
-if not re.search(r"^## 2026-05-04", clog, re.MULTILINE):
-    c4.append("CHANGELOG: missing '## 2026-05-04' entry header")
-
-results.append(("C4 — Status date 2026-05-04 consistent across status surfaces", "FAIL" if c4 else "PASS", c4, []))
 
 
 # ---------------------------------------------------------------------------
@@ -220,29 +191,18 @@ results.append(("C5 — Process Contract #6 binding language consistent", "FAIL"
 
 
 # ---------------------------------------------------------------------------
-# C6 — SPRD structural backlog references match SFDI shape
+# C6 — RETIRED 2026-05-06.
+# Original criterion required SPRD's backlog list to name "Implications
+# restructure", "PC card removal", and "Component 1 cumulative-column
+# extension" with their downstream-shape references intact. All three items
+# shipped during SPRD's B-series in 2026-05-04, and SPRD was trimmed from a
+# 579-line planning doc to a 110-line progress doc on 2026-05-05 — the
+# backlog list is no longer there to check. Implementation history now lives
+# in `git log` and `CHANGELOG.md`.
 # ---------------------------------------------------------------------------
 c6 = []
 
-backlog_items = [
-    {
-        "name": "Implications restructure",
-        "search": "Implications restructure",
-        "expected_refs": ["Phase 4", "three-way conversation"],
-    },
-    {
-        "name": "PC card removal",
-        "search": "PC card removal",
-        "expected_refs": ["Field 3"],
-    },
-    # C4 (Background series-level inheritance) closed 2026-05-05 by Background
-    # field retirement. No longer a backlog item to verify.
-    {
-        "name": "Component 1 cumulative-column extension",
-        "search": "Cumulative-column extension",
-        "expected_refs": ["Phase 1 Field 3 Q3", "Phases 2/3/4"],
-    },
-]
+backlog_items = []  # criterion retired; loop below emits PASS
 
 for item in backlog_items:
     sprd_lines = lines["SPRD"]
@@ -330,6 +290,6 @@ for name, status, findings, info in results:
 
 print()
 print("=" * 78)
-print(f"Criteria total: 7    Failing: {n_fail}")
+print(f"Criteria total: {len(results)}    Failing: {n_fail}")
 print("=" * 78)
 sys.exit(0 if n_fail == 0 else 1)
