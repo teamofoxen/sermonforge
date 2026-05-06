@@ -11,7 +11,9 @@ from pathlib import Path
 
 sys.stdout.reconfigure(encoding="utf-8")
 
-REPO = Path("C:/Projects/SermonForge-sfdi")
+# Resolve repo root from the script's own location so this works whether
+# invoked from the main repo or a worktree (sub/sfdi was the original home).
+REPO = Path(__file__).resolve().parent.parent
 MEMORY = Path("C:/Users/rossa/.claude/projects/C--Projects-SermonForge/memory")
 
 DOCS = {
@@ -93,47 +95,49 @@ results.append(("C2 — Canonical vocabulary present in SFDI/SPRD/workspace", "F
 
 
 # ---------------------------------------------------------------------------
-# C3 — Per-phase field counts (9, 7, 5, 4) consistent
+# C3 — Per-phase field counts (8, 8, 5, 4) consistent
+# Updated 2026-05-05: Background field retired (Phase 1 9 → 8); Genre field
+# added to Interpret (Phase 2 7 → 8). CHANGELOG and historical SPRD strings
+# from the original 9 → 7 reshape are still present in those docs as past
+# entries; we no longer require them as canonical, only forbid stale counts.
 # ---------------------------------------------------------------------------
 c3 = []
 sfdi = content["SFDI"]
-expected_orders = ["9", "7", "5", "4"]
+expected_orders = ["8", "8", "5", "4"]
 sfdi_orders = re.findall(r"### Field order \(revised — (\d+) fields\)", sfdi)
 if sfdi_orders != expected_orders:
     c3.append(f"SFDI field-order counts: {sfdi_orders}, expected {expected_orders}")
 
 ws_text = content["workspace"]
+# Newline-tolerant: workspace doc wraps long sentences, so "N-field" and "shape"
+# may sit on adjacent lines.
 ws_checks = [
-    (r"Phase 1.{0,80}9 fields", "Phase 1 = 9"),
-    (r"Phase 2.{0,80}7 fields", "Phase 2 = 7"),
-    (r"Phase 3.{0,80}5 fields", "Phase 3 = 5"),
-    (r"Phase 4.{0,80}4 fields", "Phase 4 = 4"),
+    (r"Phase 1[\s\S]{0,400}8-field\s+shape", "Phase 1 = 8"),
+    (r"Phase 2[\s\S]{0,400}8-field\s+shape", "Phase 2 = 8"),
+    (r"Phase 3[\s\S]{0,400}5-field\s+shape", "Phase 3 = 5"),
+    (r"Phase 4[\s\S]{0,400}4-field\s+shape", "Phase 4 = 4"),
 ]
 for pat, desc in ws_checks:
     if not re.search(pat, ws_text):
         c3.append(f"workspace: missing pattern for {desc}  (regex: {pat})")
 
 sprd_text = content["SPRD"]
-for stale in ["9+9+7+14", "11+9+7+14"]:
+clog = content["CHANGELOG"]  # used below in C4
+for stale in ["9+9+7+14", "11+9+7+14", "9+7+5+4"]:
     if stale in sprd_text:
         for ln, line in enumerate(sprd_text.splitlines(), 1):
             if stale in line:
                 c3.append(f"SPRD:{ln} — stale field count '{stale}' — {line.strip()[:120]}")
 
-if "9+7+5+4" not in sprd_text:
-    c3.append("SPRD: missing canonical '9+7+5+4' Component 3 field-count")
-
-clog = content["CHANGELOG"]
-for cstr in ["9 → 7 fields", "8 slots → 5 fields", "15 slots → 4 fields"]:
-    if cstr not in clog:
-        c3.append(f"CHANGELOG: missing reshape count '{cstr}'")
+if "8+8+5+4" not in sprd_text:
+    c3.append("SPRD: missing canonical '8+8+5+4' Component 3 field-count")
 
 sm = content["state_memory"]
-for cstr in ["Phase 1 Observe: 9", "Phase 2 Interpret: 7", "Phase 3 RT: 5", "Phase 4 Implications: 4"]:
+for cstr in ["Phase 1 Observe: 8", "Phase 2 Interpret: 8", "Phase 3 RT: 5", "Phase 4 Implications: 4"]:
     if cstr not in sm:
         c3.append(f"state_memory: missing per-phase count '{cstr}'")
 
-results.append(("C3 — Per-phase field counts (9, 7, 5, 4) consistent", "FAIL" if c3 else "PASS", c3, []))
+results.append(("C3 — Per-phase field counts (8, 8, 5, 4) consistent", "FAIL" if c3 else "PASS", c3, []))
 
 
 # ---------------------------------------------------------------------------
@@ -195,7 +199,7 @@ for doc_key in ["CORE", "charter", "state_memory"]:
     if "binding" not in text:
         c5.append(f"{doc_key}: doesn't mention 'binding' anywhere")
 
-stale_phrases = ["drafted but inactive", "vacuous"]
+stale_phrases = [r"drafted but inactive", r"\bvacuous\b"]  # \b avoids matching "vacuously" (used as a technical CS/logic adverb)
 historical = re.compile(
     r"\b(was|were|previously|no longer|rather than|formerly|prior to|until|originally)\b",
     re.IGNORECASE,
@@ -203,7 +207,7 @@ historical = re.compile(
 for doc_key in ["CORE", "SFDI", "SPRD", "charter", "state_memory"]:
     for ln, line in enumerate(lines[doc_key], 1):
         for phrase in stale_phrases:
-            if phrase in line:
+            if re.search(phrase, line):
                 if historical.search(line):
                     c5_info.append(f"OK (historical): {doc_key}:{ln} — '{phrase}' qualified — {line.strip()[:120]}")
                 else:
@@ -228,15 +232,12 @@ backlog_items = [
         "search": "PC card removal",
         "expected_refs": ["Field 3"],
     },
-    {
-        "name": "Background series-level inheritance",
-        "search": "Background field series-level inheritance",
-        "expected_refs": ["Phase 1 Field 1"],
-    },
+    # C4 (Background series-level inheritance) closed 2026-05-05 by Background
+    # field retirement. No longer a backlog item to verify.
     {
         "name": "Component 1 cumulative-column extension",
         "search": "Cumulative-column extension",
-        "expected_refs": ["Phase 1 Field 4 Q3", "Phases 2/3/4"],
+        "expected_refs": ["Phase 1 Field 3 Q3", "Phases 2/3/4"],
     },
 ]
 
@@ -275,25 +276,27 @@ results.append(("C6 — SPRD backlog references SFDI shape accurately", "FAIL" i
 c7 = []
 c7_info = []
 
-# Identify Field 3's section boundary so "Character Function" mentions inside
-# the alternates-considered context can be allowed.
+# Identify Character Purpose field's section boundary so "Character Function"
+# mentions inside the alternates-considered context can be allowed. (Field
+# was Phase 2 Field 3 originally; renumbered to Field 4 after Genre added at
+# position 2 on 2026-05-05.)
 sfdi_lines = lines["SFDI"]
-in_field3_block = set()  # 1-indexed line numbers
-in_field3 = False
+in_char_purpose_block = set()  # 1-indexed line numbers
+in_block = False
 for i, line in enumerate(sfdi_lines, 1):
-    if line.startswith("### Field 3 ") and "Character Purpose" in line:
-        in_field3 = True
-    elif in_field3 and line.startswith("### Field"):
-        in_field3 = False
-    if in_field3:
-        in_field3_block.add(i)
+    if line.startswith("### Field ") and "Character Purpose" in line:
+        in_block = True
+    elif in_block and line.startswith("### Field"):
+        in_block = False
+    if in_block:
+        in_char_purpose_block.add(i)
 
 for i, line in enumerate(sfdi_lines, 1):
     if "Character Function" in line:
-        if i in in_field3_block:
-            c7_info.append(f"OK (Field 3 alternates-considered): SFDI:{i} — {line.strip()[:120]}")
+        if i in in_char_purpose_block:
+            c7_info.append(f"OK (Character Purpose alternates-considered): SFDI:{i} — {line.strip()[:120]}")
         else:
-            c7.append(f"SFDI:{i} — 'Character Function' outside Field 3 alternates context — {line.strip()[:120]}")
+            c7.append(f"SFDI:{i} — 'Character Function' outside Character Purpose alternates context — {line.strip()[:120]}")
 
 for i, line in enumerate(sfdi_lines, 1):
     if "(placeholder)" in line:

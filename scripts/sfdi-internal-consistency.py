@@ -20,9 +20,12 @@ except Exception:
 DOC = Path("docs/PROPOSALS/study-field-definition-initiative.md")
 
 # Phases and field counts
+# Updated 2026-05-05: Background field retired (Phase 1 9 → 8); Genre field
+# added to Interpret (Phase 2 7 → 8). All Phase 1 fields renumbered down by
+# 1; all Phase 2 fields after position 1 renumbered up by 1.
 PHASES = [
-    ("Phase 1: Observe",          "Observe",            9, "nothing"),
-    ("Phase 2: Interpret",        "Interpret",          7, "Observation Set"),
+    ("Phase 1: Observe",          "Observe",            8, "nothing"),
+    ("Phase 2: Interpret",        "Interpret",          8, "Observation Set"),
     ("Phase 3: Redemptive Thread","Redemptive Thread",  5, "Interpretation Set"),
     ("Phase 4: Implications",     "Implications",       4, "Christ-Connection Statement"),
 ]
@@ -34,9 +37,9 @@ NAMED_OUTCOMES = [
 ]
 HEAVY_LIFTING = [
     # (Phase, Field N, Field name fragment, total fields in phase)
-    ("Observe",            4, "Divisions / Thought Units",     9),
-    ("Observe",            9, "Possible Implications",         9),
-    ("Interpret",          7, "Interpretation Synthesis",      7),
+    ("Observe",            3, "Divisions / Thought Units",     8),  # was Field 4 of 9
+    ("Observe",            8, "Possible Implications",         8),  # was Field 9 of 9
+    ("Interpret",          8, "Interpretation Synthesis",      8),  # was Field 7 of 7
     ("Redemptive Thread",  2, "How the Passage Points to Christ", 5),
     ("Redemptive Thread",  5, "Christ-Connection Statement",   5),
     ("Implications",       4, "Implications Synthesis",        4),
@@ -74,11 +77,16 @@ def phase_ranges():
 def field_blocks(phase_start, phase_end):
     """Return list of (field_n, field_name, start_line, end_line_exclusive)
     inside the phase. The boundary is the next `### Field` *or* the next
-    `## ` (start of within-sub-phase flow / handoff section)."""
+    `## ` (start of within-sub-phase flow / handoff section).
+
+    Skips retired fields (annotation contains "RETIRED")."""
     blocks = []
     for i in range(phase_start, phase_end):
-        m = re.match(r"^### Field (\d+) — (.+?)(?:\s*\*\(.+\)\*)?\s*$", lines[i])
+        m = re.match(r"^### Field (\d+) — (.+?)(?:\s*\*\((.+)\)\*)?\s*$", lines[i])
         if m:
+            annotation = m.group(3) or ""
+            if "RETIRED" in annotation:
+                continue
             blocks.append([int(m.group(1)), m.group(2).strip(), i, None])
     # Resolve end_line for each block.
     for idx, b in enumerate(blocks):
@@ -284,17 +292,18 @@ def block_text_for(phase_short, n):
             return "\n".join(lines[s:e]), s, e, name
     return None
 
-# 5a — Phase 2 Field 7 must say "fourth column" and "Meaning"
-b = block_text_for("Interpret", 7)
+# 5a — Phase 2 Field 8 (Interpretation Synthesis; was Field 7 before Genre
+# added at position 2 on 2026-05-05) must say "fourth column" and "Meaning"
+b = block_text_for("Interpret", 8)
 if not b:
-    c5_fail += 1; c5_details.append("  MISSING Interpret Field 7 block")
+    c5_fail += 1; c5_details.append("  MISSING Interpret Field 8 block")
 else:
     bt, s, e, _ = b
     if "fourth column" not in bt.lower() or "Meaning" not in bt:
         c5_fail += 1
-        c5_details.append("  Interpret F7 Q1: missing 'fourth column' / 'Meaning' phrasing")
+        c5_details.append("  Interpret F8 Q1: missing 'fourth column' / 'Meaning' phrasing")
     else:
-        c5_details.append("  Interpret F7 Q1: 'fourth column' + 'Meaning' present")
+        c5_details.append("  Interpret F8 Q1: 'fourth column' + 'Meaning' present")
 
 # 5b — Phase 3 Field 5 must say "five columns" and "Christ-Connection"
 b = block_text_for("Redemptive Thread", 5)
@@ -363,7 +372,7 @@ for phase, n, _name, _total in HEAVY_LIFTING:
     required_fields.add((phase, n))
 # Plus named-outcome fields (last field of each phase if not already in heavy-lifting).
 named_outcome_fields = {
-    ("Observe", 9), ("Interpret", 7),
+    ("Observe", 8), ("Interpret", 8),  # was (Observe, 9) and (Interpret, 7) before 2026-05-05 reshape
     ("Redemptive Thread", 5), ("Implications", 4),
 }
 required_fields |= named_outcome_fields

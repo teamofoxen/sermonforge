@@ -141,14 +141,13 @@ Field definitions live in `src/utils/studyFields.js`.
 
 #### Phase 1: Observe → `sermons.observations` (JSON)
 
-**SFDI-aligned in code as of SPRD B1.0 (2026-05-04).** `OBSERVE_FIELDS` in
-`src/utils/studyFields.js` is the SFDI 9-field shape: `background` → `context`
+**SFDI-aligned in code as of SPRD B1.0 (2026-05-04); Background field retired 2026-05-05.** `OBSERVE_FIELDS` in
+`src/utils/studyFields.js` is the 8-field shape: `context`
 → `surface_questions` → `divisions` → `characters` → `commands_declarations`
-→ `big_ideas` → `obvious_point` → `applications`. Five fields carry multi-
-question sequences: four text-prompt (B1.2) — Background `[author, date,
-audience, genre]`; Context `[before, after, impact, holy_spirit_intent]`;
+→ `big_ideas` → `obvious_point` → `applications`. Four fields carry multi-
+question sequences: three text-prompt (B1.2) — Context `[before, after, impact, holy_spirit_intent]`;
 Surface Questions `[where, when, how]`; Possible Implications `[pressing,
-hard_and_hopeful]` — plus Field 4 Divisions / Thought Units (B1.5) which
+hard_and_hopeful]` — plus Field 3 Divisions / Thought Units (B1.5) which
 carries three structured-exercise questions: `sentence_layout` (kind=canvas)
 + `paraphrases` (kind=paraphrase) + `thought_units` (kind=synthesis-table).
 SpotlightWorksheet's multi-question rendering dispatches on `question.kind`
@@ -157,21 +156,23 @@ to mount the matching A2.x primitive (`IndentedSentenceCanvas` /
 questions read the sibling canvas value via the field's `kind:"canvas"`
 question. Q1 carries a structured `referencePanel` (the SFDI three rules +
 genre tips for epistles / narrative / poetry) that flanks the active
-question via a 72/28 flex row. Field 4 Divisions / Thought Units and Field
-9 Possible Implications are flagged heavy-lifting and open with
+question via a 72/28 flex row. Field 3 Divisions / Thought Units and Field
+8 Possible Implications are flagged heavy-lifting and open with
 `FieldOverviewScreen` on first per-sermon entry (B1.3).
 
-**Phase 2 SFDI-aligned in code as of SPRD B2.0–B2.2 (2026-05-04).** `INTERPRET_FIELDS`
-in `src/utils/studyFields.js` is the SFDI 7-field shape: Deeper Context →
+**Phase 2 SFDI-aligned in code as of SPRD B2.0–B2.2 (2026-05-04); Genre field added 2026-05-05.** `INTERPRET_FIELDS`
+in `src/utils/studyFields.js` is the 8-field shape: Deeper Context → Genre →
 Recurring Ideas → Character Purpose → Contrasts → Cross-References →
 Commentary Notes → Interpretation Synthesis. Three new keys: `deeper_context`
 (refined from `context_impact`), `character_purpose` (refined from
 `characters`), `interpretation_synthesis` (merged from `summarize_parts` +
-`summarize_whole`). Five keys retire from rendering: `context_impact`,
-`characters`, `diagram` (cross-phase to Observe Field 4 Q1 canvas which
-absorbed the structural-diagram work), `summarize_parts`, `summarize_whole`.
-Field 1 Deeper Context carries a 2-question sequence (B2.1): `[unresolved,
-book_argument]`. Field 7 Interpretation Synthesis is heavy-lifting (B2.2):
+`summarize_whole`); plus `genre` (added 2026-05-05) — a light, optional field
+that lets the literary form set the lens before dissection begins. Five keys
+retire from rendering: `context_impact`, `characters`, `diagram` (cross-phase
+to Observe Field 3 Q1 canvas which absorbed the structural-diagram work),
+`summarize_parts`, `summarize_whole`. Field 1 Deeper Context carries a
+2-question sequence (B2.1): `[unresolved, book_argument]`. Field 2 Genre
+carries `[genre, impact]`. Field 8 Interpretation Synthesis is heavy-lifting (B2.2):
 opens with `FieldOverviewScreen` on first per-sermon entry; Q1
 `meaning_per_unit` is a new `cumulative-synthesis-table` kind that reads /
 writes the canonical thought-unit array in `observations.divisions.thought_units`
@@ -180,7 +181,7 @@ upstream columns rendered read-only and the writable `meaning` column owned
 by Phase 2. SpotlightWorksheet gains `crossPhaseRead` / `crossPhaseWrite`
 props plus a `crossPhaseSource` declaration on the question to plumb the
 cross-column read/write. The Interpret → Redemptive Thread composite gate
-in `evaluateAdvance` (`kind=sub_phase, fromIndex=2`) checks Field 7's
+in `evaluateAdvance` (`kind=sub_phase, fromIndex=2`) checks Field 8's
 composite (every thought-unit row has `meaning`; `meaning_whole` non-empty)
 and returns `{ gates, firstReason }` per B1.6's structured shape.
 

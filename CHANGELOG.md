@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-05 — Doc/validator sweep for 8+8+5+4 shape + throughline polish
+
+- Renumbered Phase 1 fields and inserted Phase 2 Genre across SFDI doc, workspace doc, SPRD doc, and anchor doc — Phase 1 carries 8 fields, Phase 2 carries 8 fields, total still 25.
+- Marked SPRD C4 (Background series-level inheritance) CLOSED in SPRD + anchor doc — substance moved to series-level Book Study and Phase 2 Genre.
+- Updated throughline-from references in SADI charter, sermon-anchor-definition-initiative, and ENFORCEMENT_STATUS to read "Phase 1 Field 1 (Context, after Background's retirement)".
+- Updated SFDI consistency validators to the 8+8+5+4 shape — phase counts, gate-key map, RETIRED-skip in field-block parser, newline-tolerant workspace-doc regex; both scripts pass clean against current docs.
+- Throughline polish — removed strikethrough on completed field labels; switched tooltip to `var(--parchment)` body + `var(--gold)` heading so dark-mode renders dark text on light bg instead of white-on-white; tooltip moved to `position: fixed` so it tracks the node regardless of rail scroll.
+
+---
+
 ## 2026-05-05 — Dashboard demote + Explore row parity + pulpit-quote centering
 
 - Hero "Build a sermon" tile demoted to secondary scale — plain serif (no italic/gold accent), eyebrow renamed `Begin work` to parallel `Resume work`.

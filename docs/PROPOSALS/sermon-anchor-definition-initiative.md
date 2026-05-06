@@ -51,7 +51,7 @@ Resolves Open Question #1.
 
 Process Contract #6 ("the Study throughline is structural") extends from its current Study-only scope to **all workspace steps through Delivery**. No separate Process Contract #7 is created for sermon-anchor structure.
 
-The reasoning rests on a single observation: there's only **one throughline**, and it runs all the way from Background (Phase 1 Field 1) to Manuscript/Delivery. The arc is:
+The reasoning rests on a single observation: there's only **one throughline**, and it runs all the way from Phase 1 Field 1 (Context, after Background's retirement 2026-05-05) to Manuscript/Delivery. The arc is:
 
 > Implications Synthesis → MPT → MPS → Outline → Functional Elements → Intro → Conclusion → Manuscript → Delivery
 

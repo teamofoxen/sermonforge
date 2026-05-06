@@ -162,7 +162,7 @@ What SADI surfaces that may extend SPRD:
 
 ## Relationship to enforcement
 
-Process Contract #6 (Study throughline is structural) was activated 2026-05-04 by SFDI's completion. **Resolved 2026-05-04 in SADI's ratification walk:** Process #6 extends to cover all workspace steps through Delivery (no separate Process #7 is created). The reasoning rests on the observation that there's only one throughline, running from Background (Phase 1 Field 1) all the way to Delivery — cutting it in half across two contracts would invent a seam where the pastor experiences none. See working doc § SADI-wide commitments / Process Contract #6 extension for the full rationale.
+Process Contract #6 (Study throughline is structural) was activated 2026-05-04 by SFDI's completion. **Resolved 2026-05-04 in SADI's ratification walk:** Process #6 extends to cover all workspace steps through Delivery (no separate Process #7 is created). The reasoning rests on the observation that there's only one throughline, running from Phase 1 Field 1 (Context, after Background's retirement 2026-05-05) all the way to Delivery — cutting it in half across two contracts would invent a seam where the pastor experiences none. See working doc § SADI-wide commitments / Process Contract #6 extension for the full rationale.
 
 The CORE.md text edit (rewording "Study throughline" → "workspace throughline" and expanding the canonical-articulation pointer to include SADI alongside SFDI) is downstream of this charter and lands as a small SPRD-side or in-place edit; the ratification walk landed the working-doc commitment, the code-edit pass to CORE.md follows.
 

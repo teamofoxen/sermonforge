@@ -8,7 +8,7 @@
 
 All **A** milestones (Component 1 foundation) and **B** milestones (the four sub-phase reshapes) are shipped and wired into the running app. **C1** (sermon-level takeover), **C3** (Sermon Frame stage), **C5** (AI prompt updates + MPS rewrite), and **C6** (per-boundary thresholds) shipped. CORE.md Process Contract #6 extended to "workspace throughline." SADI per-field content-design walks shipped.
 
-**Remaining:** C2 throughline visualization, C4 Background series-level inheritance, workspace tour rewrite.
+**Remaining:** C2 throughline visualization, workspace tour rewrite. (C4 Background series-level inheritance closed 2026-05-05 by Background field retirement.)
 
 **Next:** pre-C2 stability check, then C2. See [SPIP § Next up](study-phase-implementation-plan.md#next-up--pre-c2-stability-check-then-c2).
 

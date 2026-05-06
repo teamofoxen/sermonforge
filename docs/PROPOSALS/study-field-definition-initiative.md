@@ -43,15 +43,15 @@ A **field** is an isolated focused workspace containing one or more **questions*
 
 ### Structured-exercise questions
 
-Most questions in a field are text prompts answered in a textarea. Some questions are **structured exercises** — a working surface the pastor operates inside rather than a textarea they write into. Three sub-shapes are walked in Field 4:
+Most questions in a field are text prompts answered in a textarea. Some questions are **structured exercises** — a working surface the pastor operates inside rather than a textarea they write into. Three sub-shapes are walked in Phase 1's Divisions / Thought Units field (Field 3):
 
-1. **Indented sentence canvas (Field 4 Q1).** The pastor types the passage by hand. Tab / Shift+Tab change the line's structural depth (0–N). A peripheral reference panel beside the canvas surfaces genre-specific tips. An auto-generated line-number gutter; a level-0 visual marker on left-margin lines.
-2. **Paraphrase blocks (Field 4 Q2).** Each main sentence (level-0 line + its modifiers) from Q1 is presented as a read-only block, with a paraphrase field beneath it for the pastor's own-words rewrite. The original blocks stay visible while the pastor types into each paraphrase field.
-3. **Synthesis table (Field 4 Q3).** A multi-column table where the pastor names the meaningful artifact directly. Field 4's table is three columns: Thought unit (pastor's own-words summary), After line (autocomplete from canvas line numbers), Signal (free text). The Thought-unit cell is hand-written by the pastor — **no AI summarization in this cell**. AI may read the result downstream; AI does not generate it.
+1. **Indented sentence canvas (Field 3 Q1).** The pastor types the passage by hand. Tab / Shift+Tab change the line's structural depth (0–N). A peripheral reference panel beside the canvas surfaces genre-specific tips. An auto-generated line-number gutter; a level-0 visual marker on left-margin lines.
+2. **Paraphrase blocks (Field 3 Q2).** Each main sentence (level-0 line + its modifiers) from Q1 is presented as a read-only block, with a paraphrase field beneath it for the pastor's own-words rewrite. The original blocks stay visible while the pastor types into each paraphrase field.
+3. **Synthesis table (Field 3 Q3).** A multi-column table where the pastor names the meaningful artifact directly. Field 3's table is three columns: Thought unit (pastor's own-words summary), After line (autocomplete from canvas line numbers), Signal (free text). The Thought-unit cell is hand-written by the pastor — **no AI summarization in this cell**. AI may read the result downstream; AI does not generate it.
 
 A field's question sequence may be any mix of text-prompt and structured-exercise questions. The "Next question" gating, the persistent prior-answer visibility, and the per-field empty-evidence override apply to either kind.
 
-**Per-question paste rules.** A question may declare paste as **blocked** or **allowed**. Field 4 establishes the precedent: Q1 (canvas) blocks paste because the typing-by-hand IS the discipline; Q2 (paraphrase blocks) blocks paste because rewriting in the pastor's own words IS the discipline; Q3 (synthesis table) allows paste because synthesis is the discipline and the pastor may legitimately bring notes from elsewhere into the work — the AI block is the load-bearing constraint here, not paste.
+**Per-question paste rules.** A question may declare paste as **blocked** or **allowed**. Phase 1 Field 3 (Divisions / Thought Units) establishes the precedent: Q1 (canvas) blocks paste because the typing-by-hand IS the discipline; Q2 (paraphrase blocks) blocks paste because rewriting in the pastor's own words IS the discipline; Q3 (synthesis table) allows paste because synthesis is the discipline and the pastor may legitimately bring notes from elsewhere into the work — the AI block is the load-bearing constraint here, not paste.
 
 The structured editor itself — Tab/Shift+Tab indent behavior, line-numbered gutter, level markers, paste-intercept, peripheral reference panel, paraphrase-block layout, synthesis-table cells — is SPRD/Component-1 implementation work; SFDI declares only that the pattern *allows* each sub-shape, not how it renders.
 
@@ -61,7 +61,7 @@ For **heavy-lifting fields** — fields whose work is theologically substantive 
 
 The overview is shown only on **first entry** to the field for a given sermon. On re-entry (a sermon the pastor has worked before, returning to the field), the overview is skipped — the work is already there, per the re-entry behavior in Shape above.
 
-Not every field needs an overview. Most fields' framing lives in their question heading and the SFDI seven-slot entry. The overview is reserved for fields where the framing has to land before the work makes sense — typically the spine-finders, the synthesis fields, the load-bearing fields. Field 4 is the first walked example. Other heavy-lifting fields will be marked as the SFDI walks proceed.
+Not every field needs an overview. Most fields' framing lives in their question heading and the SFDI seven-slot entry. The overview is reserved for fields where the framing has to land before the work makes sense — typically the spine-finders, the synthesis fields, the load-bearing fields. Phase 1 Field 3 (Divisions / Thought Units) is the first walked example. Other heavy-lifting fields will be marked as the SFDI walks proceed.
 
 ### PC progression markers
 
@@ -90,52 +90,37 @@ Every per-field walk produces a structured entry with seven slots:
 
 ## Phase 1: Observe
 
-### Field order (revised — 9 fields)
+### Field order (revised — 8 fields)
 
-1. **Background** *(new — added 2026-05-03)*
-2. **Context**
-3. **Surface Questions** *(new — added 2026-05-03)*
-4. Divisions / Thought Units *(three-question shape, 2026-05-03)*
-5. Main Characters *(reordered ahead of Commands and Declarations, 2026-05-03)*
-6. Commands and Declarations *(merged from former Notable Commands + Notable Statements, 2026-05-03)*
-7. Big Ideas
-8. Obvious Point
-9. Possible Implications
+1. **Context**
+2. **Surface Questions** *(new — added 2026-05-03)*
+3. Divisions / Thought Units *(three-question shape, 2026-05-03)*
+4. Main Characters *(reordered ahead of Commands and Declarations, 2026-05-03)*
+5. Commands and Declarations *(merged from former Notable Commands + Notable Statements, 2026-05-03)*
+6. Big Ideas
+7. Obvious Point
+8. Possible Implications
 
-**Reshape from 11 to 9 fields, locked 2026-05-03:** Notable Commands + Notable Statements merged into Commands and Declarations (one binary classification, one synthesis table). Basic Outline retired; Field 4's thought units carry the proto-outline work into MPT/MPS and Step 3 (Construct an Outline). Main Characters reordered ahead of Commands and Declarations because pastoral attention notices subjects before classifying verbs.
+**Reshape from 11 to 9 to 8 fields:** Notable Commands + Notable Statements merged into Commands and Declarations (one binary classification, one synthesis table). Basic Outline retired; Field 3's thought units carry the proto-outline work into MPT/MPS and Step 3 (Construct an Outline). Main Characters reordered ahead of Commands and Declarations because pastoral attention notices subjects before classifying verbs. **Background field retired 2026-05-05** — the world-of-the-book layer (author / date / audience / genre) was carrying weight better placed in series-level Book Study (`book_background`, inheritable across a series) and in Phase 2's Genre field; making the pastor re-enter it per sermon was friction without proportionate exegetical gain.
 
-The "outside-in" arc through the first four fields: world around the book (Background) → where in the book (Context) → what's in the passage at the surface (Surface Questions) → how the passage is structured (Divisions). The lens cluster that follows (Main Characters → Commands and Declarations → Big Ideas) reads against Field 4's spine. Then the first synthesis (Obvious Point) and the bridge into Interpret (Possible Implications) close the segment.
-
----
-
-### Field 1 — Background *(new)*
-
-**Status:** Ratified 2026-05-03.
-
-**Question sequence (from Merida's named items):**
-
-| # | Key | Prompt |
-|---|---|---|
-| 1 | `author` | Who wrote this book? |
-| 2 | `date` | When was it written? |
-| 3 | `audience` | Who was the original audience, and what occasion prompted the writing? |
-| 4 | `genre` | What kind of literature is this? |
-
-**Seven-slot entry:**
-
-- **Name:** Background
-- **Intent:** Establish the world the book was written into — the historical and literary frame the passage stands inside.
-- **Question sequence:** Author → Date → Audience & Occasion → Genre.
-- **What gets written:** Factual answers grounded in introductory study. Light each week when teaching consecutively through a book — the same answers carry forward.
-- **Role in sub-phase:** First field. Sets the world the book was written into before locating the passage inside it.
-- **Connects from:** Nothing (first field of Observe). Opens against the passage and its book.
-- **Connects to:** Context — having framed the book, locate the passage inside it.
-
-**Inheritance ruling (2026-05-03):** Series-level — option (b). The series carries the book's Background; each sermon inherits and can override. Matches Merida's "less needed each week" cadence. Implementation is SPRD structural work (data model for series-level Background entry + UI surface + per-sermon override mechanism) — to be added to the SPRD structural backlog.
+The "outside-in" arc through the first three fields: where in the book (Context) → what's in the passage at the surface (Surface Questions) → how the passage is structured (Divisions). The lens cluster that follows (Main Characters → Commands and Declarations → Big Ideas) reads against Field 3's spine. Then the first synthesis (Obvious Point) and the bridge into Interpret (Possible Implications) close the segment.
 
 ---
 
-### Field 2 — Context
+### Field 1 — Background *(RETIRED 2026-05-05)*
+
+**Status:** Ratified 2026-05-03; **retired 2026-05-05.**
+
+This field was originally added as the first field of Observe, carrying the world-of-the-book layer (author / date / audience / genre) per Merida's "Background matters" note in Phase 1. The 2026-05-03 inheritance ruling (option b — series-level with per-sermon override) recognized that re-entering this content per sermon was friction; that ruling logically completed itself 2026-05-05 with the field's retirement. The substance now lives in two places that already exist:
+
+- **Series-level Book Study** — the `book_background` column on series carries author / audience / occasion / historical setting / genre and is inheritable across every sermon in the series.
+- **Phase 2 Genre field** — the literary-form lens that does interpretive work moves into Interpret as a light, optional field (`genre`) where it actually shapes how the dissection proceeds.
+
+The retirement closes SPRD C4 (Background series-level inheritance) by obviating it. No production sermons exist 2026-05-05; old data carrying the `background` key stays in the JSON column (parseStructuredField preserves it) but no longer renders.
+
+---
+
+### Field 1 — Context *(formerly Field 2)*
 
 **Status:** Ratified 2026-05-03.
 
@@ -154,13 +139,13 @@ The "outside-in" arc through the first four fields: world around the book (Backg
 - **Intent:** Locate the passage inside the book — see what flanks it, name how that bearing shapes the passage, surface why the Holy Spirit placed it here.
 - **Question sequence:** Before → After → Impact → Holy Spirit Intent.
 - **What gets written:** Q1–2 describe the flanking material; Q3 names how the flanks bear on the passage; Q4 takes the synthesizing why-this-here step.
-- **Role in sub-phase:** Second field. Locates the passage inside the world Background framed.
-- **Connects from:** Background — having framed the world the book sits inside, Context locates the passage inside the book.
+- **Role in sub-phase:** First field. Locates the passage inside the book it sits in.
+- **Connects from:** Nothing (first field of Observe). Opens against the passage and the book it sits in. Series-level Book Study (book_background) and any inherited series context provide ambient frame.
 - **Connects to:** Surface Questions — having located the passage, stand on its surface and report what's there.
 
 ---
 
-### Field 3 — Surface Questions *(new)*
+### Field 2 — Surface Questions *(formerly Field 3, new field 2026-05-03)*
 
 **Status:** Ratified 2026-05-03 — option (c), Where/When/How subset.
 
@@ -186,7 +171,7 @@ The "outside-in" arc through the first four fields: world around the book (Backg
 
 ---
 
-### Field 4 — Divisions / Thought Units
+### Field 3 — Divisions / Thought Units *(formerly Field 4)*
 
 **Status:** Ratified 2026-05-03 in **three-question shape**. Initial two-question ratification was expanded the same day to insert Q2 (paraphrase) between the original Q1 (sentence layout) and the original Q2 (now Q3, find thought units with summarization).
 
@@ -213,7 +198,7 @@ The "outside-in" arc through the first four fields: world around the book (Backg
 **Pre-field overview (pastor-side copy):**
 
 > ## Divisions / Thought Units
-> *Field 4 of 9 · Observe*
+> *Field 3 of 8 · Observe*
 >
 > The point of the sermon is the point of the text. The work of seeing what that point is starts here.
 >
@@ -303,11 +288,11 @@ The "Continue to Main Characters" button activates only when all three gates are
 
 **Implementation pattern:** All three of Field 4's questions are structured-exercise questions (see "Structured-exercise questions" in the Field Pattern). Q1 uses the indented sentence canvas sub-shape; Q2 uses the paraphrase blocks sub-shape; Q3 uses the synthesis table sub-shape. Tab/Shift+Tab structural indent on Q1, auto-generated line-number gutter, level-0 visual marker, paste-intercept on Q1 and Q2 (allowed on Q3), peripheral reference panel for Q1, composite gating, line-number autocomplete in Q3's "After line" cell, and the field intro overview pattern are all SPRD Component-1 implementation work.
 
-**PC dormant.** The work is structural spine-finding; PC enters later in Field 9.
+**PC dormant.** The work is structural spine-finding; PC enters later in Field 8.
 
 ---
 
-### Field 5 — Main Characters
+### Field 4 — Main Characters *(formerly Field 5)*
 
 **Status:** Ratified 2026-05-03 in the reshape pass.
 
@@ -323,7 +308,7 @@ The "Continue to Main Characters" button activates only when all three gates are
 - **Intent:** Name who's acting in the passage. Without this, the sermon's address is unclear — the pastor doesn't yet know whose story they're telling and whose ear they're pitching it to.
 - **Question sequence:** Identify Main Characters.
 - **What gets written:** A small list (or two-column table) of characters with their role in the passage in the pastor's own words. For Eph 2:1–5: *You/We* (the audience, once dead); *God* (rich in mercy, the actor of life); *Christ* (the means — God made us alive together with him).
-- **Role in sub-phase:** Fifth field. First lens on Field 4's spine — *who* is doing the work the spine surfaces.
+- **Role in sub-phase:** Fourth field. First lens on Field 3's spine — *who* is doing the work the spine surfaces.
 - **Connects from:** Divisions / Thought Units — having found the spine and named the bones, see who's acting in them.
 - **Connects to:** Commands and Declarations — having seen the actors, name what kind of action they're carrying.
 
@@ -331,7 +316,7 @@ The "Continue to Main Characters" button activates only when all three gates are
 
 ---
 
-### Field 6 — Commands and Declarations
+### Field 5 — Commands and Declarations *(formerly Field 6)*
 
 **Status:** Ratified 2026-05-03 in the reshape pass. Merge from former Notable Commands + Notable Statements; new field name **Commands and Declarations** (chosen over the more grammatical "Verb Tenses" and the Merida-leaning "Imperatives and Indicatives" because it lands in pastor-language without losing precision).
 
@@ -347,7 +332,7 @@ The "Continue to Main Characters" button activates only when all three gates are
 - **Intent:** Name what kind of action each main sentence in the spine carries. Imperatives drive (call to obedience). Indicatives declare (proclaim reality). The mix shapes how the passage preaches — gospel proclamation, ethical exhortation, narrative declaration, or a blend.
 - **Question sequence:** Identify Commands and Declarations.
 - **What gets written:** A row per main sentence with line, type (command or declaration), and what the sentence is doing in pastor's own words. For Eph 2:1–5, every main sentence is a declaration; the passage preaches as proclamation. For an exhortation passage like Eph 4:1–6, the mix shifts.
-- **Role in sub-phase:** Sixth field. Second lens on Field 4's spine — *what kind of action* the main sentences carry.
+- **Role in sub-phase:** Fifth field. Second lens on Field 3's spine — *what kind of action* the main sentences carry.
 - **Connects from:** Main Characters — having seen the actors, name what kind of action they're carrying.
 - **Connects to:** Big Ideas — having named the actions, surface the concepts the passage is wrestling with.
 
@@ -355,7 +340,7 @@ The "Continue to Main Characters" button activates only when all three gates are
 
 ---
 
-### Field 7 — Big Ideas
+### Field 6 — Big Ideas *(formerly Field 7)*
 
 **Status:** Ratified 2026-05-03 in the reshape pass. (Reordered from former position #8.)
 
@@ -371,7 +356,7 @@ The "Continue to Main Characters" button activates only when all three gates are
 - **Intent:** Surface the conceptual weight of the passage — the ideas the author is working with that connect to larger biblical theology. Without this, Interpret's "what does this mean?" reaches back into raw text instead of building on a named conceptual inventory.
 - **Question sequence:** List the big ideas.
 - **What gets written:** A list of concepts, each with a short one-line note. For Eph 2:1–5: spiritual death, wrath (cosmic and individual), mercy and love, union with Christ, grace as the means.
-- **Role in sub-phase:** Seventh field. Third lens on Field 4's spine — *what concepts* are at stake.
+- **Role in sub-phase:** Sixth field. Third lens on Field 3's spine — *what concepts* are at stake.
 - **Connects from:** Commands and Declarations — having named the actions, surface the concepts the passage is wrestling with.
 - **Connects to:** Obvious Point — having surfaced the concepts, state the plain-sense point.
 
@@ -379,7 +364,7 @@ The "Continue to Main Characters" button activates only when all three gates are
 
 ---
 
-### Field 8 — Obvious Point
+### Field 7 — Obvious Point *(formerly Field 8)*
 
 **Status:** Ratified 2026-05-03 in the reshape pass. (Reordered from former position #9.)
 
@@ -395,15 +380,15 @@ The "Continue to Main Characters" button activates only when all three gates are
 - **Intent:** State the plain-sense point of the passage in one sentence. The pastor's first articulation of "what is this passage about?" — the proto-MPT. Catching the simple read before complexity layers in. If this is wrong, MPT will be wrong.
 - **Question sequence:** State the obvious point.
 - **What gets written:** One sentence in the pastor's own voice. Not a paraphrase of any single line — the synthesizing point of the whole passage. For Eph 2:1–5: "Even when we were spiritually dead and under God's wrath, God in his mercy made us alive together with Christ."
-- **Role in sub-phase:** Eighth field. The first synthesis move. Pulls together Field 4 (structure, meaning, bones) and the lens cluster (5–7) into a single articulation.
+- **Role in sub-phase:** Seventh field. The first synthesis move. Pulls together Field 3 (structure, meaning, bones) and the lens cluster (4–6) into a single articulation.
 - **Connects from:** Big Ideas — having surfaced the concepts, state the plain-sense point.
 - **Connects to:** Possible Implications — having stated the point, surface what it's starting to suggest about the room.
 
-**Behavior:** Light but pivotal. No overview needed. **Paste blocked. No AI.** The pastor's own voice is the discipline — same posture as Field 4 Q3. One sentence preferred; a short two-sentence answer allowed if the passage's point genuinely needs it. **Required-non-empty for the Observe → Interpret threshold.**
+**Behavior:** Light but pivotal. No overview needed. **Paste blocked. No AI.** The pastor's own voice is the discipline — same posture as Field 3 Q3. One sentence preferred; a short two-sentence answer allowed if the passage's point genuinely needs it. **Required-non-empty for the Observe → Interpret threshold.**
 
 ---
 
-### Field 9 — Possible Implications
+### Field 8 — Possible Implications *(formerly Field 9)*
 
 **Status:** Ratified 2026-05-03 in the reshape pass. (Reordered from former position #11. Naming preserved for continuity; rename flagged as candidate during the Implications-phase walks.)
 
@@ -422,16 +407,16 @@ The "Continue to Main Characters" button activates only when all three gates are
 - **Intent:** First surfacing of Pastoral Context into the awareness layer. The bridge into Interpret. The pastor names early sight — what the passage is starting to press on, what's hard, what's hopeful — without crossing into full application. The text is still leading.
 - **Question sequence:** Pressing → Hard / Hopeful.
 - **What gets written:** Short paragraphs or bullets in the pastor's own voice. Awareness-level. Not sermon points, not application lists. Early sight.
-- **Role in sub-phase:** Ninth and final field of Observe. The bridge into Interpret. Carries Pastoral Context into the next sub-phase as awareness, not as a precondition.
+- **Role in sub-phase:** Eighth and final field of Observe. The bridge into Interpret. Carries Pastoral Context into the next sub-phase as awareness, not as a precondition.
 - **Connects from:** Obvious Point — having stated the point, surface what it's starting to suggest about the room.
 - **Connects to:** Interpret (Phase 2) — opens against this awareness; Interpret deepens the work of seeing what the passage means with the room already in view.
 
 **Pre-field overview (pastor-side copy):**
 
 > ## Possible Implications
-> *Field 9 of 9 · Observe*
+> *Field 8 of 8 · Observe*
 >
-> You've worked your way through what the text says — its world, its location, its surface, its spine, its actors, its actions, its concepts, and its plain-sense point. The Observation Set is almost done.
+> You've worked your way through what the text says — its location, its surface, its spine, its actors, its actions, its concepts, and its plain-sense point. The Observation Set is almost done.
 >
 > Before we leave Observe and step into Interpret, one more move. Look at the passage and ask: what is it starting to suggest about the room you're preaching to? What's it pressing on? What's hard? What's hopeful?
 >
@@ -469,45 +454,44 @@ The "Continue to Main Characters" button activates only when all three gates are
 
 ### The Observation Set — Observe's named outcome
 
-The Observation Set is what the pastor walks away from Observe holding. It's not a single artifact; it's the layered understanding that lives in nine field entries plus the throughline node summaries.
+The Observation Set is what the pastor walks away from Observe holding. It's not a single artifact; it's the layered understanding that lives in eight field entries plus the throughline node summaries.
 
 Composed:
 
-1. A framed book *(Background)*
-2. A located passage *(Context)*
-3. A surface report *(Surface Questions)*
-4. The spine, its meaning held in the pastor's own voice, and named thought units *(Divisions / Thought Units)*
-5. The actors named *(Main Characters)*
-6. The kind of action each main sentence carries *(Commands and Declarations)*
-7. The concepts at work *(Big Ideas)*
-8. The plain-sense point in one sentence *(Obvious Point)*
-9. Early sight of what the passage is pressing on, with hard and hopeful named *(Possible Implications)*
+1. A located passage *(Context)*
+2. A surface report *(Surface Questions)*
+3. The spine, its meaning held in the pastor's own voice, and named thought units *(Divisions / Thought Units)*
+4. The actors named *(Main Characters)*
+5. The kind of action each main sentence carries *(Commands and Declarations)*
+6. The concepts at work *(Big Ideas)*
+7. The plain-sense point in one sentence *(Obvious Point)*
+8. Early sight of what the passage is pressing on, with hard and hopeful named *(Possible Implications)*
 
-When Observe completes, the throughline visualization shows nine earned nodes for the Phase 1 segment, with the Observation Set sitting at the end of the segment as a synthesizing callout. Process Contract #6 ("the Study throughline is structural") activates for Phase 1 here.
+When Observe completes, the throughline visualization shows eight earned nodes for the Phase 1 segment, with the Observation Set sitting at the end of the segment as a synthesizing callout. Process Contract #6 ("the Study throughline is structural") activates for Phase 1 here.
 
 ### Load-bearing fields for the Observe → Interpret threshold
 
 Three fields are load-bearing. The hard gate at the boundary checks:
 
-- **Field 4 (Divisions / Thought Units)** — composite gate over its three questions (sentence layout + paraphrases + thought units). Without the spine + meaning + bones, the rest of Observe is loose.
-- **Field 8 (Obvious Point)** — single-sentence answer required. The plain-sense point is what Interpret deepens.
-- **Field 9 (Possible Implications)** — both questions required. The bridge has to actually exist before Interpret opens.
+- **Field 3 (Divisions / Thought Units)** — composite gate over its three questions (sentence layout + paraphrases + thought units). Without the spine + meaning + bones, the rest of Observe is loose.
+- **Field 7 (Obvious Point)** — single-sentence answer required. The plain-sense point is what Interpret deepens.
+- **Field 8 (Possible Implications)** — both questions required. The bridge has to actually exist before Interpret opens.
 
-Other fields (1, 2, 3, 5, 6, 7) are required-non-empty per the existing baseline rule, with per-field N/A escape valves where genuinely inapplicable.
+Other fields (1, 2, 4, 5, 6) are required-non-empty per the existing baseline rule, with per-field N/A escape valves where genuinely inapplicable.
 
 ### Reshape decisions surfaced and locked 2026-05-03
 
 - **Merged:** Notable Commands + Notable Statements → Commands and Declarations. One binary classification, one synthesis table.
-- **Retired:** Basic Outline. Field 4's thought units carry the proto-outline work into MPT/MPS and Step 3.
+- **Retired:** Basic Outline. Field 3's thought units carry the proto-outline work into MPT/MPS and Step 3.
 - **Reordered:** Main Characters moved ahead of Commands and Declarations. Subjects-first reading. Pastor notices who before classifying verbs.
-- **Field count:** 11 → 9.
+- **Field count:** 11 → 9 → 8 (Background retired 2026-05-05; substance moved to series-level Book Study and Phase 2 Genre).
 - **Possible Implications renaming:** flagged as candidate, deferred to Implications-phase walks (where the parallel "Implications" naming gets settled). Rename if needed then.
 
 ### N/A escape valve pattern (locked 2026-05-03)
 
 A field declares N/A handling per question. Two patterns:
 
-- **Field-level N/A** — the entire field is allowed to be empty when the passage genuinely doesn't carry that kind of content (Background may be deferred for an unfamiliar one-off passage; Surface Questions may legitimately have no Where/When in epistles). The pastor explicitly marks the field N/A; the throughline visualization shows the node as deferred rather than missed.
+- **Field-level N/A** — the entire field is allowed to be empty when the passage genuinely doesn't carry that kind of content (Surface Questions may legitimately have no Where/When in epistles; Phase 2's Genre may be left empty when literary form isn't doing real interpretive work for the passage). The pastor explicitly marks the field N/A; the throughline visualization shows the node as deferred rather than missed.
 - **Question-level N/A** — within a field, a specific question may be N/A while others have content (Surface Questions Q1 Where may be N/A on an epistle while Q3 How is filled). The composite gate respects per-question N/A flags.
 
 In both cases, marking N/A is a deliberate gesture, not an absence. The pastor has to actively say "this doesn't apply" — they can't pass through silently. The discipline is preserved. The throughline shows the deferred mark; if the pastor returns later and finds the field does apply after all, they remove the N/A and fill it.
@@ -518,10 +502,10 @@ In both cases, marking N/A is a deliberate gesture, not an absence. The pastor h
 
 Interpret opens not against the raw passage but against the Observation Set. What the next sub-phase reads:
 
-- **Field 4's structured spine, paraphrase, and thought units** — Interpret deepens the meaning the pastor has already begun to hold. The paraphrase from Q2 becomes a touchstone; Interpret asks "what did the author mean by this?" with the pastor's own articulation already in voice.
-- **Fields 5–7 (Main Characters, Commands and Declarations, Big Ideas)** — Interpret asks "what does this mean?" with the actors, action types, and concepts already named. Interpret doesn't reidentify them; it deepens.
-- **Field 8 (Obvious Point)** — Interpret pressure-tests the plain-sense point and refines it. The point is allowed to evolve through Interpret (and again through MPT) as understanding deepens; Field 8's role is to anchor the first articulation so the deepening can be felt.
-- **Field 9 (Possible Implications)** — Interpret carries the awareness layer forward. PC is no longer parallel-track or always-on; it's already in view as the pastor enters Interpret. The text is leading, the room is in awareness.
+- **Field 3's structured spine, paraphrase, and thought units** — Interpret deepens the meaning the pastor has already begun to hold. The paraphrase from Q2 becomes a touchstone; Interpret asks "what did the author mean by this?" with the pastor's own articulation already in voice.
+- **Fields 4–6 (Main Characters, Commands and Declarations, Big Ideas)** — Interpret asks "what does this mean?" with the actors, action types, and concepts already named. Interpret doesn't reidentify them; it deepens.
+- **Field 7 (Obvious Point)** — Interpret pressure-tests the plain-sense point and refines it. The point is allowed to evolve through Interpret (and again through MPT) as understanding deepens; Field 7's role is to anchor the first articulation so the deepening can be felt.
+- **Field 8 (Possible Implications)** — Interpret carries the awareness layer forward. PC is no longer parallel-track or always-on; it's already in view as the pastor enters Interpret. The text is leading, the room is in awareness.
 
 Interpret's named outcome (the Interpretation Set) builds on the Observation Set — it doesn't replicate it. The pastor doesn't restart at Interpret; they deepen.
 
@@ -529,15 +513,15 @@ Interpret's named outcome (the Interpretation Set) builds on the Observation Set
 
 Process Contract #2 fires at the Observe → Interpret transition. The check:
 
-- Field 4's composite gate (Q1 canvas, Q2 paraphrases, Q3 thought units) — all three filled.
-- Field 8 (Obvious Point) — non-empty.
-- Field 9 (Possible Implications) — both questions non-empty.
+- Field 3's composite gate (Q1 canvas, Q2 paraphrases, Q3 thought units) — all three filled.
+- Field 7 (Obvious Point) — non-empty.
+- Field 8 (Possible Implications) — both questions non-empty.
 
-If any are unmet, the Continue button (label: **"Continue to Interpret"**) is disabled with a hover-checklist surfacing which gate is missing. Other fields (1, 2, 3, 5, 6, 7) are required-non-empty with per-field N/A allowed.
+If any are unmet, the Continue button (label: **"Continue to Interpret"**) is disabled with a hover-checklist surfacing which gate is missing. Other fields (1, 2, 4, 5, 6) are required-non-empty with per-field N/A allowed.
 
 ### What's preserved across the boundary
 
-The throughline visualization shows the line continuing — Observe's nine nodes light up in sequence as the pastor worked through them; the line then arcs into Interpret's first node (whatever it is — to be defined when Phase 2 walks). The Observation Set sits at the end of the Observe segment as a callout the pastor can re-read at any time.
+The throughline visualization shows the line continuing — Observe's eight nodes light up in sequence as the pastor worked through them; the line then arcs into Interpret's first node (Deeper Context). The Observation Set sits at the end of the Observe segment as a callout the pastor can re-read at any time.
 
 The pastor doesn't lose the work. They carry it.
 
@@ -547,19 +531,20 @@ The pastor doesn't lose the work. They carry it.
 
 ## Phase 2: Interpret
 
-### Field order (revised — 7 fields)
+### Field order (revised — 8 fields)
 
 1. **Deeper Context** *(refined from former Context Impact)*
-2. **Recurring Ideas**
-3. **Character Purpose** *(refined from former Characters: Saying / Doing / Thinking; name locked 2026-05-04 at Phase 3 walk start)*
-4. **Contrasts**
-5. **Cross-References**
-6. **Commentary Notes**
-7. **Interpretation Synthesis** *(merged from former Summarize the Parts + Summarize the Whole; heavy-lifting, opens with overview)*
+2. **Genre** *(new — added 2026-05-05)*
+3. **Recurring Ideas**
+4. **Character Purpose** *(refined from former Characters: Saying / Doing / Thinking; name locked 2026-05-04 at Phase 3 walk start)*
+5. **Contrasts**
+6. **Cross-References**
+7. **Commentary Notes**
+8. **Interpretation Synthesis** *(merged from former Summarize the Parts + Summarize the Whole; heavy-lifting, opens with overview)*
 
-**Reshape from 9 to 7 fields, locked 2026-05-03:** Diagram / Relationships retired (absorbed by Observe Field 4 Q1's indented sentence canvas — re-asking for the structural diagram in Interpret was rerunning Phase 1). Summarize the Parts + Summarize the Whole merged into Interpretation Synthesis (two halves of one operation; one named outcome). Context Impact refined into Deeper Context (no longer duplicating Observe Field 2 Q3 Impact). Characters: Saying / Doing / Thinking refined into Character Purpose (deepens Observe Field 5 from *who* to *why* and *what the author signals through them*).
+**Reshape from 9 to 7 to 8 fields:** Diagram / Relationships retired (absorbed by Observe Field 3 Q1's indented sentence canvas — re-asking for the structural diagram in Interpret was rerunning Phase 1). Summarize the Parts + Summarize the Whole merged into Interpretation Synthesis (two halves of one operation; one named outcome). Context Impact refined into Deeper Context (no longer duplicating Observe Field 1 Q3 Impact). Characters: Saying / Doing / Thinking refined into Character Purpose (deepens Observe Field 4 from *who* to *why* and *what the author signals through them*). **Genre added 2026-05-05** as a light, optional second-position field — the literary-form lens that does interpretive work belongs in Interpret, not as an Observe-level fact. Pastor leaves it empty when genre isn't doing real work for the passage.
 
-The Merida four-part arc through the seven fields: pick up open questions and widen the lens (Deeper Context) → dissect what's inside the passage (Recurring Ideas → Character Purpose → Contrasts) → open the wider canon (Cross-References) → check against trusted readers, last (Commentary Notes) → synthesize the meaning (Interpretation Synthesis).
+The Merida four-part arc through the eight fields: pick up open questions and widen the lens (Deeper Context → Genre) → dissect what's inside the passage (Recurring Ideas → Character Purpose → Contrasts) → open the wider canon (Cross-References) → check against trusted readers, last (Commentary Notes) → synthesize the meaning (Interpretation Synthesis).
 
 ---
 
@@ -580,15 +565,40 @@ The Merida four-part arc through the seven fields: pick up open questions and wi
 - **Intent:** Pick up Observe's Context with research tools available. Resolve open questions; widen the lens from before/after to book-wide literary context and authorial purpose.
 - **Question sequence:** Unresolved Questions → Book-Wide Argument.
 - **What gets written:** Q1 — answers to questions the pastor noticed during Observe's Context that needed study tools to resolve (background details, word usage, cultural references, the Holy Spirit Intent question that pointed forward). Q2 — a paragraph or short list naming how this passage sits inside the book's argument and what the author intends across the whole that bears on the passage's meaning.
-- **Role in sub-phase:** First field. The bridge from Observe into Interpret. Picks up where Observe Field 2 (Context) and Field 9 (Possible Implications) left questions hanging.
-- **Connects from:** Observation Set — particularly the open ends in Observe Field 2's Holy Spirit Intent question and any unresolved background flagged during Observe.
-- **Connects to:** Recurring Ideas — having widened the lens, look at what surfaces over and over inside the passage.
+- **Role in sub-phase:** First field. The bridge from Observe into Interpret. Picks up where Observe Field 1 (Context) and Field 8 (Possible Implications) left questions hanging.
+- **Connects from:** Observation Set — particularly the open ends in Observe Field 1's Holy Spirit Intent question and any unresolved background flagged during Observe.
+- **Connects to:** Genre — having widened the lens, name the literary form that sets the lens for the dissection work.
 
 **Behavior:** Light field. No overview. Paste allowed. AI allowed (commentary lookup, background research). N/A allowed at the question level — Q1 may legitimately N/A if Observe's Context closed cleanly with no open questions; Q2 cannot N/A (every passage sits inside a book's argument, even if briefly).
 
 ---
 
-### Field 2 — Recurring Ideas
+### Field 2 — Genre *(new — 2026-05-05)*
+
+**Status:** Added 2026-05-05.
+
+**Question sequence:**
+
+| # | Key | Prompt |
+|---|---|---|
+| 1 | `genre` | What is the genre of this passage? |
+| 2 | `impact` | How might its genre impact interpretation? |
+
+**Seven-slot entry:**
+
+- **Name:** Genre
+- **Intent:** Name the literary form and let it set the lens. Genre is interpretive — narrative reads differently than epistle, wisdom differently than apocalyptic. Naming the form before dissection sets which moves are appropriate.
+- **Question sequence:** Genre → Impact.
+- **What gets written:** Q1 — a short label or phrase naming the form (epistle, narrative, wisdom, prophetic, apocalyptic, gospel-narrative, hymn, etc.). Q2 — a brief note on how that form should shape what the pastor looks for and how the passage gets read.
+- **Role in sub-phase:** Second field. Sits between Deeper Context (the broader lens) and Recurring Ideas (the first dissection move). Sets the lens before dissection.
+- **Connects from:** Deeper Context — having widened the lens, name the form.
+- **Connects to:** Recurring Ideas — with the form named, look at what surfaces over and over inside the passage.
+
+**Behavior:** Light, optional field. No overview. Paste allowed. AI allowed (genre lookup if needed). **Field-level N/A** allowed — when genre isn't doing real interpretive work for the passage (or the form is sufficiently obvious that naming it wouldn't sharpen the dissection), the pastor leaves it empty. Not load-bearing for the Interpret → Redemptive Thread threshold.
+
+---
+
+### Field 3 — Recurring Ideas *(formerly Field 2)*
 
 **Status:** Ratified 2026-05-03 in Phase 2 reshape pass.
 
@@ -604,17 +614,17 @@ The Merida four-part arc through the seven fields: pick up open questions and wi
 - **Intent:** Notice what surfaces over and over — words, motifs, themes — and name what the recurrence signals about authorial emphasis.
 - **Question sequence:** Identify Recurring Ideas (with what each signals).
 - **What gets written:** A list of recurring elements with a short note on each — what recurs, where, and what the recurrence is doing. For Eph 2:1–5: "dead" / "death" recurs (vv. 1, 5) — frames the human condition; "trespasses and sins" recurs (vv. 1, 5) — names the cause of the deadness; the passive "us / we / you" voice recurs throughout — signals utter human passivity in the salvation narrative.
-- **Role in sub-phase:** Second field. First dissection lens — patterns of repetition surface authorial emphasis. Distinct from Observe's Big Ideas (which named the *concepts* the passage wrestles with); Recurring Ideas is the *patterns of repetition* that signal which concepts carry the weight.
-- **Connects from:** Deeper Context — having widened the lens, look at what recurs inside the passage.
+- **Role in sub-phase:** Third field. First dissection lens — patterns of repetition surface authorial emphasis. Distinct from Observe's Big Ideas (which named the *concepts* the passage wrestles with); Recurring Ideas is the *patterns of repetition* that signal which concepts carry the weight.
+- **Connects from:** Genre — with the form named, look at what surfaces over and over inside the passage.
 - **Connects to:** Character Purpose — having seen what recurs, look at why the actors are acting as they are.
 
 **Behavior:** Light field. No overview. Paste allowed. **No AI in the cell — the noticing is the discipline.** N/A: rare; almost every passage carries some recurrence. Distinction from Observe's Big Ideas lands in the question framing ("what *recurs*" not "what concepts").
 
 ---
 
-### Field 3 — Character Purpose *(refined)*
+### Field 4 — Character Purpose *(refined; formerly Field 3)*
 
-**Status:** Ratified 2026-05-03 in Phase 2 reshape pass. Name locked 2026-05-04 at Phase 3 walk start: **Character Purpose**. Alternates considered and ruled out: *Character Function* (engineering-flavored), *Character Movement* (could read as physical movement), *What the Characters Reveal* (too long for a field name). *Character Roles* ruled out earlier — *role* is taken by Observe Field 5.
+**Status:** Ratified 2026-05-03 in Phase 2 reshape pass. Name locked 2026-05-04 at Phase 3 walk start: **Character Purpose**. Alternates considered and ruled out: *Character Function* (engineering-flavored), *Character Movement* (could read as physical movement), *What the Characters Reveal* (too long for a field name). *Character Roles* ruled out earlier — *role* is taken by Observe Field 4.
 
 **Question sequence:**
 
@@ -632,11 +642,11 @@ The Merida four-part arc through the seven fields: pick up open questions and wi
 - **Connects from:** Recurring Ideas — having seen the patterns of repetition, look at the actors moving inside them.
 - **Connects to:** Contrasts — having seen the actors, surface the pivots that mark meaning shifts between them.
 
-**Behavior:** Light field. No overview. Paste allowed. **No AI in the cell — inferring authorial intent is the discipline.** N/A allowed when the passage genuinely has no distinct characters (rare; typically rules in dense epistles where God or the author is the only character). Distinct from Observe Field 5 (which named the actors); this field asks why and what the author signals.
+**Behavior:** Light field. No overview. Paste allowed. **No AI in the cell — inferring authorial intent is the discipline.** N/A allowed when the passage genuinely has no distinct characters (rare; typically rules in dense epistles where God or the author is the only character). Distinct from Observe Field 4 (which named the actors); this field asks why and what the author signals.
 
 ---
 
-### Field 4 — Contrasts
+### Field 5 — Contrasts *(formerly Field 4)*
 
 **Status:** Ratified 2026-05-03 in Phase 2 reshape pass.
 
@@ -660,7 +670,7 @@ The Merida four-part arc through the seven fields: pick up open questions and wi
 
 ---
 
-### Field 5 — Cross-References
+### Field 6 — Cross-References *(formerly Field 5)*
 
 **Status:** Ratified 2026-05-03 in Phase 2 reshape pass.
 
@@ -684,7 +694,7 @@ The Merida four-part arc through the seven fields: pick up open questions and wi
 
 ---
 
-### Field 6 — Commentary Notes
+### Field 7 — Commentary Notes *(formerly Field 6)*
 
 **Status:** Ratified 2026-05-03 in Phase 2 reshape pass.
 
@@ -708,7 +718,7 @@ The Merida four-part arc through the seven fields: pick up open questions and wi
 
 ---
 
-### Field 7 — Interpretation Synthesis *(merged)*
+### Field 8 — Interpretation Synthesis *(merged; formerly Field 7)*
 
 **Status:** Ratified 2026-05-03 in Phase 2 reshape pass. Merge from former Summarize the Parts + Summarize the Whole.
 
@@ -726,7 +736,7 @@ The Merida four-part arc through the seven fields: pick up open questions and wi
 - **Name:** Interpretation Synthesis
 - **Intent:** Articulate what the passage MEANS — not what it says (Observe), not where it stands in the canon (Cross-References), not what others say about it (Commentary). The pastor's own voice on meaning, anchored to the spine and to the dissection work. The named outcome of Interpret — the Interpretation Set — lives here.
 - **Question sequence:** Meaning per Thought Unit → Meaning of the Whole.
-- **What gets written:** Q1 — for each thought unit named in Observe Field 4 Q3, one or two sentences on what it MEANS. The shift from paraphrase (Field 4 Q2 — what the words say in the pastor's own voice) to meaning (what the author is conveying through them). Q2 — one paragraph on the whole passage's meaning, in the pastor's own voice. The Interpretation Set's primary articulation.
+- **What gets written:** Q1 — for each thought unit named in Observe Field 3 Q3, one or two sentences on what it MEANS. The shift from paraphrase (Field 3 Q2 — what the words say in the pastor's own voice) to meaning (what the author is conveying through them). Q2 — one paragraph on the whole passage's meaning, in the pastor's own voice. The Interpretation Set's primary articulation.
 - **Role in sub-phase:** Seventh and final field of Interpret. The synthesis. The named outcome lives here. Load-bearing at the Interpret → Redemptive Thread threshold.
 - **Connects from:** Commentary Notes — having dissected, cross-referenced, and checked, now articulate the meaning.
 - **Connects to:** Redemptive Thread (Phase 3) — opens against this articulated meaning; RT asks how the meaning points to Christ.
@@ -734,7 +744,7 @@ The Merida four-part arc through the seven fields: pick up open questions and wi
 **Pre-field overview (pastor-side copy):**
 
 > ## Interpretation Synthesis
-> *Field 7 of 7 · Interpret*
+> *Field 8 of 8 · Interpret*
 >
 > You've widened the lens, dissected what recurs, named character motives, surfaced the contrasts. You've let Scripture interpret Scripture and checked your reading against trusted readers, last.
 >
@@ -752,7 +762,7 @@ The Merida four-part arc through the seven fields: pick up open questions and wi
 >
 > Beside each thought unit you named in Observe, write what it MEANS in your own voice. One or two sentences each. Not what it says — what the author is conveying through it.
 
-Q1's screen shows the same thought-unit table the pastor built in Observe Field 4 Q3 (Thought unit | After line | Signal), now extended with a fourth column: **Meaning**. The pastor fills in each Meaning cell. The original three columns are read-only — the work that produced them is upstream and shouldn't be reopened here. Paste blocked in the Meaning column; the own-voice articulation is the discipline.
+Q1's screen shows the same thought-unit table the pastor built in Observe Field 3 Q3 (Thought unit | After line | Signal), now extended with a fourth column: **Meaning**. The pastor fills in each Meaning cell. The original three columns are read-only — the work that produced them is upstream and shouldn't be reopened here. Paste blocked in the Meaning column; the own-voice articulation is the discipline.
 
 **Q2 framing (above the whole-passage paragraph):**
 
@@ -766,7 +776,7 @@ Q2's screen shows the meaning-per-unit table from Q1 as a read-only reference ab
 
 **Per-field empty-evidence override (composite over two questions):** all required to advance.
 
-- **Q1:** every thought unit from Observe Field 4 Q3 has a Meaning entry filled. (Composite check ties to upstream — if Observe Field 4 Q3 has 3 thought units, all 3 must have Meaning here.)
+- **Q1:** every thought unit from Observe Field 3 Q3 has a Meaning entry filled. (Composite check ties to upstream — if Observe Field 3 Q3 has 3 thought units, all 3 must have Meaning here.)
 - **Q2:** the whole-passage meaning paragraph is non-empty.
 
 The "Continue to Redemptive Thread" button activates only when both gates are met. A hover-checklist on the disabled button surfaces which gate is unmet.
@@ -778,7 +788,7 @@ The "Continue to Redemptive Thread" button activates only when both gates are me
 - **Continue button label:** "Continue to Redemptive Thread" — names the boundary at the moment of commit.
 - **Throughline node summary on completion:** the Q2 whole-passage meaning paragraph's first sentence, with thought-unit count as a sub-line. Example for Eph 2:1–5 — "Even in death under wrath, God's mercy raised us with Christ. *(3 thought units)*"
 
-**Implementation pattern:** Q1 is a structured-exercise question that extends Field 4 Q3's synthesis-table sub-shape with a new writable column (Meaning) and read-only upstream columns. Q2 is a text-prompt question. Composite gating, read-only upstream columns, paste-intercept on Q1's Meaning column and on Q2, and the field intro overview pattern are SPRD Component-1 implementation work.
+**Implementation pattern:** Q1 is a structured-exercise question that extends Field 3 Q3's synthesis-table sub-shape with a new writable column (Meaning) and read-only upstream columns. Q2 is a text-prompt question. Composite gating, read-only upstream columns, paste-intercept on Q1's Meaning column and on Q2, and the field intro overview pattern are SPRD Component-1 implementation work.
 
 **PC marinating.** Phase 2's PC progression is phase-level — no new PC content per field; the awareness from Phase 1 deepens alongside the text-work as the synthesis is articulated.
 
@@ -808,23 +818,24 @@ When Interpret completes, the throughline visualization shows seven earned nodes
 
 One field is load-bearing. The hard gate at the boundary checks:
 
-- **Field 7 (Interpretation Synthesis)** — composite gate over its two questions (every thought unit has a Meaning entry; whole-passage paragraph non-empty). Without articulated meaning, Redemptive Thread has nothing to deepen — Christ-connection rests on what the text means.
+- **Field 8 (Interpretation Synthesis)** — composite gate over its two questions (every thought unit has a Meaning entry; whole-passage paragraph non-empty). Without articulated meaning, Redemptive Thread has nothing to deepen — Christ-connection rests on what the text means.
 
 Other fields (1–6) are required-non-empty per the existing baseline rule, with per-field N/A escape valves where genuinely inapplicable.
 
 ### Reshape decisions surfaced and locked 2026-05-03
 
-- **Retired:** Diagram / Relationships. Absorbed by Observe Field 4 Q1's indented sentence canvas — re-asking for the structural diagram in Interpret was rerunning Phase 1.
-- **Merged:** Summarize the Parts + Summarize the Whole → Interpretation Synthesis. Two halves of one operation; one named outcome. The merge mirrors Field 4's pattern of one field carrying multiple sub-shapes.
-- **Refined:** Context Impact → Deeper Context. Observe Field 2's Q3 (Impact) and Q4 (Holy Spirit Intent) absorbed the surface "how does context shape meaning" question; Phase 2's first field now does what Observe couldn't — resolve open questions with study tools in hand and widen to book-wide literary context.
-- **Refined:** Characters: Saying / Doing / Thinking → Character Purpose. Observe Field 5 named the actors; Phase 2 deepens to motive and what the author signals through them. Name locked 2026-05-04 at Phase 3 walk start.
+- **Retired:** Diagram / Relationships. Absorbed by Observe Field 3 Q1's indented sentence canvas — re-asking for the structural diagram in Interpret was rerunning Phase 1.
+- **Merged:** Summarize the Parts + Summarize the Whole → Interpretation Synthesis. Two halves of one operation; one named outcome. The merge mirrors Field 3's pattern of one field carrying multiple sub-shapes.
+- **Refined:** Context Impact → Deeper Context. Observe Field 1's Q3 (Impact) and Q4 (Holy Spirit Intent) absorbed the surface "how does context shape meaning" question; Phase 2's first field now does what Observe couldn't — resolve open questions with study tools in hand and widen to book-wide literary context.
+- **Refined:** Characters: Saying / Doing / Thinking → Character Purpose. Observe Field 4 named the actors; Phase 2 deepens to motive and what the author signals through them. Name locked 2026-05-04 at Phase 3 walk start.
+- **Added:** Genre as Field 2 (2026-05-05). The literary-form lens that does interpretive work moves into Interpret as a light, optional field — formerly part of Observe's now-retired Background field.
 - **Field count:** 9 → 7.
 
 ### N/A escape valve pattern
 
 Same pattern as Phase 1 (locked 2026-05-03 in Observe walk). Field-level and question-level N/A both available; marking N/A is a deliberate gesture, not an absence; the throughline visualization shows deferred nodes rather than missed ones.
 
-Phase 2 specifics: Recurring Ideas, Character Purpose, and Contrasts can each be field-level N/A on passages that genuinely don't carry that kind of content (rare). Cross-References and Commentary Notes can be N/A when the pastor genuinely has no access (very rare). Field 7 (Interpretation Synthesis) cannot be N/A — it's the named outcome.
+Phase 2 specifics: Genre, Recurring Ideas, Character Purpose, and Contrasts can each be field-level N/A on passages that genuinely don't carry that kind of content (Genre routinely so when literary form isn't doing real interpretive work). Cross-References and Commentary Notes can be N/A when the pastor genuinely has no access (very rare). Field 8 (Interpretation Synthesis) cannot be N/A — it's the named outcome.
 
 ---
 
@@ -832,10 +843,10 @@ Phase 2 specifics: Recurring Ideas, Character Purpose, and Contrasts can each be
 
 Redemptive Thread opens not against the raw passage or the Observation Set but against the Interpretation Set. What the next sub-phase reads:
 
-- **Field 7 Q1 (Meaning per thought unit)** — RT asks Christ-connection per thought unit. The pastor enters RT with thought-unit meaning already articulated; RT deepens each into the Christological dimension.
-- **Field 7 Q2 (Meaning of the whole)** — RT asks how the whole points to Christ. The pastor's articulation of the passage's meaning becomes the substrate the Christ-Connection Statement deepens.
-- **Field 5 (Cross-References)** — many cross-references already start hinting at typology, NT use of OT, Christological echoes. RT carries these forward and sharpens them.
-- **Field 6 (Commentary Notes)** — Christological readings flagged in commentary work feed RT directly.
+- **Field 8 Q1 (Meaning per thought unit)** — RT asks Christ-connection per thought unit. The pastor enters RT with thought-unit meaning already articulated; RT deepens each into the Christological dimension.
+- **Field 8 Q2 (Meaning of the whole)** — RT asks how the whole points to Christ. The pastor's articulation of the passage's meaning becomes the substrate the Christ-Connection Statement deepens.
+- **Field 6 (Cross-References)** — many cross-references already start hinting at typology, NT use of OT, Christological echoes. RT carries these forward and sharpens them.
+- **Field 7 (Commentary Notes)** — Christological readings flagged in commentary work feed RT directly.
 - **Fields 2–4 (Recurring Ideas, Character Purpose, Contrasts)** — patterns may foreground Christ-typology (e.g., a recurring "rest" motif pointing toward Hebrews 4); contrasts may map onto law/grace, death/life, Adam/Christ structures. RT picks these up.
 
 The pastor doesn't restart at RT; they deepen. The Interpretation Set is the substrate for Christ-connection, not raw text.
@@ -844,19 +855,19 @@ The pastor doesn't restart at RT; they deepen. The Interpretation Set is the sub
 
 Process Contract #2 fires at the Interpret → Redemptive Thread transition. The check:
 
-- Field 7's composite gate (Q1 meaning per thought unit, Q2 whole-passage meaning) — both filled.
+- Field 8's composite gate (Q1 meaning per thought unit, Q2 whole-passage meaning) — both filled.
 
 If unmet, the Continue button (label: **"Continue to Redemptive Thread"**) is disabled with a hover-checklist surfacing which gate is missing. Other fields (1–6) are required-non-empty with per-field N/A allowed.
 
 ### What's preserved across the boundary
 
-The throughline visualization shows the line continuing — Interpret's seven nodes light up after Observe's nine; the line then arcs into Redemptive Thread's first node (whatever it is — to be defined when Phase 3 walks). The Interpretation Set sits at the end of the Interpret segment as a callout the pastor can re-read at any time, sitting alongside the Observation Set callout from Phase 1.
+The throughline visualization shows the line continuing — Interpret's eight nodes light up after Observe's eight; the line then arcs into Redemptive Thread's first node (This Passage and Christ). The Interpretation Set sits at the end of the Interpret segment as a callout the pastor can re-read at any time, sitting alongside the Observation Set callout from Phase 1.
 
 The pastor doesn't lose the meaning work. They carry it.
 
 ### PC progression across Phase 2
 
-Per the throughline vision sheet: **Interpret — marination.** The PC awareness from Observe Field 9 (Possible Implications) stays in view as the pastor dissects, cross-references, and synthesizes. No new PC fields in Phase 2 — but the awareness deepens as the meaning sharpens. PC's substance still lands in Phase 4 (Implications), not here.
+Per the throughline vision sheet: **Interpret — marination.** The PC awareness from Observe Field 8 (Possible Implications) stays in view as the pastor dissects, cross-references, and synthesizes. No new PC fields in Phase 2 — but the awareness deepens as the meaning sharpens. PC's substance still lands in Phase 4 (Implications), not here.
 
 ---
 
@@ -1069,7 +1080,7 @@ Q2's screen shows the per-unit table from Q1 as a read-only reference above the 
 
 **Per-field empty-evidence override (composite over two questions):** all required to advance.
 
-- **Q1:** every thought unit from Observe Field 4 Q3 has a Christ-Connection entry filled. (Composite check ties to upstream — same gating pattern as Phase 2 Field 7 Q1.)
+- **Q1:** every thought unit from Observe Field 3 Q3 has a Christ-Connection entry filled. (Composite check ties to upstream — same gating pattern as Phase 2 Field 8 Q1.)
 - **Q2:** the Christ-Connection Statement paragraph is non-empty.
 
 The "Continue to Implications" button activates only when both gates are met. A hover-checklist on the disabled button surfaces which gate is unmet.
@@ -1167,14 +1178,14 @@ If unmet, the Continue button (label: **"Continue to Implications"**) is disable
 
 ### What's preserved across the boundary
 
-The throughline visualization shows the line continuing — RT's five nodes light up after Interpret's seven, which lit up after Observe's nine; the line then arcs into Implications' first node (whatever it is — to be defined when Phase 4 walks). The Christ-Connection Statement sits at the end of the RT segment as a callout, alongside the Interpretation Set and Observation Set callouts from Phases 2 and 1.
+The throughline visualization shows the line continuing — RT's five nodes light up after Interpret's eight, which lit up after Observe's eight; the line then arcs into Implications' first node (Theological Significance). The Christ-Connection Statement sits at the end of the RT segment as a callout, alongside the Interpretation Set and Observation Set callouts from Phases 2 and 1.
 
 **The cumulative thought-unit table is the structural through-line of the workspace.** Across the three phases walked so far, the table grows by one column per phase:
 
-- Phase 1 Field 4 Q3 builds the table: Thought unit | After line | Signal
-- Phase 2 Field 7 Q1 adds: Meaning
+- Phase 1 Field 3 Q3 builds the table: Thought unit | After line | Signal
+- Phase 2 Field 8 Q1 adds: Meaning
 - Phase 3 Field 5 Q1 adds: Christ-Connection
-- Phase 4 will likely add another column or columns — to be determined when Implications walks (likely related to the three-way conversation)
+- Phase 4 Field 4 Q1 adds: Implication
 
 By the time MPT/MPS opens, the cumulative table holds the propositional skeleton with bones, signal, meaning, Christ-connection, and (eventually) implications all in one structural artifact. The pastor doesn't lose the work. They carry it as visible structure.
 
@@ -1280,7 +1291,7 @@ PC progression across Phase 4 — *integration*: Field 1 PC dormant within the f
 **Seven-slot entry:**
 
 - **Name:** Pastoral Context
-- **Intent:** Name the specific room the text is landing in, and articulate how it lands — costly and gifted — for the people in that room. The third voice in the three-way conversation. PC's substance is resolved here, not at MPT/MPS. Phase 1 Field 9 (Possible Implications) was the early-sight version of this work; this is the matured, integrated articulation.
+- **Intent:** Name the specific room the text is landing in, and articulate how it lands — costly and gifted — for the people in that room. The third voice in the three-way conversation. PC's substance is resolved here, not at MPT/MPS. Phase 1 Field 8 (Possible Implications) was the early-sight version of this work; this is the matured, integrated articulation.
 - **Question sequence:** Room Specifics → Cost and Gift.
 - **What gets written:** Q1 — concrete naming of specific people, situations, conditions in the congregation the text is speaking into. Not abstract demographics. Examples for Eph 2:1–5: the 30-something dad carrying the weight of being not-good-enough; the older woman whose adult child has walked away from faith; the teenager who thinks Christianity is a list of rules; the unbeliever who has been quietly attending for six months. Q2 — for those specific people, the cost and the gift. For Eph 2:1–5: Cost — the dad has to stop earning; the older woman has to release her child to God's mercy; the teenager has to let go of rules-Christianity; the unbeliever has to face deadness before life. Gift — the dad: relief, you cannot earn yourself out of death. The older woman: hope, God acts in mercy, deadness is not the final word. The teenager: surprise, Christianity is resurrection not rules. The unbeliever: invitation, come and live.
 - **Role in sub-phase:** Third field. The third voice in the three-way conversation. The room concretely named.
@@ -1351,7 +1362,7 @@ Q2's screen shows the per-unit table from Q1 as a read-only reference above the 
 
 **Per-field empty-evidence override (composite over two questions):** all required to advance.
 
-- **Q1:** every thought unit from Observe Field 4 Q3 has an Implication entry filled.
+- **Q1:** every thought unit from Observe Field 3 Q3 has an Implication entry filled.
 - **Q2:** the Implications Synthesis paragraph is non-empty.
 
 The "Continue to MPT/MPS" button activates only when both gates are met. A hover-checklist on the disabled button surfaces which gate is unmet.
@@ -1433,7 +1444,7 @@ PC's substance is resolved here. It moves from parallel-track card (current stat
 
 The full PC arc across the four sub-phases:
 
-- **Phase 1:** awareness (Field 9 Possible Implications — early sight)
+- **Phase 1:** awareness (Field 8 Possible Implications — early sight)
 - **Phase 2:** marination (no new fields; Phase 1 awareness deepens as text-meaning sharpens)
 - **Phase 3:** texture (surfaces in Field 3, deepens in Field 4, full texture in Field 5)
 - **Phase 4:** integration (Field 3 articulates concretely, Field 4 integrates as one voice in the synthesis)
@@ -1451,7 +1462,7 @@ What MPT/MPS reads:
 - **Field 4 Q2 (Implications Synthesis)** — the integrated voice of the three voices for this passage in this room. The most direct substrate for MPS (which is application-flavored, present/future tense).
 - **Field 4 Q1 (Implication per thought unit)** — the cumulative table now showing six columns per thought unit. MPT can read each thought unit as text + meaning + Christ-connection + integrated implication.
 - **Phase 3 Field 5 Q2 (Christ-Connection Statement)** — the Christological synthesis. Carries forward as ground for any redemptive application in MPS, and prevents moralistic drafting.
-- **Phase 2 Field 7 Q2 (Interpretation Set)** — the meaning of the whole, in pastor's own voice. Carries forward as the substrate of MPT (which is text-meaning, past tense).
+- **Phase 2 Field 8 Q2 (Interpretation Set)** — the meaning of the whole, in pastor's own voice. Carries forward as the substrate of MPT (which is text-meaning, past tense).
 - **Phase 1 Observation Set callouts** — the foundation work; less direct for MPT/MPS but available for verification or deepening.
 
 The four named outcomes plus the cumulative table are a complete substrate. MPT/MPS doesn't reach back into raw worksheet content. AI re-summary at MPT/MPS is unnecessary — and actively counter to the SFDI commitment that the pastor's own articulations across four sub-phases ARE the substrate.
@@ -1466,12 +1477,12 @@ If unmet, the Continue button (label: **"Continue to MPT/MPS"**) is disabled wit
 
 ### What's preserved across the boundary
 
-The throughline visualization shows the line completing the Study segment — Implications' four nodes light up after RT's five (which lit up after Interpret's seven, which lit up after Observe's nine). **Total: 25 earned nodes across the Study throughline.** The Implications Synthesis sits at the end of the Implications segment as a callout, alongside the prior three named-outcome callouts (Observation Set, Interpretation Set, Christ-Connection Statement).
+The throughline visualization shows the line completing the Study segment — Implications' four nodes light up after RT's five (which lit up after Interpret's eight, which lit up after Observe's eight). **Total: 25 earned nodes across the Study throughline.** The Implications Synthesis sits at the end of the Implications segment as a callout, alongside the prior three named-outcome callouts (Observation Set, Interpretation Set, Christ-Connection Statement).
 
 **The cumulative thought-unit table is now complete:**
 
-- Phase 1 Field 4 Q3 builds: Thought unit | After line | Signal
-- Phase 2 Field 7 Q1 adds: Meaning
+- Phase 1 Field 3 Q3 builds: Thought unit | After line | Signal
+- Phase 2 Field 8 Q1 adds: Meaning
 - Phase 3 Field 5 Q1 adds: Christ-Connection
 - Phase 4 Field 4 Q1 adds: Implication
 
@@ -1496,15 +1507,15 @@ With Phase 4 walked, the structural completion test from the SFDI charter is sat
 
 | Phase | Fields | Questions | Heavy-lifting fields |
 |---|---|---|---|
-| 1 — Observe | 9 | 20 | Field 4 (Divisions / Thought Units), Field 9 (Possible Implications) |
-| 2 — Interpret | 7 | 9 | Field 7 (Interpretation Synthesis) |
+| 1 — Observe | 8 | 16 | Field 3 (Divisions / Thought Units), Field 8 (Possible Implications) |
+| 2 — Interpret | 8 | 11 | Field 8 (Interpretation Synthesis) |
 | 3 — Redemptive Thread | 5 | 11 | Field 2 (How the Passage Points to Christ), Field 5 (Christ-Connection Statement) |
 | 4 — Implications | 4 | 13 | Field 4 (Implications Synthesis) |
-| **Total** | **25** | **53** | **6** |
+| **Total** | **25** | **51** | **6** |
 
 **Cumulative thought-unit table across phases:** Thought unit | After line | Signal | Meaning | Christ-Connection | Implication. Six columns; one writable column added per phase after Phase 1. The structural through-line of the workspace.
 
-**PC arc across phases:** awareness (Phase 1 Field 9) → marination (Phase 2) → texture (Phase 3 Fields 3, 4, 5) → integration (Phase 4 Fields 3 and 4). PC's substance flows through the named outcomes, never orphaned.
+**PC arc across phases:** awareness (Phase 1 Field 8) → marination (Phase 2) → texture (Phase 3 Fields 3, 4, 5) → integration (Phase 4 Fields 3 and 4). PC's substance flows through the named outcomes, never orphaned.
 
 ### What's pending
 
