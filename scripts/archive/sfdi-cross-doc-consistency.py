@@ -21,12 +21,15 @@ DOCS = {
     "CORE":         REPO / "docs/CORE.md",
     "SPRD":         REPO / "docs/PROPOSALS/study-phase-redesign.md",
     "charter":      REPO / "docs/PROPOSALS/sfdi-charter.md",
-    "vision":       REPO / "docs/PROPOSALS/sfdi-throughline-vision.md",
     "workspace":    REPO / "docs/SYSTEMS/sermon-workspace.md",
     "CHANGELOG":    REPO / "CHANGELOG.md",
     "MEMORY":       MEMORY / "MEMORY.md",
     "state_memory": MEMORY / "project_sprd_sfdi_state.md",
 }
+# 2026-05-06 — `vision` entry removed: `sfdi-throughline-vision.md` was merged
+# into `sfdi-charter.md § Orientation` on 2026-05-05 (commit 7365af6). The
+# vision content was never read by any criterion in this validator, so no
+# replacement reference is needed.
 
 content = {}
 lines = {}

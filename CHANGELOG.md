@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-06 — Field 3 Sprint 2 Session 5: SFDI doc rewrite + un-archive validator
+
+- SFDI Field 3 entry rewritten to canonical unified-canvas shape (seven-slot entry preserved, single `canvas` question, three sub-checks for the composite gate, ~110-word "Structural revision history" subsection at the bottom preserving the 2026-05-03 three-question record).
+- Six cascading references repointed across the SFDI doc (Field Pattern composite-gating description, Structured-exercise questions section now lists two sub-shapes — unified canvas + cumulative synthesis table, field-order annotation, Q3-posture reference in Field 7, Observe → Interpret handoff, Phase 2 Field 8 cross-phase wording).
+- `scripts/sfdi-internal-consistency.py` un-archived and passes 7/7 against the rewritten entry; `scripts/sfdi-cross-doc-consistency.py` left archived with a README note documenting four pre-existing failing criteria from the 2026-05-05 SPRD trim.
+- `ENFORCEMENT_STATUS.md` Process #6 row updated from "two validators" to "one live + one archived"; "Last verified" bumped to today.
+- Sweep PASS, simplify pass clean, 403 vitest green.
+
+---
+
 ## 2026-05-05 — Field 3 Sprint 2 Session 4: tests + fixtures
 
 - Six new contract tests in `process-2-evidence-gated-ux.test.tsx` exercise the Field 3 unified-canvas gate against new-shape fixtures directly — no migration step — covering the pass case, three failure modes (no main+modifier, missing paraphrase, no thought-unit-end), the canvas-N/A escape valve, and the per-gate `met=true` reporting at the Observe → Interpret boundary.
