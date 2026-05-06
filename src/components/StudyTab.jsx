@@ -19,8 +19,6 @@ import SpotlightWorksheet from "./SpotlightWorksheet";
 import AdvanceGateChecklist from "./AdvanceGateChecklist";
 import ThroughlineRail from "./ThroughlineRail";
 import ScripturePanel from "./ScripturePanel";
-// Tunnel-mode prototype (TunnelView, SubPhaseTrail) was reverted 2026-05-04;
-// design captured at docs/PROPOSALS/tunnel-mode.md for future consideration.
 import OutlineBuilder from "./OutlineBuilder";
 import InlineAIResponse from "./InlineAIResponse";
 import ProposalPanel from "./ProposalPanel";

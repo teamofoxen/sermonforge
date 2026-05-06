@@ -143,7 +143,7 @@ If improvements come to mind during the update, write them down for a separate *
 
 ### STEP 6 — NO SKILL CHAINING
 
-Do not invoke `drift-sweep`, `sweep-the-house`, `sweep-the-multiverse`, `sweep-the-universe`, `interrogate`, or any audit/verification skill during this update.
+Do not invoke `drift-sweep`, `sweep-the-house`, `sweep-the-multiverse`, `interrogate`, or any audit/verification skill during this update.
 
 Mid-flight anchors are not audit targets. Audit skills will flag intentional gaps as drift, and the agent will then "fix" them, corrupting the doc.
 

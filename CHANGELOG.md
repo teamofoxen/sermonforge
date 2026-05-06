@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-05 — Clean up orphan references to retired SPIR / tunnel-mode / sweep-the-universe
+
+- SRIA: SPIR doc bullet dropped; "Something surfaced in real prep" navigation now points at SPIP § Watch in real prep.
+- `ANCHORS.md`: SPIR row dropped; SRIA description chain shortened to SFDI / SADI / SPRD / SPIP.
+- `ENFORCEMENT_STATUS.md`: dead `tunnel-mode.md` pointer trimmed from the 2026-05-04 SPRD C2 narrative; descriptive history preserved.
+- `StudyTab.jsx`: two-line tunnel-mode comment block deleted — it pointed at a retired doc.
+- `anchor-update` SKILL: `sweep-the-universe` removed from the no-skill-chaining list.
+
+---
+
 ## 2026-05-05 — Ship Dashboard verse carousel + preacher quote components
 
 - Added `DashboardVerseCarousel` — 15s rotation through `preachingVerses.js`, module-level cursor so re-entry shows the next verse.
