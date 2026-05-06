@@ -28,12 +28,13 @@ import { buildSystemPrompt, appendTaskDirective } from "../prompts/sermon";
 import {
   FE_CHAT_SYSTEM,
   OBSERVE_REVIEW_TASK, INTERPRET_REVIEW_TASK, REDEMPTIVE_REVIEW_TASK, IMPLICATIONS_REVIEW_TASK,
-  MPT_DRAFT_TASK, MPS_Q1_TRANSLATE_TASK, MPS_CHAT_TASK,
+  MPT_DRAFT_TASK, MPS_Q1_TRANSLATE_TASK,
   POPULATE_SCRIPTURE_TASK,
-  OUTLINE_REVIEW_TASK, CHALLENGE_MPT_TASK,
+  OUTLINE_REVIEW_TASK,
   BRIEF_OBSERVE_TO_INTERPRET_TASK, BRIEF_INTERPRET_TO_REDEMPTIVE_TASK, BRIEF_REDEMPTIVE_TO_IMPLICATIONS_TASK,
   BRIEF_EXEGESIS_TO_MPT_MPS_TASK, BRIEF_MPT_MPS_TO_OUTLINE_TASK, BRIEF_OUTLINE_TO_FE_TASK,
 } from "../prompts/study";
+import { MAIN_POINT_PAIR_FIELDS } from "../utils/sadiAnchorFields";
 import { fetchPassage } from "../db/database";
 import PrimaryButton from "./primitives/PrimaryButton";
 import SecondaryButton from "./primitives/SecondaryButton";
@@ -433,11 +434,6 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
     }
   }, [tourActive, desiredUi, activeStep, activeSubPhase]);
 
-  useEffect(() => {
-    setMpsChat([]);
-    setMpsChatInput("");
-    setMpsChatLoading(false);
-  }, [sermon.id]);
   const [summaries, setSummaries] = useState({});
   const [summaryLoading, setSummaryLoading] = useState(null);
   const funcData = getFunctionalElements(sermon);
@@ -460,11 +456,6 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
   const [confirmOutlineApplyIdx, setConfirmOutlineApplyIdx] = useState(null);
   const [populateScriptureMessage, setPopulateScriptureMessage] = useState(null);
 
-  // MPS conversational refinement
-  const [mpsChat, setMpsChat] = useState([]); // [{role, content}]
-  const [mpsChatInput, setMpsChatInput] = useState("");
-  const [mpsChatLoading, setMpsChatLoading] = useState(false);
-
   // Outline conversational refinement
   const [outlineChat, setOutlineChat] = useState([]);
   const [outlineChatInput, setOutlineChatInput] = useState("");
@@ -483,6 +474,35 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
   const intData = useMemo(() => parseStructuredField(sermon.interpretation), [sermon.interpretation]);
   const redData = useMemo(() => parseStructuredField(sermon.redemptive_thread), [sermon.redemptive_thread]);
   const impData = useMemo(() => parseStructuredField(sermon.implications), [sermon.implications]);
+  // SADI Step 2 — Main Point Pair envelope (v19). Holds MPT (2Q) + MPS (3Q).
+  const mppData = useMemo(() => parseStructuredField(sermon.main_point_pair), [sermon.main_point_pair]);
+
+  // Read the tightened MPT/MPS values from the envelope. The flat
+  // sermon.mpt / sermon.mps columns are auto-synced from these on write,
+  // so downstream readers (AI prompts, context builder, exports) keep
+  // working without rewrites.
+  const mptTighten = useMemo(() => flattenAnswerValue(getQuestionAnswer(mppData, "mpt", "tighten")), [mppData]);
+  const mpsTranslate = useMemo(() => flattenAnswerValue(getQuestionAnswer(mppData, "mps", "translate")), [mppData]);
+
+  // Write to the main_point_pair envelope. When the pastor writes the
+  // tighten answer for either field, mirror that value into the legacy
+  // flat column so downstream consumers stay current.
+  const updateMPP = useCallback((fieldKey, qKey, value) => {
+    const next = setQuestionAnswer(mppData, fieldKey, qKey || DEFAULT_QUESTION_KEY, value);
+    const updates = { main_point_pair: serializeStructuredField(next) };
+    if (fieldKey === "mpt" && qKey === "tighten") {
+      updates.mpt = typeof value === "string" ? value : "";
+    } else if (fieldKey === "mps" && qKey === "tighten") {
+      updates.mps = typeof value === "string" ? value : "";
+    }
+    onUpdate(updates);
+  }, [mppData, onUpdate]);
+
+  const toggleMPPNa = useCallback((fieldKey, qKey) => {
+    const wasNA = isQuestionNA(mppData, fieldKey, qKey || DEFAULT_QUESTION_KEY);
+    const next = setQuestionNA(mppData, fieldKey, qKey || DEFAULT_QUESTION_KEY, !wasNA);
+    onUpdate({ main_point_pair: serializeStructuredField(next) });
+  }, [mppData, onUpdate]);
 
   // Write a question's answer (qKey defaults to primary for back-compat with
   // non-spotlight callers like the Phase 3 / Phase 4 textareas that target
@@ -576,34 +596,6 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
       console.error("[generateMPS]", e);
     } finally {
       setDraftLoading(null);
-    }
-  }
-
-  async function sendMpsChat() {
-    const input = mpsChatInput.trim();
-    if (!input || mpsChatLoading) return;
-    const newUserMsg = { role: "user", content: input };
-    const history = [...mpsChat, newUserMsg];
-    setMpsChat(history);
-    setMpsChatInput("");
-    setMpsChatLoading(true);
-    try {
-      const step = STEPS.MPT_MPS;
-      const context = buildContext({ sermon, step });
-      const contextPrefix = context ? `CONTEXT:\n${context}\n\nUSER REQUEST:\n` : "";
-      const messages = history.map((m, i) =>
-        i === history.length - 1 ? { ...m, content: contextPrefix + m.content } : m
-      );
-      const result = await sendAIMessage(messages, layerTask(MPS_CHAT_TASK, step), step, sermon.id);
-      if (result.ok && result.text.trim()) {
-        setMpsChat(prev => [...prev, { role: "assistant", content: result.text.trim() }]);
-      } else if (!result.ok && result.kind !== "aborted") {
-        setMpsChat(prev => [...prev, { role: "assistant", content: result.message }]);
-      }
-    } catch (e) {
-      setMpsChat(prev => [...prev, { role: "assistant", content: `Error: ${e.message}` }]);
-    } finally {
-      setMpsChatLoading(false);
     }
   }
 
@@ -1016,7 +1008,11 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
   // these. SFDI's per-boundary thresholds extend `evaluateAdvance` later; the
   // call sites here don't change. Empty-evidence baseline today.
   const subPhaseSufficiency = evaluateAdvance(sermon, "sub_phase", activeSubPhase);
-  const step2Sufficiency = evaluateAdvance(sermon, "step", 2);
+  // Narrowed dep — step 2 → step 3 gate reads only main_point_pair, so
+  // unrelated edits (Observe, Interpret, RT, Implications) shouldn't re-run it.
+  // Mirrors the FrameTab.jsx pattern for the Frame → Manuscript gate.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const step2Sufficiency = useMemo(() => evaluateAdvance(sermon, "step", 2), [sermon.main_point_pair]);
   const step3Sufficiency = evaluateAdvance(sermon, "step", 3);
 
   // SPRD C2 — vertical throughline rail data. Computed every render off the
@@ -1291,189 +1287,62 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
         </div>
       )}
 
-      {/* ── Step 2: MPT → MPS Forge ── */}
+      {/* ── Step 2: MPT/MPS Forge — SADI Step 2 plumbing (v19, 2026-05-05) ── */}
       {activeStep === 2 && (
-        <div className="study-step-active">
+        <div className="study-step-active" data-tour-id="mpt-field">
           <SummaryBlock summaryKey="s2" {...summaryProps} />
 
-          <div className="mpt-mps-grid">
-            <div className="field-group" data-tour-id="mpt-field">
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "5px" }}>
-                <label className="field-label" style={{ marginBottom: 0 }}>Main Point of the Text (MPT)</label>
-                {(sermon.passage || hasAnyAnswer(obsData)) && (
-                  <SecondaryButton
-                    size="sm"
-                    onClick={generateMPT}
-                    disabled={draftLoading !== null}
-                    style={{ fontSize: "12px" }}
-                  >
-                    {draftLoading === "mpt" ? "Thinking…" : "Draft →"}
-                  </SecondaryButton>
-                )}
-              </div>
-              <textarea
-                className="field-textarea"
-                rows={3}
-                style={{ minHeight: "80px" }}
-                value={sermon.mpt || ""}
-                onChange={(e) => onUpdate({ mpt: e.target.value })}
-                onInput={(e) => autoResize(e.target)}
-                ref={(el) => autoResize(el)}
-                placeholder="The main point of the text in past tense — what the author was saying to the original audience."
-              />
-              <ProposalPanel
-                loading={draftLoading === "mpt"}
-                proposal={mptProposal}
-                label="AI proposes MPT"
-                acceptLabel={sermon.mpt?.trim() ? "Replace MPT" : "Use this"}
-                onAccept={() => {
-                  onUpdate({ mpt: mptProposal });
-                  setMptProposal(null);
-                }}
-                onDiscard={() => setMptProposal(null)}
-              />
-            </div>
-            <div className="field-group" data-tour-id="mps-field">
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "5px" }}>
-                <label className="field-label" style={{ marginBottom: 0 }}>Main Point of the Sermon (MPS)</label>
-                {sermon.mpt?.trim() && (
-                  <SecondaryButton
-                    size="sm"
-                    onClick={generateMPS}
-                    disabled={draftLoading !== null}
-                    style={{ fontSize: "12px" }}
-                  >
-                    {draftLoading === "mps" ? "Thinking…" : "Draft →"}
-                  </SecondaryButton>
-                )}
-              </div>
-              <textarea
-                className="field-textarea"
-                rows={3}
-                style={{ minHeight: "80px" }}
-                value={sermon.mps || ""}
-                onChange={(e) => onUpdate({ mps: e.target.value })}
-                onInput={(e) => autoResize(e.target)}
-                ref={(el) => autoResize(el)}
-                placeholder="The main point of the sermon in present tense — what this text is saying to this congregation today."
-              />
-              <ProposalPanel
-                loading={draftLoading === "mps"}
-                proposal={mpsProposal}
-                label="AI proposes MPS"
-                acceptLabel={sermon.mps?.trim() ? "Replace MPS" : "Use this"}
-                onAccept={() => {
-                  onUpdate({ mps: mpsProposal });
-                  setMpsProposal(null);
-                }}
-                onDiscard={() => setMpsProposal(null)}
-              />
-            </div>
-          </div>
-
-          <div style={{ display: "flex", gap: "10px", marginTop: "12px" }}>
+          <div style={{ display: "flex", gap: "10px", marginBottom: "12px" }}>
             <SecondaryButton
               size="sm"
-              disabled={inlineLoading !== null}
-              onClick={() => fetchInline(
-                "mpt-challenge",
-                `MPT to challenge: "${sermon.mpt || "(not written)"}"`,
-                CHALLENGE_MPT_TASK,
-                STEPS.MPT_MPS,
-              )}
+              onClick={generateMPT}
+              disabled={draftLoading !== null || (!sermon.passage && !hasAnyAnswer(obsData))}
+              style={{ fontSize: "12px" }}
+              title={!sermon.passage && !hasAnyAnswer(obsData) ? "Add a passage or Observe content first" : ""}
             >
-              Challenge My MPT
+              {draftLoading === "mpt" ? "Thinking…" : "Draft MPT (Q1) →"}
             </SecondaryButton>
             <SecondaryButton
               size="sm"
-              disabled={inlineLoading !== null}
-              onClick={() => fetchInline(
-                "mpt-mps-chain",
-                `Evaluate the MPT→MPS chain on this sermon.`,
-                `Evaluate whether this MPS grows organically from this MPT. MPT: "${sermon.mpt || "(not written)"}". MPS: "${sermon.mps || "(not written)"}". Does the MPS follow from the MPT or is it imposed? Is the chain clean, weak, or broken? Be specific.`,
-                STEPS.MPT_MPS,
-              )}
+              onClick={generateMPS}
+              disabled={draftLoading !== null || !mptTighten?.trim()}
+              style={{ fontSize: "12px" }}
+              title={!mptTighten?.trim() ? "Tighten MPT to a single sentence first (MPT Q2)" : ""}
             >
-              Check MPT→MPS Chain
+              {draftLoading === "mps" ? "Thinking…" : "Draft MPS (Q1) →"}
             </SecondaryButton>
           </div>
 
-          <InlineAIResponse
-            fieldName="MPT Challenge"
-            response={inlineResponses["mpt-challenge"]}
-            loading={inlineLoading === "mpt-challenge"}
-            onDismiss={() => dismissInline("mpt-challenge")}
+          <ProposalPanel
+            loading={draftLoading === "mpt"}
+            proposal={mptProposal}
+            label="AI proposes MPT Draft (Q1)"
+            acceptLabel={flattenAnswerValue(getQuestionAnswer(mppData, "mpt", "draft"))?.trim() ? "Replace MPT Draft" : "Use this"}
+            onAccept={() => {
+              updateMPP("mpt", "draft", mptProposal);
+              setMptProposal(null);
+            }}
+            onDiscard={() => setMptProposal(null)}
           />
-          <InlineAIResponse
-            fieldName="MPT→MPS Chain"
-            response={inlineResponses["mpt-mps-chain"]}
-            loading={inlineLoading === "mpt-mps-chain"}
-            onDismiss={() => dismissInline("mpt-mps-chain")}
+          <ProposalPanel
+            loading={draftLoading === "mps"}
+            proposal={mpsProposal}
+            label="AI proposes MPS Translate (Q1)"
+            acceptLabel={mpsTranslate?.trim() ? "Replace MPS Translate" : "Use this"}
+            onAccept={() => {
+              updateMPP("mps", "translate", mpsProposal);
+              setMpsProposal(null);
+            }}
+            onDiscard={() => setMpsProposal(null)}
           />
 
-          {sermon.mps?.trim() && (
-            <div className="mps-chat" style={{ marginTop: "16px" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
-                <span className="field-label" style={{ marginBottom: 0, color: "var(--ink-ghost)", fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.06em" }}>Refine MPS with AI</span>
-                {mpsChat.length > 0 && (
-                  <IconButton aria-label="Clear MPS chat" className="inline-ai-dismiss" onClick={() => setMpsChat([])}>Clear</IconButton>
-                )}
-              </div>
-              {mpsChat.map((msg, i) => {
-                if (msg.role === "user") {
-                  return (
-                    <div key={i} style={{ textAlign: "right", marginBottom: "6px" }}>
-                      <span style={{ background: "var(--surface-2)", borderRadius: "8px", padding: "6px 10px", fontSize: "13px", display: "inline-block", maxWidth: "85%", textAlign: "left" }}>{msg.content}</span>
-                    </div>
-                  );
-                }
-                const revisedMatch = msg.content.match(/Revised MPS:\s*(.+?)(?:\n|$)/);
-                return (
-                  <div key={i} className="inline-ai-response" style={{ marginBottom: "8px" }}>
-                    <div className="ai-markdown" style={{ marginBottom: revisedMatch ? "8px" : "0" }}>
-                      <ReactMarkdown>{msg.content}</ReactMarkdown>
-                    </div>
-                    {revisedMatch && (
-                      <SecondaryButton
-                        size="sm"
-                        style={{ fontSize: "12px" }}
-                        onClick={() => onUpdate({ mps: revisedMatch[1].trim() })}
-                      >
-                        → Apply to MPS
-                      </SecondaryButton>
-                    )}
-                  </div>
-                );
-              })}
-              {mpsChatLoading && (
-                <div className="inline-ai-response" style={{ marginBottom: "8px" }}>
-                  <div className="ai-loading" style={{ padding: "6px 0" }}>
-                    <div className="ai-loading-dot" /><div className="ai-loading-dot" /><div className="ai-loading-dot" />
-                  </div>
-                </div>
-              )}
-              <div style={{ display: "flex", gap: "8px", marginTop: "4px" }}>
-                <textarea
-                  className="field-textarea"
-                  rows={2}
-                  style={{ flex: 1, minHeight: "unset", fontSize: "13px", resize: "none" }}
-                  placeholder="Too abstract. Lean harder into the doubt angle…"
-                  value={mpsChatInput}
-                  onChange={e => setMpsChatInput(e.target.value)}
-                  onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMpsChat(); } }}
-                  disabled={mpsChatLoading}
-                />
-                <SecondaryButton
-                  size="sm"
-                  style={{ alignSelf: "flex-end", fontSize: "12px", whiteSpace: "nowrap" }}
-                  onClick={sendMpsChat}
-                  disabled={mpsChatLoading || !mpsChatInput.trim()}
-                >
-                  Ask →
-                </SecondaryButton>
-              </div>
-            </div>
-          )}
+          <SpotlightWorksheet
+            fields={MAIN_POINT_PAIR_FIELDS}
+            data={mppData}
+            onChange={updateMPP}
+            onToggleNA={toggleMPPNa}
+            sermonId={sermon.id}
+          />
 
           <div className="step-advance">
             <PrimaryButton

@@ -82,6 +82,8 @@ const SERMON_COLUMNS = Object.freeze(new Set([
   "current_stage", "current_step", "current_sub_phase",
   // v18 — SPRD C3 Sermon Frame.
   "sermon_frame",
+  // v19 — SADI Step 2 Main Point Pair.
+  "main_point_pair",
 ]));
 /* eslint-enable sermonforge/canonical-stage-name */
 
@@ -108,6 +110,8 @@ const STRUCTURED_FIELDS = Object.freeze(new Set([
   "implications",
   // v18 — SPRD C3 Sermon Frame.
   "sermon_frame",
+  // v19 — SADI Step 2 Main Point Pair.
+  "main_point_pair",
 ]));
 /* eslint-enable sermonforge/canonical-stage-name */
 

@@ -764,6 +764,24 @@ function runMigrations() {
     db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '18')");
     version = 18;
   }
+
+  if (version < 19) {
+    // v19: SADI Step 2 plumbing — MPT/MPS as proper fields.
+    // Adds a JSON column for the per-question envelope holding MPT (2Q:
+    // draft, tighten) and MPS (3Q: translate, gospel_check, tighten),
+    // mirroring v18's sermon_frame shape. The legacy flat `mpt` and `mps`
+    // columns stay defensively per migration policy and are auto-synced
+    // from the tighten answers on write — downstream readers (AI prompts,
+    // context builder, exports) keep reading the flat columns unchanged.
+    // NULL is acceptable as the empty state.
+    const sermonInfo = queryAll("PRAGMA table_info(sermons)");
+    const have = new Set(sermonInfo.map(r => r.name));
+    if (!have.has("main_point_pair")) {
+      db.run("ALTER TABLE sermons ADD COLUMN main_point_pair TEXT DEFAULT NULL");
+    }
+    db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '19')");
+    version = 19;
+  }
 }
 
 // Verify the live schema matches the SERMON_COLUMNS / SERIES_COLUMNS allowlists

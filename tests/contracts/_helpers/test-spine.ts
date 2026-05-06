@@ -46,6 +46,8 @@ export const SERMON_COLUMNS = new Set([
   "current_stage", "current_step", "current_sub_phase",
   // v18 — SPRD C3 Sermon Frame.
   "sermon_frame",
+  // v19 — SADI Step 2 Main Point Pair.
+  "main_point_pair",
 ]);
 
 export const SERIES_COLUMNS = new Set([
@@ -65,6 +67,8 @@ export const STRUCTURED_FIELDS = new Set([
   "redemptive_thread", "implications",
   // v18 — SPRD C3 Sermon Frame.
   "sermon_frame",
+  // v19 — SADI Step 2 Main Point Pair.
+  "main_point_pair",
 ]);
 
 // Mirrors electron/main.js buildUpdate: silently filter unknown columns and

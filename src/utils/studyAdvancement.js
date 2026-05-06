@@ -369,6 +369,82 @@ function checkSermonFrameToManuscriptThreshold(sermon) {
   };
 }
 
+// SADI Step 2 — MPT composite gate (Step 2 → Step 3 / Outline boundary).
+// Per SADI ratification: MPT Q1 (draft) and Q2 (tighten) both non-empty,
+// neither N/A-able. Q2 carries an advisory single-sentence check that
+// surfaces a hint but does not block — pastor judgment wins.
+function checkMPTComposite(mppData) {
+  if (!mppData || typeof mppData !== "object") {
+    return "Write the MPT (draft and tighten) before advancing.";
+  }
+  const fieldKey = "mpt";
+  for (const qKey of ["draft", "tighten"]) {
+    const answered = !isQuestionNA(mppData, fieldKey, qKey)
+      && !!flattenAnswerValue(getQuestionAnswer(mppData, fieldKey, qKey));
+    if (!answered) {
+      return `Write the MPT ${qKey} answer before advancing.`;
+    }
+  }
+  return null;
+}
+
+// SADI Step 2 — MPS composite gate. Per SADI ratification: MPS Q1
+// (translate) and Q3 (tighten) both non-empty, no N/A. Q2 (gospel_check)
+// non-empty OR explicit N/A (the "satisfied another way" carve-out for
+// passages where the moralism check was completed upstream and surfaced
+// nothing).
+function checkMPSComposite(mppData) {
+  if (!mppData || typeof mppData !== "object") {
+    return "Write the MPS (translate, gospel-check, tighten) before advancing.";
+  }
+  const fieldKey = "mps";
+  // Q1 + Q3: load-bearing, no N/A.
+  for (const qKey of ["translate", "tighten"]) {
+    const answered = !isQuestionNA(mppData, fieldKey, qKey)
+      && !!flattenAnswerValue(getQuestionAnswer(mppData, fieldKey, qKey));
+    if (!answered) {
+      return `Write the MPS ${qKey} answer before advancing.`;
+    }
+  }
+  // Q2: non-empty OR explicit N/A.
+  if (!isQuestionAnswered(mppData, fieldKey, "gospel_check")) {
+    return "Complete the MPS gospel-check (or mark it N/A if checked upstream) before advancing.";
+  }
+  return null;
+}
+
+// SADI Step 2 → Step 3 (Outline) composite gate. Two sub-gates: MPT
+// composite + MPS composite. Returns `{ gates, firstReason }` per the
+// established B1.6 shape; the disabled-Continue UI renders the
+// hover-checklist when there are multiple gates.
+function checkStep2ToOutlineThreshold(sermon) {
+  const mppData = parseStructuredField(sermon?.main_point_pair);
+
+  const mptReason = checkMPTComposite(mppData);
+  const mpsReason = checkMPSComposite(mppData);
+
+  const gates = [
+    {
+      key: "mpt",
+      label: "MPT",
+      met: !mptReason,
+      reason: mptReason || undefined,
+    },
+    {
+      key: "mps",
+      label: "MPS",
+      met: !mpsReason,
+      reason: mpsReason || undefined,
+    },
+  ];
+
+  const firstFailing = gates.find((g) => !g.met);
+  return {
+    gates,
+    firstReason: firstFailing ? firstFailing.reason : null,
+  };
+}
+
 // SFDI Implications → MPT/MPS threshold (per `study-field-definition-
 // initiative.md` § "The hard gate at the boundary" inside Phase 4). Returns
 // `{ gates, firstReason }` mirroring B1.6's structured shape. One load-
@@ -635,6 +711,23 @@ export function evaluateAdvance(sermon, kind, fromIndex) {
   // Frame=3, Manuscript=4, Delivery=5).
   if (kind === "stage" && fromIndex === 3) {
     const result = checkSermonFrameToManuscriptThreshold(sermon);
+    if (result.firstReason) {
+      return {
+        ok: false,
+        reason: result.firstReason,
+        ...(result.gates.length > 0 ? { gates: result.gates } : {}),
+      };
+    }
+    if (result.gates.length > 0) {
+      return { ok: true, gates: result.gates };
+    }
+  }
+
+  // SADI Step 2 → Step 3 (Outline) boundary composite gate. Reads the new
+  // `main_point_pair` envelope (v19) populated by the SpotlightWorksheet.
+  // STEP_BY_INDEX[1] === STEP.MPT_MPS; fromIndex=2 is Step 2 → Step 3.
+  if (kind === "step" && fromIndex === 2) {
+    const result = checkStep2ToOutlineThreshold(sermon);
     if (result.firstReason) {
       return {
         ok: false,

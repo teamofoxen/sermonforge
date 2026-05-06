@@ -266,6 +266,10 @@ export type ImplicationsUpdate =
 // manages the per-field per-question envelope shape via setQuestionAnswer.
 export type SermonFrameUpdate = { op: "set"; questionKey: string; value: string };
 
+// SADI Step 2 — Main Point Pair (MPT 2Q + MPS 3Q). Same generic keyed-JSON
+// op pattern as the Exegesis sub-phase columns and v18 sermon_frame.
+export type MainPointPairUpdate = { op: "set"; questionKey: string; value: string };
+
 // ── Schema column allowlists (subsumed from src/constants/sermonColumns.js) ──
 //
 // These were previously duplicated across the renderer mirror and the main
@@ -286,6 +290,11 @@ export const SERMON_COLUMNS: ReadonlySet<string> = Object.freeze(new Set([
   // Conclusion field-data per the SADI Step 5 ratification, in the same
   // envelope shape as the four Exegesis sub-phase columns.
   "sermon_frame",
+  // v19 — Main Point Pair JSON column (SADI Step 2 plumbing, 2026-05-05).
+  // Holds MPT (2Q: draft, tighten) + MPS (3Q: translate, gospel_check,
+  // tighten). Flat `mpt` and `mps` columns above are auto-synced from the
+  // tighten answers; downstream readers keep using the flat columns.
+  "main_point_pair",
 ])) as ReadonlySet<string>;
 
 export const SERIES_COLUMNS: ReadonlySet<string> = Object.freeze(new Set([
@@ -355,4 +364,6 @@ export const STRUCTURED_FIELDS: ReadonlySet<string> = Object.freeze(new Set([
   "implications",
   // v18 — SPRD C3 Sermon Frame (SADI Step 5).
   "sermon_frame",
+  // v19 — SADI Step 2 Main Point Pair (MPT/MPS plumbing, 2026-05-05).
+  "main_point_pair",
 ])) as ReadonlySet<string>;

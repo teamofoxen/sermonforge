@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-05 — SADI Step 2 plumbing: MPT/MPS as SpotlightWorksheet fields (v19)
+
+- New `src/utils/sadiAnchorFields.js` defines `MAIN_POINT_PAIR_FIELDS` (MPT 2Q draft/tighten, MPS 3Q translate/gospel_check/tighten) with question prompts and overview lifted from the SADI working doc.
+- v19 migration adds `main_point_pair` JSON column; SERMON_COLUMNS + STRUCTURED_FIELDS allowlists mirrored across `electron/contracts.cjs`, `src/core/contracts.ts`, and the test-spine fixture; new `MainPointPairUpdate` type.
+- Composite gate at Step 2 → Step 3 boundary in `studyAdvancement.js` — `checkStep2ToOutlineThreshold` enforces MPT Q1+Q2 and MPS Q1+Q2-or-N/A+Q3 (Q2 N/A carries the strict "satisfied another way" semantic).
+- `StudyTab.jsx` Step 2 inline UI replaced with `SpotlightWorksheet`; legacy flat `mpt`/`mps` columns auto-synced from the tighten answers so downstream readers (AI prompts, context builder, exports) keep working unchanged.
+- Dropped Challenge MPT button + MPT→MPS chain check + MPS chat panel per user call; sweep-the-house PASS, 383 vitest green.
+
+---
+
 ## 2026-05-05 — Retire SPRD scaffolding: merge vision sheets, mothball validators, archive SRIA
 
 - Vision sheets merged into charters: `sfdi-throughline-vision.md` → `sfdi-charter.md` § Orientation; `sadi-throughline-vision.md` → `sadi-charter.md` § Orientation. Both standalone vision files deleted; references in SFDI working doc, SADI working doc, SPRD planning doc, and `ANCHORS.md` repointed.
