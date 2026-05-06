@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-05 — Field 3 Sprint 2 Session 1: unified-canvas data layer + helpers
+
+- `OBSERVE_FIELDS[2]` three-question block (`sentence_layout` / `paraphrases` / `thought_units`) collapsed into a single `unified-canvas` question; per-row UUIDs are the merge key for cross-phase column attribution.
+- New `deriveThoughtUnitsFromCanvas` and `setDivisionsCanvas` helpers materialize `thought_units` alongside `canvas` on save; cumulative columns survive insert / delete / reorder via `_canvas_row_id` matching with `after_line` legacy fallback.
+- `parseStructuredField` defensively hydrates `canvas` from legacy three-question shape when present; existing `thought_units` array (with Phase 2/3/4 cumulative columns) preserved intact.
+- `checkField3Composite` rewritten against the unified shape; pastor-facing reason strings preserved verbatim so the disabled-Continue hover-checklist reads identically.
+- `flattenToText` now surfaces undeclared keys per field so materialized `thought_units` continues to flow into AI context after the field-def change.
+
+---
+
 ## 2026-05-05 — Field 3 Sprint 1: overview cuts, canvas wrap, takeover layout
 
 - Field 3 (Divisions / Thought Units) pre-field overview trimmed from three paragraphs + a three-item ordered list to one sentence; reference-panel content tightened (dropped poetry "deferred" section, quick-tips heading, clarifier footnote, standalone epistles paragraph; three rules compressed to one short clause each).

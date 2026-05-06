@@ -105,39 +105,18 @@ export const OBSERVE_FIELDS = [
         "Lay the passage out so the structure shows. Rewrite each main sentence in your own words. Find the thought units that anchor it. The bones are already there — your job is to make them visible.",
       ],
     },
+    // Phase 4 Sprint 2 (2026-05-05): the three legacy questions
+    // (sentence_layout / paraphrases / thought_units) collapse into a single
+    // unified canvas. Paraphrase renders inline beneath each main row;
+    // thought-unit annotation attaches to canvas rows via thought_unit_end.
+    // The materialized `thought_units` array (derived on save) is what
+    // Phase 2/3/4 cross-phase reads continue to consume — load-bearing
+    // invariant preserved.
     questions: [
       {
-        key: "sentence_layout",
-        kind: "canvas",
+        key: "canvas",
+        kind: "unified-canvas",
         prompt: "Type the passage by hand. Pull each subject and main verb to the left margin. Indent modifiers under what they modify. Re-align coordinate clauses to the column of their coordinate.",
-        referencePanel: {
-          title: "The three rules",
-          sections: [
-            {
-              type: "rules",
-              items: [
-                { lead: "Subject + main verb", body: "to the left margin." },
-                { lead: "Modifiers", body: "indent under what they modify." },
-                { lead: "Coordinate clauses", body: "re-align to the column of their coordinate." },
-              ],
-            },
-            {
-              type: "genre",
-              heading: "Narrative",
-              paragraphs: ["Each main action goes to the margin. Description and character info indent under what they describe. Dialogue indents under the speech verb."],
-            },
-          ],
-        },
-      },
-      {
-        key: "paraphrases",
-        kind: "paraphrase",
-        prompt: "Take each main sentence — every left-margin line you laid out above — and rewrite it in your own words. Translation, not summary.",
-      },
-      {
-        key: "thought_units",
-        kind: "synthesis-table",
-        prompt: "Look at the main sentences above. For each thought unit you find, write what the author is hammering home (in your own words), mark the line where it ends, and name what makes the seam — a subject shift, a “But…” that pivots, a scene change.",
       },
     ],
   },
@@ -640,18 +619,117 @@ export function getPrimaryAnswer(fieldData, fieldKey) {
   return getQuestionAnswer(fieldData, fieldKey, DEFAULT_QUESTION_KEY);
 }
 
+// ── Phase 1 Field 3 unified-canvas helpers (Phase 4 Sprint 2) ──────────────
+//
+// Field 3's three legacy questions (sentence_layout / paraphrases /
+// thought_units) collapse into a single canvas where each row carries the
+// structural text plus inline paraphrase and an optional thought_unit_end
+// marker. Per-row UUIDs are the merge key when the canvas changes — Phase 2/3/4
+// cumulative columns survive insert/delete/reorder by matching on
+// `_canvas_row_id`, with a positional `after_line` fallback for legacy data
+// that predates the unification.
+
+// Generate a stable per-row id. crypto.randomUUID() is the production source;
+// the fallback exists only to keep tests honest in environments without it.
+export function generateRowId() {
+  if (typeof globalThis !== "undefined"
+      && globalThis.crypto
+      && typeof globalThis.crypto.randomUUID === "function") {
+    return globalThis.crypto.randomUUID();
+  }
+  return "row-" + Math.random().toString(36).slice(2) + "-" + Date.now().toString(36);
+}
+
+// Derive the thought_units array from a unified-canvas array. Each canvas
+// row whose thought_unit_end is populated produces a thought_units row;
+// `_canvas_row_id` back-points at the canvas row's id so subsequent canvas
+// edits can reattribute Phase 2/3/4 cumulative columns (meaning,
+// christ_connection, implication) by matching on it.
+//
+// Match strategy when merging cumulative columns from existingThoughtUnits:
+//   1. `_canvas_row_id` match (post-Sprint-2 default — every derived row
+//      carries the back-pointer).
+//   2. `after_line` fallback (defensive — only relevant for legacy
+//      thought_units rows surviving the migration without a back-pointer).
+//
+// Empty or undefined `thought_unit_end` rows are skipped — they're not
+// thought-unit seams.
+export function deriveThoughtUnitsFromCanvas(canvas, existingThoughtUnits = []) {
+  if (!Array.isArray(canvas) || canvas.length === 0) return [];
+  const existing = Array.isArray(existingThoughtUnits) ? existingThoughtUnits : [];
+  const out = [];
+
+  for (let i = 0; i < canvas.length; i++) {
+    const row = canvas[i];
+    if (!row || typeof row !== "object") continue;
+    const tue = row.thought_unit_end;
+    if (!tue || typeof tue !== "object") continue;
+
+    const summary = typeof tue.summary === "string" ? tue.summary : "";
+    const signal = typeof tue.signal === "string" ? tue.signal : "";
+    const afterLine = i + 1; // 1-indexed canvas row position
+    const rowId = typeof row.id === "string" ? row.id : "";
+
+    // Match by id first, then by after_line (legacy fallback).
+    let match = null;
+    if (rowId) {
+      match = existing.find((e) => e && e._canvas_row_id === rowId) || null;
+    }
+    if (!match) {
+      match = existing.find(
+        (e) => e && Number(e.after_line) === afterLine
+      ) || null;
+    }
+
+    const derived = {
+      thought_unit_summary: summary,
+      after_line: afterLine,
+      signal,
+      _canvas_row_id: rowId,
+    };
+    for (const key of CUMULATIVE_COLUMN_KEYS) {
+      if (match && typeof match[key] === "string" && match[key].trim()) {
+        derived[key] = match[key];
+      }
+    }
+    out.push(derived);
+  }
+
+  return out;
+}
+
+// Write a unified-canvas value to the `divisions` field, materializing the
+// derived thought_units array alongside. Both paths are authoritative — canvas
+// for Field 3 UI, thought_units for Phase 2/3/4 cross-phase reads — so this
+// helper is the single sanctioned write path that keeps them in lockstep.
+//
+// Reads existing thought_units off the raw JSON shape to preserve cumulative
+// columns even when the question is N/A-masked at read time.
+export function setDivisionsCanvas(fieldData, canvas) {
+  const existing = fieldData?.divisions?.thought_units?.value;
+  const existingArr = Array.isArray(existing) ? existing : [];
+  const derived = deriveThoughtUnitsFromCanvas(canvas, existingArr);
+  let next = setQuestionAnswer(fieldData, "divisions", "canvas", canvas);
+  next = setQuestionAnswer(next, "divisions", "thought_units", derived);
+  return next;
+}
+
 // Flatten an answer value (string or structured list) to a single string.
 // Returns "" if the value is missing, empty, or otherwise has no content.
 //
 // Sub-shape detection inspects the first entry's keys:
 //   - synthesis table:   has `thought_unit_summary` (cumulative columns appended)
-//   - paraphrase blocks: has `paraphrase`
-//   - indented canvas:   has `text` (with `depth`)
+//   - unified canvas:    has `id` + `text` (Phase 4 Sprint 2 — text + depth +
+//                        inline paraphrase + thought_unit_end)
+//   - paraphrase blocks: has `main_sentence_id` (legacy — tightened from
+//                        `paraphrase` because unified-canvas rows also carry
+//                        a `paraphrase` key)
+//   - indented canvas:   has `text` (legacy, depth-only — superseded by
+//                        unified canvas but kept for back-compat reads)
 //   - unknown:           JSON.stringify fallback
 //
 // Output formats are evidence-text-oriented (consumed by AI prompts and
-// empty-evidence gates) — not the rendered display. Per-sub-shape display
-// rendering lands in the canvas/paraphrase/table components in later A2.x.
+// empty-evidence gates) — not the rendered display.
 export function flattenAnswerValue(value) {
   if (typeof value === "string") return value.trim();
   if (!Array.isArray(value) || value.length === 0) return "";
@@ -685,7 +763,34 @@ export function flattenAnswerValue(value) {
     return lines.join("\n");
   }
 
-  if ("paraphrase" in first) {
+  if ("id" in first && "text" in first) {
+    // Unified canvas: indented text with optional inline paraphrase and
+    // thought-unit-end annotations. Single pass — keeps the structural
+    // layout legible while folding pastor-voice content into the same line.
+    for (const row of value) {
+      if (!row || typeof row !== "object") continue;
+      const t = typeof row.text === "string" ? row.text.trim() : "";
+      if (!t) continue;
+      const depth = Number.isInteger(row.depth) && row.depth > 0 ? row.depth : 0;
+      let line = "  ".repeat(depth) + t;
+      const para = typeof row.paraphrase === "string" ? row.paraphrase.trim() : "";
+      if (para) line += ` — paraphrase: ${para}`;
+      const tue = row.thought_unit_end;
+      if (tue && typeof tue === "object") {
+        const summary = typeof tue.summary === "string" ? tue.summary.trim() : "";
+        const signal = typeof tue.signal === "string" ? tue.signal.trim() : "";
+        if (summary) {
+          line += signal
+            ? ` — thought unit "${summary}" ends here (signal: ${signal})`
+            : ` — thought unit "${summary}" ends here`;
+        }
+      }
+      lines.push(line);
+    }
+    return lines.join("\n");
+  }
+
+  if ("main_sentence_id" in first) {
     for (const row of value) {
       if (!row || typeof row !== "object") continue;
       const p = typeof row.paraphrase === "string" ? row.paraphrase.trim() : "";
@@ -774,6 +879,15 @@ export function applyFieldValueMap(fieldData, valueMap) {
  *
  * Returns the new-shape object. Old-shape values are lifted to
  * `{primary: {value: <string>, na: false}}` per field.
+ *
+ * Defensive read-merge: when a `divisions` field carries the legacy three-
+ * question shape (sentence_layout + paraphrases + thought_units) but no
+ * `canvas` key, hydrate `canvas` from those keys so Field 3's unified-canvas
+ * UI has data to render. The legacy `thought_units` array is preserved as-is
+ * — Phase 2/3/4 cumulative columns survive even though the canvas rows have
+ * fresh UUIDs (no _canvas_row_id back-pointer to legacy data; first post-
+ * migration canvas edit falls through after_line attribution per
+ * deriveThoughtUnitsFromCanvas).
  */
 export function parseStructuredField(raw) {
   if (!raw || typeof raw !== "string") return {};
@@ -784,12 +898,102 @@ export function parseStructuredField(raw) {
   if (trimmed.startsWith("{")) {
     const parsed = tryParse(trimmed, null);
     if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-      return coerceToNewShape(parsed);
+      return migrateLegacyDivisionsShape(coerceToNewShape(parsed));
     }
   }
 
   // Plain text — preserve as legacy_notes
   return { legacy_notes: trimmed };
+}
+
+// Hydrate `divisions.canvas` from legacy sentence_layout + paraphrases +
+// thought_units when canvas is absent. No-op for already-migrated data and
+// for parses where divisions is unset (e.g., interpretation column).
+function migrateLegacyDivisionsShape(data) {
+  const div = data?.divisions;
+  if (!div || typeof div !== "object") return data;
+  const hasLegacyKeys =
+    "sentence_layout" in div || "paraphrases" in div || "thought_units" in div;
+  const hasCanvas = "canvas" in div;
+  if (!hasLegacyKeys || hasCanvas) return data;
+
+  const layoutRows = Array.isArray(div.sentence_layout?.value)
+    ? div.sentence_layout.value
+    : [];
+  const paraRows = Array.isArray(div.paraphrases?.value)
+    ? div.paraphrases.value
+    : [];
+  const tuRows = Array.isArray(div.thought_units?.value)
+    ? div.thought_units.value
+    : [];
+
+  const canvas = [];
+  let mainOrdinal = 0;
+  for (let i = 0; i < layoutRows.length; i++) {
+    const r = layoutRows[i];
+    if (!r || typeof r !== "object") continue;
+    const text = typeof r.text === "string" ? r.text : "";
+    const depth = Number.isInteger(r.depth) && r.depth >= 0 ? r.depth : 0;
+    const kind =
+      r.kind === "main" || r.kind === "modifier"
+        ? r.kind
+        : depth === 0
+          ? "main"
+          : "modifier";
+
+    const newRow = {
+      id: generateRowId(),
+      text,
+      depth,
+      kind,
+      paraphrase: "",
+    };
+
+    if (depth === 0 && kind === "main") {
+      const paraId = `ms-${mainOrdinal}`;
+      const paraEntry = paraRows.find((p) => p && p.main_sentence_id === paraId);
+      if (paraEntry && typeof paraEntry.paraphrase === "string") {
+        newRow.paraphrase = paraEntry.paraphrase;
+      }
+      mainOrdinal++;
+    }
+
+    const afterLine = i + 1;
+    const tuEntry = tuRows.find(
+      (t) => t && Number(t.after_line) === afterLine
+    );
+    if (tuEntry) {
+      const summary =
+        typeof tuEntry.thought_unit_summary === "string"
+          ? tuEntry.thought_unit_summary
+          : "";
+      const signal = typeof tuEntry.signal === "string" ? tuEntry.signal : "";
+      newRow.thought_unit_end = { summary, signal };
+    }
+
+    canvas.push(newRow);
+  }
+
+  // N/A translation: per-question N/A on the legacy three keys is dropped in
+  // the unified shape, but a fully-N/A field maps cleanly to canvas N/A —
+  // preserves the field-level escape valve. Partial-N/A doesn't translate
+  // (the pastor will need to re-evaluate against the unified canvas) and
+  // surfaces as canvas.na=false.
+  const allLegacyNA =
+    div.sentence_layout?.na === true &&
+    div.paraphrases?.na === true &&
+    div.thought_units?.na === true;
+
+  // Spec: preserve existing thought_units array as-is so Phase 2-4 cumulative
+  // columns aren't lost. sentence_layout / paraphrases stay in JSON via the
+  // generic preservation path; flattenToText surfaces them as undeclared keys.
+  return {
+    ...data,
+    divisions: {
+      ...div,
+      canvas: { value: canvas, na: allLegacyNA },
+    },
+  };
 }
 
 // Lift any old-shape (string) field values to new-shape envelopes. Preserves
@@ -873,6 +1077,13 @@ export function serializeStructuredField(data) {
  * context / surface_questions / divisions / applications and Phase 2's
  * deeper_context / genre) produced empty flattened output because the
  * earlier implementation only read the `primary` question key per field.
+ *
+ * Phase 4 Sprint 2 addendum: also surfaces undeclared keys present in the
+ * JSON data (e.g., the materialized `thought_units` array under `divisions`
+ * after the unified-canvas refactor; legacy keys preserved by
+ * parseStructuredField on retired fields). Without this fallback, derived
+ * data and historical entries would silently drop out of AI context the
+ * moment a field def stops listing them as questions.
  */
 export function flattenToText(data, fieldDefs) {
   if (!data || typeof data !== "object") return "";
@@ -885,32 +1096,53 @@ export function flattenToText(data, fieldDefs) {
   }
 
   // Defined fields in order. Single-primary-question fields render as the
-  // legacy `Label: value` shape; multi-question fields render as a labeled
-  // block with each question's value underneath.
+  // legacy `Label: value` shape when there's no extra data; multi-question
+  // (or mixed declared/undeclared) fields render as a labeled block.
   for (const def of fieldDefs) {
     const questions = fieldQuestions(def);
     const isLegacySingle =
       questions.length === 1 && questions[0].key === DEFAULT_QUESTION_KEY;
+    const declaredKeys = new Set(questions.map((q) => q.key));
 
-    if (isLegacySingle) {
-      const text = flattenAnswerValue(getPrimaryAnswer(data, def.key));
-      if (text) parts.push(`${def.label}: ${text}`);
-      continue;
-    }
-
-    const lines = [];
+    // Declared questions in field-def order.
+    const declared = [];
     for (const q of questions) {
       if (isQuestionNA(data, def.key, q.key)) continue;
       const text = flattenAnswerValue(getQuestionAnswer(data, def.key, q.key));
       if (!text) continue;
-      // Indent continuation lines from multi-line structured values so the
-      // block stays readable.
+      declared.push({ key: q.key, text });
+    }
+
+    // Undeclared keys present in the JSON (materialized derivations, retired
+    // legacy keys preserved on read). Iterated after declared so the field
+    // def's intentional ordering wins, with fallback content trailing.
+    const undeclared = [];
+    const fieldDataObj = data?.[def.key];
+    if (fieldDataObj && typeof fieldDataObj === "object") {
+      for (const [qKey, q] of Object.entries(fieldDataObj)) {
+        if (declaredKeys.has(qKey)) continue;
+        if (!q || typeof q !== "object" || q.na) continue;
+        const text = flattenAnswerValue(q.value);
+        if (!text) continue;
+        undeclared.push({ key: qKey, text });
+      }
+    }
+
+    if (declared.length === 0 && undeclared.length === 0) continue;
+
+    // Single-primary back-compat: only when the field has exactly one
+    // declared answer on `primary` and no undeclared sibling content.
+    if (isLegacySingle && declared.length === 1 && undeclared.length === 0) {
+      parts.push(`${def.label}: ${declared[0].text}`);
+      continue;
+    }
+
+    const lines = [];
+    for (const { key, text } of [...declared, ...undeclared]) {
       const formatted = text.replace(/\n/g, "\n    ");
-      lines.push(`  ${q.key}: ${formatted}`);
+      lines.push(`  ${key}: ${formatted}`);
     }
-    if (lines.length > 0) {
-      parts.push(`${def.label}:\n${lines.join("\n")}`);
-    }
+    parts.push(`${def.label}:\n${lines.join("\n")}`);
   }
 
   // Phase 3 / Phase 4 special fields (legacy keys retained as fields with a

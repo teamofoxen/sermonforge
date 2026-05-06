@@ -140,12 +140,17 @@ function isQuestionAnswered(data, fieldKey, questionKey) {
   return !!flattenAnswerValue(getQuestionAnswer(data, fieldKey, questionKey));
 }
 
-// Field 3 composite-gate helpers (B1.5). Inlined here rather than imported
-// from ParaphraseBlocks.jsx to keep the util free of UI-layer dependencies.
+// Field 3 composite-gate helpers. Phase 4 Sprint 2 (2026-05-05) collapsed
+// Field 3's three legacy questions (sentence_layout / paraphrases /
+// thought_units) into a single unified-canvas question. The three sub-checks
+// preserve their semantics — and their pastor-facing reason strings —
+// against the new canvas shape so the disabled-Continue hover-checklist UX
+// reads identically.
 
 // True if the canvas value carries at least one main sentence (depth=0) that
 // has at least one indented modifier (depth>0) under it before the next
-// main sentence.
+// main sentence. Works against both the legacy canvas array and the unified-
+// canvas array — both carry `text` + `depth` at the row level.
 function canvasHasMainWithModifier(canvas) {
   if (!Array.isArray(canvas) || canvas.length === 0) return false;
   let inMain = false;
@@ -163,81 +168,65 @@ function canvasHasMainWithModifier(canvas) {
   return false;
 }
 
-// Count canvas main sentences (depth=0 rows with non-empty text). Mirrors
-// ParaphraseBlocks.groupMainSentences but counts only — and skips empty heads
-// since an empty main-sentence line shouldn't demand a paraphrase.
-function countCanvasMainSentences(canvas) {
-  if (!Array.isArray(canvas)) return 0;
-  let n = 0;
+// True if every main row (depth=0, non-empty text) carries a non-empty
+// paraphrase string. Paraphrase lives inline on the canvas row in the
+// unified shape — no positional ms-N indirection.
+function everyMainHasParaphrase(canvas) {
+  if (!Array.isArray(canvas) || canvas.length === 0) return false;
+  let mainCount = 0;
   for (const row of canvas) {
     if (!row || typeof row !== "object") continue;
     const depth = Number.isInteger(row.depth) && row.depth >= 0 ? row.depth : 0;
     const text = typeof row.text === "string" ? row.text.trim() : "";
-    if (depth === 0 && text) n++;
+    if (depth !== 0 || !text) continue;
+    mainCount++;
+    const para = typeof row.paraphrase === "string" ? row.paraphrase.trim() : "";
+    if (!para) return false;
   }
-  return n;
+  return mainCount > 0;
 }
 
-// True if every main-sentence id has a non-empty paraphrase. Paraphrase ids
-// are positional `ms-0`, `ms-1`, … aligned to canvas main sentences.
-function everyParaphraseFilled(paraphrases, mainSentenceCount) {
-  if (mainSentenceCount === 0) return false;
-  if (!Array.isArray(paraphrases)) return false;
-  for (let i = 0; i < mainSentenceCount; i++) {
-    const id = `ms-${i}`;
-    const entry = paraphrases.find((e) => e && e.main_sentence_id === id);
-    const p = entry && typeof entry.paraphrase === "string" ? entry.paraphrase.trim() : "";
-    if (!p) return false;
-  }
-  return true;
-}
-
-// True if at least one synthesis-table row has both Thought unit and After line
-// filled. Signal is allowed empty (final unit of a passage). Empty placeholder
-// rows from the primitive's empty-state don't count.
-function hasOneCompleteThoughtUnit(rows) {
-  if (!Array.isArray(rows) || rows.length === 0) return false;
-  for (const row of rows) {
+// True if at least one canvas row carries a thought_unit_end with a non-empty
+// summary. The row's position is the implicit "after line" — no separate
+// after_line check needed in the new shape.
+function hasOneThoughtUnitEnd(canvas) {
+  if (!Array.isArray(canvas) || canvas.length === 0) return false;
+  for (const row of canvas) {
     if (!row || typeof row !== "object") continue;
-    const summary = typeof row.thought_unit_summary === "string" ? row.thought_unit_summary.trim() : "";
-    const after = row.after_line === undefined || row.after_line === null
-      ? ""
-      : String(row.after_line).trim();
-    if (summary && after) return true;
+    const tue = row.thought_unit_end;
+    if (!tue || typeof tue !== "object") continue;
+    const summary = typeof tue.summary === "string" ? tue.summary.trim() : "";
+    if (summary) return true;
   }
   return false;
 }
 
 // Field 3 composite gate. Returns null when satisfied or a pastor-facing
-// reason string when not. SFDI N/A escape valve: a question marked N/A counts
-// as satisfied (the pastor may declare the sub-shape inapplicable).
+// reason string when not. SFDI N/A escape valve: the unified canvas question
+// marked N/A counts as satisfied (the pastor may declare the field
+// inapplicable for this passage).
 function checkField3Composite(data) {
   const fieldKey = "divisions";
 
-  // Q1 — sentence_layout (canvas).
-  if (!isQuestionNA(data, fieldKey, "sentence_layout")) {
-    const canvas = getQuestionAnswer(data, fieldKey, "sentence_layout");
-    if (!canvasHasMainWithModifier(canvas)) {
-      return "Lay out the passage before advancing — at least one main sentence with an indented modifier under it.";
-    }
+  // N/A short-circuit.
+  if (isQuestionNA(data, fieldKey, "canvas")) return null;
+
+  const canvas = getQuestionAnswer(data, fieldKey, "canvas");
+
+  // Q1 — at least one main sentence (depth 0) with an indented modifier
+  // (depth > 0) under it.
+  if (!canvasHasMainWithModifier(canvas)) {
+    return "Lay out the passage before advancing — at least one main sentence with an indented modifier under it.";
   }
 
-  // Q2 — paraphrases. Every main sentence must have a non-empty paraphrase.
-  if (!isQuestionNA(data, fieldKey, "paraphrases")) {
-    const canvas = getQuestionAnswer(data, fieldKey, "sentence_layout");
-    const paraphrases = getQuestionAnswer(data, fieldKey, "paraphrases");
-    const mainCount = countCanvasMainSentences(canvas);
-    if (!everyParaphraseFilled(paraphrases, mainCount)) {
-      return "Rewrite each main sentence in your own words before advancing.";
-    }
+  // Q2 — every main row carries a non-empty paraphrase.
+  if (!everyMainHasParaphrase(canvas)) {
+    return "Rewrite each main sentence in your own words before advancing.";
   }
 
-  // Q3 — thought_units. At least one complete row.
-  if (!isQuestionNA(data, fieldKey, "thought_units")) {
-    const rows = getQuestionAnswer(data, fieldKey, "thought_units");
-    if (!hasOneCompleteThoughtUnit(rows)) {
-      return "Name at least one thought unit (with the line it ends after) before advancing.";
-    }
+  // Q3 — at least one row has a thought_unit_end with non-empty summary.
+  if (!hasOneThoughtUnitEnd(canvas)) {
+    return "Name at least one thought unit (with the line it ends after) before advancing.";
   }
 
   return null;

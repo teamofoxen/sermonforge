@@ -20,6 +20,9 @@ import {
   setQuestionAnswer,
   setQuestionNA,
   getQuestionAnswer,
+  generateRowId,
+  deriveThoughtUnitsFromCanvas,
+  setDivisionsCanvas,
   OBSERVE_FIELDS,
   INTERPRET_FIELDS,
   DEFAULT_QUESTION_KEY,
@@ -340,5 +343,369 @@ describe("applyFieldValueMap accepts both strings and arrays", () => {
     expect(out.b).toBeUndefined();
     expect(out.c).toBeUndefined();
     expect(getQuestionAnswer(out, "context", DEFAULT_QUESTION_KEY)).toBe("Kept.");
+  });
+});
+
+// ── Phase 4 Sprint 2 — unified-canvas helpers ─────────────────────────────
+//
+// Field 3's three legacy questions collapse into a single canvas. Coverage:
+//   - flattenAnswerValue distinguishes the unified shape from legacy paraphrase
+//     blocks (no false positive on rows carrying both `paraphrase` and `text`).
+//   - deriveThoughtUnitsFromCanvas: empty / basic / cumulative-merge / canvas
+//     edits (insert/delete/reorder) / non-matching ids (degraded, no crash).
+//   - setDivisionsCanvas: round-trip; cross-phase cumulative columns survive
+//     a canvas reorder via _canvas_row_id matching.
+//   - parseStructuredField: legacy three-question shape hydrates `canvas`,
+//     preserves existing `thought_units` array intact.
+//   - flattenToText surfaces undeclared (materialized) keys under the field
+//     label so AI context still sees thought_units after the field def change.
+
+const UNIFIED_CANVAS_FIXTURE = [
+  { id: "row-1", text: "And you were dead",                  depth: 0, kind: "main",     paraphrase: "We were dead in our sins." },
+  { id: "row-2", text: "in your trespasses and sins",        depth: 1, kind: "modifier", paraphrase: "" },
+  { id: "row-3", text: "in which you once walked",           depth: 1, kind: "modifier", paraphrase: "",
+    thought_unit_end: { summary: "Spiritual death", signal: "subject shift" } },
+  { id: "row-4", text: "But God",                            depth: 0, kind: "main",     paraphrase: "But God acted on our behalf.",
+    thought_unit_end: { summary: "But God's mercy", signal: "" } },
+];
+
+describe("flattenAnswerValue — unified-canvas shape", () => {
+  it("renders structure with inline paraphrase and thought-unit-end annotations", () => {
+    const out = flattenAnswerValue(UNIFIED_CANVAS_FIXTURE);
+    expect(out).toBe(
+      [
+        "And you were dead — paraphrase: We were dead in our sins.",
+        "  in your trespasses and sins",
+        "  in which you once walked — thought unit \"Spiritual death\" ends here (signal: subject shift)",
+        "But God — paraphrase: But God acted on our behalf. — thought unit \"But God's mercy\" ends here",
+      ].join("\n")
+    );
+  });
+
+  it("does not mistake a unified-canvas row for legacy paraphrase shape", () => {
+    // Legacy paraphrase detection now keys on `main_sentence_id`. A row that
+    // has `paraphrase` but no `main_sentence_id` (i.e. unified canvas) must
+    // not fall through into the paraphrase branch.
+    const onlyMainNoTUE = [
+      { id: "x", text: "Solo main", depth: 0, kind: "main", paraphrase: "Pastor voice." },
+    ];
+    expect(flattenAnswerValue(onlyMainNoTUE)).toBe("Solo main — paraphrase: Pastor voice.");
+  });
+
+  it("legacy paraphrase blocks still flatten to paraphrase text only", () => {
+    const out = flattenAnswerValue(PARAPHRASE);
+    expect(out).toBe("We were dead in our sins.\nBut God acted on our behalf.");
+  });
+});
+
+describe("generateRowId", () => {
+  it("returns a non-empty string id", () => {
+    const id = generateRowId();
+    expect(typeof id).toBe("string");
+    expect(id.length).toBeGreaterThan(0);
+  });
+
+  it("returns a unique id on each call", () => {
+    const ids = new Set();
+    for (let i = 0; i < 50; i++) ids.add(generateRowId());
+    expect(ids.size).toBe(50);
+  });
+});
+
+describe("deriveThoughtUnitsFromCanvas", () => {
+  it("returns [] for empty / non-array input", () => {
+    expect(deriveThoughtUnitsFromCanvas([])).toEqual([]);
+    expect(deriveThoughtUnitsFromCanvas(null)).toEqual([]);
+    expect(deriveThoughtUnitsFromCanvas(undefined)).toEqual([]);
+  });
+
+  it("derives one row per canvas row that carries thought_unit_end", () => {
+    const out = deriveThoughtUnitsFromCanvas(UNIFIED_CANVAS_FIXTURE);
+    expect(out).toHaveLength(2);
+    expect(out[0]).toMatchObject({
+      thought_unit_summary: "Spiritual death",
+      after_line: 3,
+      signal: "subject shift",
+      _canvas_row_id: "row-3",
+    });
+    expect(out[1]).toMatchObject({
+      thought_unit_summary: "But God's mercy",
+      after_line: 4,
+      signal: "",
+      _canvas_row_id: "row-4",
+    });
+  });
+
+  it("skips rows where thought_unit_end is missing or not an object", () => {
+    const canvas = [
+      { id: "a", text: "x", depth: 0, kind: "main", paraphrase: "" },
+      { id: "b", text: "y", depth: 0, kind: "main", paraphrase: "", thought_unit_end: undefined },
+      { id: "c", text: "z", depth: 0, kind: "main", paraphrase: "",
+        thought_unit_end: { summary: "Kept", signal: "" } },
+    ];
+    const out = deriveThoughtUnitsFromCanvas(canvas);
+    expect(out).toHaveLength(1);
+    expect(out[0]).toMatchObject({ thought_unit_summary: "Kept", _canvas_row_id: "c" });
+  });
+
+  it("merges cumulative columns from existing thought_units by _canvas_row_id", () => {
+    const existing = [
+      { thought_unit_summary: "Spiritual death", after_line: 3, signal: "subject shift",
+        _canvas_row_id: "row-3",
+        meaning: "Total inability before grace.",
+        christ_connection: "Christ alone makes alive.",
+        implication: "Don't preach effort as the path to life." },
+      { thought_unit_summary: "But God's mercy", after_line: 4, signal: "",
+        _canvas_row_id: "row-4",
+        meaning: "Sovereign initiative." },
+    ];
+    const out = deriveThoughtUnitsFromCanvas(UNIFIED_CANVAS_FIXTURE, existing);
+    expect(out[0].meaning).toBe("Total inability before grace.");
+    expect(out[0].christ_connection).toBe("Christ alone makes alive.");
+    expect(out[0].implication).toBe("Don't preach effort as the path to life.");
+    expect(out[1].meaning).toBe("Sovereign initiative.");
+    expect(out[1].christ_connection).toBeUndefined();
+  });
+
+  it("preserves cumulative columns through canvas reorder (id-based merge)", () => {
+    // Pastor reorders: row-4 moves before row-3. After_line shifts but ids
+    // stay; meaning/cc/implication should follow the row's id, not its position.
+    const reordered = [
+      { id: "row-4", text: "But God", depth: 0, kind: "main", paraphrase: "But God acted.",
+        thought_unit_end: { summary: "But God's mercy", signal: "" } },
+      { id: "row-1", text: "And you were dead", depth: 0, kind: "main", paraphrase: "We were dead." },
+      { id: "row-3", text: "in which you once walked", depth: 1, kind: "modifier", paraphrase: "",
+        thought_unit_end: { summary: "Spiritual death", signal: "subject shift" } },
+    ];
+    const existing = [
+      { thought_unit_summary: "Spiritual death", after_line: 3, _canvas_row_id: "row-3",
+        meaning: "Total inability." },
+      { thought_unit_summary: "But God's mercy", after_line: 4, _canvas_row_id: "row-4",
+        meaning: "Sovereign initiative." },
+    ];
+    const out = deriveThoughtUnitsFromCanvas(reordered, existing);
+    expect(out).toHaveLength(2);
+    // Row-4 now at canvas index 0 → after_line 1.
+    expect(out[0]).toMatchObject({ _canvas_row_id: "row-4", after_line: 1, meaning: "Sovereign initiative." });
+    // Row-3 now at canvas index 2 → after_line 3.
+    expect(out[1]).toMatchObject({ _canvas_row_id: "row-3", after_line: 3, meaning: "Total inability." });
+  });
+
+  it("handles canvas insert without losing cumulative columns on surviving rows", () => {
+    const inserted = [
+      { id: "row-new", text: "New top row", depth: 0, kind: "main", paraphrase: "Fresh." },
+      ...UNIFIED_CANVAS_FIXTURE,
+    ];
+    const existing = [
+      { thought_unit_summary: "Spiritual death", after_line: 3, _canvas_row_id: "row-3",
+        meaning: "Old meaning." },
+    ];
+    const out = deriveThoughtUnitsFromCanvas(inserted, existing);
+    const sd = out.find((r) => r._canvas_row_id === "row-3");
+    expect(sd).toBeTruthy();
+    expect(sd.meaning).toBe("Old meaning.");
+    expect(sd.after_line).toBe(4); // shifted by one
+  });
+
+  it("handles canvas delete by dropping the deleted row's thought-unit derivation", () => {
+    // Drop row-3 (the one carrying the Spiritual death thought_unit_end).
+    const deleted = UNIFIED_CANVAS_FIXTURE.filter((r) => r.id !== "row-3");
+    const existing = [
+      { thought_unit_summary: "Spiritual death", after_line: 3, _canvas_row_id: "row-3",
+        meaning: "Old." },
+      { thought_unit_summary: "But God's mercy", after_line: 4, _canvas_row_id: "row-4",
+        meaning: "Kept." },
+    ];
+    const out = deriveThoughtUnitsFromCanvas(deleted, existing);
+    expect(out).toHaveLength(1);
+    expect(out[0]._canvas_row_id).toBe("row-4");
+    expect(out[0].meaning).toBe("Kept.");
+  });
+
+  it("falls back to after_line match when _canvas_row_id is absent (legacy data)", () => {
+    // Existing thought_units carries no _canvas_row_id (legacy migration path).
+    const existing = [
+      { thought_unit_summary: "Spiritual death", after_line: 3, signal: "subject shift",
+        meaning: "Legacy meaning." },
+    ];
+    const out = deriveThoughtUnitsFromCanvas(UNIFIED_CANVAS_FIXTURE, existing);
+    const sd = out.find((r) => r._canvas_row_id === "row-3");
+    expect(sd).toBeTruthy();
+    expect(sd.meaning).toBe("Legacy meaning.");
+  });
+
+  it("does not crash when no existing rows match — cumulative columns simply absent", () => {
+    const existing = [
+      { thought_unit_summary: "Stale", after_line: 99, _canvas_row_id: "row-ghost",
+        meaning: "Lost." },
+    ];
+    const out = deriveThoughtUnitsFromCanvas(UNIFIED_CANVAS_FIXTURE, existing);
+    expect(out).toHaveLength(2);
+    for (const r of out) {
+      expect(r.meaning).toBeUndefined();
+      expect(r.christ_connection).toBeUndefined();
+      expect(r.implication).toBeUndefined();
+    }
+  });
+});
+
+describe("setDivisionsCanvas — materialization", () => {
+  it("writes both canvas and derived thought_units into fieldData", () => {
+    const next = setDivisionsCanvas({}, UNIFIED_CANVAS_FIXTURE);
+    expect(getQuestionAnswer(next, "divisions", "canvas")).toEqual(UNIFIED_CANVAS_FIXTURE);
+    const tus = getQuestionAnswer(next, "divisions", "thought_units");
+    expect(tus).toHaveLength(2);
+    expect(tus[0]._canvas_row_id).toBe("row-3");
+    expect(tus[1]._canvas_row_id).toBe("row-4");
+  });
+
+  it("preserves cross-phase cumulative columns when canvas is rewritten", () => {
+    // Initial canvas + materialization.
+    let data = setDivisionsCanvas({}, UNIFIED_CANVAS_FIXTURE);
+    // Phase 2 writes meaning into thought_units (simulating cross-phase write).
+    const tus = getQuestionAnswer(data, "divisions", "thought_units");
+    const phase2Tus = tus.map((r, i) => ({ ...r, meaning: `M${i}` }));
+    data = setQuestionAnswer(data, "divisions", "thought_units", phase2Tus);
+
+    // Pastor reorders canvas — row-4 to top.
+    const reordered = [
+      UNIFIED_CANVAS_FIXTURE[3],
+      ...UNIFIED_CANVAS_FIXTURE.slice(0, 3),
+    ];
+    data = setDivisionsCanvas(data, reordered);
+
+    const newTus = getQuestionAnswer(data, "divisions", "thought_units");
+    const row4 = newTus.find((r) => r._canvas_row_id === "row-4");
+    const row3 = newTus.find((r) => r._canvas_row_id === "row-3");
+    expect(row4.meaning).toBe("M1");
+    expect(row3.meaning).toBe("M0");
+  });
+
+  it("round-trips through serialize/parse without losing the canvas or materialized thought_units", () => {
+    const data = setDivisionsCanvas({}, UNIFIED_CANVAS_FIXTURE);
+    const json = serializeStructuredField(data);
+    const back = parseStructuredField(json);
+    expect(getQuestionAnswer(back, "divisions", "canvas")).toEqual(UNIFIED_CANVAS_FIXTURE);
+    const tus = getQuestionAnswer(back, "divisions", "thought_units");
+    expect(tus).toHaveLength(2);
+  });
+});
+
+describe("parseStructuredField — defensive read-merge of legacy three-question divisions shape", () => {
+  it("hydrates canvas from sentence_layout + paraphrases + thought_units", () => {
+    const legacyData = {
+      divisions: {
+        sentence_layout: {
+          value: [
+            { text: "And you were dead",         depth: 0, kind: "main" },
+            { text: "in your trespasses and sins", depth: 1, kind: "modifier" },
+            { text: "in which you once walked",    depth: 1, kind: "modifier" },
+            { text: "But God",                     depth: 0, kind: "main" },
+          ],
+          na: false,
+        },
+        paraphrases: {
+          value: [
+            { main_sentence_id: "ms-0", paraphrase: "We were dead in our sins." },
+            { main_sentence_id: "ms-1", paraphrase: "But God acted on our behalf." },
+          ],
+          na: false,
+        },
+        thought_units: {
+          value: [
+            { thought_unit_summary: "Spiritual death", after_line: 3, signal: "subject shift",
+              meaning: "Total inability." },
+            { thought_unit_summary: "But God's mercy",  after_line: 4, signal: "" },
+          ],
+          na: false,
+        },
+      },
+    };
+    const out = parseStructuredField(JSON.stringify(legacyData));
+    const canvas = out.divisions.canvas.value;
+    expect(canvas).toHaveLength(4);
+    // Main rows hydrated with paraphrase by ms-N ordinal.
+    expect(canvas[0].text).toBe("And you were dead");
+    expect(canvas[0].kind).toBe("main");
+    expect(canvas[0].paraphrase).toBe("We were dead in our sins.");
+    expect(canvas[3].text).toBe("But God");
+    expect(canvas[3].paraphrase).toBe("But God acted on our behalf.");
+    // Modifier rows have empty paraphrase.
+    expect(canvas[1].paraphrase).toBe("");
+    expect(canvas[2].paraphrase).toBe("");
+    // Every row gets a fresh id.
+    for (const row of canvas) expect(typeof row.id).toBe("string");
+    // Thought_unit_end attached by after_line (1-indexed).
+    expect(canvas[2].thought_unit_end).toEqual({ summary: "Spiritual death", signal: "subject shift" });
+    expect(canvas[3].thought_unit_end).toEqual({ summary: "But God's mercy", signal: "" });
+  });
+
+  it("preserves the legacy thought_units array intact (cumulative columns survive)", () => {
+    const legacyData = {
+      divisions: {
+        sentence_layout: { value: [{ text: "x", depth: 0, kind: "main" }], na: false },
+        paraphrases: { value: [], na: false },
+        thought_units: {
+          value: [
+            { thought_unit_summary: "Stays", after_line: 1, signal: "",
+              meaning: "Phase 2 work.",
+              christ_connection: "Phase 3 work.",
+              implication: "Phase 4 work." },
+          ],
+          na: false,
+        },
+      },
+    };
+    const out = parseStructuredField(JSON.stringify(legacyData));
+    const tus = out.divisions.thought_units.value;
+    expect(tus).toHaveLength(1);
+    expect(tus[0].meaning).toBe("Phase 2 work.");
+    expect(tus[0].christ_connection).toBe("Phase 3 work.");
+    expect(tus[0].implication).toBe("Phase 4 work.");
+  });
+
+  it("is a no-op when divisions already carries a canvas key", () => {
+    const alreadyMigrated = {
+      divisions: {
+        canvas: { value: UNIFIED_CANVAS_FIXTURE, na: false },
+        thought_units: { value: [{ thought_unit_summary: "Kept", after_line: 1, signal: "" }], na: false },
+      },
+    };
+    const out = parseStructuredField(JSON.stringify(alreadyMigrated));
+    expect(out.divisions.canvas.value).toEqual(UNIFIED_CANVAS_FIXTURE);
+    expect(out.divisions.thought_units.value).toHaveLength(1);
+  });
+
+  it("is a no-op for columns without a divisions field (e.g. interpretation)", () => {
+    const interpretation = {
+      deeper_context: { unresolved: { value: "Some question.", na: false } },
+    };
+    const out = parseStructuredField(JSON.stringify(interpretation));
+    expect(out.divisions).toBeUndefined();
+    expect(out.deeper_context.unresolved.value).toBe("Some question.");
+  });
+});
+
+describe("flattenToText — undeclared-key fallback (Concern 2 option B)", () => {
+  it("surfaces materialized thought_units under Divisions / Thought Units alongside canvas", () => {
+    // setDivisionsCanvas writes both canvas (declared) + thought_units (undeclared).
+    const data = setDivisionsCanvas({}, UNIFIED_CANVAS_FIXTURE);
+    // Add a Phase 2 meaning so we can assert it surfaces in the flattened text.
+    const tus = getQuestionAnswer(data, "divisions", "thought_units");
+    const enriched = tus.map((r) => ({ ...r, meaning: "Phase 2 work." }));
+    const next = setQuestionAnswer(data, "divisions", "thought_units", enriched);
+
+    const out = flattenToText(next, OBSERVE_FIELDS);
+    expect(out).toContain("Divisions / Thought Units:");
+    expect(out).toContain("canvas:");
+    expect(out).toContain("thought_units:");
+    expect(out).toContain("Phase 2 work.");
+  });
+
+  it("preserves single-primary back-compat when no undeclared content exists", () => {
+    const data = setPrimaryAnswer({}, "big_ideas", "Death and life; mercy and wrath.");
+    const out = flattenToText(data, OBSERVE_FIELDS);
+    expect(out).toContain("Big Ideas: Death and life; mercy and wrath.");
+    expect(out).not.toMatch(/Big Ideas:\n\s+primary:/);
   });
 });
