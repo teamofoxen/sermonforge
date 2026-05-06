@@ -2884,6 +2884,176 @@ button {
   color: var(--ink-soft);
 }
 
+/* ── Unified-canvas subtree footer (Phase 4 Sprint 2) ────────────────────── */
+/* Renders after each main row's subtree (main + its modifiers): the inline
+   paraphrase textarea, plus the unit-end affordance / inline editor / filled-
+   state cap line + callout. */
+
+.indented-canvas-subtree-footer {
+  list-style: none;
+  margin: 6px 0 14px 36px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.indented-canvas-paraphrase-input {
+  width: 100%;
+  resize: vertical;
+  min-height: 48px;
+  border: 1px solid var(--parchment-deep);
+  background: var(--parchment);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  font-family: 'IBM Plex Serif', serif;
+  font-size: 14px;
+  color: var(--ink);
+  font-style: italic;
+}
+
+.indented-canvas-paraphrase-input::placeholder {
+  color: var(--ink-ghost);
+  font-style: italic;
+}
+
+.indented-canvas-paraphrase-input:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold);
+}
+
+.indented-canvas-paraphrase-input:disabled {
+  background: var(--parchment);
+  color: var(--ink-ghost);
+  cursor: not-allowed;
+}
+
+.indented-canvas-mark-unit {
+  align-self: flex-end;
+  background: transparent;
+  border: 1px dashed var(--parchment-deep);
+  color: var(--ink-soft);
+  font-family: 'IBM Plex Serif', serif;
+  font-size: 12px;
+  font-style: italic;
+  padding: 4px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.indented-canvas-mark-unit:hover {
+  border-color: var(--gold);
+  color: var(--ink-mid);
+}
+
+.indented-canvas-mark-unit:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.indented-canvas-unit-cap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 0;
+  cursor: pointer;
+}
+
+.indented-canvas-unit-cap:focus {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.indented-canvas-unit-cap-line {
+  flex: 1;
+  height: 1px;
+  background: var(--parchment-deep);
+}
+
+.indented-canvas-unit-cap-text {
+  font-family: 'IBM Plex Serif', serif;
+  font-style: italic;
+  font-size: 13px;
+  color: var(--ink-soft);
+  flex-shrink: 0;
+}
+
+.indented-canvas-unit-signal {
+  color: var(--ink-ghost);
+}
+
+.indented-canvas-unit-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  background: var(--parchment-warm);
+  border: 1px solid var(--parchment-deep);
+  border-radius: var(--radius);
+}
+
+.indented-canvas-unit-editor-label {
+  font-family: 'IBM Plex Serif', serif;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--ink-soft);
+}
+
+.indented-canvas-unit-summary,
+.indented-canvas-unit-signal-input {
+  width: 100%;
+  border: 1px solid var(--parchment-deep);
+  background: var(--parchment);
+  border-radius: var(--radius);
+  padding: 6px 8px;
+  font-family: 'IBM Plex Serif', serif;
+  font-size: 14px;
+  color: var(--ink);
+}
+
+.indented-canvas-unit-summary:focus,
+.indented-canvas-unit-signal-input:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold);
+}
+
+.indented-canvas-unit-editor-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+.indented-canvas-unit-remove,
+.indented-canvas-unit-done {
+  font-family: 'IBM Plex Serif', serif;
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  border: 1px solid var(--parchment-deep);
+  background: var(--parchment);
+  color: var(--ink-mid);
+}
+
+.indented-canvas-unit-remove:hover {
+  border-color: var(--crimson);
+  color: var(--crimson);
+}
+
+.indented-canvas-unit-done {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: var(--parchment);
+  font-weight: 500;
+}
+
+.indented-canvas-unit-done:hover {
+  filter: brightness(0.95);
+}
+
 /* ── Paraphrase blocks (SPRD A2.2) ───────────────────────────────────────── */
 /* SFDI Field 4 Q2 sub-shape. Each main sentence the pastor laid out in Q1
    appears as a read-only block; a paraphrase textarea below each captures

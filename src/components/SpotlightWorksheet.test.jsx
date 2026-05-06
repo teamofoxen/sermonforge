@@ -546,180 +546,127 @@ describe("SpotlightWorksheet — legacy notes", () => {
   });
 });
 
-// ── Structured-exercise kind dispatch (B1.5) ───────────────────────────────
+// ── Structured-exercise kind dispatch (Phase 4 Sprint 2 unified canvas) ────
 //
 // MultiQuestionActive dispatches on `question.kind` to mount the right
-// primitive. Field 4 walks the precedent: Q1 canvas, Q2 paraphrase blocks,
-// Q3 synthesis table. Reference panel content (Q1's "three rules" + genre
-// tips) flanks the active question when `question.referencePanel` is set.
+// primitive. Field 3's three legacy questions collapsed into a single
+// `unified-canvas` question that carries structure + paraphrase + thought-
+// unit-end inline. The earlier kind values (canvas / paraphrase / synthesis-
+// table) are no longer used by any production field.
 
-const FIELD_4_LIKE = {
+const FIELD_3_UNIFIED = {
   key: "divisions",
   label: "Divisions / Thought Units",
-  hint: "Spine + meaning + bones.",
+  hint: "Lay out the passage; rewrite each main sentence; mark where thought units end.",
   questions: [
     {
-      key: "sentence_layout",
-      kind: "canvas",
-      prompt: "Lay the passage out.",
-      referencePanel: {
-        title: "The three rules",
-        sections: [
-          {
-            type: "rules",
-            items: [
-              { lead: "Subject + main verb", body: "left margin." },
-              { lead: "Modifiers", body: "indent under what they modify." },
-              { lead: "Coordinate clauses", body: "align to coordinate." },
-            ],
-            footnote: "Main verb = the finite verb.",
-          },
-          {
-            type: "genre",
-            heading: "For epistles",
-            paragraphs: ["Long sentences with cascading modifier chains."],
-          },
-          {
-            type: "genre",
-            heading: "For narrative",
-            items: ["Each main action → left margin.", "Description indents.", "Dialogue indents."],
-          },
-        ],
-      },
+      key: "canvas",
+      kind: "unified-canvas",
+      prompt: "Type the passage by hand.",
     },
-    { key: "paraphrases", kind: "paraphrase", prompt: "Rewrite each main sentence." },
-    { key: "thought_units", kind: "synthesis-table", prompt: "Find the thought units." },
   ],
 };
 
-describe("SpotlightWorksheet — kind dispatch", () => {
-  function renderField4(data = {}, sermonId = "sermon-1") {
+describe("SpotlightWorksheet — unified-canvas kind dispatch", () => {
+  function renderField3(data = {}, sermonId = "sermon-1") {
     if (typeof localStorage !== "undefined") localStorage.clear();
     const onChange = vi.fn();
     const onToggleNA = vi.fn();
     const utils = render(
       <SpotlightWorksheet
-        fields={[FIELD_4_LIKE]}
+        fields={[FIELD_3_UNIFIED]}
         data={data}
         onChange={onChange}
         onToggleNA={onToggleNA}
         sermonId={sermonId}
       />,
     );
-    // Heavy-lifting fields gate on an overview when first entered, but
-    // FIELD_4_LIKE has no `overview` blob → no gate; primitive renders directly.
     return { onChange, onToggleNA, ...utils };
   }
 
-  it("Q1 (kind=canvas) mounts IndentedSentenceCanvas, not the textarea fallback", () => {
-    renderField4();
-    // The textarea-form fallback (from the kind=textarea dispatch) should
-    // NOT be present — the canvas owns Q1's input surface.
+  it("mounts IndentedSentenceCanvas for kind=unified-canvas, not the textarea fallback", () => {
+    renderField3();
     expect(
-      document.querySelector("textarea[data-testid='question-input-divisions-sentence_layout']"),
+      document.querySelector("textarea[data-testid='question-input-divisions-canvas']"),
     ).toBeNull();
-    // The canvas itself is in the DOM via its own data-testid.
     expect(document.querySelector('[data-testid="indented-canvas"]')).toBeTruthy();
-    // And at least one canvas-row textarea is rendered (Phase 1 swapped
-    // the per-row <input> for <textarea rows={1}> so depth wraps visibly).
     expect(document.querySelectorAll("textarea.indented-canvas-input").length).toBeGreaterThan(0);
   });
 
-  it("typing into Q1's canvas emits onChange with a structured list value", () => {
-    const { onChange } = renderField4();
-    // Find the first canvas line textarea and type into it.
+  it("typing into the canvas emits onChange with a structured list value carrying ids", () => {
+    const { onChange } = renderField3();
     const inputs = document.querySelectorAll("textarea.indented-canvas-input");
     expect(inputs.length).toBeGreaterThan(0);
     fireEvent.change(inputs[0], { target: { value: "Paul writes" } });
     expect(onChange).toHaveBeenCalled();
     const lastCall = onChange.mock.calls[onChange.mock.calls.length - 1];
     expect(lastCall[0]).toBe("divisions");
-    expect(lastCall[1]).toBe("sentence_layout");
+    expect(lastCall[1]).toBe("canvas");
     expect(Array.isArray(lastCall[2])).toBe(true);
-    expect(lastCall[2][0]).toMatchObject({ text: "Paul writes", depth: 0 });
+    expect(lastCall[2][0]).toMatchObject({ text: "Paul writes", depth: 0, kind: "main" });
+    expect(typeof lastCall[2][0].id).toBe("string");
   });
 
-  it("Q1 active state renders the reference panel beside the canvas", () => {
-    renderField4();
-    const panel = screen.getByTestId("peripheral-reference-panel");
-    expect(panel).toBeTruthy();
-    expect(panel.textContent).toContain("Subject + main verb");
-    expect(panel.textContent).toContain("For epistles");
-    expect(panel.textContent).toContain("For narrative");
-  });
-
-  it("Q2 (kind=paraphrase) mounts ParaphraseBlocks reading sibling canvas value", () => {
-    const data = {
+  it("renders an inline paraphrase textarea below each main row's subtree", () => {
+    renderField3({
       divisions: {
-        sentence_layout: {
+        canvas: {
           value: [
-            { text: "Paul writes.", depth: 0, kind: "main" },
-            { text: "to the saints.", depth: 1, kind: "modifier" },
+            { id: "row-1", text: "Paul writes.",     depth: 0, kind: "main",     paraphrase: "" },
+            { id: "row-2", text: "to the saints.",   depth: 1, kind: "modifier", paraphrase: "" },
+            { id: "row-3", text: "But God responds.", depth: 0, kind: "main",     paraphrase: "" },
           ],
           na: false,
         },
-        paraphrases: { value: [], na: false },
       },
-    };
-    renderField4(data);
-    // Q1 is complete; firstIncompleteQuestionKey lands on paraphrases.
-    const active = document.querySelector(".worksheet-question-active");
-    expect(active.getAttribute("data-question-key")).toBe("paraphrases");
-    // ParaphraseBlocks renders one block per main sentence; the read-only head
-    // text from the canvas should appear inside the active question (the collapsed
-    // Q1 row also shows the flattened text in its summary, hence getAllByText).
-    expect(screen.getAllByText(/Paul writes\./).length).toBeGreaterThan(0);
-    // The paraphrase textarea is in the DOM
-    expect(document.querySelector(".paraphrase-block-input")).toBeTruthy();
+    });
+    // Two main rows → two paraphrase textareas.
+    expect(document.querySelectorAll(".indented-canvas-paraphrase-input").length).toBe(2);
   });
 
-  it("Q3 (kind=synthesis-table) mounts SynthesisTable with canvas-driven autocomplete", () => {
-    const data = {
+  it("renders the + Mark affordance on each main row when no thought_unit_end is set", () => {
+    renderField3({
       divisions: {
-        sentence_layout: {
+        canvas: {
           value: [
-            { text: "Line 1", depth: 0, kind: "main" },
-            { text: "Line 2", depth: 0, kind: "main" },
+            { id: "row-1", text: "Paul writes.", depth: 0, kind: "main", paraphrase: "" },
           ],
           na: false,
         },
-        paraphrases: {
-          value: [
-            { main_sentence_id: "ms-0", paraphrase: "P1" },
-            { main_sentence_id: "ms-1", paraphrase: "P2" },
-          ],
-          na: false,
-        },
-        thought_units: { value: [], na: false },
       },
-    };
-    renderField4(data);
-    const active = document.querySelector(".worksheet-question-active");
-    expect(active.getAttribute("data-question-key")).toBe("thought_units");
-    // The synthesis table primitive renders a <table> with thead Thought unit / After line / Signal.
-    expect(screen.getByTestId("synthesis-table")).toBeTruthy();
-    expect(screen.getByText("Thought unit")).toBeTruthy();
-    expect(screen.getByText("After line")).toBeTruthy();
-    expect(screen.getByText("Signal")).toBeTruthy();
+    });
+    const buttons = document.querySelectorAll(".indented-canvas-mark-unit");
+    expect(buttons.length).toBeGreaterThan(0);
+    expect(buttons[0].textContent).toMatch(/Mark as thought-unit end/i);
   });
 
-  it("non-active questions in a structured field still render the reference panel only on the active question", () => {
-    renderField4();
-    // Active is Q1 (sentence_layout). Click Q2 to make it active.
-    const q2 = document.querySelector('[data-question-key="paraphrases"]');
-    fireEvent.click(q2);
-    // Active now Q2 — the panel should be gone (Q2 has no referencePanel).
-    expect(screen.queryByTestId("peripheral-reference-panel")).toBeNull();
+  it("renders the filled-state cap line + callout when thought_unit_end is set", () => {
+    renderField3({
+      divisions: {
+        canvas: {
+          value: [
+            { id: "row-1", text: "Paul writes.", depth: 0, kind: "main", paraphrase: "Pastor voice.",
+              thought_unit_end: { summary: "Spiritual death", signal: "subject shift" } },
+          ],
+          na: false,
+        },
+      },
+    });
+    const cap = document.querySelector(".indented-canvas-unit-cap");
+    expect(cap).toBeTruthy();
+    expect(cap.textContent).toContain("Spiritual death");
+    expect(cap.textContent).toContain("subject shift");
+    expect(document.querySelector(".indented-canvas-mark-unit")).toBeNull();
   });
 
   it("text-prompt questions without a kind continue to render textareas (back-compat)", () => {
     const TEXT_FIELD = {
-      key: "background",
-      label: "Background",
+      key: "context",
+      label: "Context",
       hint: "World",
       questions: [
-        { key: "author", prompt: "Who?" },
-        { key: "date",   prompt: "When?" },
+        { key: "before", prompt: "What happened before?" },
+        { key: "after",  prompt: "What happens after?" },
       ],
     };
     render(
@@ -731,7 +678,7 @@ describe("SpotlightWorksheet — kind dispatch", () => {
       />,
     );
     expect(
-      document.querySelector("textarea[data-testid='question-input-background-author']"),
+      document.querySelector("textarea[data-testid='question-input-context-before']"),
     ).toBeTruthy();
     expect(screen.queryByTestId("peripheral-reference-panel")).toBeNull();
   });

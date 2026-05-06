@@ -1,14 +1,23 @@
 // @vitest-environment jsdom
 //
-// IndentedSentenceCanvas component tests (SPRD A2.1).
+// IndentedSentenceCanvas component tests (SPRD A2.1; updated for Phase 4
+// Sprint 2 unified-canvas shape).
 //
 // Covers Tab/Shift+Tab depth semantics, line-number gutter, level-0 marker
 // rendering, Enter split, Backspace merge / depth-decrement, paste-intercept,
 // drag-and-drop block, kind derivation, depth clamping, and disabled state.
+// `toMatchObject` is used in lieu of `toHaveBeenCalledWith` so the new shape
+// keys (id, paraphrase) don't have to be enumerated in every assertion.
 
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent, act } from "@testing-library/react";
 import IndentedSentenceCanvas from "./IndentedSentenceCanvas";
+
+// Latest emitted arg from a mock onChange. Tests assert on shape via
+// toMatchObject so the new id + paraphrase keys (Phase 4 Sprint 2) don't
+// invalidate the existing structural checks.
+const lastEmit = (mockFn) =>
+  mockFn.mock.calls[mockFn.mock.calls.length - 1]?.[0];
 
 function setup(overrides = {}) {
   const onChange = vi.fn();
@@ -109,7 +118,7 @@ describe("IndentedSentenceCanvas — typing", () => {
     const { onChange } = setup();
     fireEvent.change(getInputs()[0], { target: { value: "And you were dead" } });
     expect(onChange).toHaveBeenCalledTimes(1);
-    expect(onChange).toHaveBeenCalledWith([
+    expect(lastEmit(onChange)).toMatchObject([
       { text: "And you were dead", depth: 0, kind: "main" },
     ]);
   });
@@ -117,7 +126,7 @@ describe("IndentedSentenceCanvas — typing", () => {
   it("treats leading spaces as content, not indent", () => {
     const { onChange } = setup();
     fireEvent.change(getInputs()[0], { target: { value: "    indented by hand" } });
-    expect(onChange).toHaveBeenCalledWith([
+    expect(lastEmit(onChange)).toMatchObject([
       { text: "    indented by hand", depth: 0, kind: "main" },
     ]);
   });
@@ -133,7 +142,7 @@ describe("IndentedSentenceCanvas — Tab / Shift+Tab depth", () => {
     const event = fireEvent.keyDown(getInputs()[0], { key: "Tab" });
     // jsdom's fireEvent returns true if the event was preventDefault'd
     expect(event).toBe(false);
-    expect(onChange).toHaveBeenCalledWith([
+    expect(lastEmit(onChange)).toMatchObject([
       { text: "subject", depth: 1, kind: "modifier" },
     ]);
   });
@@ -143,7 +152,7 @@ describe("IndentedSentenceCanvas — Tab / Shift+Tab depth", () => {
       value: [{ text: "modifier", depth: 2, kind: "modifier" }],
     });
     fireEvent.keyDown(getInputs()[0], { key: "Tab", shiftKey: true });
-    expect(onChange).toHaveBeenCalledWith([
+    expect(lastEmit(onChange)).toMatchObject([
       { text: "modifier", depth: 1, kind: "modifier" },
     ]);
   });
@@ -153,7 +162,7 @@ describe("IndentedSentenceCanvas — Tab / Shift+Tab depth", () => {
       value: [{ text: "subject", depth: 0, kind: "main" }],
     });
     fireEvent.keyDown(getInputs()[0], { key: "Tab", shiftKey: true });
-    expect(onChange).toHaveBeenCalledWith([
+    expect(lastEmit(onChange)).toMatchObject([
       { text: "subject", depth: 0, kind: "main" },
     ]);
   });
@@ -164,7 +173,7 @@ describe("IndentedSentenceCanvas — Tab / Shift+Tab depth", () => {
       maxDepth: 3,
     });
     fireEvent.keyDown(getInputs()[0], { key: "Tab" });
-    expect(onChange).toHaveBeenCalledWith([
+    expect(lastEmit(onChange)).toMatchObject([
       { text: "deep", depth: 3, kind: "modifier" },
     ]);
   });
@@ -195,7 +204,7 @@ describe("IndentedSentenceCanvas — Enter split", () => {
     input.focus();
     input.setSelectionRange(17, 17); // after "And you were dead"
     fireEvent.keyDown(input, { key: "Enter" });
-    expect(onChange).toHaveBeenCalledWith([
+    expect(lastEmit(onChange)).toMatchObject([
       { text: "And you were dead", depth: 0, kind: "main" },
       { text: " in your sins",     depth: 0, kind: "main" },
     ]);
@@ -209,7 +218,7 @@ describe("IndentedSentenceCanvas — Enter split", () => {
     input.focus();
     input.setSelectionRange(8, 8);
     fireEvent.keyDown(input, { key: "Enter" });
-    expect(onChange).toHaveBeenCalledWith([
+    expect(lastEmit(onChange)).toMatchObject([
       { text: "modifier", depth: 2, kind: "modifier" },
       { text: " text",    depth: 2, kind: "modifier" },
     ]);
@@ -228,7 +237,7 @@ describe("IndentedSentenceCanvas — Backspace at line start", () => {
     input.focus();
     input.setSelectionRange(0, 0);
     fireEvent.keyDown(input, { key: "Backspace" });
-    expect(onChange).toHaveBeenCalledWith([
+    expect(lastEmit(onChange)).toMatchObject([
       { text: "main",     depth: 0, kind: "main" },
       { text: "modifier", depth: 0, kind: "main" },
     ]);
@@ -245,7 +254,7 @@ describe("IndentedSentenceCanvas — Backspace at line start", () => {
     input.focus();
     input.setSelectionRange(0, 0);
     fireEvent.keyDown(input, { key: "Backspace" });
-    expect(onChange).toHaveBeenCalledWith([
+    expect(lastEmit(onChange)).toMatchObject([
       { text: "firstsecond", depth: 0, kind: "main" },
     ]);
   });
@@ -326,7 +335,7 @@ describe("IndentedSentenceCanvas — defensive normalization", () => {
       value: [{ text: "x", depth: -3, kind: "modifier" }],
     });
     fireEvent.change(getInputs()[0], { target: { value: "y" } });
-    expect(onChange).toHaveBeenCalledWith([
+    expect(lastEmit(onChange)).toMatchObject([
       { text: "y", depth: 0, kind: "main" },
     ]);
   });
@@ -336,7 +345,7 @@ describe("IndentedSentenceCanvas — defensive normalization", () => {
       value: [{ text: "x", depth: 1 }],
     });
     fireEvent.change(getInputs()[0], { target: { value: "y" } });
-    expect(onChange).toHaveBeenCalledWith([
+    expect(lastEmit(onChange)).toMatchObject([
       { text: "y", depth: 1, kind: "modifier" },
     ]);
   });

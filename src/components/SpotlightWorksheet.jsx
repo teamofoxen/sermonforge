@@ -22,7 +22,6 @@ import { autoResize } from "../utils";
 import PrimaryButton from "./primitives/PrimaryButton";
 import FieldOverviewScreen from "./FieldOverviewScreen";
 import IndentedSentenceCanvas from "./IndentedSentenceCanvas";
-import ParaphraseBlocks from "./ParaphraseBlocks";
 import SynthesisTable from "./SynthesisTable";
 import PeripheralReferencePanel from "./PeripheralReferencePanel";
 import {
@@ -32,17 +31,6 @@ import {
   flattenAnswerValue,
   fieldKeyToTourId,
 } from "../utils/studyFields";
-
-// Find the canvas-kind question's value within a field's data sub-tree.
-// Structured-exercise sub-shapes that depend on the canvas (paraphrase blocks,
-// synthesis table) read it here rather than coupling to a hard-coded sibling
-// key — the question with `kind: "canvas"` is the source of truth.
-function findCanvasValue(questions, fieldData, fieldKey) {
-  const canvasQ = questions.find((q) => q.kind === "canvas");
-  if (!canvasQ) return [];
-  const v = getQuestionAnswer(fieldData, fieldKey, canvasQ.key);
-  return Array.isArray(v) ? v : [];
-}
 
 // Resolve the effective value for a question. For cross-phase questions
 // (cumulative-synthesis-table at Phase 2 / 3 / 4 reading the canonical
@@ -205,6 +193,10 @@ export function firstIncompleteQuestionKey(questions, data, fieldKey, crossPhase
 }
 
 // ── Single-question active rendering (A1.1 back-compat path) ──────────────
+//
+// Single-question fields share the kind dispatch with multi-question fields
+// via ActiveQuestionInput — so structured kinds (unified-canvas today; other
+// future kinds) work in either form without duplicating dispatch logic.
 
 function SingleQuestionActive({
   field,
@@ -215,17 +207,19 @@ function SingleQuestionActive({
   onToggleNA,
   onNext,
   isLast,
+  fieldData,
+  fieldQuestionsArr,
 }) {
   const taRef = useRef(null);
   useEffect(() => {
     if (taRef.current) {
       taRef.current.focus();
-      const len = taRef.current.value.length;
-      taRef.current.setSelectionRange(len, len);
+      const len = (taRef.current.value || "").length;
+      try { taRef.current.setSelectionRange(len, len); } catch { /* non-textarea */ }
     }
   }, []);
 
-  const canAdvance = isNA || !!String(value || "").trim();
+  const canAdvance = isNA || questionHasContent(question, value);
   return (
     <div
       className={`worksheet-field worksheet-field-active${isNA ? " worksheet-field-na" : ""}`}
@@ -233,15 +227,15 @@ function SingleQuestionActive({
       data-tour-id={fieldKeyToTourId(field.key)}
     >
       <label className="worksheet-field-label">{field.label}</label>
-      <textarea
-        className="field-textarea"
-        rows={3}
-        value={value || ""}
-        onChange={(e) => onChange(e.target.value)}
-        onInput={(e) => autoResize(e.target)}
-        ref={(el) => { taRef.current = el; autoResize(el); }}
-        placeholder={question.prompt || field.hint || ""}
-        disabled={isNA}
+      <ActiveQuestionInput
+        field={field}
+        question={question}
+        value={value}
+        isNA={isNA}
+        onChange={onChange}
+        fieldQuestionsArr={fieldQuestionsArr || [question]}
+        fieldData={fieldData}
+        taRefSetter={(el) => { taRef.current = el; }}
       />
       <div className="spotlight-controls">
         <button
@@ -285,33 +279,16 @@ function ActiveQuestionInput({
 }) {
   const kind = question.kind || "textarea";
 
-  if (kind === "canvas") {
+  if (kind === "unified-canvas") {
+    // Phase 4 Sprint 2 — Field 3's three legacy questions collapsed into a
+    // single canvas where each row carries text + depth + inline paraphrase
+    // + optional thought_unit_end. The materialized thought_units array
+    // (kept in sync via setDivisionsCanvas at the StudyTab write site)
+    // continues to feed Phase 2/3/4 cross-phase reads.
     return (
       <IndentedSentenceCanvas
         value={Array.isArray(value) ? value : []}
         onChange={onChange}
-        disabled={isNA}
-      />
-    );
-  }
-  if (kind === "paraphrase") {
-    const canvas = findCanvasValue(fieldQuestionsArr, fieldData, field.key);
-    return (
-      <ParaphraseBlocks
-        canvas={canvas}
-        value={Array.isArray(value) ? value : []}
-        onChange={onChange}
-        disabled={isNA}
-      />
-    );
-  }
-  if (kind === "synthesis-table") {
-    const canvas = findCanvasValue(fieldQuestionsArr, fieldData, field.key);
-    return (
-      <SynthesisTable
-        value={Array.isArray(value) ? value : []}
-        onChange={onChange}
-        canvas={canvas}
         disabled={isNA}
       />
     );
@@ -741,6 +718,8 @@ export function SpotlightField({
       onToggleNA={() => onToggleQuestionNA(q.key)}
       onNext={onNextField}
       isLast={isLast}
+      fieldData={data}
+      fieldQuestionsArr={questions}
     />
   );
 }

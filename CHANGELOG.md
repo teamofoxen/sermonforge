@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-05 — Field 3 Sprint 2 Session 2: unified-canvas UI rebuild
+
+- New `IndentedSentenceCanvas` renders the unified row shape — text + depth + inline paraphrase (main rows only) + "+ Mark as thought-unit end" affordance with inline editor and filled-state cap line + italic right-margin callout.
+- `SpotlightWorksheet` kind dispatch gains a `unified-canvas` branch; legacy `canvas` / `paraphrase` / `synthesis-table` dead-code branches removed.
+- `SingleQuestionActive` refactored to share `ActiveQuestionInput` so kind dispatch works in single-question fields (Field 3 has only one question now).
+- `StudyTab.updateStructured` routes `divisions/canvas` writes through `setDivisionsCanvas` so the materialized `thought_units` array stays in sync with the canvas on every save.
+- `ParaphraseBlocks` retired (component + test files deleted); 387 vitest green.
+
+---
+
 ## 2026-05-05 — Field 3 Sprint 2 Session 1: unified-canvas data layer + helpers
 
 - `OBSERVE_FIELDS[2]` three-question block (`sentence_layout` / `paraphrases` / `thought_units`) collapsed into a single `unified-canvas` question; per-row UUIDs are the merge key for cross-phase column attribution.

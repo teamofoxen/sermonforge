@@ -14,6 +14,7 @@ import {
   isQuestionNA, setQuestionNA, DEFAULT_QUESTION_KEY,
   flattenToText,
   fieldQuestions, getQuestionAnswer, flattenAnswerValue,
+  setDivisionsCanvas,
 } from "../utils/studyFields";
 import SpotlightWorksheet from "./SpotlightWorksheet";
 import AdvanceGateChecklist from "./AdvanceGateChecklist";
@@ -517,7 +518,17 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
   // non-spotlight callers like the Phase 3 / Phase 4 textareas that target
   // legacy single-question fields by key).
   const updateStructured = useCallback((column, currentData, fieldKey, value, qKey = DEFAULT_QUESTION_KEY) => {
-    const next = setQuestionAnswer(currentData, fieldKey, qKey, value);
+    // Phase 4 Sprint 2 — Field 3's unified canvas is the only question on
+    // `divisions` whose write also materializes the canonical
+    // `thought_units` array (consumed by Phase 2/3/4 cross-phase reads).
+    // setDivisionsCanvas keeps both paths in lockstep; every other field
+    // uses the generic per-question writer.
+    let next;
+    if (column === "observations" && fieldKey === "divisions" && qKey === "canvas") {
+      next = setDivisionsCanvas(currentData, Array.isArray(value) ? value : []);
+    } else {
+      next = setQuestionAnswer(currentData, fieldKey, qKey, value);
+    }
     onUpdate({ [column]: serializeStructuredField(next) });
   }, [onUpdate]);
 
