@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-06 — Cross-doc SFDI validator drift remediation + un-archive
+
+- `scripts/sfdi-cross-doc-consistency.py` un-archived alongside the internal-consistency validator; both now live in `scripts/` and pass against current docs (7/7 + 6/6).
+- C2 narrowed to SFDI + workspace (SPRD dropped from the vocabulary doc list — the trimmed 110-line SPRD progress doc no longer carries vocabulary anchors); C3's redundant SPRD-specific `8+8+5+4` check dropped (other surfaces still verify the shape).
+- C4 (status-date lock to 2026-05-04) and C6 (SPRD backlog items) retired entirely as brittle drift sources tied to a 579-line SPRD planning doc that was trimmed on 2026-05-05; criterion bodies replaced with retirement notes citing the trim and the items' shipped status.
+- `docs/ENFORCEMENT_STATUS.md` Process #6 row repointed to both validators; Last verified bumped; verification command restored to chained run; archive dir removed (now empty).
+- Memory refreshed: `project_sprd_sfdi_state.md` description gains Field 3 Sprint 2 closure (5 sessions, 2026-05-05 → 2026-05-06); body adds Sprint 2 implementation entry; stale `sfdi-throughline-vision.md` reference fixed (file was merged into the charter on 2026-05-05); `MEMORY.md` index hook updated.
+
+---
+
 ## 2026-05-06 — Field 3 Sprint 2 Session 5: SFDI doc rewrite + un-archive validator
 
 - SFDI Field 3 entry rewritten to canonical unified-canvas shape (seven-slot entry preserved, single `canvas` question, three sub-checks for the composite gate, ~110-word "Structural revision history" subsection at the bottom preserving the 2026-05-03 three-question record).
