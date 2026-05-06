@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-05-06 — Retire Field 3 redesign work artifacts
+
+- Deleted `.drift/field-3-unified-canvas-drift.sh` — one-time migration validator that converged at exit 0 once the unified-canvas drift was cleared from `sermon-workspace.md`; criteria targeted retired three-question language that won't reoccur naturally, so the script's job is done.
+- Deleted `docs/audit-reports/2026-05-06-overnight-summary.md` — audit report from the overnight Field 3 follow-on session; all findings addressed in commits `87e59cc` (cross-doc validator drift), `98fc40e` (tour seed migration), and `dc83890` (sermon-workspace.md drift + canvas hint + merge guard).
+- Both files preserved in git history; CHANGELOG entries from the originating sessions stay untouched per "do not restate prior entries" guidance — the historical record points at the artifacts as they were when written.
+- 403/403 vitest still green; SFDI validators still PASS; preflight PASS.
+
+---
+
 ## 2026-05-06 — Field 3 redesign close: doc drift, canvas hint, merge guard
 
 - `docs/SYSTEMS/sermon-workspace.md` Phase 1 paragraph (lines 150-161) rewritten for the unified-canvas shape — Field 3 as one canvas question, retired `ParaphraseBlocks` reference, `_canvas_row_id` attribution + `deriveThoughtUnitsFromCanvas` materialization noted, `takeoverWhenActive` flag mentioned; line 172 "Q1 canvas" → "unified canvas".
