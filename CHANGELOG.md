@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-05-05 — Ship Dashboard verse carousel + preacher quote components
+
+- Added `DashboardVerseCarousel` — 15s rotation through `preachingVerses.js`, module-level cursor so re-entry shows the next verse.
+- Added `DashboardPreacherQuote` — 15s rotation with no-consecutive-preacher shuffle, stencil portrait with SVG fallback when the PNG is missing.
+- Added `src/datasets/preachingVerses.js` — ESV preaching/proclamation/Word verses with category tags and partial-clause flags.
+- Retired `DashboardChurchHistory` and `DashboardHeader` — replaced by the editorial bands above; `Dashboard.jsx` imports already landed in `8f6e743`.
+
+---
+
 ## 2026-05-05 — Doc/validator sweep for 8+8+5+4 shape + throughline polish
 
 - Renumbered Phase 1 fields and inserted Phase 2 Genre across SFDI doc, workspace doc, SPRD doc, and anchor doc — Phase 1 carries 8 fields, Phase 2 carries 8 fields, total still 25.
