@@ -79,6 +79,28 @@ jobs:
       - name: Build Vite
         run: npx vite build
 
+      - name: Diagnose .p12 + password before signing
+        env:
+          CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+        run: |
+          echo "=== Password length (should be 32) ==="
+          echo "${#CSC_KEY_PASSWORD}"
+          echo "=== Password char categories (no value exposed) ==="
+          printf '%s' "$CSC_KEY_PASSWORD" | awk '{ for(i=1;i<=length($0);i++) { c=substr($0,i,1); if(c~/[A-Fa-f0-9]/) hex++; else other++; } print "hex chars:", hex+0, "non-hex chars:", other+0 }'
+          echo "=== Decode .p12, hash it (expect 33c35cc55ca173d42d7a42f169eb035f1357bdf5ac30e714ccd646e09c182450) ==="
+          printf '%s' "$CSC_LINK" | base64 -d > /tmp/diagnose.p12
+          shasum -a 256 /tmp/diagnose.p12
+          echo "=== OpenSSL test: does the password decrypt the .p12? ==="
+          if openssl pkcs12 -in /tmp/diagnose.p12 -nokeys -passin "pass:$CSC_KEY_PASSWORD" -info -nomacver 2>&1 | grep -q "Bag Attributes"; then
+            echo "OpenSSL: opened .p12 (no MAC verify)"
+          else
+            echo "OpenSSL: FAILED to open .p12 even without MAC verify — file is corrupt"
+          fi
+          echo "=== OpenSSL with MAC verify (real test) ==="
+          openssl pkcs12 -in /tmp/diagnose.p12 -nokeys -passin "pass:$CSC_KEY_PASSWORD" -info 2>&1 | grep -E "MAC|verify|Bag|error" | head -5
+          rm -f /tmp/diagnose.p12
+
       - name: Build and publish macOS DMG
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
