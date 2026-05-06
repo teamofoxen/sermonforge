@@ -709,3 +709,197 @@ describe("flattenToText — undeclared-key fallback (Concern 2 option B)", () =>
     expect(out).not.toMatch(/Big Ideas:\n\s+primary:/);
   });
 });
+
+// ── Cross-phase verification (Phase 4 Sprint 2 Session 3) ─────────────────
+//
+// Session 3's named goal: verify that canvas edits propagate through
+// `StudyTab.updateStructured` (parse → setDivisionsCanvas → serialize) so
+// Phase 2/3/4 cumulative-synthesis-tables read the right rows after every
+// canvas operation. This is the wire-level integration the helper-only
+// tests above don't exercise as a single flow.
+//
+// `updateObservations` mirrors `StudyTab.updateStructured`'s special case
+// for `divisions/canvas` writes — the same code path the workspace runs on
+// every keystroke. Every test in this block works against the
+// sermon-level JSON contract (the string that lives on the `observations`
+// column), so any drift in serialize/parse/materialize would surface here.
+
+describe("cross-phase: canvas edits propagate through serialize/parse without losing Phase 2/3/4 cumulative columns", () => {
+  const updateObservations = (observationsJson, canvas) => {
+    const data = parseStructuredField(observationsJson || "{}");
+    const next = setDivisionsCanvas(data, canvas);
+    return serializeStructuredField(next);
+  };
+
+  it("first canvas write produces a sermon-level JSON containing both canvas and thought_units", () => {
+    const json = updateObservations("", UNIFIED_CANVAS_FIXTURE);
+    expect(typeof json).toBe("string");
+    expect(json.length).toBeGreaterThan(0);
+
+    const back = parseStructuredField(json);
+    expect(back.divisions.canvas.value).toEqual(UNIFIED_CANVAS_FIXTURE);
+    expect(Array.isArray(back.divisions.thought_units.value)).toBe(true);
+    expect(back.divisions.thought_units.value).toHaveLength(2);
+  });
+
+  it("Phase 2 read of the materialized thought_units array sees the canonical cross-phase shape", () => {
+    // Cumulative-synthesis-table at Phase 2 reads observations.divisions.thought_units.
+    // Every row must carry the back-pointer + structural meta needed for the
+    // table's read-only columns (Thought unit / After line / Signal).
+    const json = updateObservations("", UNIFIED_CANVAS_FIXTURE);
+    const obs = parseStructuredField(json);
+    const thoughtUnits = obs.divisions.thought_units.value;
+    for (const row of thoughtUnits) {
+      expect(typeof row._canvas_row_id).toBe("string");
+      expect(row._canvas_row_id.length).toBeGreaterThan(0);
+      expect(typeof row.after_line).toBe("number");
+      expect(typeof row.thought_unit_summary).toBe("string");
+    }
+  });
+
+  it("Phase 2 writes meaning; canvas reorder preserves it via _canvas_row_id", () => {
+    // Step 1 — pastor builds canvas in Phase 1.
+    let observationsJson = updateObservations("", UNIFIED_CANVAS_FIXTURE);
+
+    // Step 2 — pastor in Phase 2 reads thought_units, adds meaning per row.
+    let obs = parseStructuredField(observationsJson);
+    const tus = obs.divisions.thought_units.value;
+    const tusWithMeaning = tus.map((r, i) => ({ ...r, meaning: `Phase 2 meaning ${i}` }));
+    obs = setQuestionAnswer(obs, "divisions", "thought_units", tusWithMeaning);
+    observationsJson = serializeStructuredField(obs);
+
+    // Step 3 — pastor returns to Phase 1 and reorders canvas (last row to top).
+    const reorderedCanvas = [
+      UNIFIED_CANVAS_FIXTURE[3],
+      ...UNIFIED_CANVAS_FIXTURE.slice(0, 3),
+    ];
+    observationsJson = updateObservations(observationsJson, reorderedCanvas);
+
+    // Step 4 — Phase 2 reads again. Meaning must follow row ids, not positions.
+    obs = parseStructuredField(observationsJson);
+    const newTus = obs.divisions.thought_units.value;
+    const row4 = newTus.find((r) => r._canvas_row_id === "row-4");
+    const row3 = newTus.find((r) => r._canvas_row_id === "row-3");
+    expect(row4?.meaning).toBe("Phase 2 meaning 1");
+    expect(row3?.meaning).toBe("Phase 2 meaning 0");
+  });
+
+  it("canvas insert preserves all existing Phase 2/3/4 cumulative columns", () => {
+    // Build canvas + populate cumulative columns at Phase 2 / 3 / 4.
+    let observationsJson = updateObservations("", UNIFIED_CANVAS_FIXTURE);
+    let obs = parseStructuredField(observationsJson);
+    const tus = obs.divisions.thought_units.value;
+    obs = setQuestionAnswer(
+      obs,
+      "divisions",
+      "thought_units",
+      tus.map((r, i) => ({
+        ...r,
+        meaning: `M${i}`,
+        christ_connection: `CC${i}`,
+        implication: `I${i}`,
+      })),
+    );
+    observationsJson = serializeStructuredField(obs);
+
+    // Insert a new top-of-canvas row (no thought_unit_end on it).
+    const inserted = [
+      { id: "row-new", text: "Setup line.", depth: 0, kind: "main", paraphrase: "" },
+      ...UNIFIED_CANVAS_FIXTURE,
+    ];
+    observationsJson = updateObservations(observationsJson, inserted);
+
+    obs = parseStructuredField(observationsJson);
+    const newTus = obs.divisions.thought_units.value;
+    expect(newTus).toHaveLength(2);
+    const r3 = newTus.find((r) => r._canvas_row_id === "row-3");
+    const r4 = newTus.find((r) => r._canvas_row_id === "row-4");
+    expect(r3).toMatchObject({ meaning: "M0", christ_connection: "CC0", implication: "I0" });
+    expect(r4).toMatchObject({ meaning: "M1", christ_connection: "CC1", implication: "I1" });
+    // After_line shifts by one because of the prepended row.
+    expect(r3.after_line).toBe(4);
+    expect(r4.after_line).toBe(5);
+  });
+
+  it("canvas-delete drops the corresponding thought_units row and its Phase 2/3/4 columns", () => {
+    let observationsJson = updateObservations("", UNIFIED_CANVAS_FIXTURE);
+    let obs = parseStructuredField(observationsJson);
+    const tus = obs.divisions.thought_units.value;
+    obs = setQuestionAnswer(
+      obs,
+      "divisions",
+      "thought_units",
+      tus.map((r, i) => ({
+        ...r,
+        meaning: `M${i}`,
+        christ_connection: `CC${i}`,
+        implication: `I${i}`,
+      })),
+    );
+    observationsJson = serializeStructuredField(obs);
+
+    // Delete row-3 (the unit-end carrier for "Spiritual death").
+    const trimmed = UNIFIED_CANVAS_FIXTURE.filter((r) => r.id !== "row-3");
+    observationsJson = updateObservations(observationsJson, trimmed);
+
+    obs = parseStructuredField(observationsJson);
+    const newTus = obs.divisions.thought_units.value;
+    expect(newTus).toHaveLength(1);
+    expect(newTus[0]._canvas_row_id).toBe("row-4");
+    expect(newTus[0].meaning).toBe("M1");
+  });
+
+  it("legacy three-question shape migrates to canvas on read; first canvas re-write keeps thought_units cumulative columns intact via after_line fallback", () => {
+    // Sermon arrives with legacy shape (no production sermons exist, so this
+    // is the defensive path). thought_units carries an existing meaning.
+    const legacyJson = JSON.stringify({
+      divisions: {
+        sentence_layout: {
+          value: [
+            { text: "And you were dead", depth: 0, kind: "main" },
+            { text: "in your trespasses and sins", depth: 1, kind: "modifier" },
+          ],
+          na: false,
+        },
+        paraphrases: {
+          value: [{ main_sentence_id: "ms-0", paraphrase: "We were dead in our sins." }],
+          na: false,
+        },
+        thought_units: {
+          value: [
+            {
+              thought_unit_summary: "Spiritual death",
+              after_line: 2,
+              signal: "subject shift",
+              meaning: "Total inability before grace.",
+            },
+          ],
+          na: false,
+        },
+      },
+    });
+
+    // Read migrates → canvas hydrated, thought_units preserved as-is.
+    let obs = parseStructuredField(legacyJson);
+    expect(Array.isArray(obs.divisions.canvas.value)).toBe(true);
+    expect(obs.divisions.thought_units.value[0].meaning).toBe("Total inability before grace.");
+
+    // Pastor edits canvas (rewrites a row). The hydrated canvas has the
+    // legacy thought_unit_end attached at after_line=2 (row index 1, the
+    // modifier). After re-write through setDivisionsCanvas, derive uses the
+    // after_line fallback (legacy thought_units row has no _canvas_row_id)
+    // so the meaning survives.
+    const editedCanvas = obs.divisions.canvas.value.map((r) =>
+      r.depth === 0 ? { ...r, paraphrase: "Updated paraphrase." } : r,
+    );
+    const newJson = (() => {
+      const next = setDivisionsCanvas(obs, editedCanvas);
+      return serializeStructuredField(next);
+    })();
+
+    obs = parseStructuredField(newJson);
+    const tus = obs.divisions.thought_units.value;
+    expect(tus).toHaveLength(1);
+    expect(tus[0].meaning).toBe("Total inability before grace.");
+  });
+});

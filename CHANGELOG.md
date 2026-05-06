@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-05 — Field 3 Sprint 2 Session 3: cross-phase verification tests
+
+- New `studyFields.test.js` block simulates the full `StudyTab.updateStructured` flow at the data layer (parse → setDivisionsCanvas → serialize → re-parse) so canvas-edit propagation through the sermon-level JSON is covered as one wire.
+- First-write check: a fresh canvas write produces sermon-level JSON containing both the canvas array and the materialized `thought_units` array with `_canvas_row_id` back-pointers and numeric `after_line`.
+- Survival checks: Phase 2/3/4 cumulative columns (`meaning` / `christ_connection` / `implication`) survive canvas reorder via id matching, survive canvas insert with `after_line` shifting correctly, and drop cleanly with their row on canvas delete.
+- Legacy migration check: a legacy three-question sermon migrates to the unified canvas on read, and the first canvas re-write afterward preserves the legacy `meaning` column via the `after_line` fallback in `deriveThoughtUnitsFromCanvas`.
+- 393 vitest green (up from 387).
+
+---
+
 ## 2026-05-05 — Simplify /end-session governance: preflight script + thin skill + doc trim
 
 - New `scripts/preflight.sh` orchestrates `drift-check.sh` + sweep-trigger advisory + staging hygiene as STEP 1 of `/end-session`.
