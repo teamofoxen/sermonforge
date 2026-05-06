@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-05 — Dashboard demote + Explore row parity + pulpit-quote centering
+
+- Hero "Build a sermon" tile demoted to secondary scale — plain serif (no italic/gold accent), eyebrow renamed `Begin work` to parallel `Resume work`.
+- Tile typography tightened (hero 36→26, secondary 26→19, blurb 15→13.5) and padding/min-height pulled in (24/28→18/22, 200→160).
+- Verse + pulpit-quote scale reduced (24→17 / 22→16) and decorative quote marks (48→32) so the editorial bands stop dominating.
+- Explore tile rebuilt with `ExploreRow` mirroring Resume's gold-bar/parchment-warm layout; shared 56px min-height aligns both row cards.
+- Pulpit-quote group now centers via `auto auto` + `justify-content: center` on `.hdr-illuminated` — leftward bias removed.
+
+---
+
 ## 2026-05-05 — Retire SPIR + tunnel-mode + sweep-the-universe placeholder
 
 - `study-phase-implementation-remediation.md` deleted — risk register served implementation phase only; the three lived-use concerns were already lifted into SPIP "Watch in real prep" in the prior commit.

@@ -6,7 +6,6 @@ import NewSermonModal from "./NewSermonModal";
 import DashboardVerseCarousel from "./DashboardVerseCarousel";
 import DashboardPreacherQuote from "./DashboardPreacherQuote";
 import PrimaryButton from "./primitives/PrimaryButton";
-import TextButton from "./primitives/TextButton";
 import DeleteButton from "./primitives/DeleteButton";
 import { formatDate } from "../utils";
 
@@ -93,15 +92,13 @@ export default function Dashboard({ onOpenSermon, onNewSeries, onLeaveTour }) {
             >
               <div className="tile-eyebrow">
                 <span className="dot" />
-                <span>Primary&nbsp;workflow</span>
+                <span>Begin&nbsp;work</span>
               </div>
-              <h2 className="tile-title tile-title-lg">
-                Build a <em>sermon.</em>
+              <h2 className="tile-title">
+                Build a sermon.
               </h2>
               <p className="tile-blurb">
-                Walk a single sermon from text to manuscript. Exegesis, MPT and MPS,
-                outline, functional elements, and delivery — the full Sermon Workspace,
-                one step at a time.
+                From text to manuscript — exegesis, big idea, outline, delivery.
               </p>
               <div className="tile-actions">
                 <PrimaryButton
@@ -131,11 +128,10 @@ export default function Dashboard({ onOpenSermon, onNewSeries, onLeaveTour }) {
             >
               <div className="tile-eyebrow tile-eyebrow-soft">Plan&nbsp;ahead</div>
               <h3 className="tile-title">
-                Build a <em>series.</em>
+                Build a series.
               </h3>
               <p className="tile-blurb">
-                Plan a sermon series end to end. Set the passage range, big idea,
-                and redemptive arc — then break it into weeks.
+                Plan a series end to end — passage range, arc, week-by-week.
               </p>
               <span className="tile-link">
                 Build series <ArrowRightIcon />
@@ -154,25 +150,19 @@ export default function Dashboard({ onOpenSermon, onNewSeries, onLeaveTour }) {
             <div className="dash-tile tile-secondary" style={{ display: "flex", flexDirection: "column" }}>
               <div className="tile-eyebrow tile-eyebrow-soft">Look&nbsp;around</div>
               <h3 className="tile-title">Explore SermonForge.</h3>
-              <p className="tile-blurb">
-                Walk the workspace with the guided tour, or open a fully-filled
-                sample sermon to poke around at your own pace.
-              </p>
-              <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "auto" }}>
-                <TextButton
-                  className="tile-meta tile-meta-button"
+              <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "12px" }}>
+                <ExploreRow
+                  label="Take the guided tour"
+                  loading={loadingAction === "tour"}
+                  disabled={!!loadingAction}
                   onClick={() => openSampleSermon({ launchTour: true })}
+                />
+                <ExploreRow
+                  label="Open a sample sermon"
+                  loading={loadingAction === "sample"}
                   disabled={!!loadingAction}
-                >
-                  {loadingAction === "tour" ? "Loading…" : "Take the guided tour →"}
-                </TextButton>
-                <TextButton
-                  className="tile-meta tile-meta-button"
                   onClick={() => openSampleSermon({ launchTour: false })}
-                  disabled={!!loadingAction}
-                >
-                  {loadingAction === "sample" ? "Loading…" : "Open a sample sermon →"}
-                </TextButton>
+                />
               </div>
             </div>
           </div>
@@ -295,6 +285,43 @@ function ResumeRow({ sermon, onOpen, onDelete, flagged }) {
       {onDelete && (
         <DeleteButton small onDelete={() => onDelete(sermon.id)} />
       )}
+    </div>
+  );
+}
+
+function ExploreRow({ label, loading, disabled, onClick }) {
+  return (
+    <div
+      role="button"
+      tabIndex={disabled ? -1 : 0}
+      aria-disabled={disabled || undefined}
+      onClick={() => { if (!disabled) onClick?.(); }}
+      onKeyDown={(e) => {
+        if (disabled) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick?.();
+        }
+      }}
+      style={{
+        display: "flex", alignItems: "center", gap: "10px",
+        cursor: disabled ? "wait" : "pointer",
+        padding: "8px 10px",
+        minHeight: "56px",
+        borderRadius: "var(--radius)",
+        background: "var(--parchment-warm)",
+        borderLeft: "3px solid var(--gold)",
+        fontFamily: "var(--font-serif)",
+        opacity: disabled && !loading ? 0.5 : 1,
+      }}
+    >
+      <div style={{
+        flex: 1, minWidth: 0,
+        fontSize: "13px", color: "var(--ink)", fontWeight: 600,
+        whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+      }}>
+        {loading ? "Loading…" : label}
+      </div>
     </div>
   );
 }
