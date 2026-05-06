@@ -204,6 +204,22 @@ export default function IndentedSentenceCanvas({
     if (idx <= 0) return;
     const prev = rows[idx - 1];
     const cur = rows[idx];
+    // Blast-radius guard — if the row being merged carries a thought-unit-end
+    // marker, its derived thought_units row (and any Phase 2/3/4 cumulative
+    // columns attached via `_canvas_row_id`) would drop on the next save.
+    // No-op the merge in this case: the pastor must explicitly remove the
+    // seam (via the ✕ Unmark affordance on the inline editor) before the row
+    // can be deleted via Backspace. Rows with only text + paraphrase merge
+    // silently — Backspace-at-column-0 is a frequent gesture and paraphrase
+    // content is recoverable from the surrounding context.
+    //
+    // Mutation Contract #5 forbids raw window.confirm; an inline-error toast
+    // pattern is the canonical UX for surfacing this no-op to the pastor and
+    // is tracked as a follow-up once an InlineError primitive lands inside
+    // the canvas. Until then, the affordance for unmarking is visible on the
+    // row itself — the pastor sees the thought-unit cap and the ✕ Unmark
+    // button, so the silent no-op is discoverable in practice.
+    if (cur && cur.thought_unit_end) return;
     const next = rows.slice();
     const mergedCaret = prev.text.length;
     // Merging keeps the previous row's id, paraphrase, and thought_unit_end
@@ -480,6 +496,13 @@ export default function IndentedSentenceCanvas({
           Type each line by hand — paste is off here.
         </div>
       )}
+      <div
+        className="indented-canvas-keyboard-hint"
+        data-testid="indented-canvas-keyboard-hint"
+        aria-hidden="true"
+      >
+        Tab indents · Shift+Tab outdents · Enter splits · Backspace at line start outdents or merges
+      </div>
     </div>
   );
 }

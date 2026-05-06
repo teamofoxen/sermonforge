@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-06 — Field 3 redesign close: doc drift, canvas hint, merge guard
+
+- `docs/SYSTEMS/sermon-workspace.md` Phase 1 paragraph (lines 150-161) rewritten for the unified-canvas shape — Field 3 as one canvas question, retired `ParaphraseBlocks` reference, `_canvas_row_id` attribution + `deriveThoughtUnitsFromCanvas` materialization noted, `takeoverWhenActive` flag mentioned; line 172 "Q1 canvas" → "unified canvas".
+- `docs/PROPOSALS/study-phase-redesign.md` milestones table gains one row for **Phase 1 Field 3 unified canvas** — compact format matching the SADI Step 2 plumbing precedent; documents the structural revision of B1's Field 3.
+- `IndentedSentenceCanvas` gets a permanent keyboard-gesture cheat sheet at the bottom (`Tab indents · Shift+Tab outdents · Enter splits · Backspace at line start outdents or merges`) — quiet styling; replaces the retired peripheral reference panel as the on-canvas hint surface.
+- Blast-radius fix in `mergeWithPrev`: now `window.confirm`s before silently dropping a row that carries a `thought_unit_end` marker — guards Phase 2/3/4 cumulative-column attribution that would otherwise be lost on a single Backspace at column 0; rows with only text + paraphrase pass through silently.
+- Drift validator exit 0; 403/403 vitest green; SFDI internal 7/7, cross-doc 6/6; preflight PASS.
+
+---
+
 ## 2026-05-06 — Overnight audit summary 2026-05-06
 
 - Field 3 Sprint 2 follow-on: hunted across all greppable fixtures for the legacy three-question shape with verse-reference `after_line` values (the `Number("v.2") === NaN` defensive-merge bug class that hit the tour seed) — zero BUG candidates found; all surviving legacy-shape fixtures carry integer-string `after_line` values that `Number()` parses cleanly.

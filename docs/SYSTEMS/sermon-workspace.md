@@ -141,24 +141,31 @@ Field definitions live in `src/utils/studyFields.js`.
 
 #### Phase 1: Observe → `sermons.observations` (JSON)
 
-**SFDI-aligned in code as of SPRD B1.0 (2026-05-04); Background field retired 2026-05-05.** `OBSERVE_FIELDS` in
+**SFDI-aligned in code as of SPRD B1.0 (2026-05-04); Background field retired 2026-05-05; Field 3 collapsed to unified canvas Phase 4 Sprint 2 (2026-05-05).** `OBSERVE_FIELDS` in
 `src/utils/studyFields.js` is the 8-field shape: `context`
 → `surface_questions` → `divisions` → `characters` → `commands_declarations`
-→ `big_ideas` → `obvious_point` → `applications`. Four fields carry multi-
-question sequences: three text-prompt (B1.2) — Context `[before, after, impact, holy_spirit_intent]`;
+→ `big_ideas` → `obvious_point` → `applications`. Three text-prompt fields
+carry multi-question sequences (B1.2): Context `[before, after, impact, holy_spirit_intent]`;
 Surface Questions `[where, when, how]`; Possible Implications `[pressing,
-hard_and_hopeful]` — plus Field 3 Divisions / Thought Units (B1.5) which
-carries three structured-exercise questions: `sentence_layout` (kind=canvas)
-+ `paraphrases` (kind=paraphrase) + `thought_units` (kind=synthesis-table).
-SpotlightWorksheet's multi-question rendering dispatches on `question.kind`
-to mount the matching A2.x primitive (`IndentedSentenceCanvas` /
-`ParaphraseBlocks` / `SynthesisTable`); paraphrase + synthesis-table
-questions read the sibling canvas value via the field's `kind:"canvas"`
-question. Q1 carries a structured `referencePanel` (the SFDI three rules +
-genre tips for epistles / narrative / poetry) that flanks the active
-question via a 72/28 flex row. Field 3 Divisions / Thought Units and Field
-8 Possible Implications are flagged heavy-lifting and open with
-`FieldOverviewScreen` on first per-sermon entry (B1.3).
+hard_and_hopeful]`. Field 3 Divisions / Thought Units carries a single
+unified-canvas question `canvas` (kind=unified-canvas) where each row holds
+text, depth, an inline paraphrase on main rows, and an optional
+`thought_unit_end` marker (`{summary, signal}`) on main rows. The
+materialized `thought_units` array is derived from canvas annotations on
+every save (`deriveThoughtUnitsFromCanvas` in `studyFields.js`) and written
+back to the same JSON envelope at `observations.divisions.thought_units.value`
+— Phase 2/3/4 cumulative-column reads consume that derived array unchanged.
+Stable per-row UUIDs (`crypto.randomUUID()` with a deterministic fallback)
+back-point cumulative columns to canvas rows via `_canvas_row_id`, so canvas
+edits (insert / delete / reorder / paraphrase change) preserve attribution.
+SpotlightWorksheet's multi-question rendering dispatches on `question.kind`;
+Field 3's `unified-canvas` mounts the single primitive `IndentedSentenceCanvas`
+(which absorbs paraphrase + thought-unit-marker UX inline). Field 3 Divisions
+/ Thought Units and Field 8 Possible Implications are flagged heavy-lifting
+and open with `FieldOverviewScreen` on first per-sermon entry (B1.3); Field
+3 also carries `takeoverWhenActive: true`, collapsing the throughline rail
+when spotlit so the canvas owns the workspace width (Sprint 1, restore
+button preserved; suppressed during the workspace tour).
 
 **Phase 2 SFDI-aligned in code as of SPRD B2.0–B2.2 (2026-05-04); Genre field added 2026-05-05.** `INTERPRET_FIELDS`
 in `src/utils/studyFields.js` is the 8-field shape: Deeper Context → Genre →
@@ -169,7 +176,7 @@ Commentary Notes → Interpretation Synthesis. Three new keys: `deeper_context`
 `summarize_whole`); plus `genre` (added 2026-05-05) — a light, optional field
 that lets the literary form set the lens before dissection begins. Five keys
 retire from rendering: `context_impact`, `characters`, `diagram` (cross-phase
-to Observe Field 3 Q1 canvas which absorbed the structural-diagram work),
+to Observe Field 3's unified canvas which absorbed the structural-diagram work),
 `summarize_parts`, `summarize_whole`. Field 1 Deeper Context carries a
 2-question sequence (B2.1): `[unresolved, book_argument]`. Field 2 Genre
 carries `[genre, impact]`. Field 8 Interpretation Synthesis is heavy-lifting (B2.2):

@@ -30,6 +30,7 @@ Thirteen milestones in three phases. **A** = the new Study UX shell. **B** = the
 | **C6** | evaluateAdvance per-boundary thresholds | four sub-phase composite gates wired through B1–B4 cuts; renderer-side via `studyAdvancement.js`; B1.6 introduced the `{gates, firstReason}` structured shape | ✅ |
 | **Tour rewrite** | Workspace tour — throughline-first reframe | 17 stops walking the cumulative thought-unit table + four named outcomes through MPT/MPS → Outline → FE → Frame → Manuscript → Delivery | ✅ |
 | **SADI Step 2 plumbing** | MPT/MPS as proper SADI fields (post-SPRD follow-on) | new `sadiAnchorFields.js`; v19 `main_point_pair` envelope; SpotlightWorksheet over MPT 2Q + MPS 3Q; composite gate at Step 2 → Step 3 | ✅ |
+| **Phase 1 Field 3 unified canvas** | structural revision of B1's Field 3 (post-SPRD follow-on) | three legacy questions (`sentence_layout` / `paraphrases` / `thought_units`) collapsed into one `unified-canvas` question; per-row UUIDs (`crypto.randomUUID`) carry cumulative-column attribution via `_canvas_row_id`; `deriveThoughtUnitsFromCanvas` materializes the canonical thought-unit array on save so Phase 2/3/4 cross-phase reads stay unchanged; `ParaphraseBlocks` retired; defensive read-merge in `parseStructuredField` for legacy three-question fixtures; SFDI working doc rewrite-with-historical-addendum | ✅ |
 
 ---
 

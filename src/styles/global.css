@@ -2884,6 +2884,21 @@ button {
   color: var(--ink-soft);
 }
 
+/* Always-visible keyboard-gesture cheat sheet at the bottom of the canvas.
+   Replaces the retired peripheral reference panel as the on-canvas hint
+   surface for typing gestures. Quiet styling — eye stops noticing it after
+   the pastor has used the gestures once or twice. */
+.indented-canvas-keyboard-hint {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--parchment-deep);
+  font-family: 'IBM Plex Serif', serif;
+  font-size: 11px;
+  color: var(--ink-ghost);
+  letter-spacing: 0.02em;
+  user-select: none;
+}
+
 /* ── Unified-canvas subtree footer (Phase 4 Sprint 2) ────────────────────── */
 /* Renders after each main row's subtree (main + its modifiers): the inline
    paraphrase textarea, plus the unit-end affordance / inline editor / filled-
