@@ -397,6 +397,44 @@
   overflow-y: auto;
   padding: 20px 36px 60px;
   border-right: 1px solid var(--parchment-deep);
+  position: relative;
+}
+
+/* Takeover — heavy-lifting fields with `takeoverWhenActive: true` collapse
+   the throughline rail and tighten write-column padding when active, so the
+   canvas + paraphrase + table get the room. The pastor restores the rail
+   via the `.field-takeover-restore` button (top-right, sticky). Suppressed
+   while the workspace tour is active — tour stops anchor on the rail. */
+.study-three-col-takeover .tl-rail {
+  display: none;
+}
+
+.study-three-col-takeover .study-write-col {
+  padding: 20px 20px 60px;
+}
+
+.field-takeover-restore {
+  position: sticky;
+  top: 8px;
+  margin-left: auto;
+  margin-bottom: -28px;
+  z-index: 10;
+  display: block;
+  width: fit-content;
+  background: var(--white);
+  border: 1px solid var(--parchment-deep);
+  color: var(--ink-ghost);
+  font-family: 'IBM Plex Serif', serif;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.field-takeover-restore:hover {
+  color: var(--ink);
+  border-color: var(--gold);
 }
 
 .study-write-inner {

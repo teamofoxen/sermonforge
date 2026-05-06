@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-05 — Field 3 Sprint 1: overview cuts, canvas wrap, takeover layout
+
+- Field 3 (Divisions / Thought Units) pre-field overview trimmed from three paragraphs + a three-item ordered list to one sentence; reference-panel content tightened (dropped poetry "deferred" section, quick-tips heading, clarifier footnote, standalone epistles paragraph; three rules compressed to one short clause each).
+- `IndentedSentenceCanvas` per-row `<input>` swapped for `<textarea rows={1}>` with `autoResize` — long sentences at depth 3+ now wrap visibly instead of horizontal-scrolling out of sight; canvas row alignment shifted to flex-start so the level-0 marker bar grows with wrapped content.
+- New `takeoverWhenActive` field-def flag (Field 3 only today) collapses the throughline rail and tightens write-column padding when the field is spotlit; sticky `↺ Restore rail` button restores until the active field changes.
+- Takeover suppressed while the workspace tour is active — tour stops anchored on the rail (`throughline`, `four-named-outcomes`) still render correctly.
+- 383 vitest green; two `SpotlightWorksheet` test fixtures migrated from `<input>` to `<textarea.indented-canvas-input>` selectors for the canvas-row element swap.
+
+---
+
 ## 2026-05-05 — Consolidate SPRD docs: archive SPIP, trim planning doc, add doc-drift checkpoint to /end-session
 
 - SPIP archived to `docs/ARCHIVE/study-phase-implementation-plan.md` — every section now CLOSED/SHIPPED/RESOLVED; `ANCHORS.md` row dropped.

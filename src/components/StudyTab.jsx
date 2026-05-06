@@ -417,6 +417,15 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
   // of always pointing at the first-incomplete heuristic.
   const [currentActiveFieldKey, setCurrentActiveFieldKey] = useState(null);
 
+  // Takeover state — heavy-lifting fields with `takeoverWhenActive: true`
+  // collapse the throughline rail and tighten write-column padding when
+  // they're spotlit, so the canvas + paraphrase + table get the room. The
+  // pastor can restore the rail mid-field via the small button rendered
+  // top-right; the override resets when they leave the field.
+  // Suppressed during the workspace tour (tour stops anchor on the rail).
+  const [takeoverOverride, setTakeoverOverride] = useState(false);
+  useEffect(() => { setTakeoverOverride(false); }, [currentActiveFieldKey]);
+
   useEffect(() => {
     localStorage.setItem(`sermonforge_study_step_${sermon.id}`, activeStep);
     localStorage.setItem(`sermonforge_study_subphase_${sermon.id}`, activeSubPhase);
@@ -1019,16 +1028,36 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
   // four parsed phase columns. Cheap (just iteration over the field defs).
   const railSubPhases = buildRailSubPhases(sermon, obsData, intData, redData, impData, activeSubPhase, currentActiveFieldKey);
 
+  // Active field def (Phase 1 only — only Phase 1 Field 3 carries the
+  // takeover flag today; expand the lookup if later phases opt in).
+  const activeFieldDef = OBSERVE_FIELDS.find((f) => f.key === currentActiveFieldKey) || null;
+  const wantsTakeover =
+    !!activeFieldDef?.takeoverWhenActive &&
+    activeStep === 1 &&
+    activeSubPhase === 1 &&
+    !tourActive &&
+    !takeoverOverride;
+
   return (
     <div className="study-tab-shell">
       <StudyStepStrip activeStep={activeStep} onStepChange={jumpToStep} />
-      <div className="study-three-col">
+      <div className={`study-three-col${wantsTakeover ? " study-three-col-takeover" : ""}`}>
         <ThroughlineRail
           subPhases={railSubPhases}
           activeSubPhaseId={activeStep === 1 ? SUB_PHASE_IDS[activeSubPhase - 1] : null}
           onFieldClick={handleRailFieldClick}
         />
         <div className="study-write-col">
+          {wantsTakeover && (
+            <button
+              type="button"
+              className="field-takeover-restore"
+              onClick={() => setTakeoverOverride(true)}
+              title="Restore the throughline rail"
+            >
+              ↺ Restore rail
+            </button>
+          )}
           <div className="study-write-inner">
 
       {advanceError && (

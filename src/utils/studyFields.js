@@ -92,21 +92,18 @@ export const OBSERVE_FIELDS = [
     label: "Divisions / Thought Units",
     hint: "How is the passage built? Lay out the main sentences, paraphrase them, and find the thought units that anchor it.",
     heavyLifting: true,
+    // When this field is the spotlit field, the workspace shell collapses the
+    // throughline rail + AI panel and reduces write-column padding so the
+    // canvas + paraphrase + table get the room. Pastor can restore the panels
+    // via the "Restore panels" button (resets on field change). Suppressed
+    // while the workspace tour is active — tour-wins, since stops anchor on
+    // the rail and worksheet container.
+    takeoverWhenActive: true,
     overview: {
       title: "Divisions / Thought Units",
       paragraphs: [
-        "The point of the sermon is the point of the text. The work of seeing what that point is starts here.",
-        "Before you can preach the passage, you have to see how it's built. Which sentences carry the main weight. What's supporting them. Where one move ends and the next begins. How the passage flows.",
-        "You're not building an outline. You're laying the foundation any outline will rest on. The bones of the passage are already there. Your job in this field is to make them visible.",
+        "Lay the passage out so the structure shows. Rewrite each main sentence in your own words. Find the thought units that anchor it. The bones are already there — your job is to make them visible.",
       ],
-      list: {
-        intro: "Three parts:",
-        items: [
-          "Lay the passage out so the structure shows.",
-          "Rewrite each main sentence in your own words.",
-          "Find the thought units that anchor the passage.",
-        ],
-      },
     },
     questions: [
       {
@@ -119,35 +116,15 @@ export const OBSERVE_FIELDS = [
             {
               type: "rules",
               items: [
-                { lead: "Subject + main verb", body: "pulled to the left margin. The spine of the clause." },
-                { lead: "Modifiers", body: "(adjectives, adverbs, prepositional phrases, subordinate clauses) — indent under what they modify." },
-                { lead: "Coordinate clauses", body: "(“and,” “but,” “or”) — re-align to the column of their coordinate. Same indent level as their peer." },
-              ],
-              footnote: "Main verb = the finite verb (carries tense, head of the clause). Participles, infinitives, and gerunds are modifiers.",
-            },
-            {
-              type: "heading",
-              heading: "Quick outline tips",
-              paragraphs: ["The three rules above are the operation across all genre. Here's how they apply by genre."],
-            },
-            {
-              type: "genre",
-              heading: "For epistles",
-              paragraphs: ["The three rules above, applied as written. Long sentences with cascading modifier chains; coordinate clauses joined by “and,” “but,” “or.”"],
-            },
-            {
-              type: "genre",
-              heading: "For narrative",
-              items: [
-                "Each main action → left margin. Most narrative clauses are actions; expect many lines at the margin.",
-                "Description and character info (“who was a Pharisee,” “now there was a famine”) → indent under what they describe.",
-                "Dialogue → indent under the speech verb. “He said” stays at the margin; the words spoken indent under it.",
+                { lead: "Subject + main verb", body: "to the left margin." },
+                { lead: "Modifiers", body: "indent under what they modify." },
+                { lead: "Coordinate clauses", body: "re-align to the column of their coordinate." },
               ],
             },
             {
               type: "genre",
-              heading: "For poetry",
-              paragraphs: ["Deferred for a future iteration."],
+              heading: "Narrative",
+              paragraphs: ["Each main action goes to the margin. Description and character info indent under what they describe. Dialogue indents under the speech verb."],
             },
           ],
         },

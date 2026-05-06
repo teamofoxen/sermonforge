@@ -20,6 +20,7 @@
 // and emitted automatically; callers should not set it.
 
 import React, { useRef, useState, useEffect, useCallback } from "react";
+import { autoResize } from "../utils";
 
 const MAX_DEPTH_DEFAULT = 5;
 const PASTE_HINT_TIMEOUT_MS = 2200;
@@ -77,6 +78,15 @@ export default function IndentedSentenceCanvas({
   useEffect(() => () => {
     if (pasteHintTimer.current) clearTimeout(pasteHintTimer.current);
   }, []);
+
+  // Re-fit every textarea height when rows change (add / remove / depth shift)
+  // or when the underlying value changes from outside the textarea (e.g. row
+  // split). Direct typing is handled by onInput on the textarea itself.
+  useEffect(() => {
+    for (const el of inputRefs.current) {
+      if (el) autoResize(el);
+    }
+  }, [rows]);
 
   const flashPasteHint = useCallback(() => {
     setPasteHintVisible(true);
@@ -202,13 +212,14 @@ export default function IndentedSentenceCanvas({
             >
               <span className="indented-canvas-gutter" aria-hidden="true">{idx + 1}</span>
               <span className="indented-canvas-marker" aria-hidden="true" />
-              <input
-                ref={(el) => { inputRefs.current[idx] = el; }}
+              <textarea
+                ref={(el) => { inputRefs.current[idx] = el; autoResize(el); }}
                 className="indented-canvas-input"
                 style={{ marginLeft: `${depth * 1.5}em` }}
-                type="text"
+                rows={1}
                 value={row.text}
                 onChange={(e) => updateText(idx, e.target.value)}
+                onInput={(e) => autoResize(e.target)}
                 onKeyDown={(e) => handleKeyDown(e, idx)}
                 onPaste={handlePaste}
                 onDrop={handleDrop}

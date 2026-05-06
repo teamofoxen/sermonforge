@@ -611,24 +611,24 @@ describe("SpotlightWorksheet — kind dispatch", () => {
     return { onChange, onToggleNA, ...utils };
   }
 
-  it("Q1 (kind=canvas) mounts IndentedSentenceCanvas instead of a textarea", () => {
+  it("Q1 (kind=canvas) mounts IndentedSentenceCanvas, not the textarea fallback", () => {
     renderField4();
-    // Canvas renders the gutter + a single empty input row by default.
-    const canvas = document.querySelector(".indented-sentence-canvas") ||
-                   document.querySelector('[data-testid="indented-sentence-canvas"]') ||
-                   document.querySelector("textarea[data-testid='question-input-divisions-sentence_layout']");
-    // The textarea-form fallback should NOT be present.
+    // The textarea-form fallback (from the kind=textarea dispatch) should
+    // NOT be present — the canvas owns Q1's input surface.
     expect(
       document.querySelector("textarea[data-testid='question-input-divisions-sentence_layout']"),
     ).toBeNull();
-    // The canvas component renders inputs; at least one row input should be in the DOM.
-    expect(document.querySelectorAll("input").length).toBeGreaterThan(0);
+    // The canvas itself is in the DOM via its own data-testid.
+    expect(document.querySelector('[data-testid="indented-canvas"]')).toBeTruthy();
+    // And at least one canvas-row textarea is rendered (Phase 1 swapped
+    // the per-row <input> for <textarea rows={1}> so depth wraps visibly).
+    expect(document.querySelectorAll("textarea.indented-canvas-input").length).toBeGreaterThan(0);
   });
 
   it("typing into Q1's canvas emits onChange with a structured list value", () => {
     const { onChange } = renderField4();
-    // Find the first canvas line input and type into it.
-    const inputs = document.querySelectorAll("input");
+    // Find the first canvas line textarea and type into it.
+    const inputs = document.querySelectorAll("textarea.indented-canvas-input");
     expect(inputs.length).toBeGreaterThan(0);
     fireEvent.change(inputs[0], { target: { value: "Paul writes" } });
     expect(onChange).toHaveBeenCalled();
