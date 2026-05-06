@@ -58,6 +58,51 @@ const FIELD_3_ALL_NA = {
   thought_units:   { value: "", na: true },
 };
 
+// Phase 4 Sprint 2 unified-canvas form. Tests using this fixture exercise the
+// new-shape gate path directly (no migration step) — locks in gate behavior
+// independent of the legacy → unified read-merge in parseStructuredField.
+// Minimum that satisfies the composite: one main row with a modifier and a
+// non-empty paraphrase, with a thought_unit_end populated on the main row.
+// Materialized thought_units array is included so Phase 2/3/4 reads see the
+// canonical cross-phase array (mirrors what setDivisionsCanvas would produce).
+const FIELD_3_UNIFIED_FILLED = {
+  canvas: {
+    value: [
+      {
+        id: "row-1",
+        text: "There is now no condemnation",
+        depth: 0,
+        kind: "main",
+        paraphrase: "No condemnation now stands against believers in Christ.",
+        thought_unit_end: { summary: "Believers stand uncondemned in Christ.", signal: "" },
+      },
+      {
+        id: "row-2",
+        text: "for those who are in Christ Jesus.",
+        depth: 1,
+        kind: "modifier",
+        paraphrase: "",
+      },
+    ],
+    na: false,
+  },
+  thought_units: {
+    value: [
+      {
+        thought_unit_summary: "Believers stand uncondemned in Christ.",
+        after_line: 1,
+        signal: "",
+        _canvas_row_id: "row-1",
+      },
+    ],
+    na: false,
+  },
+};
+
+const FIELD_3_UNIFIED_NA = {
+  canvas: { value: [], na: true },
+};
+
 describe("SPRD Q3 hard-gate UX: Continue button disabled when source empty", () => {
   beforeEach(() => {
     installTestSpine();
@@ -432,6 +477,172 @@ describe("SPRD Q3 hard-gate UX: evaluateAdvance unit test", () => {
       2,
     );
     expect(result.ok).toBe(false);
+  });
+});
+
+// Phase 4 Sprint 2 — Field 3 unified-canvas gate (no migration involved)
+//
+// Tests above feed the gate via the legacy three-question fixture, which
+// parseStructuredField migrates into the unified shape on read. These tests
+// pin gate behavior on the new shape directly — every fixture writes
+// `divisions.canvas` with the unified row shape, so the gate runs against
+// what setDivisionsCanvas would produce in production.
+describe("Field 3 unified-canvas gate (Phase 4 Sprint 2): new-shape fixtures, no migration", () => {
+  it("passes when canvas has main+modifier, paraphrase on the main row, and thought_unit_end populated", async () => {
+    const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
+    const result = evaluateAdvance(
+      {
+        id: "test",
+        observations: JSON.stringify({
+          context: "some content",
+          divisions: FIELD_3_UNIFIED_FILLED,
+          obvious_point: "Plain-sense point.",
+          applications: {
+            pressing:         { value: "Pressing.",  na: false },
+            hard_and_hopeful: { value: "Hard/hope.", na: false },
+          },
+        }),
+      },
+      "sub_phase",
+      1,
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  it("fails Q1 when canvas has main rows only (no indented modifiers)", async () => {
+    const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
+    const result = evaluateAdvance(
+      {
+        id: "test",
+        observations: JSON.stringify({
+          context: "some content",
+          divisions: {
+            canvas: {
+              value: [
+                { id: "x", text: "Main only.", depth: 0, kind: "main",
+                  paraphrase: "Pastor voice.",
+                  thought_unit_end: { summary: "T.", signal: "" } },
+              ],
+              na: false,
+            },
+          },
+          obvious_point: "Plain-sense point.",
+          applications: {
+            pressing:         { value: "Pressing.",  na: false },
+            hard_and_hopeful: { value: "Hard/hope.", na: false },
+          },
+        }),
+      },
+      "sub_phase",
+      1,
+    );
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/Lay out the passage/i);
+  });
+
+  it("fails Q2 when a main row has no paraphrase", async () => {
+    const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
+    const result = evaluateAdvance(
+      {
+        id: "test",
+        observations: JSON.stringify({
+          context: "some content",
+          divisions: {
+            canvas: {
+              value: [
+                { id: "a", text: "Main A.", depth: 0, kind: "main", paraphrase: "PA.",
+                  thought_unit_end: { summary: "TA.", signal: "" } },
+                { id: "b", text: "modifier",  depth: 1, kind: "modifier", paraphrase: "" },
+                { id: "c", text: "Main B.", depth: 0, kind: "main", paraphrase: "" /* missing */ },
+              ],
+              na: false,
+            },
+          },
+          obvious_point: "Plain-sense point.",
+          applications: {
+            pressing:         { value: "Pressing.",  na: false },
+            hard_and_hopeful: { value: "Hard/hope.", na: false },
+          },
+        }),
+      },
+      "sub_phase",
+      1,
+    );
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/Rewrite each main sentence/i);
+  });
+
+  it("fails Q3 when no row has a thought_unit_end with a summary", async () => {
+    const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
+    const result = evaluateAdvance(
+      {
+        id: "test",
+        observations: JSON.stringify({
+          context: "some content",
+          divisions: {
+            canvas: {
+              value: [
+                { id: "a", text: "Main A.", depth: 0, kind: "main", paraphrase: "PA." },
+                { id: "b", text: "modifier", depth: 1, kind: "modifier", paraphrase: "" },
+              ],
+              na: false,
+            },
+          },
+          obvious_point: "Plain-sense point.",
+          applications: {
+            pressing:         { value: "Pressing.",  na: false },
+            hard_and_hopeful: { value: "Hard/hope.", na: false },
+          },
+        }),
+      },
+      "sub_phase",
+      1,
+    );
+    expect(result.ok).toBe(false);
+    expect(result.reason).toMatch(/thought unit/i);
+  });
+
+  it("escape valve: canvas N/A satisfies the composite without populated rows", async () => {
+    const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
+    const result = evaluateAdvance(
+      {
+        id: "test",
+        observations: JSON.stringify({
+          context: "some content",
+          divisions: FIELD_3_UNIFIED_NA,
+          obvious_point: "Plain-sense point.",
+          applications: {
+            pressing:         { value: "Pressing.",  na: false },
+            hard_and_hopeful: { value: "Hard/hope.", na: false },
+          },
+        }),
+      },
+      "sub_phase",
+      1,
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  it("Field 3 unified gate slot reports met=true when threshold is fully satisfied", async () => {
+    const { evaluateAdvance } = await import("../../src/utils/studyAdvancement");
+    const result: any = evaluateAdvance(
+      {
+        id: "test",
+        observations: JSON.stringify({
+          context: "some content",
+          divisions: FIELD_3_UNIFIED_FILLED,
+          obvious_point: "Plain-sense point.",
+          applications: {
+            pressing:         { value: "Pressing.",  na: false },
+            hard_and_hopeful: { value: "Hard/hope.", na: false },
+          },
+        }),
+      },
+      "sub_phase",
+      1,
+    );
+    const f3 = result.gates?.find((g: { key: string }) => g.key === "field_3_divisions");
+    expect(f3?.met).toBe(true);
   });
 });
 

@@ -659,6 +659,98 @@ describe("SpotlightWorksheet — unified-canvas kind dispatch", () => {
     expect(document.querySelector(".indented-canvas-mark-unit")).toBeNull();
   });
 
+  it("clicking + Mark opens the unit-end editor inline", () => {
+    renderField3({
+      divisions: {
+        canvas: {
+          value: [
+            { id: "row-1", text: "Paul writes.", depth: 0, kind: "main", paraphrase: "" },
+          ],
+          na: false,
+        },
+      },
+    });
+    const button = document.querySelector(".indented-canvas-mark-unit");
+    expect(button).toBeTruthy();
+    fireEvent.click(button);
+    const editor = document.querySelector(".indented-canvas-unit-editor");
+    expect(editor).toBeTruthy();
+    expect(editor.querySelector(".indented-canvas-unit-summary")).toBeTruthy();
+    expect(editor.querySelector(".indented-canvas-unit-signal-input")).toBeTruthy();
+  });
+
+  it("typing in the unit-summary field emits onChange writing the canvas with thought_unit_end", () => {
+    const { onChange } = renderField3({
+      divisions: {
+        canvas: {
+          value: [
+            { id: "row-1", text: "Paul writes.", depth: 0, kind: "main", paraphrase: "" },
+          ],
+          na: false,
+        },
+      },
+    });
+    fireEvent.click(document.querySelector(".indented-canvas-mark-unit"));
+    fireEvent.change(document.querySelector(".indented-canvas-unit-summary"), {
+      target: { value: "Paul's opening thesis." },
+    });
+    expect(onChange).toHaveBeenCalled();
+    const last = onChange.mock.calls[onChange.mock.calls.length - 1];
+    expect(last[0]).toBe("divisions");
+    expect(last[1]).toBe("canvas");
+    expect(last[2][0].thought_unit_end).toMatchObject({
+      summary: "Paul's opening thesis.",
+      signal: "",
+    });
+  });
+
+  it("clicking Remove drops thought_unit_end from the row and the affordance returns", () => {
+    const { onChange } = renderField3({
+      divisions: {
+        canvas: {
+          value: [
+            { id: "row-1", text: "Paul writes.", depth: 0, kind: "main", paraphrase: "Pastor voice.",
+              thought_unit_end: { summary: "Paul's thesis.", signal: "" } },
+          ],
+          na: false,
+        },
+      },
+    });
+    // Filled state: callout visible, no affordance.
+    expect(document.querySelector(".indented-canvas-unit-cap")).toBeTruthy();
+    expect(document.querySelector(".indented-canvas-mark-unit")).toBeNull();
+
+    // Click callout to re-open editor; click Remove.
+    fireEvent.click(document.querySelector(".indented-canvas-unit-cap"));
+    const removeBtn = document.querySelector(".indented-canvas-unit-remove");
+    expect(removeBtn).toBeTruthy();
+    fireEvent.click(removeBtn);
+
+    // onChange last emit drops thought_unit_end on the row.
+    const last = onChange.mock.calls[onChange.mock.calls.length - 1];
+    expect(last[2][0].thought_unit_end).toBeUndefined();
+  });
+
+  it("typing in the inline paraphrase textarea emits onChange with paraphrase set on the main row", () => {
+    const { onChange } = renderField3({
+      divisions: {
+        canvas: {
+          value: [
+            { id: "row-1", text: "Paul writes.", depth: 0, kind: "main", paraphrase: "" },
+          ],
+          na: false,
+        },
+      },
+    });
+    const paraInput = document.querySelector(".indented-canvas-paraphrase-input");
+    expect(paraInput).toBeTruthy();
+    fireEvent.change(paraInput, { target: { value: "Paul opens with his name and authority." } });
+    const last = onChange.mock.calls[onChange.mock.calls.length - 1];
+    expect(last[2][0]).toMatchObject({
+      paraphrase: "Paul opens with his name and authority.",
+    });
+  });
+
   it("text-prompt questions without a kind continue to render textareas (back-compat)", () => {
     const TEXT_FIELD = {
       key: "context",

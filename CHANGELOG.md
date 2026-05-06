@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-05-05 — Field 3 Sprint 2 Session 4: tests + fixtures
+
+- Six new contract tests in `process-2-evidence-gated-ux.test.tsx` exercise the Field 3 unified-canvas gate against new-shape fixtures directly — no migration step — covering the pass case, three failure modes (no main+modifier, missing paraphrase, no thought-unit-end), the canvas-N/A escape valve, and the per-gate `met=true` reporting at the Observe → Interpret boundary.
+- Four new component tests in `SpotlightWorksheet.test.jsx` cover the unit-end editor lifecycle: `+ Mark` opens the inline editor, typing the summary emits canvas with `thought_unit_end`, Remove drops `thought_unit_end` and surfaces the affordance again, and inline paraphrase typing emits canvas with `paraphrase` set on the main row.
+- `ENFORCEMENT_STATUS.md` "Last verified" line bumped to note the new-shape fixture coverage; vitest at 403 green (up from 393).
+
+---
+
 ## 2026-05-05 — Field 3 Sprint 2 Session 3: cross-phase verification tests
 
 - New `studyFields.test.js` block simulates the full `StudyTab.updateStructured` flow at the data layer (parse → setDivisionsCanvas → serialize → re-parse) so canvas-edit propagation through the sermon-level JSON is covered as one wire.

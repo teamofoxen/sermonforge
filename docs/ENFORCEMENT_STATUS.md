@@ -1,6 +1,6 @@
 # Enforcement Status
 
-**Last verified:** 2026-05-05 — sweep PASS, 374 vitest green.
+**Last verified:** 2026-05-05 — preflight PASS, 403 vitest green; Field 3 unified-canvas gate now exercised against new-shape fixtures directly (no migration step).
 **Verified against:** [`docs/CORE.md`](CORE.md).
 **History:** see `git log docs/ENFORCEMENT_STATUS.md` and [`CHANGELOG.md`](../CHANGELOG.md). Per-event narrative is intentionally not duplicated here.
 
