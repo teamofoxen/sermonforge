@@ -25,15 +25,15 @@ All six items closed:
 
 ---
 
-## Backlog
+## Backlog — CLOSED 2026-05-05
 
-1. **Workspace tour rewrite — throughline-first reframe.** SFDI-reconciliation of the existing 30-stop tour SHIPPED 2026-05-05 (`workspaceTourStops.js` + `sermon-workspace-tour.md` mirror current Phase 1/2/3/4 SFDI shapes). Next iteration is a **structural reframe**: rebuild the tour as a throughline-anchored narrative (~15-18 stops) instead of a UI-surface walk. See `sermon-workspace-tour.md` § "Next iteration" for the proposed structure. Substrate is stable; pre-C2 stability check + C2 visualization both closed.
+1. **Workspace tour rewrite — throughline-first reframe — SHIPPED 2026-05-05** in commit `cbb41ec`. 17 throughline-first stops walking the cumulative thought-unit table + four named outcomes through MPT/MPS → Outline → FE → Frame → Manuscript → Delivery. Replaced the 30-stop SFDI-reconciled tour shipped earlier the same day.
 
 ---
 
-## Watch in real prep
+## Watch in real prep — RESOLVED 2026-05-05
 
-Three qualitative concerns that only verify under lived sermon prep, not implementation. Surface here if any of them fires:
+Lived sermon prep ran end-to-end on the new shape; **none of the three concerns below surfaced.** Listed here for historical reference and future watching:
 
 - **Throughline doesn't feel earned.** Spotlight feels claustrophobic; "Next question" reads as punitive; the pre-field overview reads as a wall before work; paste-intercept frustrates legitimate outside notes; per-cell no-AI feels like the app policing the pastor.
 - **MPT/MPS opens unmoored.** The four-phase synthesis is retired with no replacement. The bet is that the four named outcomes plus the cumulative thought-unit table carry the substrate without it. If they don't, MPT/MPS opens with nothing under it — a behavior-change loss before the named-outcome substrate registers as a gain.
