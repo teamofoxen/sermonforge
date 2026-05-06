@@ -6,6 +6,41 @@
 
 ---
 
+## Orientation
+
+The arc, in one sentence: the text says → the text means → the text points to Christ → the text lands on this congregation. One deepening exegetical work, one throughline, one preaching foundation strong enough that MPT and MPS can be drafted without reaching back into raw worksheet content.
+
+### The four sub-phases and what they produce
+
+| Sub-phase | The work | The named outcome |
+|---|---|---|
+| **Observe** | What does the text *say*? | **Observation Set** — a worked-through reading of the surface |
+| **Interpret** | What does the text *mean*? | **Interpretation Set** — meaning in your own words, anchored to observations |
+| **Redemptive Thread** | How does it point to Christ? | **Christ-Connection Statement** — the redemptive synthesis |
+| **Implications** | How does it land on this congregation? | **Implications Synthesis** — three-way conversation between Theological Significance, Personal Implications, and Pastoral Context |
+
+Each named outcome is what the next sub-phase opens against. Each handoff is felt.
+
+### How PC enters — pastor's articulation, verbatim
+
+> The point of exegesis is engagement with the world of text itself, as much as possible, without influence from modern context. That's to ensure that at the core of a sermon, God is speaking first. My PC shouldn't be driving the sermon, the text should be driving the sermon toward my PC.
+
+The progression: **Observe** awareness (PC's first surfacing through "Possible Implications") → **Interpret** marination (possible implications deepen as text-work deepens) → **Redemptive Thread** texture (gospel-centered understanding gives the implications real weight) → **Implications** integration (three-way conversation between Theological Significance, Personal Implications, and PC; PC is one of three voices, not orphaned to the top).
+
+### The non-negotiables
+
+- **Text speaks first.** PC is driven by the text, not the other way.
+- **Each field contributes to the throughline.** No field is filler. If a field doesn't earn its place, it doesn't belong.
+- **Each sub-phase produces its named outcome** through the field-work that earns it. The named outcome is the artifact, not a slogan.
+- **Every sub-phase boundary names its handoff.** What carries forward is explicit.
+- **AI augments. AI does not substitute** for the pastoral work.
+
+### The qualitative test
+
+By the time you reach MPT/MPS, the foundation feels earned. The four named outcomes are themselves substantive — you don't need to reach back into raw worksheet content to write the main point. If each element feels earned to you, the pastor will feel it too. The work is done when the throughline is real.
+
+---
+
 ## Why this initiative exists
 
 The Study Phase Re-Design (SPRD) investigation surfaced that the four sub-phases of Study — Observe, Interpret, Redemptive Thread, Implications — feel like four worksheets stapled together rather than a single deepening exegetical work. SPRD set out to fix that at the architecture layer (how the pastor moves through the sub-phases, how evidence is checked, how Pastoral Context enters).
@@ -96,7 +131,7 @@ This is large. Roughly 40 fields across four sub-phases need walkthrough entries
 - **Subsequent sessions:** "Resume SFDI at Observe, field four" (or wherever the previous session ended).
 - **Sub-phase-boundary session:** "SFDI within-sub-phase flow pass for Observe" (after all Observe fields are walked).
 
-For each field walk, Claude pulls the field's current state from `src/utils/studyFields.js`, surfaces Merida's cross-reference from `memory/project_cce_merida_source.md`, and proposes throughline connections to the next field. The pastor responds; Claude captures into the seven-slot entry under the field pattern (see "The Field Pattern" in `docs/PROPOSALS/study-field-definition-initiative.md`). Use `docs/PROPOSALS/sfdi-throughline-vision.md` as the in-session orientation sheet.
+For each field walk, Claude pulls the field's current state from `src/utils/studyFields.js`, surfaces Merida's cross-reference from `memory/project_cce_merida_source.md`, and proposes throughline connections to the next field. The pastor responds; Claude captures into the seven-slot entry under the field pattern (see "The Field Pattern" in `docs/PROPOSALS/study-field-definition-initiative.md`). Use the **Orientation** section above as the in-session orientation sheet.
 
 Entries accumulate in the working SFDI document at `docs/PROPOSALS/study-field-definition-initiative.md`.
 
@@ -138,7 +173,7 @@ Entries accumulate in the working SFDI document at `docs/PROPOSALS/study-field-d
 - SPRD says: "Implications has a three-way conversation." SFDI says which fields enact each voice.
 - SPRD says: "AI prompts treat PC as enrichment, never as a precondition." SFDI says what PC content each field carries that the prompts read from.
 
-SFDI runs in-session as described in "How to start a session" above. The vision sheet at `docs/PROPOSALS/sfdi-throughline-vision.md` is the live orientation sheet kept in view during walks.
+SFDI runs in-session as described in "How to start a session" above. The Orientation section at the top of this charter is the live orientation sheet kept in view during walks.
 
 ---
 

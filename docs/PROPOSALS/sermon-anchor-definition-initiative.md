@@ -2,7 +2,7 @@
 
 **Status:** Ratification walk complete 2026-05-04. Eleven structural rulings landed (named outcomes for both steps; cumulative-table closure; Process Contract #6 extension; SADI-wide N/A determination; AI principle; per-field question shapes; pre-field overview assignment). Per-field content-design walks (overview body text, pastor-side question framing copy, example outputs) remain as future per-field walks.
 **Charter:** [`sadi-charter.md`](./sadi-charter.md) — the why, the boundaries, the approach.
-**Vision sheet:** [`sadi-throughline-vision.md`](./sadi-throughline-vision.md) — the throughline arc kept in view during walks.
+**Orientation:** [`sadi-charter.md`](./sadi-charter.md) § Orientation — the throughline arc kept in view during walks.
 **Merida cross-reference:** `~/.claude/projects/C--Projects-SermonForge/memory/project_cce_merida_source.md` — the source SermonForge's structure was built from. Steps 2 and 5 sections are SADI-relevant.
 **SFDI working doc:** [`study-field-definition-initiative.md`](./study-field-definition-initiative.md) — Phase 4 Field 4 (Implications Synthesis) is the upstream substrate for SADI's Step 2 walks.
 **Field-state source of truth (today):** Step 2 fields (MPT/MPS) live inline in `src/components/StudyTab.jsx` (no central definitions yet); Step 5 fields (Intro/Conclusion) currently live in the Manuscript step until SPRD ships the Step 5 elevation (C3, SADI-gated).

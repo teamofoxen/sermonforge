@@ -7,6 +7,62 @@
 
 ---
 
+## Orientation
+
+The arc, in one sentence: the Implications Synthesis (SFDI Phase 4 named outcome) hands off to MPT (past, what the text meant) → MPS (present/future, what this sermon does for this congregation) → Outline + FE (the body, NOT in SADI scope) → Intro (frames the listener for the body) and Conclusion (lands the body's call) → Manuscript / Delivery. The four anchor fields — MPT, MPS, Intro, Conclusion — frame the body so the sermon can be received.
+
+### The two steps SADI walks
+
+| Step | Fields | Anchor function | Named outcome |
+|---|---|---|---|
+| **Step 2 — MPT/MPS Forge** | MPT, MPS | Message anchor — what the sermon is *about* | **Main Point Pair** (MPT + MPS, derivation visible) |
+| **Step 5 — Intro / Conclusion** | Intro, Conclusion | Listener-contact anchor — how the sermon *enters and exits* the room | **Sermon Frame** (Intro frames the body's listener-posture; Conclusion lands the body's call) |
+
+Each anchor reads from upstream named outcomes and hands forward to downstream work.
+
+### Where SADI sits in the workflow
+
+```
+Step 1 — Exegesis (SFDI: 4 sub-phases, 25 fields, 4 named outcomes)
+  ↓ Implications Synthesis →
+Step 2 — MPT/MPS Forge (SADI)
+  ↓ Main Point Pair →
+Step 3 — Outline Builder (not SADI)
+  ↓
+Step 4 — Functional Elements (not SADI)
+  ↓
+Step 5 — Intro / Conclusion (SADI)
+  ↓ Sermon Frame →
+Manuscript → Delivery
+```
+
+SADI's two scope-steps **bracket** the body work (Steps 3-4).
+
+### How the cumulative table closes
+
+SFDI's cumulative thought-unit table reaches six columns by Phase 4 (Thought unit | After line | Signal | Meaning | Christ-Connection | Implication). **The table closes there.** None of SADI's four anchor fields extends it. Steps 2-5 read the table *whole*, not per-unit, because they are unifications, not segmentations. MPT is one sentence about the *whole* text; MPS is one sentence about the *whole* sermon; Intro frames the whole listener; Conclusion lands one call to the whole room.
+
+### How PC enters the sermon-anchor work
+
+By the time the pastor reaches MPT/MPS, PC's substance is integrated into the Implications Synthesis as one of three voices. **MPT/MPS doesn't need separate PC handling** — the Synthesis carries the PC content. The MPS Draft prompt reads the Implications Synthesis directly; the "for this congregation" clause comes from the three-voice integration, not a separate PC tier. Intro names the listener-posture the body will need (drawn from the Synthesis's PC voice); Conclusion lands the body's call in language the room can receive.
+
+### The non-negotiables
+
+- **The Implications Synthesis is the substrate for MPT/MPS.** No AI re-summary; no reaching back into raw worksheet content.
+- **MPT is past tense + author-intended.** Single sentence, anchored in what the text meant.
+- **MPS is present/future tense + redemptive.** Single sentence, derived from MPT, gospel-driven (not moralistic — the gospel-makes-it-possible thread from SFDI Phase 3 Field 3 carries forward).
+- **Intro and Conclusion frame, don't repeat.** Intro doesn't restate the body; Conclusion summates and lands a response, not a recap.
+- **Each field contributes to its step's named outcome.** No filler.
+- **Every step boundary has a handoff,** articulated explicitly.
+- **AI augments. AI does not substitute** for the pastoral work.
+- **The text and the room together shape the anchors.** MPT comes from the text; MPS bridges; Intro/Conclusion are room-facing — but always anchored back to text-meaning via the SFDI named outcomes.
+
+### The qualitative test
+
+When the SermonForge workflow is run end-to-end, opening Step 2 should feel like the natural close of Step 1 (the Implications Synthesis is right there). Opening Step 5 should feel like the natural close of Step 4 (the body's named outcomes are right there). MPT shouldn't reach into raw text; MPS shouldn't be moralistic; Intro shouldn't improvise; Conclusion shouldn't recap. If each anchor feels earned, the sermon is preachable. If not, the anchors aren't anchored.
+
+---
+
 ## Why this initiative exists
 
 SFDI defined the structural integrity of Study (Step 1 — Exegesis): 25 fields across four sub-phases, four named outcomes, four sub-phase boundary handoffs. The Implications Synthesis (Phase 4 named outcome) hands off to MPT/MPS as the substrate for the main-point work.
@@ -113,7 +169,7 @@ None identified. Field labels are pastor-natural. No vocabulary collisions surfa
 
 For each field walk, Claude pulls the field's current state from the codebase (Step 2 fields live inline in `src/components/StudyTab.jsx`; Step 5 fields currently live in Manuscript step until SPRD ships the Step 5 elevation), surfaces Merida's cross-reference from `project_cce_merida_source.md`, and proposes throughline connections to the next field. The pastor responds; Claude captures into the seven-slot entry.
 
-Use [`sadi-throughline-vision.md`](./sadi-throughline-vision.md) as the in-session orientation sheet.
+Use the **Orientation** section above as the in-session orientation sheet.
 
 Entries accumulate in the working SADI document at [`sermon-anchor-definition-initiative.md`](./sermon-anchor-definition-initiative.md).
 

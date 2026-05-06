@@ -3,7 +3,7 @@
 **Status:** All four sub-phase walks complete (2026-05-03 → 2026-05-04). SFDI's structural completion test is satisfied: every field has a seven-slot entry, every sub-phase has a named outcome, every sub-phase boundary has a handoff articulation. Experiential completion is qualitative and tested in real sermon-prep use once SPRD Component 1 ships.
 **Last touched:** 2026-05-03.
 **Charter:** [`sfdi-charter.md`](./sfdi-charter.md) — the why, the boundaries, the approach.
-**Vision sheet:** [`sfdi-throughline-vision.md`](./sfdi-throughline-vision.md) — the throughline arc kept in view during walks.
+**Orientation:** [`sfdi-charter.md`](./sfdi-charter.md) § Orientation — the throughline arc kept in view during walks.
 **Merida cross-reference:** `memory/project_cce_merida_source.md` — the source SermonForge's Study structure was built from.
 **Field-state source of truth (today):** `src/utils/studyFields.js` — current `OBSERVE_FIELDS`, `INTERPRET_FIELDS`, `REDEMPTIVE_FIELDS`, `IMPLICATIONS_THEOLOGICAL`, `IMPLICATIONS_PERSONAL`.
 

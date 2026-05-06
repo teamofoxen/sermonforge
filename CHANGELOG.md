@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-05-05 — Retire SPRD scaffolding: merge vision sheets, mothball validators, archive SRIA
+
+- Vision sheets merged into charters: `sfdi-throughline-vision.md` → `sfdi-charter.md` § Orientation; `sadi-throughline-vision.md` → `sadi-charter.md` § Orientation. Both standalone vision files deleted; references in SFDI working doc, SADI working doc, SPRD planning doc, and `ANCHORS.md` repointed.
+- SFDI Python validators (`sfdi-internal-consistency.py` + `sfdi-cross-doc-consistency.py`) moved to `scripts/archive/` with a README — SFDI walks complete, validators idle.
+- SRIA (`study-redesign-implementation-anchor.md`) archived to `docs/ARCHIVE/` — SPRD shipped, re-entry index no longer load-bearing.
+- `ANCHORS.md` row count dropped from 8 to 5 (visions, SRIA removed).
+
+---
+
 ## 2026-05-05 — Clean up orphan references to retired SPIR / tunnel-mode / sweep-the-universe
 
 - SRIA: SPIR doc bullet dropped; "Something surfaced in real prep" navigation now points at SPIP § Watch in real prep.

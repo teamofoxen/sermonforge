@@ -188,7 +188,7 @@ Three structural commitments live in SPRD:
 - **The named outcome sits inside the sub-phase, not after it.** It is the work of the sub-phase, produced as the field-work composes — not an interstitial step between sub-phases.
 - **The handoff to the next sub-phase carries the named outcome forward.** The next sub-phase opens against it; the prior named outcome is the substrate the next work builds on.
 
-The substance — what each named outcome IS, what fields produce it, how the field-work composes into it — lives in SFDI. The current orientation sheet at `docs/PROPOSALS/sfdi-throughline-vision.md` carries the working set of named outcomes (Observation Set, Interpretation Set, Christ-Connection Statement, Implications Synthesis); SFDI's per-field walks deepen them. The names are subject to refinement during SFDI walks.
+The substance — what each named outcome IS, what fields produce it, how the field-work composes into it — lives in SFDI. The Orientation section at the top of `docs/PROPOSALS/sfdi-charter.md` carries the working set of named outcomes (Observation Set, Interpretation Set, Christ-Connection Statement, Implications Synthesis); SFDI's per-field walks deepen them. The names are subject to refinement during SFDI walks.
 
 **Two structural notes on shape that SPRD owns:**
 
