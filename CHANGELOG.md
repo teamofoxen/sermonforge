@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-05-05 — Retire SPIR + tunnel-mode + sweep-the-universe placeholder
+
+- `study-phase-implementation-remediation.md` deleted — risk register served implementation phase only; the three lived-use concerns were already lifted into SPIP "Watch in real prep" in the prior commit.
+- `docs/PROPOSALS/tunnel-mode.md` deleted — held design exploration with no revisit plan; prototype was reverted same-day on 2026-05-04.
+- `.claude/skills/sweep-the-universe/` deleted — placeholder skill with no content; `sweep-the-multiverse` covers the comprehensive-audit role.
+
+---
+
 ## 2026-05-05 — Workspace tour throughline-first rewrite (17 stops)
 
 - `workspaceTourStops.js` rewritten to 17 throughline-first stops; walks the cumulative thought-unit table + four named outcomes through MPT/MPS → Outline → Functional Elements → Frame → Manuscript → Delivery.
