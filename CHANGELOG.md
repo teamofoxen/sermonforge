@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-05-06 — Overnight audit summary 2026-05-06
+
+- Field 3 Sprint 2 follow-on: hunted across all greppable fixtures for the legacy three-question shape with verse-reference `after_line` values (the `Number("v.2") === NaN` defensive-merge bug class that hit the tour seed) — zero BUG candidates found; all surviving legacy-shape fixtures carry integer-string `after_line` values that `Number()` parses cleanly.
+- Phase 4 drift-sweep against `docs/SYSTEMS/sermon-workspace.md` and `docs/PROPOSALS/sfdi-charter.md` flagged the Phase 1 paragraph at sermon-workspace.md:150–172 still describing Field 3 with the pre-Sprint-2 three-question shape and listing retired `ParaphraseBlocks` as a primitive; charter doc is clean (zero hits).
+- No code or fixture edits — REPORT-only run per `feedback_audit_workflow` and the autonomous task's explicit scope; per-doc fix decisions deferred to morning review.
+- Validator script saved at `.drift/field-3-unified-canvas-drift.sh` (re-runnable) and full findings at `docs/audit-reports/2026-05-06-overnight-summary.md`.
+
+---
+
 ## 2026-05-06 — Tour seed migrated to unified-canvas shape; cross-doc validator drift edits actually landed
 
 - `electron/tourData.js` Field 3 divisions block converted from the legacy three-question shape (`sentence_layout` / `paraphrases` / `thought_units` with verse-reference `after_line`s like `"v.2"`) to the unified-canvas shape: 15 canvas rows with stable `tour-rom5-row-N` IDs, inline paraphrase per main row, three thought-unit-end markers attached to main rows (Standing on row 6, merged Pivot+Chain on row 8, Anchor on row 12) — fixes the silent migration failure where `Number("v.2")` is `NaN` so unit-ends never attached after defensive read-merge.
