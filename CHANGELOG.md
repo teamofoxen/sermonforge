@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-05-07 — Mac distribution: first signed + notarized public release (v1.0.0)
+
+- `package.json` mac config: `mergeASARs: false` (sidesteps `@electron/asar` minimatch overflow on universal builds with native modules), `notarize: true` driven by App Store Connect API key env vars.
+- `.github/workflows/build.yml`: macOS job timeboxed to 30 min, `if: failure() || cancelled()` step re-runs `xcrun notarytool --verbose` directly against the signed `.app` and uploads raw output as a workflow artifact.
+- Walked rc.1 → rc.13 isolating each layer — universal-ASAR merge, OpenSSL 3 vs Apple Keychain `.p12` format (regenerated with `-legacy`), notarize teamId/credentials conflict (App Store Connect API key path), and pending Apple Developer agreement that returned plaintext HTTP 403 from notarytool and crashed `@electron/notarize`'s JSON parser.
+- `v1.0.0` shipped: signed Windows NSIS + signed/notarized universal macOS DMG attached, both auto-update feeds (`latest.yml` + `latest-mac.yml`) live; `known-good/mac-pipeline-pre-diagnostic` rollback tag at `c509548`.
+
+---
+
 ## 2026-05-07 — Cap Resume rows so dashboard cards stay consistent height
 
 - `ResumeWorkTile` rows container capped at `max-height: 120px` with `overflow-y: auto` — prevents the tile from growing with sermon count and stops the hero/series tiles from getting bumped to a taller grid row by `grid-auto-rows: 1fr`.
