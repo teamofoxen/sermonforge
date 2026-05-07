@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-05-07 — Cap Resume rows so dashboard cards stay consistent height
+
+- `ResumeWorkTile` rows container capped at `max-height: 120px` with `overflow-y: auto` — prevents the tile from growing with sermon count and stops the hero/series tiles from getting bumped to a taller grid row by `grid-auto-rows: 1fr`.
+- `.slice(0, 5)` removed from the upcoming filter so all in-progress sermons stay reachable via scroll inside the cap.
+- Verified all four dashboard tiles now lock to 225px regardless of sermon count (0, 2, or 5+).
+
+---
+
 ## 2026-05-06 — Retire Field 3 redesign work artifacts
 
 - Deleted `.drift/field-3-unified-canvas-drift.sh` — one-time migration validator that converged at exit 0 once the unified-canvas drift was cleared from `sermon-workspace.md`; criteria targeted retired three-question language that won't reoccur naturally, so the script's job is done.

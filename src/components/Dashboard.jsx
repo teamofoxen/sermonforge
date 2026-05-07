@@ -40,7 +40,7 @@ export default function Dashboard({ onOpenSermon, onNewSeries, onLeaveTour }) {
 
   const today = new Date().toISOString().slice(0, 10);
   const overdue = inProgress.filter((s) => s.date && s.date < today);
-  const upcoming = inProgress.filter((s) => !s.date || s.date >= today).slice(0, 5);
+  const upcoming = inProgress.filter((s) => !s.date || s.date >= today);
 
   async function handleDeleteSermon(id) {
     await deleteSermon(id);
@@ -212,7 +212,12 @@ function ResumeWorkTile({ overdue, upcoming, onOpenSermon, onDeleteSermon }) {
           Nothing in flight. Start a sermon when you're ready.
         </p>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "12px" }}>
+        <div style={{
+          display: "flex", flexDirection: "column", gap: "10px",
+          marginTop: "12px",
+          maxHeight: "120px",
+          overflowY: "auto",
+        }}>
           {overdue.length > 0 && (
             <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
               <div style={{
