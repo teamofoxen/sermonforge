@@ -121,9 +121,7 @@
       "gatekeeperAssess": false,
       "entitlements": "build/entitlements.mac.plist",
       "entitlementsInherit": "build/entitlements.mac.plist",
-      "notarize": {
-        "teamId": "427LMGF9HY"
-      },
+      "notarize": true,
       "mergeASARs": false,
       "target": [
         {
