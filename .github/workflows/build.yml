@@ -112,6 +112,7 @@ jobs:
           echo "APPLE_API_KEY=$HOME/private_keys/AuthKey.p8" >> "$GITHUB_ENV"
 
       - name: Build and publish macOS DMG
+        timeout-minutes: 30
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
@@ -123,3 +124,59 @@ jobs:
           npx electron-builder --mac
           --publish always
           --config.directories.output=release
+
+      - name: Diagnostic — direct notarytool submit (only on failure)
+        if: failure() || cancelled()
+        env:
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+        run: |
+          set +e
+          mkdir -p diagnostic
+          APP_PATH=$(find release -type d -name "SermonForge.app" -maxdepth 4 2>/dev/null | head -1)
+          {
+            echo "=== Diagnostic context ==="
+            date -u
+            echo "APP_PATH: $APP_PATH"
+            echo "APPLE_API_KEY: $APPLE_API_KEY"
+            ls -la "$APPLE_API_KEY" 2>&1
+          } | tee diagnostic/notarytool-direct.log
+          if [ -z "$APP_PATH" ]; then
+            echo "No .app found — electron-builder failed before signing produced a bundle" >> diagnostic/notarytool-direct.log
+            exit 0
+          fi
+          {
+            echo "=== Codesign verification ==="
+            codesign --verify --deep --strict --verbose=4 "$APP_PATH" 2>&1
+            echo "=== Zipping .app for notarization ==="
+            ditto -c -k --keepParent "$APP_PATH" diagnostic/SermonForge-direct.zip 2>&1
+            ls -lh diagnostic/SermonForge-direct.zip
+            echo "=== xcrun notarytool submit (verbose, raw output) ==="
+            xcrun notarytool submit diagnostic/SermonForge-direct.zip \
+              --key "$APPLE_API_KEY" \
+              --key-id "$APPLE_API_KEY_ID" \
+              --issuer "$APPLE_API_ISSUER" \
+              --wait \
+              --verbose \
+              --timeout 25m 2>&1
+            NT_EXIT=$?
+            echo "=== notarytool exit code: $NT_EXIT ==="
+            SUB_ID=$(grep -oE "id: [a-f0-9-]{36}" diagnostic/notarytool-direct.log | head -1 | awk '{print $2}')
+            if [ -n "$SUB_ID" ]; then
+              echo "=== notarytool log $SUB_ID ==="
+              xcrun notarytool log "$SUB_ID" \
+                --key "$APPLE_API_KEY" \
+                --key-id "$APPLE_API_KEY_ID" \
+                --issuer "$APPLE_API_ISSUER" 2>&1
+            else
+              echo "Could not extract submission ID from log."
+            fi
+          } | tee -a diagnostic/notarytool-direct.log
+
+      - name: Diagnostic — upload raw notarytool log
+        if: failure() || cancelled()
+        uses: actions/upload-artifact@v4
+        with:
+          name: notarytool-diagnostic
+          path: diagnostic/
+          retention-days: 7
