@@ -1157,6 +1157,21 @@ export function flattenToText(data, fieldDefs) {
   return parts.join("\n");
 }
 
+// Minimum content length for a sub-phase to count as "genuinely engaged."
+// Intuition, not math — 20 chars catches "typed nothing" / "typed one word"
+// but passes any sentence-shaped answer.
+export const LOOK_AGAIN_MIN_CHARS = 20;
+
+/**
+ * Whether a sub-phase has at least `minChars` of pastor-typed content across
+ * its questions. Used to gate the Look Again button so AI is only invoked
+ * once the pastor has genuinely engaged the work. N/A questions don't
+ * contribute (they're excluded by flattenToText).
+ */
+export function hasMinimumSubstrate(data, fieldDefs, minChars = LOOK_AGAIN_MIN_CHARS) {
+  return flattenToText(data, fieldDefs).trim().length >= minChars;
+}
+
 /**
  * Flatten all 4 exegesis columns from structured JSON to plain text.
  * Drop-in replacement for summarizeExegesis when columns contain JSON.

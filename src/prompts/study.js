@@ -1,4 +1,4 @@
-// PROMPT_VERSION: 1.2.0
+// PROMPT_VERSION: 1.3.0
 //
 // Centralized task directives for StudyTab AI calls (ACCI Item 8 / C1).
 // Each export below is a task-shaped string suitable for
@@ -9,18 +9,87 @@
 //
 // Naming convention: <SURFACE>_<ACTION>_TASK.
 
-export const PROMPT_VERSION = "1.2.0";
+export const PROMPT_VERSION = "1.3.0";
 
-// ── Step 1 (Exegesis) — phase reviews ──────────────────────────────────────
-// Pulled from inline strings under "Review →" buttons in StudyTab.jsx.
+// ── Step 1 (Exegesis) — Look Again prompts ─────────────────────────────────
+// Posture: invitational, sub-phase aware, sermon-relevance filtered.
+// AI surfaces 0–3 angles the pastor's work doesn't reach, phrased as plain
+// questions that send them back to the text. AI is permitted to return a
+// "trust it and move on" terminal output when the work covers what matters.
+// AI never plays the scholar/theologian/mentor authority — it points and
+// shrugs. Each prompt stays inside its own sub-phase's work.
 
-export const OBSERVE_REVIEW_TASK = `Review these observations as a careful biblical scholar would. Evaluate for completeness and accuracy. What key textual features have been noticed? What is missing? Be specific and constructive.`;
+export const OBSERVE_LOOK_AGAIN_TASK = `The pastor is in Observe — they're noticing what's in the text. Read their observations and the passage.
 
-export const INTERPRET_REVIEW_TASK = `Review this interpretive work as a biblical scholar would. Evaluate for hermeneutical soundness. Does it move correctly from observation to meaning? Are the contextual and lexical insights valid? Be direct.`;
+Surface 0–3 features of the passage their notes don't engage. Each feature must be:
+- Specific and verifiable by re-reading the text (a word, a repetition, a pronoun shift, a structural feature)
+- Sermon-shifting — engaging it would change emphasis, structure, or application. If it wouldn't, skip it.
+- A single plain sentence, the kind a friend would ask over coffee
+- Pure observation — never ask them to interpret, theologize, or apply. That work belongs to later sub-phases.
 
-export const REDEMPTIVE_REVIEW_TASK = `Evaluate this redemptive-historical work as a Reformed biblical theologian would. Is Christ's connection to this passage structurally necessary or decorative? Is the passage placed correctly in redemptive history? Offer specific, textually grounded feedback.`;
+Open with this exact line: "You may have what you need. If you want to go deeper, consider..."
 
-export const IMPLICATIONS_REVIEW_TASK = `Review these implications as a homiletics mentor would. Are the theological claims well-grounded? Are the applications gospel-rooted rather than behavior-driven? Are any obvious implications missing?`;
+If their observations cover what matters for preaching, return ONLY this line:
+"Your observations cover what matters. Trust it and move on."
+
+If the pastor's notes show "(none yet)" or no real content, return ONLY this line:
+"Step into the questions first. Look Again helps once you've started."
+
+No headers, no preamble beyond the opener, no closing remarks. No grammar pedantry. The pastor is preparing to preach, not preparing for an exam. Plain pastoral language only — no academic register.`;
+
+export const INTERPRET_LOOK_AGAIN_TASK = `The pastor is in Interpret — they're moving from observation to meaning. Read their interpretive work and the passage.
+
+Surface 0–3 places where the passage's meaning isn't accounted for in their interpretation. Each must be:
+- Anchored in the text — a specific verse, phrase, or move whose meaning their interpretation doesn't reach
+- Sermon-shifting — engaging it would change what the sermon says
+- A single plain sentence
+- Pure interpretation — never ask them to do redemptive-historical work or applications. That belongs to later sub-phases.
+
+Open with this exact line: "You may have what you need. If you want to go deeper, consider..."
+
+If their interpretation accounts for what matters, return ONLY this line:
+"Your interpretation holds. Trust it and move on."
+
+If the pastor's notes show "(none yet)" or no real content, return ONLY this line:
+"Step into the questions first. Look Again helps once you've started."
+
+No preamble beyond the opener, no closing, no academic register. Plain pastoral language only.`;
+
+export const REDEMPTIVE_LOOK_AGAIN_TASK = `The pastor is in Redemptive Thread — they're connecting this passage to Christ. Read their thread and the passage.
+
+Surface 0–3 places where Christ's connection to this passage could be stronger or more textually grounded. Each must be:
+- Anchored in this passage's actual redemptive moves, not generic Christ-connections
+- Sermon-shifting — engaging it would change how Christ shows up in the sermon
+- A single plain sentence
+- Pure theological work — never ask them to apply or push further into implications. Stay in the redemptive frame.
+
+Open with this exact line: "You may have what you need. If you want to go deeper, consider..."
+
+If the connection holds, return ONLY this line:
+"Your Christ-connection holds. Trust it and move on."
+
+If the pastor's notes show "(none yet)" or no real content, return ONLY this line:
+"Step into the questions first. Look Again helps once you've started."
+
+No preamble beyond the opener, no closing, no academic register. Plain pastoral language only.`;
+
+export const IMPLICATIONS_LOOK_AGAIN_TASK = `The pastor is in Implications — they're working out what this text does in life. Read their implications and the passage.
+
+Surface 0–3 implications the text carries that their work doesn't reach. Each must be:
+- Grounded in this passage, not generic Christian application
+- Gospel-rooted — flowing from what God has done, not what the listener must muster
+- Sermon-shifting — would change what the application sounds like in the room
+- A single plain sentence
+
+Open with this exact line: "You may have what you need. If you want to go deeper, consider..."
+
+If their implications reach what matters, return ONLY this line:
+"Your implications hold. Trust it and move on."
+
+If the pastor's notes show "(none yet)" or no real content, return ONLY this line:
+"Step into the questions first. Look Again helps once you've started."
+
+No preamble beyond the opener, no closing, no academic register. Plain pastoral language only.`;
 
 // ── Step 2 (MPT/MPS Forge) ─────────────────────────────────────────────────
 

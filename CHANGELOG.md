@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-07 — Look Again: invitational prompts, substrate gate, topical-scoped chat
+
+- `src/prompts/study.js` v1.3.0: four `*_REVIEW_TASK` rewritten as `*_LOOK_AGAIN_TASK` — invitational opener, sermon-relevance filter, sub-phase guard, plain register, 0–3 questions with "trust it and move on" terminal output.
+- `StudyTab.jsx`: buttons relabeled "Review →" → "Look Again" and gated behind ≥20 chars of substrate via new `hasMinimumSubstrate` (`studyFields.js`); four inline blocks collapsed into a `LookAgainBlock` component.
+- `AIPanel.jsx`: free-form chat removed except at MPT_MPS / FUNCTIONAL_ELEMENTS; cold-open (no passage AND no MPT) hides the footer with a "Set a passage to begin" redirect; theology toggle paired with chat visibility.
+- `inputText` clears on every step change so drafts don't bleed across MPS/FE; `LOOK_AGAIN_MIN_CHARS` constant introduced for the substrate threshold.
+- Process Contract #5 strengthens: chat-surface carve-out narrowed to step-bound MPS/FE; new prompts permit empty-substrate refusal instead of fabricating substrate.
+
+---
+
 ## 2026-05-07 — Mac distribution: first signed + notarized public release (v1.0.0)
 
 - `package.json` mac config: `mergeASARs: false` (sidesteps `@electron/asar` minimatch overflow on universal builds with native modules), `notarize: true` driven by App Store Connect API key env vars.

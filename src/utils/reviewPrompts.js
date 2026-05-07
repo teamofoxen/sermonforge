@@ -14,7 +14,7 @@ import { STAGE } from "../core/contracts";
 import { getOutline } from "../utils";
 import {
   OUTLINE_REVIEW_TASK, CHALLENGE_MPT_TASK,
-  OBSERVE_REVIEW_TASK, INTERPRET_REVIEW_TASK, REDEMPTIVE_REVIEW_TASK, IMPLICATIONS_REVIEW_TASK,
+  OBSERVE_LOOK_AGAIN_TASK, INTERPRET_LOOK_AGAIN_TASK, REDEMPTIVE_LOOK_AGAIN_TASK, IMPLICATIONS_LOOK_AGAIN_TASK,
 } from "../prompts/study";
 import {
   OBSERVE_FIELDS, INTERPRET_FIELDS, REDEMPTIVE_FIELDS, IMPLICATIONS_FIELDS,
@@ -42,8 +42,8 @@ export function getReviewPrompt(tab, sermon, activeStep) {
       const obsData = parseStructuredField(sermon?.observations);
       const filled = flattenToText(obsData, OBSERVE_FIELDS);
       return {
-        system: OBSERVE_REVIEW_TASK,
-        prompt: `Review observations for ${passage}.\n\nMy observations:\n${filled || "(none yet)"}`,
+        system: OBSERVE_LOOK_AGAIN_TASK,
+        prompt: `Observations on ${passage}:\n\n${filled || "(none yet)"}`,
       };
     }
 
@@ -51,8 +51,8 @@ export function getReviewPrompt(tab, sermon, activeStep) {
       const intData = parseStructuredField(sermon?.interpretation);
       const filled = flattenToText(intData, INTERPRET_FIELDS);
       return {
-        system: INTERPRET_REVIEW_TASK,
-        prompt: `Review interpretation work for ${passage}.\n\nMy interpretation:\n${filled || "(none yet)"}`,
+        system: INTERPRET_LOOK_AGAIN_TASK,
+        prompt: `Interpretation of ${passage}:\n\n${filled || "(none yet)"}`,
       };
     }
 
@@ -60,8 +60,8 @@ export function getReviewPrompt(tab, sermon, activeStep) {
       const redData = parseStructuredField(sermon?.redemptive_thread);
       const filled = flattenToText(redData, REDEMPTIVE_FIELDS);
       return {
-        system: REDEMPTIVE_REVIEW_TASK,
-        prompt: `Review redemptive-thread work for ${passage}.\n\nMy redemptive thread notes:\n${filled || "(none yet)"}`,
+        system: REDEMPTIVE_LOOK_AGAIN_TASK,
+        prompt: `Redemptive thread for ${passage}:\n\n${filled || "(none yet)"}`,
       };
     }
 
@@ -69,8 +69,8 @@ export function getReviewPrompt(tab, sermon, activeStep) {
       const impData = parseStructuredField(sermon?.implications);
       const filled = flattenToText(impData, IMPLICATIONS_FIELDS);
       return {
-        system: IMPLICATIONS_REVIEW_TASK,
-        prompt: `Review implications for ${passage}.\n\nMy implications:\n${filled || "(none yet)"}`,
+        system: IMPLICATIONS_LOOK_AGAIN_TASK,
+        prompt: `Implications from ${passage}:\n\n${filled || "(none yet)"}`,
       };
     }
 

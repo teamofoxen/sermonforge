@@ -12,7 +12,7 @@ import {
   parseStructuredField, serializeStructuredField,
   getPrimaryAnswer, setPrimaryAnswer, setQuestionAnswer, hasAnyAnswer,
   isQuestionNA, setQuestionNA, DEFAULT_QUESTION_KEY,
-  flattenToText,
+  flattenToText, hasMinimumSubstrate,
   fieldQuestions, getQuestionAnswer, flattenAnswerValue,
   setDivisionsCanvas,
 } from "../utils/studyFields";
@@ -28,7 +28,7 @@ import { parseAIJson, validateScriptureMap } from "../utils/aiSchema";
 import { buildSystemPrompt, appendTaskDirective } from "../prompts/sermon";
 import {
   FE_CHAT_SYSTEM,
-  OBSERVE_REVIEW_TASK, INTERPRET_REVIEW_TASK, REDEMPTIVE_REVIEW_TASK, IMPLICATIONS_REVIEW_TASK,
+  OBSERVE_LOOK_AGAIN_TASK, INTERPRET_LOOK_AGAIN_TASK, REDEMPTIVE_LOOK_AGAIN_TASK, IMPLICATIONS_LOOK_AGAIN_TASK,
   MPT_DRAFT_TASK, MPS_Q1_TRANSLATE_TASK,
   POPULATE_SCRIPTURE_TASK,
   OUTLINE_REVIEW_TASK,
@@ -390,6 +390,46 @@ function buildRailSubPhases(sermon, obsData, intData, redData, impData, activeId
       fields, done,
     };
   });
+}
+
+// Per-sub-phase Look Again button + inline response. The four sub-phases
+// (Observe / Interpret / Redemptive Thread / Implications) all share this
+// shape: a substrate-gated button that flattens the pastor's structured
+// answers and fires the sub-phase's Look Again prompt; an inline response
+// area below for AI's reply.
+function LookAgainBlock({
+  data, fields, fetchKey, prefix, task, phase, label,
+  inlineLoading, inlineResponses, fetchInline, dismissInline,
+}) {
+  const ready = hasMinimumSubstrate(data, fields);
+  return (
+    <>
+      <div style={{ marginTop: "8px" }}>
+        <SecondaryButton
+          size="sm"
+          onClick={() => {
+            const filled = flattenToText(data, fields);
+            fetchInline(
+              fetchKey,
+              `${prefix}:\n\n${filled || "(none yet)"}`,
+              task,
+              phase,
+            );
+          }}
+          disabled={inlineLoading !== null || !ready}
+          title={!ready ? "Engage at least one question first." : ""}
+        >
+          {inlineLoading === fetchKey ? "Thinking…" : "Look Again"}
+        </SecondaryButton>
+      </div>
+      <InlineAIResponse
+        fieldName={label}
+        response={inlineResponses[fetchKey]}
+        loading={inlineLoading === fetchKey}
+        onDismiss={() => dismissInline(fetchKey)}
+      />
+    </>
+  );
 }
 
 export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChange, onTabChange, onSummaryGenerated, onMovement }) {
@@ -1112,30 +1152,18 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                 requestActiveToken={railRequest?.phase === 1 ? railRequest.token : null}
                 onActiveFieldKeyChange={setCurrentActiveFieldKey}
               />
-              <div style={{ marginTop: "8px" }}>
-                <SecondaryButton
-                  size="sm"
-                  onClick={() => {
-                    // Use flattenToText so multi-question fields surface
-                    // (closes B1.0-era getPrimaryAnswer-only bug for Phase 1).
-                    const filled = flattenToText(obsData, OBSERVE_FIELDS);
-                    fetchInline(
-                      "observe",
-                      `My observations:\n\n${filled || "(none yet)"}`,
-                      OBSERVE_REVIEW_TASK,
-                      PHASES.OBSERVE,
-                    );
-                  }}
-                  disabled={inlineLoading !== null}
-                >
-                  {inlineLoading === "observe" ? "Thinking…" : "Review →"}
-                </SecondaryButton>
-              </div>
-              <InlineAIResponse
-                fieldName="Observations"
-                response={inlineResponses["observe"]}
-                loading={inlineLoading === "observe"}
-                onDismiss={() => dismissInline("observe")}
+              <LookAgainBlock
+                data={obsData}
+                fields={OBSERVE_FIELDS}
+                fetchKey="observe"
+                prefix="My observations"
+                task={OBSERVE_LOOK_AGAIN_TASK}
+                phase={PHASES.OBSERVE}
+                label="Observations"
+                inlineLoading={inlineLoading}
+                inlineResponses={inlineResponses}
+                fetchInline={fetchInline}
+                dismissInline={dismissInline}
               />
             </div>
           )}
@@ -1166,30 +1194,18 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                 requestActiveToken={railRequest?.phase === 2 ? railRequest.token : null}
                 onActiveFieldKeyChange={setCurrentActiveFieldKey}
               />
-              <div style={{ marginTop: "8px" }}>
-                <SecondaryButton
-                  size="sm"
-                  onClick={() => {
-                    // Use flattenToText so multi-question fields surface
-                    // (closes B1.0-era getPrimaryAnswer-only bug for Phase 2).
-                    const filled = flattenToText(intData, INTERPRET_FIELDS);
-                    fetchInline(
-                      "interpret",
-                      `My interpretation:\n\n${filled || "(none yet)"}`,
-                      INTERPRET_REVIEW_TASK,
-                      PHASES.INTERPRET,
-                    );
-                  }}
-                  disabled={inlineLoading !== null}
-                >
-                  {inlineLoading === "interpret" ? "Thinking…" : "Review →"}
-                </SecondaryButton>
-              </div>
-              <InlineAIResponse
-                fieldName="Interpretation"
-                response={inlineResponses["interpret"]}
-                loading={inlineLoading === "interpret"}
-                onDismiss={() => dismissInline("interpret")}
+              <LookAgainBlock
+                data={intData}
+                fields={INTERPRET_FIELDS}
+                fetchKey="interpret"
+                prefix="My interpretation"
+                task={INTERPRET_LOOK_AGAIN_TASK}
+                phase={PHASES.INTERPRET}
+                label="Interpretation"
+                inlineLoading={inlineLoading}
+                inlineResponses={inlineResponses}
+                fetchInline={fetchInline}
+                dismissInline={dismissInline}
               />
             </div>
           )}
@@ -1224,30 +1240,18 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                 onActiveFieldKeyChange={setCurrentActiveFieldKey}
               />
 
-              <div style={{ marginTop: "8px" }}>
-                <SecondaryButton
-                  size="sm"
-                  onClick={() => {
-                    // Use flattenToText so multi-question fields surface
-                    // (closes B1.0-era getPrimaryAnswer-only bug for Phase 3).
-                    const filled = flattenToText(redData, REDEMPTIVE_FIELDS);
-                    fetchInline(
-                      "redemptive",
-                      `Redemptive thread answers:\n\n${filled || "(none yet)"}`,
-                      REDEMPTIVE_REVIEW_TASK,
-                      PHASES.REDEMPTIVE_THREAD,
-                    );
-                  }}
-                  disabled={inlineLoading !== null}
-                >
-                  {inlineLoading === "redemptive" ? "Thinking…" : "Review →"}
-                </SecondaryButton>
-              </div>
-              <InlineAIResponse
-                fieldName="Redemptive Thread"
-                response={inlineResponses["redemptive"]}
-                loading={inlineLoading === "redemptive"}
-                onDismiss={() => dismissInline("redemptive")}
+              <LookAgainBlock
+                data={redData}
+                fields={REDEMPTIVE_FIELDS}
+                fetchKey="redemptive"
+                prefix="Redemptive thread answers"
+                task={REDEMPTIVE_LOOK_AGAIN_TASK}
+                phase={PHASES.REDEMPTIVE_THREAD}
+                label="Redemptive Thread"
+                inlineLoading={inlineLoading}
+                inlineResponses={inlineResponses}
+                fetchInline={fetchInline}
+                dismissInline={dismissInline}
               />
             </div>
           )}
@@ -1281,32 +1285,18 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                 onActiveFieldKeyChange={setCurrentActiveFieldKey}
               />
 
-              <div style={{ marginTop: "8px" }}>
-                <SecondaryButton
-                  size="sm"
-                  onClick={() => {
-                    // Build the review prompt's "filled" content using
-                    // flattenToText so multi-question fields (Fields 1/2/3)
-                    // surface — closes the B1.0-era `getPrimaryAnswer`-only
-                    // bug for Phase 4's Review path.
-                    const filled = flattenToText(impData, IMPLICATIONS_FIELDS);
-                    fetchInline(
-                      "implications",
-                      `Implications:\n\n${filled || "(none yet)"}`,
-                      IMPLICATIONS_REVIEW_TASK,
-                      PHASES.IMPLICATIONS,
-                    );
-                  }}
-                  disabled={inlineLoading !== null}
-                >
-                  {inlineLoading === "implications" ? "Thinking…" : "Review →"}
-                </SecondaryButton>
-              </div>
-              <InlineAIResponse
-                fieldName="Implications"
-                response={inlineResponses["implications"]}
-                loading={inlineLoading === "implications"}
-                onDismiss={() => dismissInline("implications")}
+              <LookAgainBlock
+                data={impData}
+                fields={IMPLICATIONS_FIELDS}
+                fetchKey="implications"
+                prefix="Implications"
+                task={IMPLICATIONS_LOOK_AGAIN_TASK}
+                phase={PHASES.IMPLICATIONS}
+                label="Implications"
+                inlineLoading={inlineLoading}
+                inlineResponses={inlineResponses}
+                fetchInline={fetchInline}
+                dismissInline={dismissInline}
               />
             </div>
           )}

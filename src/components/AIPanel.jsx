@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import ReactMarkdown from "react-markdown";
 import { autoResize } from "../utils";
 import { sendAIMessage } from "../utils/ai";
+import { STEPS } from "../constants/steps";
 import { buildContext, describeContext, readPastoralContext } from "../utils/contextBuilder";
 import { captureResponsePatterns } from "../utils/memory";
 import { buildSystemPrompt, appendTaskDirective, getActiveRole, THEOLOGY_RESEARCH_PROMPT, INCORPORATE_REVISION_PROMPT } from "../prompts/sermon";
@@ -340,6 +341,28 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
   const historyTrimmed = messages.length > MAX_HISTORY_TURNS * 2;
   const turnCount = Math.min(MAX_HISTORY_TURNS, Math.ceil(messages.length / 2));
 
+  // Topical scoping: the free-form chat input is the largest contract pressure
+  // point in the AI surface. Close it everywhere except the two steps where
+  // multi-turn refinement is genuinely the work — MPT/MPS Forge (iterating on
+  // a single sentence) and Functional Elements (developing E/A/I per point).
+  // Cold-open (no passage AND no MPT) hides the entire footer — AI helps once
+  // the pastor has started, not before. Theology toggle is paired with the
+  // chat input since it gates how typed text routes; relocates with it.
+  const isColdOpen = !sermon?.passage && !sermon?.mpt;
+  const showChatInput =
+    !isColdOpen &&
+    (effectiveStep === STEPS.MPT_MPS || effectiveStep === STEPS.FUNCTIONAL_ELEMENTS);
+  const chatPlaceholder = effectiveStep === STEPS.MPT_MPS
+    ? "Refine your MPS… (Enter to send, Shift+Enter for new line)"
+    : "Develop a point's explanation, application, or illustration… (Enter to send)";
+
+  // Drafts are step-bound. Clearing on every step change keeps an unsent MPS
+  // draft from re-appearing under the FE placeholder (or vice versa) and
+  // matches the topical-scoping intent of the input itself.
+  useEffect(() => {
+    setInputText("");
+  }, [effectiveStep]);
+
   return (
     <aside className="ai-panel" data-tour-id="ai-panel">
       <div className="ai-panel-header" data-tour-id="ai-panel-header">
@@ -401,7 +424,9 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
         )}
         {messages.length === 0 && !loading && (
           <div className="ai-message empty-state">
-            Ask anything about your passage, or use the quick actions below.
+            {isColdOpen
+              ? "Set a passage to begin. AI helps once you've started working the text."
+              : "Use Review My Work for feedback on your work."}
           </div>
         )}
         {messages.map((msg, i) => {
@@ -486,81 +511,84 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
         <div ref={messagesEndRef} />
       </div>
 
-      <div className="ai-panel-footer">
-        {/* Review My Work */}
-        <PrimaryButton
-          style={{ width: "100%", marginBottom: "10px" }}
-          onClick={() => {
-            const { prompt, system } = getReviewPrompt(activeTab, sermon, activeStep);
-            const step = activeStep || activeTab;
-            const reviewMeta = getStepFieldConfig(step) ? { isReview: true, reviewStep: step } : {};
-            sendMessage(prompt, system, step, sermon?.id, reviewMeta);
-          }}
-          disabled={loading}
-        >
-          Review My Work
-        </PrimaryButton>
-
-        {/* Series Coherence Check — only shown when series big idea exists */}
-        {sermon?.series?.big_idea && (
-          <SecondaryButton
+      {!isColdOpen && (
+        <div className="ai-panel-footer">
+          {/* Review My Work */}
+          <PrimaryButton
             style={{ width: "100%", marginBottom: "10px" }}
-            onClick={handleSeriesCoherenceCheck}
+            onClick={() => {
+              const { prompt, system } = getReviewPrompt(activeTab, sermon, activeStep);
+              const step = activeStep || activeTab;
+              const reviewMeta = getStepFieldConfig(step) ? { isReview: true, reviewStep: step } : {};
+              sendMessage(prompt, system, step, sermon?.id, reviewMeta);
+            }}
             disabled={loading}
           >
-            Check Series Alignment
-          </SecondaryButton>
-        )}
+            Review My Work
+          </PrimaryButton>
 
-        {/* Theology library toggle. Label changes when sqlite-vec / embedder
-            is unavailable so the pastor isn't told they're getting semantic
-            results when they're actually FTS-only. */}
-        {theologyAvailable && (
-          <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12px", color: "var(--ink-soft)", marginBottom: "8px", cursor: "pointer" }}>
-            <input
-              type="checkbox"
-              checked={theologyEnabled}
-              onChange={e => setTheologyEnabled(e.target.checked)}
-            />
-            {theologySemantic ? "Search Theology Library" : "Search Theology Library (keyword only)"}
-          </label>
-        )}
+          {/* Series Coherence Check — only shown when series big idea exists */}
+          {sermon?.series?.big_idea && (
+            <SecondaryButton
+              style={{ width: "100%", marginBottom: "10px" }}
+              onClick={handleSeriesCoherenceCheck}
+              disabled={loading}
+            >
+              Check Series Alignment
+            </SecondaryButton>
+          )}
 
-        {/* "What I can see" — context snapshot the AI will receive on the next send */}
-        <ContextSnapshotPanel
-          open={showContextPanel}
-          onToggle={() => setShowContextPanel(v => !v)}
-          sermon={sermon}
-          step={effectiveStep}
-          theologyMode={theologyMode}
-          turnCount={turnCount}
-          historyTrimmed={historyTrimmed}
-        />
+          {/* Theology library toggle — paired with chat input since it gates
+              how typed text routes. Only visible at MPT_MPS / FE steps where
+              the chat input itself is visible. */}
+          {showChatInput && theologyAvailable && (
+            <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "12px", color: "var(--ink-soft)", marginBottom: "8px", cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={theologyEnabled}
+                onChange={e => setTheologyEnabled(e.target.checked)}
+              />
+              {theologySemantic ? "Search Theology Library" : "Search Theology Library (keyword only)"}
+            </label>
+          )}
 
-        {/* Free-form chat input */}
-        <div className="ai-input-row">
-          <textarea
-            className="ai-input"
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            onInput={(e) => autoResize(e.target)}
-            ref={(el) => autoResize(el)}
-            onKeyDown={handleInputKeyDown}
-            placeholder="Ask anything… (Enter to send, Shift+Enter for new line)"
-            rows={1}
-            disabled={loading}
+          {/* "What I can see" — context snapshot the AI will receive on the next send */}
+          <ContextSnapshotPanel
+            open={showContextPanel}
+            onToggle={() => setShowContextPanel(v => !v)}
+            sermon={sermon}
+            step={effectiveStep}
+            theologyMode={theologyMode}
+            turnCount={turnCount}
+            historyTrimmed={historyTrimmed}
           />
-          <IconButton
-            aria-label="Send message"
-            className="ai-send-btn"
-            onClick={handleSendInput}
-            disabled={loading || !inputText.trim()}
-            title="Send"
-          >
-            →
-          </IconButton>
+
+          {showChatInput && (
+            <div className="ai-input-row">
+              <textarea
+                className="ai-input"
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                onInput={(e) => autoResize(e.target)}
+                ref={(el) => autoResize(el)}
+                onKeyDown={handleInputKeyDown}
+                placeholder={chatPlaceholder}
+                rows={1}
+                disabled={loading}
+              />
+              <IconButton
+                aria-label="Send message"
+                className="ai-send-btn"
+                onClick={handleSendInput}
+                disabled={loading || !inputText.trim()}
+                title="Send"
+              >
+                →
+              </IconButton>
+            </div>
+          )}
         </div>
-      </div>
+      )}
 
       {incorporateLoading && (
         <div style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 10, borderRadius: "var(--radius)", fontSize: "13px", color: "var(--ink-soft)" }}>
