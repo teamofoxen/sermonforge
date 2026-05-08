@@ -28,14 +28,6 @@ function StencilPortrait({ preacher }) {
           src={url}
           alt=""
           onError={() => setImgOk(false)}
-          style={{
-            position: "absolute",
-            inset: 7,
-            width: "calc(100% - 14px)",
-            height: "calc(100% - 14px)",
-            objectFit: "cover",
-            objectPosition: "center 20%",
-          }}
         />
       ) : (
         <svg viewBox="0 0 60 80" fill="currentColor" preserveAspectRatio="xMidYMid meet">

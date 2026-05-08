@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-05-08 — Dashboard polish pass: pane + sidebar implementation from Claude Design
+
+- Pane: hero gets 5px gold-gradient bar + new `--shadow-hero` token + 320px corner glow; eyebrows unified across all four tiles (gold ring, hero gets filled `.is-primary`); tile padding 22/28/20, fixed 240px height, dropped `grid-auto-rows: 1fr`; verse band gradient eased to 3-stop with fading 56px-inset gold seam; rows extracted from inline styles into shared `.dash-row` component (Resume + Explore unified); preacher quote gets fading parchment-deep top hairline.
+- Sidebar: logo lockup left-aligned with 22/24/20 padding and inset 24px gold divider; section label and footer flipped to JetBrains Mono caps (9px/0.28em label, 9.5px/0.18em footer); nav item rhythm 11/24, gap 12; sidebar's gold right edge swapped from background-image trick to vertical-fading `::after` gradient.
+- Dark-mode overrides: verse-band gradient flips to dark tokens, row background drops to 4% white wash with 8% on hover, hero shadow restated with black drop + brightened gold rim.
+- Verse band gets `min-height: 170px` so 1- and 2-line verses occupy the same vertical space — dashboard content no longer shifts when the rotating verse changes length.
+
+---
+
 ## 2026-05-08 — BTI Build MVP: transport endpoint and telemetry bus live
 
 - Charter synced 2026-05-07 to the production-IS-the-beta ruling — Q5 retired, Phase 1 lightweight scope locked, `docs/PROPOSALS/bti-build-mvp.md` adds the Chunks 1-7 implementation plan.

@@ -90,10 +90,7 @@ export default function Dashboard({ onOpenSermon, onNewSeries, onLeaveTour }) {
                 }
               }}
             >
-              <div className="tile-eyebrow">
-                <span className="dot" />
-                <span>Begin&nbsp;work</span>
-              </div>
+              <div className="tile-eyebrow is-primary">Begin&nbsp;work</div>
               <h2 className="tile-title">
                 Build a sermon.
               </h2>
@@ -126,7 +123,7 @@ export default function Dashboard({ onOpenSermon, onNewSeries, onLeaveTour }) {
                 }
               }}
             >
-              <div className="tile-eyebrow tile-eyebrow-soft">Plan&nbsp;ahead</div>
+              <div className="tile-eyebrow">Plan&nbsp;ahead</div>
               <h3 className="tile-title">
                 Build a series.
               </h3>
@@ -147,18 +144,20 @@ export default function Dashboard({ onOpenSermon, onNewSeries, onLeaveTour }) {
             />
 
             {/* EXPLORE — orientation paths for new pastors. */}
-            <div className="dash-tile tile-secondary" style={{ display: "flex", flexDirection: "column" }}>
-              <div className="tile-eyebrow tile-eyebrow-soft">Look&nbsp;around</div>
+            <div className="dash-tile tile-secondary">
+              <div className="tile-eyebrow">Look&nbsp;around</div>
               <h3 className="tile-title">Explore SermonForge.</h3>
-              <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "12px" }}>
+              <div className="dash-rows">
                 <ExploreRow
                   label="Take the guided tour"
+                  meta="Five minutes · Walk-through"
                   loading={loadingAction === "tour"}
                   disabled={!!loadingAction}
                   onClick={() => openSampleSermon({ launchTour: true })}
                 />
                 <ExploreRow
                   label="Open a sample sermon"
+                  meta="Romans 8:28–39 · Worked example"
                   loading={loadingAction === "sample"}
                   disabled={!!loadingAction}
                   onClick={() => openSampleSermon({ launchTour: false })}
@@ -203,8 +202,8 @@ function ResumeWorkTile({ overdue, upcoming, onOpenSermon, onDeleteSermon }) {
   const isEmpty = overdue.length === 0 && upcoming.length === 0;
 
   return (
-    <div className="dash-tile tile-secondary" style={{ display: "flex", flexDirection: "column" }}>
-      <div className="tile-eyebrow tile-eyebrow-soft">Resume&nbsp;work</div>
+    <div className="dash-tile tile-secondary">
+      <div className="tile-eyebrow">Resume&nbsp;work</div>
       <h3 className="tile-title">Where you left off.</h3>
 
       {isEmpty ? (
@@ -212,40 +211,13 @@ function ResumeWorkTile({ overdue, upcoming, onOpenSermon, onDeleteSermon }) {
           Nothing in flight. Start a sermon when you're ready.
         </p>
       ) : (
-        <div style={{
-          display: "flex", flexDirection: "column", gap: "10px",
-          marginTop: "12px",
-          maxHeight: "120px",
-          overflowY: "auto",
-        }}>
-          {overdue.length > 0 && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              <div style={{
-                fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.06em",
-                color: "var(--crimson-soft)", fontWeight: 600,
-              }}>
-                Delivered without marking complete
-              </div>
-              {overdue.map((s) => (
-                <ResumeRow key={s.id} sermon={s} onOpen={onOpenSermon} onDelete={onDeleteSermon} flagged />
-              ))}
-            </div>
-          )}
-          {upcoming.length > 0 && (
-            <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-              {overdue.length > 0 && (
-                <div style={{
-                  fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.06em",
-                  color: "var(--ink-ghost)", fontWeight: 600, marginTop: "4px",
-                }}>
-                  In progress
-                </div>
-              )}
-              {upcoming.map((s) => (
-                <ResumeRow key={s.id} sermon={s} onOpen={onOpenSermon} onDelete={onDeleteSermon} />
-              ))}
-            </div>
-          )}
+        <div className="dash-rows">
+          {overdue.map((s) => (
+            <ResumeRow key={s.id} sermon={s} onOpen={onOpenSermon} onDelete={onDeleteSermon} flagged />
+          ))}
+          {upcoming.map((s) => (
+            <ResumeRow key={s.id} sermon={s} onOpen={onOpenSermon} onDelete={onDeleteSermon} />
+          ))}
         </div>
       )}
     </div>
@@ -255,6 +227,7 @@ function ResumeWorkTile({ overdue, upcoming, onOpenSermon, onDeleteSermon }) {
 function ResumeRow({ sermon, onOpen, onDelete, flagged }) {
   return (
     <div
+      className={`dash-row${flagged ? " is-overdue" : ""}`}
       role="button"
       tabIndex={0}
       onClick={() => onOpen?.(sermon.id)}
@@ -264,29 +237,25 @@ function ResumeRow({ sermon, onOpen, onDelete, flagged }) {
           onOpen?.(sermon.id);
         }
       }}
-      style={{
-        display: "flex", alignItems: "center", gap: "10px",
-        cursor: "pointer",
-        padding: "8px 10px",
-        borderRadius: "var(--radius)",
-        background: "var(--parchment-warm)",
-        borderLeft: flagged ? "3px solid var(--crimson-soft)" : "3px solid var(--gold)",
-        fontFamily: "var(--font-serif)",
-      }}
     >
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{
-          fontSize: "13px", color: "var(--ink)", fontWeight: 600,
-          whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-        }}>
-          {sermon.title || "Untitled"}
-        </div>
-        <div style={{ fontSize: "11px", color: "var(--ink-ghost)", marginTop: "2px" }}>
-          {sermon.passage || "—"}
-          {sermon.date && <> · {formatDate(sermon.date)}</>}
-          {sermon.series_title && <> · {sermon.series_title}</>}
+      <div className="dash-row-body">
+        <div className="dash-row-title">{sermon.title || "Untitled"}</div>
+        <div className="dash-row-meta">
+          {flagged ? (
+            <>
+              <span className="flag">Delivered — mark complete</span>
+              {sermon.date && <><span className="sep">·</span>{formatDate(sermon.date)}</>}
+            </>
+          ) : (
+            <>
+              {sermon.passage || "—"}
+              {sermon.date && <><span className="sep">·</span>{formatDate(sermon.date)}</>}
+              {sermon.series_title && <><span className="sep">·</span>{sermon.series_title}</>}
+            </>
+          )}
         </div>
       </div>
+      <span className="dash-row-arr" aria-hidden="true">→</span>
       {onDelete && (
         <DeleteButton small onDelete={() => onDelete(sermon.id)} />
       )}
@@ -294,9 +263,10 @@ function ResumeRow({ sermon, onOpen, onDelete, flagged }) {
   );
 }
 
-function ExploreRow({ label, loading, disabled, onClick }) {
+function ExploreRow({ label, meta, loading, disabled, onClick }) {
   return (
     <div
+      className="dash-row"
       role="button"
       tabIndex={disabled ? -1 : 0}
       aria-disabled={disabled || undefined}
@@ -309,24 +279,15 @@ function ExploreRow({ label, loading, disabled, onClick }) {
         }
       }}
       style={{
-        display: "flex", alignItems: "center", gap: "10px",
         cursor: disabled ? "wait" : "pointer",
-        padding: "8px 10px",
-        minHeight: "56px",
-        borderRadius: "var(--radius)",
-        background: "var(--parchment-warm)",
-        borderLeft: "3px solid var(--gold)",
-        fontFamily: "var(--font-serif)",
         opacity: disabled && !loading ? 0.5 : 1,
       }}
     >
-      <div style={{
-        flex: 1, minWidth: 0,
-        fontSize: "13px", color: "var(--ink)", fontWeight: 600,
-        whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-      }}>
-        {loading ? "Loading…" : label}
+      <div className="dash-row-body">
+        <div className="dash-row-title">{loading ? "Loading…" : label}</div>
+        {meta && !loading && <div className="dash-row-meta">{meta}</div>}
       </div>
+      <span className="dash-row-arr" aria-hidden="true">→</span>
     </div>
   );
 }
