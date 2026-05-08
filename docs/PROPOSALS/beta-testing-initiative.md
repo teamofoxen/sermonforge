@@ -4,6 +4,7 @@
 **Audience:** The lone developer of SermonForge, who is also a pastor and the pastor-user. Written in plain language, no engineering vocabulary required.
 **Date drafted:** 2026-05-01.
 **Revised:** 2026-05-06 — ACC, SFDI, SADI, and SPRD all closed since drafting. BTI is now a validation pass on built behavior, not a paired front with concurrent in-flight work. Dependencies, routing language, and Q7's capacity framing updated accordingly.
+**Revised:** 2026-05-07 — Two rulings landed. (1) Production IS the beta — no separate beta installer, no feature-flagged variant, no build-channel split. The feedback UI lives in the production app for every user. Q5 dissolved; Q9 (privacy) reframed as a first-run disclosure for all users; Stage 1/Stage 2 reframed accordingly. (2) Phase 1 build sub-program scoped lightweight: in-app flag + pop-out form + telemetry + transport endpoint + token-gated inbox; Tier 3 ops, frame-check ops, digest publication, attrition outreach automation deferred to Phase 2/3.
 
 ---
 
@@ -92,7 +93,7 @@ The right answer depends on what the developer can sustain alongside Mac distrib
 
 Four deliverables, walked roughly in parallel:
 
-1. **A beta build of SermonForge with feedback UI baked in.** A separate installer or feature-flagged variant of the main app, distinct from the production build, with the in-app feedback surfaces and telemetry described below active. Testers run this build instead of the production build for the duration of the program.
+1. **The production app, with feedback UI baked in.** There is no separate beta installer and no feature-flagged variant. The in-app feedback surfaces and telemetry described below live in the production app for every user. The cohort runs the same build as anyone else who downloads SermonForge — what makes them the cohort is recruitment, the privacy disclosure they consent to at first-run, and the Tier 3 cadence on top, not a different build. This collapses the dual-installer overhead the program would otherwise carry against Mac/Windows distribution.
 2. **A tester-facing summary document.** Short, plain-language, written for the pastor — what they're signing up for, what's being captured, how to give feedback, and what the program asks of them. **The summary explicitly inverts the tester's job: it asks them to tell the developer when the tool is in their way, when they didn't reach for it, when the AI felt like it was doing their work — not to tell the developer the tool is promising or that it's coming along.** This inversion is the primary mitigation for friend-cohort pulled punches. Distinct from this charter; this charter is for the developer, the summary is for the cohort. Drafted in Phase 1 and finalized before Phase 2 onboarding.
 3. **A feedback intake and review system.** A capture path for every feedback tier, a review cadence the developer can sustain alongside other work, a routing decision for every finding (see "Feedback-to-action pathway"), and a path from feedback into the development backlog (new tickets, sharpening of in-flight work, or explicit ratification of recently-shipped work).
 4. **A living BTI document.** This charter starts the document. As the program runs, the document accumulates the dimensions tested, the patterns observed, the routing decisions made, the rulings made, and the production-side outcomes — including which telemetry events survive into production and which retire when the cohort closes.
@@ -243,7 +244,7 @@ The developer reaches out personally — one outreach, friendly, not metrics-fra
 
 BTI does not "complete" the way SFDI completes. It's a running program. Completion is named in two stages:
 
-**Stage 1 — Beta program close.** When the cohort retires the beta build and moves to production. Reaching this stage requires:
+**Stage 1 — Structured cohort program close.** When the cohort retires from the structured Tier 3 program. Production = beta means there is no build-to-build handoff; the cohort and the broader user base are running the same SermonForge throughout. Stage 1 close is therefore the end of the *structured observation*, not a build migration. Reaching this stage requires:
 
 - Every active tester has run the app for a meaningful number of sermons.
 - Both anchor dimensions (invasiveness and workflow-fit) trend positive across the active cohort, read through the weighting rules in "Reading feedback across the cohort."
@@ -252,7 +253,7 @@ BTI does not "complete" the way SFDI completes. It's a running program. Completi
 - All BTI findings routed to the development backlog have been actioned, deferred-with-reason, or closed.
 - The open questions in this charter are settled (or explicitly retired).
 
-**Stage 2 — Production telemetry steady-state.** A scaled-back set of automated signals runs in production indefinitely, capturing the same patterns at lower fidelity. Reaching this stage requires: a ruling on which signals survive (Q8); a ruling on disclosure (what production users are told about telemetry at install time); the in-app feedback flag retiring or persisting in a leaner form.
+**Stage 2 — Steady-state in-app surfaces.** After Stage 1 close, the in-app feedback surfaces continue as production features — the cohort's voluntary departure does not retire the flag button or the pop-out form. What changes is the structured Tier 3 cadence (ends), the cohort-specific privacy framing (replaced by the production privacy disclosure that already shipped at first-run from Phase 1), and the telemetry event set (possibly trimmed per Q8). Reaching this stage requires: a ruling on which signals survive (Q8); a ruling on whether any in-app feedback surface should retire or persist in a leaner form post-cohort.
 
 Closing the program well — naming what was learned, naming what stays in production, naming what retires — is itself part of completion. The BTI document holds the close-out summary.
 
@@ -267,11 +268,11 @@ Decisions to work through together as the program scopes. Some genuinely gate Ph
 - **Q3 — Telemetry event list.** Each candidate signal in the Layer 0 list (and any additions) needs an explicit ruling: keep, cut, or defer.
 - **Q3b — Telemetry interpretation rulings.** For each signal that survives Q3, what pattern in that signal counts as evidence of which failure mode? "High unedited accept-rate is concerning" is an interpretive ruling smuggled into the event list — it could equally mean the AI got it right. Edit distance has the same problem; it assumes the saved field is the final form, which it isn't for delivery edits. Each retained signal needs its interpretation rule named separately, before the signal arrives. Q3b is paired with Q3 but settles independently.
 - **Q4 — Telemetry transport.** Same channel as feedback, or separate? Realtime or batched? What happens if the tester is offline?
-- **Q5 — Beta build channel.** Separate installer with its own auto-update channel, or feature-flagged variant of the main build? The auto-update behavior of `electron-updater` (see `docs/PROPOSALS/distribution.md`) is the constraint.
+- **Q5 — Beta build channel.** *Retired 2026-05-07.* Resolved by ruling: production IS the beta. There is no separate installer, no feature-flagged variant, no build-channel split. The feedback UI lives in the production app for every user. Original framing is preserved here as a record of the question that the ruling answered.
 - **Q6 — Recruitment cadence.** All testers onboarded at once, or staggered? Staggered means cleaner first-run signal; all-at-once means a synchronized observation window.
 - **Q7 — Cohort feasibility.** The replacement for a former review-cadence question, reframed because cadence is downstream of scale. What scale is sustainable alongside Mac distribution work and ongoing maintenance: smaller-and-deeper (10-15), larger-and-shallower (20-30), or hybrid (20-30 enrolled with rotating Tier 3 subset)? What review cadence and visible-loop digest cadence does the chosen scale support? What active-cohort floor does Stage 1 commit to (likely 8 of 10-15, or 15 of 20-30, but the actual number is part of the settlement)? These three settle together.
 - **Q8 — Production telemetry scaledown.** Which signals survive? What's the disclosure model at install time?
-- **Q9 — Privacy floor for the cohort.** Even high-trust testers deserve a written "what we capture and what we don't" doc. What's its location and what's in it?
+- **Q9 — First-run privacy disclosure.** Production = beta means the privacy doc is not just for the cohort — it has to surface as a first-run disclosure for every user, not as a side document handed only to opted-in testers. The natural surface is the existing `SetupScreen` audit-log disclosure (ACC E1); telemetry and feedback capture are added there. What's in the disclosure (event list, retention, transport destination), and what consent shape does it ask for?
 
 ---
 
@@ -281,7 +282,7 @@ Decisions to work through together as the program scopes. Some genuinely gate Ph
 - **SFDI** — closed 2026-05-05; the Study throughline is structural and Process Contract #6 is binding. BTI tests whether the throughline actually deepens the work for a pastor who didn't build it: do the four named outcomes feel earned, does each sub-phase boundary's handoff actually carry, does Field 3's unified canvas read as one canvas question rather than three stapled worksheets. SFDI's binding integrity is the contract; BTI's pastor cohort is the test of whether that integrity is felt.
 - **SADI** — closed 2026-05-05; MPT/MPS plumbed as `SpotlightWorksheet` fields with the v19 `main_point_pair` envelope and a composite gate at the Step 2 → Step 3 boundary. BTI tests whether MPT and MPS feel earned by the Study throughline rather than reached-for at the top of the workspace, whether the gate's "satisfied another way" semantic on MPS Q2 reads as a real escape valve rather than a workaround, whether the strict-N/A path is ever used in practice.
 - **SPRD** — closed; the 8+8+5+4 phase shape is locked. BTI's behavioral telemetry (Layer 0) tests whether testers actually move through the four phases or skip / abandon them; the friction dimension surfaces the felt experience of the phase walk.
-- **Mac distribution** (in flight; pipeline scaffolded 2026-04-30, signing and notarization being shaken out across recent commits) — Q5 (beta build channel) is the live join point. Mac signoff is not yet end-to-end on CI; whatever auto-update story BTI uses for the cohort has to coexist with both the shipped Windows distribution story and the in-flight Mac one. Mac distribution's progress is therefore a real input to Q7 — Mac signoff competes with BTI build work for the developer's hours and may shape Phase 1 timing.
+- **Mac distribution** — closed 2026-05-07; v1.0.0 signed + notarized macOS DMG + signed Windows NSIS shipped, both auto-update feeds (`latest.yml` + `latest-mac.yml`) live. With Q5 (beta build channel) dissolved, BTI inherits both signed installers as the production build — no parallel beta-build pipeline to maintain. Mac distribution is no longer a Q7 input; the developer-hours competition that shaped earlier Phase 1 timing has cleared.
 - **Theology corpus proposal** (`docs/PROPOSALS/theology-corpus.md`) — still queued; gates all retrieval upgrades. Voice-and-frame drift (Anchor 1, theological layer; dimension 9) is the first place a curated corpus would prove its worth or fail to. The theological frame check method above produces the data that would tell. If the cohort surfaces sustained frame drift, that finding is the strongest possible reason to advance the corpus from queued to active.
 
 ---
@@ -290,9 +291,37 @@ Decisions to work through together as the program scopes. Some genuinely gate Ph
 
 The program runs in four phases.
 
-**Phase 0 — Charter ratification and scoping conversations.** This document gets read, refined, and ratified. Open questions get worked through with the developer's working partner. **Phase 0 closes — and Phase 1 begins — when Q1, Q2, Q5, and Q9 are settled.** These four are the build-blockers: in-app UI surface (Q1), feedback transport (Q2), beta build channel (Q5), and the privacy doc that has to exist before Phase 2 onboarding (Q9). The other questions are explicitly deferred — Q3, Q3b, and Q4 settle inside Phase 1 implementation as the right shape surfaces; Q6, Q7, and Q8 settle inside Phase 2 onboarding or against early cohort signal. Phase 0 does not wait on them.
+**Phase 0 — Charter ratification and scoping conversations.** This document gets read, refined, and ratified. Open questions get worked through with the developer's working partner. **Phase 0 closes — and Phase 1 begins — when Q1, Q2, and Q9 are settled.** These three are the build-blockers: in-app UI surface (Q1), feedback transport (Q2), and the first-run privacy disclosure that has to ship with the production app from Phase 1 onward (Q9). Q5 was retired 2026-05-07 by ruling and no longer gates Phase 1. The other questions are explicitly deferred — Q3, Q3b, and Q4 settle inside Phase 1 implementation as the right shape surfaces; Q6, Q7, and Q8 settle inside Phase 2 onboarding or against early cohort signal. Phase 0 does not wait on them.
 
-**Phase 1 — Beta build, tester-facing summary, theological-frame-check pre-samples.** The in-app feedback UI gets built. The telemetry event list gets implemented behind a build-flag (Q3 settles here as the implementation surfaces the right shape; Q3b is drafted alongside, signal by signal). The transport channel gets wired (Q4 settles here). A separate installer (or build-flagged variant) gets stood up. The privacy doc gets finalized. The tester-facing summary — with the inverted-job framing — gets drafted and finalized. The theological-frame-check pre-program prompt and text pool get prepared. The visible-loop digest template gets drafted. No testers yet.
+**Phase 1 — Production-app feedback surfaces, tester-facing summary, theological-frame-check pre-samples.** The in-app feedback UI gets built into the production app — flag button at every AI surface, pop-out form on the footer menu, telemetry event capture (Q3 settles here as the implementation surfaces the right shape; Q3b is drafted alongside, signal by signal). The transport channel gets wired (Q4 settles here). The first-run privacy disclosure ships with the same release; the existing `SetupScreen` audit-log disclosure (ACC E1) is the natural surface to extend. The tester-facing summary — with the inverted-job framing — gets drafted and finalized. The theological-frame-check pre-program prompt and text pool get prepared. The visible-loop digest template gets drafted. No testers yet.
+
+**Phase 1 build sub-program — lightweight scope, ruled 2026-05-07.** The build slice that ships in Phase 1 is deliberately tight, separating *the surfaces and plumbing the cohort needs to start* from *the operational scaffolding the cohort generates and consumes once the program is running*. The split:
+
+*Built in Phase 1:*
+- Flag button at every AI surface (per-surface, persistent, tiny). Captures `{surface, sermonId, step, lastAiCall, optional 1-line note, timestamp}`.
+- Pop-out form (footer menu trigger). Single-dimension picker + free text, not all 10 dimensions on one screen.
+- Telemetry event capture — small set: `app-open`, `ai-press`, `ai-proposal {accepted | edited | rejected}`, `panel-time`, `field-time`, `sermon-create`, `sermon-finish`, `tour-step`, `crash`. Buffer locally as NDJSON, flush on interval and on app quit.
+- One transport endpoint serving all three payload types.
+- Developer-controlled storage (recommended: Cloudflare Worker + D1 for free-tier capacity at 20-30 testers).
+- Token-gated read-only inbox page served by the same endpoint.
+- First-run privacy disclosure (Q9), shipped as part of the Phase 1 release.
+- Setup note + tester-facing summary + privacy doc — finalized as documents for cohort onboarding.
+- Cohort roster — a single CSV/Notion sheet, not in-app.
+
+*Deferred to Phase 2/3 (operational, emerges as the program runs):*
+- Tier 3 prompt bank.
+- Frame-check writing-sample passage pool and assignment scheme.
+- Visible-loop digest template.
+- Re-engage outreach template.
+- Tier 3 cadence/scheduler/receipt mechanisms.
+- Cross-reading process for the three writing-sample rounds.
+- Formal routing-review process — the intake table is the log; a weekly SQL pass is enough until volume demands more.
+- Visible-loop digest publication channel.
+- Automated silent-tester detection — manual SQL query against the telemetry table is sufficient until the cohort is large enough that scanning is costly.
+- Per-tester writing-sample file sets.
+- Digest archive.
+
+The defer list is not a backlog of "things we said we'd do and didn't" — it is the explicit recognition that operational scaffolding for a cohort that does not yet exist burns capacity that should ship the surfaces the cohort needs first. Each deferred item lights up when its triggering condition appears (first writing samples submitted → cross-reading process; first round of digest content → publication channel; etc.).
 
 **Phase 2 — Cohort onboarding.** Q6 (recruitment cadence) and Q7 (cohort feasibility, including active-cohort floor) settle here, before any tester gets the build. Pastors are invited, given the build, given the tester-facing summary and privacy doc, given a short orientation on the three feedback tiers and what's being captured. Opted-in testers complete their pre-program writing sample. Then they use the app.
 
