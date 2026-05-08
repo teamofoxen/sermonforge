@@ -73,4 +73,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // upgrades and manual cache clears. See electron/main.js MEMORY_BACKUP_PATH.
   backupMemory:  (json) => ipcRenderer.invoke("db-backupMemory", json),
   restoreMemory: ()     => ipcRenderer.invoke("db-restoreMemory"),
+
+  // ── BTI telemetry ─────────────────────────────────────────────────────────
+  // Fire-and-forget event emission from renderer to the main-process bus
+  // (electron/telemetry/bus.js). Returns { ok: bool } but callers can ignore.
+  telemetryEmit:        (eventType, payload) => ipcRenderer.invoke("telemetry-emit", { eventType, payload }),
+  telemetrySetEnabled:  (enabled)            => ipcRenderer.invoke("telemetry-set-enabled", enabled),
 });

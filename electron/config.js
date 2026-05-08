@@ -40,6 +40,11 @@ const paths = {
 
   // Crash + error log (Phase 2 — written here, attached to feedback reports)
   logs: path.join(app.getPath("userData"), isPackaged ? "logs" : "logs-dev"),
+
+  // BTI telemetry NDJSON queue (electron/telemetry/bus.js).
+  // Per-session NDJSON files accumulate here; periodic flush ships to the
+  // Cloudflare Worker (see transport/worker.js).
+  telemetry: path.join(app.getPath("userData"), isPackaged ? "telemetry" : "telemetry-dev"),
 };
 
 // ── Legacy DB locations ───────────────────────────────────────────────────────

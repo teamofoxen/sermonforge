@@ -32,6 +32,7 @@ const { registerAIHandlers } = require("./ai");
 const { saveKeys, loadEsvKey, isConfigured } = require("./keystore");
 const { resetClient } = require("./ai/provider");
 const { initUpdater } = require("./updater");
+const telemetryBus = require("./telemetry/bus");
 const BetterSqlite3 = require("better-sqlite3");
 const sqliteVec = require("sqlite-vec");
 
@@ -933,6 +934,22 @@ function maybeWarnOneDrive() {
 
 // ── IPC handlers ────────────────────────────────────────────────────────────
 registerAIHandlers(ipcMain);
+
+// BTI telemetry — renderer-side emits flow through here. The bus is in the
+// main process (filesystem + network); renderers post events via IPC.
+ipcMain.handle("telemetry-emit", (_, { eventType, payload } = {}) => {
+  try {
+    telemetryBus.emit(eventType, payload);
+    return { ok: true };
+  } catch (err) {
+    logError("[telemetry-emit] handler threw", err);
+    return { ok: false };
+  }
+});
+ipcMain.handle("telemetry-set-enabled", (_, enabled) => {
+  telemetryBus.setEnabled(!!enabled);
+  return { ok: true };
+});
 
 // Column allowlists are imported from electron/contracts.cjs (single source of
 // truth: src/core/contracts.ts). buildUpdate validates against them; updates
@@ -2888,6 +2905,8 @@ ipcMain.handle('passage-fetch', async (_, passage) => {
 app.whenReady().then(async () => {
   logInfo(`SermonForge ${app.getVersion()} starting`);
   createWindow();              // splash visible immediately
+  telemetryBus.init();
+  telemetryBus.emit("app-open", { version: app.getVersion(), platform: process.platform });
   await initDatabase();
   maybeWarnOneDrive();         // populates the startup-warning slot before renderer mounts
   loadAppContent();            // swap splash → real app
@@ -2916,6 +2935,7 @@ app.on("before-quit", async (e) => {
   if (theologyDb) { try { theologyDb.close(); } catch (_) {} }
   theologyDb = null;
   theologyVecAvailable = false;
+  try { await telemetryBus.flushAndExit(); } catch (_) {}
   app.exit(0);
 });
 
