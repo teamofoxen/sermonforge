@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-08 — BTI Build MVP: transport endpoint and telemetry bus live
+
+- Charter synced 2026-05-07 to the production-IS-the-beta ruling — Q5 retired, Phase 1 lightweight scope locked, `docs/PROPOSALS/bti-build-mvp.md` adds the Chunks 1-7 implementation plan.
+- Chunk 1: Cloudflare Worker `sermonforge-bti.ross-appleton.workers.dev` with `POST /ingest` (Bearer-gated, flag/form/events kinds), `GET /inbox` (admin-token-gated), `GET /health`; D1 database with three tables keyed by tester_id; INGEST_TOKEN + ADMIN_TOKEN secrets; source at `transport/`.
+- Chunk 2: `electron/telemetry/{bus.js, events.js, config.js}` — append-only NDJSON queue at `paths.telemetry`, 30s periodic flush, rotated `.pending` pattern survives flush failures, 5s fetch timeout, 500-event batch cap.
+- Bus wired into `electron/main.js` (init + `app-open` emit in `whenReady`, `telemetry-emit` and `telemetry-set-enabled` IPC handlers, `flushAndExit` in `before-quit`); `electron/preload.js` exposes `telemetryEmit` + `telemetrySetEnabled`.
+- End-to-end smoke verified: emit → NDJSON → Worker → D1 → inbox readback round-trips cleanly.
+
+---
+
 ## 2026-05-07 — SetupScreen copy refresh: ESV recommended, minimal AI usage framing
 
 - Section 2 (ESV) heading "optional" → "recommended"; description rewritten to point to the right-column passage view in the sermon workspace and to state plainly that without a key the passage column stays empty — drops the stale "Bible passage popup" wording.
