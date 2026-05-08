@@ -923,13 +923,53 @@ button {
   margin-bottom: 20px;
 }
 
+.summary-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
 .summary-label {
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--gold);
-  margin-bottom: 8px;
+}
+
+.summary-toggle {
+  background: none;
+  border: none;
+  color: var(--ink-ghost);
+  font-family: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--radius);
+  letter-spacing: 0.04em;
+  transition: color 0.15s, background 0.15s;
+}
+
+.summary-toggle:hover {
+  color: var(--ink-mid);
+  background: var(--parchment);
+}
+
+.summary-bullets {
+  font-size: 13px;
+  color: var(--ink-mid);
+  line-height: 1.55;
+  margin: 0;
+  padding-left: 18px;
+}
+
+.summary-bullets li {
+  margin-bottom: 4px;
+}
+
+.summary-bullets li:last-child {
+  margin-bottom: 0;
 }
 
 .summary-content {
@@ -943,6 +983,125 @@ button {
   font-size: 13px;
   color: var(--ink-ghost);
   font-style: italic;
+}
+
+/* Pause-point screen — discrete sub-phase boundary surface. Replaces the
+   normal step/sub-phase body when active; clears via the Begin button. */
+.pause-point-screen {
+  background: var(--parchment);
+  border: 1px solid var(--parchment-deep);
+  border-left: 4px solid var(--gold);
+  border-radius: var(--radius);
+  padding: 32px 40px;
+  margin: 12px 0 28px;
+  max-width: 760px;
+}
+
+.pause-point-header {
+  margin-bottom: 28px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--parchment-deep);
+}
+
+.pause-point-eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--gold);
+  margin-bottom: 8px;
+}
+
+.pause-point-title {
+  font-family: var(--font-serif);
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0;
+  line-height: 1.25;
+}
+
+.pause-point-section {
+  margin-bottom: 24px;
+}
+
+.pause-point-section:last-of-type {
+  margin-bottom: 28px;
+}
+
+.pause-point-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-ghost);
+  margin-bottom: 10px;
+}
+
+.pause-point-bullets {
+  font-size: 14px;
+  color: var(--ink-mid);
+  line-height: 1.6;
+  margin: 0;
+  padding-left: 20px;
+}
+
+.pause-point-bullets li {
+  margin-bottom: 6px;
+}
+
+.pause-point-bullets li:last-child {
+  margin-bottom: 0;
+}
+
+.pause-point-content {
+  font-size: 14px;
+  color: var(--ink-mid);
+  line-height: 1.65;
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.pause-point-content-empty {
+  font-style: italic;
+  color: var(--ink-ghost);
+}
+
+.pause-point-loading {
+  font-size: 13px;
+  color: var(--ink-ghost);
+  font-style: italic;
+}
+
+.pause-point-footer {
+  margin-top: 32px;
+  padding-top: 20px;
+  border-top: 1px solid var(--parchment-deep);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.pause-point-continue {
+  background: var(--gold);
+  color: var(--white);
+  border: none;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 22px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  letter-spacing: 0.02em;
+  transition: background 0.15s, transform 0.05s;
+}
+
+.pause-point-continue:hover {
+  background: var(--gold-deep, var(--gold));
+  filter: brightness(0.95);
+}
+
+.pause-point-continue:active {
+  transform: translateY(1px);
 }
 
 /* Continue button row */
@@ -3235,6 +3394,22 @@ button {
 .synthesis-table-input:disabled {
   color: var(--ink-ghost);
   cursor: not-allowed;
+}
+
+.synthesis-table-char-counter {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--ink-ghost);
+  text-align: right;
+  margin-top: 2px;
+  padding-right: 4px;
+  letter-spacing: 0.04em;
+  user-select: none;
+}
+
+.synthesis-table-char-counter-full {
+  color: var(--gold);
+  font-weight: 600;
 }
 
 .synthesis-table-input-line-number {

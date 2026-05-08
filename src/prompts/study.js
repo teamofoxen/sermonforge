@@ -142,14 +142,21 @@ Illustration: What story, image, or example makes this point land in lived exper
 
 When asked about a specific point, give focused, concrete suggestions. Do not pad. Do not lecture about functional element theory — just help develop the actual content.`;
 
+// ── Field-level reference cards ────────────────────────────────────────────
+// AI-synthesized read-only references that appear alongside specific fields
+// to surface prior work without making the pastor scroll back. Designed for
+// reuse — same shape, different anchor field per card.
+
+export const CONTEXT_REFERENCE_TASK = `The pastor is entering Deeper Context (Phase 2 Field 1). Pull forward what they wrote in Phase 1 Context (the four questions: what happened before this passage, what happens after, do those answers impact what's happening here, why the Holy Spirit led the author to write this passage in this place) and synthesize it into 3–5 short bullet points they can use as reference while doing deeper context work. Each bullet one sentence, starting with "- ". Anchor on what they actually wrote — do not invent. If a question was empty or marked N/A, skip it. If they wrote nothing meaningful at all, return only this single line: "Phase 1 Context is empty — start there first." No commentary, no preamble.`;
+
 // ── Briefings (advance-step / advance-sub-phase summaries) ─────────────────
 // Synthesize prior work for orientation when the pastor advances.
 
-export const BRIEF_OBSERVE_TO_INTERPRET_TASK = `Summarize the key observations a preacher noted about the passage in 3–5 concise bullet points. These will orient their interpretation work. Synthesis only — no quality commentary.`;
+export const BRIEF_OBSERVE_TO_INTERPRET_TASK = `Summarize the key observations a preacher noted about the passage in 3–5 concise bullet points, anchored on the Observation Set. These will orient their interpretation work. Synthesis only — no quality commentary. Each bullet one sentence, starting with "- ".`;
 
-export const BRIEF_INTERPRET_TO_REDEMPTIVE_TASK = `Summarize the key interpretive conclusions reached about the passage in 3–5 bullet points. These will orient work on the redemptive thread. Synthesis only.`;
+export const BRIEF_INTERPRET_TO_REDEMPTIVE_TASK = `Summarize the key interpretive conclusions reached about the passage in 3–5 bullet points, anchored on the Interpretation Set. These will orient work on the redemptive thread. Synthesis only. Each bullet one sentence, starting with "- ".`;
 
-export const BRIEF_REDEMPTIVE_TO_IMPLICATIONS_TASK = `Summarize in 2–3 sentences the Christ-connection a preacher has established for the passage. This will orient their work on theological and practical implications.`;
+export const BRIEF_REDEMPTIVE_TO_IMPLICATIONS_TASK = `Summarize the Christ-connection a preacher has established for the passage in 3–5 concise bullet points, anchored on the Christ-Connection Statement. These will orient their work on theological and practical implications. Synthesis only — no quality commentary. Each bullet one sentence, starting with "- ".`;
 
 export const BRIEF_EXEGESIS_TO_MPT_MPS_TASK = `Synthesize a preacher's complete exegetical work before they forge the main point. Provide 4–6 concise bullet points covering: key textual observations, interpretive conclusions, the Christ-connection established, and theological and practical implications surfaced. This will directly inform their MPT and MPS. Be specific to the text, not generic.`;
 

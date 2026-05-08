@@ -3,6 +3,7 @@
 **Status:** Scoping. No build work has begun. No testers have been recruited. The full BTI document accumulates as the program runs; this charter is the starting frame.
 **Audience:** The lone developer of SermonForge, who is also a pastor and the pastor-user. Written in plain language, no engineering vocabulary required.
 **Date drafted:** 2026-05-01.
+**Revised:** 2026-05-06 — ACC, SFDI, SADI, and SPRD all closed since drafting. BTI is now a validation pass on built behavior, not a paired front with concurrent in-flight work. Dependencies, routing language, and Q7's capacity framing updated accordingly.
 
 ---
 
@@ -17,7 +18,7 @@ Both are project-killers. The first kills SermonForge by betraying its thesis. T
 
 The product owner cannot test either failure mode alone. Self-testing is contaminated — the developer knows what the AI is *meant* to be doing and what the workflow is *meant* to feel like, so cannot feel what an unprimed pastor feels when the AI lands a paragraph in their study notes uninvited, or when the tool sits unopened on a Wednesday morning. Both modes have to be tested by pastors who didn't build it.
 
-BTI exists to test them. It runs a closed beta with a cohort of pastor friends — a high-trust group — and surfaces both failure modes early enough that the AI Clarity & Constraint task tracker (`docs/PROPOSALS/ai-clarity-and-constraint.md`) and other in-flight work can reorder in response. The pairing with ACC is direct: ACC fixes the AI subsystem from the inside; BTI tests whether the fixes actually feel like fixes from the outside, *and* whether the surrounding tool feels solid enough to keep using.
+BTI exists to test them. It runs a closed beta with a cohort of pastor friends — a high-trust group — and tests both failure modes against a SermonForge that has, as of program start, completed its major in-flight initiatives. The AI Clarity & Constraint remediation (the cleanup of the AI subsystem's tab-side bypasses and direct-write paths), SFDI (the Study throughline), SADI (the MPT/MPS pair as sermon anchor), and SPRD (the Study phase redesign) have all shipped. What was in-flight when this charter was first drafted is now built. BTI's job is to ask whether those built changes actually feel like fixes from the outside — whether the AI's invasiveness has actually been constrained, whether the throughline actually deepens the work for a pastor who didn't build it, whether the surrounding tool feels solid enough to keep using.
 
 ---
 
@@ -75,7 +76,7 @@ These don't disqualify the cohort — they *are* the cohort, and the alternative
 
 The cohort size has a real arithmetic underneath it that has to be modeled, not left as a default.
 
-Tier 3 is the heart of the longitudinal signal — each round is roughly a thirty-minute exchange per tester (written, voice, or async). At 20-30 testers per round that is **10-15 hours of Tier 3 alone per round**, before Tier 2 review, telemetry analysis, ACC conversion, the visible-loop digest back to the cohort, theological frame-check cross-reading, and the actual build work. The developer is also running ACC and SFDI.
+Tier 3 is the heart of the longitudinal signal — each round is roughly a thirty-minute exchange per tester (written, voice, or async). At 20-30 testers per round that is **10-15 hours of Tier 3 alone per round**, before Tier 2 review, telemetry analysis, feedback-routing decisions into the development backlog, the visible-loop digest back to the cohort, theological frame-check cross-reading, and the actual build work. With ACC, SFDI, SADI, and SPRD all closed, BTI does not compete with another major content initiative for the developer's hours — but Mac distribution (in flight) and the theology corpus (queued) still draw against the same time budget, and BTI is itself a multi-month commitment.
 
 Three viable shapes:
 
@@ -83,7 +84,7 @@ Three viable shapes:
 - **Larger and shallower (20-30 testers).** Tier 3 cannot cover everyone every round at full participation. Either rounds happen less often, or Tier 3 covers a rotating subset each round. Broader signal volume; per-voice signal is thinner. More attrition resilience.
 - **Hybrid: 20-30 enrolled, rotating Tier 3 subset.** Everyone gets Tier 1 (in-app flag) and Tier 2 (pop-out form) continuously. Tier 3 rotates through subsets — say 8-10 testers per round — so every tester gets Tier 3 every two or three rounds. Closes some of the throughput gap without losing breadth.
 
-The right answer depends on what the developer can sustain alongside ACC and SFDI, what theological frame-check participation looks like (another tester-burden vector — see below), what the visible-loop cadence to the cohort needs to be (see "Feedback-to-action pathway"), and what active-cohort floor the program commits to for Stage 1 completion (see "Tester attrition"). These resolve together as Q7.
+The right answer depends on what the developer can sustain alongside Mac distribution work and ongoing maintenance, what theological frame-check participation looks like (another tester-burden vector — see below), what the visible-loop cadence to the cohort needs to be (see "Feedback-to-action pathway"), and what active-cohort floor the program commits to for Stage 1 completion (see "Tester attrition"). These resolve together as Q7.
 
 ---
 
@@ -93,7 +94,7 @@ Four deliverables, walked roughly in parallel:
 
 1. **A beta build of SermonForge with feedback UI baked in.** A separate installer or feature-flagged variant of the main app, distinct from the production build, with the in-app feedback surfaces and telemetry described below active. Testers run this build instead of the production build for the duration of the program.
 2. **A tester-facing summary document.** Short, plain-language, written for the pastor — what they're signing up for, what's being captured, how to give feedback, and what the program asks of them. **The summary explicitly inverts the tester's job: it asks them to tell the developer when the tool is in their way, when they didn't reach for it, when the AI felt like it was doing their work — not to tell the developer the tool is promising or that it's coming along.** This inversion is the primary mitigation for friend-cohort pulled punches. Distinct from this charter; this charter is for the developer, the summary is for the cohort. Drafted in Phase 1 and finalized before Phase 2 onboarding.
-3. **A feedback intake and review system.** A capture path for every feedback tier, a review cadence the developer can sustain alongside other work, a routing decision for every finding (see "Feedback-to-action pathway"), and a path from feedback to ACC task tracker items (or new items, or rulings on existing ones).
+3. **A feedback intake and review system.** A capture path for every feedback tier, a review cadence the developer can sustain alongside other work, a routing decision for every finding (see "Feedback-to-action pathway"), and a path from feedback into the development backlog (new tickets, sharpening of in-flight work, or explicit ratification of recently-shipped work).
 4. **A living BTI document.** This charter starts the document. As the program runs, the document accumulates the dimensions tested, the patterns observed, the routing decisions made, the rulings made, and the production-side outcomes — including which telemetry events survive into production and which retire when the cohort closes.
 
 ---
@@ -205,9 +206,9 @@ Two requirements, both committed from Phase 1:
 
 **Every BTI finding gets a routing decision, on the record.** Each Tier 1 flag, Tier 2 form, and Tier 3 exchange is reviewed and routed into one of four buckets:
 
-- *Convert to a new ACC item.* Goes to the AI Clarity & Constraint task tracker as a new entry.
-- *Unblock or modify an existing ACC item.* The finding settles a Q-ruling, sharpens an item's acceptance check, or escalates an item's tier.
-- *BTI-only entry.* A pattern visible in the cohort but not yet ready for ACC — kept in the living BTI document until it sharpens.
+- *New development item.* Goes to the development backlog as a new ticket — a UI fix, an AI behavior change, a content correction, a copy revision, whatever the finding calls for.
+- *Sharpens or unblocks something already in motion.* The finding settles a question on Mac distribution, the theology corpus, or any other queued or in-flight work whose shape it helps clarify. This bucket also picks up findings that *ratify or challenge* recently-shipped work — feedback that doesn't generate new work but tells the developer whether ACC, SFDI, SADI, or SPRD landed as felt improvements.
+- *BTI-only entry.* A pattern visible in the cohort but not yet sharp enough to ticket — kept in the living BTI document until it sharpens.
 - *Note-and-defer.* Acknowledged, no action, with a stated reason. (Not a wastebasket — every note-and-defer reads like a real ruling, because the tester will see it routed there in the digest below.)
 
 The routing decision is logged in the living BTI document. Nothing falls through.
@@ -248,7 +249,7 @@ BTI does not "complete" the way SFDI completes. It's a running program. Completi
 - Both anchor dimensions (invasiveness and workflow-fit) trend positive across the active cohort, read through the weighting rules in "Reading feedback across the cohort."
 - No unresolved red-flag findings on either anchor among active testers.
 - The active cohort has held above its Q7 floor for at least four weeks.
-- The ACC task tracker has shipped Tier A and Tier B items in response to BTI findings.
+- All BTI findings routed to the development backlog have been actioned, deferred-with-reason, or closed.
 - The open questions in this charter are settled (or explicitly retired).
 
 **Stage 2 — Production telemetry steady-state.** A scaled-back set of automated signals runs in production indefinitely, capturing the same patterns at lower fidelity. Reaching this stage requires: a ruling on which signals survive (Q8); a ruling on disclosure (what production users are told about telemetry at install time); the in-app feedback flag retiring or persisting in a leaner form.
@@ -268,7 +269,7 @@ Decisions to work through together as the program scopes. Some genuinely gate Ph
 - **Q4 — Telemetry transport.** Same channel as feedback, or separate? Realtime or batched? What happens if the tester is offline?
 - **Q5 — Beta build channel.** Separate installer with its own auto-update channel, or feature-flagged variant of the main build? The auto-update behavior of `electron-updater` (see `docs/PROPOSALS/distribution.md`) is the constraint.
 - **Q6 — Recruitment cadence.** All testers onboarded at once, or staggered? Staggered means cleaner first-run signal; all-at-once means a synchronized observation window.
-- **Q7 — Cohort feasibility.** The replacement for a former review-cadence question, reframed because cadence is downstream of scale. What scale is sustainable alongside ACC and SFDI: smaller-and-deeper (10-15), larger-and-shallower (20-30), or hybrid (20-30 enrolled with rotating Tier 3 subset)? What review cadence and visible-loop digest cadence does the chosen scale support? What active-cohort floor does Stage 1 commit to (likely 8 of 10-15, or 15 of 20-30, but the actual number is part of the settlement)? These three settle together.
+- **Q7 — Cohort feasibility.** The replacement for a former review-cadence question, reframed because cadence is downstream of scale. What scale is sustainable alongside Mac distribution work and ongoing maintenance: smaller-and-deeper (10-15), larger-and-shallower (20-30), or hybrid (20-30 enrolled with rotating Tier 3 subset)? What review cadence and visible-loop digest cadence does the chosen scale support? What active-cohort floor does Stage 1 commit to (likely 8 of 10-15, or 15 of 20-30, but the actual number is part of the settlement)? These three settle together.
 - **Q8 — Production telemetry scaledown.** Which signals survive? What's the disclosure model at install time?
 - **Q9 — Privacy floor for the cohort.** Even high-trust testers deserve a written "what we capture and what we don't" doc. What's its location and what's in it?
 
@@ -276,10 +277,12 @@ Decisions to work through together as the program scopes. Some genuinely gate Ph
 
 ## Dependencies on other in-flight work
 
-- **AI Clarity & Constraint task tracker** (`ai-clarity-and-constraint.md`) — paired front. Several ACC items are direct invasiveness mitigations and BTI is the test that they worked. Specifically: Item 2 (replace six direct-write paths with the proposal pattern) is the biggest invasiveness fix in the tracker; BTI tests whether the proposal pattern actually feels like a proposal. Items 5 and 6 (active-role label, "What I can see" panel) are constraint-visibility fixes; BTI tests whether the visibility lands as reassurance. Item 4 (differentiate failure modes) replaces a generic error string with kind-specific messages; BTI tests whether the new messages feel pastoral. The feedback-to-action pathway above names the explicit routing back from BTI findings into ACC.
-- **SFDI** — independent. SFDI is content work on study fields; BTI is feedback work on the running app. They share no surfaces. SFDI's outcome may sharpen the AI's behavior at the field level, which BTI would then observe — but BTI does not block on SFDI and SFDI does not block on BTI. Both initiatives compete with BTI for the developer's hours, which is part of why Q7 (cohort feasibility) cannot be left to default.
-- **Distribution proposal** (`docs/PROPOSALS/distribution.md`) — Q5 (beta build channel) is the join point. Whatever auto-update story BTI uses has to coexist with the production distribution story.
-- **Theology corpus proposal** (`docs/PROPOSALS/theology-corpus.md`) — voice-and-frame drift (Anchor 1, theological layer; dimension 9) is the first place a curated corpus would prove its worth or fail to. The theological frame check method above produces the data that would tell.
+- **AI Clarity & Constraint** — closed 2026-05-01 / 2026-05-02; archived at `docs/ARCHIVE/ai-clarity-and-constraint.md`. The behavior the cleanup produced now lives in `docs/SYSTEMS/ai-panel.md`, `docs/SYSTEMS/ai-model-migration.md`, and `docs/REFERENCE/ipc-channels.md`. BTI is the validation pass on that work — testing whether the proposal pattern feels like a proposal, whether differentiated error messages feel pastoral, whether the active-role label and "What I can see" panel actually land as reassurance, whether tab-side AI calls now centralized through `buildSystemPrompt` and `buildContext` produce a felt difference in invasiveness. ACC was the inside fix; BTI is the outside test.
+- **SFDI** — closed 2026-05-05; the Study throughline is structural and Process Contract #6 is binding. BTI tests whether the throughline actually deepens the work for a pastor who didn't build it: do the four named outcomes feel earned, does each sub-phase boundary's handoff actually carry, does Field 3's unified canvas read as one canvas question rather than three stapled worksheets. SFDI's binding integrity is the contract; BTI's pastor cohort is the test of whether that integrity is felt.
+- **SADI** — closed 2026-05-05; MPT/MPS plumbed as `SpotlightWorksheet` fields with the v19 `main_point_pair` envelope and a composite gate at the Step 2 → Step 3 boundary. BTI tests whether MPT and MPS feel earned by the Study throughline rather than reached-for at the top of the workspace, whether the gate's "satisfied another way" semantic on MPS Q2 reads as a real escape valve rather than a workaround, whether the strict-N/A path is ever used in practice.
+- **SPRD** — closed; the 8+8+5+4 phase shape is locked. BTI's behavioral telemetry (Layer 0) tests whether testers actually move through the four phases or skip / abandon them; the friction dimension surfaces the felt experience of the phase walk.
+- **Mac distribution** (in flight; pipeline scaffolded 2026-04-30, signing and notarization being shaken out across recent commits) — Q5 (beta build channel) is the live join point. Mac signoff is not yet end-to-end on CI; whatever auto-update story BTI uses for the cohort has to coexist with both the shipped Windows distribution story and the in-flight Mac one. Mac distribution's progress is therefore a real input to Q7 — Mac signoff competes with BTI build work for the developer's hours and may shape Phase 1 timing.
+- **Theology corpus proposal** (`docs/PROPOSALS/theology-corpus.md`) — still queued; gates all retrieval upgrades. Voice-and-frame drift (Anchor 1, theological layer; dimension 9) is the first place a curated corpus would prove its worth or fail to. The theological frame check method above produces the data that would tell. If the cohort surfaces sustained frame drift, that finding is the strongest possible reason to advance the corpus from queued to active.
 
 ---
 
@@ -293,7 +296,7 @@ The program runs in four phases.
 
 **Phase 2 — Cohort onboarding.** Q6 (recruitment cadence) and Q7 (cohort feasibility, including active-cohort floor) settle here, before any tester gets the build. Pastors are invited, given the build, given the tester-facing summary and privacy doc, given a short orientation on the three feedback tiers and what's being captured. Opted-in testers complete their pre-program writing sample. Then they use the app.
 
-**Phase 3 — Running program.** Feedback flows in through all three tiers and Layer 0. The visible loop runs to the cohort weekly or biweekly. Findings convert to ACC items, unblock existing ACC items, become BTI-only entries, or note-and-defer per the feedback-to-action pathway. Patterns get named in this living document. Mid-program writing samples land at the program midpoint; close samples land at program close. Tester attrition is handled per the section above. The program runs until Stage 1 close.
+**Phase 3 — Running program.** Feedback flows in through all three tiers and Layer 0. The visible loop runs to the cohort weekly or biweekly. Findings route into the four buckets per the feedback-to-action pathway: new development items, sharpening of in-flight work, BTI-only entries, or note-and-defer. Patterns get named in this living document. Mid-program writing samples land at the program midpoint; close samples land at program close. Tester attrition is handled per the section above. The program runs until Stage 1 close.
 
 When ready to begin, name a starting point:
 

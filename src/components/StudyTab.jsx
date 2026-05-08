@@ -18,6 +18,8 @@ import {
 } from "../utils/studyFields";
 import SpotlightWorksheet from "./SpotlightWorksheet";
 import AdvanceGateChecklist from "./AdvanceGateChecklist";
+import PausePointScreen from "./PausePointScreen";
+import ThroughlineCanvas from "./ThroughlineCanvas";
 import ThroughlineRail from "./ThroughlineRail";
 import ScripturePanel from "./ScripturePanel";
 import OutlineBuilder from "./OutlineBuilder";
@@ -33,6 +35,7 @@ import {
   POPULATE_SCRIPTURE_TASK,
   OUTLINE_REVIEW_TASK,
   BRIEF_OBSERVE_TO_INTERPRET_TASK, BRIEF_INTERPRET_TO_REDEMPTIVE_TASK, BRIEF_REDEMPTIVE_TO_IMPLICATIONS_TASK,
+  CONTEXT_REFERENCE_TASK,
   BRIEF_EXEGESIS_TO_MPT_MPS_TASK, BRIEF_MPT_MPS_TO_OUTLINE_TASK, BRIEF_OUTLINE_TO_FE_TASK,
 } from "../prompts/study";
 import { MAIN_POINT_PAIR_FIELDS } from "../utils/sadiAnchorFields";
@@ -70,18 +73,60 @@ function CollapseArrow({ open }) {
   );
 }
 
-function SummaryBlock({ summaryKey, summaries, summaryLoading }) {
+// Parse AI text into a bullet array. Recognizes lines starting with "-",
+// "*", "•", or "1." / "1)". Returns null if fewer than 2 bullets parse —
+// caller falls back to paragraph rendering for those.
+function parseSummaryBullets(text) {
+  if (!text) return null;
+  const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+  const bullets = [];
+  for (const line of lines) {
+    const m = line.match(/^[-*•]\s+(.+)$/) || line.match(/^\d+[.)]\s+(.+)$/);
+    if (m) bullets.push(m[1].trim());
+  }
+  return bullets.length >= 2 ? bullets : null;
+}
+
+function SummaryBlock({
+  summaryKey,
+  summaries,
+  summaryLoading,
+  label = "Where you've been",
+  loadingText = "Pulling together where you've been…",
+}) {
   const text = summaries[summaryKey];
   const loading = summaryLoading === summaryKey;
+  const [expanded, setExpanded] = useState(true);
   if (!text && !loading) return null;
+  const bullets = !loading ? parseSummaryBullets(text) : null;
   return (
     <div className="summary-block">
       {loading ? (
-        <span className="summary-loading">Synthesizing previous work…</span>
+        <span className="summary-loading">{loadingText}</span>
       ) : (
         <>
-          <div className="summary-label">From your previous work</div>
-          <div className="summary-content">{text}</div>
+          <div className="summary-label-row">
+            <div className="summary-label">{label}</div>
+            <button
+              type="button"
+              className="summary-toggle"
+              onClick={() => setExpanded((v) => !v)}
+              aria-expanded={expanded}
+            >
+              {expanded ? "Hide" : "Show"}
+            </button>
+          </div>
+          {expanded && (
+            bullets ? (
+              <ul className="summary-bullets">
+                {bullets.map((b, i) => (
+                  <li key={i}>{b}</li>
+                ))}
+              </ul>
+            ) : (
+              <div className="summary-content">{text}</div>
+            )
+          )}
         </>
       )}
     </div>
@@ -486,6 +531,74 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
 
   const [summaries, setSummaries] = useState({});
   const [summaryLoading, setSummaryLoading] = useState(null);
+
+  // Pause-point state. Set by `advanceSubPhase` after a successful spine
+  // transition; cleared by `PausePointScreen.onContinue` or by manual
+  // navigation (jumpToStep / jumpToSubPhase). Shape:
+  //   { priorSubPhase: 1|2|3|4, nextKey: 2|3|4|"step_2", priorSummaryKey: "p2"|"p3"|"p4"|"s2" }
+  // Pause-point is purely visual — by the time it renders, transitionState
+  // has already accepted the move, so dismissing it never affects spine.
+  const [pausePoint, setPausePoint] = useState(null);
+
+  // Auto-generate the "Where you've been" summary when entering sub-phases
+  // 2/3/4 directly (e.g., via the rail), so the surface is visible regardless
+  // of how the pastor navigated in. The advance-flow call sites below remain —
+  // this useEffect only fires when the cached summary is absent and not
+  // already loading. Idempotent.
+  useEffect(() => {
+    if (activeStep !== 1) return; // sub-phase summaries are exegesis only
+    const subPhaseConfigs = {
+      2: {
+        key: "p2",
+        brief: "Brief me on the observations before I move into interpretation.",
+        task: BRIEF_OBSERVE_TO_INTERPRET_TASK,
+        step: PHASES.INTERPRET,
+      },
+      3: {
+        key: "p3",
+        brief: "Brief me on the interpretive conclusions before I work the redemptive thread.",
+        task: BRIEF_INTERPRET_TO_REDEMPTIVE_TASK,
+        step: PHASES.REDEMPTIVE_THREAD,
+      },
+      4: {
+        key: "p4",
+        brief: "Brief me on the Christ-connection before I draw implications.",
+        task: BRIEF_REDEMPTIVE_TO_IMPLICATIONS_TASK,
+        step: PHASES.IMPLICATIONS,
+      },
+    };
+    const config = subPhaseConfigs[activeSubPhase];
+    if (!config) return;
+    if (summaries[config.key]) return; // already generated this session
+    if (summaryLoading === config.key) return; // already loading
+    generateSummary(config.key, config.brief, config.task, config.step);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeStep, activeSubPhase]);
+
+  // Field-level reference cards. AI synthesis appears alongside the active
+  // field as a read-only reference, surfacing prior work the field reads
+  // against. Triggered on entering the field; cached per session under a
+  // distinct summaryKey ("ref_*") so it doesn't collide with sub-phase
+  // entry summaries ("p2"/"p3"/"p4"). Designed for reuse — extend the
+  // config map below to add a card for another field (e.g. cross_refs).
+  useEffect(() => {
+    if (activeStep !== 1) return;
+    const fieldConfigs = {
+      deeper_context: {
+        key: "ref_p2_context",
+        brief: "Synthesize my Phase 1 Context observations as a reference while I do Deeper Context.",
+        task: CONTEXT_REFERENCE_TASK,
+        step: PHASES.INTERPRET,
+      },
+    };
+    const config = fieldConfigs[currentActiveFieldKey];
+    if (!config) return;
+    if (summaries[config.key]) return;
+    if (summaryLoading === config.key) return;
+    generateSummary(config.key, config.brief, config.task, config.step);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeStep, currentActiveFieldKey]);
+
   const funcData = getFunctionalElements(sermon);
 
   // Inline AI response state — keyed by section name
@@ -773,6 +886,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
         BRIEF_EXEGESIS_TO_MPT_MPS_TASK,
         STEPS.MPT_MPS,
       );
+      setPausePoint({ priorSubPhase: 4, nextKey: "step_2", priorSummaryKey: "s2" });
       return;
     }
 
@@ -804,6 +918,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
         BRIEF_OBSERVE_TO_INTERPRET_TASK,
         PHASES.INTERPRET,
       );
+      setPausePoint({ priorSubPhase: 1, nextKey: 2, priorSummaryKey: "p2" });
     } else if (next === 3) {
       generateSummary(
         "p3",
@@ -811,6 +926,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
         BRIEF_INTERPRET_TO_REDEMPTIVE_TASK,
         PHASES.REDEMPTIVE_THREAD,
       );
+      setPausePoint({ priorSubPhase: 2, nextKey: 3, priorSummaryKey: "p3" });
     } else if (next === 4) {
       generateSummary(
         "p4",
@@ -818,6 +934,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
         BRIEF_REDEMPTIVE_TO_IMPLICATIONS_TASK,
         PHASES.IMPLICATIONS,
       );
+      setPausePoint({ priorSubPhase: 3, nextKey: 4, priorSummaryKey: "p4" });
     }
   }
 
@@ -890,6 +1007,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
     onMovement?.({ from: fromStep, to: toStep, kind: "step" });
     setActiveStep(step);
     setActiveSubPhase(1);
+    setPausePoint(null); // manual jump clears any pending pause-point
     onStepChange?.(STEP_SEQUENCE[step - 1]);
   }
 
@@ -931,6 +1049,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
     }
     onMovement?.({ from: fromSubPhase, to: toSubPhase, kind: "sub_phase" });
     setActiveSubPhase(phase);
+    setPausePoint(null); // manual jump clears any pending pause-point
     onStepChange?.(PHASE_SEQUENCE[phase - 1]);
   }
 
@@ -1079,13 +1198,21 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
   // four parsed phase columns. Cheap (just iteration over the field defs).
   const railSubPhases = buildRailSubPhases(sermon, obsData, intData, redData, impData, activeSubPhase, currentActiveFieldKey);
 
-  // Active field def (Phase 1 only — only Phase 1 Field 3 carries the
-  // takeover flag today; expand the lookup if later phases opt in).
-  const activeFieldDef = OBSERVE_FIELDS.find((f) => f.key === currentActiveFieldKey) || null;
+  // Active field def — looked up across all four sub-phases. Fields opt into
+  // the takeover layout via `takeoverWhenActive: true` in their def. As of
+  // Session 3 the opted-in set is: Phase 1 Field 3 (Divisions), Phase 2
+  // Field 8 (Interpretation Synthesis), Phase 3 Field 5 (Christ-Connection
+  // Statement), Phase 4 Field 4 (Implications Synthesis). The flag itself
+  // is the source of truth — no per-sub-phase guard.
+  const activeFieldDef =
+    OBSERVE_FIELDS.find((f) => f.key === currentActiveFieldKey) ||
+    INTERPRET_FIELDS.find((f) => f.key === currentActiveFieldKey) ||
+    REDEMPTIVE_FIELDS.find((f) => f.key === currentActiveFieldKey) ||
+    IMPLICATIONS_FIELDS.find((f) => f.key === currentActiveFieldKey) ||
+    null;
   const wantsTakeover =
     !!activeFieldDef?.takeoverWhenActive &&
     activeStep === 1 &&
-    activeSubPhase === 1 &&
     !tourActive &&
     !takeoverOverride;
 
@@ -1104,12 +1231,43 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
               type="button"
               className="field-takeover-restore"
               onClick={() => setTakeoverOverride(true)}
-              title="Restore the throughline rail"
+              title="Back to main view"
             >
-              ↺ Restore rail
+              ↺ Back to main
             </button>
           )}
-          <div className="study-write-inner">
+          <div className="study-write-col-body">
+            {/*
+              Throughline canvas — pause-point coordination:
+                - Normal: shows activeSubPhase (catches up immediately on advance).
+                - During a sub-phase pause-point: shows the prior sub-phase view
+                  (pausePoint.priorSubPhase). When pastor clicks Begin and clears
+                  the pause-point, displayedSubPhase jumps to activeSubPhase and
+                  CSS animates the prior pane shrinking to a strip + new pane
+                  fading in.
+                - During the Implications → MPT/MPS step transition pause-point:
+                  canvas keeps rendering the Implications view (priorSubPhase=4)
+                  even though activeStep has flipped to 2; on dismiss, the canvas
+                  unmounts (since activeStep !== 1).
+            */}
+            {(() => {
+              const inExegesis = activeStep === 1;
+              const stepTransitionPausePoint =
+                pausePoint && pausePoint.nextKey === "step_2";
+              const shouldRender =
+                !wantsTakeover && (inExegesis || stepTransitionPausePoint);
+              if (!shouldRender) return null;
+              const displayed = pausePoint
+                ? pausePoint.priorSubPhase
+                : activeSubPhase;
+              return (
+                <ThroughlineCanvas
+                  sermon={sermon}
+                  activeSubPhase={displayed}
+                />
+              );
+            })()}
+            <div className="study-write-inner">
 
       {advanceError && (
         <div
@@ -1131,8 +1289,19 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
         </div>
       )}
 
+      {/* ── Pause-point — discrete sub-phase boundary screen. ── */}
+      {pausePoint && (
+        <PausePointScreen
+          priorSubPhase={pausePoint.priorSubPhase}
+          nextKey={pausePoint.nextKey}
+          priorSummaryText={summaries[pausePoint.priorSummaryKey]}
+          priorSummaryLoading={summaryLoading === pausePoint.priorSummaryKey}
+          onContinue={() => setPausePoint(null)}
+        />
+      )}
+
       {/* ── Step 1: Exegesis ── */}
-      {activeStep === 1 && (
+      {!pausePoint && activeStep === 1 && (
         <div className="study-step-active">
 
           {activeSubPhase === 2 && <SummaryBlock summaryKey="p2" {...summaryProps} />}
@@ -1170,6 +1339,14 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
 
           {activeSubPhase === 2 && (
             <div className="sub-phase-body" data-tour-id="phase-2-worksheet">
+              {currentActiveFieldKey === "deeper_context" && (
+                <SummaryBlock
+                  summaryKey="ref_p2_context"
+                  label="From your Phase 1 Context"
+                  loadingText="Pulling forward your Phase 1 Context…"
+                  {...summaryProps}
+                />
+              )}
               <SpotlightWorksheet
                 fields={INTERPRET_FIELDS}
                 data={intData}
@@ -1318,7 +1495,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
       )}
 
       {/* ── Step 2: MPT/MPS Forge — SADI Step 2 plumbing (v19, 2026-05-05) ── */}
-      {activeStep === 2 && (
+      {!pausePoint && activeStep === 2 && (
         <div className="study-step-active" data-tour-id="mpt-field">
           <SummaryBlock summaryKey="s2" {...summaryProps} />
 
@@ -1389,7 +1566,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
       )}
 
       {/* ── Step 3: Outline Builder ── */}
-      {activeStep === 3 && (
+      {!pausePoint && activeStep === 3 && (
         <div className="study-step-active" data-tour-id="outline-builder">
           <SummaryBlock summaryKey="s3" {...summaryProps} />
 
@@ -1544,7 +1721,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
       )}
 
       {/* ── Step 4: Functional Elements ── */}
-      {activeStep === 4 && (
+      {!pausePoint && activeStep === 4 && (
         <div className="study-step-active" data-tour-id="functional-elements">
           <SummaryBlock summaryKey="s4" {...summaryProps} />
 
@@ -1705,6 +1882,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
         </div>
       )}
 
+          </div>
           </div>
         </div>
         <ScripturePanel passage={sermon.passage} />

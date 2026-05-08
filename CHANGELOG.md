@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-07 — Workspace UX overhaul + BTI charter revision
+
+- Sample sermon scrubbed of Greek/grammar terminology; `main_point_pair` envelope filled; Merida references removed; new overviews on Phase 3 Field 1 and Phase 4 Field 1 (three-voices framing); "Signal"→"Cue", "Restore rail"→"Back to main".
+- Phase 2/3/4 synthesis fields gain `takeoverWhenActive` + 200-char cap with counter; `activeFieldDef` lookup expanded across all four phase arrays so the flag fires.
+- "Where you've been" auto-fires on direct sub-phase entry, reshaped to 3–5 bullets with hide/show; new AI reference card synthesizes Phase 1 Context next to Deeper Context.
+- New `PausePointScreen` discrete what-you-did / what's-next screen between sub-phases; spine routing untouched.
+- New `ThroughlineCanvas` parallel layer — strips + active pane + width transitions + pause-point coordination + reduced-motion respect; BTI charter revised end-to-end against ACC/SFDI/SADI/SPRD closure.
+
+---
+
 ## 2026-05-07 — Look Again: invitational prompts, substrate gate, topical-scoped chat
 
 - `src/prompts/study.js` v1.3.0: four `*_REVIEW_TASK` rewritten as `*_LOOK_AGAIN_TASK` — invitational opener, sermon-relevance filter, sub-phase guard, plain register, 0–3 questions with "trust it and move on" terminal output.

@@ -57,7 +57,7 @@ describe("SynthesisTable — Phase 1 columns", () => {
     setup();
     expect(screen.getByText("Thought unit")).toBeTruthy();
     expect(screen.getByText("After line")).toBeTruthy();
-    expect(screen.getByText("Signal")).toBeTruthy();
+    expect(screen.getByText("Cue")).toBeTruthy();
   });
 
   it("renders one empty row when value is empty", () => {

@@ -32,10 +32,19 @@ import React, { useId } from "react";
 import { CUMULATIVE_COLUMN_KEYS } from "../utils/studyFields";
 import DeleteButton from "./primitives/DeleteButton";
 
+// Per-cell character cap on writable textarea cells in any synthesis-table
+// surface. Applies to thought_unit_summary (Phase 1) and the cumulative
+// columns (`meaning` Phase 2, `christ_connection` Phase 3, `implication`
+// Phase 4). Read-only cells are unaffected — the cap pre-shortens content
+// at write-time so downstream synthesis tables stay readable at a glance.
+// Hard limit (HTML maxLength) plus a small visible counter beneath each
+// textarea.
+export const TEXTAREA_CHAR_LIMIT = 200;
+
 export const PHASE_1_COLUMNS = Object.freeze([
   { key: "thought_unit_summary", label: "Thought unit", kind: "textarea",    placeholder: "What is the author hammering home, in your own words?" },
   { key: "after_line",            label: "After line",  kind: "line-number", placeholder: "1" },
-  { key: "signal",                label: "Signal",      kind: "input",       placeholder: "Subject shift, transition, scene change…" },
+  { key: "signal",                label: "Cue",         kind: "input",       placeholder: "Subject shift, transition, scene change…" },
 ]);
 
 function rowHasCumulativeContent(row) {
@@ -155,6 +164,8 @@ export default function SynthesisTable({
                   );
                 }
                 if (col.kind === "textarea") {
+                  const charLimit = TEXTAREA_CHAR_LIMIT;
+                  const charCount = v.length;
                   return (
                     <td key={col.key} className={cellClass} data-column={col.key}>
                       <textarea
@@ -164,8 +175,15 @@ export default function SynthesisTable({
                         disabled={disabled}
                         placeholder={col.placeholder || ""}
                         rows={2}
+                        maxLength={charLimit}
                         aria-label={`${col.label}, row ${rowIdx + 1}`}
                       />
+                      <div
+                        className={`synthesis-table-char-counter${charCount >= charLimit ? " synthesis-table-char-counter-full" : ""}`}
+                        aria-hidden="true"
+                      >
+                        {charCount}/{charLimit}
+                      </div>
                     </td>
                   );
                 }
