@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-05-07 — Pastor-facing field walkthroughs (Markdown + Workspace .docx)
+
+- New `docs/PROPOSALS/sermonforge-field-walkthrough.md` traces every Series Planner + Sermon Workspace field in plain English, including cross-phase populations and the closing throughline.
+- New Workspace-only Word doc at `docs/PROPOSALS/sermon-workspace-field-walkthrough.docx` (4 Study phases + MPT/MPS + Outline + Functional Elements + Manuscript + Delivery + 9-point throughline).
+- Generator colocated at `docs/PROPOSALS/sermon-workspace-field-walkthrough.build.js` so the docx can be rebuilt; kept out of `scripts/` since it's not operational tooling.
+
+---
+
 ## 2026-05-07 — Workspace UX overhaul + BTI charter revision
 
 - Sample sermon scrubbed of Greek/grammar terminology; `main_point_pair` envelope filled; Merida references removed; new overviews on Phase 3 Field 1 and Phase 4 Field 1 (three-voices framing); "Signal"→"Cue", "Restore rail"→"Back to main".
