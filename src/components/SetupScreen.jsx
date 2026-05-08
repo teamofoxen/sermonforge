@@ -141,8 +141,9 @@ export default function SetupScreen({ onComplete }) {
           </h2>
           <p style={{ color: "var(--ink-mid)", fontSize: "14px", margin: "0 0 10px", lineHeight: "1.5" }}>
             SermonForge uses Claude AI as a study companion — exegetical insight, structural feedback, and
-            editing help. You write the sermon. The API is pay-as-you-go — typically a fraction of a cent
-            per click. $10 of credit will last weeks.
+            editing help. You write the sermon. SermonForge keeps AI usage minimal — calls happen at a
+            few deliberate points in your study, not constantly. Pay-as-you-go through Anthropic; a small
+            starting credit ($5–$10) covers weeks of regular use.
           </p>
           <ol style={STEPS}>
             <li>Go to <strong style={{ color: "var(--ink)" }}>console.anthropic.com</strong> and sign up</li>
@@ -170,15 +171,16 @@ export default function SetupScreen({ onComplete }) {
             fontFamily: "var(--font-serif)",
             fontSize: "16px", color: "var(--ink)", margin: "0 0 4px",
           }}>
-            2. ESV API key <span style={{ color: "var(--ink-ghost)", fontSize: "13px" }}>optional</span>
+            2. ESV API key <span style={{ color: "var(--ink-ghost)", fontSize: "13px" }}>recommended</span>
           </h2>
           <p style={{ color: "var(--ink-mid)", fontSize: "14px", margin: "0 0 10px", lineHeight: "1.5" }}>
-            Adds the ESV translation to the Bible passage popup. The ESV API is free for personal use.
+            Powers the passage view in the sermon workspace. Free for personal use — without it,
+            the passage column stays empty.
           </p>
           <ol style={STEPS}>
-            <li>Go to <strong style={{ color: "var(--ink)" }}>api.esv.org</strong>, create an account, verify your email</li>
-            <li>Click <strong style={{ color: "var(--ink)" }}>API Token</strong> and create a token</li>
-            <li>Copy the token and paste it below</li>
+            <li>Go to <strong style={{ color: "var(--ink)" }}>api.esv.org</strong>, sign in or create an account</li>
+            <li>Get your ESV API key</li>
+            <li>Copy the key and paste it below</li>
           </ol>
           <label style={LABEL}>Your ESV API key <span style={{ color: "var(--ink-ghost)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(leave blank to skip)</span></label>
           <KeyInput

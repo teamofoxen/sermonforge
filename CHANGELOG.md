@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-05-07 — SetupScreen copy refresh: ESV recommended, minimal AI usage framing
+
+- Section 2 (ESV) heading "optional" → "recommended"; description rewritten to point to the right-column passage view in the sermon workspace and to state plainly that without a key the passage column stays empty — drops the stale "Bible passage popup" wording.
+- Section 2 step 2 simplified to "Get your ESV API key" — removes the Crossway-specific "Create an Application" jargon that doesn't match the current ESV site terminology consistently.
+- Section 1 cost framing reworked: "fraction of a cent per click" and "$10 of credit will last weeks" replaced with a minimal-AI-usage note and "$5–$10 covers weeks of regular use" — accurate after ACC/SADI/SPRD AI-usage reductions.
+
+---
+
 ## 2026-05-07 — Memory hygiene: startup re-read + end-session memory step
 
 - `CLAUDE.md` adds a "Memory snapshot" section instructing a fresh Read of `MEMORY.md` at session start — the system-reminder snapshot can lag the disk if `MEMORY.md` was edited just before or during session boot.
