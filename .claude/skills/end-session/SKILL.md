@@ -28,7 +28,21 @@ then update `docs/ENFORCEMENT_STATUS.md`: bump the "Last verified" line and upda
 
 Keep the "Last verified" line to one or two sentences. Historical narrative belongs in `git log` and `CHANGELOG.md`, not in this header.
 
-## STEP 3 — UPDATE CHANGELOG
+## STEP 3 — UPDATE MEMORY (only if lasting state changed)
+
+If the session produced any of:
+
+- An initiative closed, opened, or changed phase (e.g., "ACCI closed", "BTI Phase 1 starting")
+- A user feedback rule established or invalidated ("stop doing X", "yes that pattern is right")
+- A project state fact that will outlive this session (deadlines, decisions, stakeholder asks)
+- A new external reference (Linear project, dashboard URL, MCP server, dataset)
+- An existing memory entry contradicted by today's work
+
+then update the relevant memory file at `C:\Users\rossa\.claude\projects\C--Projects-SermonForge\memory\` AND its pointer line in `MEMORY.md`. Otherwise skip.
+
+Memory updates are part of the same commit as code/docs from this session — do not split.
+
+## STEP 4 — UPDATE CHANGELOG
 
 Prepend ONE new section to `CHANGELOG.md`, immediately after the first `---`:
 
@@ -41,17 +55,17 @@ Prepend ONE new section to `CHANGELOG.md`, immediately after the first `---`:
 
 Rules: max 5 bullets, one sentence each, today's date, current session only, under 120 words. Do NOT restate prior entries or explain rationale.
 
-## STEP 4 — COMMIT
+## STEP 5 — COMMIT
 
 Stage only the files this session touched, by explicit path. Do NOT use `git add .` — pre-existing untracked files may be unrelated.
 
 Commit title = the CHANGELOG subject. Body = the same bullets.
 
-## STEP 5 — PUSH
+## STEP 6 — PUSH
 
 `git push origin main`.
 
-## STEP 6 — CONFIRM
+## STEP 7 — CONFIRM
 
 Print the commit hash and confirm the push landed. Keep it brief.
 

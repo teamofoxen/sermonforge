@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-05-07 — Memory hygiene: startup re-read + end-session memory step
+
+- `CLAUDE.md` adds a "Memory snapshot" section instructing a fresh Read of `MEMORY.md` at session start — the system-reminder snapshot can lag the disk if `MEMORY.md` was edited just before or during session boot.
+- `end-session` SKILL.md adds STEP 3 (UPDATE MEMORY) gated to lasting-state changes only (initiative phase, feedback rule, project fact, external reference, contradicted entry); CHANGELOG/COMMIT/PUSH/CONFIRM renumbered to 4/5/6/7.
+- Memory updates must ride in the same commit as the session's other changes to prevent re-introducing the snapshot/disk gap.
+
+---
+
 ## 2026-05-07 — Pastor-facing field walkthroughs (Markdown + Workspace .docx)
 
 - New `docs/PROPOSALS/sermonforge-field-walkthrough.md` traces every Series Planner + Sermon Workspace field in plain English, including cross-phase populations and the closing throughline.

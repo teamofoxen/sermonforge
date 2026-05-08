@@ -37,6 +37,13 @@ The task touches a system with recent relevant history — e.g., debugging a reg
 understanding why something was built a certain way, or checking what changed in a recent
 build. **Do not load CHANGELOG.md by default on every session.**
 
+## Memory snapshot
+
+The `MEMORY.md` index is pre-loaded into context at session start, but the snapshot
+can lag the disk if `MEMORY.md` was edited just before or during session boot. At the
+start of each session, Read `C:\Users\rossa\.claude\projects\C--Projects-SermonForge\memory\MEMORY.md`
+from disk before relying on the index. The file is small; this is cheap.
+
 ---
 
 ## Authority
