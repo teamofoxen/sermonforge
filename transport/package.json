@@ -1,0 +1,16 @@
+{
+  "name": "sermonforge-bti-transport",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Cloudflare Worker + D1 transport for SermonForge BTI feedback (flags, forms, telemetry)",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "schema": "wrangler d1 execute sermonforge-bti --remote --file=schema.sql",
+    "schema:local": "wrangler d1 execute sermonforge-bti --local --file=schema.sql"
+  },
+  "devDependencies": {
+    "wrangler": "^4.90.0"
+  }
+}

@@ -1,0 +1,14 @@
+name = "sermonforge-bti"
+main = "worker.js"
+compatibility_date = "2026-05-08"
+
+# D1 database binding.
+# database_id is filled in after `wrangler d1 create sermonforge-bti`.
+[[d1_databases]]
+binding = "DB"
+database_name = "sermonforge-bti"
+database_id = "7cd9f545-3d00-451c-8e6f-19eadba81173"
+
+# Secrets (set via `wrangler secret put`, not in this file):
+#   INGEST_TOKEN — Bearer token the SermonForge app uses to POST /ingest
+#   ADMIN_TOKEN  — query token the inbox UI uses for GET /inbox
