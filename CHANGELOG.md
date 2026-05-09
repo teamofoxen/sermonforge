@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-08 — Topbar Ink redesign + sidebar Paul-at-Areopagus watermark
+
+- Topbar header rendered for all non-Workspace views in `App.jsx`; Logo's two decorative rule spans dropped — the sidebar/topbar L-shape now carries the chrome.
+- Topbar restyled to dark Ink (Claude Design Option 2) with locally-scoped `--topbar-fg*` tokens; single gold hairline seams the bottom edge, perpendicular to the sidebar's gold right edge.
+- Sidebar gets a faded Raphael "St Paul at Areopagus" watermark in the lower 58% — V&A public-domain cartoon, 0.13 opacity, sepia-toned, mask-faded into the ink.
+- Sidebar logo height tuned to 62px so its inset gold divider aligns with the topbar's bottom seam — one continuous L-shape hairline.
+- Dash-header tightened (min-height 170→114px, padding 22/24→15/16) to make room for the topbar.
+
+---
+
 ## 2026-05-08 — Remove Phase 6 embedder kill switch
 
 - `SF_EMBED_WORKER` flag retired after one-release soak (shipped 2026-04-29 in `d1beb56`); the worker_thread embedder pipeline is now the only path.

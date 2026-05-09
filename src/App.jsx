@@ -255,6 +255,9 @@ export default function App() {
         />
       )}
       <div className="main-content">
+        {currentView !== VIEW.Workspace && (
+          <header className="topbar" aria-label="Topbar"></header>
+        )}
         <Suspense fallback={null}>
         {currentView === VIEW.Dashboard && (
           <Dashboard

@@ -37,7 +37,6 @@ export default function Logo({
 
   return (
     <div className={cls} role="img" aria-label="SermonForge">
-      <span className={styles.rule} aria-hidden="true" />
       <div className={styles.word}>SermonForge</div>
       {tagline && (
         <div className={styles.tag}>
@@ -45,7 +44,6 @@ export default function Logo({
           Clarity{"\u2003"}Through{"\u2003"}Constraint
         </div>
       )}
-      <span className={styles.rule} aria-hidden="true" />
     </div>
   );
 }
