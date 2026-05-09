@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { getRecentSermons, getRecentSeries } from "../core/spine";
 import { VIEW } from "../core/contracts";
 import NewSermonModal from "./NewSermonModal.jsx";
-import FeedbackModal from "./FeedbackModal.jsx";
+import FeedbackForm from "./FeedbackForm.jsx";
 import IconButton from "./primitives/IconButton";
 import TextButton from "./primitives/TextButton";
 import Logo from "./Logo.jsx";
@@ -259,13 +259,12 @@ export default function Sidebar({ currentView, onNavigate, onOpenSermon, onOpenS
           onClick={() => setShowFeedback(true)}
           style={{ padding: "4px 0 0" }}
         >
-          Send feedback
+          Send feedback…
         </TextButton>
       </div>
 
       {showFeedback && (
-        <FeedbackModal
-          currentView={currentView}
+        <FeedbackForm
           onClose={() => setShowFeedback(false)}
         />
       )}

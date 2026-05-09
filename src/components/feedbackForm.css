@@ -1,0 +1,133 @@
+/* FeedbackForm — Tier 2 pop-out feedback modal (BTI Phase 1, Chunk 4).
+ *
+ * Single-dimension picker + free-text. Modal in the same renderer process
+ * (per Q1 ruling — no separate BrowserWindow at this scale).
+ */
+
+.feedback-form-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(26, 20, 16, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 20px;
+}
+
+.feedback-form-modal {
+  width: 100%;
+  max-width: 520px;
+  background: var(--parchment);
+  border: 1px solid var(--parchment-deep);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-deep);
+  font-family: var(--font-serif);
+  color: var(--ink-mid);
+  overflow: hidden;
+}
+
+.feedback-form-header {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--parchment-deep);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.feedback-form-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.feedback-form-close {
+  background: transparent;
+  border: none;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--ink-ghost);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius);
+}
+
+.feedback-form-close:hover {
+  color: var(--ink);
+  background: var(--parchment-warm);
+}
+
+.feedback-form-body {
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.feedback-form-intro {
+  font-size: 13px;
+  color: var(--ink-soft);
+  font-style: italic;
+  line-height: 1.5;
+}
+
+.feedback-form-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-ghost);
+  font-weight: 600;
+}
+
+.feedback-form-select,
+.feedback-form-textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--parchment-deep);
+  border-radius: var(--radius);
+  background: var(--white);
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: 14px;
+}
+
+.feedback-form-textarea {
+  min-height: 140px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.feedback-form-select:focus,
+.feedback-form-textarea:focus {
+  outline: none;
+  border-color: var(--gold);
+}
+
+.feedback-form-footer {
+  padding: 12px 18px;
+  border-top: 1px solid var(--parchment-deep);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  background: var(--parchment-warm);
+}
+
+.feedback-form-footer-note {
+  font-size: 11px;
+  color: var(--ink-ghost);
+  font-style: italic;
+}
+
+.feedback-form-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.feedback-form-confirm {
+  padding: 24px 18px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--sage);
+  font-style: italic;
+}

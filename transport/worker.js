@@ -6,12 +6,25 @@
 
 const JSON_HEADERS = { 'Content-Type': 'application/json; charset=utf-8' };
 
+// CORS headers — only used on /inbox so the developer can open
+// transport/inbox.html locally (file://) and fetch this Worker.
+// /ingest deliberately omits CORS: SermonForge clients are same-origin
+// from a Node fetch, and there is no browser-fetch use case.
+const INBOX_CORS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+};
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
     if (request.method === 'POST' && url.pathname === '/ingest') {
       return handleIngest(request, env);
+    }
+    if (request.method === 'OPTIONS' && url.pathname === '/inbox') {
+      return new Response(null, { status: 204, headers: INBOX_CORS });
     }
     if (request.method === 'GET' && url.pathname === '/inbox') {
       return handleInbox(url, env);
@@ -146,6 +159,6 @@ async function handleInbox(url, env) {
       forms: forms.results,
       events: events.results,
     }),
-    { headers: JSON_HEADERS }
+    { headers: { ...JSON_HEADERS, ...INBOX_CORS } }
   );
 }

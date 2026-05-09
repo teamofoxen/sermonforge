@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SermonForge BTI Inbox</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --ink: #1a1410;
+    --ink-mid: #3d3229;
+    --ink-soft: #6b5c4e;
+    --ink-ghost: #a8998a;
+    --parchment: #f7f3ec;
+    --parchment-warm: #efe9de;
+    --parchment-deep: #e4dace;
+    --gold: #b8860b;
+    --sage: #4a6741;
+    --crimson: #8b1a1a;
+    --white: #ffffff;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    background: var(--parchment);
+    color: var(--ink);
+    font-size: 14px;
+    padding: 16px;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding: 8px 12px;
+    background: var(--white);
+    border: 1px solid var(--parchment-deep);
+    border-radius: 6px;
+    margin-bottom: 12px;
+  }
+  header label { color: var(--ink-soft); font-size: 12px; }
+  header input {
+    padding: 4px 8px;
+    border: 1px solid var(--parchment-deep);
+    border-radius: 3px;
+    font-family: monospace;
+    font-size: 12px;
+    min-width: 240px;
+  }
+  header input[type="password"] { min-width: 160px; }
+  header button {
+    padding: 5px 12px;
+    background: var(--ink);
+    color: var(--parchment);
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 12px;
+  }
+  header button:hover { background: var(--ink-mid); }
+  header .status { color: var(--ink-ghost); font-size: 12px; margin-left: auto; }
+  header .status.error { color: var(--crimson); }
+
+  .tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid var(--parchment-deep);
+    margin-bottom: 8px;
+  }
+  .tab {
+    padding: 8px 14px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    border-bottom: none;
+    border-radius: 6px 6px 0 0;
+    color: var(--ink-soft);
+    background: var(--parchment-warm);
+    font-size: 13px;
+  }
+  .tab.active {
+    background: var(--white);
+    color: var(--ink);
+    border-color: var(--parchment-deep);
+    font-weight: 600;
+  }
+  .tab .count {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 6px;
+    background: var(--parchment-deep);
+    color: var(--ink-mid);
+    border-radius: 10px;
+    font-size: 11px;
+  }
+  .tab.active .count { background: var(--gold); color: var(--white); }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .row {
+    background: var(--white);
+    border: 1px solid var(--parchment-deep);
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .row .meta {
+    color: var(--ink-ghost);
+    font-size: 11px;
+    font-family: monospace;
+    margin-bottom: 4px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .row .meta strong { color: var(--ink-mid); font-weight: 600; }
+  .row .body { color: var(--ink-mid); white-space: pre-wrap; }
+  .row .surface, .row .dimension, .row .event-type {
+    display: inline-block;
+    padding: 2px 8px;
+    background: var(--gold);
+    color: var(--white);
+    border-radius: 10px;
+    font-size: 11px;
+    margin-right: 6px;
+    text-transform: lowercase;
+  }
+  .row details {
+    margin-top: 6px;
+    font-family: monospace;
+    font-size: 11px;
+    color: var(--ink-soft);
+  }
+  .row details summary { cursor: pointer; color: var(--ink-ghost); }
+  .row details pre {
+    background: var(--parchment-warm);
+    padding: 8px;
+    border-radius: 3px;
+    margin-top: 4px;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .empty {
+    text-align: center;
+    color: var(--ink-ghost);
+    padding: 32px;
+    font-style: italic;
+  }
+</style>
+</head>
+<body>
+  <header>
+    <label>Worker URL</label>
+    <input id="worker-url" type="text" placeholder="https://sermonforge-bti.ross-appleton.workers.dev">
+    <label>Admin Token</label>
+    <input id="admin-token" type="password" placeholder="…">
+    <button id="refresh">Refresh</button>
+    <span id="status" class="status">Idle.</span>
+  </header>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="flags">Flags <span class="count" id="count-flags">0</span></div>
+    <div class="tab" data-tab="forms">Forms <span class="count" id="count-forms">0</span></div>
+    <div class="tab" data-tab="events">Telemetry <span class="count" id="count-events">0</span></div>
+  </div>
+
+  <div id="panel-flags" class="panel active"></div>
+  <div id="panel-forms" class="panel"></div>
+  <div id="panel-events" class="panel"></div>
+
+<script>
+const STORAGE_URL = "bti-inbox-worker-url";
+const STORAGE_TOKEN = "bti-inbox-admin-token";
+
+const els = {
+  url: document.getElementById("worker-url"),
+  token: document.getElementById("admin-token"),
+  refresh: document.getElementById("refresh"),
+  status: document.getElementById("status"),
+  panels: {
+    flags: document.getElementById("panel-flags"),
+    forms: document.getElementById("panel-forms"),
+    events: document.getElementById("panel-events"),
+  },
+  counts: {
+    flags: document.getElementById("count-flags"),
+    forms: document.getElementById("count-forms"),
+    events: document.getElementById("count-events"),
+  },
+};
+
+// Restore last-used URL + token.
+els.url.value = localStorage.getItem(STORAGE_URL) || "https://sermonforge-bti.ross-appleton.workers.dev";
+els.token.value = localStorage.getItem(STORAGE_TOKEN) || "";
+
+// Tab switching.
+document.querySelectorAll(".tab").forEach((t) => {
+  t.addEventListener("click", () => {
+    document.querySelectorAll(".tab").forEach((x) => x.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach((x) => x.classList.remove("active"));
+    t.classList.add("active");
+    document.getElementById("panel-" + t.dataset.tab).classList.add("active");
+  });
+});
+
+els.refresh.addEventListener("click", load);
+els.token.addEventListener("keydown", (e) => { if (e.key === "Enter") load(); });
+
+function setStatus(text, isError) {
+  els.status.textContent = text;
+  els.status.classList.toggle("error", !!isError);
+}
+
+function shorten(s, n) {
+  if (s == null) return "—";
+  const str = String(s);
+  return str.length > n ? str.slice(0, n) + "…" : str;
+}
+
+function fmtTime(ts) {
+  if (!ts) return "—";
+  try {
+    const d = new Date(ts);
+    return d.toLocaleString();
+  } catch {
+    return ts;
+  }
+}
+
+async function load() {
+  const baseUrl = els.url.value.replace(/\/+$/, "");
+  const token = els.token.value;
+  if (!baseUrl || !token) { setStatus("Worker URL and admin token required.", true); return; }
+  localStorage.setItem(STORAGE_URL, baseUrl);
+  localStorage.setItem(STORAGE_TOKEN, token);
+
+  setStatus("Loading…");
+  try {
+    const res = await fetch(`${baseUrl}/inbox?token=${encodeURIComponent(token)}&limit=200`);
+    if (!res.ok) {
+      setStatus(`HTTP ${res.status} — ${res.status === 401 ? "bad token" : "load failed"}`, true);
+      return;
+    }
+    const data = await res.json();
+    render(data);
+    setStatus(`Loaded at ${new Date().toLocaleTimeString()}.`);
+  } catch (err) {
+    setStatus(`Network error: ${err.message}`, true);
+  }
+}
+
+function render({ flags = [], forms = [], events = [] }) {
+  els.counts.flags.textContent = flags.length;
+  els.counts.forms.textContent = forms.length;
+  els.counts.events.textContent = events.length;
+
+  els.panels.flags.innerHTML = flags.length === 0
+    ? `<div class="empty">No flags yet.</div>`
+    : flags.map(renderFlag).join("");
+  els.panels.forms.innerHTML = forms.length === 0
+    ? `<div class="empty">No forms yet.</div>`
+    : forms.map(renderForm).join("");
+  els.panels.events.innerHTML = events.length === 0
+    ? `<div class="empty">No telemetry events yet.</div>`
+    : events.map(renderEvent).join("");
+}
+
+function escape(s) {
+  if (s == null) return "";
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function renderFlag(f) {
+  return `
+    <div class="row">
+      <div class="meta">
+        <span class="surface">${escape(f.surface)}</span>
+        <span><strong>tester</strong> ${escape(shorten(f.tester_id, 8))}</span>
+        <span><strong>sermon</strong> ${escape(shorten(f.sermon_id, 12))}</span>
+        <span><strong>step</strong> ${escape(f.step ?? "—")}</span>
+        <span><strong>client</strong> ${escape(fmtTime(f.client_timestamp))}</span>
+        <span><strong>server</strong> ${escape(fmtTime(f.server_timestamp))}</span>
+      </div>
+      <div class="body">${escape(f.note || "(no note)")}</div>
+      ${f.last_ai_call_json ? `
+        <details>
+          <summary>AI exchange</summary>
+          <pre>${escape(prettyJson(f.last_ai_call_json))}</pre>
+        </details>` : ""}
+    </div>
+  `;
+}
+
+function renderForm(f) {
+  return `
+    <div class="row">
+      <div class="meta">
+        <span class="dimension">${escape(f.dimension)}</span>
+        <span><strong>tester</strong> ${escape(shorten(f.tester_id, 8))}</span>
+        <span><strong>sermon</strong> ${escape(shorten(f.sermon_id, 12))}</span>
+        <span><strong>step</strong> ${escape(f.step ?? "—")}</span>
+        <span><strong>client</strong> ${escape(fmtTime(f.client_timestamp))}</span>
+        <span><strong>server</strong> ${escape(fmtTime(f.server_timestamp))}</span>
+      </div>
+      <div class="body">${escape(f.text)}</div>
+    </div>
+  `;
+}
+
+function renderEvent(e) {
+  return `
+    <div class="row">
+      <div class="meta">
+        <span class="event-type">${escape(e.event_type)}</span>
+        <span><strong>tester</strong> ${escape(shorten(e.tester_id, 8))}</span>
+        <span><strong>client</strong> ${escape(fmtTime(e.client_timestamp))}</span>
+        <span><strong>server</strong> ${escape(fmtTime(e.server_timestamp))}</span>
+      </div>
+      <details>
+        <summary>payload</summary>
+        <pre>${escape(prettyJson(e.payload_json))}</pre>
+      </details>
+    </div>
+  `;
+}
+
+function prettyJson(s) {
+  try { return JSON.stringify(JSON.parse(s), null, 2); } catch { return s || ""; }
+}
+
+// Auto-load if both fields are populated.
+if (els.url.value && els.token.value) load();
+</script>
+</body>
+</html>

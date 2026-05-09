@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { saveApiKeys } from "../db/database";
+import { saveApiKeys, setSetting } from "../db/database";
 import InlineError from "./InlineError";
 import PrimaryButton from "./primitives/PrimaryButton";
 import IconButton from "./primitives/IconButton";
@@ -75,6 +75,7 @@ function KeyInput({ value, onChange, placeholder }) {
 export default function SetupScreen({ onComplete }) {
   const [anthropic, setAnthropic] = useState("");
   const [esv, setEsv] = useState("");
+  const [telemetryOn, setTelemetryOn] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -88,6 +89,12 @@ export default function SetupScreen({ onComplete }) {
     try {
       const result = await saveApiKeys({ anthropic, esv: esv.trim() });
       if (result?.success) {
+        // Persist BTI telemetry preference (Q9). Default-on per the charter
+        // ruling; explicit opt-out is the only state stored as "false".
+        try {
+          await setSetting("bti_telemetry_enabled", telemetryOn ? "true" : "false");
+          await window.electronAPI?.telemetrySetEnabled?.(telemetryOn);
+        } catch (_) {}
         onComplete();
       } else {
         setError(result?.error || "Failed to save keys.");
@@ -218,6 +225,48 @@ export default function SetupScreen({ onComplete }) {
           your app data folder) recording each AI request — the system prompt, your messages, and the response.
           It never leaves your machine and is used only for local debugging.
         </p>
+
+        {/* ── Telemetry & feedback (BTI Phase 1, Q9) ─────────────────────── */}
+        <div style={{ ...SECTION, paddingTop: "20px", marginTop: "20px" }}>
+          <h2 style={{
+            fontFamily: "var(--font-serif)",
+            fontSize: "14px", color: "var(--ink)", margin: "0 0 8px",
+          }}>
+            Telemetry and feedback
+          </h2>
+          <p style={{ color: "var(--ink-mid)", fontSize: "13px", lineHeight: "1.55", margin: "0 0 10px" }}>
+            SermonForge sends a small amount of usage data to its developer to help shape the tool —
+            things like which buttons you press, how long the AI takes, when something crashes, and
+            any flags or feedback you choose to send. <strong>Sermon content is never captured.</strong> When
+            you click a flag and choose to include the AI exchange, only that one exchange travels with
+            the flag.
+          </p>
+          <p style={{ color: "var(--ink-mid)", fontSize: "13px", lineHeight: "1.55", margin: "0 0 10px" }}>
+            Data goes to a developer-controlled endpoint — no third-party analytics. Full details live in
+            the privacy doc shipped with the app (<code style={{ fontFamily: "monospace" }}>docs/REFERENCE/privacy.md</code>).
+            You can turn this off below; if you do, nothing leaves your device.
+          </p>
+          <label style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            padding: "10px 12px",
+            background: "var(--parchment-warm)",
+            border: "1px solid var(--parchment-deep)",
+            borderRadius: "4px",
+            cursor: "pointer",
+            fontSize: "13px",
+            color: "var(--ink-mid)",
+          }}>
+            <input
+              type="checkbox"
+              checked={telemetryOn}
+              onChange={(e) => setTelemetryOn(e.target.checked)}
+              style={{ cursor: "pointer" }}
+            />
+            <span>Send anonymous usage and feedback to the developer (recommended)</span>
+          </label>
+        </div>
 
         {/* OneDrive caution — surfaced here so new users see it before adding data. */}
         <p style={FINE_PRINT}>

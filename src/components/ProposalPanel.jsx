@@ -8,6 +8,7 @@
 
 import PrimaryButton from "./primitives/PrimaryButton";
 import SecondaryButton from "./primitives/SecondaryButton";
+import FeedbackFlag from "./FeedbackFlag";
 
 export default function ProposalPanel({
   loading,
@@ -16,6 +17,7 @@ export default function ProposalPanel({
   onDiscard,
   label = "AI proposes",
   acceptLabel = "Use this",
+  flagContext = null,
 }) {
   if (!loading && !proposal) return null;
 
@@ -35,15 +37,31 @@ export default function ProposalPanel({
     >
       <div
         style={{
-          fontSize: "11px",
-          letterSpacing: "0.08em",
-          textTransform: "uppercase",
-          color: "var(--ink-ghost)",
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          gap: "8px",
           marginBottom: "6px",
-          fontWeight: 600,
         }}
       >
-        {label}
+        <div
+          style={{
+            fontSize: "11px",
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            color: "var(--ink-ghost)",
+            fontWeight: 600,
+          }}
+        >
+          {label}
+        </div>
+        {flagContext && (
+          <FeedbackFlag
+            surface="proposal"
+            sermonId={flagContext.sermonId ?? null}
+            step={flagContext.step ?? null}
+          />
+        )}
       </div>
       {loading && !proposal ? (
         <div className="ai-loading" style={{ padding: "4px 0" }}>

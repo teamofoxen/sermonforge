@@ -25,6 +25,7 @@ import ScripturePanel from "./ScripturePanel";
 import OutlineBuilder from "./OutlineBuilder";
 import InlineAIResponse from "./InlineAIResponse";
 import ProposalPanel from "./ProposalPanel";
+import FeedbackFlag from "./FeedbackFlag";
 import { OUTLINE_SYSTEM, outlineHasNumberedList, extractOutlineWithExplanations } from "../utils/outlineChat";
 import { parseAIJson, validateScriptureMap } from "../utils/aiSchema";
 import { buildSystemPrompt, appendTaskDirective } from "../prompts/sermon";
@@ -706,7 +707,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
       const userContent = context
         ? `CONTEXT:\n${context}\n\nUSER REQUEST:\n${userRequest}`
         : userRequest;
-      const result = await sendAIMessage([{ role: "user", content: userContent }], layerTask(taskDirective, step), step, sermon.id);
+      const result = await sendAIMessage([{ role: "user", content: userContent }], layerTask(taskDirective, step), step, sermon.id, "study-tab");
       if (result.ok) {
         setInlineResponses(prev => ({ ...prev, [key]: result.text }));
       } else if (result.kind !== "aborted") {
@@ -739,6 +740,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
         layerTask(MPT_DRAFT_TASK, step),
         step,
         sermon.id,
+        "study-tab",
       );
       if (result.ok && result.text.trim()) setMptProposal(result.text.trim());
     } catch (e) {
@@ -763,6 +765,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
         layerTask(MPS_Q1_TRANSLATE_TASK, step),
         step,
         sermon.id,
+        "study-tab",
       );
       if (result.ok && result.text.trim()) setMpsProposal(result.text.trim());
     } catch (e) {
@@ -787,6 +790,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
         layerTask(OUTLINE_SYSTEM, step),
         step,
         sermon.id,
+        "study-tab",
       );
       if (result.ok && result.text.trim()) setOutlineChat([{ role: "assistant", content: result.text.trim() }]);
     } catch (e) {
@@ -811,7 +815,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
       const messages = history.map((m, i) =>
         i === history.length - 1 ? { ...m, content: contextPrefix + m.content } : m
       );
-      const result = await sendAIMessage(messages, layerTask(OUTLINE_SYSTEM, step), step, sermon.id);
+      const result = await sendAIMessage(messages, layerTask(OUTLINE_SYSTEM, step), step, sermon.id, "study-tab");
       if (result.ok && result.text.trim()) {
         setOutlineChat(prev => [...prev, { role: "assistant", content: result.text.trim() }]);
       } else if (!result.ok && result.kind !== "aborted") {
@@ -836,6 +840,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
         layerTask(taskDirective, step),
         step,
         sermon.id,
+        "study-tab",
       );
       if (result.ok) {
         setSummaries(prev => ({ ...prev, [key]: result.text }));
@@ -1093,6 +1098,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
         layerTask(POPULATE_SCRIPTURE_TASK, step),
         step,
         sermon.id,
+        "study-tab",
       );
       if (!result.ok) {
         if (result.kind === "aborted") return;
@@ -1168,7 +1174,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
       const messages = history.map((m, i) =>
         i === history.length - 1 ? { ...m, content: contextPrefix + m.content } : m
       );
-      const result = await sendAIMessage(messages, layerTask(FE_CHAT_SYSTEM, step), step, sermon.id);
+      const result = await sendAIMessage(messages, layerTask(FE_CHAT_SYSTEM, step), step, sermon.id, "study-tab");
       if (result.ok && result.text.trim()) {
         setFeChat(prev => [...prev, { role: "assistant", content: result.text.trim() }]);
       } else if (!result.ok && result.kind !== "aborted") {
@@ -1218,7 +1224,12 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
 
   return (
     <div className="study-tab-shell">
-      <StudyStepStrip activeStep={activeStep} onStepChange={jumpToStep} />
+      <div style={{ position: "relative" }}>
+        <StudyStepStrip activeStep={activeStep} onStepChange={jumpToStep} />
+        <div style={{ position: "absolute", top: "8px", right: "10px" }}>
+          <FeedbackFlag surface="study-tab" sermonId={sermon?.id ?? null} step={activeStep ?? null} />
+        </div>
+      </div>
       <div className={`study-three-col${wantsTakeover ? " study-three-col-takeover" : ""}`}>
         <ThroughlineRail
           subPhases={railSubPhases}
@@ -1523,6 +1534,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
           <ProposalPanel
             loading={draftLoading === "mpt"}
             proposal={mptProposal}
+            flagContext={{ sermonId: sermon.id, step: STEPS.MPT_MPS }}
             label="AI proposes MPT Draft (Q1)"
             acceptLabel={flattenAnswerValue(getQuestionAnswer(mppData, "mpt", "draft"))?.trim() ? "Replace MPT Draft" : "Use this"}
             onAccept={() => {
@@ -1534,6 +1546,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
           <ProposalPanel
             loading={draftLoading === "mps"}
             proposal={mpsProposal}
+            flagContext={{ sermonId: sermon.id, step: STEPS.MPT_MPS }}
             label="AI proposes MPS Translate (Q1)"
             acceptLabel={mpsTranslate?.trim() ? "Replace MPS Translate" : "Use this"}
             onAccept={() => {
@@ -1767,6 +1780,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
           <ProposalPanel
             loading={scripturePopulating}
             proposal={scriptureProposal?.summary || null}
+            flagContext={{ sermonId: sermon.id, step: STEPS.FUNCTIONAL_ELEMENTS }}
             label="AI proposes Scripture mapping"
             acceptLabel="Use this"
             onAccept={() => {

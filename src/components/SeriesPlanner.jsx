@@ -31,6 +31,7 @@ import SecondaryButton from "./primitives/SecondaryButton";
 import IconButton from "./primitives/IconButton";
 import BackButton from "./primitives/BackButton";
 import TextButton from "./primitives/TextButton";
+import FeedbackFlag from "./FeedbackFlag";
 
 
 // Layer a task directive on top of the canonical system prompt for series-
@@ -254,6 +255,7 @@ export default function SeriesPlanner({ seriesId, onClose, onOpenSermon }) {
         >
           Chat with AI
         </SecondaryButton>
+        <FeedbackFlag surface="series-planner" sermonId={null} step={null} />
       </div>
 
       {/* Auto-suggest Mark Series Complete — fires when every committed
@@ -441,6 +443,7 @@ function BookStudyTab({ series, onChange, drawerOpen, onOpenDrawer, onCloseDrawe
         layerSeriesTask(BOOK_STUDY_FIELD_ANALYZE_TASK, SERIES_STEPS.BookStudy),
         SERIES_STEPS.BookStudy,
         null,
+        "series-planner",
       );
       if (result.ok) {
         setInlineResponses(prev => ({ ...prev, [fieldDef.key]: result.text }));
@@ -464,6 +467,7 @@ function BookStudyTab({ series, onChange, drawerOpen, onOpenDrawer, onCloseDrawe
         layerSeriesTask(BOOK_STUDY_BIG_IDEA_TASK, SERIES_STEPS.BookStudy),
         SERIES_STEPS.BookStudy,
         null,
+        "series-planner",
       );
       if (result.ok && result.text.trim()) onChange("emerging_big_idea", result.text.trim());
     } catch (e) {
@@ -498,6 +502,7 @@ function BookStudyTab({ series, onChange, drawerOpen, onOpenDrawer, onCloseDrawe
         layerSeriesTask(`${BOOK_STUDY_CHAT_TASK}\n\n${seriesContext}`, SERIES_STEPS.BookStudy),
         SERIES_STEPS.BookStudy,
         null,
+        "series-planner",
       );
       if (result.ok) {
         setAiMessages([...newMessages, { role: "assistant", content: result.text }]);
@@ -625,6 +630,7 @@ function OverviewTab({ series, onChange, drawerOpen, onOpenDrawer, onCloseDrawer
         layerSeriesTask(SERIES_BIG_IDEA_TASK, SERIES_STEPS.Overview),
         SERIES_STEPS.Overview,
         null,
+        "series-planner",
       );
       if (result.ok && result.text.trim()) onChange("big_idea", result.text.trim());
     } catch (e) {
@@ -643,6 +649,7 @@ function OverviewTab({ series, onChange, drawerOpen, onOpenDrawer, onCloseDrawer
         layerSeriesTask(SERIES_OVERVIEW_TASK, SERIES_STEPS.Overview),
         SERIES_STEPS.Overview,
         null,
+        "series-planner",
       );
       if (result.ok && result.text.trim()) onChange("overview", result.text.trim());
     } catch (e) {
@@ -662,7 +669,7 @@ function OverviewTab({ series, onChange, drawerOpen, onOpenDrawer, onCloseDrawer
     setChatLoading(true);
     try {
       const context = `Series: "${series.title}" | Passage: ${series.passage_range || "—"} | Big Idea: ${series.big_idea || "—"} | Canon: ${series.canon_category || "—"}`;
-      const result = await sendAIMessage(newMessages, layerSeriesTask(`${SERIES_OVERVIEW_CHAT_TASK}\n\nCurrent series context: ${context}.`, SERIES_STEPS.Overview), SERIES_STEPS.Overview, null);
+      const result = await sendAIMessage(newMessages, layerSeriesTask(`${SERIES_OVERVIEW_CHAT_TASK}\n\nCurrent series context: ${context}.`, SERIES_STEPS.Overview), SERIES_STEPS.Overview, null, "series-planner");
       if (result.ok) {
         setAiMessages([...newMessages, { role: "assistant", content: result.text }]);
       } else if (result.kind !== "aborted") {
@@ -859,6 +866,7 @@ function StructureTab({ series, sections, onChange, onSectionsChange, seriesId, 
         layerSeriesTask(SERIES_STRUCTURAL_OUTLINE_TASK, SERIES_STEPS.Structure),
         SERIES_STEPS.Structure,
         null,
+        "series-planner",
       );
       if (result.ok && result.text.trim()) onChange("structural_outline", result.text.trim());
     } catch (e) {
@@ -906,7 +914,7 @@ function StructureTab({ series, sections, onChange, onSectionsChange, seriesId, 
     setChatLoading(true);
     try {
       const context = `Series: "${series.title}" | Passage: ${series.passage_range || "—"}`;
-      const result = await sendAIMessage(newMessages, layerSeriesTask(`${SERIES_STRUCTURE_CHAT_TASK}\n\nContext: ${context}.`, SERIES_STEPS.Structure), SERIES_STEPS.Structure, null);
+      const result = await sendAIMessage(newMessages, layerSeriesTask(`${SERIES_STRUCTURE_CHAT_TASK}\n\nContext: ${context}.`, SERIES_STEPS.Structure), SERIES_STEPS.Structure, null, "series-planner");
       if (result.ok) {
         setAiMessages([...newMessages, { role: "assistant", content: result.text }]);
       } else if (result.kind !== "aborted") {
@@ -1195,7 +1203,7 @@ function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpen
     setChatLoading(true);
     try {
       const context = `Series: "${series.title}" | Passage: ${series.passage_range || "—"} | Existing slots: ${sermons.map(s => s.passage || s.title).filter(Boolean).join(", ") || "none yet"}`;
-      const result = await sendAIMessage(newMessages, layerSeriesTask(`${SERIES_SLOTS_CHAT_TASK}\n\nContext: ${context}.`, SERIES_STEPS.Slots), SERIES_STEPS.Slots, null);
+      const result = await sendAIMessage(newMessages, layerSeriesTask(`${SERIES_SLOTS_CHAT_TASK}\n\nContext: ${context}.`, SERIES_STEPS.Slots), SERIES_STEPS.Slots, null, "series-planner");
       if (result.ok) {
         setAiMessages([...newMessages, { role: "assistant", content: result.text }]);
       } else if (result.kind !== "aborted") {
@@ -1397,6 +1405,7 @@ function SlotRow({ slot, index, onChange, onDelete, onCommit, commitError, onCle
         layerSeriesTask(`${STUDY_GUIDE_NOTE_TASK}\n\nSeries: "${series?.title || "this series"}".`, SERIES_STEPS.Slots),
         SERIES_STEPS.Slots,
         slot?.id ?? null,
+        "series-planner",
       );
       if (result.ok) {
         setAssistResponse(result.text);
@@ -1588,6 +1597,7 @@ function CalendarTab({ series, sections, sermons, calNotes, onChange, onSermonsC
         layerSeriesTask(`${CALENDAR_CHAT_TASK}\n\nSeries: "${series.title}" starting ${series.start_date || "TBD"}.\nCurrent schedule:\n${scheduleContext}${noteContext}`, SERIES_STEPS.Calendar),
         SERIES_STEPS.Calendar,
         null,
+        "series-planner",
       );
       if (result.ok) {
         setAiMessages([...newMessages, { role: "assistant", content: result.text }]);

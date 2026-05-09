@@ -951,6 +951,18 @@ ipcMain.handle("telemetry-set-enabled", (_, enabled) => {
   return { ok: true };
 });
 
+// BTI flag/form submissions — single-item POST through the bus's
+// sendImmediate path. Failures persist to the immediate queue and
+// retry on the next periodic flush.
+ipcMain.handle("bti-feedback-submit", async (_, { kind, payload } = {}) => {
+  try {
+    return await telemetryBus.sendImmediate(kind, payload);
+  } catch (err) {
+    logError("[bti-feedback-submit] handler threw", err);
+    return { ok: false, reason: "threw" };
+  }
+});
+
 // Column allowlists are imported from electron/contracts.cjs (single source of
 // truth: src/core/contracts.ts). buildUpdate validates against them; updates
 // to anything outside the allowlist throw in dev (drift surfaces loudly) and
@@ -2905,9 +2917,15 @@ ipcMain.handle('passage-fetch', async (_, passage) => {
 app.whenReady().then(async () => {
   logInfo(`SermonForge ${app.getVersion()} starting`);
   createWindow();              // splash visible immediately
-  telemetryBus.init();
-  telemetryBus.emit("app-open", { version: app.getVersion(), platform: process.platform });
   await initDatabase();
+  // Telemetry initialized AFTER the DB so we can honor the BTI opt-out before
+  // any event leaves the device. Q9 default = on; explicit "false" disables.
+  telemetryBus.init();
+  try {
+    const pref = getSetting("bti_telemetry_enabled");
+    if (pref === "false") telemetryBus.setEnabled(false);
+  } catch (_) {}
+  telemetryBus.emit("app-open", { version: app.getVersion(), platform: process.platform });
   maybeWarnOneDrive();         // populates the startup-warning slot before renderer mounts
   loadAppContent();            // swap splash → real app
   initUpdater();

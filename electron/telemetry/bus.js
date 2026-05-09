@@ -5,8 +5,10 @@
 // the BTI Worker (transport/worker.js).
 //
 // File layout under paths.telemetry:
-//   <session-id>.ndjson           — active queue (this session)
-//   <session-id>.ndjson.pending   — rotated queue, in flight to the Worker
+//   <session-id>.ndjson             — active batched-event queue (this session)
+//   <session-id>.ndjson.pending     — rotated batched queue, in flight to the Worker
+//   <session-id>.immediate.ndjson   — flag/form items that failed their immediate
+//                                     POST and are waiting for a periodic retry
 //
 // Tester ID is persisted under paths.userData/tester-id.txt (opaque UUID,
 // assigned at first run, survives reinstall only if userData survives).
@@ -31,6 +33,7 @@ const {
 
 let _sessionId = null;
 let _ndjsonFile = null;
+let _immediateFile = null;
 let _flushTimer = null;
 let _testerId = null;
 let _initialized = false;
@@ -45,9 +48,11 @@ function init() {
     }
     _sessionId = randomUUID();
     _ndjsonFile = path.join(paths.telemetry, `${_sessionId}.ndjson`);
+    _immediateFile = path.join(paths.telemetry, `${_sessionId}.immediate.ndjson`);
     _testerId = loadOrAssignTesterId();
     _flushTimer = setInterval(() => {
       flush().catch(() => {});
+      drainImmediateQueue().catch(() => {});
     }, FLUSH_INTERVAL_MS);
     _initialized = true;
   } catch (err) {
@@ -184,6 +189,93 @@ async function flushAndExit() {
     _flushTimer = null;
   }
   await flush().catch(() => {});
+  await drainImmediateQueue().catch(() => {});
+}
+
+// sendImmediate — single-item POST for flag/form payloads. Tries the network
+// first; on failure, appends to <session-id>.immediate.ndjson where the
+// periodic flush loop retries it on the next tick. Never throws.
+//
+// `kind` is "flag" | "form". `payload` is the per-kind shape from the BTI
+// build proposal (lines 138-149 for flag, 174-181 for form). The function
+// adds testerId at send time, so callers don't need to know the tester ID.
+async function sendImmediate(kind, payload) {
+  if (!_initialized || !_enabled) return { ok: false, reason: "disabled" };
+  if (!kind || typeof kind !== "string") return { ok: false, reason: "bad-kind" };
+  const item = { kind, payload: payload && typeof payload === "object" ? payload : {} };
+
+  if (!INGEST_TOKEN || !WORKER_URL) {
+    // local-only mode — persist for later (in case transport is configured later)
+    queueImmediate(item);
+    return { ok: false, reason: "no-transport" };
+  }
+
+  const ok = await postOne(item);
+  if (!ok) queueImmediate(item);
+  return { ok };
+}
+
+async function postOne({ kind, payload }) {
+  try {
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), FLUSH_TIMEOUT_MS);
+    const res = await fetch(`${WORKER_URL}/ingest`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${INGEST_TOKEN}`,
+      },
+      body: JSON.stringify({ kind, testerId: _testerId, ...payload }),
+      signal: controller.signal,
+    });
+    clearTimeout(t);
+    return res.ok;
+  } catch (_) {
+    return false;
+  }
+}
+
+function queueImmediate(item) {
+  if (!_immediateFile) return;
+  try {
+    fs.appendFileSync(_immediateFile, JSON.stringify(item) + "\n");
+  } catch (err) {
+    logError("[telemetry] immediate queue write failed", err);
+  }
+}
+
+async function drainImmediateQueue() {
+  if (!_initialized || !_enabled) return;
+  if (!INGEST_TOKEN || !WORKER_URL) return;
+  if (!_immediateFile || !fs.existsSync(_immediateFile)) return;
+
+  let content;
+  try {
+    content = fs.readFileSync(_immediateFile, "utf8");
+  } catch (_) {
+    return;
+  }
+  const lines = content.split("\n").filter(Boolean);
+  if (lines.length === 0) {
+    try { fs.unlinkSync(_immediateFile); } catch (_) {}
+    return;
+  }
+
+  const remaining = [];
+  for (const line of lines) {
+    let item;
+    try { item = JSON.parse(line); } catch (_) { continue; }
+    const ok = await postOne(item);
+    if (!ok) remaining.push(item);
+  }
+
+  try {
+    if (remaining.length === 0) {
+      fs.unlinkSync(_immediateFile);
+    } else {
+      fs.writeFileSync(_immediateFile, remaining.map((i) => JSON.stringify(i)).join("\n") + "\n");
+    }
+  } catch (_) {}
 }
 
 function loadOrAssignTesterId() {
@@ -202,4 +294,4 @@ function loadOrAssignTesterId() {
   return id;
 }
 
-module.exports = { init, emit, setEnabled, getTesterId, flush, flushAndExit };
+module.exports = { init, emit, setEnabled, getTesterId, flush, flushAndExit, sendImmediate };

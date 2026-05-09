@@ -9,6 +9,7 @@ import { SERMON_STATUS, STAGE } from "../core/contracts";
 import PrimaryButton from "./primitives/PrimaryButton";
 import SecondaryButton from "./primitives/SecondaryButton";
 import ProposalPanel from "./ProposalPanel";
+import FeedbackFlag from "./FeedbackFlag";
 
 // ── Panel constants ───────────────────────────────────────────────────────────
 
@@ -133,6 +134,7 @@ function ManuscriptPanel({ sermon, onUpdate, onPanelChange }) {
         MANUSCRIPT_DELIVERY_SYSTEM,
         STAGE.Delivery,
         sermon.id,
+        "delivery-tab",
       );
       if (!result.ok) {
         if (result.kind !== "aborted") setError(`Generation failed: ${result.message}`);
@@ -170,6 +172,7 @@ function ManuscriptPanel({ sermon, onUpdate, onPanelChange }) {
       <ProposalPanel
         loading={generating}
         proposal={proposal}
+        flagContext={{ sermonId: sermon?.id ?? null, step: STAGE.Delivery }}
         label="AI proposes delivery formatting"
         acceptLabel={content ? "Replace formatted manuscript" : "Use this"}
         onAccept={() => {
@@ -491,6 +494,7 @@ function WithoutNotesPanel({ sermon, onUpdate }) {
         CMC_SYSTEM,
         STAGE.Delivery,
         sermon.id,
+        "delivery-tab",
       );
       if (!result.ok) {
         if (result.kind !== "aborted") setError(`Generation failed: ${result.message}`);
@@ -582,6 +586,7 @@ function WithoutNotesPanel({ sermon, onUpdate }) {
       <ProposalPanel
         loading={generating}
         proposal={proposal?.summary || null}
+        flagContext={{ sermonId: sermon?.id ?? null, step: STAGE.Delivery }}
         label="AI proposes preaching blocks"
         acceptLabel={blocks.length > 0 ? "Replace preaching blocks" : "Use this"}
         onAccept={() => {
@@ -646,8 +651,11 @@ export default function DeliveryTab({ sermon, onUpdate }) {
   }
 
   return (
-    <div data-tour-id="delivery-overview">
-      <div style={{ marginBottom: "20px", fontSize: "13px", color: "var(--ink-ghost)", fontStyle: "italic" }}>
+    <div data-tour-id="delivery-overview" style={{ position: "relative" }}>
+      <div style={{ position: "absolute", top: "0", right: "0" }}>
+        <FeedbackFlag surface="delivery-tab" sermonId={sermon?.id ?? null} step={STAGE.Delivery} />
+      </div>
+      <div style={{ marginBottom: "20px", fontSize: "13px", color: "var(--ink-ghost)", fontStyle: "italic", paddingRight: "32px" }}>
         Three ways to stand at the pulpit. Format the manuscript for reading aloud, review the preaching outline, or compress everything into memory blocks for preaching without notes.
       </div>
 

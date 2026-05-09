@@ -26,6 +26,7 @@ import {
 import PrimaryButton from "./primitives/PrimaryButton";
 import SecondaryButton from "./primitives/SecondaryButton";
 import IconButton from "./primitives/IconButton";
+import FeedbackFlag from "./FeedbackFlag";
 
 // Keep the last N turns (user+assistant pairs) of conversation history when sending
 // each new message. Avoids re-sending an ever-growing transcript that inflates token
@@ -169,7 +170,7 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
       // content blocks with cache_control on the static portion.
       const base = buildSystemPrompt(step, sermonId);
       const finalSystemPrompt = appendTaskDirective(base, systemPrompt);
-      const result = await sendAIMessage(history, finalSystemPrompt, step, sermonId);
+      const result = await sendAIMessage(history, finalSystemPrompt, step, sermonId, "ai-panel");
       if (!result.ok) {
         if (result.kind === "aborted") return "";
         setMessages((prev) => [...prev, { role: "assistant", content: result.message, ...meta }]);
@@ -248,7 +249,7 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
         const userMsg = { role: "user", content: userContent };
         setMessages(prev => [...prev, userMsg]);
         const history = trimHistory([...messagesRef.current, userMsg]).map(m => ({ role: m.role, content: m.content }));
-        const result = await sendAIMessage(history, systemPrompt, step, sermon?.id);
+        const result = await sendAIMessage(history, systemPrompt, step, sermon?.id, "ai-panel");
         // Deduplicate sources by author+work for the attribution display
         const sources = hits?.length ? dedupSources(hits) : [];
         if (!result.ok) {
@@ -294,7 +295,7 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
       const current = getCurrentFieldData(config, sermon);
       const prompt = buildIncorporatePrompt(config, current, reviewContent);
       const systemPrompt = INCORPORATE_REVISION_PROMPT;
-      const result = await sendAIMessage([{ role: "user", content: prompt }], systemPrompt, reviewStep, sermon?.id);
+      const result = await sendAIMessage([{ role: "user", content: prompt }], systemPrompt, reviewStep, sermon?.id, "ai-panel");
       if (!result.ok) {
         if (result.kind === "aborted") return;
         setMessages(prev => [...prev, { role: "assistant", content: `Couldn't revise: ${result.message}` }]);
@@ -382,6 +383,7 @@ export default function AIPanel({ sermon, activeTab, activeStep, externalMessage
             {messages.length > 0 && (
               <IconButton aria-label="Clear AI conversation" className="ai-clear-btn" onClick={clearHistory}>Clear</IconButton>
             )}
+            <FeedbackFlag surface="ai-panel" sermonId={sermon?.id ?? null} step={activeStep ?? null} />
           </div>
         </div>
       </div>

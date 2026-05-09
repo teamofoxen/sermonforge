@@ -14,6 +14,10 @@
  *                               the IPC handler in main process still completes;
  *                               we just discard the response). Calls without a
  *                               sermonId are not abortable in the current pass.
+ * @param {string} [surface]   — BTI surface slug ("ai-panel" | "study-tab" |
+ *                               "outline-tab" | "delivery-tab" | "series-planner").
+ *                               Drives the per-surface lastAiCall registry the
+ *                               FeedbackFlag reads, and the ai-press telemetry event.
  * @returns {Promise<
  *   { ok: true, text: string }
  *   | { ok: false, kind: "auth"|"rate_limit"|"network"|"server"|"timeout"|"format"|"empty"|"unknown"|"aborted", message: string }
@@ -24,6 +28,8 @@
  * generally skip rendering anything for it (it represents user intent, not
  * failure).
  */
+
+import { setLastAiCall } from "./lastAiCallRegistry";
 
 // In-flight registry. Map<sermonId, Set<AbortController>>. SermonWorkspace
 // calls abortInFlightForSermon(prevSermonId) when the active sermon changes
@@ -38,7 +44,7 @@ export function abortInFlightForSermon(sermonId) {
   inFlight.delete(sermonId);
 }
 
-export async function sendAIMessage(messages, systemPrompt, step, sermonId) {
+export async function sendAIMessage(messages, systemPrompt, step, sermonId, surface) {
   // Input validation
   if (!Array.isArray(messages)) {
     console.error('[AI] sendAIMessage: messages must be an array', { messages });
@@ -91,7 +97,11 @@ export async function sendAIMessage(messages, systemPrompt, step, sermonId) {
     // The IPC handler resolves with an envelope. Defensive: if a legacy/test
     // stub returns a bare string, wrap it so callers get a uniform shape.
     if (typeof response === 'string') {
+      recordAiPress(surface, step, sermonId, messages, response);
       return { ok: true, text: response };
+    }
+    if (response && response.ok && typeof response.text === 'string') {
+      recordAiPress(surface, step, sermonId, messages, response.text);
     }
     return response;
   } catch (err) {
@@ -111,4 +121,18 @@ export async function sendAIMessage(messages, systemPrompt, step, sermonId) {
       }
     }
   }
+}
+
+// Capture lastAiCall for the surface (for the FeedbackFlag) and emit an
+// ai-press telemetry event. Both are best-effort — never throw.
+function recordAiPress(surface, step, sermonId, messages, output) {
+  if (!surface) return;
+  try {
+    const lastUser = [...messages].reverse().find((m) => m && m.role === 'user');
+    const input = typeof lastUser?.content === 'string' ? lastUser.content : '';
+    setLastAiCall(surface, { input, output: typeof output === 'string' ? output : '' });
+  } catch (_) {}
+  try {
+    window.electronAPI?.telemetryEmit?.('ai-press', { surface, step: step ?? null, sermonId: sermonId ?? null });
+  } catch (_) {}
 }

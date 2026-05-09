@@ -1,0 +1,150 @@
+// FeedbackForm — Tier 2 in-app feedback modal (BTI Phase 1, Chunk 4).
+//
+// Single-dimension picker + free-text. Used for "felt-but-not-immediate"
+// observations — things that don't fit a flag. Per the BTI charter
+// (docs/PROPOSALS/beta-testing-initiative.md, Tier 2 description).
+//
+// Payload shape per docs/PROPOSALS/bti-build-mvp.md (lines 174-181).
+
+import { useEffect, useState } from "react";
+import PrimaryButton from "./primitives/PrimaryButton";
+import SecondaryButton from "./primitives/SecondaryButton";
+import IconButton from "./primitives/IconButton";
+import "./feedbackForm.css";
+
+// Dimension order matches the charter's Feedback Dimensions section. Default
+// selection is "What surprised you" — the open-ended catch-all (per Chunk 4
+// spec, line 170).
+const DIMENSIONS = [
+  { value: "invasiveness", label: "Invasiveness" },
+  { value: "workflow-fit", label: "Workflow-fit" },
+  { value: "ai-response-quality", label: "AI response quality" },
+  { value: "trust", label: "Trust" },
+  { value: "friction-and-surprise", label: "Friction and surprise" },
+  { value: "onboarding-and-first-run", label: "Onboarding and first-run" },
+  { value: "reliability-and-weirdness", label: "Reliability and weirdness" },
+  { value: "performance-and-feel", label: "Performance and feel" },
+  { value: "voice-and-frame", label: "Voice and frame" },
+  { value: "what-surprised-you", label: "What surprised you" },
+];
+
+const DEFAULT_DIMENSION = "what-surprised-you";
+
+export default function FeedbackForm({ onClose, sermonId = null, step = null }) {
+  const [dimension, setDimension] = useState(DEFAULT_DIMENSION);
+  const [text, setText] = useState("");
+  const [sending, setSending] = useState(false);
+  const [confirmShown, setConfirmShown] = useState(false);
+
+  // Escape closes the modal.
+  useEffect(() => {
+    function onKey(e) {
+      if (e.key === "Escape") onClose?.();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  // After the confirmation banner shows briefly, close.
+  useEffect(() => {
+    if (!confirmShown) return;
+    const t = setTimeout(() => onClose?.(), 1400);
+    return () => clearTimeout(t);
+  }, [confirmShown, onClose]);
+
+  async function handleSend() {
+    if (!text.trim() || sending) return;
+    setSending(true);
+    const payload = {
+      dimension,
+      text: text.trim(),
+      sermonId,
+      step,
+      timestamp: new Date().toISOString(),
+    };
+    try {
+      await window.electronAPI?.btiSubmit?.("form", payload);
+    } catch (_) {
+      // Bus persists failures locally for retry.
+    }
+    setSending(false);
+    setConfirmShown(true);
+  }
+
+  function handleOverlayClick(e) {
+    if (e.target === e.currentTarget) onClose?.();
+  }
+
+  return (
+    <div className="feedback-form-overlay" onMouseDown={handleOverlayClick}>
+      <div className="feedback-form-modal" role="dialog" aria-label="Send feedback">
+        <div className="feedback-form-header">
+          <div className="feedback-form-title">Send feedback</div>
+          <IconButton
+            aria-label="Close"
+            className="feedback-form-close"
+            onClick={onClose}
+          >
+            ×
+          </IconButton>
+        </div>
+
+        {confirmShown ? (
+          <div className="feedback-form-confirm">
+            Sent. Thank you — every note shapes the tool.
+          </div>
+        ) : (
+          <>
+            <div className="feedback-form-body">
+              <div className="feedback-form-intro">
+                One dimension at a time. Tell me what's in the way, what's missing,
+                what surprised you. The honest version, not the polite version.
+              </div>
+
+              <div>
+                <div className="feedback-form-label" style={{ marginBottom: 4 }}>Dimension</div>
+                <select
+                  className="feedback-form-select"
+                  value={dimension}
+                  onChange={(e) => setDimension(e.target.value)}
+                >
+                  {DIMENSIONS.map((d) => (
+                    <option key={d.value} value={d.value}>{d.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <div className="feedback-form-label" style={{ marginBottom: 4 }}>What you noticed</div>
+                <textarea
+                  className="feedback-form-textarea"
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  placeholder="A sentence or a paragraph — whatever you have time for."
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            <div className="feedback-form-footer">
+              <span className="feedback-form-footer-note">
+                Sermon content is not sent. Only what you type here.
+              </span>
+              <div className="feedback-form-actions">
+                <SecondaryButton size="sm" onClick={onClose}>Cancel</SecondaryButton>
+                <PrimaryButton
+                  size="sm"
+                  loading={sending ? "Saving…" : undefined}
+                  disabled={!text.trim()}
+                  onClick={handleSend}
+                >
+                  Send
+                </PrimaryButton>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}

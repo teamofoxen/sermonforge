@@ -14,6 +14,7 @@ import PrimaryButton from "./primitives/PrimaryButton";
 import SecondaryButton from "./primitives/SecondaryButton";
 import IconButton from "./primitives/IconButton";
 import BackButton from "./primitives/BackButton";
+import FeedbackFlag from "./FeedbackFlag";
 import { STAGE } from "../core/contracts";
 
 function mpsExtractStem(mps) {
@@ -74,6 +75,7 @@ export default function OutlineTab({ sermon, onUpdate, onTabChange, studySummari
         OUTLINE_SYSTEM,
         STAGE.Blueprint,
         sermon.id,
+        "outline-tab",
       );
       if (result.ok && result.text.trim()) {
         setOutlineChat([{ role: "assistant", content: result.text.trim() }]);
@@ -107,7 +109,7 @@ export default function OutlineTab({ sermon, onUpdate, onTabChange, studySummari
       const messages = history.map((m, i) =>
         i === history.length - 1 ? { ...m, content: contextPrefix + m.content } : m
       );
-      const result = await sendAIMessage(messages, OUTLINE_SYSTEM, STAGE.Blueprint, sermon.id);
+      const result = await sendAIMessage(messages, OUTLINE_SYSTEM, STAGE.Blueprint, sermon.id, "outline-tab");
       if (result.ok && result.text.trim()) {
         setOutlineChat(prev => [...prev, { role: "assistant", content: result.text.trim() }]);
       } else if (!result.ok && result.kind !== "aborted") {
@@ -131,6 +133,7 @@ export default function OutlineTab({ sermon, onUpdate, onTabChange, studySummari
         OUTLINE_REVIEW_TASK,
         STAGE.Blueprint,
         sermon.id,
+        "outline-tab",
       );
       if (result.ok) {
         setReviewResponse(result.text);
@@ -145,8 +148,11 @@ export default function OutlineTab({ sermon, onUpdate, onTabChange, studySummari
   }
 
   return (
-    <div>
-      <div style={{ marginBottom: "20px", fontSize: "13px", color: "var(--ink-ghost)", fontStyle: "italic" }}>
+    <div style={{ position: "relative" }}>
+      <div style={{ position: "absolute", top: "0", right: "0" }}>
+        <FeedbackFlag surface="outline-tab" sermonId={sermon?.id ?? null} step={STAGE.Blueprint} />
+      </div>
+      <div style={{ marginBottom: "20px", fontSize: "13px", color: "var(--ink-ghost)", fontStyle: "italic", paddingRight: "32px" }}>
         The Blueprint holds your sermon's load-bearing structure — MPS and outline together. Confirm the shape is right, then move to Manuscript.
       </div>
 

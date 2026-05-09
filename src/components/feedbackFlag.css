@@ -1,0 +1,115 @@
+/* FeedbackFlag — Tier 1 in-app flag (BTI Phase 1, Chunk 3).
+ *
+ * Quiet-but-persistent ink-on-parchment styling. The button is a small
+ * outline glyph that sits next to a surface's primary AI affordance and
+ * stays out of the pastor's way until they want it.
+ */
+
+.feedback-flag-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.feedback-flag-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--ink-ghost);
+  cursor: pointer;
+  border-radius: var(--radius);
+  transition: color 120ms ease, background 120ms ease;
+}
+
+.feedback-flag-btn:hover,
+.feedback-flag-btn:focus-visible {
+  color: var(--gold);
+  background: var(--parchment-warm);
+  outline: none;
+}
+
+.feedback-flag-btn[data-pending="true"] {
+  color: var(--gold);
+}
+
+.feedback-flag-btn svg {
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.5;
+}
+
+.feedback-flag-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 1000;
+  width: 280px;
+  background: var(--parchment);
+  border: 1px solid var(--parchment-deep);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-med);
+  padding: 12px;
+  font-family: var(--font-serif);
+  font-size: 13px;
+  color: var(--ink-mid);
+}
+
+.feedback-flag-popover-title {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-ghost);
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.feedback-flag-popover input[type="text"] {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--parchment-deep);
+  border-radius: var(--radius);
+  background: var(--white);
+  color: var(--ink);
+  font-family: var(--font-serif);
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.feedback-flag-popover input[type="text"]:focus {
+  outline: none;
+  border-color: var(--gold);
+}
+
+.feedback-flag-popover-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--ink-soft);
+  margin-bottom: 10px;
+  cursor: pointer;
+}
+
+.feedback-flag-popover-check input {
+  margin: 0;
+  cursor: pointer;
+}
+
+.feedback-flag-popover-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.feedback-flag-confirm {
+  font-size: 11px;
+  color: var(--sage);
+  margin-top: 6px;
+}

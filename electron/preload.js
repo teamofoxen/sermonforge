@@ -79,4 +79,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // (electron/telemetry/bus.js). Returns { ok: bool } but callers can ignore.
   telemetryEmit:        (eventType, payload) => ipcRenderer.invoke("telemetry-emit", { eventType, payload }),
   telemetrySetEnabled:  (enabled)            => ipcRenderer.invoke("telemetry-set-enabled", enabled),
+
+  // ── BTI feedback (Tier 1 flag + Tier 2 form) ──────────────────────────────
+  // kind is "flag" | "form"; payload shape per docs/PROPOSALS/bti-build-mvp.md
+  // (lines 138-149 for flag, 174-181 for form). On failure the main-process
+  // bus persists locally and retries on the next periodic flush.
+  btiSubmit:            (kind, payload) => ipcRenderer.invoke("bti-feedback-submit", { kind, payload }),
 });

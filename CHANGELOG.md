@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-08 — BTI Phase 1 Chunks 3-6: in-app feedback surfaces + Q9 disclosure
+
+- New `FeedbackFlag` icon-button + popover mounted at all six AI surfaces (AIPanel header, StudyTab/OutlineTab/DeliveryTab tops, SeriesPlanner topbar, ProposalPanel header via threaded `flagContext`); per-surface `lastAiCallRegistry` fed by `sendAIMessage` (added `surface` arg threaded through 27 call sites in 5 components), which also emits `ai-press` telemetry.
+- Main-side `bus.sendImmediate(kind, payload)` with offline-persist `<session>.immediate.ndjson` queue drained on the periodic flush; new `bti-feedback-submit` IPC + `electronAPI.btiSubmit` for flag/form payloads.
+- New `FeedbackForm` modal with the charter's 10-dimension picker + free-text + Send (default dimension "What surprised you"); Sidebar's "Send feedback" TextButton repointed from the legacy `FeedbackModal` to the new BTI form.
+- New `transport/inbox.html` self-contained dev page (three tabs: Flags, Forms, Telemetry) with localStorage URL+token; Worker `/inbox` gains CORS headers + OPTIONS preflight (requires `wrangler deploy` to land).
+- `SetupScreen` extended with a "Telemetry and feedback" section + opt-out toggle (default on); `electron/main.js` reordered so the `bti_telemetry_enabled` setting is honored before the first emit, and the long-form privacy doc lands at `docs/REFERENCE/privacy.md`.
+
+---
+
 ## 2026-05-08 — Tour scroll: pan anchored element to viewport center across all scrollable ancestors
 
 - `TourOverlay.jsx` now walks every scrollable ancestor of the anchored element (`overflow-y: auto/scroll` + `scrollHeight > clientHeight`), centering the element within each, then pans the window so the element lands at viewport center. Fixes a regression where rail-phase segments nested inside the rail's own overflow-y container ended up centered within the rail but off-screen on the page (the four study phase tour stops appeared below the viewport).
