@@ -2,6 +2,12 @@
 
 ---
 
+## 2026-05-08 — Add HOW_AI_WORKS pastor-facing doc
+
+- New `docs/HOW_AI_WORKS.md` — plain-English guide for pastors covering what AI does (Look Again, MPS refinement, Functional Elements chat, Manuscript audits, Delivery formatting), what AI does not do, what pastors will notice in normal use, and why the system is built around clarity-through-constraint.
+
+---
+
 ## 2026-05-08 — Topbar Ink redesign + sidebar Paul-at-Areopagus watermark
 
 - Topbar header rendered for all non-Workspace views in `App.jsx`; Logo's two decorative rule spans dropped — the sidebar/topbar L-shape now carries the chrome.
