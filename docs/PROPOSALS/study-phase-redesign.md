@@ -1,6 +1,6 @@
 # Study Phase Re-Design (SPRD) — Planning Document
 
-**Status:** SHIPPED. All A/B/C milestones complete by 2026-05-05. Workspace tour rewrite shipped 2026-05-05 (17 throughline-first stops). SADI Step 2 plumbing shipped 2026-05-05 (commit `0d98abd`). C4 closed by Phase 1 Background field retirement 2026-05-05. SPIP archived; per-milestone implementation history lives in git log + `CHANGELOG.md`. SFDI structural walks complete; SADI ratification + content-design walks complete.
+**Status:** SHIPPED. All A/B/C milestones complete by 2026-05-05. Workspace tour rewrite shipped 2026-05-05 (17 throughline-first stops; simplified 2026-05-08 to 12 plain-prose stops). SADI Step 2 plumbing shipped 2026-05-05 (commit `0d98abd`). C4 closed by Phase 1 Background field retirement 2026-05-05. SPIP archived; per-milestone implementation history lives in git log + `CHANGELOG.md`. SFDI structural walks complete; SADI ratification + content-design walks complete.
 
 This document is now a structural reference rather than a forward-looking plan. It preserves the load-bearing commitments and the eight design-question rulings; the rich design reasoning lives in git history and the SFDI/SADI working docs.
 
@@ -28,7 +28,7 @@ Thirteen milestones in three phases. **A** = the new Study UX shell. **B** = the
 | **C4** | ~~Background series-level inheritance~~ | CLOSED 2026-05-05 by Background field retirement — substance moved to series-level Book Study + Phase 2 Genre | ✅ closed |
 | **C5** | AI prompt updates | per-phase Review prompts rewired to phase field arrays + flattenToText; tier 7 PC reads Phase 4 Field 3; MPS_DRAFT three per-question prompts replace WITH_PC/NO_PC pair | ✅ |
 | **C6** | evaluateAdvance per-boundary thresholds | four sub-phase composite gates wired through B1–B4 cuts; renderer-side via `studyAdvancement.js`; B1.6 introduced the `{gates, firstReason}` structured shape | ✅ |
-| **Tour rewrite** | Workspace tour — throughline-first reframe | 17 stops walking the cumulative thought-unit table + four named outcomes through MPT/MPS → Outline → FE → Frame → Manuscript → Delivery | ✅ |
+| **Tour rewrite** | Workspace tour — plain-prose reframe (2026-05-08; was throughline-first 2026-05-05) | 12 stops, one imperative sentence per stop | ✅ |
 | **SADI Step 2 plumbing** | MPT/MPS as proper SADI fields (post-SPRD follow-on) | new `sadiAnchorFields.js`; v19 `main_point_pair` envelope; SpotlightWorksheet over MPT 2Q + MPS 3Q; composite gate at Step 2 → Step 3 | ✅ |
 | **Phase 1 Field 3 unified canvas** | structural revision of B1's Field 3 (post-SPRD follow-on) | three legacy questions (`sentence_layout` / `paraphrases` / `thought_units`) collapsed into one `unified-canvas` question; per-row UUIDs (`crypto.randomUUID`) carry cumulative-column attribution via `_canvas_row_id`; `deriveThoughtUnitsFromCanvas` materializes the canonical thought-unit array on save so Phase 2/3/4 cross-phase reads stay unchanged; `ParaphraseBlocks` retired; defensive read-merge in `parseStructuredField` for legacy three-question fixtures; SFDI working doc rewrite-with-historical-addendum | ✅ |
 
@@ -103,7 +103,7 @@ If migration ever becomes real, **Option C (per-field legacy_notes)** is the spe
 - **CORE.md Process Contract #6** binds the workspace throughline to SFDI + SADI together.
 - **ENFORCEMENT_STATUS.md** records current verification of every clause.
 - **Sermon workspace system doc** ([`docs/SYSTEMS/sermon-workspace.md`](../SYSTEMS/sermon-workspace.md)) carries the verbatim PC progression articulation.
-- **Tour spec** ([`sermon-workspace-tour.md`](sermon-workspace-tour.md)) carries the 17 throughline-first stops.
+- **Tour spec** ([`sermon-workspace-tour.md`](sermon-workspace-tour.md)) carries the 12 plain-prose stops (post-SPRD simplification 2026-05-08).
 - **Archived implementation log** ([`docs/ARCHIVE/study-phase-implementation-plan.md`](../ARCHIVE/study-phase-implementation-plan.md)) preserves the per-milestone shipping record.
 
 ---

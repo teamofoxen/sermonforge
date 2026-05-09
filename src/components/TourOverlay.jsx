@@ -87,10 +87,32 @@ export default function TourOverlay() {
   const isLast     = index >= total - 1;
 
   // Spotlight geometry: radial gradient centered on the target element. Falls
-  // back to viewport center when the anchor isn't found yet.
-  const cx = rect ? rect.x + rect.width  / 2 : window.innerWidth  / 2;
-  const cy = rect ? rect.y + rect.height / 2 : window.innerHeight / 2;
-  const radius = rect ? Math.max(rect.width, rect.height) / 2 + 24 : 0;
+  // back to viewport center when the anchor isn't found yet. For anchors
+  // taller or wider than the viewport, the radius is capped and the focus
+  // recenters on the visible portion so the spotlight stays meaningful and
+  // the glow ring doesn't trail off-screen.
+  const VIEWPORT_W = window.innerWidth;
+  const VIEWPORT_H = window.innerHeight;
+  const MAX_RADIUS = 220;
+
+  const tall = rect && rect.height > VIEWPORT_H;
+  const wide = rect && rect.width > VIEWPORT_W;
+  const oversized = tall || wide;
+
+  const visibleTop    = rect ? Math.max(rect.y, 0) : 0;
+  const visibleLeft   = rect ? Math.max(rect.x, 0) : 0;
+  const visibleHeight = rect ? Math.max(0, Math.min(rect.y + rect.height, VIEWPORT_H) - visibleTop) : 0;
+  const visibleWidth  = rect ? Math.max(0, Math.min(rect.x + rect.width,  VIEWPORT_W) - visibleLeft) : 0;
+
+  const cx = rect
+    ? (wide ? visibleLeft + Math.min(visibleWidth, MAX_RADIUS * 2) / 2 : rect.x + rect.width / 2)
+    : VIEWPORT_W / 2;
+  const cy = rect
+    ? (tall ? visibleTop + Math.min(visibleHeight, MAX_RADIUS * 2) / 2 : rect.y + rect.height / 2)
+    : VIEWPORT_H / 2;
+  const radius = rect
+    ? Math.min(Math.max(rect.width, rect.height) / 2, MAX_RADIUS) + 24
+    : 0;
 
   const vignetteStyle = rect
     ? {
@@ -98,8 +120,11 @@ export default function TourOverlay() {
       }
     : { background: "rgba(0,0,0,0.55)" };
 
-  // Glow ring tracks the element's bounding rect.
-  const glowStyle = rect
+  // Glow ring tracks the element's bounding rect — but only when the element
+  // fits the viewport. For oversized anchors the radial spotlight carries the
+  // focus on its own; drawing a rectangle that extends past the viewport
+  // edges would trail gold lines through the top/bottom of the screen.
+  const glowStyle = rect && !oversized
     ? {
         position: "fixed",
         left: rect.x - 6,

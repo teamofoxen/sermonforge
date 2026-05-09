@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-08 — Workspace tour plain-prose reframe (12 stops)
+
+- `workspaceTourStops.js` rewritten as 12 plain-prose stops; one imperative sentence per stop, no insider terms, no sequential connectors.
+- New "Your Study at a Glance" rail stop (Stop 2); "Sermon Spine" replaces "Step 2 — MPT → MPS" as the pastor-facing label.
+- Phase tour stops re-anchored on per-phase rail nodes (`rail-phase-{1..4}`) instead of full-height `sub-phase-body`; spotlight now lands on small named nodes on the throughline rail.
+- `TourOverlay.jsx` clamps spotlight radius at 220px, recenters on visible portion for anchors larger than the viewport, and suppresses the glow ring when an anchor exceeds the viewport (no more lines trailing off-screen).
+- `sermon-workspace-tour.md` mirrored; `study-phase-redesign.md` drift cleaned.
+
+---
+
 ## 2026-05-08 — Dashboard polish pass: pane + sidebar implementation from Claude Design
 
 - Pane: hero gets 5px gold-gradient bar + new `--shadow-hero` token + 320px corner glow; eyebrows unified across all four tiles (gold ring, hero gets filled `.is-primary`); tile padding 22/28/20, fixed 240px height, dropped `grid-auto-rows: 1fr`; verse band gradient eased to 3-stop with fading 56px-inset gold seam; rows extracted from inline styles into shared `.dash-row` component (Resume + Explore unified); preacher quote gets fading parchment-deep top hairline.

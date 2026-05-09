@@ -85,7 +85,10 @@ export default function ThroughlineRail({
           const isActive = sp.id === activeSubPhaseId;
           return (
             <React.Fragment key={sp.id}>
-              <div className={`tl-segment ${isActive ? "is-active" : "is-collapsed"}`}>
+              <div
+                className={`tl-segment ${isActive ? "is-active" : "is-collapsed"}`}
+                data-tour-id={`rail-phase-${spIdx + 1}`}
+              >
                 <div className="tl-header">
                   <div className="tl-header-num">{String(spIdx + 1).padStart(2, "0")}</div>
                   <div className="tl-header-label">{sp.label}</div>

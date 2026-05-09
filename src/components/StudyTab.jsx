@@ -1309,7 +1309,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
           {activeSubPhase === 4 && <SummaryBlock summaryKey="p4" {...summaryProps} />}
 
           {activeSubPhase === 1 && (
-            <div className="sub-phase-body" data-tour-id="phase-1-worksheet">
+            <div className="sub-phase-body">
               <SpotlightWorksheet
                 fields={OBSERVE_FIELDS}
                 data={obsData}
@@ -1338,7 +1338,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
           )}
 
           {activeSubPhase === 2 && (
-            <div className="sub-phase-body" data-tour-id="phase-2-worksheet">
+            <div className="sub-phase-body">
               {currentActiveFieldKey === "deeper_context" && (
                 <SummaryBlock
                   summaryKey="ref_p2_context"
@@ -1388,7 +1388,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
           )}
 
           {activeSubPhase === 3 && (
-            <div className="sub-phase-body" data-tour-id="phase-3-worksheet">
+            <div className="sub-phase-body">
               <SpotlightWorksheet
                 fields={REDEMPTIVE_FIELDS}
                 data={redData}
@@ -1434,7 +1434,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
           )}
 
           {activeSubPhase === 4 && (
-            <div className="sub-phase-body" data-tour-id="phase-4-worksheet">
+            <div className="sub-phase-body">
               <SpotlightWorksheet
                 fields={IMPLICATIONS_FIELDS}
                 data={impData}
