@@ -52,12 +52,36 @@ export default function TourOverlay() {
   const rect = useAnchorRect(anchorId, active);
 
   // Bring the current anchor into view when the stop changes, so the spotlight
-  // lands on something the user can actually see.
+  // lands on something the user can actually see. `scrollIntoView` only
+  // scrolls the nearest scrollable ancestor — for anchors nested inside a
+  // scrolling container (e.g. the rail's `overflow-y` aside) that leaves the
+  // element centered within its container but still off-screen on the page.
+  // Walk all scrollable ancestors first, then pan the window so the element
+  // ends up at viewport center.
   useEffect(() => {
     if (!active || !anchorId) return;
     const el = document.querySelector(`[data-tour-id="${anchorId}"]`);
-    if (el && typeof el.scrollIntoView === "function") {
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (!el) return;
+
+    let node = el.parentElement;
+    while (node && node !== document.body) {
+      const cs = getComputedStyle(node);
+      const scrollableY =
+        (cs.overflowY === "auto" || cs.overflowY === "scroll") &&
+        node.scrollHeight > node.clientHeight;
+      if (scrollableY) {
+        const tr = el.getBoundingClientRect();
+        const nr = node.getBoundingClientRect();
+        const delta = (tr.top + tr.height / 2) - (nr.top + nr.height / 2);
+        node.scrollTop += delta;
+      }
+      node = node.parentElement;
+    }
+
+    const tr = el.getBoundingClientRect();
+    const windowDelta = (tr.top + tr.height / 2) - window.innerHeight / 2;
+    if (Math.abs(windowDelta) > 4) {
+      window.scrollBy({ top: windowDelta, behavior: "smooth" });
     }
   }, [active, anchorId]);
 

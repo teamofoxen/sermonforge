@@ -2,6 +2,12 @@
 
 ---
 
+## 2026-05-08 — Tour scroll: pan anchored element to viewport center across all scrollable ancestors
+
+- `TourOverlay.jsx` now walks every scrollable ancestor of the anchored element (`overflow-y: auto/scroll` + `scrollHeight > clientHeight`), centering the element within each, then pans the window so the element lands at viewport center. Fixes a regression where rail-phase segments nested inside the rail's own overflow-y container ended up centered within the rail but off-screen on the page (the four study phase tour stops appeared below the viewport).
+
+---
+
 ## 2026-05-08 — Add HOW_AI_WORKS pastor-facing doc
 
 - New `docs/HOW_AI_WORKS.md` — plain-English guide for pastors covering what AI does (Look Again, MPS refinement, Functional Elements chat, Manuscript audits, Delivery formatting), what AI does not do, what pastors will notice in normal use, and why the system is built around clarity-through-constraint.
