@@ -1,17 +1,9 @@
 // electron/embedder/host.js — main-process facade for the embedding pipeline.
 //
-// Two paths, selected at module load by config.embedWorker.enabled:
-//
-//   1. Worker path (default).
-//      Spawns electron/embedder/worker.js on first request, keeps it warm,
-//      terminates after IDLE_TIMEOUT_MS to release ~85 MB of model memory.
-//      Survives a worker crash by rejecting all in-flight requests with a
-//      tagged error and clearing the handle so the next call respawns.
-//
-//   2. Main-thread fallback.
-//      The pre-Phase-6 code, preserved verbatim and gated by SF_EMBED_WORKER=0.
-//      Lets us ship the worker dark and flip it off without a hotfix if
-//      onnxruntime-node behaves differently in worker_threads on a user's box.
+// Spawns electron/embedder/worker.js on first request, keeps it warm,
+// terminates after IDLE_TIMEOUT_MS to release ~85 MB of model memory.
+// Survives a worker crash by rejecting all in-flight requests with a
+// tagged error and clearing the handle so the next call respawns.
 //
 // Public API:
 //   embedTexts(texts: string[]) → Promise<(number[]|null)[]>   — null per-slot for failures
@@ -20,7 +12,7 @@
 
 const path = require("path");
 const { Worker } = require("worker_threads");
-const { paths, embedWorker } = require("../config");
+const { paths } = require("../config");
 const { logError, logInfo } = require("../logger");
 
 const EMBED_DIM = 384;
@@ -120,7 +112,9 @@ function ensureWorker() {
   return pendingSpawn;
 }
 
-async function embedTextsViaWorker(texts) {
+// ── Public API ──────────────────────────────────────────────────────────────
+
+async function embedTexts(texts) {
   if (!Array.isArray(texts) || texts.length === 0) return [];
   // Clear the idle timer BEFORE awaiting ensureWorker(). The idle callback is a
   // macrotask; the await yields and gives that callback a chance to fire and
@@ -143,52 +137,6 @@ async function embedTextsViaWorker(texts) {
   w.postMessage({ requestId, kind: "embed-texts", texts });
   armIdleTimer();
   return result;
-}
-
-// ── Main-thread fallback ────────────────────────────────────────────────────
-// Preserves the pre-Phase-6 behavior verbatim. Activated by SF_EMBED_WORKER=0.
-
-let mainThreadEmbedder = null;
-
-async function ensureMainThreadEmbedder() {
-  if (mainThreadEmbedder) return true;
-  try {
-    const { pipeline, env } = await import("@xenova/transformers");
-    env.cacheDir = paths.models;
-    env.allowRemoteModels = false;
-    mainThreadEmbedder = await pipeline("feature-extraction", "Xenova/all-MiniLM-L6-v2", {
-      quantized: true,
-    });
-    return true;
-  } catch (e) {
-    logError("[embedder] main-thread pipeline load failed", e);
-    return false;
-  }
-}
-
-async function embedTextsViaMainThread(texts) {
-  const ok = await ensureMainThreadEmbedder();
-  if (!ok) return texts.map(() => null);
-  const out = new Array(texts.length).fill(null);
-  for (let i = 0; i < texts.length; i++) {
-    const text = texts[i];
-    if (typeof text !== "string" || text.length === 0) continue;
-    try {
-      const output = await mainThreadEmbedder([text], { pooling: "mean", normalize: true });
-      const arr = Array.from(output[0].data);
-      if (arr.length === EMBED_DIM) out[i] = arr;
-    } catch (_) {
-      // leave null
-    }
-  }
-  return out;
-}
-
-// ── Public API ──────────────────────────────────────────────────────────────
-
-async function embedTexts(texts) {
-  if (embedWorker.enabled) return embedTextsViaWorker(texts);
-  return embedTextsViaMainThread(texts);
 }
 
 async function embedText(text) {

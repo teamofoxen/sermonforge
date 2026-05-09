@@ -84,7 +84,7 @@ When adding new fields to the `sermons` table, they must also be added to `SERMO
 
 No external embedding API is used — embeddings are computed on-device.
 
-### Embedding pipeline location (Phase 6)
+### Embedding pipeline location
 
 The Xenova pipeline runs in a `worker_threads` worker
 (`electron/embedder/worker.js`), driven from main via
@@ -92,11 +92,9 @@ The Xenova pipeline runs in a `worker_threads` worker
 main process so renderer IPC, `flushDb`, and dialog handling do not
 stall during model load (1–3 s cold) or per-query embedding.
 
-Kill switch: set `SF_EMBED_WORKER=0` in `.env` or environment to fall
-back to the pre-Phase-6 main-thread pipeline (preserved verbatim inside
-`host.js`). Worker idle TTL: 10 min — terminates the worker to release
-~85 MB of model memory; the next call respawns. Worker crash: pending
-requests reject with a tagged error and the next call respawns.
+Worker idle TTL: 10 min — terminates the worker to release ~85 MB of
+model memory; the next call respawns. Worker crash: pending requests
+reject with a tagged error and the next call respawns.
 
 ---
 

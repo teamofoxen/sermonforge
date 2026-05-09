@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-05-08 — Remove Phase 6 embedder kill switch
+
+- `SF_EMBED_WORKER` flag retired after one-release soak (shipped 2026-04-29 in `d1beb56`); the worker_thread embedder pipeline is now the only path.
+- `electron/embedder/host.js` collapsed to the worker dispatch (main-thread fallback deleted); `embedWorker` flag block + export removed from `electron/config.js`.
+- `electron/main.js` and `docs/SYSTEMS/database.md` cleaned of kill-switch references.
+
+---
+
 ## 2026-05-08 — Workspace tour plain-prose reframe (12 stops)
 
 - `workspaceTourStops.js` rewritten as 12 plain-prose stops; one imperative sentence per stop, no insider terms, no sequential connectors.

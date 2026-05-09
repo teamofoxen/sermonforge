@@ -373,7 +373,7 @@ function saveDb() {
 // theology.db is managed exclusively by better-sqlite3 due to sqlite-vec dependency.
 // DO NOT access via sql.js.
 let theologyVecAvailable = false;  // true when theology_vec table has embeddings
-const embedderHost = require("./embedder/host"); // worker-backed by default (electron/embedder/host.js); kill-switch via SF_EMBED_WORKER=0
+const embedderHost = require("./embedder/host"); // worker_thread-backed; see electron/embedder/host.js
 
 async function ensureTheologyDbLoaded() {
   if (theologyDb) return;
@@ -415,8 +415,8 @@ async function ensureTheologyDbLoaded() {
 }
 
 // Embed a single text into a 384-dim vector. Returns the array, or null on failure.
-// Delegates to embedder/host.js, which dispatches to a worker_thread by default
-// (Phase 6) and to a main-thread pipeline when SF_EMBED_WORKER=0.
+// Delegates to embedder/host.js, which runs the @xenova/transformers pipeline
+// in a worker_thread.
 async function embedText(text) {
   try {
     return await embedderHost.embedText(text);

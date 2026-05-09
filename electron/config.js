@@ -80,14 +80,4 @@ const legacyDbPaths = [
 // ── Dev server ────────────────────────────────────────────────────────────────
 const devServerUrl = "http://localhost:5173";
 
-// ── Feature flags ─────────────────────────────────────────────────────────────
-// embedWorker.enabled — Phase 6. When true, the @xenova/transformers pipeline
-// runs in a worker_thread (electron/embedder/worker.js); when false, it runs
-// on the main thread (the pre-Phase-6 path, kept verbatim in
-// electron/embedder/host.js as a kill-switch fallback). Default on; set
-// SF_EMBED_WORKER=0 in .env or environment to flip back to main-thread.
-const embedWorker = {
-  enabled: process.env.SF_EMBED_WORKER !== "0",
-};
-
-module.exports = { isDev, isPackaged, paths, legacyDbPaths, devServerUrl, embedWorker };
+module.exports = { isDev, isPackaged, paths, legacyDbPaths, devServerUrl };
