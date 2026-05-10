@@ -56,7 +56,7 @@ module.exports = {
     // `eslint-disable-line react-hooks/exhaustive-deps` directives resolve.
     // rules-of-hooks catches real hook bugs (hooks called conditionally);
     // exhaustive-deps left off because it produces noisy false positives
-    // around intentional dep-array narrowing (see AIPanel.jsx:104).
+    // around intentional dep-array narrowing.
     'react-hooks/rules-of-hooks': 'error',
     // Structural enforcement against the consumer-side import-drift class
     // documented in docs/ENFORCEMENT_STATUS.md. The Pilot C → SeriesPlanner

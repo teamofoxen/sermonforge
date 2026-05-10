@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-05-09 — ARI residue cleanup: drop dead refs + Dashboard sample passage
+
+- Removed the `phrasePatterns` / `aiPhrasePatterns` Absolute Invariant from `docs/CORE.md` — its runtime guard lived in `src/utils/memory.js`, deleted in the ARI audit fix-pass.
+- Pruned `^src/utils/ai\.js$` and `^src/prompts/` from `scripts/preflight.sh` `SWEEP_PATTERNS` — both paths were deleted in ARI Phase 8 and will never match a future diff.
+- Stripped the `(see AIPanel.jsx:104)` citation from the `.eslintrc.cjs` exhaustive-deps comment — `AIPanel.jsx` was deleted in ARI Phase 1.
+- Fixed the Dashboard "Open a sample sermon" passage label from `Romans 8:28-39` to `Romans 5:1-5` to match the actual tour seed in `electron/tourData.js:90`.
+
+---
+
 ## 2026-05-09 — Fix Surface Contract #4 test: Planning placeholder added to EXPECTED_DEEP
 
 - `tests/contracts/surface-4-you-are-here.test.ts` added `Planning` to `EXPECTED_DEEP`; ARI's `<SeriesPlannerComingSoon />` route in `App.jsx:239` was orphaning the Test workflow on `main`.

@@ -272,15 +272,6 @@ either reshapes to pass, or it does not ship.
   `src/utils.js`. It assigns the stable UUID that `functional_elements` keys depend on.
   Never construct `{id, text}` objects inline anywhere else.
 
-- **`phrasePatterns` and `aiPhrasePatterns` must never be merged.**
-  - `phrasePatterns` = pastor's own rhetorical patterns extracted from manuscript; used in
-    adaptive hints to guide generation.
-  - `aiPhrasePatterns` = patterns extracted from AI responses; for analysis only, never
-    influence generation.
-  - A runtime assertion in `src/utils/memory.js` `updateMemory()` throws in dev mode if
-    an AI-sourced phrase is written to `phrasePatterns`. Do not remove this guard.
-    If it fires, fix the call site routing AI content to the wrong key.
-
 - **The 500ms debounce on `saveDb()`** is a deliberate trade-off. sql.js serializes the
   entire DB on every write; reducing this debounce would cause UI sluggishness on every
   keystroke. Do not reduce it or add synchronous writes.

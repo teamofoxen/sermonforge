@@ -54,9 +54,6 @@ echo "--- sweep triggers ---"
 SWEEP_PATTERNS=(
   '^electron/main\.js$'
   '^electron/preload\.js$'
-  '^src/utils/contextBuilder\.js$'
-  '^src/utils/ai\.js$'
-  '^src/prompts/'
   '^src/db/database\.js$'
   '^migrations/'
 )

@@ -132,7 +132,7 @@ export default function Dashboard({ onOpenSermon, onLeaveTour }) {
                 />
                 <ExploreRow
                   label="Open a sample sermon"
-                  meta="Romans 8:28–39 · Worked example"
+                  meta="Romans 5:1-5 · Worked example"
                   loading={loadingAction === "sample"}
                   disabled={!!loadingAction}
                   onClick={() => openSampleSermon({ launchTour: false })}
