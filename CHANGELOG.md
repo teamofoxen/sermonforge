@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-05-09 — ARI Phases 5+6: synthesis questions and outline questions (placeholder wording)
+
+- `PausePointScreen` now shows a one-sentence synthesis question at each sub-phase boundary; pastor's answer persists to `_synthesis` in the sub-phase JSON column.
+- Collapsible "Outline Questions" panel added to Blueprint tab with four placeholder questions walking from MPS to outline structure.
+- `docs/SYSTEMS/sermon-workspace.md` fully rewritten for post-ARI state (all AI references removed).
+- ARI charter updated: Phases 5+6 marked shipped; D1/D2 wording sessions remain open; Phase 11 schema cleanup deferred.
+
+---
+
 ## 2026-05-09 — BTI Q1 closure: FeedbackFlag mounted on Manuscript tab
 
 - `ManuscriptTab.jsx` now mounts `<FeedbackFlag surface="manuscript-tab" step={STAGE.Manuscript} />` (absolute top-right; pattern matches StudyTab and OutlineTab).
