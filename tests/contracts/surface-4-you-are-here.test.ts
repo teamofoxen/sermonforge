@@ -14,23 +14,24 @@ import * as path from "node:path";
 // router destination missing from the sidebar is "nameless wandering" —
 // the user can land there but no canonical "you are here" will activate.
 //
-// `series-planner` and `workspace` are deep destinations entered from a
-// different surface (clicking a series card / sermon card). They are not
-// expected to have sidebar entries — the position-in-series chip and
-// breadcrumbs in the workspace topbar provide their "you are here". The
-// test allows them via the EXPECTED_DEEP set.
+// `Planning`, `SeriesPlanner`, and `Workspace` are deep destinations not
+// surfaced as sidebar entries. The test allows them via the EXPECTED_DEEP set.
 
 const ROOT = path.resolve(__dirname, "..", "..");
 
-// Deep routes reached from a different surface than the sidebar:
-//   • SeriesPlanner — entered by clicking a series card
-//   • Workspace — entered by clicking a sermon card; topbar provides "you are here"
+// Deep routes not surfaced in the sidebar:
+//   • Planning + SeriesPlanner — placeholder routes after ARI removed the
+//     Series Planner (2026-05-09); both render <SeriesPlannerComingSoon />
+//     in App.jsx so legacy internal navigation lands on the placeholder
+//     instead of crashing.
+//   • Workspace — entered by clicking a sermon card; topbar breadcrumbs
+//     provide its "you are here".
 //
 // (Pilot B.2 renamed `archive` → `CompletedSermons` and added a canonical
 // sidebar entry. The vocabulary-completion pilot then migrated all view keys
 // to the PascalCase canonical names defined by `VIEW` in
 // `src/core/contracts.ts`.)
-const EXPECTED_DEEP = new Set(["SeriesPlanner", "Workspace"]);
+const EXPECTED_DEEP = new Set(["Planning", "SeriesPlanner", "Workspace"]);
 
 // Both forms — literal strings and `VIEW.<Name>` enum references — count as
 // destinations. Post-vocabulary-completion the router and sidebar use enum
@@ -81,9 +82,11 @@ describe("Surface Contract #4: 'you are here' is always answerable", () => {
 
   it("the router exposes at least the four canonical top-level destinations", () => {
     const router = parseRouterDestinations();
+    // Post-ARI canonical top-level destinations (Planning is now a coming-soon
+    // placeholder, not a canonical destination — see EXPECTED_DEEP above).
     expect(router.has("Dashboard")).toBe(true);
-    expect(router.has("Planning")).toBe(true);
-    expect(router.has("Calendar")).toBe(true);
     expect(router.has("Sermons")).toBe(true);
+    expect(router.has("CompletedSermons")).toBe(true);
+    expect(router.has("Calendar")).toBe(true);
   });
 });

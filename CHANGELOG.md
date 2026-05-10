@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-09 — Fix Surface Contract #4 test: Planning placeholder added to EXPECTED_DEEP
+
+- `tests/contracts/surface-4-you-are-here.test.ts` added `Planning` to `EXPECTED_DEEP`; ARI's `<SeriesPlannerComingSoon />` route in `App.jsx:239` was orphaning the Test workflow on `main`.
+- Test 2 ("four canonical top-level destinations") rewritten to match the post-ARI sidebar surface set: `Dashboard / Sermons / CompletedSermons / Calendar` — Planning is no longer canonical, only a placeholder.
+- Comment block above `EXPECTED_DEEP` rewritten to document why Planning + SeriesPlanner are deep routes (placeholder catch for legacy internal navigation, not user-reachable surfaces).
+- `docs/ENFORCEMENT_STATUS.md` Surface #4 per-clause row updated with the new EXPECTED_DEEP set and PascalCase view keys; Last verified line bumped with the follow-up note.
+- Full vitest suite green: 22 files, 291 tests.
+
+---
+
 ## 2026-05-09 — ARI: AI removed from SermonForge
 
 - Phases 0–4 + 7–10 of the AI Removal Initiative shipped (charter at `docs/PROPOSALS/ai-removal-initiative.md`); Series Planner gated, all AI surfaces cut (chat panels, Generate/Suggest/Review buttons, Flow Coach/Ear Check/Tune-Up), per-tab Notebooks added, Manuscript review reframed as static checklists, Delivery tab removed.
