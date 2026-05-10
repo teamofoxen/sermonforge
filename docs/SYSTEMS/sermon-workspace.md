@@ -185,6 +185,47 @@ The "Continue to Manuscript →" button is gated on `outline.length > 0`.
 
 ---
 
+## Frame Tab
+
+Component: `src/components/FrameTab.jsx`. The elevated SADI Step 5 (SPRD C3,
+2026-05-04). Field definitions live in `src/utils/sermonFrameFields.js`.
+
+Renders the Sermon Frame — Intro frames the listener's *entry* into the body,
+Conclusion frames the *exit*. Both fields are heavy-lifting and open with
+`FieldOverviewScreen` on first per-sermon entry, then walk through
+`SpotlightWorksheet`. Persists as `sermons.sermon_frame` (JSON, v18 migration).
+
+### Field 1 — Intro
+
+Four-question shape: `hook` → `bridge_to_text` → `expectations` → `redemptive_note`.
+
+- Q1/Q2/Q3 are not N/A-able (load-bearing).
+- Q4 (`redemptive_note`) is N/A-able with strict "satisfied another way" semantic —
+  only when the hook itself was redemptive.
+
+### Field 2 — Conclusion
+
+Four-question shape: `summate` → `land_call` → `gospel_empower` → `closing_posture`.
+
+None are N/A-able. Every component is structurally necessary at the listener's
+exit; `closing_posture` forces an explicit pastoral choice (silence / song /
+prayer / charge).
+
+### Gate to Manuscript
+
+`evaluateAdvance(sermon, "stage", 3)` in `src/utils/studyAdvancement.js` runs two
+composite checks:
+
+- **Intro composite** — Q1/Q2/Q3 non-empty; Q4 non-empty OR explicitly N/A.
+- **Conclusion composite** — Q1/Q2/Q3/Q4 all non-empty AND not marked N/A.
+
+The composite gate is what enforces Conclusion's no-N/A rule; the
+`SpotlightWorksheet` N/A toggle still renders on every question (UI suppression
+of the toggle on no-N/A questions is a deferred follow-on). Failures surface
+via `AdvanceGateChecklist` beneath the "Continue to Manuscript" button.
+
+---
+
 ## Manuscript Tab
 
 Component: `src/components/ManuscriptTab.jsx`.

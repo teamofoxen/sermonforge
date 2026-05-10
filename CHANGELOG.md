@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-05-09 — Doc fix: add Frame Tab section to sermon-workspace.md
+
+- `docs/SYSTEMS/sermon-workspace.md` documented three workspace tabs but the code has four; added "Frame Tab" section between Blueprint and Manuscript.
+- New section mirrors existing structure: component path (`src/components/FrameTab.jsx`), field definitions (`src/utils/sermonFrameFields.js`), Intro and Conclusion sub-sections with question shapes and N/A semantics, and the `evaluateAdvance(sermon, "stage", 3)` composite gate.
+- Opening line ("All AI surfaces are gone") left unchanged — Frame brings no AI back, still accurate.
+
+---
+
 ## 2026-05-09 — ARI Phases 5+6: synthesis questions and outline questions (placeholder wording)
 
 - `PausePointScreen` now shows a one-sentence synthesis question at each sub-phase boundary; pastor's answer persists to `_synthesis` in the sub-phase JSON column.
