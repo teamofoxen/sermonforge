@@ -1,7 +1,5 @@
 # SermonForge Beta — Setup Note
 
-> **Stale notice (ARI Phase 10, 2026-05-09):** AI was removed from SermonForge before beta launch. This setup note still references the AI Panel and AI-surface flag mounts; both are gone. The flag button now lives at the regular workspace surfaces (Study, Outline, Manuscript) and captures pastoral feedback only — no AI exchange. Rewrite pending before the note ships to testers.
-
 A short walkthrough for installing the app and giving feedback. Pair this with the longer letter (`docs/PROPOSALS/bti-tester-summary.md`) and the privacy reference (`docs/REFERENCE/privacy.md`).
 
 ---
@@ -36,6 +34,8 @@ The first time you open SermonForge, you'll see a one-time setup screen.
 
 **ESV API key** — recommended, not required. Powers the passage view in the workspace. Free to get from `api.esv.org` (sign in, request a key, paste it in). If you skip it, the passage column stays empty; everything else works.
 
+There is no other API key to set up. SermonForge does not call any third-party AI service. Crossway (for ESV passages) is the only outbound network credential the app uses, and only when you load a passage.
+
 **Telemetry and feedback toggle** — default on. This is the toggle described in the privacy doc. With it on, the app sends a small set of usage events and any flags or feedback you choose to send. Sermon content is never captured. With it off, nothing leaves your device.
 
 **For the cohort, please leave the toggle on unless something feels off.** It's the channel that lets your flags and feedback reach me. If you turn it off and want it back on later, message me — until a Settings panel ships in a later version, the only way to flip it back is via me.
@@ -46,7 +46,7 @@ Click "Save and Open SermonForge" (or "Skip and Open SermonForge" if you didn't 
 
 ## The first few minutes in the app
 
-A short tour runs the first time you open the workspace. It walks you through the main tabs — Study, Outline, Manuscript, Delivery — and the AI Panel on the right. Take it once; it's about three minutes.
+A short tour runs the first time you open the workspace. It walks you through the main tabs — Study, Blueprint, Manuscript — and the per-tab notebook surface. Take it once; it's about three minutes.
 
 After the tour, open a sermon (or create one from the Dashboard) and start preparing the way you normally would. Don't try to use every feature at once. Use the tabs you'd reach for in your normal week. The signal I want is what your actual prep looks like with this in it, not a careful test pass.
 
@@ -56,11 +56,24 @@ After the tour, open a sermon (or create one from the Dashboard) and start prepa
 
 Two affordances are built into the production app. You don't have to remember them — they'll be visible when they're useful.
 
-**The flag button.** A small icon next to every AI surface in the app — the AI Panel header, the AI affordances on each tab, the proposal cards. Click it when something feels off in the moment. A short popover opens: a one-line note input, a checkbox for "Include the AI exchange in this flag" (default on; uncheck if you'd rather not send the exchange), and Send / Send blank.
+**The flag button.** A small icon at the top of the Study tab and the Blueprint tab. Click it when something feels off in the moment — a question put a word in your mouth, the flow nudged you somewhere you wouldn't have gone, a field felt heavier than it should. A short popover opens: a one-line note input and Send / Send blank.
 
 You can send blank. The click itself is signal. Use it freely.
 
-**Send feedback…** A menu item that opens a longer form. Pick a dimension (Invasiveness, Workflow-fit, AI response quality, Trust, Friction and surprise, Onboarding, Reliability, Performance, Voice and frame, What surprised you), write a few lines, send. Good for the things that don't fit a flag.
+**Send feedback…** A menu item in the sidebar that opens a longer form. Pick a dimension, write a few lines, send. The dimensions are:
+
+- Structural overreach
+- Workflow-fit
+- Question quality
+- Trust
+- Friction and surprise
+- Onboarding and first-run
+- Reliability and weirdness
+- Performance and feel
+- Voice and frame
+- What surprised you
+
+Use whichever fits. "What surprised you" is the catch-all if nothing else matches. Good for the things that don't fit a flag.
 
 Both surfaces queue locally if you're offline and ship when you're back online.
 
@@ -82,7 +95,7 @@ Tell me. No explanation needed. You can either keep the app and stop sending fee
 
 ## A reminder of what I'm asking
 
-The hardest feedback — *"I went back to my old workflow"*, *"this feels like it's writing my sermon for me"*, *"I keep meaning to open it and forgetting"* — is the most valuable. The encouragement is kind, but it won't change a decision. The hard things will.
+The hardest feedback — *"I went back to my old workflow"*, *"the question put a word in my mouth"*, *"I keep meaning to open it and forgetting"* — is the most valuable. The encouragement is kind, but it won't change a decision. The hard things will.
 
 That's the whole reason for the program. Thank you for being part of it.
 

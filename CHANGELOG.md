@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-09 — BTI rewrite for post-ARI product + Phase 1.5 cleanup
+
+- Charter rewritten (`beta-testing-initiative.md`): Anchor 1 recast as "structural overreach" (question flow shaping pastor voice); dimensions overhauled; telemetry trimmed of AI events; frame-check hypothesis shifted to question-driven drift.
+- Privacy doc rewritten: Anthropic section removed; ESV/Crossway is the sole external service; AI exchange include dropped from flag description.
+- Tester letter and setup note reframed: thesis is "system asks; pastor answers"; hard-feedback examples shifted to question-driven friction.
+- Build proposal converted from forward implementation spec to historical record with pre/post-ARI delta table.
+- Phase 1.5 code cleanup: `events.js` drops dead `AI_PRESS` / `AI_PROPOSAL`; `FeedbackForm.jsx` dimensions match charter (verified in preview).
+
+---
+
 ## 2026-05-09 — ARI residue cleanup: drop dead refs + Dashboard sample passage
 
 - Removed the `phrasePatterns` / `aiPhrasePatterns` Absolute Invariant from `docs/CORE.md` — its runtime guard lived in `src/utils/memory.js`, deleted in the ARI audit fix-pass.

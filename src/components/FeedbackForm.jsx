@@ -3,8 +3,6 @@
 // Single-dimension picker + free-text. Used for "felt-but-not-immediate"
 // observations — things that don't fit a flag. Per the BTI charter
 // (docs/PROPOSALS/beta-testing-initiative.md, Tier 2 description).
-//
-// Payload shape per docs/PROPOSALS/bti-build-mvp.md (lines 174-181).
 
 import { useEffect, useState } from "react";
 import PrimaryButton from "./primitives/PrimaryButton";
@@ -12,13 +10,13 @@ import SecondaryButton from "./primitives/SecondaryButton";
 import IconButton from "./primitives/IconButton";
 import "./feedbackForm.css";
 
-// Dimension order matches the charter's Feedback Dimensions section. Default
-// selection is "What surprised you" — the open-ended catch-all (per Chunk 4
-// spec, line 170).
+// Dimension order matches the charter's Feedback Dimensions section
+// (docs/PROPOSALS/beta-testing-initiative.md, post-ARI rewrite 2026-05-09).
+// Default selection is "What surprised you" — the open-ended catch-all.
 const DIMENSIONS = [
-  { value: "invasiveness", label: "Invasiveness" },
+  { value: "structural-overreach", label: "Structural overreach" },
   { value: "workflow-fit", label: "Workflow-fit" },
-  { value: "ai-response-quality", label: "AI response quality" },
+  { value: "question-quality", label: "Question quality" },
   { value: "trust", label: "Trust" },
   { value: "friction-and-surprise", label: "Friction and surprise" },
   { value: "onboarding-and-first-run", label: "Onboarding and first-run" },

@@ -5,8 +5,6 @@
 
 const EVENT_TYPES = Object.freeze({
   APP_OPEN: "app-open",
-  AI_PRESS: "ai-press",                 // payload: { surface, step?, sermonId? }
-  AI_PROPOSAL: "ai-proposal",           // payload: { decision: "accepted" | "edited" | "rejected", surface }
   PANEL_TIME: "panel-time",             // payload: { surface, durationMs }
   FIELD_TIME: "field-time",             // payload: { field, durationMs }
   SERMON_CREATE: "sermon-create",       // payload: { sermonId }
