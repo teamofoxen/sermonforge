@@ -84,7 +84,7 @@ ARI shipped 2026-05-09 in a single 12-phase day (`docs/PROPOSALS/ai-removal-init
 | FeedbackFlag mount: DeliveryTab | Mounted | Surface deleted |
 | FeedbackFlag mount: StudyTab | Mounted | **Mounted** |
 | FeedbackFlag mount: OutlineTab (Blueprint) | Mounted | **Mounted** |
-| FeedbackFlag mount: ManuscriptTab | Not mounted | Candidate (pending Q1 follow-up) |
+| FeedbackFlag mount: ManuscriptTab | Not mounted | **Mounted** (added 2026-05-09 closing Q1) |
 | FeedbackFlag popover: AI-include checkbox | Present | Removed |
 | Telemetry: `ai-press` event | Emitted on AI button press | Defined but unused; cleanup pending |
 | Telemetry: `ai-proposal` event | Emitted on proposal accept/edit/reject | Defined but unused; cleanup pending |

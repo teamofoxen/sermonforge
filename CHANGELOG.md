@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-05-09 — BTI Q1 closure: FeedbackFlag mounted on Manuscript tab
+
+- `ManuscriptTab.jsx` now mounts `<FeedbackFlag surface="manuscript-tab" step={STAGE.Manuscript} />` (absolute top-right; pattern matches StudyTab and OutlineTab).
+- Charter Q1 settled at three mounts (Study, Blueprint, Manuscript); Phase 1.5 marked closed.
+- Tester-summary, setup note, and build-proposal delta table updated to name all three tabs; setup note adds "review checklist missed the thing you actually noticed" as a flag-worthy example.
+
+---
+
 ## 2026-05-09 — BTI rewrite for post-ARI product + Phase 1.5 cleanup
 
 - Charter rewritten (`beta-testing-initiative.md`): Anchor 1 recast as "structural overreach" (question flow shaping pastor voice); dimensions overhauled; telemetry trimmed of AI events; frame-check hypothesis shifted to question-driven drift.

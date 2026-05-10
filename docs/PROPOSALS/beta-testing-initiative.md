@@ -105,7 +105,7 @@ Three tiers for tester voice, plus a layer of automated signals running undernea
 
 ### Tier 1 — In-app flag (thirty seconds)
 
-A small, persistent flag affordance at every workspace tab where the pastor authors structured content — currently the Study tab and the Blueprint tab. Clicking it captures the moment: which surface, which sermon, which step, plus an optional one-line note. The pastor can send blank.
+A small, persistent flag affordance at every workspace tab where the pastor authors structured content — Study, Blueprint, and Manuscript. Clicking it captures the moment: which surface, which sermon, which step, plus an optional one-line note. The pastor can send blank.
 
 This tier is the heart of the system. It captures the moment of friction *as it happens*, not after the pastor has rationalized it away. A flag without a note still tells the developer where to look.
 
@@ -274,7 +274,7 @@ Closing the program well — naming what was learned, naming what stays in produ
 
 Decisions to work through together as the program scopes. Some genuinely gate Phase 2; others are better settled by the work itself or by early cohort signal. The list is the agenda, not a checklist.
 
-- **Q1 — In-app feedback UI surface.** *Settled (post-ARI):* Flag button mounts at workspace authorship surfaces — currently Study and Blueprint tabs. Manuscript tab is a candidate (its review checklists could be flag-worthy moments) — pending build decision. Pop-out form trigger: sidebar "Send feedback…" entry, modal in-process.
+- **Q1 — In-app feedback UI surface.** *Settled (post-ARI):* Flag button mounts at all three workspace authorship tabs — Study, Blueprint, and Manuscript. Pop-out form trigger: sidebar "Send feedback…" entry, modal in-process.
 - **Q2 — Feedback transport.** *Settled:* Cloudflare Worker + D1 endpoint. Live.
 - **Q3 — Telemetry event list.** *Mostly settled:* the seven events under Layer 0 above are captured. `ai-press` and `ai-proposal` are defined but unused — cleanup pending. Two new candidate signals (`structured-field-write` / `notebook-write` balance and `step-progression`) deferred to Phase 1.5 if early signal demands them.
 - **Q3b — Telemetry interpretation rulings.** Each retained signal needs an interpretation rule named separately, before the signal arrives. Open per signal.
@@ -306,11 +306,7 @@ The program runs in four phases.
 
 **Phase 1 — Production-app feedback surfaces, tester-facing summary.** *Built infrastructure shipped 2026-05-08; ARI-driven rewrite of tester-facing docs in progress 2026-05-09.* Flag button at workspace authorship surfaces (Study, Blueprint), pop-out form on sidebar, telemetry event capture, transport endpoint, token-gated inbox, first-run privacy disclosure all live. The tester-facing summary, setup note, and privacy doc are being rewritten for the post-ARI shape (this charter's revision is part of that pass).
 
-**Phase 1.5 — Pre-onboarding cleanup.** Small follow-ups before any tester gets the build:
-- Remove `ai-press` / `ai-proposal` from `electron/telemetry/events.js` (event constants without callers).
-- Update `FeedbackForm.jsx` dimensions list to match the post-ARI dimensions section above.
-- Add `FeedbackFlag` to the Manuscript tab if Q1 lands on three mounts (currently two).
-- Optional: add `structured-field-write` / `notebook-write` and `step-progression` events if Q3 admits them.
+**Phase 1.5 — Pre-onboarding cleanup.** *Closed 2026-05-09.* `ai-press` / `ai-proposal` event constants removed from `electron/telemetry/events.js`; `FeedbackForm.jsx` dimensions updated to match the post-ARI section above; `FeedbackFlag` added to the Manuscript tab (three mounts settled). Optional Q3 telemetry additions (`structured-field-write` / `notebook-write` / `step-progression`) deferred to Phase 2 if early cohort signal demands them.
 
 **Phase 2 — Cohort onboarding.** Q6 (recruitment cadence) and Q7 (cohort feasibility, including active-cohort floor) settle here, before any tester gets the build. Pastors are invited, given the build, given the tester-facing summary and privacy doc, given a short orientation on the three feedback tiers and what's being captured. Opted-in testers complete their pre-program writing sample. Then they use the app.
 
