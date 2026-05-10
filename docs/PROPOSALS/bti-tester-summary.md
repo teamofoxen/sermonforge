@@ -48,7 +48,7 @@ A few months of using SermonForge for real sermon prep — your normal weekly pr
 
 There are three ways to give feedback, designed for three different amounts of time:
 
-**A flag button — thirty seconds.** Inside the app, on each tab where you're authoring something — Study, Blueprint — there's a small flag button. If something feels off in the moment — a question put a word in your mouth, the flow nudged you somewhere you wouldn't have gone, a field felt heavier than it should — click it. You can leave a one-line note or just click and move on. Even a flag with no note tells me where to look. Use it freely. I'd rather get a hundred half-formed flags than ten polished ones.
+**A flag button — thirty seconds.** Inside the app, on each tab where you're authoring something — Study, Blueprint, Manuscript — there's a small flag button. If something feels off in the moment — a question put a word in your mouth, the flow nudged you somewhere you wouldn't have gone, a field felt heavier than it should — click it. You can leave a one-line note or just click and move on. Even a flag with no note tells me where to look. Use it freely. I'd rather get a hundred half-formed flags than ten polished ones.
 
 **A longer feedback form — five minutes.** A pop-out you can open from the sidebar when you have five minutes and want to say more. A handful of named dimensions (structural overreach, workflow-fit, question quality, trust, friction, voice and frame, and a few others), free-text answers, fill in what you have time for. Good for the things that don't fit a flag — patterns you noticed across the week, things that have been bothering you but you couldn't put your finger on.
 

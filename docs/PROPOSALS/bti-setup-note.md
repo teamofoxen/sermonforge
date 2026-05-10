@@ -56,7 +56,7 @@ After the tour, open a sermon (or create one from the Dashboard) and start prepa
 
 Two affordances are built into the production app. You don't have to remember them — they'll be visible when they're useful.
 
-**The flag button.** A small icon at the top of the Study tab and the Blueprint tab. Click it when something feels off in the moment — a question put a word in your mouth, the flow nudged you somewhere you wouldn't have gone, a field felt heavier than it should. A short popover opens: a one-line note input and Send / Send blank.
+**The flag button.** A small icon at the top of the Study tab, the Blueprint tab, and the Manuscript tab. Click it when something feels off in the moment — a question put a word in your mouth, the flow nudged you somewhere you wouldn't have gone, a review checklist missed the thing you actually noticed, a field felt heavier than it should. A short popover opens: a one-line note input and Send / Send blank.
 
 You can send blank. The click itself is signal. Use it freely.
 

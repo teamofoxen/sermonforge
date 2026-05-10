@@ -3,7 +3,9 @@ import { getOutline, getFunctionalElements, serializeOutline, serializeFunctiona
 import { exportManuscript } from "../db/database";
 import NotebookPanel from "./NotebookPanel";
 import ManuscriptReview from "./ManuscriptReview";
+import FeedbackFlag from "./FeedbackFlag";
 import SecondaryButton from "./primitives/SecondaryButton";
+import { STAGE } from "../core/contracts";
 
 function countWords(sermon) {
   const ms = parseManuscript(sermon.manuscript);
@@ -142,8 +144,11 @@ export default function ManuscriptTab({ sermon, onUpdate }) {
   };
 
   return (
-    <div>
-      <div style={{ marginBottom: "20px", fontSize: "13px", color: "var(--ink-ghost)", fontStyle: "italic" }}>
+    <div style={{ position: "relative" }}>
+      <div style={{ position: "absolute", top: "0", right: "0" }}>
+        <FeedbackFlag surface="manuscript-tab" sermonId={sermon?.id ?? null} step={STAGE.Manuscript} />
+      </div>
+      <div style={{ marginBottom: "20px", fontSize: "13px", color: "var(--ink-ghost)", fontStyle: "italic", paddingRight: "32px" }}>
         Expand the outline into full prose.
       </div>
       {/* Toolbar */}
