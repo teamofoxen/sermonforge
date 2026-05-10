@@ -168,6 +168,7 @@ function StudyStepStrip({ activeStep, onStepChange }) {
   return (
     <div className="study-step-strip" role="tablist" aria-label="Study step">
       {STUDY_STEPS.map((s) => (
+        // eslint-disable-next-line sermonforge/no-raw-button
         <button
           key={s.id}
           type="button"
@@ -652,6 +653,7 @@ export default function StudyTab({ sermon, onUpdate, onStepChange, onTabChange, 
         />
         <div className="study-write-col">
           {wantsTakeover && (
+            // eslint-disable-next-line sermonforge/no-raw-button
             <button
               type="button"
               className="field-takeover-restore"
@@ -715,13 +717,26 @@ export default function StudyTab({ sermon, onUpdate, onStepChange, onTabChange, 
       )}
 
       {/* ── Pause-point — discrete sub-phase boundary screen. ── */}
-      {pausePoint && (
-        <PausePointScreen
-          priorSubPhase={pausePoint.priorSubPhase}
-          nextKey={pausePoint.nextKey}
-          onContinue={() => setPausePoint(null)}
-        />
-      )}
+      {pausePoint && (() => {
+        const synthMeta =
+          pausePoint.priorSubPhase === 1 ? { col: "observations", data: obsData }
+          : pausePoint.priorSubPhase === 2 ? { col: "interpretation", data: intData }
+          : pausePoint.priorSubPhase === 3 ? { col: "redemptive_thread", data: redData }
+          : pausePoint.priorSubPhase === 4 ? { col: "implications", data: impData }
+          : null;
+        const synthValue = synthMeta ? (getQuestionAnswer(synthMeta.data, "_synthesis") ?? "") : "";
+        return (
+          <PausePointScreen
+            priorSubPhase={pausePoint.priorSubPhase}
+            nextKey={pausePoint.nextKey}
+            synthesisValue={synthValue}
+            onSynthesisChange={(val) => {
+              if (synthMeta) updateStructured(synthMeta.col, synthMeta.data, "_synthesis", val);
+            }}
+            onContinue={() => setPausePoint(null)}
+          />
+        );
+      })()}
 
       {/* ── Step 1: Exegesis ── */}
       {!pausePoint && activeStep === 1 && (

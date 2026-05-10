@@ -1,10 +1,19 @@
+import { useState } from "react";
 import { getOutline, serializeOutline, getFunctionalElements, serializeFunctionalElements } from "../utils";
 import OutlineBuilder from "./OutlineBuilder";
 import NotebookPanel from "./NotebookPanel";
+import Collapsible from "./primitives/Collapsible";
 import PrimaryButton from "./primitives/PrimaryButton";
 import BackButton from "./primitives/BackButton";
 import FeedbackFlag from "./FeedbackFlag";
 import { STAGE } from "../core/contracts";
+
+const OUTLINE_QUESTIONS = [
+  "What single move is your MPS asking listeners to make?",
+  "What obstacles stand between where listeners are now and that move?",
+  "What does the text give to address each obstacle? Name them — these are your outline points.",
+  "Does the sequence move the listener toward the MPS, or are the points parallel observations?",
+];
 
 function mpsExtractStem(mps) {
   if (!mps) return null;
@@ -23,6 +32,7 @@ export default function OutlineTab({ sermon, onUpdate, onTabChange }) {
   const outline = getOutline(sermon);
   const fe = getFunctionalElements(sermon);
   const mpsStem = mpsExtractStem(sermon.mps);
+  const [showOutlineQuestions, setShowOutlineQuestions] = useState(false);
 
   function handleOutlineChange(newOutline) {
     onUpdate({ outline: serializeOutline(newOutline) });
@@ -90,6 +100,23 @@ export default function OutlineTab({ sermon, onUpdate, onTabChange }) {
           )}
         </div>
       )}
+
+      <div style={{ marginBottom: "16px" }}>
+        <Collapsible
+          label="Outline Questions"
+          open={showOutlineQuestions}
+          onToggle={() => setShowOutlineQuestions(o => !o)}
+          bodyStyle={{ padding: "0 16px 16px" }}
+        >
+          <ol style={{ margin: 0, paddingLeft: "20px" }}>
+            {OUTLINE_QUESTIONS.map((q, i) => (
+              <li key={i} style={{ fontSize: "14px", color: "var(--ink-mid)", lineHeight: "1.65", marginBottom: i < OUTLINE_QUESTIONS.length - 1 ? "10px" : 0 }}>
+                {q}
+              </li>
+            ))}
+          </ol>
+        </Collapsible>
+      </div>
 
       <div className="card">
         <div className="card-header">

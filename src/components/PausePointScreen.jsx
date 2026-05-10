@@ -2,14 +2,12 @@
 //
 // Renders between sub-phases when `advanceSubPhase` succeeds. Two sections:
 //
-//   1. **What you just did** — shows the just-completed sub-phase's named
-//      outcome via the existing AI-synthesized summary (summaries[p2/p3/p4]
-//      for sub-phase boundaries; summaries[s2] for the Exegesis → MPT/MPS
-//      step boundary). Same bullet shape as SummaryBlock.
+//   1. **What you just did** — a synthesis question the pastor answers in one
+//      sentence. Their answer is the named outcome for the sub-phase (Observation
+//      Set / Interpretation Set / Christ-Connection / Implications Synthesis).
+//      Persists through the standard onUpdate pipeline via the `_synthesis` key.
 //
-//   2. **What's next** — static description of the upcoming work. For the
-//      Phase 4 transition, this is where the three-voices conversation gets
-//      framed (in lieu of a separate Phase 4 sub-phase intro).
+//   2. **What's next** — static description of the upcoming work.
 //
 // The pause-point is post-gate UI — it never blocks advancement. By the time
 // it renders, `transitionState` has already accepted the spine move. Pastor
@@ -18,8 +16,14 @@
 
 import React from "react";
 
-// "What's next" copy keyed by destination. Sub-phase numbers (2/3/4) for
-// sub-phase boundaries; "step_2" for the Exegesis → MPT/MPS step boundary.
+const SYNTHESIS_QUESTIONS = {
+  1: "In one sentence, what does the text say?",
+  2: "In one sentence, what does the text mean?",
+  3: "In one sentence, where is Christ in this text?",
+  4: "In one sentence, how does this text land on your people?",
+};
+
+// "What's next" copy keyed by destination.
 const NEXT_DESCRIPTIONS = {
   2: {
     title: "What's next: Interpret",
@@ -57,31 +61,17 @@ const NEXT_BUTTON_LABELS = {
   step_2: "Begin MPT and MPS",
 };
 
-// Same bullet parser used by SummaryBlock — recognizes "-", "*", "•", "1.",
-// "1)" line prefixes. Returns null when fewer than 2 bullets parse so the
-// caller can fall back to plain-paragraph rendering.
-function parseBullets(text) {
-  if (!text) return null;
-  const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
-  const bullets = [];
-  for (const line of lines) {
-    const m = line.match(/^[-*•]\s+(.+)$/) || line.match(/^\d+[.)]\s+(.+)$/);
-    if (m) bullets.push(m[1].trim());
-  }
-  return bullets.length >= 2 ? bullets : null;
-}
-
 export default function PausePointScreen({
   priorSubPhase,
   nextKey,
-  priorSummaryText,
-  priorSummaryLoading,
+  synthesisValue,
+  onSynthesisChange,
   onContinue,
 }) {
   const priorTitle = PRIOR_TITLES[priorSubPhase] || "Sub-phase complete";
   const next = NEXT_DESCRIPTIONS[nextKey] || { title: "What's next", body: "" };
   const buttonLabel = NEXT_BUTTON_LABELS[nextKey] || "Continue";
-  const bullets = !priorSummaryLoading ? parseBullets(priorSummaryText) : null;
+  const synthQuestion = SYNTHESIS_QUESTIONS[priorSubPhase];
 
   return (
     <div className="pause-point-screen" data-testid="pause-point-screen">
@@ -92,18 +82,26 @@ export default function PausePointScreen({
 
       <section className="pause-point-section">
         <div className="pause-point-section-label">What you just did</div>
-        {priorSummaryLoading ? (
-          <div className="pause-point-loading">
-            Pulling together what you produced…
-          </div>
-        ) : bullets ? (
-          <ul className="pause-point-bullets">
-            {bullets.map((b, i) => (
-              <li key={i}>{b}</li>
-            ))}
-          </ul>
-        ) : priorSummaryText ? (
-          <div className="pause-point-content">{priorSummaryText}</div>
+        {synthQuestion ? (
+          <>
+            <p className="pause-point-content" style={{ marginBottom: "10px" }}>
+              {synthQuestion}
+            </p>
+            <textarea
+              className="field-textarea"
+              value={synthesisValue || ""}
+              onChange={(e) => onSynthesisChange?.(e.target.value)}
+              placeholder="One sentence."
+              rows={2}
+              style={{
+                width: "100%",
+                fontSize: "14px",
+                lineHeight: "1.6",
+                fontFamily: "var(--font-serif)",
+                resize: "vertical",
+              }}
+            />
+          </>
         ) : (
           <div className="pause-point-content pause-point-content-empty">
             Your work in this sub-phase is complete.
@@ -117,6 +115,7 @@ export default function PausePointScreen({
       </section>
 
       <div className="pause-point-footer">
+        {/* eslint-disable-next-line sermonforge/no-raw-button */}
         <button
           type="button"
           className="pause-point-continue"

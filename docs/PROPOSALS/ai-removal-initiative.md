@@ -159,13 +159,27 @@ New `ManuscriptReview.jsx` component. Three collapsible sections (Flow Check, Ea
 
 Mounted in `ManuscriptTab.jsx` between manuscript fields and the Manuscript Notebook. Single `openReview` state — only one section open at a time.
 
-### Phase 5 — Synthesis-question reframes (after D2 design session)
+### Phase 5 — Synthesis-question reframes (✅ shipped, placeholder wording)
 
-Drop the Generate Summary buttons (already in Phase 2), introduce the synthesis question into each Exegesis sub-phase's question flow.
+Drop the Generate Summary buttons (already in Phase 2) — done. Synthesis question
+added at `PausePointScreen` for each sub-phase boundary. The pastor answers in one
+sentence; the answer persists via `updateStructured` into a `_synthesis` key on the
+sub-phase's JSON column. Placeholder questions (edit these in a homiletics session):
 
-### Phase 6 — Outline-question sequence (after D1 design session)
+| Sub-phase | Question |
+|-----------|----------|
+| Observe (1) | "In one sentence, what does the text say?" |
+| Interpret (2) | "In one sentence, what does the text mean?" |
+| Redemptive Thread (3) | "In one sentence, where is Christ in this text?" |
+| Implications (4) | "In one sentence, how does this text land on your people?" |
 
-New prewritten question sequence for outline construction.
+D2 (exact wording) remains open — these are placeholders until a homiletics working session.
+
+### Phase 6 — Outline-question sequence (✅ shipped, placeholder questions)
+
+Collapsible "Outline Questions" panel added to Blueprint tab (`OutlineTab.jsx`).
+Four placeholder questions that walk from MPS to outline structure. D1 (exact
+question design) remains open — refine these in a homiletics working session.
 
 ### Phase 7 — Cut Delivery tab (✅ shipped 2026-05-09)
 
@@ -244,9 +258,10 @@ Edited:
 - `docs/SYSTEMS/sermon-workspace.md` — partial-stale notice added at top flagging AI sections as historical pending rewrite
 
 Pending (not blocking):
-- `docs/SYSTEMS/sermon-workspace.md` — full rewrite removing AI sections (notice flags it as stale until done)
-- ESLint `no-direct-ai` rule repurposing to "no AI imports allowed"
+- ESLint `no-direct-ai` rule repurposing to "no AI imports allowed" (already functions as no-exception tripwire; rename is cosmetic)
 - Any remaining stale references in `docs/PROPOSALS/` (most are historical/archival)
+
+`docs/SYSTEMS/sermon-workspace.md` — rewritten 2026-05-09 (same day as Phase 5/6 placeholder ship).
 
 ### Phase 11 — Schema migration (D4)
 
