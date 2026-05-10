@@ -101,28 +101,6 @@ returns:  true
 ```
 Upserts a value in the `settings` table. Triggers a debounced `saveDb()`.
 
-### `"db-backupMemory"`
-```
-receives: json string (serialized pastor memory object)
-returns:  { ok: true } | { ok: false, error: string }
-```
-Write-through copy of the renderer's `localStorage.sermonforge_memory` to
-`%APPDATA%\sermonforge\data\memory-backup.json`. Survives Electron major
-upgrades, manual cache clears, and migrate-to-new-machine. Called fire-and-forget
-from `saveMemory()` in `src/utils/memory.js`. Memory remains primary in
-localStorage — this is a durability backup, not a source of truth. Per
-`docs/CORE.md`, full memory does not move to the main process because the IPC
-round-trip per AI call is too expensive.
-
-### `"db-restoreMemory"`
-```
-receives: nothing
-returns:  { ok: true, json: string|null } | { ok: false, error: string }
-```
-Reads the memory backup file. Called from `App.jsx` mount via
-`restoreMemoryFromBackup()` when localStorage is empty. Returns `json: null`
-when no backup file exists (first launch, or backup never written).
-
 ---
 
 ## Scripture
@@ -251,18 +229,21 @@ Reads from `app.getVersion()`.
 receives: nothing
 returns:  { configured: bool }
 ```
-Whether `loadKey()` (in `electron/keystore.js`) returns a non-empty
-Anthropic API key. The key value itself never crosses the IPC boundary.
+Whether the user has completed the one-time first-run setup screen.
+ARI Phase 8 (2026-05-09) repurposed this channel: `configured` now reflects
+the presence of the `bti_telemetry_enabled` setting (written on SetupScreen
+submit). The legacy name is preserved so existing renderer code continues
+to resolve. No API key value ever crosses the IPC boundary.
 
 ### `"app-save-api-key"`
 ```
-receives: { anthropic: string, esv?: string }
+receives: { esv?: string }
 returns:  { success: true } | { success: false, error: string }
 ```
-Validates and stores user-provided keys via Electron `safeStorage` (packaged
-builds) or `process.env` (dev). Validates Anthropic key starts with `sk-ant-`
-and is ≥ 20 chars. On success, calls `resetClient()` so the cached SDK client
-is rebuilt with the new key on the next AI call.
+Stores the user-provided ESV key via Electron `safeStorage` (packaged
+builds) or `process.env` (dev). Channel name preserved for renderer-side
+compatibility; ESV is the only key the app accepts (ARI Phase 8,
+2026-05-09 — Anthropic key handling removed alongside the AI subsystem).
 
 ### `"app-get-startup-warning"`
 ```
@@ -285,6 +266,48 @@ returns:  Promise<string> (empty string on success, error message on failure —
 Opens `paths.userData` in the OS file manager. Wired to the OneDrive
 warning surfaces so the user can locate the folder before relocating
 OneDrive sync away from it.
+
+### `"app-get-sermon-columns"`
+```
+receives: nothing
+returns:  string[]
+```
+Returns the main-process `SERMON_COLUMNS` allowlist. The renderer-side
+mirror in `src/core/contracts.ts` is asserted against this on App mount;
+a mismatch fails fast rather than letting `buildUpdate()` silently drop
+unknown fields.
+
+---
+
+## BTI Telemetry + Feedback
+
+### `"telemetry-emit"`
+```
+receives: { eventType: string, payload: object }
+returns:  { ok: bool }
+```
+Fire-and-forget event emission from renderer to the main-process bus
+(`electron/telemetry/bus.js`). The bus appends to a local NDJSON buffer
+and the transport batches uploads to the BTI Cloudflare Worker. No-op
+when the user has the telemetry toggle off. Event vocabulary lives in
+`electron/telemetry/events.js`.
+
+### `"telemetry-set-enabled"`
+```
+receives: bool
+returns:  { ok: true }
+```
+Toggles the BTI telemetry preference. Persists to the `bti_telemetry_enabled`
+setting and short-circuits the bus + transport when off.
+
+### `"bti-feedback-submit"`
+```
+receives: { kind: "flag" | "form", payload: object }
+returns:  { ok: true } | { ok: false, error: string }
+```
+Submits a Tier 1 flag or Tier 2 form to the BTI Cloudflare Worker. On
+failure the main-process bus persists locally and retries on the next
+periodic flush. Payload shape per `docs/PROPOSALS/bti-build-mvp.md`.
 
 ---
 

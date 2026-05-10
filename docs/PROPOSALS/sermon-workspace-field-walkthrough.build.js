@@ -1,4 +1,10 @@
 // Generates the Sermon Workspace field walkthrough as a .docx
+//
+// STALE POST-ARI (2026-05-09): The body text below describes "Review Outline" and
+// "Review E/A/I Balance" as AI buttons, and references Series Planner tabs as
+// live. Both are wrong post-ARI (AI subsystem deleted; Series Planner gated
+// behind a "Coming soon" placeholder). Retained as historical reference; do not
+// run to regenerate the .docx without first rewriting the body content.
 const fs = require("fs");
 const path = require("path");
 const {

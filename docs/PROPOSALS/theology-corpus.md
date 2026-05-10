@@ -1,5 +1,14 @@
 # Proposal: Curated Theology Corpus
 
+> **ORPHANED post-ARI (2026-05-09).** This proposal targeted a corpus whose only
+> consumer was the AI panel's footnote-style citations. ARI Phase 8 deleted the
+> AI subsystem; the corpus has no UI surface today. `theology.db`, the
+> `theology-search` / `theology-status` / `theology-get-chunks` IPC channels,
+> and the local MiniLM-L6-v2 embedder are retained on disk per ARI charter D5
+> (deferred decision). If retrieval becomes a future pastor-facing surface, the
+> corpus quality work below would still apply — but no current consumer needs it.
+> Retained as historical proposal; do not start work without first re-opening D5.
+
 > **Status:** Draft — 2026-04-21
 > **Owner:** Ross
 > **Motivation:** The current theology search indexes whatever was ingested ad hoc.

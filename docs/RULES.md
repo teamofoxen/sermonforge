@@ -57,8 +57,6 @@
 - Do not introduce new patterns unnecessarily.
 - Do not add features, error handling, or abstractions beyond what the task requires.
 - The 500ms debounce on `saveDb()` is deliberate — see `docs/CORE.md`.
-- Pastor memory in `localStorage` is intentional but fragile: it does not survive Electron major
-  version upgrades. The DB-backed memory backup (`memory-backup.json`) is the durability layer.
 
 ### Pre-Completion Check
 Before finishing any change verify:

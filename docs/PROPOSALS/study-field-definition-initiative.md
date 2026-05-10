@@ -1,5 +1,7 @@
 # Study Field Definition Initiative — Working Document
 
+> **Post-ARI status (2026-05-09):** SFDI closed before the AI Removal Initiative. Any AI-prompt / AI-affordance commitments in this document are historical — the AI subsystem was deleted in ARI Phase 8 (2026-05-09). The structural commitments (field shapes, named outcomes, handoffs, the seven-slot entry pattern, Process Contract #6) remain binding. Where the document says "AI prompts read X" or "AI may assist," read it as "the SpotlightWorksheet question flow surfaces X." See [`ai-removal-initiative.md`](./ai-removal-initiative.md) for the full initiative.
+
 **Status:** All four sub-phase walks complete (2026-05-03 → 2026-05-04). SFDI's structural completion test is satisfied: every field has a seven-slot entry, every sub-phase has a named outcome, every sub-phase boundary has a handoff articulation. Experiential completion is qualitative and tested in real sermon-prep use once SPRD Component 1 ships.
 **Last touched:** 2026-05-03.
 **Charter:** [`sfdi-charter.md`](./sfdi-charter.md) — the why, the boundaries, the approach.

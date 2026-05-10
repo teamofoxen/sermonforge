@@ -1,21 +1,32 @@
 # SermonForge — Project Structure Reference
 
+> Last verified: 2026-05-09 (post-ARI). The AI subsystem (`electron/ai.js`,
+> `src/utils/ai.js`, `src/prompts/`, `AIPanel.jsx`, `ProposalPanel.jsx`,
+> `InlineAIResponse.jsx`, `SeriesPlanner.jsx`, `Planning.jsx`, `NewSeriesModal.jsx`,
+> `DeliveryTab.jsx`, the localStorage `memory.js` layer, `contextBuilder.js`,
+> `contextSchema.js`) was deleted in ARI Phase 8 / Phase 9.
+
 ---
 
 ## Environment
 
 ```
 .env file:          project root (never commit)
-  ANTHROPIC_API_KEY=sk-ant-...
-  ESV_API_KEY=...           (Crossway ESV API — optional; ESV column activates when set)
+  ESV_API_KEY=...           (Crossway ESV API — optional; passage view activates when set)
 
 OneDrive path:      C:\Users\rossa\OneDrive
-Project root:       C:\Users\rossa\OneDrive\SermonForge
-Database file:      C:\Users\rossa\OneDrive\SermonForge\sermonforge.db
-Build output:       C:\Users\rossa\OneDrive\SermonForgeBuilds\
-Study guides:       C:\Users\rossa\OneDrive\SermonForge\StudyGuides\
-Feedback files:     C:\Users\rossa\OneDrive\SermonForge\Feedback\
+Project root:       C:\Projects\SermonForge
+Database file:      %APPDATA%\sermonforge\data\sermonforge.db
+Build output:       C:\Projects\SermonForgeBuilds\
+Study guides:       %USERPROFILE%\OneDrive\SermonForge\StudyGuides\
+Manuscript exports: %USERPROFILE%\Documents\SermonForge\exports\Manuscripts\
+Feedback files:     %USERPROFILE%\OneDrive\SermonForge\Feedback\
 ```
+
+The userData path is resolved by `electron/config.js`. ARI removed
+`ANTHROPIC_API_KEY`; the only remaining env-driven secret is `ESV_API_KEY`
+(optional, used by `passage-fetch`). For BTI testers, `GITHUB_FEEDBACK_TOKEN`
+is wired into the build via CI.
 
 ---
 
@@ -26,13 +37,15 @@ Feedback files:     C:\Users\rossa\OneDrive\SermonForge\Feedback\
 | Electron | 31 | Desktop shell |
 | React | 18 | UI framework |
 | Vite | 5 | Dev server and bundler (config: `vite.config.mjs`, ESM) |
-| sql.js | — | SQLite compiled to WASM (not better-sqlite3 — see `docs/SYSTEMS/database.md`) |
-| @anthropic-ai/sdk | — | Claude API client |
-| dotenv | — | Environment variable loading |
+| sql.js | — | SQLite compiled to WASM (sermonforge.db; not better-sqlite3 — see `docs/SYSTEMS/database.md`) |
+| better-sqlite3 + sqlite-vec | — | Native sqlite for theology.db (FTS4 + vec0) |
+| @xenova/transformers | — | Local MiniLM-L6-v2 embedder for theology semantic search |
 | docx | — | Word document generation (.docx export) |
+| electron-updater | — | Auto-update from GitHub Releases |
+| dotenv | — | Environment variable loading |
 | Node | 24 | Runtime |
 
-Platform: Windows 11 · Storage: OneDrive
+Platform: Windows 11 + macOS (signed + notarized builds since v1.0.0).
 
 ---
 
@@ -47,64 +60,110 @@ SermonForge/
 ├── package.json           — dependencies and npm scripts
 ├── vite.config.mjs        — Vite configuration (ESM; base: "./" required for Electron)
 ├── index.html             — Electron renderer entry point
-├── .env                   — API keys and paths (never commit)
+├── .env                   — ESV_API_KEY, GITHUB_FEEDBACK_TOKEN (never commit)
 ├── docs/
 │   ├── CORE.md            — authority, identity, invariants, architectural boundaries
 │   ├── RULES.md           — development rules, guardrails, design system, git workflow
+│   ├── ANCHORS.md         — list of anchor documents
+│   ├── ENFORCEMENT_STATUS.md — per-clause enforcement table
 │   ├── SYSTEMS/
-│   │   ├── context-pipeline.md  — 7-tier context assembly; buildContext, tiers, budgets
-│   │   ├── ai-panel.md          — AI panel behavior, system prompt, Tune-Up Engine
-│   │   ├── series-planner.md    — Series Planner tabs, Study Guide, calendar engine
-│   │   ├── sermon-workspace.md  — Study tab structure, Pastoral Context, save flow
+│   │   ├── sermon-workspace.md  — Study/Blueprint/Manuscript tabs, Pastoral Context, save flow
 │   │   ├── database.md          — sql.js, migrations, debounces, SERMON_COLUMNS
 │   │   └── ipc.md               — IPC architecture, boundaries, channel naming
-│   └── REFERENCE/
-│       ├── schema.md            — full database table definitions
-│       ├── ipc-channels.md      — all IPC channel specifications
-│       └── project-structure.md — this file
+│   ├── REFERENCE/
+│   │   ├── schema.md            — full database table definitions
+│   │   ├── ipc-channels.md      — all IPC channel specifications
+│   │   ├── privacy.md           — what the app sends, what it doesn't
+│   │   └── project-structure.md — this file
+│   ├── PROPOSALS/         — active charters, design briefs, in-flight initiatives
+│   └── ARCHIVE/           — closed initiatives (ACC, study-phase-implementation, etc.)
 ├── electron/
 │   ├── main.js            — Electron main process, all IPC handlers, DB init, migrations
-│   ├── ai.js              — Anthropic client + "ai-message" IPC handler
-│   └── preload.js         — contextBridge API exposed to renderer (window.electronAPI)
+│   ├── preload.js         — contextBridge API exposed to renderer (window.electronAPI)
+│   ├── config.js          — dev/prod gatekeeper (paths, ELECTRON_DEV detection)
+│   ├── keystore.js        — safeStorage wrapper for the ESV API key
+│   ├── logger.js          — app.log writer; captures uncaughtException
+│   ├── updater.js         — electron-updater wiring (auto-update from GitHub Releases)
+│   ├── tourData.js        — tour-only sample sermon seed
+│   ├── contracts.cjs      — main-process mirror of src/core/contracts.ts (SERMON_COLUMNS etc.)
+│   ├── dbMigration.js     — runMigrations() helpers
+│   ├── embedder/          — local MiniLM-L6-v2 embedder worker (theology semantic search)
+│   └── telemetry/
+│       ├── bus.js         — in-process event bus + NDJSON buffer
+│       ├── transport.js   — Cloudflare Worker batch transport
+│       └── events.js      — registered event vocabulary
 └── src/
     ├── main.jsx           — React entry point
     ├── App.jsx            — top-level routing and state
-    ├── styles/
-    │   └── global.css     — full design system, all CSS variables
-    ├── db/
-    │   └── database.js    — IPC-backed wrapper functions (components import from here)
     ├── utils.js           — shared utilities: tryParse, formatDate, autoResize,
     │                        createOutlinePoint (the only place outline points are created)
-    ├── utils/
-    │   ├── ai.js             — sendAIMessage(): single AI call choke point for all renderer-side AI calls
-    │   ├── churchCalendar.js — liturgical season engine (ESM; cannot be imported from main.js)
-    │   ├── contextBuilder.js — 7-tier context assembly pipeline: buildContext, buildAdaptiveHints,
-    │   │                        buildMemoryContext, resolveIncludes, summarizeExegesis
-    │   ├── studyFields.js    — structured worksheet field definitions (OBSERVE_FIELDS,
-    │   │                        INTERPRET_FIELDS, REDEMPTIVE_FIELDS, IMPLICATIONS_*);
-    │   │                        parse/serialize/flattenExegesis helpers
-    │   ├── hooks.js          — shared React hooks (useDebounce)
-    │   └── memory.js         — localStorage pastor memory layer; load/save/update/extract;
-    │                            updateMemory() contains phrasePatterns guard (do not remove)
+    ├── styles/
+    │   ├── global.css     — full design system, all CSS variables
+    │   └── typography.css — Google Fonts loaders for IBM Plex Serif/Mono/Sans + JetBrains Mono
+    ├── core/
+    │   ├── contracts.ts   — STAGE/STEP/SUB_PHASE/VIEW enums, SERMON_COLUMNS, MutationKind
+    │   └── spine.ts       — single sermon/series state surface (the only path)
+    ├── db/
+    │   └── database.js    — IPC-backed wrapper functions for non-spine channels
     ├── constants/
-    │   ├── steps.js          — STEPS, PHASES, STEP_SEQUENCE, PHASE_SEQUENCE
-    │   └── contextSchema.js  — CONTEXT_SECTIONS: shared section label constants
+    │   ├── steps.js       — STEPS, PHASES, STEP_SEQUENCE, PHASE_SEQUENCE
+    │   └── sermonColumns.js — re-export of SERMON_COLUMNS from core/contracts.ts
+    ├── contexts/          — React context providers
+    ├── data/              — static data (verse rotations, preacher quotes)
+    ├── datasets/          — bundled study datasets
+    ├── tour/              — workspace tour data + step definitions
+    ├── utils/
+    │   ├── churchCalendar.js — liturgical season engine (ESM; cannot be imported from main.js)
+    │   ├── studyFields.js    — Study field defs (OBSERVE_FIELDS, INTERPRET_FIELDS, REDEMPTIVE_FIELDS, IMPLICATIONS_FIELDS)
+    │   ├── sadiAnchorFields.js — SADI Step 2 MAIN_POINT_PAIR_FIELDS
+    │   ├── sermonFrameFields.js — SADI Step 5 SERMON_FRAME_FIELDS
+    │   ├── studyAdvancement.js — evaluateAdvance(): per-boundary gate logic
+    │   └── hooks.js          — shared React hooks (useDebounce)
     └── components/
         ├── Sidebar.jsx
         ├── Dashboard.jsx
-        ├── Planning.jsx           — Series list + biblical coverage view
-        ├── SeriesPlanner.jsx      — Series planning workspace (5 tabs) + StudyGuideModal
+        ├── DashboardVerseCarousel.jsx
+        ├── DashboardPreacherQuote.jsx
         ├── SermonList.jsx
         ├── Calendar.jsx
-        ├── Illustrations.jsx
-        ├── Archive.jsx
-        ├── Library.jsx            — Sermon library import + search
+        ├── CompletedSermons.jsx
+        ├── Archive.jsx              — legacy Archive surface; CompletedSermons is the canonical re-entry
         ├── SermonWorkspace.jsx
-        ├── StudyTab.jsx
-        ├── OutlineTab.jsx
-        ├── ManuscriptTab.jsx
-        ├── DeliveryTab.jsx
-        ├── AIPanel.jsx
-        ├── PassagePopup.jsx       — floating 3-translation scripture viewer (portal to document.body)
-        └── NewSermonModal.jsx
+        ├── StudyTab.jsx             — Study tab (4 steps: Exegesis / MPT-MPS / Outline / Functional Elements)
+        ├── OutlineTab.jsx           — Blueprint tab (renamed; file kept legacy name)
+        ├── ManuscriptTab.jsx        — Manuscript tab (terminal sermon-prep stage post-ARI)
+        ├── FrameTab.jsx             — Frame tab (SADI Step 5: Intro + Conclusion)
+        ├── ManuscriptReview.jsx     — Flow Check / Ear Check / Final Tune-Up structured prompts (read-only)
+        ├── NotebookPanel.jsx        — Per-tab notebook (Study/Blueprint/Manuscript)
+        ├── PausePointScreen.jsx     — Sub-phase boundary screen with synthesis question
+        ├── SpotlightWorksheet.jsx   — Renders SFDI fields with question dispatch
+        ├── IndentedSentenceCanvas.jsx — Phase 1 Field 3 unified-canvas
+        ├── ThroughlineCanvas.jsx    — Throughline visualization
+        ├── ThroughlineRail.jsx      — Side rail showing pastor's progress
+        ├── SynthesisTable.jsx       — Cumulative thought-unit table (Phases 2/3/4)
+        ├── FieldOverviewScreen.jsx  — First-entry overview for heavy fields
+        ├── PeripheralReferencePanel.jsx — Cross-field reference cards
+        ├── ScripturePanel.jsx       — In-workspace passage display
+        ├── PassagePopup.jsx         — Floating ESV scripture viewer (portal to document.body)
+        ├── OutlineBuilder.jsx
+        ├── NewSermonModal.jsx
+        ├── SetupScreen.jsx          — First-run setup (ESV key + telemetry preference)
+        ├── OneDriveWarning.jsx
+        ├── DeleteButton.jsx         — Two-step confirm (re-exported from primitives/)
+        ├── InlineError.jsx
+        ├── Logo.jsx
+        ├── FeedbackFlag.jsx         — BTI Tier 1 flag button (Study/Blueprint/Manuscript)
+        ├── FeedbackForm.jsx         — BTI Tier 2 form (sidebar entry → modal)
+        ├── FeedbackModal.jsx        — Legacy feedback modal
+        ├── TourOverlay.jsx
+        └── primitives/
+            ├── PrimaryButton.tsx
+            ├── SecondaryButton.tsx
+            ├── IconButton.tsx
+            ├── TextButton.tsx
+            ├── BackButton.tsx
+            ├── EmptyState.tsx
+            ├── LoadingState.tsx
+            ├── Collapsible.jsx
+            └── DeleteButton.jsx
 ```

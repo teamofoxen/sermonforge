@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-09 — Post-ARI doc-drift sweep: live refs corrected, charters banner-tagged
+
+- `docs/SYSTEMS/ipc.md` and `docs/REFERENCE/project-structure.md` rewritten; `ipc-channels.md` purged of memory channels + Anthropic semantics, BTI telemetry channels added.
+- `RULES.md`/`database.md` memory rules removed; `ENFORCEMENT_STATUS.md` corrected (Mutation #2 retirement, SADI AI principle, no-direct-ai allowlist, MPS_DRAFT, Process #4); `distribution.md` and ACCI stub fixed.
+- Closed-initiative charters (SFDI/SADI/SPRD + working docs) and stale design briefs (sermon-workspace-tour, sermonforge-field-walkthrough, theology-corpus, dashboard-design-brief) tagged with post-ARI / stale / orphaned banners.
+- `sermon-workspace-tour.md` file list cleaned; Stop 12 retired note added; 12 → 11 stops.
+- New `scripts/drift-sweep-ari-bti.sh` validator (re-runnable; converged at exit 0).
+
+---
+
 ## 2026-05-09 — ARI Phases 5+6: synthesis questions and outline questions (placeholder wording)
 
 - `PausePointScreen` now shows a one-sentence synthesis question at each sub-phase boundary; pastor's answer persists to `_synthesis` in the sub-phase JSON column.

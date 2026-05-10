@@ -1,5 +1,7 @@
 # Study Phase Re-Design (SPRD) — Planning Document
 
+> **Post-ARI status (2026-05-09):** SPRD shipped before the AI Removal Initiative. The Q8 ruling ("Inline AI Reviews are advisory carve-out…") and the structural commitment that "AI prompts treat PC as enrichment, never as a precondition" are historical — the AI subsystem was deleted in ARI Phase 8 (2026-05-09). Every other commitment (the 8+8+5+4 phase shape, hard-gate UX, evidence-gate firing, Step 5 elevation, Implications restructure, Implications Synthesis as Phase 4 named outcome, PC card removal, Isolated-World Workspace UX) remains binding. See [`ai-removal-initiative.md`](./ai-removal-initiative.md) for the full initiative.
+
 **Status:** SHIPPED. All A/B/C milestones complete by 2026-05-05. Workspace tour rewrite shipped 2026-05-05 (17 throughline-first stops; simplified 2026-05-08 to 12 plain-prose stops). SADI Step 2 plumbing shipped 2026-05-05 (commit `0d98abd`). C4 closed by Phase 1 Background field retirement 2026-05-05. SPIP archived; per-milestone implementation history lives in git log + `CHANGELOG.md`. SFDI structural walks complete; SADI ratification + content-design walks complete.
 
 This document is now a structural reference rather than a forward-looking plan. It preserves the load-bearing commitments and the eight design-question rulings; the rich design reasoning lives in git history and the SFDI/SADI working docs.

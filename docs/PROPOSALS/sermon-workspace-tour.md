@@ -1,9 +1,18 @@
 # Sermon Workspace Tour — Implementation Spec
 
+> **Post-ARI status (2026-05-09):** ARI Phase 7 deleted the Delivery tab and its
+> tour stop, so the current shipping tour is **11 stops, ending at Manuscript**
+> (Stop 12 below is retired). The AI-philosophy stop was already retired in the
+> 2026-05-08 plain-prose reframe. References to deleted files (`DeliveryTab.jsx`,
+> `AIPanel.jsx`) and the deleted IPC channel `db-loadTourSermon` (rolled into the
+> `"spine"` channel as `load-tour-sermon` / `remove-tour-sermon` ops) are
+> historical. Engine, mock sermon, per-field anchors, and 11-stop locked content
+> still ship.
+
 > Status: design locked, implementation shipped (engine 2026-04-28; SFDI
 > reconciliation 2026-05-05; throughline-first reframe 2026-05-05;
-> plain-prose reframe 2026-05-08). The Series Planner tour is a separate,
-> later effort — do not entangle the two.
+> plain-prose reframe 2026-05-08; Stop 12 retirement 2026-05-09 with ARI Phase 7).
+> The Series Planner tour is a separate, later effort — do not entangle the two.
 
 > **Plain-prose reframe (2026-05-08):** The locked content below is the
 > 12-stop plain-prose narrative. Each stop is one short imperative
@@ -27,7 +36,7 @@
 A guided spotlight tour of the Sermon Workspace. Triggered from the Dashboard
 ("Take the guided tour" inside the Explore SermonForge tile). The tour opens
 a tour-only sample sermon — "The Hope That Does Not Disappoint" (Romans 5:1-5,
-sermon ID `tour-romans-sermon-01`) — and walks through 12 stops. Each stop =
+sermon ID `tour-romans-sermon-01`) — and walks through 11 stops (12 originally; Stop 12 retired with ARI Phase 7). Each stop =
 a spotlight on a real element + a callout card with one short sentence
 naming the move at that surface. User clicks "Next" to advance; can leave
 anytime.
@@ -85,24 +94,23 @@ later effort — do not entangle the two.
   worksheet body)
 - `src/components/FrameTab.jsx` — Step 5 (Sermon Frame: Intro +
   Conclusion); anchored at `data-tour-id="frame-worksheet"` for stop 10
-- `src/components/DeliveryTab.jsx` — Delivery surfaces (Manuscript /
-  Preaching Outline / Without Notes); anchored at
-  `data-tour-id="delivery-overview"` for stop 12
-- `src/components/ManuscriptTab.jsx` — Flow Coach, Ear Check, Tune-Up
-  (no longer surfaced in tour copy; pastor encounters them in the
-  Manuscript tab itself)
-- `src/components/AIPanel.jsx` — openable from tour state
-- `src/tour/workspaceTourStops.js` — the 12-stop array; `TourContext`
-  drives prerequisite-aligned UI state for each stop
-- `electron/tourData.js` + `db-loadTourSermon` IPC handler — tour sermon
-  seeding (delete-then-insert per launch); list-query filters
-  (`id NOT LIKE 'tour-%'`) keep the sample out of normal lists
+- `src/components/ManuscriptTab.jsx` — Manuscript tab (terminal stage
+  post-ARI); the Flow Coach / Ear Check / Tune-Up surfaces are now
+  read-only structured prompts in `src/components/ManuscriptReview.jsx`,
+  not surfaced in the tour
+- `src/tour/workspaceTourStops.js` — the 11-stop array (Stop 12 Delivery
+  retired with ARI Phase 7); `TourContext` drives prerequisite-aligned
+  UI state for each stop
+- `electron/tourData.js` + the spine ops `load-tour-sermon` /
+  `remove-tour-sermon` — tour sermon seeding (delete-then-insert per
+  launch); list-query filters (`id NOT LIKE 'tour-%'`) keep the sample
+  out of normal lists
 - `src/styles/global.css` — design system tokens (use only these; no new
   colors, no new fonts)
 
 ---
 
-## The 12 stops (locked content)
+## The stops (locked content — 11 currently shipping, Stop 12 retired)
 
 > Heading is bold. Body is one imperative sentence. Copy verbatim.
 
@@ -139,8 +147,9 @@ later effort — do not entangle the two.
 ### Stop 11 — Manuscript
 **Manuscript.** Write your sermon.
 
-### Stop 12 — Delivery
-**Delivery.** Format and export your sermon for preaching.
+> Stop 12 (Delivery) was retired by ARI Phase 7 (2026-05-09) when the
+> Delivery tab was deleted. Manuscript is now the terminal sermon-prep
+> stage; export-to-Word lives at the bottom of the Manuscript tab.
 
 ---
 

@@ -11,7 +11,7 @@
 
 ## 1. Goals
 
-- A pastor downloads SermonForge, runs it, enters their API key once, and is done.
+- A pastor downloads SermonForge, runs it, optionally enters an ESV API key, and is done.
 - Mac and Windows both supported.
 - When Ross ships an update, users get it automatically without doing anything.
 - When something breaks for a user, Ross finds out without depending on copy/paste.
@@ -33,7 +33,7 @@
 | Windows installer build | Working (`npm run build` → NSIS `.exe`) |
 | Mac build | Not configured |
 | Auto-updates | **Done** — `electron-updater` wired up via `electron/updater.js` |
-| API key setup screen | **Done** — `SetupScreen.jsx`; Claude + ESV keys via `safeStorage` |
+| Setup screen | **Done** — `SetupScreen.jsx`; optional ESV key via `safeStorage` + BTI telemetry preference (post-ARI: Anthropic key removed) |
 | GitHub repo | Exists at `github.com/teamofoxen/sermonforge` |
 | Feedback → GitHub Issues | **Working** — `GITHUB_FEEDBACK_TOKEN` in `.env`, posts structured issues |
 | Crash log / auto error capture | **Done** — `electron/logger.js`; last 50 lines attached to feedback |
@@ -183,7 +183,7 @@ These don't require code — just a shift in how to think when building:
 | Phase | Scope | Prerequisite |
 |-------|-------|--------------|
 | 0 | `electron/config.js` — dev/prod gatekeeper | Nothing ✅ |
-| 1 | `SetupScreen.jsx` — first-run API key entry | Phase 0 ✅ |
+| 1 | `SetupScreen.jsx` — first-run optional ESV key + telemetry preference | Phase 0 ✅ |
 | 2 | Crash log + auto-attach to feedback | Phase 0 ✅ |
 | 3 | `electron-updater` wired up | Phase 0 ✅ |
 | 4 | Mac build config + icons + entitlements | Apple Developer account confirmed |

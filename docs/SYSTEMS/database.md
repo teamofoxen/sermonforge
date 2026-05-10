@@ -154,9 +154,6 @@ the miss immediately in development — but only if you actually exercise the sa
 
 ## Key Design Notes
 
-- **Pastor memory** is stored in `localStorage` (not the database). This is intentional: the
-  IPC round-trip cost of reading memory on every AI call would be significant if it were in
-  the DB. Tradeoff: memory does not survive Electron major version upgrades.
 - **Sermon slots** are real `sermons` records with `stage='planning'`. There is no separate
   planning-slots table.
 - **Calendar notes and metadata** are in separate tables.

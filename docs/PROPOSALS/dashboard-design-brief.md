@@ -143,8 +143,9 @@ and the Big Idea. Don't use Plex Sans here.
 ```
 
 Notes:
-- The sidebar (260px) and any AI panel (320px right side) are NOT visible on
-  the dashboard — the dashboard fills the content area edge-to-edge.
+- The sidebar (260px) is not visible on the dashboard — the dashboard fills the
+  content area edge-to-edge. (The brief originally also mentioned a 320px AI panel
+  on the right; ARI 2026-05-09 deleted the AI panel entirely.)
 - `dash-page-body` removes the default `page-body` padding so the verse band
   can sit flush against the topbar.
 
