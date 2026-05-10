@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-05-10 — ESV key: validate on entry, add in-app update path
+
+- `app-save-api-key` IPC handler now validates the key against the ESV API before saving; 401/403 returns a clear error, network failures save the key silently.
+- New `EsvKeyModal.jsx` lets users update their ESV key from inside the app at any time.
+- "Update ESV key…" link added to the sidebar footer, opening the modal.
+
+---
+
 ## 2026-05-09 — Post-ARI doc-drift sweep: live refs corrected, charters banner-tagged
 
 - `docs/SYSTEMS/ipc.md` and `docs/REFERENCE/project-structure.md` rewritten; `ipc-channels.md` purged of memory channels + Anthropic semantics, BTI telemetry channels added.

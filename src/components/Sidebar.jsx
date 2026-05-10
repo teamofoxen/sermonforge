@@ -3,6 +3,7 @@ import { getRecentSermons } from "../core/spine";
 import { VIEW } from "../core/contracts";
 import NewSermonModal from "./NewSermonModal.jsx";
 import FeedbackForm from "./FeedbackForm.jsx";
+import EsvKeyModal from "./EsvKeyModal.jsx";
 import IconButton from "./primitives/IconButton";
 import TextButton from "./primitives/TextButton";
 import Logo from "./Logo.jsx";
@@ -45,6 +46,7 @@ export default function Sidebar({ currentView, onNavigate, onOpenSermon, theme, 
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [recentSermons, setRecentSermons] = useState([]);
   const [showFeedback, setShowFeedback] = useState(false);
+  const [showEsvModal, setShowEsvModal] = useState(false);
 
   const visibleRecents = recentSermons.filter((s) => s.title?.trim());
 
@@ -187,12 +189,22 @@ export default function Sidebar({ currentView, onNavigate, onOpenSermon, theme, 
         >
           Send feedback…
         </TextButton>
+        <TextButton
+          onClick={() => setShowEsvModal(true)}
+          style={{ padding: "2px 0 0" }}
+        >
+          Update ESV key…
+        </TextButton>
       </div>
 
       {showFeedback && (
         <FeedbackForm
           onClose={() => setShowFeedback(false)}
         />
+      )}
+
+      {showEsvModal && (
+        <EsvKeyModal onClose={() => setShowEsvModal(false)} />
       )}
 
       {showNewModal && (

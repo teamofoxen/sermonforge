@@ -2406,8 +2406,27 @@ ipcMain.handle("app-get-key-status", () => {
   return { configured: Boolean(row) };
 });
 
-ipcMain.handle("app-save-api-key", (_, keys) => {
+ipcMain.handle("app-save-api-key", async (_, keys) => {
   const { esv } = keys || {};
+  if (esv && esv.trim()) {
+    try {
+      const res = await fetch(
+        "https://api.esv.org/v3/passage/text/?q=John+3:16" +
+        "&include-headings=false&include-footnotes=false" +
+        "&include-verse-numbers=false&include-short-copyright=false" +
+        "&include-passage-references=false",
+        {
+          headers: { Authorization: `Token ${esv.trim()}` },
+          signal: AbortSignal.timeout(8000),
+        }
+      );
+      if (res.status === 401 || res.status === 403) {
+        return { success: false, error: "That key wasn't accepted by the ESV API — check it and try again." };
+      }
+    } catch (_) {
+      // Network unreachable — save the key anyway; user can fix it later
+    }
+  }
   try {
     saveKeys({ esv });
     return { success: true };
