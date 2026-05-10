@@ -1,79 +1,66 @@
 'use strict';
 
 /**
- * no-direct-ai — AI Integrity Gate (ACCI Item D2).
+ * no-direct-ai — AI Integrity Gate (originally ACCI Item D2; rewritten in
+ * ARI Phase 8, 2026-05-09).
  *
- * Two gates:
+ * SermonForge contains no AI surfaces. This rule is the lint-layer tripwire
+ * for that invariant: any import of @anthropic-ai/sdk or any reintroduction
+ * of window.electronAPI.sendAIMessage is rejected at editor/CI time.
  *
- * Gate 1 — Anthropic SDK import.
- * `electron/ai/provider.js` is the sole allowed importer of @anthropic-ai/sdk.
- * Any other file importing it bypasses the provider abstraction and would
- * construct its own Anthropic client outside the IPC boundary.
- *
- * Gate 2 — Direct IPC sendAIMessage call.
- * `src/utils/ai.js` is the sole allowed caller of window.electronAPI.sendAIMessage.
- * Any component accessing it directly bypasses the layered system-prompt,
- * context-pipeline, audit-log tagging, and abort-controller added in Tier A–C.
+ * No exceptions. Pre-ARI, the rule allowed `electron/ai/provider.js` (SDK)
+ * and `src/utils/ai.js` (sendAIMessage); both files are now deleted, and the
+ * rule's allowlist was removed alongside them. If a future change needs AI
+ * back, the contract layer (Process #5 in docs/CORE.md) is the place to
+ * reopen the question — not the lint config.
  */
 
 const RE_ANTHROPIC_SDK = /^@anthropic-ai\/sdk$/;
-const RE_PROVIDER_PATH = /(?:^|\/)electron\/ai\/provider(?:\.js)?$/;
-const RE_AI_UTIL_PATH  = /(?:^|\/)src\/utils\/ai(?:\.js)?$/;
 
 module.exports = {
   meta: {
     type: 'problem',
     docs: {
       description:
-        'AI Integrity Gate: Anthropic SDK must only be imported in electron/ai/provider.js; window.electronAPI.sendAIMessage must only be called from src/utils/ai.js.',
+        'AI Integrity Gate: SermonForge contains no AI. @anthropic-ai/sdk imports and window.electronAPI.sendAIMessage calls are forbidden.',
       category: 'SermonForge',
     },
     schema: [],
     messages: {
       sdkBypass:
-        "AI Integrity violation: '@anthropic-ai/sdk' may only be imported in 'electron/ai/provider.js'.",
+        "AI Integrity violation: '@anthropic-ai/sdk' may not be imported. SermonForge contains no AI (ARI, 2026-05-09).",
       ipcBypass:
-        "AI Integrity violation: 'window.electronAPI.sendAIMessage' may only be called from 'src/utils/ai.js'. Import 'sendAIMessage' from that module instead.",
+        "AI Integrity violation: 'window.electronAPI.sendAIMessage' may not be called. The IPC channel was removed in ARI Phase 8.",
     },
   },
   create(context) {
-    const filename = (context.getFilename ? context.getFilename() : context.filename || '').replace(/\\/g, '/');
-    const isProvider = RE_PROVIDER_PATH.test(filename);
-    const isAiUtil   = RE_AI_UTIL_PATH.test(filename);
-
     return {
-      // Gate 1: Anthropic SDK import (ES modules)
       ImportDeclaration(node) {
-        if (isProvider) return;
         const src = node.source && node.source.value;
         if (typeof src === 'string' && RE_ANTHROPIC_SDK.test(src)) {
           context.report({ node, messageId: 'sdkBypass' });
         }
       },
-
-      // Gate 1 (CJS): provider.js uses require(), not import — needs a separate visitor from ImportDeclaration.
       CallExpression(node) {
-        if (!isProvider && node.callee.name === 'require') {
+        if (node.callee.name === 'require') {
           const arg = node.arguments[0];
           if (arg && arg.type === 'Literal' && typeof arg.value === 'string' && RE_ANTHROPIC_SDK.test(arg.value)) {
             context.report({ node, messageId: 'sdkBypass' });
           }
+          return;
         }
 
-        // Gate 2: window.electronAPI.sendAIMessage(...)
-        if (!isAiUtil) {
-          const callee = node.callee;
-          if (
-            callee.type === 'MemberExpression' &&
-            !callee.computed &&
-            callee.property.name === 'sendAIMessage' &&
-            callee.object.type === 'MemberExpression' &&
-            !callee.object.computed &&
-            callee.object.property.name === 'electronAPI' &&
-            callee.object.object.name === 'window'
-          ) {
-            context.report({ node, messageId: 'ipcBypass' });
-          }
+        const callee = node.callee;
+        if (
+          callee.type === 'MemberExpression' &&
+          !callee.computed &&
+          callee.property.name === 'sendAIMessage' &&
+          callee.object.type === 'MemberExpression' &&
+          !callee.object.computed &&
+          callee.object.property.name === 'electronAPI' &&
+          callee.object.object.name === 'window'
+        ) {
+          context.report({ node, messageId: 'ipcBypass' });
         }
       },
     };

@@ -23,17 +23,15 @@
 2. Never change the database schema without approval and a migration plan. All schema changes
    must go through `runMigrations()` with a version increment — never alter `CREATE TABLE`
    without also adding a migration.
-3. Never expose `ANTHROPIC_API_KEY` to the renderer process.
-4. All Claude API calls must go through IPC `"ai-message"` channel via `sendAIMessage()`.
-5. Always verify `npm start` works after changes.
-6. Never mark an issue as fixed without verifying it actually works.
-7. This is a Windows app on OneDrive — always use `path.join()`, never hardcode path separators.
-8. After completing any set of changes, run `npm run build` to produce an updated installer.
+3. Always verify `npm start` works after changes.
+4. Never mark an issue as fixed without verifying it actually works.
+5. This is a Windows app on OneDrive — always use `path.join()`, never hardcode path separators.
+6. After completing any set of changes, run `npm run build` to produce an updated installer.
    Output goes to `C:\Projects\SermonForgeBuilds\`. Do not wait to be asked —
    build is part of finishing a task.
    - `base: "./"` in `vite.config.mjs` is required (Electron loads from `file://`, not `http://`).
    - electron-builder: `sql-wasm.wasm` must be in `asarUnpack`; `.env` must be in `extraResources`.
-9. Update `CHANGELOG.md` after every change — what changed and why.
+7. Update `CHANGELOG.md` after every change — what changed and why.
 
 ---
 
@@ -42,7 +40,7 @@
 ### Boundaries
 - No direct use of `window.electronAPI` outside wrapper modules.
 - No raw SQL outside the database layer (`electron/main.js` handlers).
-- All AI calls must go through `sendAIMessage` (`src/utils/ai.js`).
+- No AI surfaces, no AI calls. SermonForge contains no AI (ARI, 2026-05-09).
 
 ### No Silent Failures
 - Do not swallow errors with empty catch blocks.
@@ -54,18 +52,13 @@
 - Check for an existing utility before writing a new one.
 - `createOutlinePoint(text)` is the only place outline points are created — see `docs/CORE.md`.
 
-### Memory / AI Feedback Loop
-- `phrasePatterns` and `aiPhrasePatterns` must never be merged — see `docs/CORE.md`.
-- If the runtime guard in `updateMemory()` fires, fix the call site; do not remove the guard.
-
 ### Change Discipline
 - Make minimal, surgical changes.
 - Do not introduce new patterns unnecessarily.
 - Do not add features, error handling, or abstractions beyond what the task requires.
 - The 500ms debounce on `saveDb()` is deliberate — see `docs/CORE.md`.
 - Pastor memory in `localStorage` is intentional but fragile: it does not survive Electron major
-  version upgrades. Do not move it to the DB without considering the IPC round-trip cost on
-  every AI call.
+  version upgrades. The DB-backed memory backup (`memory-backup.json`) is the durability layer.
 
 ### Pre-Completion Check
 Before finishing any change verify:
@@ -90,7 +83,7 @@ variables. Never hardcode these values anywhere else.
 ```
 
 **Typography:**
-- IBM Plex Serif — headings, body copy, italic quotes, sermon manuscripts, AI markdown, all prose (the reading voice)
+- IBM Plex Serif — headings, body copy, italic quotes, sermon manuscripts, all prose (the reading voice)
 - JetBrains Mono — wordmark, eyebrows, scripture refs, attributions, dates, all meta/labels (the structural voice)
 - IBM Plex Sans — reserve, available for any future dense-UI surface
 - Loaded from Google Fonts via `src/styles/typography.css`. Tokens: `--font-serif`, `--font-mono`, `--font-sans`.
@@ -98,7 +91,6 @@ variables. Never hardcode these values anywhere else.
 **Layout:**
 - Sidebar: 260px, `var(--ink)` background, gold gradient right border
 - Content area: `var(--parchment)` background
-- AI Panel: 320px right sidebar, white background
 - Topbar: white background, soft shadow
 
 **Component rules:**

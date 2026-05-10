@@ -37,7 +37,7 @@
 import {
   Stage, Step, SubPhase, Sermon, Series,
   STAGE, STAGE_SEQUENCE, STEP_CANONICAL_SEQUENCE, SUB_PHASE_CANONICAL_SEQUENCE,
-  MUTATION_KIND, STRUCTURED_FIELDS,
+  STRUCTURED_FIELDS,
   OutlineUpdate, FunctionalElementUpdate,
   ObservationUpdate, InterpretationUpdate,
   RedemptiveThreadUpdate, ImplicationsUpdate,
@@ -329,23 +329,9 @@ export interface UserInputMutation {
   value: string | StructuredFieldUpdate;
 }
 
-export interface AiProposalMutation {
-  kind: "ai_proposal";
-  sermonId: string;
-  field: string;
-  value: string | StructuredFieldUpdate;
-}
+export type SpineMutation = UserInputMutation;
 
-export interface AiApplyMutation {
-  kind: "ai_apply";
-  sermonId: string;
-  field: string;
-  proposalId: string;
-}
-
-export type SpineMutation = UserInputMutation | AiProposalMutation | AiApplyMutation;
-
-function checkShape(input: UserInputMutation | AiProposalMutation): void {
+function checkShape(input: UserInputMutation): void {
   const isStructured = STRUCTURED_FIELDS.has(input.field);
   const valueIsString = typeof input.value === "string";
   if (isStructured && valueIsString) {
@@ -364,16 +350,8 @@ function checkShape(input: UserInputMutation | AiProposalMutation): void {
   }
 }
 
-// Overloads so callers see the right return type per mutation kind.
-export async function applyMutation(input: UserInputMutation): Promise<void>;
-export async function applyMutation(input: AiProposalMutation): Promise<{ proposalId: string }>;
-export async function applyMutation(input: AiApplyMutation): Promise<void>;
-export async function applyMutation(
-  input: SpineMutation,
-): Promise<void | { proposalId: string }> {
-  if (input.kind === MUTATION_KIND.UserInput || input.kind === MUTATION_KIND.AiProposal) {
-    checkShape(input);
-  }
+export async function applyMutation(input: UserInputMutation): Promise<void> {
+  checkShape(input);
   return call("apply-mutation", input);
 }
 

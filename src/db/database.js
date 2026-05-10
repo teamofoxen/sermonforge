@@ -47,7 +47,6 @@ export const fetchPassage = (passage) => api.fetchPassage(passage);
 
 // ── Export ────────────────────────────────────────────────────────────────────
 export const exportStudyGuide = (seriesId) => api.exportStudyGuide(seriesId);
-export const exportPmb = (data) => api.exportPmb(data);
 export const exportManuscript = (data) => api.exportManuscript(data);
 
 // ── API key setup ─────────────────────────────────────────────────────────────
@@ -67,10 +66,6 @@ export const flushDb        = () => api.flushDb();
 // ── Startup warnings ──────────────────────────────────────────────────────────
 export const getStartupWarning = ()        => api.getStartupWarning();
 export const openDataFolder    = ()        => api.openDataFolder();
-
-// ── Pastor memory backup ──────────────────────────────────────────────────────
-export const backupMemory  = (json) => api.backupMemory(json);
-export const restoreMemory = ()     => api.restoreMemory();
 
 // ── Schema contract guard ─────────────────────────────────────────────────────
 export const getSermonColumns = () => api.getSermonColumns();

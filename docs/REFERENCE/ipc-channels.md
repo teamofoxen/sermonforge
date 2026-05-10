@@ -5,18 +5,6 @@ See `docs/SYSTEMS/ipc.md` for architecture and boundary rules.
 
 ---
 
-## AI
-
-### `"ai-message"` — handled in `electron/ai.js`
-```
-receives: { messages: [{role, content}], systemPrompt: string, step: string, sermonId: string|null }
-returns:  { ok: true, text: string }
-        | { ok: false, kind: "auth"|"rate_limit"|"network"|"server"|"timeout"|"format"|"empty"|"unknown", message: string }
-```
-The only channel through which the Anthropic API is called. API key never leaves the main process. Always resolves (never rejects) — callers read the `ok` envelope. Payloads over 1 MB are rejected with `kind: "format"` before the API call is made.
-
----
-
 ## Database Operations
 
 All sermon and series state routes through the `"spine"` channel. Named per-operation `db-get*` channels for sermons/series (`db-getRecentSermons`, `db-getRecentSeries`, `db-loadTourSermon`, `db-removeTourSermon`) no longer exist — they are spine ops now. Settings, calendar notes, memory, and schema queries remain as named channels. No raw SQL is accepted from the renderer.
@@ -218,16 +206,9 @@ returns:  { success: true, filepath: string }
 Assembles a 5-part `.docx` study guide from all series fields, sections, and sermon slots.
 Saves to `~/OneDrive/SermonForge/StudyGuides/[title] — Study Guide.docx`.
 Creates the `StudyGuides` directory if absent. Empty parts are omitted entirely.
-See `docs/SYSTEMS/series-planner.md` for the 5-part structure.
-
-### `"sermon-export-pmb"`
-```
-receives: { blocks, spine, title, passage, mps }
-returns:  { success: true, filepath: string }
-        | { success: false, error: string }
-```
-Builds the Preaching Without Notes `.docx` from `sermon.preaching_blocks` (DeliveryTab CMC output).
-Saves to `Documents/SermonForge/exports/PreachingBlocks/[title] — Preaching Blocks.docx`, then opens it via `shell.openPath`.
+(Series Planner is currently gated behind a "Coming soon" placeholder — ARI Phase 0,
+2026-05-09 — so this handler is reachable only via the legacy Planning route, which now
+renders the placeholder. Handler retained for future Series Planner re-enablement.)
 
 ### `"sermon-export-manuscript"`
 ```

@@ -3,13 +3,11 @@ import { getApiKeyStatus, onDbWriteError, onDbWriteOk, flushDb, getSermonColumns
 import { removeTourSermon } from "./core/spine";
 import { SERMON_COLUMNS } from "./constants/sermonColumns";
 import { VIEW } from "./core/contracts";
-import { restoreMemoryFromBackup } from "./utils/memory";
 import { TourProvider } from "./contexts/TourContext";
 import TourOverlay from "./components/TourOverlay";
 import SetupScreen from "./components/SetupScreen";
 import Sidebar from "./components/Sidebar";
 import Dashboard from "./components/Dashboard";
-import NewSeriesModal from "./components/NewSeriesModal";
 import OneDriveWarning from "./components/OneDriveWarning";
 import PrimaryButton from "./components/primitives/PrimaryButton";
 import SecondaryButton from "./components/primitives/SecondaryButton";
@@ -17,9 +15,22 @@ import SecondaryButton from "./components/primitives/SecondaryButton";
 const SermonList = lazy(() => import("./components/SermonList"));
 const Calendar = lazy(() => import("./components/Calendar"));
 const CompletedSermons = lazy(() => import("./components/CompletedSermons"));
-const Planning = lazy(() => import("./components/Planning"));
-const SeriesPlanner = lazy(() => import("./components/SeriesPlanner"));
 const SermonWorkspace = lazy(() => import("./components/SermonWorkspace"));
+
+function SeriesPlannerComingSoon() {
+  return (
+    <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", padding: "48px 32px" }}>
+      <div style={{ maxWidth: 520, textAlign: "center" }}>
+        <h1 style={{ fontFamily: "var(--font-serif)", fontSize: 28, fontWeight: 600, color: "var(--ink)", marginBottom: 12 }}>
+          Series planner — coming soon
+        </h1>
+        <p style={{ fontFamily: "var(--font-serif)", fontSize: 16, color: "var(--ink-soft)", lineHeight: 1.6 }}>
+          Series planning is in development and will return in a later release. For now, plan one sermon at a time from the Dashboard.
+        </p>
+      </div>
+    </div>
+  );
+}
 
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -68,13 +79,6 @@ export default function App() {
       .catch(() => setKeyReady(false));
   }, []);
 
-  // One-shot restore of pastor memory from userData/memory-backup.json. No-op
-  // when localStorage already has memory. Covers Electron major upgrades and
-  // manual cache clears that would otherwise wipe accumulated style patterns.
-  useEffect(() => {
-    restoreMemoryFromBackup().catch((e) => console.error("[App] memory restore failed:", e));
-  }, []);
-
   // Schema-contract guard: assert the renderer SERMON_COLUMNS mirror still
   // matches the main-side allowlist. Drift here re-introduces the silent-save
   // bug class — buildUpdate rejects unknown columns, the renderer's optimistic
@@ -114,56 +118,17 @@ export default function App() {
 
   const [currentView, setCurrentView] = useState(VIEW.Dashboard);
   const [openSermonId, setOpenSermonId] = useState(null);
-  const [openSeriesId, setOpenSeriesId] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [returnDestination, setReturnDestination] = useState(VIEW.Dashboard);
-  const [returnSeriesId, setReturnSeriesId] = useState(null);
 
-  const openSermon = useCallback((id, origin = VIEW.Dashboard, seriesId = null) => {
+  const openSermon = useCallback((id) => {
     setOpenSermonId(id);
     setCurrentView(VIEW.Workspace);
-    setReturnDestination(origin);
-    setReturnSeriesId(seriesId);
   }, []);
 
   const closeWorkspace = useCallback(() => {
-    const dest = returnDestination;
-    const sid = returnSeriesId;
     setOpenSermonId(null);
-    setReturnDestination(VIEW.Dashboard);
-    setReturnSeriesId(null);
     setRefreshKey(k => k + 1);
-    if (dest === VIEW.SeriesPlanner && sid) {
-      setOpenSeriesId(sid);
-      setCurrentView(VIEW.SeriesPlanner);
-    } else {
-      setCurrentView(VIEW.Dashboard);
-    }
-  }, [returnDestination, returnSeriesId]);
-
-  const openPlanner = useCallback((id) => {
-    setOpenSeriesId(id);
-    setCurrentView(VIEW.SeriesPlanner);
-  }, []);
-
-  // State Contract #3: no anonymous atoms. Open the New Series modal instead
-  // of silently writing an "Untitled Series" stub. The modal collects the
-  // series title before any record is created.
-  const [showNewSeriesModal, setShowNewSeriesModal] = useState(false);
-
-  const handleNewSeries = useCallback(() => {
-    setShowNewSeriesModal(true);
-  }, []);
-
-  const handleSeriesCreated = useCallback((id) => {
-    setShowNewSeriesModal(false);
-    openPlanner(id);
-  }, [openPlanner]);
-
-  const closePlanner = useCallback(() => {
-    setOpenSeriesId(null);
-    setCurrentView(VIEW.Planning);
-    setRefreshKey(k => k + 1);
+    setCurrentView(VIEW.Dashboard);
   }, []);
 
   const navigate = useCallback((view) => {
@@ -171,16 +136,11 @@ export default function App() {
     if (view !== VIEW.Workspace) {
       setOpenSermonId(null);
     }
-    if (view !== VIEW.SeriesPlanner) setOpenSeriesId(null);
   }, []);
 
-  // "Leave tour" — discard the tour sermon and return to the dashboard.
   const leaveTour = useCallback(async () => {
     try { await removeTourSermon(); } catch (e) { console.error("[leaveTour]", e); }
     setOpenSermonId(null);
-    setOpenSeriesId(null);
-    setReturnDestination(VIEW.Dashboard);
-    setReturnSeriesId(null);
     setRefreshKey(k => k + 1);
     setCurrentView(VIEW.Dashboard);
   }, []);
@@ -248,8 +208,6 @@ export default function App() {
           currentView={currentView}
           onNavigate={navigate}
           onOpenSermon={openSermon}
-          onOpenSeries={openPlanner}
-          onNewSeries={handleNewSeries}
           theme={theme}
           onToggleTheme={toggleTheme}
         />
@@ -263,8 +221,6 @@ export default function App() {
           <Dashboard
             key={refreshKey}
             onOpenSermon={openSermon}
-            onOpenSeries={openPlanner}
-            onNewSeries={handleNewSeries}
             onLeaveTour={leaveTour}
           />
         )}
@@ -280,25 +236,12 @@ export default function App() {
         {currentView === VIEW.CompletedSermons && (
           <CompletedSermons onOpenSermon={openSermon} />
         )}
-        {currentView === VIEW.Planning && (
-          <Planning
-            key={refreshKey}
-            onOpenPlanner={openPlanner}
-            onNewSeries={handleNewSeries}
-          />
-        )}
-        {currentView === VIEW.SeriesPlanner && openSeriesId && (
-          <SeriesPlanner
-            seriesId={openSeriesId}
-            onClose={closePlanner}
-            onOpenSermon={openSermon}
-          />
-        )}
+        {currentView === VIEW.Planning && <SeriesPlannerComingSoon />}
+        {currentView === VIEW.SeriesPlanner && <SeriesPlannerComingSoon />}
         {currentView === VIEW.Workspace && openSermonId && (
           <SermonWorkspace
             sermonId={openSermonId}
             onClose={closeWorkspace}
-            onOpenSeries={openPlanner}
             onOpenSermon={openSermon}
           />
         )}
@@ -306,12 +249,6 @@ export default function App() {
       </div>
 
     </div>
-    {showNewSeriesModal && (
-      <NewSeriesModal
-        onClose={() => setShowNewSeriesModal(false)}
-        onCreated={handleSeriesCreated}
-      />
-    )}
     <TourOverlay />
     </TourProvider>
     </ErrorBoundary>

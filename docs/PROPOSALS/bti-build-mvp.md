@@ -1,5 +1,7 @@
 # BTI Build MVP — Implementation Proposal
 
+> **Stale notice (ARI Phase 10, 2026-05-09):** AI was removed in ARI. The flag-button mount-points listed below for "AI Panel" / "AI surfaces" / "proposal cards" no longer exist; the FeedbackFlag still ships, but its mounts are now the regular workspace surfaces (StudyTab, OutlineTab, ManuscriptTab, etc.). The `ai-press` telemetry event in the bus is dormant. Treat AI-specific guidance below as archival.
+
 > **Status:** Drafted 2026-05-07. Implementation has not started. This proposal lives one level below the BTI charter (`docs/PROPOSALS/beta-testing-initiative.md`); the charter is the *what* and *why* of Phase 1, this is the *how*. Nothing here extends BTI's scope beyond the charter's "Phase 1 build sub-program" sub-section.
 
 > **Audience:** The lone developer of SermonForge. Plain language, but technical specifics where they matter.

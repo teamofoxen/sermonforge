@@ -1,8 +1,14 @@
 # SermonForge — Sermon Workspace
 
-> The Sermon Workspace is where a pastor goes deep on a specific week within the context of
-> a series. Component: `src/components/SermonWorkspace.jsx`.
-> See also: `docs/SYSTEMS/series-planner.md` for how the workspace is opened.
+> **Partial-stale notice (ARI Phase 10, 2026-05-09):** AI surfaces, the AI
+> Panel, the context tiers, and per-field "Review"/"Look Again" buttons
+> referenced below have been removed. Pastor-authored field structure, the
+> throughline (Process #6), pause-points, and the SADI/SFDI named outcomes
+> are unchanged. Treat any AI-related section as historical until this doc
+> is rewritten.
+
+> The Sermon Workspace is where a pastor goes deep on a specific week.
+> Component: `src/components/SermonWorkspace.jsx`.
 
 ---
 

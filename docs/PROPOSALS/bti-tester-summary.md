@@ -1,5 +1,7 @@
 # SermonForge Beta — A Note for the Cohort
 
+> **Stale notice (ARI Phase 10, 2026-05-09):** AI was removed from SermonForge before beta launch. This letter still describes the flag button at "every AI surface" — that's archival now. Rewrite pending before the letter ships.
+
 A short letter to the pastors I'm asking to test SermonForge with me.
 
 ---

@@ -1,15 +1,11 @@
 // FeedbackFlag — Tier 1 in-app flag affordance (BTI Phase 1, Chunk 3).
 //
-// One per AI surface. The pastor clicks the flag, optionally types a one-line
-// note, optionally toggles whether the most recent AI exchange on this surface
-// rides along, and sends. Empty notes are valid — the click itself is signal.
+// One per workspace surface. The pastor clicks the flag, optionally types a
+// one-line note, and sends. Empty notes are valid — the click itself is signal.
 //
-// Payload shape per docs/PROPOSALS/bti-build-mvp.md (lines 138-149).
-// lastAiCall is sourced from the per-surface registry written by
-// src/utils/ai.js sendAIMessage on every successful response.
+// Payload shape per docs/PROPOSALS/bti-build-mvp.md.
 
 import { useEffect, useRef, useState } from "react";
-import { getLastAiCall } from "../utils/lastAiCallRegistry";
 import PrimaryButton from "./primitives/PrimaryButton";
 import SecondaryButton from "./primitives/SecondaryButton";
 import IconButton from "./primitives/IconButton";
@@ -18,7 +14,6 @@ import "./feedbackFlag.css";
 export default function FeedbackFlag({ surface, sermonId = null, step = null }) {
   const [open, setOpen] = useState(false);
   const [note, setNote] = useState("");
-  const [includeAi, setIncludeAi] = useState(true);
   const [confirm, setConfirm] = useState(null);
   const wrapRef = useRef(null);
   const inputRef = useRef(null);
@@ -60,10 +55,6 @@ export default function FeedbackFlag({ surface, sermonId = null, step = null }) 
       note: blank ? "" : note.trim(),
       timestamp: new Date().toISOString(),
     };
-    if (includeAi) {
-      const lastAiCall = getLastAiCall(surface);
-      if (lastAiCall) payload.lastAiCall = lastAiCall;
-    }
 
     try {
       await window.electronAPI?.btiSubmit?.("flag", payload);
@@ -103,14 +94,6 @@ export default function FeedbackFlag({ surface, sermonId = null, step = null }) 
               if (e.key === "Enter") send(false);
             }}
           />
-          <label className="feedback-flag-popover-check">
-            <input
-              type="checkbox"
-              checked={includeAi}
-              onChange={(e) => setIncludeAi(e.target.checked)}
-            />
-            Include the AI exchange in this flag
-          </label>
           <div className="feedback-flag-popover-actions">
             <SecondaryButton size="sm" onClick={() => send(true)}>Send blank</SecondaryButton>
             <PrimaryButton size="sm" onClick={() => send(false)}>Send</PrimaryButton>

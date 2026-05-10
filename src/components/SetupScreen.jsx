@@ -4,12 +4,6 @@ import InlineError from "./InlineError";
 import PrimaryButton from "./primitives/PrimaryButton";
 import IconButton from "./primitives/IconButton";
 
-const SECTION = {
-  borderTop: "1px solid var(--parchment-deep)",
-  paddingTop: "24px",
-  marginTop: "24px",
-};
-
 const LABEL = {
   display: "block",
   fontSize: "12px",
@@ -31,6 +25,12 @@ const STEPS = {
 const FINE_PRINT = {
   color: "var(--ink-ghost)", fontSize: "12px",
   textAlign: "center", marginTop: "10px", lineHeight: "1.5",
+};
+
+const SECTION = {
+  borderTop: "1px solid var(--parchment-deep)",
+  paddingTop: "24px",
+  marginTop: "24px",
 };
 
 function KeyInput({ value, onChange, placeholder }) {
@@ -73,31 +73,25 @@ function KeyInput({ value, onChange, placeholder }) {
 }
 
 export default function SetupScreen({ onComplete }) {
-  const [anthropic, setAnthropic] = useState("");
   const [esv, setEsv] = useState("");
   const [telemetryOn, setTelemetryOn] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  const claudeValid = anthropic.startsWith("sk-ant-") && anthropic.length >= 20;
-  const canSubmit = claudeValid && !saving;
-
   async function handleSave() {
-    if (!canSubmit) return;
+    if (saving) return;
     setSaving(true);
     setError("");
     try {
-      const result = await saveApiKeys({ anthropic, esv: esv.trim() });
+      const result = await saveApiKeys({ esv: esv.trim() });
       if (result?.success) {
-        // Persist BTI telemetry preference (Q9). Default-on per the charter
-        // ruling; explicit opt-out is the only state stored as "false".
         try {
           await setSetting("bti_telemetry_enabled", telemetryOn ? "true" : "false");
           await window.electronAPI?.telemetrySetEnabled?.(telemetryOn);
         } catch (_) {}
         onComplete();
       } else {
-        setError(result?.error || "Failed to save keys.");
+        setError(result?.error || "Failed to save.");
         setSaving(false);
       }
     } catch (e) {
@@ -125,7 +119,6 @@ export default function SetupScreen({ onComplete }) {
         boxShadow: "0 4px 24px rgba(26,20,16,0.08)",
       }}>
 
-        {/* Header */}
         <div style={{ marginBottom: "28px", textAlign: "center" }}>
           <h1 style={{
             fontFamily: "var(--font-serif)",
@@ -134,51 +127,16 @@ export default function SetupScreen({ onComplete }) {
             SermonForge
           </h1>
           <p style={{ color: "var(--ink-ghost)", fontSize: "14px", margin: 0 }}>
-            One-time setup — takes about 5 minutes
+            One-time setup
           </p>
         </div>
 
-        {/* ── Section 1: Claude API ───────────────────────────────────────── */}
         <div>
           <h2 style={{
             fontFamily: "var(--font-serif)",
             fontSize: "16px", color: "var(--ink)", margin: "0 0 4px",
           }}>
-            1. Claude API key <span style={{ color: "var(--crimson-soft)", fontSize: "13px" }}>required</span>
-          </h2>
-          <p style={{ color: "var(--ink-mid)", fontSize: "14px", margin: "0 0 10px", lineHeight: "1.5" }}>
-            SermonForge uses Claude AI as a study companion — exegetical insight, structural feedback, and
-            editing help. You write the sermon. SermonForge keeps AI usage minimal — calls happen at a
-            few deliberate points in your study, not constantly. Pay-as-you-go through Anthropic; a small
-            starting credit ($5–$10) covers weeks of regular use.
-          </p>
-          <ol style={STEPS}>
-            <li>Go to <strong style={{ color: "var(--ink)" }}>console.anthropic.com</strong> and sign up</li>
-            <li>Add a small credit amount under <strong style={{ color: "var(--ink)" }}>Billing</strong> ($5–$10)</li>
-            <li>In the sidebar click <strong style={{ color: "var(--ink)" }}>API Keys → Create Key</strong></li>
-            <li>Name it "SermonForge", click <strong style={{ color: "var(--ink)" }}>Create</strong></li>
-            <li>Copy the key immediately — you won't see it again</li>
-          </ol>
-          <label style={LABEL}>Your Claude API key</label>
-          <KeyInput
-            value={anthropic}
-            onChange={v => { setAnthropic(v); setError(""); }}
-            placeholder="sk-ant-..."
-          />
-          {anthropic && !claudeValid && (
-            <p style={{ color: "var(--ink-ghost)", fontSize: "12px", margin: "6px 0 0" }}>
-              Should start with sk-ant-
-            </p>
-          )}
-        </div>
-
-        {/* ── Section 2: ESV API ─────────────────────────────────────────── */}
-        <div style={SECTION}>
-          <h2 style={{
-            fontFamily: "var(--font-serif)",
-            fontSize: "16px", color: "var(--ink)", margin: "0 0 4px",
-          }}>
-            2. ESV API key <span style={{ color: "var(--ink-ghost)", fontSize: "13px" }}>recommended</span>
+            ESV API key <span style={{ color: "var(--ink-ghost)", fontSize: "13px" }}>recommended</span>
           </h2>
           <p style={{ color: "var(--ink-mid)", fontSize: "14px", margin: "0 0 10px", lineHeight: "1.5" }}>
             Powers the passage view in the sermon workspace. Free for personal use — without it,
@@ -197,36 +155,24 @@ export default function SetupScreen({ onComplete }) {
           />
         </div>
 
-        {/* Error */}
         {error && (
           <div style={{ marginTop: "16px" }}>
             <InlineError onDismiss={() => setError(null)}>{error}</InlineError>
           </div>
         )}
 
-        {/* Submit */}
         <PrimaryButton
           onClick={handleSave}
-          disabled={!canSubmit}
+          disabled={saving}
           style={{ width: "100%", marginTop: "24px" }}
         >
-          {saving ? "Saving…" : esv.trim() ? "Save and Open SermonForge" : "Skip ESV and Open SermonForge"}
+          {saving ? "Saving…" : esv.trim() ? "Save and Open SermonForge" : "Skip and Open SermonForge"}
         </PrimaryButton>
 
-        {/* Fine print */}
-        <p style={{ ...FINE_PRINT, marginTop: "14px" }}>
-          Keys are stored securely on this machine and only sent directly to Anthropic
-          and Crossway when you use those features.
-        </p>
-
-        {/* Surfaced at setup so the pastor sees it before their first AI call. */}
         <p style={FINE_PRINT}>
-          SermonForge keeps a local activity log (<code style={{ fontFamily: "monospace" }}>ai-log.jsonl</code> in
-          your app data folder) recording each AI request — the system prompt, your messages, and the response.
-          It never leaves your machine and is used only for local debugging.
+          The ESV key is stored securely on this machine and only sent to Crossway when you load passages.
         </p>
 
-        {/* ── Telemetry & feedback (BTI Phase 1, Q9) ─────────────────────── */}
         <div style={{ ...SECTION, paddingTop: "20px", marginTop: "20px" }}>
           <h2 style={{
             fontFamily: "var(--font-serif)",
@@ -235,15 +181,13 @@ export default function SetupScreen({ onComplete }) {
             Telemetry and feedback
           </h2>
           <p style={{ color: "var(--ink-mid)", fontSize: "13px", lineHeight: "1.55", margin: "0 0 10px" }}>
-            SermonForge sends a small amount of usage data to its developer to help shape the tool —
-            things like which buttons you press, how long the AI takes, when something crashes, and
-            any flags or feedback you choose to send. <strong>Sermon content is never captured.</strong> When
-            you click a flag and choose to include the AI exchange, only that one exchange travels with
-            the flag.
+            SermonForge sends a small amount of usage data to its developer — things like which buttons
+            you press, when something crashes, and any flags or feedback you choose to send.
+            <strong> Sermon content is never captured.</strong>
           </p>
           <p style={{ color: "var(--ink-mid)", fontSize: "13px", lineHeight: "1.55", margin: "0 0 10px" }}>
-            Data goes to a developer-controlled endpoint — no third-party analytics. Full details live in
-            the privacy doc shipped with the app (<code style={{ fontFamily: "monospace" }}>docs/REFERENCE/privacy.md</code>).
+            Data goes to a developer-controlled endpoint — no third-party analytics. Full details in the
+            privacy doc shipped with the app (<code style={{ fontFamily: "monospace" }}>docs/REFERENCE/privacy.md</code>).
             You can turn this off below; if you do, nothing leaves your device.
           </p>
           <label style={{
@@ -268,7 +212,6 @@ export default function SetupScreen({ onComplete }) {
           </label>
         </div>
 
-        {/* OneDrive caution — surfaced here so new users see it before adding data. */}
         <p style={FINE_PRINT}>
           <strong style={{ color: "var(--ink-soft)" }}>Note:</strong> avoid running SermonForge from a
           OneDrive-synced folder. Cloud sync can corrupt the local database.

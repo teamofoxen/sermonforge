@@ -16,12 +16,10 @@ This file is a navigation guide. Do not load everything by default.
 
 | Task area | Load | Also check |
 |-----------|------|------------|
-| AI responses, context assembly, system prompts | [`docs/SYSTEMS/context-pipeline.md`](docs/SYSTEMS/context-pipeline.md) and [`docs/SYSTEMS/ai-panel.md`](docs/SYSTEMS/ai-panel.md) | `series-planner.md` (which Book Study fields are excluded from tier 4 and why); `sermon-workspace.md` (Pastoral Context tier rules) |
-| Series planning, planner tabs, Study Guide export | [`docs/SYSTEMS/series-planner.md`](docs/SYSTEMS/series-planner.md) | `context-pipeline.md` if changes affect which series fields feed the context tiers |
-| Sermon workspace, study tab, save flow, PassagePopup | [`docs/SYSTEMS/sermon-workspace.md`](docs/SYSTEMS/sermon-workspace.md) | `context-pipeline.md` if touching Pastoral Context fields or structured exegesis JSON |
+| Sermon workspace, study tab, save flow, PassagePopup | [`docs/SYSTEMS/sermon-workspace.md`](docs/SYSTEMS/sermon-workspace.md) | — |
 | Database, schema, migrations, FTS | [`docs/SYSTEMS/database.md`](docs/SYSTEMS/database.md) | adding columns to `sermons` requires updating `SERMON_COLUMNS` in `electron/main.js` — `buildUpdate()` throws in dev if you miss this, but only if you exercise the save path in testing |
 | IPC channels, preload, main process boundaries | [`docs/SYSTEMS/ipc.md`](docs/SYSTEMS/ipc.md) | — |
-| Distribution, installers, auto-updates, API key setup, crash logging | [`docs/PROPOSALS/distribution.md`](docs/PROPOSALS/distribution.md) | `electron/config.js` (paths + dev/prod gatekeeper), `electron/keystore.js` (safeStorage), `electron/logger.js` (`app.log`), `electron/updater.js` (electron-updater), `electron/ai/provider.js` (Anthropic SDK wrapper), `src/components/SetupScreen.jsx` (first-run key entry) |
+| Distribution, installers, auto-updates, ESV API key setup, crash logging | [`docs/PROPOSALS/distribution.md`](docs/PROPOSALS/distribution.md) | `electron/config.js` (paths + dev/prod gatekeeper), `electron/keystore.js` (safeStorage for ESV key), `electron/logger.js` (`app.log`), `electron/updater.js` (electron-updater), `src/components/SetupScreen.jsx` (first-run setup) |
 
 ## Load only when you need specific lookup details
 

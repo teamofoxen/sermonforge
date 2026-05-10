@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-09 — ARI: AI removed from SermonForge
+
+- Phases 0–4 + 7–10 of the AI Removal Initiative shipped (charter at `docs/PROPOSALS/ai-removal-initiative.md`); Series Planner gated, all AI surfaces cut (chat panels, Generate/Suggest/Review buttons, Flow Coach/Ear Check/Tune-Up), per-tab Notebooks added, Manuscript review reframed as static checklists, Delivery tab removed.
+- Backend deleted: `electron/ai.js`, `provider.js`, `sendAIMessage`, `@anthropic-ai/sdk`, all prompts, context pipeline, memory pattern-capture system; SetupScreen rewritten as ESV-only; `app-get-key-status` repurposed for first-run gating.
+- Contracts rewritten: Process #5 ("No AI substitution"), Mutation #1 (pastor-only authorship), Mutation #2 retired; `MutationKind` collapsed to `user_input`; `validateAndCommit` AI branches removed; identity sentence + architectural boundaries + tech stack updated.
+- Schema v20 adds `notebook_study`/`notebook_blueprint`/`notebook_manuscript` columns (verified end-to-end against real-DB copy); `Collapsible` primitive extracted; ESLint `no-direct-ai` rewritten as no-exception tripwire; ~280 lines of dead AI CSS pruned.
+- Website updated: `/sermonforge/` "Requires" row → "Optional Setup" (ESV); starter page card adds "Clarity through constraint" framing.
+
+---
+
 ## 2026-05-08 — BTI Phase 1 Chunks 3-6: in-app feedback surfaces + Q9 disclosure
 
 - New `FeedbackFlag` icon-button + popover mounted at all six AI surfaces (AIPanel header, StudyTab/OutlineTab/DeliveryTab tops, SeriesPlanner topbar, ProposalPanel header via threaded `flagContext`); per-surface `lastAiCallRegistry` fed by `sendAIMessage` (added `surface` arg threaded through 27 call sites in 5 components), which also emits `ai-press` telemetry.

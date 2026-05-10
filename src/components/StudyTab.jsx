@@ -1,18 +1,14 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import ReactMarkdown from "react-markdown";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useTour } from "../contexts/TourContext";
 import { getOutline, serializeOutline, getFunctionalElements, serializeFunctionalElements, autoResize } from "../utils";
-import { STEPS, PHASES, PHASE_SEQUENCE, STEP_SEQUENCE } from "../constants/steps";
-import { sendAIMessage } from "../utils/ai";
-import { buildContext } from "../utils/contextBuilder";
+import { STEPS, PHASE_SEQUENCE, STEP_SEQUENCE } from "../constants/steps";
 import {
   OBSERVE_FIELDS, INTERPRET_FIELDS,
   REDEMPTIVE_FIELDS,
   IMPLICATIONS_FIELDS,
   parseStructuredField, serializeStructuredField,
-  getPrimaryAnswer, setPrimaryAnswer, setQuestionAnswer, hasAnyAnswer,
+  setQuestionAnswer,
   isQuestionNA, setQuestionNA, DEFAULT_QUESTION_KEY,
-  flattenToText, hasMinimumSubstrate,
   fieldQuestions, getQuestionAnswer, flattenAnswerValue,
   setDivisionsCanvas,
 } from "../utils/studyFields";
@@ -23,27 +19,10 @@ import ThroughlineCanvas from "./ThroughlineCanvas";
 import ThroughlineRail from "./ThroughlineRail";
 import ScripturePanel from "./ScripturePanel";
 import OutlineBuilder from "./OutlineBuilder";
-import InlineAIResponse from "./InlineAIResponse";
-import ProposalPanel from "./ProposalPanel";
+import NotebookPanel from "./NotebookPanel";
 import FeedbackFlag from "./FeedbackFlag";
-import { OUTLINE_SYSTEM, outlineHasNumberedList, extractOutlineWithExplanations } from "../utils/outlineChat";
-import { parseAIJson, validateScriptureMap } from "../utils/aiSchema";
-import { buildSystemPrompt, appendTaskDirective } from "../prompts/sermon";
-import {
-  FE_CHAT_SYSTEM,
-  OBSERVE_LOOK_AGAIN_TASK, INTERPRET_LOOK_AGAIN_TASK, REDEMPTIVE_LOOK_AGAIN_TASK, IMPLICATIONS_LOOK_AGAIN_TASK,
-  MPT_DRAFT_TASK, MPS_Q1_TRANSLATE_TASK,
-  POPULATE_SCRIPTURE_TASK,
-  OUTLINE_REVIEW_TASK,
-  BRIEF_OBSERVE_TO_INTERPRET_TASK, BRIEF_INTERPRET_TO_REDEMPTIVE_TASK, BRIEF_REDEMPTIVE_TO_IMPLICATIONS_TASK,
-  CONTEXT_REFERENCE_TASK,
-  BRIEF_EXEGESIS_TO_MPT_MPS_TASK, BRIEF_MPT_MPS_TO_OUTLINE_TASK, BRIEF_OUTLINE_TO_FE_TASK,
-} from "../prompts/study";
 import { MAIN_POINT_PAIR_FIELDS } from "../utils/sadiAnchorFields";
-import { fetchPassage } from "../db/database";
 import PrimaryButton from "./primitives/PrimaryButton";
-import SecondaryButton from "./primitives/SecondaryButton";
-import IconButton from "./primitives/IconButton";
 import { STAGE, STEP, ContractViolation } from "../core/contracts";
 import { transitionState } from "../core/spine";
 import {
@@ -54,10 +33,6 @@ import {
 
 const STEP_LABELS = ["Exegesis", "MPT / MPS", "Outline", "Functional Elements"];
 const PHASE_LABELS = ["Observe", "Interpret", "Redemptive Thread", "Implications"];
-
-// SPRD Q1 spine-routing helpers and Q3 sufficiency evaluator live in
-// `src/utils/studyAdvancement.js`. SFDI's per-boundary thresholds extend
-// `evaluateAdvance` there; UI consumers in this file don't change.
 
 function CollapseArrow({ open }) {
   return (
@@ -71,107 +46,6 @@ function CollapseArrow({ open }) {
     >
       <polyline points="9 18 15 12 9 6" />
     </svg>
-  );
-}
-
-// Parse AI text into a bullet array. Recognizes lines starting with "-",
-// "*", "•", or "1." / "1)". Returns null if fewer than 2 bullets parse —
-// caller falls back to paragraph rendering for those.
-function parseSummaryBullets(text) {
-  if (!text) return null;
-  const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
-  const bullets = [];
-  for (const line of lines) {
-    const m = line.match(/^[-*•]\s+(.+)$/) || line.match(/^\d+[.)]\s+(.+)$/);
-    if (m) bullets.push(m[1].trim());
-  }
-  return bullets.length >= 2 ? bullets : null;
-}
-
-function SummaryBlock({
-  summaryKey,
-  summaries,
-  summaryLoading,
-  label = "Where you've been",
-  loadingText = "Pulling together where you've been…",
-}) {
-  const text = summaries[summaryKey];
-  const loading = summaryLoading === summaryKey;
-  const [expanded, setExpanded] = useState(true);
-  if (!text && !loading) return null;
-  const bullets = !loading ? parseSummaryBullets(text) : null;
-  return (
-    <div className="summary-block">
-      {loading ? (
-        <span className="summary-loading">{loadingText}</span>
-      ) : (
-        <>
-          <div className="summary-label-row">
-            <div className="summary-label">{label}</div>
-            <button
-              type="button"
-              className="summary-toggle"
-              onClick={() => setExpanded((v) => !v)}
-              aria-expanded={expanded}
-            >
-              {expanded ? "Hide" : "Show"}
-            </button>
-          </div>
-          {expanded && (
-            bullets ? (
-              <ul className="summary-bullets">
-                {bullets.map((b, i) => (
-                  <li key={i}>{b}</li>
-                ))}
-              </ul>
-            ) : (
-              <div className="summary-content">{text}</div>
-            )
-          )}
-        </>
-      )}
-    </div>
-  );
-}
-
-function SermonShapePreview({ sermon, outline, funcData }) {
-  const hasMPT = !!sermon.mpt?.trim();
-  const hasMPS = !!sermon.mps?.trim();
-  const hasIntro = hasMPT || hasMPS;
-  const hasBody = outline.length > 0;
-
-  if (!hasIntro && !hasBody) return null;
-
-  return (
-    <div style={{ background: "var(--parchment-warm)", border: "1px solid var(--parchment-deep)", borderRadius: "var(--radius)", padding: "16px 20px", marginBottom: "20px", fontSize: "14px", color: "var(--ink-soft)" }}>
-      <div style={{ fontFamily: "var(--font-serif)", fontSize: "11px", letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--ink-ghost)", marginBottom: "12px" }}>Sermon Shape</div>
-
-      {hasIntro && (
-        <div style={{ marginBottom: "12px" }}>
-          <div style={{ fontWeight: "600", color: "var(--ink-mid)", marginBottom: "4px" }}>Introduction</div>
-          {hasMPT && <div style={{ paddingLeft: "12px", marginBottom: "2px" }}><span style={{ color: "var(--ink-ghost)", fontSize: "12px" }}>MPT  </span>{sermon.mpt}</div>}
-          {hasMPS && <div style={{ paddingLeft: "12px" }}><span style={{ color: "var(--ink-ghost)", fontSize: "12px" }}>MPS  </span>{sermon.mps}</div>}
-        </div>
-      )}
-
-      {hasBody && (
-        <div>
-          <div style={{ fontWeight: "600", color: "var(--ink-mid)", marginBottom: "6px" }}>Body</div>
-          {outline.map((pt, i) => {
-            const d = funcData[pt.id] || {};
-            const tags = [d.explanation && "E", d.application && "A", d.illustration && "I"].filter(Boolean);
-            return (
-              <div key={pt.id} style={{ paddingLeft: "12px", marginBottom: "6px" }}>
-                <div style={{ color: "var(--ink)" }}><span style={{ color: "var(--gold)", fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", marginRight: "6px" }}>{i + 1}.</span>{pt.text}</div>
-                {tags.length > 0 && (
-                  <div style={{ paddingLeft: "18px", fontSize: "12px", color: "var(--ink-ghost)" }}>{tags.join(" · ")}</div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
   );
 }
 
@@ -438,47 +312,7 @@ function buildRailSubPhases(sermon, obsData, intData, redData, impData, activeId
   });
 }
 
-// Per-sub-phase Look Again button + inline response. The four sub-phases
-// (Observe / Interpret / Redemptive Thread / Implications) all share this
-// shape: a substrate-gated button that flattens the pastor's structured
-// answers and fires the sub-phase's Look Again prompt; an inline response
-// area below for AI's reply.
-function LookAgainBlock({
-  data, fields, fetchKey, prefix, task, phase, label,
-  inlineLoading, inlineResponses, fetchInline, dismissInline,
-}) {
-  const ready = hasMinimumSubstrate(data, fields);
-  return (
-    <>
-      <div style={{ marginTop: "8px" }}>
-        <SecondaryButton
-          size="sm"
-          onClick={() => {
-            const filled = flattenToText(data, fields);
-            fetchInline(
-              fetchKey,
-              `${prefix}:\n\n${filled || "(none yet)"}`,
-              task,
-              phase,
-            );
-          }}
-          disabled={inlineLoading !== null || !ready}
-          title={!ready ? "Engage at least one question first." : ""}
-        >
-          {inlineLoading === fetchKey ? "Thinking…" : "Look Again"}
-        </SecondaryButton>
-      </div>
-      <InlineAIResponse
-        fieldName={label}
-        response={inlineResponses[fetchKey]}
-        loading={inlineLoading === fetchKey}
-        onDismiss={() => dismissInline(fetchKey)}
-      />
-    </>
-  );
-}
-
-export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChange, onTabChange, onSummaryGenerated, onMovement }) {
+export default function StudyTab({ sermon, onUpdate, onStepChange, onTabChange, onMovement }) {
   const { active: tourActive, desiredUi } = useTour();
   const [activeStep, setActiveStep] = useState(() => {
     const saved = localStorage.getItem(`sermonforge_study_step_${sermon.id}`);
@@ -530,9 +364,6 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
     }
   }, [tourActive, desiredUi, activeStep, activeSubPhase]);
 
-  const [summaries, setSummaries] = useState({});
-  const [summaryLoading, setSummaryLoading] = useState(null);
-
   // Pause-point state. Set by `advanceSubPhase` after a successful spine
   // transition; cleared by `PausePointScreen.onContinue` or by manual
   // navigation (jumpToStep / jumpToSubPhase). Shape:
@@ -541,95 +372,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
   // has already accepted the move, so dismissing it never affects spine.
   const [pausePoint, setPausePoint] = useState(null);
 
-  // Auto-generate the "Where you've been" summary when entering sub-phases
-  // 2/3/4 directly (e.g., via the rail), so the surface is visible regardless
-  // of how the pastor navigated in. The advance-flow call sites below remain —
-  // this useEffect only fires when the cached summary is absent and not
-  // already loading. Idempotent.
-  useEffect(() => {
-    if (activeStep !== 1) return; // sub-phase summaries are exegesis only
-    const subPhaseConfigs = {
-      2: {
-        key: "p2",
-        brief: "Brief me on the observations before I move into interpretation.",
-        task: BRIEF_OBSERVE_TO_INTERPRET_TASK,
-        step: PHASES.INTERPRET,
-      },
-      3: {
-        key: "p3",
-        brief: "Brief me on the interpretive conclusions before I work the redemptive thread.",
-        task: BRIEF_INTERPRET_TO_REDEMPTIVE_TASK,
-        step: PHASES.REDEMPTIVE_THREAD,
-      },
-      4: {
-        key: "p4",
-        brief: "Brief me on the Christ-connection before I draw implications.",
-        task: BRIEF_REDEMPTIVE_TO_IMPLICATIONS_TASK,
-        step: PHASES.IMPLICATIONS,
-      },
-    };
-    const config = subPhaseConfigs[activeSubPhase];
-    if (!config) return;
-    if (summaries[config.key]) return; // already generated this session
-    if (summaryLoading === config.key) return; // already loading
-    generateSummary(config.key, config.brief, config.task, config.step);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeStep, activeSubPhase]);
-
-  // Field-level reference cards. AI synthesis appears alongside the active
-  // field as a read-only reference, surfacing prior work the field reads
-  // against. Triggered on entering the field; cached per session under a
-  // distinct summaryKey ("ref_*") so it doesn't collide with sub-phase
-  // entry summaries ("p2"/"p3"/"p4"). Designed for reuse — extend the
-  // config map below to add a card for another field (e.g. cross_refs).
-  useEffect(() => {
-    if (activeStep !== 1) return;
-    const fieldConfigs = {
-      deeper_context: {
-        key: "ref_p2_context",
-        brief: "Synthesize my Phase 1 Context observations as a reference while I do Deeper Context.",
-        task: CONTEXT_REFERENCE_TASK,
-        step: PHASES.INTERPRET,
-      },
-    };
-    const config = fieldConfigs[currentActiveFieldKey];
-    if (!config) return;
-    if (summaries[config.key]) return;
-    if (summaryLoading === config.key) return;
-    generateSummary(config.key, config.brief, config.task, config.step);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeStep, currentActiveFieldKey]);
-
   const funcData = getFunctionalElements(sermon);
-
-  // Inline AI response state — keyed by section name
-  const [inlineResponses, setInlineResponses] = useState({});
-  const [inlineLoading, setInlineLoading] = useState(null); // key of section currently loading
-
-  // Draft-generation loading flags
-  const [draftLoading, setDraftLoading] = useState(null); // "mpt" | "mps" | "big_idea"
-
-  // AI draft proposals — Mutation Contract: AI proposals live in a separate
-  // slot until the user explicitly accepts. The corresponding field is never
-  // overwritten by AI without a click.
-  const [mptProposal, setMptProposal] = useState(null);
-  const [mpsProposal, setMpsProposal] = useState(null);
-  // Populate Scripture proposal — holds the resolved fe-update + summary text
-  // until the pastor accepts. Shape: { next, summary }.
-  const [scriptureProposal, setScriptureProposal] = useState(null);
-  const [confirmOutlineApplyIdx, setConfirmOutlineApplyIdx] = useState(null);
-  const [populateScriptureMessage, setPopulateScriptureMessage] = useState(null);
-
-  // Outline conversational refinement
-  const [outlineChat, setOutlineChat] = useState([]);
-  const [outlineChatInput, setOutlineChatInput] = useState("");
-  const [outlineChatLoading, setOutlineChatLoading] = useState(false);
-
-  // Functional elements conversational refinement
-  const [feChat, setFeChat] = useState([]);
-  const [feChatInput, setFeChatInput] = useState("");
-  const [feChatLoading, setFeChatLoading] = useState(false);
-  const [scripturePopulating, setScripturePopulating] = useState(false);
 
   const outline = getOutline(sermon);
 
@@ -640,13 +383,6 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
   const impData = useMemo(() => parseStructuredField(sermon.implications), [sermon.implications]);
   // SADI Step 2 — Main Point Pair envelope (v19). Holds MPT (2Q) + MPS (3Q).
   const mppData = useMemo(() => parseStructuredField(sermon.main_point_pair), [sermon.main_point_pair]);
-
-  // Read the tightened MPT/MPS values from the envelope. The flat
-  // sermon.mpt / sermon.mps columns are auto-synced from these on write,
-  // so downstream readers (AI prompts, context builder, exports) keep
-  // working without rewrites.
-  const mptTighten = useMemo(() => flattenAnswerValue(getQuestionAnswer(mppData, "mpt", "tighten")), [mppData]);
-  const mpsTranslate = useMemo(() => flattenAnswerValue(getQuestionAnswer(mppData, "mps", "translate")), [mppData]);
 
   // Write to the main_point_pair envelope. When the pastor writes the
   // tighten answer for either field, mirror that value into the legacy
@@ -692,167 +428,6 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
     onUpdate({ [column]: serializeStructuredField(next) });
   }, [onUpdate]);
 
-  // Layer a task directive on top of the canonical system prompt for this
-  // sermon and step. Call sites pass only the task-shaped string; the role,
-  // tool context, message-context rules, step description, and adaptive hints
-  // come from buildSystemPrompt. Mirrors the pattern used in AIPanel.jsx.
-  const layerTask = useCallback((taskDirective, step) =>
-    appendTaskDirective(buildSystemPrompt(step, sermon.id), taskDirective),
-  [sermon.id]);
-
-  async function fetchInline(key, userRequest, taskDirective, step) {
-    setInlineLoading(key);
-    try {
-      const context = buildContext({ sermon, step });
-      const userContent = context
-        ? `CONTEXT:\n${context}\n\nUSER REQUEST:\n${userRequest}`
-        : userRequest;
-      const result = await sendAIMessage([{ role: "user", content: userContent }], layerTask(taskDirective, step), step, sermon.id, "study-tab");
-      if (result.ok) {
-        setInlineResponses(prev => ({ ...prev, [key]: result.text }));
-      } else if (result.kind !== "aborted") {
-        setInlineResponses(prev => ({ ...prev, [key]: result.message }));
-      }
-    } catch (e) {
-      setInlineResponses(prev => ({ ...prev, [key]: `Error: ${e.message}` }));
-    } finally {
-      setInlineLoading(null);
-    }
-  }
-
-  function dismissInline(key) {
-    setInlineResponses(prev => { const n = { ...prev }; delete n[key]; return n; });
-  }
-
-
-  async function generateMPT() {
-    if (draftLoading) return;
-    setDraftLoading("mpt");
-    setMptProposal(null);
-    try {
-      const step = STEPS.MPT_MPS;
-      const context = buildContext({ sermon, step });
-      const userContent = context
-        ? `CONTEXT:\n${context}\n\nUSER REQUEST:\nDraft a Main Point of the Text (MPT) for this passage.`
-        : "Draft a Main Point of the Text (MPT) for this passage.";
-      const result = await sendAIMessage(
-        [{ role: "user", content: userContent }],
-        layerTask(MPT_DRAFT_TASK, step),
-        step,
-        sermon.id,
-        "study-tab",
-      );
-      if (result.ok && result.text.trim()) setMptProposal(result.text.trim());
-    } catch (e) {
-      console.error("[generateMPT]", e);
-    } finally {
-      setDraftLoading(null);
-    }
-  }
-
-  async function generateMPS() {
-    if (draftLoading || !sermon.mpt?.trim()) return;
-    setDraftLoading("mps");
-    setMpsProposal(null);
-    try {
-      const step = STEPS.MPT_MPS;
-      const context = buildContext({ sermon, step });
-      const userContent = context
-        ? `CONTEXT:\n${context}\n\nUSER REQUEST:\nDraft a Main Point of the Sermon (MPS) grounded in the MPT.`
-        : "Draft a Main Point of the Sermon (MPS) grounded in the MPT.";
-      const result = await sendAIMessage(
-        [{ role: "user", content: userContent }],
-        layerTask(MPS_Q1_TRANSLATE_TASK, step),
-        step,
-        sermon.id,
-        "study-tab",
-      );
-      if (result.ok && result.text.trim()) setMpsProposal(result.text.trim());
-    } catch (e) {
-      console.error("[generateMPS]", e);
-    } finally {
-      setDraftLoading(null);
-    }
-  }
-
-  async function suggestOutline() {
-    if (draftLoading || outlineChatLoading) return;
-    setDraftLoading("outline-draft");
-    setOutlineChat([]);
-    try {
-      const step = STEPS.OUTLINE;
-      const context = buildContext({ sermon, step });
-      const userContent = context
-        ? `CONTEXT:\n${context}\n\nUSER REQUEST:\nPropose a sermon outline.`
-        : "Propose a sermon outline.";
-      const result = await sendAIMessage(
-        [{ role: "user", content: userContent }],
-        layerTask(OUTLINE_SYSTEM, step),
-        step,
-        sermon.id,
-        "study-tab",
-      );
-      if (result.ok && result.text.trim()) setOutlineChat([{ role: "assistant", content: result.text.trim() }]);
-    } catch (e) {
-      console.error("[suggestOutline]", e);
-    } finally {
-      setDraftLoading(null);
-    }
-  }
-
-  async function sendOutlineChat() {
-    const input = outlineChatInput.trim();
-    if (!input || outlineChatLoading) return;
-    const newUserMsg = { role: "user", content: input };
-    const history = [...outlineChat, newUserMsg];
-    setOutlineChat(history);
-    setOutlineChatInput("");
-    setOutlineChatLoading(true);
-    try {
-      const step = STEPS.OUTLINE;
-      const context = buildContext({ sermon, step });
-      const contextPrefix = context ? `CONTEXT:\n${context}\n\nUSER REQUEST:\n` : "";
-      const messages = history.map((m, i) =>
-        i === history.length - 1 ? { ...m, content: contextPrefix + m.content } : m
-      );
-      const result = await sendAIMessage(messages, layerTask(OUTLINE_SYSTEM, step), step, sermon.id, "study-tab");
-      if (result.ok && result.text.trim()) {
-        setOutlineChat(prev => [...prev, { role: "assistant", content: result.text.trim() }]);
-      } else if (!result.ok && result.kind !== "aborted") {
-        setOutlineChat(prev => [...prev, { role: "assistant", content: result.message }]);
-      }
-    } catch (e) {
-      setOutlineChat(prev => [...prev, { role: "assistant", content: `Error: ${e.message}` }]);
-    } finally {
-      setOutlineChatLoading(false);
-    }
-  }
-
-  async function generateSummary(key, briefRequest, taskDirective, step) {
-    setSummaryLoading(key);
-    try {
-      const context = buildContext({ sermon, step });
-      const userContent = context
-        ? `CONTEXT:\n${context}\n\nUSER REQUEST:\n${briefRequest}`
-        : briefRequest;
-      const result = await sendAIMessage(
-        [{ role: "user", content: userContent }],
-        layerTask(taskDirective, step),
-        step,
-        sermon.id,
-        "study-tab",
-      );
-      if (result.ok) {
-        setSummaries(prev => ({ ...prev, [key]: result.text }));
-        if (key === "s3" || key === "s4") onSummaryGenerated?.(key, result.text);
-      }
-    } catch (e) {
-      console.error("Summary generation failed:", e);
-    } finally {
-      setSummaryLoading(prev => (prev === key ? null : prev));
-    }
-  }
-
   // Q1 spine routing — every renderer-side movement calls transitionState
   // before updating local state. Process #1 (monotonic) and Process #2 (evidence)
   // fire main-side; rejections surface via `advanceError`. Tour-driven state
@@ -885,13 +460,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
       setActiveStep(2);
       setActiveSubPhase(1);
       onStepChange?.(STEPS.MPT_MPS);
-      generateSummary(
-        "s2",
-        "Brief me on the complete exegetical work before I forge the main point.",
-        BRIEF_EXEGESIS_TO_MPT_MPS_TASK,
-        STEPS.MPT_MPS,
-      );
-      setPausePoint({ priorSubPhase: 4, nextKey: "step_2", priorSummaryKey: "s2" });
+      setPausePoint({ priorSubPhase: 4, nextKey: "step_2", priorSummaryKey: null });
       return;
     }
 
@@ -917,29 +486,11 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
     onStepChange?.(PHASE_SEQUENCE[next - 1]);
 
     if (next === 2) {
-      generateSummary(
-        "p2",
-        "Brief me on the observations before I move into interpretation.",
-        BRIEF_OBSERVE_TO_INTERPRET_TASK,
-        PHASES.INTERPRET,
-      );
-      setPausePoint({ priorSubPhase: 1, nextKey: 2, priorSummaryKey: "p2" });
+      setPausePoint({ priorSubPhase: 1, nextKey: 2, priorSummaryKey: null });
     } else if (next === 3) {
-      generateSummary(
-        "p3",
-        "Brief me on the interpretive conclusions before I work the redemptive thread.",
-        BRIEF_INTERPRET_TO_REDEMPTIVE_TASK,
-        PHASES.REDEMPTIVE_THREAD,
-      );
-      setPausePoint({ priorSubPhase: 2, nextKey: 3, priorSummaryKey: "p3" });
+      setPausePoint({ priorSubPhase: 2, nextKey: 3, priorSummaryKey: null });
     } else if (next === 4) {
-      generateSummary(
-        "p4",
-        "Brief me on the Christ-connection before I draw implications.",
-        BRIEF_REDEMPTIVE_TO_IMPLICATIONS_TASK,
-        PHASES.IMPLICATIONS,
-      );
-      setPausePoint({ priorSubPhase: 3, nextKey: 4, priorSummaryKey: "p4" });
+      setPausePoint({ priorSubPhase: 3, nextKey: 4, priorSummaryKey: null });
     }
   }
 
@@ -969,22 +520,6 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
     setActiveStep(next);
     setActiveSubPhase(1);
     onStepChange?.(STEP_SEQUENCE[next - 1]);
-
-    if (next === 3) {
-      generateSummary(
-        "s3",
-        "Brief me before I build the sermon outline.",
-        BRIEF_MPT_MPS_TO_OUTLINE_TASK,
-        STEPS.OUTLINE,
-      );
-    } else if (next === 4) {
-      generateSummary(
-        "s4",
-        "Brief me before I develop functional elements per outline point.",
-        BRIEF_OUTLINE_TO_FE_TASK,
-        STEPS.FUNCTIONAL_ELEMENTS,
-      );
-    }
   }
 
   async function jumpToStep(step) {
@@ -1067,127 +602,6 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
     delete cleaned[pointId];
     onUpdate({ functional_elements: serializeFunctionalElements(cleaned) });
   }
-
-  async function populateScripture() {
-    if (!sermon.passage || outline.length === 0 || scripturePopulating) return;
-    setScripturePopulating(true);
-    setPopulateScriptureMessage(null);
-    setScriptureProposal(null);
-    try {
-      // Mutation Contract #1: user typing wins by default. Skip rows that already
-      // have user-entered Scripture content; only fill empty rows.
-      const eligible = outline.filter(pt => !(funcData[pt.id]?.scripture?.trim()));
-      const skippedCount = outline.length - eligible.length;
-
-      if (eligible.length === 0) {
-        setPopulateScriptureMessage({
-          tone: "info",
-          text: `All ${outline.length} point${outline.length === 1 ? "" : "s"} already have Scripture filled — nothing to populate.`,
-        });
-        return;
-      }
-
-      const pts = eligible.map((p, i) => `${i + 1}. ${p.text}`).join("\n");
-      const step = STEPS.FUNCTIONAL_ELEMENTS;
-      const context = buildContext({ sermon, step });
-      const userContent = context
-        ? `CONTEXT:\n${context}\n\nUSER REQUEST:\nMap each outline point below to its most relevant verse range within the passage.\n\nOutline points to map:\n${pts}`
-        : `Outline points to map:\n${pts}\n\nMap each to its most relevant verse range within the passage.`;
-      const result = await sendAIMessage(
-        [{ role: "user", content: userContent }],
-        layerTask(POPULATE_SCRIPTURE_TASK, step),
-        step,
-        sermon.id,
-        "study-tab",
-      );
-      if (!result.ok) {
-        if (result.kind === "aborted") return;
-        setPopulateScriptureMessage({ tone: "error", text: `Could not populate Scripture: ${result.message}` });
-        return;
-      }
-      const resp = result.text;
-      const parsed = parseAIJson(resp);
-      if (!parsed.ok) {
-        setPopulateScriptureMessage({ tone: "error", text: `Could not populate Scripture: ${parsed.reason}` });
-        return;
-      }
-      const validated = validateScriptureMap(parsed.value);
-      if (!validated.ok) {
-        setPopulateScriptureMessage({ tone: "error", text: `Could not populate Scripture: ${validated.reason}` });
-        return;
-      }
-      const map = validated.value;
-      const next = { ...funcData };
-      const previewLines = [];
-      let populated = 0;
-      await Promise.all(
-        eligible.map(async (pt, i) => {
-          const ref = map[String(i + 1)];
-          if (!ref) return;
-          const result = await fetchPassage(ref);
-          if (result?.esv) {
-            next[pt.id] = { ...(next[pt.id] || { explanation: "", application: "", illustration: "" }), scripture: result.esv };
-            populated += 1;
-            previewLines.push({ idx: outline.indexOf(pt) + 1, text: pt.text, ref, esv: result.esv });
-          }
-        })
-      );
-      if (populated === 0) {
-        setPopulateScriptureMessage({ tone: "info", text: "Nothing to populate — no verse mappings returned." });
-        return;
-      }
-      previewLines.sort((a, b) => a.idx - b.idx);
-      const summary = [
-        skippedCount > 0
-          ? `Will populate ${populated} of ${eligible.length} empty point${eligible.length === 1 ? "" : "s"} (${skippedCount} already had Scripture, left untouched).`
-          : `Will populate ${populated} of ${eligible.length} point${eligible.length === 1 ? "" : "s"}.`,
-        "",
-        ...previewLines.map(p => `Point ${p.idx} — ${p.ref}\n${p.esv}`),
-      ].join("\n");
-      setScriptureProposal({
-        next,
-        summary,
-        message: skippedCount > 0
-          ? `Populated ${populated} of ${eligible.length} empty point${eligible.length === 1 ? "" : "s"} (${skippedCount} already had Scripture, left untouched).`
-          : `Populated ${populated} of ${eligible.length} point${eligible.length === 1 ? "" : "s"}.`,
-      });
-    } catch (e) {
-      console.error("[populateScripture]", e);
-      setPopulateScriptureMessage({ tone: "error", text: `Could not populate Scripture: ${e.message}` });
-    } finally {
-      setScripturePopulating(false);
-    }
-  }
-
-  async function sendFeChat() {
-    const input = feChatInput.trim();
-    if (!input || feChatLoading) return;
-    const newUserMsg = { role: "user", content: input };
-    const history = [...feChat, newUserMsg];
-    setFeChat(history);
-    setFeChatInput("");
-    setFeChatLoading(true);
-    try {
-      const step = STEPS.FUNCTIONAL_ELEMENTS;
-      const context = buildContext({ sermon, step });
-      const contextPrefix = context ? `CONTEXT:\n${context}\n\nUSER REQUEST:\n` : "";
-      const messages = history.map((m, i) =>
-        i === history.length - 1 ? { ...m, content: contextPrefix + m.content } : m
-      );
-      const result = await sendAIMessage(messages, layerTask(FE_CHAT_SYSTEM, step), step, sermon.id, "study-tab");
-      if (result.ok && result.text.trim()) {
-        setFeChat(prev => [...prev, { role: "assistant", content: result.text.trim() }]);
-      } else if (!result.ok && result.kind !== "aborted") {
-        setFeChat(prev => [...prev, { role: "assistant", content: result.message }]);
-      }
-    } catch (e) {
-      setFeChat(prev => [...prev, { role: "assistant", content: `Error: ${e.message}` }]);
-    } finally {
-      setFeChatLoading(false);
-    }
-  }
-
-  const summaryProps = { summaries, summaryLoading };
 
   // SPRD Q3 — sufficiency per Continue button. The disabled-Continue UX consumes
   // these. SFDI's per-boundary thresholds extend `evaluateAdvance` later; the
@@ -1305,8 +719,6 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
         <PausePointScreen
           priorSubPhase={pausePoint.priorSubPhase}
           nextKey={pausePoint.nextKey}
-          priorSummaryText={summaries[pausePoint.priorSummaryKey]}
-          priorSummaryLoading={summaryLoading === pausePoint.priorSummaryKey}
           onContinue={() => setPausePoint(null)}
         />
       )}
@@ -1314,10 +726,6 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
       {/* ── Step 1: Exegesis ── */}
       {!pausePoint && activeStep === 1 && (
         <div className="study-step-active">
-
-          {activeSubPhase === 2 && <SummaryBlock summaryKey="p2" {...summaryProps} />}
-          {activeSubPhase === 3 && <SummaryBlock summaryKey="p3" {...summaryProps} />}
-          {activeSubPhase === 4 && <SummaryBlock summaryKey="p4" {...summaryProps} />}
 
           {activeSubPhase === 1 && (
             <div className="sub-phase-body">
@@ -1332,32 +740,11 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                 requestActiveToken={railRequest?.phase === 1 ? railRequest.token : null}
                 onActiveFieldKeyChange={setCurrentActiveFieldKey}
               />
-              <LookAgainBlock
-                data={obsData}
-                fields={OBSERVE_FIELDS}
-                fetchKey="observe"
-                prefix="My observations"
-                task={OBSERVE_LOOK_AGAIN_TASK}
-                phase={PHASES.OBSERVE}
-                label="Observations"
-                inlineLoading={inlineLoading}
-                inlineResponses={inlineResponses}
-                fetchInline={fetchInline}
-                dismissInline={dismissInline}
-              />
             </div>
           )}
 
           {activeSubPhase === 2 && (
             <div className="sub-phase-body">
-              {currentActiveFieldKey === "deeper_context" && (
-                <SummaryBlock
-                  summaryKey="ref_p2_context"
-                  label="From your Phase 1 Context"
-                  loadingText="Pulling forward your Phase 1 Context…"
-                  {...summaryProps}
-                />
-              )}
               <SpotlightWorksheet
                 fields={INTERPRET_FIELDS}
                 data={intData}
@@ -1381,19 +768,6 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                 requestedActiveFieldKey={railRequest?.phase === 2 ? railRequest.key : null}
                 requestActiveToken={railRequest?.phase === 2 ? railRequest.token : null}
                 onActiveFieldKeyChange={setCurrentActiveFieldKey}
-              />
-              <LookAgainBlock
-                data={intData}
-                fields={INTERPRET_FIELDS}
-                fetchKey="interpret"
-                prefix="My interpretation"
-                task={INTERPRET_LOOK_AGAIN_TASK}
-                phase={PHASES.INTERPRET}
-                label="Interpretation"
-                inlineLoading={inlineLoading}
-                inlineResponses={inlineResponses}
-                fetchInline={fetchInline}
-                dismissInline={dismissInline}
               />
             </div>
           )}
@@ -1427,20 +801,6 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                 requestActiveToken={railRequest?.phase === 3 ? railRequest.token : null}
                 onActiveFieldKeyChange={setCurrentActiveFieldKey}
               />
-
-              <LookAgainBlock
-                data={redData}
-                fields={REDEMPTIVE_FIELDS}
-                fetchKey="redemptive"
-                prefix="Redemptive thread answers"
-                task={REDEMPTIVE_LOOK_AGAIN_TASK}
-                phase={PHASES.REDEMPTIVE_THREAD}
-                label="Redemptive Thread"
-                inlineLoading={inlineLoading}
-                inlineResponses={inlineResponses}
-                fetchInline={fetchInline}
-                dismissInline={dismissInline}
-              />
             </div>
           )}
 
@@ -1472,20 +832,6 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
                 requestActiveToken={railRequest?.phase === 4 ? railRequest.token : null}
                 onActiveFieldKeyChange={setCurrentActiveFieldKey}
               />
-
-              <LookAgainBlock
-                data={impData}
-                fields={IMPLICATIONS_FIELDS}
-                fetchKey="implications"
-                prefix="Implications"
-                task={IMPLICATIONS_LOOK_AGAIN_TASK}
-                phase={PHASES.IMPLICATIONS}
-                label="Implications"
-                inlineLoading={inlineLoading}
-                inlineResponses={inlineResponses}
-                fetchInline={fetchInline}
-                dismissInline={dismissInline}
-              />
             </div>
           )}
 
@@ -1508,54 +854,6 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
       {/* ── Step 2: MPT/MPS Forge — SADI Step 2 plumbing (v19, 2026-05-05) ── */}
       {!pausePoint && activeStep === 2 && (
         <div className="study-step-active" data-tour-id="mpt-field">
-          <SummaryBlock summaryKey="s2" {...summaryProps} />
-
-          <div style={{ display: "flex", gap: "10px", marginBottom: "12px" }}>
-            <SecondaryButton
-              size="sm"
-              onClick={generateMPT}
-              disabled={draftLoading !== null || (!sermon.passage && !hasAnyAnswer(obsData))}
-              style={{ fontSize: "12px" }}
-              title={!sermon.passage && !hasAnyAnswer(obsData) ? "Add a passage or Observe content first" : ""}
-            >
-              {draftLoading === "mpt" ? "Thinking…" : "Draft MPT (Q1) →"}
-            </SecondaryButton>
-            <SecondaryButton
-              size="sm"
-              onClick={generateMPS}
-              disabled={draftLoading !== null || !mptTighten?.trim()}
-              style={{ fontSize: "12px" }}
-              title={!mptTighten?.trim() ? "Tighten MPT to a single sentence first (MPT Q2)" : ""}
-            >
-              {draftLoading === "mps" ? "Thinking…" : "Draft MPS (Q1) →"}
-            </SecondaryButton>
-          </div>
-
-          <ProposalPanel
-            loading={draftLoading === "mpt"}
-            proposal={mptProposal}
-            flagContext={{ sermonId: sermon.id, step: STEPS.MPT_MPS }}
-            label="AI proposes MPT Draft (Q1)"
-            acceptLabel={flattenAnswerValue(getQuestionAnswer(mppData, "mpt", "draft"))?.trim() ? "Replace MPT Draft" : "Use this"}
-            onAccept={() => {
-              updateMPP("mpt", "draft", mptProposal);
-              setMptProposal(null);
-            }}
-            onDiscard={() => setMptProposal(null)}
-          />
-          <ProposalPanel
-            loading={draftLoading === "mps"}
-            proposal={mpsProposal}
-            flagContext={{ sermonId: sermon.id, step: STEPS.MPT_MPS }}
-            label="AI proposes MPS Translate (Q1)"
-            acceptLabel={mpsTranslate?.trim() ? "Replace MPS Translate" : "Use this"}
-            onAccept={() => {
-              updateMPP("mps", "translate", mpsProposal);
-              setMpsProposal(null);
-            }}
-            onDiscard={() => setMpsProposal(null)}
-          />
-
           <SpotlightWorksheet
             fields={MAIN_POINT_PAIR_FIELDS}
             data={mppData}
@@ -1581,141 +879,11 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
       {/* ── Step 3: Outline Builder ── */}
       {!pausePoint && activeStep === 3 && (
         <div className="study-step-active" data-tour-id="outline-builder">
-          <SummaryBlock summaryKey="s3" {...summaryProps} />
-
-<OutlineBuilder
+          <OutlineBuilder
             outline={outline}
             onUpdate={(newOutline) => onUpdate({ outline: serializeOutline(newOutline) })}
             onRemove={handleOutlineRemove}
           />
-
-          <div style={{ marginTop: "12px", display: "flex", gap: "10px", alignItems: "center" }}>
-            <SecondaryButton
-              size="sm"
-              disabled={draftLoading !== null || outlineChatLoading || inlineLoading !== null}
-              onClick={suggestOutline}
-            >
-              {draftLoading === "outline-draft" ? "Thinking…" : "Suggest Outline"}
-            </SecondaryButton>
-            <SecondaryButton
-              size="sm"
-              disabled={inlineLoading !== null || draftLoading !== null || outlineChatLoading}
-              onClick={() => {
-                // Exegesis + outline come from buildContext at step OUTLINE.
-                const pts = outline.map((p, i) => `${i + 1}. ${p.text}`).join("\n");
-                fetchInline(
-                  "outline-review",
-                  `Outline to review:\n${pts || "(no points yet)"}`,
-                  OUTLINE_REVIEW_TASK,
-                  STEPS.OUTLINE,
-                );
-              }}
-            >
-              {inlineLoading === "outline-review" ? "Thinking…" : "Review Outline"}
-            </SecondaryButton>
-          </div>
-
-          <InlineAIResponse
-            fieldName="Outline Review"
-            response={inlineResponses["outline-review"]}
-            loading={inlineLoading === "outline-review"}
-            onDismiss={() => dismissInline("outline-review")}
-          />
-
-          {(outlineChat.length > 0 || draftLoading === "outline-draft") && (
-            <div className="mps-chat" style={{ marginTop: "16px" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
-                <span className="field-label" style={{ marginBottom: 0, color: "var(--ink-ghost)", fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.06em" }}>Refine Outline with AI</span>
-                {outlineChat.length > 0 && (
-                  <IconButton aria-label="Clear outline chat" className="inline-ai-dismiss" onClick={() => setOutlineChat([])}>Clear</IconButton>
-                )}
-              </div>
-              {outlineChat.map((msg, i) => {
-                if (msg.role === "user") {
-                  return (
-                    <div key={i} style={{ textAlign: "right", marginBottom: "6px" }}>
-                      <span style={{ background: "var(--surface-2)", borderRadius: "8px", padding: "6px 10px", fontSize: "13px", display: "inline-block", maxWidth: "85%", textAlign: "left" }}>{msg.content}</span>
-                    </div>
-                  );
-                }
-                const extracted = outlineHasNumberedList(msg.content) ? extractOutlineWithExplanations(msg.content) : null;
-                return (
-                  <div key={i} className="inline-ai-response" style={{ marginBottom: "8px" }}>
-                    <div className="ai-markdown" style={{ marginBottom: extracted ? "8px" : "0" }}>
-                      <ReactMarkdown>{msg.content}</ReactMarkdown>
-                    </div>
-                    {extracted && (() => {
-                      // Mutation Contract #4: replacing existing user-typed outline
-                      // points is destructive — require a two-step inline confirm.
-                      // When outline is empty, single-click is fine (no user content
-                      // to lose).
-                      const isDestructive = outline.length > 0;
-                      const inConfirm = confirmOutlineApplyIdx === i;
-                      const commit = () => {
-                        const existing = getFunctionalElements(sermon);
-                        onUpdate({
-                          outline: serializeOutline(extracted.points),
-                          functional_elements: serializeFunctionalElements({ ...existing, ...extracted.explanations }),
-                        });
-                        setConfirmOutlineApplyIdx(null);
-                      };
-                      if (!isDestructive) {
-                        return (
-                          <SecondaryButton size="sm" style={{ fontSize: "12px" }} onClick={commit}>
-                            → Apply to Outline
-                          </SecondaryButton>
-                        );
-                      }
-                      if (inConfirm) {
-                        return (
-                          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                            <PrimaryButton size="sm" style={{ fontSize: "12px" }} onClick={commit}>
-                              Replace {outline.length} existing point{outline.length === 1 ? "" : "s"}
-                            </PrimaryButton>
-                            <SecondaryButton size="sm" style={{ fontSize: "12px" }} onClick={() => setConfirmOutlineApplyIdx(null)}>
-                              Cancel
-                            </SecondaryButton>
-                          </div>
-                        );
-                      }
-                      return (
-                        <SecondaryButton size="sm" style={{ fontSize: "12px" }} onClick={() => setConfirmOutlineApplyIdx(i)}>
-                          → Apply to Outline
-                        </SecondaryButton>
-                      );
-                    })()}
-                  </div>
-                );
-              })}
-              {outlineChatLoading && (
-                <div className="inline-ai-response" style={{ marginBottom: "8px" }}>
-                  <div className="ai-loading" style={{ padding: "6px 0" }}>
-                    <div className="ai-loading-dot" /><div className="ai-loading-dot" /><div className="ai-loading-dot" />
-                  </div>
-                </div>
-              )}
-              <div style={{ display: "flex", gap: "8px", marginTop: "4px" }}>
-                <textarea
-                  className="field-textarea"
-                  rows={2}
-                  style={{ flex: 1, minHeight: "unset", fontSize: "13px", resize: "none" }}
-                  placeholder="Make these more diagnostic. Sharpen MP2…"
-                  value={outlineChatInput}
-                  onChange={e => setOutlineChatInput(e.target.value)}
-                  onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendOutlineChat(); } }}
-                  disabled={outlineChatLoading}
-                />
-                <SecondaryButton
-                  size="sm"
-                  style={{ alignSelf: "flex-end", fontSize: "12px", whiteSpace: "nowrap" }}
-                  onClick={sendOutlineChat}
-                  disabled={outlineChatLoading || !outlineChatInput.trim()}
-                >
-                  Ask →
-                </SecondaryButton>
-              </div>
-            </div>
-          )}
 
           {outline.length > 0 && (
             <div className="step-advance">
@@ -1736,63 +904,7 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
       {/* ── Step 4: Functional Elements ── */}
       {!pausePoint && activeStep === 4 && (
         <div className="study-step-active" data-tour-id="functional-elements">
-          <SummaryBlock summaryKey="s4" {...summaryProps} />
-
-          {outline.length > 0 && sermon.passage && (
-            <div style={{ marginBottom: "12px", display: "flex", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
-              <SecondaryButton
-                size="sm"
-                disabled={scripturePopulating}
-                onClick={populateScripture}
-                title="Fills empty Scripture rows only — rows with content are left untouched"
-              >
-                {scripturePopulating ? "Loading…" : "Populate Scripture (ESV)"}
-              </SecondaryButton>
-              {populateScriptureMessage && (
-                <span style={{
-                  fontSize: "12px",
-                  fontFamily: "var(--font-serif)",
-                  fontStyle: "italic",
-                  color: populateScriptureMessage.tone === "error"
-                    ? "#a04040"
-                    : populateScriptureMessage.tone === "info"
-                      ? "var(--ink-ghost)"
-                      : "var(--ink-soft)",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                }}>
-                  {populateScriptureMessage.text}
-                  <IconButton
-                    aria-label="Dismiss message"
-                    onClick={() => setPopulateScriptureMessage(null)}
-                    style={{
-                      background: "transparent", border: "none",
-                      color: "var(--ink-ghost)", fontSize: "14px", lineHeight: 1, padding: 0,
-                    }}
-                    title="Dismiss"
-                  >×</IconButton>
-                </span>
-              )}
-            </div>
-          )}
-
-          <ProposalPanel
-            loading={scripturePopulating}
-            proposal={scriptureProposal?.summary || null}
-            flagContext={{ sermonId: sermon.id, step: STEPS.FUNCTIONAL_ELEMENTS }}
-            label="AI proposes Scripture mapping"
-            acceptLabel="Use this"
-            onAccept={() => {
-              if (!scriptureProposal) return;
-              onUpdate({ functional_elements: serializeFunctionalElements(scriptureProposal.next) });
-              setPopulateScriptureMessage({ tone: "ok", text: scriptureProposal.message });
-              setScriptureProposal(null);
-            }}
-            onDiscard={() => setScriptureProposal(null)}
-          />
-
-{outline.map((pt, i) => (
+          {outline.map((pt, i) => (
             <FuncElem
               key={pt.id}
               pointText={pt.text}
@@ -1807,87 +919,6 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
             />
           ))}
 
-          <div style={{ marginTop: "12px" }}>
-            <SecondaryButton
-              size="sm"
-              disabled={inlineLoading !== null}
-              onClick={() => {
-                const allEAI = outline.map((pt, i) => {
-                  const d = funcData[pt.id] || {};
-                  return `Point ${i + 1}: ${pt.text}\n  E: ${d.explanation || "(none)"}\n  A: ${d.application || "(none)"}\n  I: ${d.illustration || "(none)"}`;
-                }).join("\n\n");
-                fetchInline(
-                  "eai-review",
-                  `Functional elements to evaluate:\n${allEAI}`,
-                  `Evaluate the Explanation/Application/Illustration balance across all outline points for ${sermon.passage || "this passage"}. Is explanation too thin or too heavy? Is application gospel-rooted or behavior-driven? Are the illustrations doing real work? Give a point-by-point assessment.`,
-                  STEPS.FUNCTIONAL_ELEMENTS,
-                );
-              }}
-            >
-              {inlineLoading === "eai-review" ? "Thinking…" : "Review E/A/I Balance"}
-            </SecondaryButton>
-          </div>
-
-          <InlineAIResponse
-            fieldName="E/A/I Balance"
-            response={inlineResponses["eai-review"]}
-            loading={inlineLoading === "eai-review"}
-            onDismiss={() => dismissInline("eai-review")}
-          />
-
-          {/* AI chat for developing functional elements */}
-          <div className="mps-chat" style={{ marginTop: "16px" }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
-              <span className="field-label" style={{ marginBottom: 0, color: "var(--ink-ghost)", fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.06em" }}>Develop with AI</span>
-              {feChat.length > 0 && (
-                <IconButton aria-label="Clear functional elements chat" className="inline-ai-dismiss" onClick={() => setFeChat([])}>Clear</IconButton>
-              )}
-            </div>
-            {feChat.map((msg, i) => {
-              if (msg.role === "user") {
-                return (
-                  <div key={i} style={{ textAlign: "right", marginBottom: "6px" }}>
-                    <span style={{ background: "var(--surface-2)", borderRadius: "8px", padding: "6px 10px", fontSize: "13px", display: "inline-block", maxWidth: "85%", textAlign: "left" }}>{msg.content}</span>
-                  </div>
-                );
-              }
-              return (
-                <div key={i} className="inline-ai-response" style={{ marginBottom: "8px" }}>
-                  <div className="ai-markdown">
-                    <ReactMarkdown>{msg.content}</ReactMarkdown>
-                  </div>
-                </div>
-              );
-            })}
-            {feChatLoading && (
-              <div className="inline-ai-response" style={{ marginBottom: "8px" }}>
-                <div className="ai-loading" style={{ padding: "6px 0" }}>
-                  <div className="ai-loading-dot" /><div className="ai-loading-dot" /><div className="ai-loading-dot" />
-                </div>
-              </div>
-            )}
-            <div style={{ display: "flex", gap: "8px", marginTop: "4px" }}>
-              <textarea
-                className="field-textarea"
-                rows={2}
-                style={{ flex: 1, minHeight: "unset", fontSize: "13px", resize: "none" }}
-                placeholder="Help me develop Point 2's application. Suggest an illustration for Point 1…"
-                value={feChatInput}
-                onChange={e => setFeChatInput(e.target.value)}
-                onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendFeChat(); } }}
-                disabled={feChatLoading}
-              />
-              <SecondaryButton
-                size="sm"
-                style={{ alignSelf: "flex-end", fontSize: "12px", whiteSpace: "nowrap" }}
-                onClick={sendFeChat}
-                disabled={feChatLoading || !feChatInput.trim()}
-              >
-                Ask →
-              </SecondaryButton>
-            </div>
-          </div>
-
           <div className="step-advance">
             <PrimaryButton size="sm" onClick={() => onTabChange?.(STAGE.Blueprint)}>
               Continue to Blueprint →
@@ -1895,6 +926,13 @@ export default function StudyTab({ sermon, onUpdate, onAI, aiLoading, onStepChan
           </div>
         </div>
       )}
+
+          <NotebookPanel
+            value={sermon.notebook_study}
+            onChange={(value) => onUpdate({ notebook_study: value })}
+            label="Study Notebook"
+            placeholder="Free-form notes for your study work — observations, questions, things to revisit."
+          />
 
           </div>
           </div>

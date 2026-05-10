@@ -1,8 +1,8 @@
 /* FeedbackFlag — Tier 1 in-app flag (BTI Phase 1, Chunk 3).
  *
  * Quiet-but-persistent ink-on-parchment styling. The button is a small
- * outline glyph that sits next to a surface's primary AI affordance and
- * stays out of the pastor's way until they want it.
+ * outline glyph that sits next to each workspace surface and stays out
+ * of the pastor's way until they want it.
  */
 
 .feedback-flag-wrap {
@@ -31,10 +31,6 @@
   color: var(--gold);
   background: var(--parchment-warm);
   outline: none;
-}
-
-.feedback-flag-btn[data-pending="true"] {
-  color: var(--gold);
 }
 
 .feedback-flag-btn svg {
@@ -85,21 +81,6 @@
 .feedback-flag-popover input[type="text"]:focus {
   outline: none;
   border-color: var(--gold);
-}
-
-.feedback-flag-popover-check {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--ink-soft);
-  margin-bottom: 10px;
-  cursor: pointer;
-}
-
-.feedback-flag-popover-check input {
-  margin: 0;
-  cursor: pointer;
 }
 
 .feedback-flag-popover-actions {

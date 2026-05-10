@@ -23,9 +23,9 @@ Every UX decision must reflect this hierarchy — the Calendar assigns sermons t
 displays a schedule; reference features (Illustrations, Library, Archive) are resources within
 the workflow, not top-level destinations.
 
-*One-sentence identity: SermonForge starts where sermon prep actually starts — with the series.
-Plan the arc, divide the passage, then go deep on each sermon with AI assistance calibrated to
-every stage.*
+*One-sentence identity: SermonForge starts where sermon prep actually starts — with the text.
+The system forces clarity through a structured throughline, end to end pastor-authored.
+No AI substitution.*
 
 ---
 
@@ -146,16 +146,11 @@ these names. (See State Contract clause 5: *one name per concept*.)
    held in marination through Interpret, gaining texture at Redemptive Thread,
    and fully integrated at Implications. The exact phase-by-phase mechanics
    are specified in `docs/SYSTEMS/sermon-workspace.md`.
-5. **AI augments, never substitutes.** AI runs on user evidence. There is no AI
-   operation that produces sermon content from zero user input. Compressed paths
-   that bypass user evidence are forbidden under this contract. *Scope: this
-   contract's enforcement (the `ai_proposal`/`ai_apply` mutation cycle,
-   empty-evidence rejection in `validateAndCommit`) covers substitutive AI
-   writes — operations that propose or apply content directly to sermon fields.
-   Advisory AI interfaces — Review buttons that produce display-only commentary,
-   and conversational Chat interfaces where any content application is a
-   separate, explicit, user-confirmed gesture — are outside this contract's
-   enforcement scope and are governed directly by the Principle.*
+5. **No AI substitution.** The system contains no AI authorship surfaces. The
+   pastor authors all sermon content. (ARI Phase 9, 2026-05-09: AI removed
+   from the product entirely. The `ai_proposal`/`ai_apply` mutation cycle
+   that previously enforced "AI augments, never substitutes" was removed
+   alongside the AI surfaces it gated.)
 6. **The workspace throughline is structural.** Each workspace step (and
    each Study sub-phase) produces a named outcome by way of a throughline
    that runs through its fields and crosses each step or sub-phase boundary
@@ -184,12 +179,17 @@ these names. (See State Contract clause 5: *one name per concept*.)
 
 ### 3. Mutation Contract — what happens when something changes
 
-1. **User typing always wins by default.** The system does not overwrite
-   user-typed content without explicit, per-occurrence consent. "Draft,"
-   "Suggest," "Populate" are *proposals*, never *replacements*.
-2. **AI proposals live in a separate slot until accepted.** Accept is one click.
-   Reject is no click. The user's existing field is never touched while a
-   proposal is pending.
+1. **User typing always wins by default.** All sermon content is pastor-typed.
+   The system does not overwrite user-typed content. There are no system-driven
+   writes to sermon fields outside the pastor's keystrokes. (ARI Phase 9,
+   2026-05-09: pre-ARI this clause governed the AI proposal/apply cycle that
+   gated AI-driven writes; with AI removed, the rule reduces to "the pastor
+   is the only author.")
+2. **The proposal slot was retired in ARI Phase 9.** The original clause
+   reserved a separate slot for AI proposals so the pastor's existing field
+   was never touched while a proposal was pending. With AI removed (ARI,
+   2026-05-09), no system actor ever writes to a sermon field; the slot
+   mechanism is unnecessary.
 3. **Saves are events, not background noise.** Successful saves are visible —
    the user can answer "is my work safe" at any moment. Failed saves are visible
    and retryable. Silent saves are not allowed in either direction.
@@ -236,10 +236,9 @@ either reshapes to pass, or it does not ship.
 ## Non-Negotiable Architectural Boundaries
 
 - **No backend.** Local-first only. No web API, no server process, no remote storage.
-- **API key never reaches the renderer.** `ANTHROPIC_API_KEY` is loaded in the main process
-  only and is never passed to the renderer via IPC or any other path.
-- **All AI calls go through IPC.** Every Claude API call — without exception — must go through
-  the `"ai-message"` IPC channel via `sendAIMessage()` in `src/utils/ai.js`.
+- **No AI.** SermonForge contains no AI surfaces (ARI, 2026-05-09). The Anthropic SDK,
+  IPC `"ai-message"` channel, system prompts, and context pipeline have been removed. ESV
+  passage fetching (Crossway API) is the only outbound network call from the app.
 - **No raw SQL in the renderer.** All database operations go through named IPC channels handled
   in `electron/main.js`. No SQL is accepted from the renderer.
 - **No direct `window.electronAPI` outside wrapper modules.** Components use `src/db/database.js`
@@ -295,6 +294,6 @@ either reshapes to pass, or it does not ship.
 ## Tech Stack (summary)
 
 Electron 31 · React 18 · Vite 5 (config: `vite.config.mjs`) · sql.js (WASM SQLite) ·
-@anthropic-ai/sdk · dotenv · Node 24 · Windows 11 / OneDrive storage.
+dotenv · Node 24 · Windows 11 / OneDrive storage.
 
 Full details: `docs/REFERENCE/project-structure.md`.

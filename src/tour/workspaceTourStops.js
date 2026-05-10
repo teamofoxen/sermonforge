@@ -11,18 +11,15 @@
 // and StudyTab state when the tour is active. Tab keys come from `STAGE` in
 // `src/core/contracts.ts`.
 //
-// 2026-05-08 — plain-prose reframe. The 17-stop throughline-anchored tour
-// is retired — it carried too much cognitive load and leaned on insider
-// terms (throughline, cumulative thought-unit table, named outcomes, lens
-// cluster, outside-in). The 12-stop replacement walks the workspace surface
-// by surface: workspace shell → study rail → Observe → Interpret →
-// Redemptive Thread → Implications → Sermon Spine (MPT/MPS) → Outline →
-// Functional Elements → Frame → Manuscript → Delivery. Mock sermon
-// unchanged: Romans 5:1-5 (`tour-romans-sermon-01`).
+// Plain-prose tour, surface by surface: workspace shell → study rail →
+// Observe → Interpret → Redemptive Thread → Implications → Sermon Spine
+// (MPT/MPS) → Outline → Functional Elements → Frame → Manuscript. Mock
+// sermon: Romans 5:1-5 (`tour-romans-sermon-01`).
 
 import { STAGE } from "../core/contracts";
 
-const STUDY_BASE = { tab: STAGE.Study, drawerOpen: false };
+const STUDY_BASE = { tab: STAGE.Study };
+
 
 export const WORKSPACE_TOUR_STOPS = [
   {
@@ -93,20 +90,13 @@ export const WORKSPACE_TOUR_STOPS = [
     anchorId: "frame-worksheet",
     title: "Frame.",
     body: "Write your intro and conclusion.",
-    prerequisites: { tab: STAGE.Frame, drawerOpen: false },
+    prerequisites: { tab: STAGE.Frame },
   },
   {
     id: "manuscript",
     anchorId: "stage-tab-Manuscript",
     title: "Manuscript.",
     body: "Write your sermon.",
-    prerequisites: { tab: STAGE.Manuscript, drawerOpen: false },
-  },
-  {
-    id: "delivery",
-    anchorId: "delivery-overview",
-    title: "Delivery.",
-    body: "Format and export your sermon for preaching.",
-    prerequisites: { tab: STAGE.Delivery, drawerOpen: false },
+    prerequisites: { tab: STAGE.Manuscript },
   },
 ];

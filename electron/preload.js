@@ -1,10 +1,6 @@
 const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("electronAPI", {
-  // ── AI ────────────────────────────────────────────────────────────────────
-  sendAIMessage: (messages, systemPrompt, step, sermonId) =>
-    ipcRenderer.invoke("ai-message", { messages, systemPrompt, step, sermonId }),
-
   // ── Spine — the only sermon/series state surface ──────────────────────────
   // src/core/spine.ts is the renderer-side companion. Direct calls to
   // window.electronAPI.spine() outside src/core/spine.ts are flagged by
@@ -27,7 +23,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // ── Export ───────────────────────────────────────────────────────────────────
   exportStudyGuide: (seriesId) => ipcRenderer.invoke("series-export-study-guide", seriesId),
-  exportPmb: (data) => ipcRenderer.invoke("sermon-export-pmb", data),
   exportManuscript: (data) => ipcRenderer.invoke("sermon-export-manuscript", data),
 
   // ── Bible passage ─────────────────────────────────────────────────────────
@@ -67,12 +62,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   },
   // Manual flush — banner's "Retry" button.
   flushDb: () => ipcRenderer.invoke("db-flush"),
-
-  // ── Pastor memory backup ──────────────────────────────────────────────────
-  // Write-through copy of localStorage memory so it survives Electron major
-  // upgrades and manual cache clears. See electron/main.js MEMORY_BACKUP_PATH.
-  backupMemory:  (json) => ipcRenderer.invoke("db-backupMemory", json),
-  restoreMemory: ()     => ipcRenderer.invoke("db-restoreMemory"),
 
   // ── BTI telemetry ─────────────────────────────────────────────────────────
   // Fire-and-forget event emission from renderer to the main-process bus

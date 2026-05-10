@@ -18,7 +18,7 @@ function ArrowRightIcon() {
   );
 }
 
-export default function Dashboard({ onOpenSermon, onNewSeries, onLeaveTour }) {
+export default function Dashboard({ onOpenSermon, onLeaveTour }) {
   const { start: startTour } = useTour();
   const [showNewModal, setShowNewModal] = useState(false);
   const [loadingAction, setLoadingAction] = useState(null); // null | 'tour' | 'sample'
@@ -108,31 +108,6 @@ export default function Dashboard({ onOpenSermon, onNewSeries, onLeaveTour }) {
                   Build sermon <ArrowRightIcon />
                 </PrimaryButton>
               </div>
-            </div>
-
-            {/* SERIES */}
-            <div
-              className="dash-tile tile-secondary"
-              onClick={onNewSeries}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  onNewSeries && onNewSeries();
-                }
-              }}
-            >
-              <div className="tile-eyebrow">Plan&nbsp;ahead</div>
-              <h3 className="tile-title">
-                Build a series.
-              </h3>
-              <p className="tile-blurb">
-                Plan a series end to end — passage range, arc, week-by-week.
-              </p>
-              <span className="tile-link">
-                Build series <ArrowRightIcon />
-              </span>
             </div>
 
             {/* RESUME WORK — State Contract #6 surface integration. */}

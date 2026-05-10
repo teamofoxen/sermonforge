@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getRecentSermons, getRecentSeries } from "../core/spine";
+import { getRecentSermons } from "../core/spine";
 import { VIEW } from "../core/contracts";
 import NewSermonModal from "./NewSermonModal.jsx";
 import FeedbackForm from "./FeedbackForm.jsx";
@@ -41,19 +41,12 @@ const CHEVRON_UP = (
   </svg>
 );
 
-export default function Sidebar({ currentView, onNavigate, onOpenSermon, onOpenSeries, onNewSeries, theme, onToggleTheme }) {
+export default function Sidebar({ currentView, onNavigate, onOpenSermon, theme, onToggleTheme }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [seriesDropdownOpen, setSeriesDropdownOpen] = useState(false);
   const [recentSermons, setRecentSermons] = useState([]);
-  const [recentSeries, setRecentSeries] = useState([]);
   const [showFeedback, setShowFeedback] = useState(false);
 
-  // State Contract #3 enforced at creation; no need to filter "Untitled Series"
-  // here — that name will not be created going forward. Pre-existing rows from
-  // before the contract landed still surface, by design (the user sees and
-  // renames them rather than the sidebar hiding them).
   const visibleRecents = recentSermons.filter((s) => s.title?.trim());
-  const visibleSeries = recentSeries.filter((s) => s.title?.trim());
 
   useEffect(() => {
     if (!dropdownOpen) return;
@@ -62,13 +55,6 @@ export default function Sidebar({ currentView, onNavigate, onOpenSermon, onOpenS
       .catch((err) => console.error("[Sidebar] Failed to load recent sermons:", err));
   }, [dropdownOpen]);
 
-  useEffect(() => {
-    if (!seriesDropdownOpen) return;
-    getRecentSeries(3)
-      .then(setRecentSeries)
-      .catch((err) => console.error("[Sidebar] Failed to load recent series:", err));
-  }, [seriesDropdownOpen]);
-
   const [showNewModal, setShowNewModal] = useState(false);
 
   function handleNewSermon() {
@@ -76,24 +62,13 @@ export default function Sidebar({ currentView, onNavigate, onOpenSermon, onOpenS
     setShowNewModal(true);
   }
 
-  function handleNewSeries() {
-    setSeriesDropdownOpen(false);
-    if (onNewSeries) onNewSeries();
-  }
-
   function handleRecentSermon(id) {
     setDropdownOpen(false);
     onOpenSermon(id);
   }
 
-  function handleRecentSeries(id) {
-    setSeriesDropdownOpen(false);
-    if (onOpenSeries) onOpenSeries(id);
-  }
-
   function handleNavigate(view) {
     setDropdownOpen(false);
-    setSeriesDropdownOpen(false);
     onNavigate(view);
   }
 
@@ -119,55 +94,6 @@ export default function Sidebar({ currentView, onNavigate, onOpenSermon, onOpenS
           </svg>
           Dashboard
         </div>
-
-        {/* Series Planning — inline dropdown */}
-        <div
-          className={`nav-item ${currentView === VIEW.Planning || currentView === VIEW.SeriesPlanner ? "active" : ""}`}
-          onClick={() => setSeriesDropdownOpen((o) => !o)}
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-            <path d="M12 2L2 7l10 5 10-5-10-5z" />
-            <path d="M2 17l10 5 10-5" />
-            <path d="M2 12l10 5 10-5" />
-          </svg>
-          Series Planning
-          {seriesDropdownOpen ? CHEVRON_UP : CHEVRON_DOWN}
-        </div>
-
-        {seriesDropdownOpen && (
-          <div style={{ background: "rgba(0,0,0,0.2)", borderLeft: "3px solid var(--gold)", marginLeft: 0 }}>
-            <div
-              className="nav-item"
-              onClick={handleNewSeries}
-              style={{ paddingLeft: 36, fontSize: 13, color: "var(--gold-pale)" }}
-            >
-              + New Series
-            </div>
-            <div
-              className="nav-item"
-              onClick={() => handleNavigate(VIEW.Planning)}
-              style={{ paddingLeft: 36, fontSize: 13 }}
-            >
-              All Series
-            </div>
-            {visibleSeries.length > 0 && (
-              <div style={{ borderTop: "1px solid rgba(212,160,23,0.15)", margin: "2px 0" }} />
-            )}
-            {visibleSeries.map((s) => (
-              <div
-                key={s.id}
-                className="nav-item"
-                onClick={() => handleRecentSeries(s.id)}
-                style={{ paddingLeft: 36, fontSize: 12, overflow: "hidden" }}
-                title={s.title || "Untitled"}
-              >
-                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", display: "block" }}>
-                  {s.title || "Untitled"}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
 
         {/* Sermon Prep — inline dropdown */}
         <div

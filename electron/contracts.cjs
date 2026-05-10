@@ -20,7 +20,9 @@ const STAGE = Object.freeze({
   Delivery: "Delivery",
 });
 
-const STAGE_SEQUENCE = Object.freeze(["Study", "Blueprint", "Frame", "Manuscript", "Delivery"]);
+// ARI Phase 7 — "Delivery" removed from the visible tab sequence; the Stage
+// type still admits it so legacy data doesn't break.
+const STAGE_SEQUENCE = Object.freeze(["Study", "Blueprint", "Frame", "Manuscript"]);
 
 const STEP = Object.freeze({
   Exegesis: "Exegesis",
@@ -54,10 +56,9 @@ const SERIES_STATUS = Object.freeze({
   Complete: "complete",
 });
 
+// ARI Phase 9 — collapsed to UserInput only.
 const MUTATION_KIND = Object.freeze({
   UserInput: "user_input",
-  AiProposal: "ai_proposal",
-  AiApply: "ai_apply",
 });
 
 const LOADING_VERB = Object.freeze({
@@ -84,6 +85,9 @@ const SERMON_COLUMNS = Object.freeze(new Set([
   "sermon_frame",
   // v19 — SADI Step 2 Main Point Pair.
   "main_point_pair",
+  // v20 — ARI Phase 3 per-tab notebooks. Free-form pastor-typed notes,
+  // sermon-scoped, one column per workspace tab where AI used to live.
+  "notebook_study", "notebook_blueprint", "notebook_manuscript",
 ]));
 /* eslint-enable sermonforge/canonical-stage-name */
 

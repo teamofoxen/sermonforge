@@ -41,18 +41,11 @@ function loadNamedKey(name, envVar) {
 
 // ── Named-key convenience exports (used by main.js) ───────────────────────────
 
-function loadKey()    { return loadNamedKey("anthropic", "ANTHROPIC_API_KEY"); }
-function loadEsvKey() { return loadNamedKey("esv",       "ESV_API_KEY"); }
+function loadEsvKey() { return loadNamedKey("esv", "ESV_API_KEY"); }
 
-// Save both keys submitted from the setup screen.
-// anthropic is required; esv is optional (empty string = skip).
-function saveKeys({ anthropic, esv }) {
-  saveNamedKey("anthropic", anthropic);
+// Save the ESV key submitted from the setup screen. Empty = skip.
+function saveKeys({ esv }) {
   if (esv && esv.trim()) saveNamedKey("esv", esv.trim());
 }
 
-function isConfigured() {
-  return Boolean(loadKey());
-}
-
-module.exports = { saveKeys, loadKey, loadEsvKey, isConfigured };
+module.exports = { saveKeys, loadEsvKey };

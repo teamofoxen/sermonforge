@@ -28,9 +28,7 @@ process.on("unhandledRejection", (reason) => {
 
 require("dotenv").config({ path: paths.env, override: true });
 
-const { registerAIHandlers } = require("./ai");
-const { saveKeys, loadEsvKey, isConfigured } = require("./keystore");
-const { resetClient } = require("./ai/provider");
+const { saveKeys, loadEsvKey } = require("./keystore");
 const { initUpdater } = require("./updater");
 const telemetryBus = require("./telemetry/bus");
 const BetterSqlite3 = require("better-sqlite3");
@@ -783,6 +781,25 @@ function runMigrations() {
     db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '19')");
     version = 19;
   }
+
+  if (version < 20) {
+    // v20: ARI Phase 3 per-tab notebooks. Free-form pastor-typed notes,
+    // sermon-scoped, one column per workspace tab where AI used to live.
+    // Plain text. NULL is the empty state.
+    const sermonInfo = queryAll("PRAGMA table_info(sermons)");
+    const have = new Set(sermonInfo.map(r => r.name));
+    if (!have.has("notebook_study")) {
+      db.run("ALTER TABLE sermons ADD COLUMN notebook_study TEXT DEFAULT NULL");
+    }
+    if (!have.has("notebook_blueprint")) {
+      db.run("ALTER TABLE sermons ADD COLUMN notebook_blueprint TEXT DEFAULT NULL");
+    }
+    if (!have.has("notebook_manuscript")) {
+      db.run("ALTER TABLE sermons ADD COLUMN notebook_manuscript TEXT DEFAULT NULL");
+    }
+    db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '20')");
+    version = 20;
+  }
 }
 
 // Verify the live schema matches the SERMON_COLUMNS / SERIES_COLUMNS allowlists
@@ -933,7 +950,6 @@ function maybeWarnOneDrive() {
 }
 
 // ── IPC handlers ────────────────────────────────────────────────────────────
-registerAIHandlers(ipcMain);
 
 // BTI telemetry — renderer-side emits flow through here. The bus is in the
 // main process (filesystem + network); renderers post events via IPC.
@@ -1002,24 +1018,6 @@ function buildUpdate(fields, allowedColumns) {
 // contract clause on every rejection so the renderer-side ContractViolation
 // carries the same citation. Reads are routed through the same channel for
 // uniformity but bypass the validation switch.
-//
-// Proposal storage
-// ────────────────
-// `ai_proposal` mutations stage value in the in-memory `proposals` map keyed
-// by a server-generated proposalId. They are NEVER written to the DB at
-// proposal time — Mutation Contract #1: "User typing always wins by default."
-// Subsequent `ai_apply` mutations look up the proposal and commit. Proposals
-// expire after PROPOSAL_TTL_MS to bound the map.
-
-const proposals = new Map();
-const PROPOSAL_TTL_MS = 1000 * 60 * 60; // 1h
-
-function pruneExpiredProposals() {
-  const now = Date.now();
-  for (const [id, p] of proposals) {
-    if (p.expiresAt < now) proposals.delete(id);
-  }
-}
 
 let _legacyEvidenceCutoffCache = null;
 function getLegacyEvidenceCutoff() {
@@ -1519,83 +1517,6 @@ function validateAndCommit(op, payload) {
           [serialized, sermonId],
         );
         saveDb();
-        return success();
-      }
-
-      if (kind === MUTATION_KIND.AiProposal) {
-        // Process Contract #5: AI augments user evidence — reject when prior
-        // content is empty. Treat empty string, null, "[]", and "{}" as empty.
-        const prior = row[field];
-        const priorEmpty =
-          prior == null ||
-          (typeof prior === "string" &&
-            (prior.trim() === "" || prior === "[]" || prior === "{}"));
-        if (priorEmpty) {
-          return rejection(
-            "PROCESS_5_AI_NO_USER_EVIDENCE",
-            "Process #5",
-            "Process Contract #5 violation: AI augments, never substitutes — proposals require prior user evidence in the field.",
-          );
-        }
-        if (isStructured) {
-          if (typeof payload.value === "string") {
-            return rejection(
-              "STATE_5_STRUCTURED_FIELD_STRING",
-              "State #5",
-              `'${field}' is a structured field; pass a typed update shape.`,
-            );
-          }
-        } else if (typeof payload.value !== "string") {
-          return rejection(
-            "STATE_5_SIMPLE_FIELD_STRUCTURED",
-            "State #5",
-            `'${field}' is a simple field; value must be a string.`,
-          );
-        }
-        pruneExpiredProposals();
-        const proposalId = randomUUID();
-        proposals.set(proposalId, {
-          sermonId,
-          field,
-          value: payload.value,
-          isStructured,
-          expiresAt: Date.now() + PROPOSAL_TTL_MS,
-        });
-        return success({ proposalId });
-      }
-
-      if (kind === MUTATION_KIND.AiApply) {
-        pruneExpiredProposals();
-        const { proposalId } = payload;
-        if (!proposalId || !proposals.has(proposalId)) {
-          return rejection(
-            "MUTATION_1_AI_APPLY_WITHOUT_PROPOSAL",
-            "Mutation #1",
-            "Mutation Contract #1 violation: user typing wins; ai_apply requires a referenced proposalId from a prior ai_proposal.",
-          );
-        }
-        const p = proposals.get(proposalId);
-        if (p.sermonId !== sermonId || p.field !== field) {
-          return rejection(
-            "MUTATION_1_PROPOSAL_MISMATCH",
-            "Mutation #1",
-            "Mutation Contract #1 violation: proposalId references a different sermon/field than the apply call.",
-          );
-        }
-        let serialized;
-        if (p.isStructured) {
-          const r = applyStructuredUpdate(row, field, p.value);
-          if (r && typeof r === "object" && r.ok === false) return r;
-          serialized = r;
-        } else {
-          serialized = p.value;
-        }
-        db.run(
-          `UPDATE sermons SET ${field} = ?, updated_at = datetime('now') WHERE id = ?`,
-          [serialized, sermonId],
-        );
-        saveDb();
-        proposals.delete(proposalId);
         return success();
       }
 
@@ -2282,133 +2203,6 @@ ipcMain.handle("series-export-study-guide", async (_, seriesId) => {
   }
 });
 
-ipcMain.handle("sermon-export-pmb", async (_, { blocks, spine, title, passage, mps }) => {
-  try {
-    const { Document, Paragraph, TextRun, HeadingLevel } = require("docx");
-    const { Packer } = require("docx");
-
-    const children = [];
-
-    function divider() {
-      return new Paragraph({
-        spacing: { before: 200, after: 200 },
-        children: [new TextRun({ text: "————————————————————", color: "AAAAAA" })],
-      });
-    }
-
-    // Title block
-    if (title || passage) {
-      children.push(new Paragraph({
-        heading: HeadingLevel.HEADING_1,
-        spacing: { before: 0, after: 80 },
-        children: [new TextRun({ text: title || passage || "Preaching Blocks", bold: true })],
-      }));
-    }
-    if (passage && title) {
-      children.push(new Paragraph({
-        spacing: { after: 80 },
-        children: [new TextRun({ text: passage, color: "666666" })],
-      }));
-    }
-    if (mps) {
-      children.push(new Paragraph({
-        spacing: { after: 240 },
-        children: [new TextRun({ text: `MPS: ${mps}` })],
-      }));
-    }
-
-    // Spine
-    if (spine) {
-      children.push(new Paragraph({
-        spacing: { before: 0, after: 40 },
-        children: [new TextRun({ text: "SPINE", bold: true, allCaps: true, color: "888888", size: 32 })],
-      }));
-      children.push(new Paragraph({
-        spacing: { after: 320 },
-        children: [new TextRun({ text: spine, bold: true, size: 52 })],
-      }));
-    }
-
-    function bullet(text) {
-      return new Paragraph({
-        bullet: { level: 0 },
-        spacing: { after: 100 },
-        children: [new TextRun({ text })],
-      });
-    }
-
-    // Blocks
-    (blocks || []).forEach((block, i) => {
-      if (i > 0) children.push(divider());
-
-      // Block header: ID + movement
-      children.push(new Paragraph({
-        heading: HeadingLevel.HEADING_2,
-        spacing: { before: 160, after: 80 },
-        children: [
-          new TextRun({ text: `${block.id}  `, bold: true }),
-          new TextRun({ text: (block.movement || "").toUpperCase(), color: "888888", allCaps: true }),
-        ],
-      }));
-
-      // Outline point + scripture — orientation anchors, no label
-      if (block.outline_point) {
-        children.push(new Paragraph({
-          spacing: { after: 40 },
-          children: [new TextRun({ text: block.outline_point, bold: true })],
-        }));
-      }
-      if (block.scripture) {
-        children.push(new Paragraph({
-          spacing: { after: 120 },
-          children: [new TextRun({ text: block.scripture, color: "555555" })],
-        }));
-      }
-
-      // Trigger phrase — the ignition key
-      children.push(new Paragraph({
-        spacing: { before: 80, after: 160 },
-        children: [new TextRun({ text: block.trigger_phrase || "", bold: true, size: 56 })],
-      }));
-
-      // All supporting bullets — no labels, just scan order
-      children.push(bullet(block.core_claim || ""));
-      (block.memory_hooks || []).forEach(h => children.push(bullet(h)));
-      if (block.imagery) children.push(bullet(block.imagery));
-
-      // Transition out — plain line at the bottom, set apart
-      if (block.transition_out) {
-        children.push(new Paragraph({
-          spacing: { before: 120, after: 40 },
-          children: [new TextRun({ text: `→ ${block.transition_out}`, color: "555555" })],
-        }));
-      }
-    });
-
-    const doc = new Document({
-      styles: {
-        default: { document: { run: { size: 40 } } },
-      },
-      sections: [{ properties: {}, children }],
-    });
-
-    const exportDir = path.join(app.getPath("documents"), "SermonForge", "exports", "PreachingBlocks");
-    if (!fs.existsSync(exportDir)) fs.mkdirSync(exportDir, { recursive: true });
-
-    const safeTitle = (title || passage || "Sermon").replace(/[<>:"/\\|?*\n\r\t]/g, "—").trim();
-    const filepath = path.join(exportDir, `${safeTitle} — Preaching Blocks.docx`);
-
-    const buffer = await Packer.toBuffer(doc);
-    await fs.promises.writeFile(filepath, buffer);
-    shell.openPath(filepath);
-
-    return { success: true, filepath };
-  } catch (e) {
-    console.error("[sermon-export-pmb]", e);
-    return { success: false, error: e.message };
-  }
-});
-
 ipcMain.handle("sermon-export-manuscript", async (_, payload) => {
   try {
     const { Document, Paragraph, TextRun, HeadingLevel, AlignmentType } = require("docx");
@@ -2572,36 +2366,6 @@ ipcMain.handle("db-getSchemaVersion", () => {
 // flushDb result shape so the renderer can either dismiss the banner or keep it.
 ipcMain.handle("db-flush", async () => flushDb());
 
-// Pastor memory backup. Memory still lives in localStorage (per CORE.md — IPC
-// round-trip on every AI call is too expensive to move it server-side). This
-// is a write-through copy to a JSON file in userData so the pattern survives
-// localStorage wipes (Electron major version upgrades, manual cache clear,
-// migrate-to-new-machine). saveMemory in the renderer fires this fire-and-forget;
-// loadMemory falls back to db-restoreMemory when localStorage is empty.
-const MEMORY_BACKUP_PATH = path.join(app.getPath("userData"), "memory-backup.json");
-
-ipcMain.handle("db-backupMemory", async (_, json) => {
-  try {
-    if (typeof json !== "string") return { ok: false, error: "memory must be a JSON string" };
-    await fs.promises.writeFile(MEMORY_BACKUP_PATH, json, "utf8");
-    return { ok: true };
-  } catch (e) {
-    logError("[memory-backup] write failed", e);
-    return { ok: false, error: e.message };
-  }
-});
-
-ipcMain.handle("db-restoreMemory", async () => {
-  try {
-    if (!fs.existsSync(MEMORY_BACKUP_PATH)) return { ok: true, json: null };
-    const json = await fs.promises.readFile(MEMORY_BACKUP_PATH, "utf8");
-    return { ok: true, json };
-  } catch (e) {
-    logError("[memory-backup] read failed", e);
-    return { ok: false, error: e.message };
-  }
-});
-
 ipcMain.handle("app-get-version", () => {
   return { version: app.getVersion() };
 });
@@ -2632,19 +2396,20 @@ ipcMain.handle("app-get-startup-warning", () => {
   return w;
 });
 
-// ── API key setup ─────────────────────────────────────────────────────────────
+// ── First-run gate ────────────────────────────────────────────────────────────
+// Channel kept under its legacy name so existing renderer code continues to
+// resolve. ARI Phase 8 narrowed semantics: "configured" now means "user has
+// been through the one-time setup screen at least once" (signalled by the
+// presence of `bti_telemetry_enabled` in settings — written on submit).
 ipcMain.handle("app-get-key-status", () => {
-  return { configured: isConfigured() };
+  const row = queryOne("SELECT value FROM settings WHERE key = 'bti_telemetry_enabled'");
+  return { configured: Boolean(row) };
 });
 
 ipcMain.handle("app-save-api-key", (_, keys) => {
-  const { anthropic, esv } = keys || {};
-  if (typeof anthropic !== "string" || !anthropic.startsWith("sk-ant-") || anthropic.length < 20) {
-    return { success: false, error: "Invalid Claude API key format." };
-  }
+  const { esv } = keys || {};
   try {
-    saveKeys({ anthropic, esv });
-    resetClient();
+    saveKeys({ esv });
     return { success: true };
   } catch (e) {
     console.error("[app-save-api-key]", e.message);

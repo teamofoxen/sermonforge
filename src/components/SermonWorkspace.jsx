@@ -1,6 +1,4 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-// useRef is used for pendingMessageId — a stable counter so repeated identical
-// prompts each produce a distinct object reference and always trigger the effect.
 import { useDebounce } from "../utils/hooks";
 import { useTour } from "../contexts/TourContext";
 import {
@@ -11,58 +9,37 @@ import {
 } from "../core/spine";
 import { pickSermonColumns, STAGE, STAGE_SEQUENCE, STAGE_LABELS, ContractViolation } from "../core/contracts";
 import { buildStageEvidence, formatTabRejection } from "../utils/studyAdvancement";
-
-// SPRD Q1 spine-routing helpers (buildStageEvidence, formatTabRejection) live
-// in `src/utils/studyAdvancement.js` alongside the sub-phase / step variants
-// and SPRD Q3's `evaluateAdvance`. Stage tabs keep Q1's click-then-banner UX
-// (per the Q3 ruling: tabs are navigation, not commitment).
-import { updateMemory, extractOutlinePattern, extractPhrasePatterns } from "../utils/memory";
-import { abortInFlightForSermon } from "../utils/ai";
 import { autoResize } from "../utils";
 import DeleteButton from "./DeleteButton";
 import StudyTab from "./StudyTab";
 import OutlineTab from "./OutlineTab";
 import FrameTab from "./FrameTab";
 import ManuscriptTab from "./ManuscriptTab";
-import DeliveryTab from "./DeliveryTab";
-import AIPanel from "./AIPanel";
 import PassagePopup from "./PassagePopup";
 import SecondaryButton from "./primitives/SecondaryButton";
 import IconButton from "./primitives/IconButton";
 import BackButton from "./primitives/BackButton";
 import TextButton from "./primitives/TextButton";
 
-// Workspace tabs are Stage values from `src/core/contracts.ts` — single
-// source of truth. Pre-vocabulary-completion the keys were lowercase and
-// the second key was misnamed `"outline"` (the tab itself is the Blueprint
-// — `OutlineTab.jsx` is just the file that renders it). The tab keys now
-// match `STAGE.{Study,Blueprint,Manuscript,Delivery}` everywhere.
 const TABS = STAGE_SEQUENCE;
 const TAB_LABELS = STAGE_LABELS;
 
-// localStorage migration — pre-vocabulary-completion stored values were
-// lowercase ("study"/"outline"/"manuscript"/"delivery"). Map them to the
-// canonical Stage values at read time so existing sermons restore the
-// correct tab on next mount. STAGE.Frame is brand-new in SPRD C3 (no legacy
-// lowercase value collides), so it isn't in the map.
+// Pre-vocabulary-completion lowercase tab keys, plus "delivery" which is no
+// longer a renderable tab post-ARI — remapped to Manuscript (the terminal stage).
 const LEGACY_TAB_MAP = {
   study: STAGE.Study,
   outline: STAGE.Blueprint,
   manuscript: STAGE.Manuscript,
-  delivery: STAGE.Delivery,
+  delivery: STAGE.Manuscript,
 };
 
 
-export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpenSermon }) {
+export default function SermonWorkspace({ sermonId, onClose, onOpenSermon }) {
   const [sermon, setSermon] = useState(null);
   const [activeTab, setActiveTab] = useState(STAGE.Study);
   const [activeStep, setActiveStep] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [pendingMessage, setPendingMessage] = useState(null);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [studySummaries, setStudySummaries] = useState({});
   const [showPassage, setShowPassage] = useState(false);
   // Save visibility — Mutation Contract #3 lives in spine.persistMutation.
   // "Saving…" while in flight, "Saved" when at rest, "Save failed · Retry" on error.
@@ -87,7 +64,6 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpe
   // preserved for legacy data; their content surfaces as Phase 4 Field 3
   // legacy_notes on first open of a sermon under the new shape.
   const { active: tourActive, desiredUi } = useTour();
-  const pendingIdRef = useRef(0);
 
   // When the tour is active, align workspace state with the current stop's
   // declared prerequisites. Only writes when there's a real change so we don't
@@ -97,14 +73,8 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpe
     if (desiredUi.tab && desiredUi.tab !== activeTab) {
       setActiveTab(desiredUi.tab);
     }
-    if (typeof desiredUi.drawerOpen === "boolean" && desiredUi.drawerOpen !== drawerOpen) {
-      setDrawerOpen(desiredUi.drawerOpen);
-    }
-  }, [tourActive, desiredUi, activeTab, drawerOpen]);
-  // Mirrors sermon state synchronously so captureMemory never reads a stale closure.
+  }, [tourActive, desiredUi, activeTab]);
   const sermonRef = useRef(null);
-  // Last hash captured — prevents duplicate memory writes when content hasn't changed.
-  const lastCapturedHashRef = useRef(null);
 
   useEffect(() => {
     async function load() {
@@ -153,42 +123,6 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpe
     load();
   }, [sermonId]);
 
-  // Abort any in-flight AI calls tagged with the *previous* sermonId when
-  // the active sermon changes (and on unmount). Prevents a stale response
-  // from arriving and being applied to a different sermon — corruption that
-  // is otherwise silent and unrecoverable. See docs/PROPOSALS/ai-clarity-and-constraint.md
-  // Item A1.
-  useEffect(() => {
-    return () => abortInFlightForSermon(sermonId);
-  }, [sermonId]);
-
-  function captureMemory(s, { scanPhrases = false } = {}) {
-    if (!s) return;
-    const hash = `${s.mpt ?? ""}|${s.passage ?? ""}|${s.outline ?? ""}`;
-    if (hash === lastCapturedHashRef.current) return;
-    const partial = {};
-
-    const history = {};
-    if (s.mpt?.trim()) history.recentMPTs = [s.mpt.trim()];
-    if (s.passage?.trim()) history.recentPassages = [s.passage.trim()];
-    if (Object.keys(history).length > 0) partial.history = history;
-
-    const patterns = {};
-    const outlinePattern = extractOutlinePattern(s.outline);
-    if (outlinePattern) patterns.outlinePatterns = [outlinePattern];
-    // Phrase extraction is expensive on long manuscripts — only run on tab change,
-    // and only when the manuscript has enough content to yield a real signal.
-    if (scanPhrases && (s.manuscript?.length ?? 0) >= 300) {
-      const phrasePatterns = extractPhrasePatterns(s.manuscript);
-      if (phrasePatterns.length > 0) patterns.phrasePatterns = phrasePatterns.slice(0, 3);
-    }
-    if (Object.keys(patterns).length > 0) partial.patterns = patterns;
-
-    if (Object.keys(partial).length === 0) return;
-    updateMemory(partial);
-    lastCapturedHashRef.current = hash;
-  }
-
   const persistUpdate = useCallback(
     async () => {
       // sermonRef.current carries JOIN fields, position fields, and
@@ -198,7 +132,6 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpe
       const payload = pickSermonColumns(sermonRef.current);
       await persistMutation(setSaveState, async () => {
         await updateSermon(sermonId, payload);
-        captureMemory(sermonRef.current);
       });
     },
     [sermonId]
@@ -243,7 +176,6 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpe
       throw e;
     }
 
-    captureMemory(sermonRef.current, { scanPhrases: true });
     setActiveTab(tab);
     setActiveStep(null);
     localStorage.setItem(`sermonforge_sermon_tab_${sermonId}`, tab);
@@ -253,18 +185,6 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpe
   async function handleDelete() {
     await deleteSermon(sermonId);
     onClose();
-  }
-
-  function handleAI(prompt, systemPrompt, options = {}) {
-    if (options.openDrawer) setDrawerOpen(true);
-    pendingIdRef.current += 1;
-    setPendingMessage({
-      prompt,
-      systemPrompt,
-      step: activeStep || activeTab,
-      id: pendingIdRef.current,
-      persistColumn: options.persistColumn,
-    });
   }
 
   if (loading) {
@@ -326,17 +246,7 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpe
           />
           <div className="topbar-left">
             <div className="topbar-series">
-              {sermon.series_title && sermon.series_id && onOpenSeries ? (
-                <span
-                  onClick={() => onOpenSeries(sermon.series_id)}
-                  style={{ cursor: "pointer", color: "var(--gold)", textDecoration: "none" }}
-                  title="Back to series"
-                >
-                  {sermon.series_title}
-                </span>
-              ) : (
-                sermon.series_title && <span>{sermon.series_title}</span>
-              )}
+              {sermon.series_title && <span>{sermon.series_title}</span>}
               {/* Position-in-series chip + prev/next chevrons. State Contract #4:
                   parent context is first-class — the user can answer "which
                   sermon of how many am I on" without leaving the workspace. */}
@@ -431,14 +341,6 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpe
           <TextButton onClick={() => setShowHowItWorks(true)}>
             How this works
           </TextButton>
-          <SecondaryButton
-            size="sm"
-            data-tour-id="chat-with-ai-button"
-            onClick={() => setDrawerOpen(v => !v)}
-            style={{ fontSize: "13px", color: drawerOpen ? "var(--gold)" : "var(--ink-ghost)", borderColor: drawerOpen ? "var(--gold)" : undefined }}
-          >
-            Chat with AI
-          </SecondaryButton>
         </div>
       </div>
 
@@ -491,16 +393,13 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpe
             <StudyTab
               sermon={sermon}
               onUpdate={handleUpdate}
-              onAI={handleAI}
-              aiLoading={aiLoading}
               onStepChange={setActiveStep}
               onTabChange={handleTabChange}
-              onSummaryGenerated={(key, text) => setStudySummaries(prev => ({ ...prev, [key]: text }))}
               onMovement={({ from, to }) => setLastMovement({ from, to, at: Date.now() })}
             />
           )}
           {activeTab === STAGE.Blueprint && (
-            <OutlineTab sermon={sermon} onUpdate={handleUpdate} onTabChange={handleTabChange} studySummaries={studySummaries} />
+            <OutlineTab sermon={sermon} onUpdate={handleUpdate} onTabChange={handleTabChange} />
           )}
           {activeTab === STAGE.Frame && (
             <FrameTab sermon={sermon} onUpdate={handleUpdate} onTabChange={handleTabChange} />
@@ -509,35 +408,13 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSeries, onOpe
             <ManuscriptTab
               sermon={sermon}
               onUpdate={handleUpdate}
-              onAI={handleAI}
-              aiLoading={aiLoading}
-              onOpenDrawer={() => setDrawerOpen(true)}
-              onTabChange={handleTabChange}
             />
-          )}
-          {activeTab === STAGE.Delivery && (
-            <DeliveryTab sermon={sermon} onUpdate={handleUpdate} />
           )}
         </div>
 
       </div>
     </div>
 
-    {/* AI drawer — slides in from right, overlays content */}
-    <div className={`ai-drawer ${drawerOpen ? "open" : ""}`}>
-      <div className="ai-drawer-close-bar">
-        <IconButton aria-label="Close AI drawer" className="ai-drawer-close-btn" onClick={() => setDrawerOpen(false)}>✕</IconButton>
-      </div>
-      <AIPanel
-        sermon={sermon}
-        activeTab={activeTab}
-        activeStep={activeStep}
-        externalMessage={pendingMessage}
-        onLoadingChange={setAiLoading}
-        loading={aiLoading}
-        onUpdate={handleUpdate}
-      />
-    </div>
     {showHowItWorks && <SermonHowItWorksModal onClose={() => setShowHowItWorks(false)} />}
     <PassagePopup
       passage={sermon?.passage}
@@ -583,11 +460,10 @@ function SermonHowItWorksModal({ onClose }) {
         <p style={{
           fontSize: "13px", color: "var(--ink-ghost)",
           marginBottom: "24px", fontFamily: "var(--font-serif)",
-        }}>Each sermon moves through four stages from exegesis to delivery.</p>
+        }}>Each sermon moves through four stages from text to manuscript.</p>
         <div style={{ overflowX: "auto" }}>
           <svg viewBox="0 0 860 336" style={{ width: "100%", height: "auto", display: "block" }}>
 
-            {/* ── Stage boxes ─────────────────────────────────────────────────── */}
             <rect x="10" y="16" width="180" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
             <text x="100" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "var(--font-serif)", fontWeight: 600 }}>Study</text>
 
@@ -595,23 +471,20 @@ function SermonHowItWorksModal({ onClose }) {
             <text x="320" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "var(--font-serif)", fontWeight: 600 }}>Blueprint</text>
 
             <rect x="450" y="16" width="180" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
-            <text x="540" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "var(--font-serif)", fontWeight: 600 }}>Manuscript</text>
+            <text x="540" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "var(--font-serif)", fontWeight: 600 }}>Frame</text>
 
             <rect x="670" y="16" width="180" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
-            <text x="760" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "var(--font-serif)", fontWeight: 600 }}>Delivery</text>
+            <text x="760" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "var(--font-serif)", fontWeight: 600 }}>Manuscript</text>
 
-            {/* ── Between-stage arrows ────────────────────────────────────────── */}
             <text x="210" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-ghost)", fontSize: "14px" }}>→</text>
             <text x="430" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-ghost)", fontSize: "14px" }}>→</text>
             <text x="650" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-ghost)", fontSize: "14px" }}>→</text>
 
-            {/* ── Stage → first sub-item connectors ───────────────────────────── */}
             <line x1="100" y1="56" x2="100" y2="76" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
             <line x1="320" y1="56" x2="320" y2="76" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
             <line x1="540" y1="56" x2="540" y2="76" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
             <line x1="760" y1="56" x2="760" y2="76" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
 
-            {/* ── Study sub-items (7) ──────────────────────────────────────────── */}
             <rect x="10" y="76" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
             <text x="100" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Observe</text>
             <line x1="100" y1="104" x2="100" y2="112" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
@@ -639,33 +512,30 @@ function SermonHowItWorksModal({ onClose }) {
             <rect x="10" y="292" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
             <text x="100" y="306" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Functional Elements</text>
 
-            {/* ── Outline sub-items (1) ────────────────────────────────────────── */}
             <rect x="230" y="76" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
             <text x="320" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Outline Editor</text>
 
-            {/* ── Manuscript sub-items (2) ─────────────────────────────────────── */}
             <rect x="450" y="76" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="540" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Manuscript Editor</text>
+            <text x="540" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Introduction</text>
             <line x1="540" y1="104" x2="540" y2="112" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
 
             <rect x="450" y="112" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="540" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Tune-Up Engine</text>
+            <text x="540" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Conclusion</text>
 
-            {/* ── Delivery sub-items (4) ───────────────────────────────────────── */}
             <rect x="670" y="76" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="760" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Delivery Notes</text>
+            <text x="760" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Manuscript Editor</text>
             <line x1="760" y1="104" x2="760" y2="112" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
 
             <rect x="670" y="112" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="760" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Timing Notes</text>
+            <text x="760" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Manuscript Notebook</text>
             <line x1="760" y1="140" x2="760" y2="148" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
 
             <rect x="670" y="148" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="760" y="162" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Post-Sermon</text>
+            <text x="760" y="162" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Review Checklists</text>
             <line x1="760" y1="176" x2="760" y2="184" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
 
             <rect x="670" y="184" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="760" y="198" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Checklist</text>
+            <text x="760" y="198" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Export to Word</text>
 
           </svg>
         </div>

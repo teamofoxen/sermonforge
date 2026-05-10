@@ -1,11 +1,9 @@
 import { useState } from "react";
-import ReactMarkdown from "react-markdown";
-import { getOutline, getFunctionalElements, serializeOutline, serializeFunctionalElements, autoResize, parseManuscript, assembleManuscriptText } from "../utils";
-import { buildContext } from "../utils/contextBuilder";
+import { getOutline, getFunctionalElements, serializeOutline, serializeFunctionalElements, autoResize, parseManuscript } from "../utils";
 import { exportManuscript } from "../db/database";
-import PrimaryButton from "./primitives/PrimaryButton";
+import NotebookPanel from "./NotebookPanel";
+import ManuscriptReview from "./ManuscriptReview";
 import SecondaryButton from "./primitives/SecondaryButton";
-import { STAGE } from "../core/contracts";
 
 function countWords(sermon) {
   const ms = parseManuscript(sermon.manuscript);
@@ -23,65 +21,6 @@ function countWords(sermon) {
   ];
   return texts.filter(Boolean).join(" ").trim().split(/\s+/).filter(Boolean).length;
 }
-
-// ── System prompts ─────────────────────────────────────────────────────────────
-
-const FLOW_COACH_SYSTEM = `You are a sermon flow coach working through a fixed worklist. One step at a time.
-
-RULES:
-- Work only through the worklist provided in the prompt. Do not reorder, skip, or add steps.
-- One step per response. State which step you are on (e.g. "Step 2 of 5").
-- Be brief. 2–4 bullet points. No paragraphs.
-- Describe what the movement needs to accomplish for the listener — pacing, emotional register, logical flow, momentum. Be specific to this sermon.
-- Do NOT write any content. No sentences, no transitions, no wording suggestions. Direction only.
-- End every response with: "Ready for the next step?"
-- When the pastor signals readiness (any affirmative), move to the next step on the worklist.
-- If the pastor asks to go back to an earlier step, return to it and re-coach it. Then continue forward from there.
-- When all steps are done, say so briefly.
-- If the pastor asks a question mid-session, answer it briefly and return to the current step. Do not abandon the worklist.
-- Do not add steps, reframe the sequence, or summarize past steps unprompted.`;
-
-const EAR_CHECK_SYSTEM = `You are a sermon delivery analyst working through a self-generated worklist. One step at a time.
-
-FIRST RESPONSE — SCAN AND ANNOUNCE:
-Read the manuscript. Identify all issues across two categories:
-- Structural orphans: passages disconnected from structural logic (drifted sections, unanchored explanatory blocks)
-- Speakability flags: passages that will lose the room when heard aloud (sentence nesting, abstract noun density, verbal signposting) — cap at 5
-
-Produce a brief numbered worklist of every issue you found (one line each, location + issue type). Then immediately begin Step 1.
-
-RULES FOR ALL SUBSEQUENT STEPS:
-- One step per response. State which step you are on (e.g. "Step 1 of 6").
-- Be brief. 2–4 bullet points. No paragraphs.
-- For each issue: locate it, name what makes it a problem, give one direction for fixing it. No rewrites, no replacement language.
-- Theological precision is not a problem. Unintelligibility is.
-- End every response with: "Ready for the next step?"
-- When the pastor signals readiness, move to the next step.
-- If the pastor asks to go back to an earlier step, return to it. Then continue forward.
-- If the pastor asks a question mid-session, answer briefly and return to the current step.
-- When all steps are done, say so briefly.
-- Do not add steps or summarize past steps unprompted.`;
-
-const TUNE_UP_SYSTEM = `You are a sermon editor. Evaluate this sermon manuscript using the Sermon Tune-Up Engine. Constraints: preserve the author's voice; prefer minimal high-leverage edits; keep length change within ±10%; do not add new illustrations unless asked; do not add new theology unless gospel repair is required.
-
-PHASE 1 — SERMON SNAPSHOT (describe, do not fix):
-- State Title, Passage, MPT (explicit/inferred/missing), MPS (explicit/inferred/missing)
-- Give actual outline (3-6 bullets) of how the sermon moves
-- Tag major sections as E (Explanation), A (Application), I (Illustration)
-- Map redemptive logic: where Christ appears and his function (necessary/assistive/add-on)
-- Describe what the conclusion is doing
-
-PHASE 2 — ALIGNMENT MAP:
-For each category, mark ALIGNED/MISALIGNED/MISSING/OVERWEIGHTED with severity Minor/Moderate/Major and brief evidence:
-1. Text→Claim Chain: text governance (Governed/Launched/Drifted), MPT accuracy, MPS integrity, chain integrity
-2. Structural Alignment: does each point derive from text and serve MPS? Progression: Progressive/Flat/Fragmented
-3. Functional Balance: Explanation (Sufficient/Thin/Assumed), Application (gospel-rooted or behavior-driven), Illustration (clarifies or distracts)
-4. Redemptive Necessity: Is Christ structurally necessary or decorative? Could sermon work without Jesus?
-5. Conclusion Coherence: Summation (Explicit/Implied/Missing), Response grounded in Christ's work?
-Name 1-2 root causes. List Top 5 Fixes.
-
-PHASE 3 — PATCH PLAN:
-Bullet list of exact edits (what/where/why). Mark inline as [ADD: ...], [CUT: ...], [REPLACE: old → new], [MOVE: ... to ...].`;
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
@@ -123,58 +62,9 @@ function TransitionField({ label, value, onChange }) {
   );
 }
 
-function formatRelativeTime(date) {
-  const diff = Date.now() - date.getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  if (days < 30) return `${days}d ago`;
-  return date.toLocaleDateString();
-}
-
-function LastTuneUpPanel({ saved }) {
-  const [open, setOpen] = useState(false);
-  let parsed;
-  try { parsed = JSON.parse(saved); } catch { parsed = null; }
-  if (!parsed?.content) return null;
-
-  const ts = parsed.ts ? new Date(parsed.ts) : null;
-  const ago = ts ? formatRelativeTime(ts) : "";
-
-  return (
-    <div style={{ background: "var(--parchment-warm)", border: "1px solid var(--parchment-deep)", borderRadius: "var(--radius)", marginBottom: "12px" }}>
-      <div
-        onClick={() => setOpen(v => !v)}
-        style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", cursor: "pointer", userSelect: "none" }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <span style={{ fontFamily: "var(--font-serif)", fontSize: "10px", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-ghost)" }}>
-            Last Tune-Up
-          </span>
-          {ago && <span style={{ fontSize: "11px", color: "var(--ink-ghost)" }}>{ago}</span>}
-        </div>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
-          style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s ease", color: "var(--ink-ghost)" }}>
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
-      </div>
-      {open && (
-        <div style={{ padding: "12px 14px 14px", borderTop: "1px solid var(--parchment-deep)", fontSize: "13px", lineHeight: "1.6", color: "var(--ink-soft)" }}>
-          <div className="ai-markdown">
-            <ReactMarkdown>{parsed.content}</ReactMarkdown>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ── Main component ─────────────────────────────────────────────────────────────
 
-export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading, onOpenDrawer, onTabChange }) {
+export default function ManuscriptTab({ sermon, onUpdate }) {
   const ms = parseManuscript(sermon.manuscript);
   const outline = getOutline(sermon);
   const fes = getFunctionalElements(sermon);
@@ -227,38 +117,7 @@ export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading, onOpe
     onUpdate({ outline: serializeOutline(updated) });
   }
 
-  function runFlowCoach() {
-    const steps = ["Introduction"];
-    for (let i = 0; i < outline.length - 1; i++) {
-      steps.push(`Gap: "${outline[i].text}" → "${outline[i + 1].text}"`);
-    }
-    steps.push("Conclusion");
-    const worklist = steps.map((s, i) => `${i + 1}. ${s}`).join("\n");
-    const manuscript = assembleManuscriptText(sermon);
-    const context = buildContext({ sermon, step: "manuscript" });
-    const body = `Title: ${sermon.title || "Untitled"}\nPassage: ${sermon.passage || "unknown"}\nMPT: ${sermon.mpt || "(not set)"}\nMPS: ${sermon.mps || "(not set)"}\n\nManuscript:\n\n${manuscript}\n\nWorklist (${steps.length} steps):\n${worklist}\n\nBegin with Step 1.`;
-    const prompt = context ? `CONTEXT:\n${context}\n\n${body}` : body;
-    onOpenDrawer?.();
-    onAI(prompt, FLOW_COACH_SYSTEM);
-  }
-
-  function runEarCheck() {
-    const manuscript = assembleManuscriptText(sermon);
-    const context = buildContext({ sermon, step: "manuscript" });
-    const body = `Title: ${sermon.title || "Untitled"}\nPassage: ${sermon.passage || "unknown"}\nMPT: ${sermon.mpt || "(not set)"}\nMPS: ${sermon.mps || "(not set)"}\n\nManuscript:\n\n${manuscript}`;
-    const prompt = context ? `CONTEXT:\n${context}\n\n${body}` : body;
-    onOpenDrawer?.();
-    onAI(prompt, EAR_CHECK_SYSTEM);
-  }
-
-  function runTuneUp() {
-    const manuscript = assembleManuscriptText(sermon);
-    const context = buildContext({ sermon, step: "manuscript" });
-    const body = `Title: ${sermon.title || "Untitled"}\nPassage: ${sermon.passage || "unknown"}\nMPT: ${sermon.mpt || "(not set)"}\nMPS: ${sermon.mps || "(not set)"}\n\nManuscript:\n\n${manuscript}`;
-    const prompt = context ? `CONTEXT:\n${context}\n\n${body}` : body;
-    onOpenDrawer?.();
-    onAI(prompt, TUNE_UP_SYSTEM, { persistColumn: "last_tune_up" });
-  }
+  const [openReview, setOpenReview] = useState(null);
 
   const words = countWords(sermon);
   const minutes = Math.round(words / 130);
@@ -285,41 +144,11 @@ export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading, onOpe
   return (
     <div>
       <div style={{ marginBottom: "20px", fontSize: "13px", color: "var(--ink-ghost)", fontStyle: "italic" }}>
-        Expand the outline into full prose. Use the AI tools above to check flow and speakability, then run the Final Tune-Up before moving to Delivery.
+        Expand the outline into full prose.
       </div>
       {/* Toolbar */}
       <div className="manuscript-toolbar">
         <div className="word-count">{words.toLocaleString()} words · ~{minutes} min</div>
-        <SecondaryButton
-          size="sm"
-          data-tour-id="flow-coach-button"
-          className="has-tooltip"
-          data-tooltip="A step-by-step coaching session that walks through what each movement needs to accomplish — intro, transitions, conclusion. Coaches direction only, one step at a time."
-          onClick={runFlowCoach}
-          disabled={aiLoading}
-        >
-          Flow Coach
-        </SecondaryButton>
-        <SecondaryButton
-          size="sm"
-          data-tour-id="ear-check-button"
-          className="has-tooltip"
-          data-tooltip="Scans your manuscript for passages that will lose listeners when heard aloud. Steps through each issue one at a time with a diagnosis and direction."
-          onClick={runEarCheck}
-          disabled={aiLoading || !hasContent}
-        >
-          Ear Check
-        </SecondaryButton>
-        <PrimaryButton
-          size="sm"
-          data-tour-id="tune-up-button"
-          className="has-tooltip"
-          data-tooltip="A full editorial evaluation covering structure, text alignment, functional balance, and redemptive logic. Produces a Sermon Snapshot, Alignment Map, and Patch Plan."
-          onClick={runTuneUp}
-          disabled={aiLoading || !hasContent}
-        >
-          {aiLoading ? "Thinking…" : "Final Tune-Up"}
-        </PrimaryButton>
         <SecondaryButton
           size="sm"
           className="has-tooltip"
@@ -335,8 +164,6 @@ export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading, onOpe
           Export failed: {exportError}
         </div>
       )}
-
-      {sermon.last_tune_up && <LastTuneUpPanel saved={sermon.last_tune_up} />}
 
       {/* Introduction */}
       <div id="ms-section-intro" style={sectionCard}>
@@ -435,11 +262,18 @@ export default function ManuscriptTab({ sermon, onUpdate, onAI, aiLoading, onOpe
         />
       </div>
 
-      <div className="step-advance">
-        <PrimaryButton size="sm" onClick={() => onTabChange?.(STAGE.Delivery)}>
-          Continue to Delivery →
-        </PrimaryButton>
-      </div>
+      <ManuscriptReview
+        sermon={sermon}
+        openReview={openReview}
+        onToggle={setOpenReview}
+      />
+
+      <NotebookPanel
+        value={sermon.notebook_manuscript}
+        onChange={(value) => onUpdate({ notebook_manuscript: value })}
+        label="Manuscript Notebook"
+        placeholder="Free-form notes for delivery — pacing marks, lines to land hard, sections to slow down on."
+      />
 
     </div>
   );

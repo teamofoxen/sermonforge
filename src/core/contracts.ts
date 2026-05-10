@@ -58,8 +58,13 @@ export const STAGE = {
   Delivery: "Delivery",
 } as const satisfies Record<Stage, Stage>;
 
+// ARI Phase 7 — "Delivery" removed from the visible tab sequence (the
+// Delivery tab UI is gone). The Stage type still admits "Delivery" so legacy
+// data with `current_stage = "Delivery"` doesn't blow up the contract; it
+// just doesn't render as a tab. Manuscript is now the terminal sermon-prep
+// stage, with Export to Word as the terminal action.
 export const STAGE_SEQUENCE: readonly Stage[] = Object.freeze([
-  "Study", "Blueprint", "Frame", "Manuscript", "Delivery",
+  "Study", "Blueprint", "Frame", "Manuscript",
 ]);
 
 export const STAGE_LABELS: Readonly<Record<Stage, string>> = Object.freeze({
@@ -138,12 +143,14 @@ export const SERIES_STATUS_LABELS: Readonly<Record<SeriesStatus, string>> = Obje
 });
 
 // ── Mutation Contract — kinds of state change ────────────────────────────────
-export type MutationKind = "user_input" | "ai_proposal" | "ai_apply";
+// ARI Phase 9 — collapsed to `user_input` only. The `ai_proposal` and
+// `ai_apply` kinds were the contractual home for AI mutations through the
+// proposal-then-apply cycle; with AI removed (Phases 1–8), the only kind
+// that can flow through the spine is direct user input.
+export type MutationKind = "user_input";
 
 export const MUTATION_KIND = {
   UserInput: "user_input",
-  AiProposal: "ai_proposal",
-  AiApply: "ai_apply",
 } as const satisfies Record<string, MutationKind>;
 
 // ── Surface Contract #4 — top-level view routes ──────────────────────────────
@@ -295,6 +302,10 @@ export const SERMON_COLUMNS: ReadonlySet<string> = Object.freeze(new Set([
   // tighten). Flat `mpt` and `mps` columns above are auto-synced from the
   // tighten answers; downstream readers keep using the flat columns.
   "main_point_pair",
+  // v20 — ARI Phase 3 per-tab notebooks (2026-05-09). Free-form pastor-typed
+  // notes, sermon-scoped, one column per workspace tab where AI used to
+  // live. Plain text; replaces the AI Panel as the docked thinking surface.
+  "notebook_study", "notebook_blueprint", "notebook_manuscript",
 ])) as ReadonlySet<string>;
 
 export const SERIES_COLUMNS: ReadonlySet<string> = Object.freeze(new Set([

@@ -1,5 +1,7 @@
 # Beta Testing Initiative (BTI) — Charter
 
+> **Stale notice (ARI Phase 10, 2026-05-09):** This charter was written when SermonForge had AI surfaces. AI was removed in ARI; the BTI feedback flag, telemetry bus, and tester roster mechanics survive, but every reference below to AI accept-rate, AI surface mounts, AI proposals, and the AI Panel is historical. Treat as archival until BTI is re-scoped for a no-AI product.
+
 **Status:** Scoping. No build work has begun. No testers have been recruited. The full BTI document accumulates as the program runs; this charter is the starting frame.
 **Audience:** The lone developer of SermonForge, who is also a pastor and the pastor-user. Written in plain language, no engineering vocabulary required.
 **Date drafted:** 2026-05-01.
