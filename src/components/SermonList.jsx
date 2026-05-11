@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { getAllSermons, deleteSermon, updateSermon } from "../core/spine";
 import { searchSermons } from "../db/database";
 import { formatDate } from "../utils";
+import { hintFromMatchedColumn } from "../utils/searchHints";
 import NewSermonModal from "./NewSermonModal";
 import DeleteButton from "./DeleteButton";
 import SearchResultSnippet from "./SearchResultSnippet";
@@ -95,7 +96,7 @@ export default function SermonList({ onOpenSermon }) {
               <div
                 key={sermon.id}
                 className="sermon-card"
-                onClick={() => onOpenSermon(sermon.id)}
+                onClick={() => onOpenSermon(sermon.id, hintFromMatchedColumn(sermon.matchedColumn))}
               >
                 <div className="sermon-card-header">
                   <div className="sermon-card-title">{sermon.title}</div>

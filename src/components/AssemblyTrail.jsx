@@ -161,6 +161,8 @@ export default function AssemblyTrail({
   jumpToStudy,
   onUpdate,
   onExit,
+  initialNotebookOpen,
+  bypassStageOverview,
   seriesTitle, seriesPosition, seriesTotal, onOpenPrev, onOpenNext,
 }) {
   const viewport = useViewportSize();
@@ -168,7 +170,7 @@ export default function AssemblyTrail({
   const [passageOpen, setPassageOpen] = useState(false);
   const [dismissedOverviews, setDismissedOverviews] = useState(() => new Set());
   const [stageOverviewSeen, markStageOverviewSeen] = useStageOverviewSeen("assembly");
-  const notebook = useNotebookToggle();
+  const notebook = useNotebookToggle({ initialOpen: !!initialNotebookOpen });
   const map = useTrailMapToggle();
 
   // Active field within the current sub-phase. For Anchor + Frame, this is
@@ -437,7 +439,9 @@ export default function AssemblyTrail({
   // mount of Assembly in a session so the pastor reads the framing before
   // walking the trail. `useStageOverviewSeen` persists in sessionStorage,
   // so reloads stay quiet but a fresh app boot re-fires the framing.
-  if (!stageOverviewSeen) {
+  // Exception: when the pastor arrived via a search-result click,
+  // skip the overview — they came for the specific match.
+  if (!stageOverviewSeen && !bypassStageOverview) {
     const readSynth = (col) => {
       try {
         const data = parseStructuredField(sermon?.[col]);

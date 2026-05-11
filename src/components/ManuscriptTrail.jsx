@@ -40,12 +40,12 @@ import { getOutline } from "../utils";
 import "./studyTrail.css";
 
 export default function ManuscriptTrail({
-  sermon, onUpdate, onClose,
+  sermon, onUpdate, onClose, navHint,
   seriesTitle, seriesPosition, seriesTotal, onOpenPrev, onOpenNext,
 }) {
   const [passageOpen, setPassageOpen] = useState(false);
   const [stageOverviewSeen, markStageOverviewSeen] = useStageOverviewSeen("manuscript");
-  const notebook = useNotebookToggle();
+  const notebook = useNotebookToggle({ initialOpen: !!navHint?.openNotebook });
   const map = useTrailMapToggle();
 
   // Cmd/Ctrl+. opens the passage popup from the writing room (the
@@ -65,7 +65,10 @@ export default function ManuscriptTrail({
   // in a session. The carried-forward list reads back the four Assembly
   // outcomes (MPP + Outline + Body + Frame) so the pastor sees the whole
   // sermon-in-progress before they settle in to write.
-  if (!stageOverviewSeen) {
+  //
+  // Exception: when the pastor arrived via a search-result click, skip
+  // the overview — they came for the specific match, not a framing.
+  if (!stageOverviewSeen && !navHint) {
     const mpt = sermon?.mpt || "";
     const mps = sermon?.mps || "";
     const outline = (() => { try { return getOutline(sermon) || []; } catch { return []; } })();

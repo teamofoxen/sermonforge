@@ -36,7 +36,7 @@ const LEGACY_TAB_MAP = {
 };
 
 
-export default function SermonWorkspace({ sermonId, onClose, onOpenSermon }) {
+export default function SermonWorkspace({ sermonId, onClose, onOpenSermon, navHint }) {
   const [sermon, setSermon] = useState(null);
   const [activeTab, setActiveTab] = useState(STAGE.Study);
   const [activeStep, setActiveStep] = useState(null);
@@ -126,8 +126,13 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSermon }) {
         // writes via transitionState on every tab change. Tour sermons
         // reseed to STAGE.Study on every load (DELETE+INSERT), so they
         // always land at the start of the trail. Regular sermons resume
-        // to wherever the pastor was last.
-        if (data?.current_stage) {
+        // to wherever the pastor was last. A navHint from a search-
+        // result click overrides this — the pastor wants to land on the
+        // surface where the match was found.
+        const hintedStage = navHint?.stage && TABS.includes(navHint.stage) ? navHint.stage : null;
+        if (hintedStage) {
+          setActiveTab(hintedStage);
+        } else if (data?.current_stage) {
           const seededTab = LEGACY_TAB_MAP[data.current_stage] || data.current_stage;
           if (TABS.includes(seededTab)) setActiveTab(seededTab);
         }
@@ -432,6 +437,10 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSermon }) {
                   onOpenNext: idx < siblingIds.length - 1 && onOpenSermon ? () => onOpenSermon(siblingIds[idx + 1]) : undefined,
                 }
               : {};
+            // Forward the search-driven navHint to whichever tab matches
+            // its `stage` field. Each tab consumes the subPhase + openNotebook
+            // hints on its initial mount; subsequent navigation ignores them.
+            const tabHint = navHint?.stage === activeTab ? navHint : null;
             if (activeTab === STAGE.Study) {
               return (
                 <StudyTab
@@ -440,6 +449,7 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSermon }) {
                   onTabChange={handleTabChange}
                   onMovement={({ from, to }) => setLastMovement({ from, to, at: Date.now() })}
                   onClose={onClose}
+                  navHint={tabHint}
                   {...seriesProps}
                 />
               );
@@ -452,6 +462,7 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSermon }) {
                   onTabChange={handleTabChange}
                   onMovement={({ from, to }) => setLastMovement({ from, to, at: Date.now() })}
                   onClose={onClose}
+                  navHint={tabHint}
                   {...seriesProps}
                 />
               );
@@ -462,6 +473,7 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSermon }) {
                   sermon={sermon}
                   onUpdate={handleUpdate}
                   onClose={onClose}
+                  navHint={tabHint}
                   {...seriesProps}
                 />
               );

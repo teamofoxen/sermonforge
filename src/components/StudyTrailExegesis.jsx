@@ -196,6 +196,7 @@ export default function StudyTrailExegesis({
   subPhaseSufficiency,
   onUpdate,
   onExit,
+  initialNotebookOpen,
   seriesTitle, seriesPosition, seriesTotal, onOpenPrev, onOpenNext,
 }) {
   const viewport = useViewportSize();
@@ -224,7 +225,7 @@ export default function StudyTrailExegesis({
   // existing PassagePopup as a modal overlay so the pastor can read the
   // text without leaving the clearing.
   const [passageOpen, setPassageOpen] = useState(false);
-  const notebook = useNotebookToggle();
+  const notebook = useNotebookToggle({ initialOpen: !!initialNotebookOpen });
   const map = useTrailMapToggle();
   const dismissOverview = (fieldKey) => {
     setDismissedOverviews((prev) => {

@@ -27,16 +27,22 @@ import {
 } from "../utils/studyAdvancement";
 
 export default function AssemblyTab({
-  sermon, onUpdate, onTabChange, onMovement, onClose,
+  sermon, onUpdate, onTabChange, onMovement, onClose, navHint,
   seriesTitle, seriesPosition, seriesTotal, onOpenPrev, onOpenNext,
 }) {
   const { active: tourActive, desiredUi } = useTour();
   // Initial sub-phase derives from the DB column `last_assembly_subphase`,
   // populated by spine.transitionState on every Assembly sub-phase movement.
-  // Tour sermons reseed this to "Anchor" on every load.
-  const [activeSubPhase, setActiveSubPhase] = useState(
-    () => subPhaseToIndex(sermon.last_assembly_subphase, STAGE.Assembly),
-  );
+  // Tour sermons reseed this to "Anchor" on every load. A search-driven
+  // navHint overrides this when the pastor clicked a result that points
+  // at a specific sub-phase.
+  const [activeSubPhase, setActiveSubPhase] = useState(() => {
+    if (navHint?.subPhase) {
+      const idx = subPhaseToIndex(navHint.subPhase, STAGE.Assembly);
+      if (idx > 0) return idx;
+    }
+    return subPhaseToIndex(sermon.last_assembly_subphase, STAGE.Assembly);
+  });
   const [advanceError, setAdvanceError] = useState(null);
 
   useEffect(() => {
@@ -242,6 +248,8 @@ export default function AssemblyTab({
       jumpToStudy={jumpToStudy}
       onUpdate={onUpdate}
       onExit={onClose}
+      initialNotebookOpen={!!navHint?.openNotebook}
+      bypassStageOverview={!!navHint}
       seriesTitle={seriesTitle}
       seriesPosition={seriesPosition}
       seriesTotal={seriesTotal}

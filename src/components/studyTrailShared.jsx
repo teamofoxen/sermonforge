@@ -333,8 +333,8 @@ export function NotebookDrawer({ open, onClose, label, value, onChange, placehol
 // wires identically. Cmd/Ctrl+N flips it; Esc closes when open and the
 // trail's modalOpen flag tells the existing useTrailKeyboard to defer
 // the exit shortcut while the drawer holds focus.
-export function useNotebookToggle() {
-  const [open, setOpen] = useState(false);
+export function useNotebookToggle({ initialOpen = false } = {}) {
+  const [open, setOpen] = useState(!!initialOpen);
   useEffect(() => {
     const onKey = (e) => {
       const mod = e.metaKey || e.ctrlKey;

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { getAllSermons, deleteSermon } from "../core/spine";
 import { exportManuscript, searchSermons } from "../db/database";
 import { formatDate, parseManuscript, getOutline, getFunctionalElements } from "../utils";
+import { hintFromMatchedColumn } from "../utils/searchHints";
 import DeleteButton from "./DeleteButton";
 import InlineError from "./InlineError";
 import SearchResultSnippet from "./SearchResultSnippet";
@@ -142,7 +143,7 @@ export default function CompletedSermons({ onOpenSermon }) {
               <div
                 key={sermon.id}
                 className="sermon-card"
-                onClick={() => onOpenSermon(sermon.id)}
+                onClick={() => onOpenSermon(sermon.id, hintFromMatchedColumn(sermon.matchedColumn))}
               >
                 <div className="sermon-card-header">
                   <div className="sermon-card-title">{sermon.title}</div>

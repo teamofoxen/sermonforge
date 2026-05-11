@@ -118,15 +118,22 @@ export default function App() {
 
   const [currentView, setCurrentView] = useState(VIEW.Dashboard);
   const [openSermonId, setOpenSermonId] = useState(null);
+  // Optional navigation hint from a search result — { stage?, subPhase?,
+  // openNotebook? }. Consumed once by SermonWorkspace on the next mount,
+  // then cleared. Plain object instead of a context to keep the flow
+  // explicit at every hop.
+  const [openSermonHint, setOpenSermonHint] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  const openSermon = useCallback((id) => {
+  const openSermon = useCallback((id, hint = null) => {
     setOpenSermonId(id);
+    setOpenSermonHint(hint);
     setCurrentView(VIEW.Workspace);
   }, []);
 
   const closeWorkspace = useCallback(() => {
     setOpenSermonId(null);
+    setOpenSermonHint(null);
     setRefreshKey(k => k + 1);
     setCurrentView(VIEW.Dashboard);
   }, []);
@@ -243,6 +250,7 @@ export default function App() {
             sermonId={openSermonId}
             onClose={closeWorkspace}
             onOpenSermon={openSermon}
+            navHint={openSermonHint}
           />
         )}
         </Suspense>

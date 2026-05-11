@@ -27,7 +27,7 @@ import {
 } from "../utils/studyAdvancement";
 
 export default function StudyTab({
-  sermon, onUpdate, onTabChange, onMovement, onClose,
+  sermon, onUpdate, onTabChange, onMovement, onClose, navHint,
   seriesTitle, seriesPosition, seriesTotal, onOpenPrev, onOpenNext,
 }) {
   const { active: tourActive, desiredUi } = useTour();
@@ -36,9 +36,16 @@ export default function StudyTab({
   // Tour sermons reseed this to "Observe" on every load, so re-opens
   // always land at the start of the trail. Regular sermons resume to
   // wherever the pastor was last in Study.
-  const [activeSubPhase, setActiveSubPhase] = useState(
-    () => subPhaseToIndex(sermon.last_study_subphase, STAGE.Study),
-  );
+  const [activeSubPhase, setActiveSubPhase] = useState(() => {
+    // A search-driven navHint overrides the DB-stored last position when
+    // the pastor clicked through to a specific sub-phase match. Otherwise
+    // resume where they left off.
+    if (navHint?.subPhase) {
+      const idx = subPhaseToIndex(navHint.subPhase, STAGE.Study);
+      if (idx > 0) return idx;
+    }
+    return subPhaseToIndex(sermon.last_study_subphase, STAGE.Study);
+  });
   const [advanceError, setAdvanceError] = useState(null);
   const [currentActiveFieldKey, setCurrentActiveFieldKey] = useState(null);
 
@@ -197,6 +204,7 @@ export default function StudyTab({
       subPhaseSufficiency={subPhaseSufficiency}
       onUpdate={onUpdate}
       onExit={onClose}
+      initialNotebookOpen={!!navHint?.openNotebook}
       seriesTitle={seriesTitle}
       seriesPosition={seriesPosition}
       seriesTotal={seriesTotal}

@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-05-11 — Search-driven navigation: click a hit, land on the right surface
+
+- New `src/utils/searchHints.js` maps each search-result `matchedColumn` to a `{ stage?, subPhase?, openNotebook? }` hint. A notebook match opens the workspace at that stage with the drawer pre-opened; a sub-phase match (Observe / Interpret / Anchor / Frame, etc.) lands at that sub-phase; a Manuscript-bucket match lands in the writing room.
+- Hint plumbed through the existing open-sermon flow: `SermonList` + `CompletedSermons` compute the hint per result, `App.jsx`'s `openSermon(id, hint)` forwards it to `SermonWorkspace`, which seeds `activeTab` from the hint (overriding `current_stage`) and forwards a per-tab `navHint` to `StudyTab` / `AssemblyTab` / `ManuscriptTrail`. The notebook drawer's `useNotebookToggle` now accepts an `initialOpen` option.
+- Stage-overview clearings (DW12 — "Entering Assembly" / "Entering the Writing Room") are bypassed when the pastor arrived from a search-result click. They came for the match, not the framing.
+- 839/839 vitest green; preflight + drift-check PASS; preview verified the navigation path mounts.
+
+---
+
 ## 2026-05-11 — Sermon search UI: list views wired to the new full-content search
 
 - `SermonList.jsx` and `CompletedSermons.jsx` now call the v22 `searchSermons` IPC instead of filtering client-side on title / passage / series only. A 200ms debounce keeps the IPC traffic sane during typing; each view still constrains results to its lifecycle scope (`in_progress` for the active list, `complete` for the completed view) so the search doesn't bleed across surfaces.
