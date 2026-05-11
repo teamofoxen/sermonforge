@@ -15,7 +15,7 @@
  */
 @keyframes tw-trail-handoff {
   from { opacity: 0; transform: translateX(48px); }
-  to   { opacity: 1; transform: translateX(0); }
+  to   { opacity: 1; transform: none; }
 }
 .tw-shell {
   position: fixed;
@@ -746,7 +746,7 @@
  */
 .tw-shell .tw-clearing-stage-pause {
   text-align: center;
-  width: min(880px, 92vw);
+  width: min(880px, calc(100vw - 400px - 64px));
 }
 .tw-shell .tw-clearing-stage-pause .tw-clearing-actions {
   justify-content: center;
@@ -879,7 +879,7 @@
  */
 .tw-shell .tw-clearing-stage-overview {
   text-align: left;
-  width: min(820px, 92vw);
+  width: min(820px, calc(100vw - 400px - 64px));
 }
 .tw-shell .tw-clearing-stage-overview .tw-stage-marker {
   margin-left: 0;
@@ -1032,13 +1032,6 @@
 .tw-shell .tw-notebook-drawer-input::placeholder {
   color: var(--ink-ghost);
   font-style: italic;
-}
-
-/* Writing-room notebook drawer slides over the right edge instead of
- * clearing the scripture column, because the writing room's body
- * already uses the central reading column. */
-.tw-shell-writing-room .tw-notebook-drawer {
-  right: 400px;
 }
 
 /* ── Workspace Trail Map (WTC DW11) ──────────────────────────────────── *
@@ -1287,9 +1280,6 @@
  * `.tw-shell` already; nothing extra needed here. */
 
 /* ── Workshop clearing (Outline + Equip sub-phases) ───────────────────── */
-.tw-shell .tw-clearing-workshop {
-  max-width: 900px;
-}
 .tw-shell .tw-workshop-reference {
   background: color-mix(in srgb, var(--parchment-warm) 60%, transparent);
   border-left: 2px solid var(--gold);

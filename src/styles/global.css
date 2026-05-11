@@ -2022,7 +2022,7 @@ button {
   top: 56px;
   width: 360px;
   max-height: calc(100vh - 76px);
-  z-index: 500;
+  z-index: 1050;
   background: var(--white);
   border: 1px solid var(--parchment-deep);
   border-radius: var(--radius-lg);

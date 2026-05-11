@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-11 — Fix trail clearings overflowing at 1200px + hidden passage popup
+
+- Stage-boundary pause and stage-overview clearings now use scripture-aware widths (`calc(100vw - 400px - 64px)`) so they fit at 1200px instead of overflowing 40px and 10px each side respectively into the scripture column and off-screen.
+- Passage popup z-index raised to 1050 so it renders above the trail shell instead of hidden beneath it when opened from a trail's PASSAGE chip.
+- Removed dead `.tw-clearing-workshop max-width: 900px` (always overridden by the smaller base width).
+- Removed redundant `.tw-shell-writing-room .tw-notebook-drawer` override + its stale comment.
+- `tw-trail-handoff` keyframe ends at `transform: none` so the shell no longer holds a residual transform that would create a containing block for fixed descendants.
+
+---
+
 ## 2026-05-11 — WTC charter: pre-WTC rollback note
 
 - Added a rollback callout to `workspace-trail-charter.md` recording the pre-WTC SHA (`348e438` — "Post-ARI doc-drift sweep", parent of `3090d20` "Trail experiment") and the `git checkout -b pre-wtc-restore 348e438` branch command.
