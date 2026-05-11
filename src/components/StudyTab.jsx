@@ -21,6 +21,7 @@ import ScripturePanel from "./ScripturePanel";
 import OutlineBuilder from "./OutlineBuilder";
 import NotebookPanel from "./NotebookPanel";
 import FeedbackFlag from "./FeedbackFlag";
+import StudyTrailExegesis from "./StudyTrailExegesis";
 import { MAIN_POINT_PAIR_FIELDS } from "../utils/sadiAnchorFields";
 import PrimaryButton from "./primitives/PrimaryButton";
 import { STAGE, STEP, ContractViolation } from "../core/contracts";
@@ -373,6 +374,12 @@ export default function StudyTab({ sermon, onUpdate, onStepChange, onTabChange, 
   // has already accepted the move, so dismissing it never affects spine.
   const [pausePoint, setPausePoint] = useState(null);
 
+  // D20 (worktree experiment) — trail-suppression state. The trail's × /
+  // Esc affordance flips this true, unmounting the takeover so the legacy
+  // three-column shell can render. A "Trail mode →" affordance in that
+  // shell flips it back. Local — refresh resets to false (trail re-mounts).
+  const [trailSuppressed, setTrailSuppressed] = useState(false);
+
   const funcData = getFunctionalElements(sermon);
 
   const outline = getOutline(sermon);
@@ -637,11 +644,65 @@ export default function StudyTab({ sermon, onUpdate, onStepChange, onTabChange, 
     !tourActive &&
     !takeoverOverride;
 
+  // Worktree experiment — Step 1 takes over the screen with the switchback
+  // trail UI. The Implications → Step 2 transition pause-point is also
+  // hosted here so the "walk on" beat lands in the same surface that
+  // produced the Implications Synthesis.
+  const showTrail =
+    (activeStep === 1 ||
+      (pausePoint && pausePoint.nextKey === "step_2")) &&
+    !trailSuppressed;
+
+  if (showTrail) {
+    return (
+      <StudyTrailExegesis
+        sermon={sermon}
+        activeSubPhase={activeSubPhase}
+        currentActiveFieldKey={currentActiveFieldKey}
+        setCurrentActiveFieldKey={setCurrentActiveFieldKey}
+        pausePoint={pausePoint}
+        setPausePoint={setPausePoint}
+        obsData={obsData}
+        intData={intData}
+        redData={redData}
+        impData={impData}
+        updateStructured={updateStructured}
+        toggleStructuredNA={toggleStructuredNA}
+        advanceSubPhase={advanceSubPhase}
+        jumpToSubPhase={jumpToSubPhase}
+        subPhaseSufficiency={subPhaseSufficiency}
+        onExit={() => setTrailSuppressed(true)}
+      />
+    );
+  }
+
   return (
     <div className="study-tab-shell">
       <div style={{ position: "relative" }}>
         <StudyStepStrip activeStep={activeStep} onStepChange={jumpToStep} />
-        <div style={{ position: "absolute", top: "8px", right: "10px" }}>
+        <div style={{ position: "absolute", top: "8px", right: "10px", display: "flex", gap: "12px", alignItems: "center" }}>
+          {trailSuppressed && activeStep === 1 && (
+            // eslint-disable-next-line sermonforge/no-raw-button
+            <button
+              type="button"
+              onClick={() => setTrailSuppressed(false)}
+              title="Re-enter switchback trail (worktree experiment)"
+              style={{
+                background: "transparent",
+                border: "1px solid rgba(212, 160, 23, 0.4)",
+                borderRadius: "2px",
+                padding: "6px 12px",
+                fontFamily: "'JetBrains Mono', ui-monospace, monospace",
+                fontSize: "10px",
+                letterSpacing: "0.18em",
+                color: "var(--gold)",
+                cursor: "pointer",
+                textTransform: "uppercase",
+              }}
+            >
+              Trail mode →
+            </button>
+          )}
           <FeedbackFlag surface="study-tab" sermonId={sermon?.id ?? null} step={activeStep ?? null} />
         </div>
       </div>

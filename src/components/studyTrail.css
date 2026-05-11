@@ -1,0 +1,714 @@
+/* studyTrail.css — switchback-trail rendering of Step 1 (Exegesis).
+ *
+ * Adapted from tmp/switchback/Workspace - Switchback Trail.html. All selectors
+ * are scoped to `.tw-shell` so this stylesheet does not leak into the rest of
+ * the workspace. The clearing also overrides a small set of SpotlightField
+ * classes so the embedded multi-question UI sits inside the trail's
+ * typography without competing chrome.
+ *
+ * Tokens are pulled from src/styles/global.css (--ink / --parchment / --gold
+ * etc.) — no new design tokens introduced.
+ */
+
+/* Fixed-position takeover: the trail owns the full viewport whenever it
+ * mounts. The workspace chrome (topbar / tab strip / sidebar) stays in the
+ * DOM beneath but is visually replaced. Aligns with the design handoff,
+ * which specifies the trail's own 62px ink topbar as the only topbar.
+ */
+.tw-shell {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1000;
+  overflow: hidden;
+  background:
+    radial-gradient(
+      ellipse at 50% 20%,
+      var(--parchment-warm) 0%,
+      var(--parchment) 60%,
+      var(--parchment-deep) 130%
+    );
+  font-family: 'Crimson Pro', Georgia, serif;
+  color: var(--ink);
+}
+
+.tw-shell .tw-mono {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+/* ── Top bar (62px, ink) ──────────────────────────────────────────────
+ * Three slots: top-left (passage chip, gold mono — opens popup), centered
+ * title (Playfair italic), top-right (× exit). Back-along-trail and stop
+ * counter were mockup leftovers and were cut — the clearing's `← look back`
+ * link covers backward navigation, and the eyebrow + ribbon already place
+ * the pastor along the trail. */
+.tw-shell .tw-topbar {
+  position: relative;
+  z-index: 4;
+  height: 62px;
+  background: var(--ink);
+  color: var(--parchment);
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  padding: 0 24px;
+  border-bottom: 1px solid rgba(212, 160, 23, 0.22);
+  box-shadow: 0 1px 0 rgba(212, 160, 23, 0.10);
+}
+
+.tw-shell .tw-topbar-left {
+  display: flex;
+  align-items: center;
+}
+
+.tw-shell .tw-meta-passage {
+  color: var(--gold-bright);
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  transition: color .15s;
+}
+.tw-shell .tw-meta-passage:hover {
+  color: var(--parchment);
+}
+
+.tw-shell .tw-topbar-title {
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: 20px;
+  color: var(--parchment);
+  letter-spacing: 0.005em;
+  margin: 0;
+  text-align: center;
+  justify-self: center;
+}
+
+.tw-shell .tw-topbar-right {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+/* D20 — Exit affordance. Quiet × in the topbar's right area. Pastor leaves
+ * the trail back to the workspace shell; parent decides what that means
+ * (currently: suppress the trail until next mount). Esc fires the same
+ * handler via the keyboard nav effect. */
+.tw-shell .tw-exit {
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  color: var(--parchment-deep);
+  font-size: 22px;
+  line-height: 1;
+  padding: 6px 10px;
+  margin-left: 6px;
+  transition: color .15s, background .15s;
+  border-radius: 2px;
+}
+.tw-shell .tw-exit:hover {
+  color: var(--gold-bright);
+  background: rgba(212, 160, 23, 0.06);
+}
+
+/* ── Phase ribbon ────────────────────────────────────────────────────── */
+.tw-shell .tw-ribbon {
+  position: relative;
+  z-index: 3;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 0 32px;
+  background: linear-gradient(to bottom, var(--parchment-warm), transparent);
+  border-bottom: 1px solid var(--parchment-deep);
+}
+.tw-shell .tw-ribbon-phase {
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  color: var(--gold);
+}
+.tw-shell .tw-ribbon-question {
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
+  font-size: 16px;
+  color: var(--ink-soft);
+}
+.tw-shell .tw-ribbon-pos {
+  margin-left: auto;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: var(--ink-ghost);
+}
+
+/* ── Trail SVG (background, panned by camera offset) ─────────────────── */
+.tw-shell .tw-trail {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+.tw-shell .tw-trail-line {
+  fill: none;
+  stroke: var(--gold);
+  stroke-width: 1.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.55;
+}
+.tw-shell .tw-trail-line-shadow {
+  stroke: var(--ink);
+  stroke-width: 4;
+  opacity: 0.04;
+  filter: blur(1px);
+}
+
+/* D6 — Camera tween. The transform-bearing group transitions on every
+ * change to (tx, ty), which is driven by the active stop's geometry
+ * point. Within-field Q advance does NOT change tx/ty (the trail station
+ * stays put across Qs), so within-field stays still while cross-field +
+ * cross-sub-phase movements glide. The easing curve is a slow-out cubic
+ * to land softly into the new clearing. */
+.tw-shell .tw-trail .tw-camera {
+  transition: transform 0.55s cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+.tw-shell .tw-station circle {
+  fill: var(--parchment);
+  stroke: var(--ink-soft);
+  stroke-width: 1;
+  transition: all .3s ease;
+}
+.tw-shell .tw-station.is-active circle {
+  fill: var(--gold-bright);
+  stroke: var(--gold);
+  stroke-width: 1.5;
+}
+.tw-shell .tw-station-pause circle {
+  fill: var(--parchment-warm);
+  stroke: var(--ink-ghost);
+  stroke-dasharray: 2 3;
+}
+.tw-shell .tw-station-pause.is-active circle {
+  fill: var(--parchment);
+  stroke: var(--gold);
+  stroke-dasharray: none;
+  stroke-width: 1.5;
+}
+.tw-shell .tw-station-pause line {
+  stroke: var(--gold);
+  stroke-width: 1.2;
+  stroke-linecap: round;
+}
+.tw-shell .tw-station-num {
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  fill: var(--ink-ghost);
+}
+
+/* Mist mask + paper grain — colors flip with dark mode via parchment tokens
+ * so the active-clearing area dissolves into the background instead of
+ * burning as a bright spotlight halo on dark backgrounds. */
+.tw-shell .tw-mist-stop { stop-color: var(--parchment); }
+.tw-shell .tw-grain-stroke { stroke: var(--parchment-deep); }
+.tw-shell .tw-station-glow {
+  fill: var(--gold-pale);
+  opacity: 0.45;
+  filter: blur(6px);
+}
+.tw-shell .tw-station-glow-2 {
+  fill: var(--gold-bright);
+  opacity: 0.18;
+  filter: blur(3px);
+}
+
+/* ── Right scripture column ─────────────────────────────────────────── *
+ * Pinned right-side scripture panel. Width must match SCRIPTURE_COL_WIDTH
+ * in StudyTrailExegesis.jsx — the camera math centers the clearing in
+ * (viewport - this) so the active station never sits behind the panel. */
+.tw-shell .tw-scripture {
+  position: fixed;
+  top: 62px;       /* below topbar */
+  right: 0;
+  bottom: 0;
+  width: 400px;
+  z-index: 6;
+  background: var(--parchment-warm);
+  border-left: 1px solid var(--parchment-deep);
+  box-shadow: -2px 0 0 rgba(26, 20, 16, 0.04);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── The clearing (active card) ──────────────────────────────────────── */
+.tw-shell .tw-clearing {
+  position: absolute;
+  /* Center horizontally in (viewport - scripture column). The 400px must
+   * stay synced with SCRIPTURE_COL_WIDTH in the JSX. */
+  left: calc((100% - 400px) / 2);
+  top: 58%;
+  transform: translate(-50%, -50%);
+  width: min(740px, calc(100vw - 400px - 64px));
+  z-index: 5;
+  padding: 44px 56px 36px;
+  text-align: left;
+  animation: tw-bloom .55s ease-out;
+}
+@keyframes tw-bloom {
+  from { opacity: 0; transform: translate(-50%, -46%); }
+  to   { opacity: 1; transform: translate(-50%, -50%); }
+}
+
+.tw-shell .tw-clearing-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  color: var(--gold);
+  margin-bottom: 18px;
+}
+.tw-shell .tw-clearing-eyebrow-sep {
+  color: var(--parchment-deep);
+}
+
+.tw-shell .tw-clearing-title {
+  font-family: 'Playfair Display', serif;
+  font-weight: 400;
+  font-size: 56px;
+  line-height: 1.05;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+  margin: 0 0 18px;
+  text-wrap: pretty;
+}
+
+.tw-shell .tw-clearing-prompt {
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
+  font-size: 22px;
+  line-height: 1.4;
+  color: var(--ink-mid);
+  margin: 0 0 32px;
+  max-width: 620px;
+  text-wrap: pretty;
+}
+
+.tw-shell .tw-clearing-body {
+  /* Slightly lifted from parchment so the card reads as a surface, not a
+     painted stripe. In dark mode `--parchment-warm` is `#201c18` — a
+     barely-lighter ink that keeps the card visible without the spotlight
+     halo. */
+  background: var(--parchment-warm);
+  border: 1px solid var(--parchment-deep);
+  border-radius: 2px;
+  padding: 22px 24px 14px;
+  position: relative;
+  box-shadow: var(--shadow-soft);
+}
+.tw-shell .tw-clearing-body::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 22px;
+  bottom: 22px;
+  width: 2px;
+  background: var(--gold);
+  opacity: 0.7;
+}
+
+/* ── Trail-native field inputs (replace spotlight chrome) ─────────────── */
+
+.tw-shell .tw-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.tw-shell .tw-question {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tw-shell .tw-question + .tw-question {
+  border-top: 1px dotted var(--parchment-deep);
+  padding-top: 18px;
+}
+
+.tw-shell .tw-question-prompt {
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
+  font-size: 16px;
+  color: var(--ink-soft);
+  margin: 0;
+}
+
+.tw-shell .tw-question-textarea {
+  width: 100%;
+  min-height: 150px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-size: 19px;
+  line-height: 1.6;
+  color: var(--ink);
+  resize: none;
+}
+.tw-shell .tw-question-textarea::placeholder {
+  color: var(--ink-ghost);
+  font-style: italic;
+}
+
+.tw-shell .tw-clearing-meter {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 10px;
+  margin-top: 6px;
+  border-top: 1px dotted var(--parchment-deep);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: var(--ink-ghost);
+}
+.tw-shell .tw-clearing-passage { color: var(--gold); }
+
+/* D2 — N/A surface inside the clearing body. The editor is replaced by a
+ * quiet message so the pastor sees the question is intentionally skipped
+ * for this passage. The `↺ restore this question` link in the actions row
+ * brings the editor back. */
+.tw-shell .tw-question-na {
+  padding: 24px 0;
+  text-align: center;
+}
+.tw-shell .tw-question-na-message {
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
+  font-size: 18px;
+  color: var(--ink-mid);
+  margin: 0 0 8px;
+}
+.tw-shell .tw-question-na-sub {
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-size: 14px;
+  color: var(--ink-ghost);
+  margin: 0;
+  max-width: 380px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ── Clearing actions row ────────────────────────────────────────────── */
+.tw-shell .tw-clearing-actions {
+  margin-top: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.tw-shell .tw-clearing-actions-left {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.tw-shell .tw-link-back,
+.tw-shell .tw-link-na {
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: var(--ink-ghost);
+  padding: 8px 0;
+}
+.tw-shell .tw-link-back:hover,
+.tw-shell .tw-link-na:hover {
+  color: var(--ink-mid);
+}
+.tw-shell .tw-link-na {
+  text-transform: lowercase;
+}
+
+.tw-shell .tw-advance {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--ink);
+  color: var(--parchment);
+  border: 0;
+  cursor: pointer;
+  padding: 14px 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  transition: transform .15s, background .2s;
+  box-shadow: var(--shadow-soft);
+}
+.tw-shell .tw-advance:hover:not(:disabled) {
+  background: var(--gold);
+  color: var(--ink);
+  transform: translateY(-1px);
+}
+.tw-shell .tw-advance:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+.tw-shell .tw-advance-arrow {
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-size: 16px;
+}
+
+/* D17 — Composite-gate UI in trail typography. AdvanceGateChecklist
+ * renders as `<ul class="advance-gate-checklist">` with per-gate `<li>`s
+ * carrying ✓ or ✗ markers + label + reason. Style here lifts that
+ * structure into the trail's typeface and adds a quiet eyebrow so the
+ * checklist reads as a contemplative "what the trail still asks of you"
+ * rather than a generic form-validation list. */
+.tw-shell .tw-clearing-gate {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px dotted var(--parchment-deep);
+}
+.tw-shell .tw-clearing-gate::before {
+  content: 'BEFORE YOU CROSS THE BEND';
+  display: block;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.28em;
+  color: var(--gold);
+  margin-bottom: 12px;
+}
+.tw-shell .tw-clearing-gate .advance-hint {
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
+  font-size: 16px;
+  line-height: 1.45;
+  color: var(--ink-mid);
+  text-wrap: pretty;
+}
+.tw-shell .tw-clearing-gate .advance-gate-checklist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tw-shell .tw-clearing-gate .advance-gate-item {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  align-items: baseline;
+  column-gap: 10px;
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-size: 15px;
+  line-height: 1.45;
+}
+.tw-shell .tw-clearing-gate .advance-gate-marker {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 12px;
+  text-align: center;
+}
+.tw-shell .tw-clearing-gate .advance-gate-item-met {
+  color: var(--ink-ghost);
+}
+.tw-shell .tw-clearing-gate .advance-gate-item-met .advance-gate-marker {
+  color: var(--sage-soft, #8fb084);
+}
+.tw-shell .tw-clearing-gate .advance-gate-item-met .advance-gate-label {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--parchment-deep);
+}
+.tw-shell .tw-clearing-gate .advance-gate-item-unmet {
+  color: var(--ink-mid);
+}
+.tw-shell .tw-clearing-gate .advance-gate-item-unmet .advance-gate-marker {
+  color: var(--gold);
+}
+.tw-shell .tw-clearing-gate .advance-gate-item-unmet .advance-gate-label {
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
+  font-size: 16px;
+  color: var(--ink);
+}
+.tw-shell .tw-clearing-gate .advance-gate-reason {
+  color: var(--ink-soft);
+  font-style: normal;
+  font-family: 'Crimson Pro', Georgia, serif;
+}
+
+/* ── Overview clearing variant (D19) ─────────────────────────────────── *
+ * Heavy-lifting field intro. Same width as the regular clearing so the
+ * camera+mist still center on it cleanly, but body uses Crimson Pro at
+ * reading-comfort size for the multi-paragraph overview text. No accent
+ * rail (the body is a passage to read, not a card to fill).
+ */
+.tw-shell .tw-clearing-overview .tw-overview-body {
+  margin: 24px 0 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 640px;
+}
+.tw-shell .tw-clearing-overview .tw-overview-paragraph {
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-size: 18px;
+  line-height: 1.55;
+  color: var(--ink-mid);
+  margin: 0;
+  text-wrap: pretty;
+}
+
+/* ── Pause clearing variant ──────────────────────────────────────────── */
+.tw-shell .tw-clearing-pause {
+  text-align: center;
+  width: min(640px, 86vw);
+}
+.tw-shell .tw-clearing-pause .tw-clearing-actions {
+  justify-content: center;
+  gap: 28px;
+}
+
+.tw-shell .tw-pause-eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.32em;
+  color: var(--gold);
+  margin-bottom: 22px;
+}
+.tw-shell .tw-pause-title {
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: 42px;
+  line-height: 1.2;
+  color: var(--ink);
+  margin: 0 0 18px;
+  text-wrap: pretty;
+}
+.tw-shell .tw-pause-sub {
+  font-size: 17px;
+  line-height: 1.55;
+  color: var(--ink-soft);
+  max-width: 480px;
+  margin: 0 auto 30px;
+}
+
+.tw-shell .tw-pause-input {
+  background: var(--parchment-warm);
+  border: 1px solid var(--parchment-deep);
+  border-radius: 2px;
+  padding: 18px 22px 14px;
+  text-align: left;
+  box-shadow: var(--shadow-soft);
+  max-width: 520px;
+  margin: 0 auto 22px;
+}
+.tw-shell .tw-pause-input input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
+  font-size: 22px;
+  color: var(--ink);
+  padding: 6px 0 12px;
+  border-bottom: 1px solid var(--parchment-deep);
+  margin-bottom: 10px;
+}
+.tw-shell .tw-pause-input input::placeholder {
+  color: var(--ink-ghost);
+}
+.tw-shell .tw-pause-handoff {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: var(--ink-ghost);
+}
+.tw-shell .tw-pause-handoff strong {
+  color: var(--gold);
+  font-weight: 500;
+  letter-spacing: 0.18em;
+}
+
+.tw-shell .tw-pause-next {
+  font-size: 14px;
+  color: var(--ink-soft);
+  max-width: 520px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+.tw-shell .tw-pause-next .tw-mono {
+  color: var(--gold);
+  letter-spacing: 0.22em;
+  font-size: 10px;
+  margin-right: 8px;
+}
+.tw-shell .tw-pause-next em {
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
+  color: var(--ink);
+}
+.tw-shell .tw-pause-next-q {
+  font-style: italic;
+  color: var(--ink-mid);
+}
+
+/* ── Save status (bottom-right) ──────────────────────────────────────── */
+.tw-shell .tw-save {
+  position: fixed;
+  right: 24px;
+  bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  color: var(--ink-ghost);
+  z-index: 6;
+}
+.tw-shell .tw-save-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--sage-soft, #8fb084);
+  box-shadow: 0 0 0 3px rgba(107, 156, 96, 0.18);
+}
+
+/* ── Vignette around the clearing for depth ──────────────────────────── *
+ * Vignette colors are derived from the parchment tokens via color-mix so
+ * dark mode dissolves the vignette into the background instead of pushing
+ * a halo on the canvas.
+ */
+.tw-shell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  background:
+    radial-gradient(
+      ellipse 60% 50% at 50% 58%,
+      transparent 0%,
+      transparent 30%,
+      color-mix(in srgb, var(--parchment-deep) 35%, transparent) 90%
+    ),
+    linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--parchment) 40%, transparent) 0%,
+      transparent 14%,
+      transparent 85%,
+      color-mix(in srgb, var(--parchment-deep) 50%, transparent) 100%
+    );
+}
