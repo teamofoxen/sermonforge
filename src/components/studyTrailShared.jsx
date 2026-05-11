@@ -201,6 +201,86 @@ export function TrailDefs() {
   );
 }
 
+// Stage overview — fires once per session when a trail mounts following
+// a cross-stage handoff (DW12). Frames the stage the pastor is entering:
+// names the work, the shape, and the named outcomes that travel forward.
+// Same shell (topbar + scripture column) as the active clearing; the
+// overview replaces the body area until the pastor dismisses it.
+//
+// `stageKey` is the sessionStorage namespace — distinct per stage so
+// Assembly and Manuscript fire independently. The hook returns a tuple of
+// `[seen, markSeen]`; consumers render the overview when `!seen` and call
+// `markSeen()` from the continue affordance. SessionStorage persists for
+// the active app session and resets on browser/Electron close — matching
+// the charter's "once per session" wording.
+export function useStageOverviewSeen(stageKey) {
+  const storageKey = `sf_stage_overview_${stageKey}_seen`;
+  const [seen, setSeen] = useState(() => {
+    try {
+      return typeof window !== "undefined" && window.sessionStorage?.getItem(storageKey) === "1";
+    } catch {
+      return false;
+    }
+  });
+  const markSeen = () => {
+    setSeen(true);
+    try { window.sessionStorage?.setItem(storageKey, "1"); } catch { /* private mode etc. */ }
+  };
+  return [seen, markSeen];
+}
+
+export function StageOverview({
+  eyebrow,           // "ENTERING ASSEMBLY" / "ENTERING THE WRITING ROOM"
+  title,             // "Assembly — where the sermon takes shape."
+  body,              // descriptive paragraph
+  outcomes,          // [{ label, text }, ...] — the named outcomes this stage will produce
+  carriedForward,    // optional [{ label, text }, ...] — outcomes already produced in prior stages
+  continueLabel,     // "Walk into Assembly" / "Walk into the writing room"
+  onContinue,
+}) {
+  return (
+    <div className="tw-clearing tw-clearing-stage-overview">
+      <div className="tw-stage-marker" aria-hidden="true" />
+      <div className="tw-pause-eyebrow tw-stage-eyebrow tw-mono">{eyebrow}</div>
+      <h2 className="tw-pause-title tw-stage-title">{title}</h2>
+      <p className="tw-pause-sub tw-stage-sub">{body}</p>
+      {outcomes && outcomes.length > 0 && (
+        <div className="tw-stage-overview-section">
+          <div className="tw-stage-overview-section-label tw-mono">YOU WILL PRODUCE</div>
+          <ul className="tw-stage-overview-list">
+            {outcomes.map((o) => (
+              <li key={o.label}>
+                <span className="tw-stage-overview-outcome-label tw-mono">{o.label}</span>
+                <span className="tw-stage-overview-outcome-text">{o.text}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {carriedForward && carriedForward.length > 0 && (
+        <div className="tw-stage-overview-section">
+          <div className="tw-stage-overview-section-label tw-mono">YOU ALREADY HAVE</div>
+          <ul className="tw-stage-overview-list">
+            {carriedForward.map((o) => (
+              <li key={o.label}>
+                <span className="tw-stage-overview-outcome-label tw-mono">{o.label}</span>
+                <span className="tw-stage-overview-outcome-text">{o.text}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <div className="tw-clearing-actions">
+        {/* eslint-disable-next-line sermonforge/no-raw-button */}
+        <button className="tw-advance" onClick={onContinue}>
+          <span>{continueLabel}</span>
+          <span className="tw-advance-arrow">→</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // Stage-boundary pause — the heavier visual register used at Study →
 // Assembly and Assembly → Manuscript. Distinguished from the sub-phase
 // `PauseClearing` (lightweight "A BREATH BETWEEN PHASES") by a wider

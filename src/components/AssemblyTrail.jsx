@@ -28,6 +28,7 @@ import {
   getQuestionAnswer,
   getQuestionString,
   isQuestionNA,
+  parseStructuredField,
 } from "../utils/studyFields";
 import { MAIN_POINT_PAIR_FIELDS } from "../utils/sadiAnchorFields";
 import { SERMON_FRAME_FIELDS } from "../utils/sermonFrameFields";
@@ -42,6 +43,7 @@ import {
   firstIncompleteFieldKey, fieldHasAnyAnswer,
   useViewportSize, useSyncActiveQuestion, useTrailKeyboard,
   TrailTopBar, TrailDefs, Station, StageBoundaryPause,
+  StageOverview, useStageOverviewSeen,
 } from "./studyTrailShared";
 import "./studyTrail.css";
 
@@ -160,6 +162,7 @@ export default function AssemblyTrail({
   const [maxVisitedStop, setMaxVisitedStop] = useState(0);
   const [passageOpen, setPassageOpen] = useState(false);
   const [dismissedOverviews, setDismissedOverviews] = useState(() => new Set());
+  const [stageOverviewSeen, markStageOverviewSeen] = useStageOverviewSeen("assembly");
 
   // Active field within the current sub-phase. For Anchor + Frame, this is
   // the MPT/MPS or Intro/Conclusion key. Workshop sub-phases don't use it.
@@ -419,6 +422,49 @@ export default function AssemblyTrail({
       />
     );
   })();
+
+  // Stage overview (DW12) — short-circuit the trail body on the first
+  // mount of Assembly in a session so the pastor reads the framing before
+  // walking the trail. `useStageOverviewSeen` persists in sessionStorage,
+  // so reloads stay quiet but a fresh app boot re-fires the framing.
+  if (!stageOverviewSeen) {
+    const readSynth = (col) => {
+      try {
+        const data = parseStructuredField(sermon?.[col]);
+        const v = getQuestionAnswer(data, "_synthesis");
+        return typeof v === "string" ? v : "";
+      } catch { return ""; }
+    };
+    const carriedForward = [
+      { label: "OBSERVATION SET",            text: readSynth("observations")     || "(not yet written)" },
+      { label: "INTERPRETATION SET",         text: readSynth("interpretation")   || "(not yet written)" },
+      { label: "CHRIST-CONNECTION STATEMENT",text: readSynth("redemptive_thread")|| "(not yet written)" },
+      { label: "IMPLICATIONS SYNTHESIS",     text: readSynth("implications")     || "(not yet written)" },
+    ];
+    return (
+      <div className="tw-shell">
+        <TrailTopBar sermon={sermon} onExit={onExit} onPassageClick={() => setPassageOpen(true)} />
+        <PassagePopup passage={sermon?.passage} isOpen={passageOpen} onClose={() => setPassageOpen(false)} />
+        <aside className="tw-scripture">
+          <ScripturePanel passage={sermon?.passage} />
+        </aside>
+        <StageOverview
+          eyebrow="ENTERING ASSEMBLY"
+          title="Assembly — where the sermon takes shape."
+          body="Four sub-phases. The Anchor forges the Main Point Pair from the four syntheses you've already produced; the Outline lays the body; Equip fills each point with Scripture, explanation, application, and illustration; the Frame writes the Intro and Conclusion. Walk one bend at a time."
+          outcomes={[
+            { label: "MAIN POINT PAIR", text: "Past-tense MPT + present-tense MPS — the spine the body hangs on." },
+            { label: "SERMON OUTLINE",  text: "The points that move the listener toward the MPS." },
+            { label: "SERMON BODY",     text: "Each point equipped with Scripture / Explanation / Application / Illustration." },
+            { label: "SERMON FRAME",    text: "The Intro that opens, the Conclusion that lands." },
+          ]}
+          carriedForward={carriedForward}
+          continueLabel="Walk into Assembly"
+          onContinue={markStageOverviewSeen}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="tw-shell">

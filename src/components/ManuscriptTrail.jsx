@@ -18,7 +18,14 @@ import { useState } from "react";
 import ManuscriptTab from "./ManuscriptTab";
 import PassagePopup from "./PassagePopup";
 import ScripturePanel from "./ScripturePanel";
-import { TrailTopBar, useTrailKeyboard } from "./studyTrailShared";
+import {
+  TrailTopBar,
+  useTrailKeyboard,
+  StageOverview,
+  useStageOverviewSeen,
+} from "./studyTrailShared";
+import { getQuestionAnswer, getQuestionString, parseStructuredField } from "../utils/studyFields";
+import { getOutline } from "../utils";
 import "./studyTrail.css";
 
 export default function ManuscriptTrail({ sermon, onUpdate }) {
@@ -28,6 +35,7 @@ export default function ManuscriptTrail({ sermon, onUpdate }) {
   // away in Item 8; until then it matches the Study / Assembly behavior so
   // the contract is the same across stages.
   const [trailSuppressed, setTrailSuppressed] = useState(false);
+  const [stageOverviewSeen, markStageOverviewSeen] = useStageOverviewSeen("manuscript");
 
   useTrailKeyboard({
     advance: () => {},
@@ -64,6 +72,72 @@ export default function ManuscriptTrail({ sermon, onUpdate }) {
           </button>
         </div>
         <ManuscriptTab sermon={sermon} onUpdate={onUpdate} />
+      </div>
+    );
+  }
+
+  // Stage overview (DW12) — fires on first arrival at the writing room
+  // in a session. The carried-forward list reads back the four Assembly
+  // outcomes (MPP + Outline + Body + Frame) so the pastor sees the whole
+  // sermon-in-progress before they settle in to write.
+  if (!stageOverviewSeen) {
+    const mpt = sermon?.mpt || "";
+    const mps = sermon?.mps || "";
+    const outline = (() => { try { return getOutline(sermon) || []; } catch { return []; } })();
+    const frameData = (() => { try { return parseStructuredField(sermon?.sermon_frame); } catch { return null; } })();
+    const introHook = frameData ? getQuestionString(frameData, "intro", "hook") : "";
+    const conclusionLand = frameData ? getQuestionString(frameData, "conclusion", "land_call") : "";
+    const carriedForward = [
+      {
+        label: "MAIN POINT PAIR",
+        text: mpt || mps
+          ? `${mpt || "(MPT not written)"} · ${mps || "(MPS not written)"}`
+          : "(not yet written)",
+      },
+      {
+        label: "SERMON OUTLINE",
+        text: outline.length
+          ? outline.map((p, i) => `${i + 1}. ${p.text || "(untitled)"}`).join(" · ")
+          : "(no points yet)",
+      },
+      {
+        label: "SERMON FRAME",
+        text: introHook || conclusionLand
+          ? `Intro: ${introHook || "(not written)"} · Conclusion: ${conclusionLand || "(not written)"}`
+          : "(not yet written)",
+      },
+    ];
+    return (
+      <div className="tw-shell tw-shell-writing-room">
+        <TrailTopBar
+          sermon={sermon}
+          onExit={() => setTrailSuppressed(true)}
+          onPassageClick={() => setPassageOpen(true)}
+        />
+        <PassagePopup
+          passage={sermon?.passage}
+          isOpen={passageOpen}
+          onClose={() => setPassageOpen(false)}
+        />
+        <aside className="tw-scripture">
+          <ScripturePanel passage={sermon?.passage} />
+        </aside>
+        <main className="tw-writing-room-body">
+          <StageOverview
+            eyebrow="ENTERING THE WRITING ROOM"
+            title="You've walked far. Now expand the trail into prose."
+            body="Every named outcome you've produced — from Observation Set to Sermon Frame — is here. The writing room is one continuous surface; section cards keep the structure visible while you write. The trail recedes; the writing leads from here."
+            outcomes={[
+              { label: "INTRODUCTION",  text: "Opener, MPT, scripture reading, MPS, expectation, title." },
+              { label: "BODY",          text: "Each outline point with transition, point, Scripture, explanation, application, illustration." },
+              { label: "CONCLUSION",    text: "Response that lands what the trail has shaped." },
+              { label: "REVIEW + EXPORT",text: "Flow check, ear check, final tune-up, then export to Word." },
+            ]}
+            carriedForward={carriedForward}
+            continueLabel="Walk into the writing room"
+            onContinue={markStageOverviewSeen}
+          />
+        </main>
       </div>
     );
   }

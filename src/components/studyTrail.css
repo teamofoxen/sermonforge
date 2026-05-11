@@ -13,6 +13,10 @@
  * DOM beneath but is visually replaced. Aligns with the design handoff,
  * which specifies the trail's own 62px ink topbar as the only topbar.
  */
+@keyframes tw-trail-handoff {
+  from { opacity: 0; transform: translateX(48px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
 .tw-shell {
   position: fixed;
   inset: 0;
@@ -20,6 +24,13 @@
   height: 100vh;
   z-index: 1000;
   overflow: hidden;
+  /* Camera handoff (WTC DW7) — when a stage transition mounts a new trail
+   * (Study → Assembly, Assembly → Manuscript), the shell glides in from a
+   * short offset and fades up. The cut feels like the camera is panning
+   * around the bend rather than jumping to a new scene. Single-fire on
+   * mount; the active clearing's existing `tw-bloom` animation handles
+   * within-stage entrances unchanged. */
+  animation: tw-trail-handoff 0.55s ease-out both;
   background:
     radial-gradient(
       ellipse at 50% 20%,
@@ -856,6 +867,74 @@
 .tw-shell .tw-stage-next {
   max-width: 620px;
   margin: 0 auto 28px;
+}
+
+/* ── Stage overview (WTC DW12) ───────────────────────────────────────── *
+ * Fires once per session when a trail mounts following a cross-stage
+ * handoff. Shares the heavier register vocabulary (gold-bright marker,
+ * "ENTERING …" eyebrow, italic Playfair title) so the pastor reads the
+ * arrival as a major bend of the same trail rather than entering a
+ * separate app. Two optional sections list what the stage produces and
+ * what carries forward from the prior stages.
+ */
+.tw-shell .tw-clearing-stage-overview {
+  text-align: left;
+  width: min(820px, 92vw);
+}
+.tw-shell .tw-clearing-stage-overview .tw-stage-marker {
+  margin-left: 0;
+}
+.tw-shell .tw-clearing-stage-overview .tw-stage-eyebrow {
+  text-align: left;
+}
+.tw-shell .tw-clearing-stage-overview .tw-stage-title {
+  text-align: left;
+  margin-bottom: 18px;
+}
+.tw-shell .tw-clearing-stage-overview .tw-stage-sub {
+  margin-left: 0;
+  margin-right: 0;
+  max-width: 680px;
+}
+.tw-shell .tw-clearing-stage-overview .tw-clearing-actions {
+  justify-content: flex-start;
+  margin-top: 16px;
+}
+.tw-shell .tw-stage-overview-section {
+  margin: 26px 0 6px;
+}
+.tw-shell .tw-stage-overview-section-label {
+  font-size: 10px;
+  letter-spacing: 0.32em;
+  color: var(--gold);
+  margin-bottom: 14px;
+}
+.tw-shell .tw-stage-overview-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.tw-shell .tw-stage-overview-list li {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 20px;
+  padding: 10px 0 12px;
+  border-bottom: 1px dotted var(--parchment-deep);
+  align-items: baseline;
+}
+.tw-shell .tw-stage-overview-list li:last-child {
+  border-bottom: none;
+}
+.tw-shell .tw-stage-overview-outcome-label {
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  color: var(--gold);
+}
+.tw-shell .tw-stage-overview-outcome-text {
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--ink-mid);
 }
 
 /* ── Vignette around the clearing for depth ──────────────────────────── *
