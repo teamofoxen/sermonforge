@@ -13,6 +13,10 @@
  * DOM beneath but is visually replaced. Aligns with the design handoff,
  * which specifies the trail's own 62px ink topbar as the only topbar.
  */
+@keyframes tw-trail-handoff {
+  from { opacity: 0; transform: translateX(48px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
 .tw-shell {
   position: fixed;
   inset: 0;
@@ -20,6 +24,13 @@
   height: 100vh;
   z-index: 1000;
   overflow: hidden;
+  /* Camera handoff (WTC DW7) — when a stage transition mounts a new trail
+   * (Study → Assembly, Assembly → Manuscript), the shell glides in from a
+   * short offset and fades up. The cut feels like the camera is panning
+   * around the bend rather than jumping to a new scene. Single-fire on
+   * mount; the active clearing's existing `tw-bloom` animation handles
+   * within-stage entrances unchanged. */
+  animation: tw-trail-handoff 0.55s ease-out both;
   background:
     radial-gradient(
       ellipse at 50% 20%,
@@ -720,6 +731,493 @@
   justify-content: center;
 }
 
+/* ── Stage-boundary pause (heavier register) ─────────────────────────── *
+ * The pause-clearing variant fired at Study → Assembly and Assembly →
+ * Manuscript. Distinguished from the lightweight sub-phase pause-clearing
+ * by a wider card, a gold-bright hairline marker, a heavier eyebrow, a
+ * larger italic title, and a multi-outcome read-back stack instead of a
+ * single synthesis input.
+ *
+ * The stage's terminal named outcome (Implications Synthesis / Sermon
+ * Frame) stays editable inline so the pastor can refine the last piece
+ * before crossing the bend. Each row gets a content node from the caller
+ * so the read-back, single-input, and paired-input shapes coexist
+ * without growing a prop-flag surface on `StageBoundaryPause`.
+ */
+.tw-shell .tw-clearing-stage-pause {
+  text-align: center;
+  width: min(880px, 92vw);
+}
+.tw-shell .tw-clearing-stage-pause .tw-clearing-actions {
+  justify-content: center;
+  gap: 28px;
+}
+.tw-shell .tw-stage-marker {
+  width: 88px;
+  height: 2px;
+  background: var(--gold-bright);
+  margin: 0 auto 22px;
+  opacity: 0.85;
+}
+.tw-shell .tw-stage-eyebrow {
+  color: var(--gold-bright);
+  letter-spacing: 0.4em;
+  font-size: 11px;
+  margin-bottom: 24px;
+}
+.tw-shell .tw-stage-title {
+  font-size: 48px;
+  line-height: 1.15;
+  margin-bottom: 14px;
+}
+.tw-shell .tw-stage-sub {
+  max-width: 620px;
+  margin: 0 auto 36px;
+}
+.tw-shell .tw-stage-outcomes {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 760px;
+  margin: 0 auto 32px;
+  text-align: left;
+}
+.tw-shell .tw-stage-outcome {
+  background: var(--parchment-warm);
+  border-left: 2px solid var(--gold);
+  padding: 14px 20px 16px;
+  border-radius: 2px;
+  box-shadow: var(--shadow-soft);
+}
+.tw-shell .tw-stage-outcome-label {
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  color: var(--gold);
+  margin-bottom: 8px;
+}
+.tw-shell .tw-stage-outcome-body {
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--ink-mid);
+}
+.tw-shell .tw-stage-empty {
+  color: var(--ink-ghost);
+  font-style: italic;
+}
+.tw-shell .tw-stage-outcome-pair {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.tw-shell .tw-stage-outcome-pair .tw-pair-input {
+  font-size: 18px;
+  min-height: 48px;
+}
+.tw-shell .tw-stage-outcome-sublabel {
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: var(--ink-ghost);
+  margin-bottom: 4px;
+}
+.tw-shell .tw-stage-outcome-mpt {
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
+  font-size: 17px;
+  color: var(--ink-mid);
+  line-height: 1.45;
+  margin-bottom: 4px;
+}
+.tw-shell .tw-stage-outcome-mps {
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
+  font-size: 17px;
+  color: var(--ink);
+  line-height: 1.45;
+}
+.tw-shell .tw-stage-outcome-list {
+  margin: 0;
+  padding-left: 20px;
+}
+.tw-shell .tw-stage-outcome-list li {
+  margin-bottom: 4px;
+}
+.tw-shell .tw-stage-outcome-list li:last-child {
+  margin-bottom: 0;
+}
+.tw-shell .tw-stage-outcome-equip-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+.tw-shell .tw-stage-outcome-equip-row:last-child {
+  margin-bottom: 0;
+}
+.tw-shell .tw-stage-outcome-equip-count {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: var(--ink-ghost);
+  white-space: nowrap;
+}
+.tw-shell .tw-stage-outcome-equip-count.is-full {
+  color: var(--gold);
+}
+.tw-shell .tw-stage-next {
+  max-width: 620px;
+  margin: 0 auto 28px;
+}
+
+/* ── Stage overview (WTC DW12) ───────────────────────────────────────── *
+ * Fires once per session when a trail mounts following a cross-stage
+ * handoff. Shares the heavier register vocabulary (gold-bright marker,
+ * "ENTERING …" eyebrow, italic Playfair title) so the pastor reads the
+ * arrival as a major bend of the same trail rather than entering a
+ * separate app. Two optional sections list what the stage produces and
+ * what carries forward from the prior stages.
+ */
+.tw-shell .tw-clearing-stage-overview {
+  text-align: left;
+  width: min(820px, 92vw);
+}
+.tw-shell .tw-clearing-stage-overview .tw-stage-marker {
+  margin-left: 0;
+}
+.tw-shell .tw-clearing-stage-overview .tw-stage-eyebrow {
+  text-align: left;
+}
+.tw-shell .tw-clearing-stage-overview .tw-stage-title {
+  text-align: left;
+  margin-bottom: 18px;
+}
+.tw-shell .tw-clearing-stage-overview .tw-stage-sub {
+  margin-left: 0;
+  margin-right: 0;
+  max-width: 680px;
+}
+.tw-shell .tw-clearing-stage-overview .tw-clearing-actions {
+  justify-content: flex-start;
+  margin-top: 16px;
+}
+.tw-shell .tw-stage-overview-section {
+  margin: 26px 0 6px;
+}
+.tw-shell .tw-stage-overview-section-label {
+  font-size: 10px;
+  letter-spacing: 0.32em;
+  color: var(--gold);
+  margin-bottom: 14px;
+}
+.tw-shell .tw-stage-overview-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.tw-shell .tw-stage-overview-list li {
+  display: grid;
+  grid-template-columns: 200px 1fr;
+  gap: 20px;
+  padding: 10px 0 12px;
+  border-bottom: 1px dotted var(--parchment-deep);
+  align-items: baseline;
+}
+.tw-shell .tw-stage-overview-list li:last-child {
+  border-bottom: none;
+}
+.tw-shell .tw-stage-overview-outcome-label {
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  color: var(--gold);
+}
+.tw-shell .tw-stage-overview-outcome-text {
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--ink-mid);
+}
+
+/* ── Notebook drawer (WTC DW8) ───────────────────────────────────────── *
+ * Per-stage free-form scratchpad surfaced from a topbar toggle. Slides
+ * up from the bottom of the trail viewport — sits above the active
+ * clearing but below the topbar/scripture column so the pastor stays
+ * oriented. Single textarea inside; the existing notebook column round-
+ * trips through `onUpdate` unchanged.
+ */
+.tw-shell .tw-notebook-toggle {
+  background: transparent;
+  border: 1px solid rgba(212, 160, 23, 0.32);
+  color: var(--gold);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  padding: 6px 12px;
+  border-radius: 2px;
+  cursor: pointer;
+  margin-right: 6px;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+.tw-shell .tw-notebook-toggle:hover {
+  border-color: var(--gold-bright);
+  color: var(--gold-bright);
+}
+.tw-shell .tw-notebook-toggle.is-open {
+  background: var(--gold);
+  color: var(--parchment);
+  border-color: var(--gold);
+}
+
+.tw-shell .tw-notebook-drawer {
+  position: fixed;
+  left: 0;
+  right: 400px; /* clear of the scripture column */
+  bottom: 0;
+  height: 55vh;
+  max-height: 540px;
+  z-index: 12;
+  background: var(--parchment-warm);
+  border-top: 2px solid var(--gold);
+  box-shadow: 0 -12px 36px rgba(26, 20, 16, 0.18);
+  transform: translateY(100%);
+  transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+  display: flex;
+  flex-direction: column;
+}
+.tw-shell .tw-notebook-drawer.is-open {
+  transform: translateY(0);
+}
+.tw-shell .tw-notebook-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 28px 12px;
+  border-bottom: 1px solid var(--parchment-deep);
+}
+.tw-shell .tw-notebook-drawer-label {
+  font-size: 10px;
+  letter-spacing: 0.32em;
+  color: var(--gold);
+  text-transform: uppercase;
+}
+.tw-shell .tw-notebook-drawer-close {
+  background: transparent;
+  border: 0;
+  font-size: 22px;
+  color: var(--ink-soft);
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}
+.tw-shell .tw-notebook-drawer-close:hover {
+  color: var(--ink);
+}
+.tw-shell .tw-notebook-drawer-body {
+  flex: 1;
+  padding: 18px 28px 24px;
+  overflow-y: auto;
+}
+.tw-shell .tw-notebook-drawer-input {
+  width: 100%;
+  height: 100%;
+  min-height: 240px;
+  border: 0;
+  outline: 0;
+  resize: none;
+  background: transparent;
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--ink);
+}
+.tw-shell .tw-notebook-drawer-input::placeholder {
+  color: var(--ink-ghost);
+  font-style: italic;
+}
+
+/* Writing-room notebook drawer slides over the right edge instead of
+ * clearing the scripture column, because the writing room's body
+ * already uses the central reading column. */
+.tw-shell-writing-room .tw-notebook-drawer {
+  right: 400px;
+}
+
+/* ── Workspace Trail Map (WTC DW11) ──────────────────────────────────── *
+ * Single-screen overview modal showing the three-stage switchback at a
+ * glance. Locked to "clean or doesn't ship": no checkmarks, no progress
+ * counters, no per-field labels — only the nine sub-phase stops with
+ * their named outcomes, and a single gold pin where the pastor is now.
+ */
+.tw-map-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  background: color-mix(in srgb, var(--ink) 78%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  animation: tw-map-fade 0.28s ease-out;
+}
+@keyframes tw-map-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.tw-map-modal {
+  width: min(1180px, 96vw);
+  max-height: 88vh;
+  background: var(--parchment);
+  border-radius: 4px;
+  box-shadow: 0 24px 80px rgba(26, 20, 16, 0.36);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: tw-map-rise 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes tw-map-rise {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.tw-map-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 28px 40px 8px;
+}
+.tw-map-eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.4em;
+  color: var(--gold-bright);
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+.tw-map-title {
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: 38px;
+  line-height: 1.1;
+  color: var(--ink);
+  margin: 0;
+}
+.tw-map-close {
+  background: transparent;
+  border: 0;
+  font-size: 26px;
+  color: var(--ink-soft);
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}
+.tw-map-close:hover { color: var(--ink); }
+.tw-map-svg {
+  width: 100%;
+  flex: 1;
+  display: block;
+  padding: 0 20px;
+}
+.tw-map-stage-label {
+  font-size: 10px;
+  letter-spacing: 0.32em;
+  fill: var(--gold);
+}
+.tw-map-stage-sub {
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-style: italic;
+  font-size: 11px;
+  fill: var(--ink-ghost);
+}
+.tw-map-band-divider {
+  stroke: var(--parchment-deep);
+  stroke-width: 1;
+  stroke-dasharray: 2 6;
+}
+.tw-map-path {
+  fill: none;
+  stroke: url(#tw-map-path-grad);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+.tw-map-stop {
+  fill: var(--parchment);
+  stroke: var(--gold);
+  stroke-width: 2;
+  transition: fill 0.16s ease;
+}
+.tw-map-stop.is-visited {
+  fill: var(--gold);
+  fill-opacity: 0.4;
+}
+.tw-map-stop.is-here {
+  fill: var(--gold-bright);
+  stroke: var(--gold-bright);
+  stroke-width: 0;
+}
+.tw-map-stop-glow {
+  fill: var(--gold-bright);
+  fill-opacity: 0.18;
+}
+.tw-map-stop-glow-2 {
+  fill-opacity: 0.32;
+}
+.tw-map-stop-label {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  fill: var(--ink-soft);
+}
+.tw-map-stop-label.is-here {
+  fill: var(--gold-bright);
+}
+.tw-map-stop-outcome {
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-style: italic;
+  font-size: 12px;
+  fill: var(--ink-mid);
+}
+.tw-map-stop-outcome.is-here {
+  fill: var(--ink);
+}
+.tw-map-footer {
+  padding: 14px 40px 24px;
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  border-top: 1px solid var(--parchment-deep);
+  background: var(--parchment-warm);
+}
+.tw-map-footer .tw-mono {
+  font-size: 10px;
+  letter-spacing: 0.32em;
+  color: var(--gold);
+}
+.tw-map-here-label {
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-size: 15px;
+  color: var(--ink);
+}
+.tw-map-here-label em {
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
+  color: var(--gold);
+}
+/* Map-trigger button in the topbar — sibling to the notebook toggle. */
+.tw-shell .tw-map-toggle {
+  background: transparent;
+  border: 1px solid rgba(212, 160, 23, 0.32);
+  color: var(--gold);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  padding: 6px 12px;
+  border-radius: 2px;
+  cursor: pointer;
+  margin-right: 6px;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+.tw-shell .tw-map-toggle:hover {
+  border-color: var(--gold-bright);
+  color: var(--gold-bright);
+}
+
 /* ── Vignette around the clearing for depth ──────────────────────────── *
  * Vignette colors are derived from the parchment tokens via color-mix so
  * dark mode dissolves the vignette into the background instead of pushing
@@ -747,6 +1245,46 @@
     );
 }
 
+
+/* ── Writing room (WTC Phase F / DW5) ─────────────────────────────────── *
+ * Manuscript's terminal "stage" of the trail. The clearing-walk metaphor
+ * gives way to a settled place: trail topbar stays, scripture column
+ * stays, the central body hosts the existing ManuscriptTab full-width
+ * (capped to a reading column) so the pastor settles in to long-form
+ * prose. The trail SVG retires — the paper-grain texture + vignette via
+ * `.tw-shell::after` carry the felt continuity without a competing path.
+ */
+.tw-shell-writing-room .tw-writing-room-body {
+  position: absolute;
+  top: 62px;       /* below topbar */
+  left: 0;
+  right: 400px;    /* scripture column reserves this */
+  bottom: 0;
+  padding: 40px 64px 80px;
+  overflow-y: auto;
+  z-index: 4;
+  background: var(--parchment);
+  animation: tw-writing-room-enter 0.45s ease-out;
+}
+@keyframes tw-writing-room-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.tw-shell-writing-room .tw-writing-room-body > * {
+  max-width: 820px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.tw-shell-writing-room .tw-writing-room-eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.32em;
+  color: var(--gold);
+  margin-bottom: 28px;
+  text-transform: uppercase;
+}
+/* Re-enable normal vignette underneath the body so the writing room
+ * inherits the same warm framing as a clearing. The ::after sits on
+ * `.tw-shell` already; nothing extra needed here. */
 
 /* ── Workshop clearing (Outline + Equip sub-phases) ───────────────────── */
 .tw-shell .tw-clearing-workshop {

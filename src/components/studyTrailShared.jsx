@@ -137,7 +137,7 @@ export function useTrailKeyboard({
   }, [advance, lookBack, advanceDisabled, onExit, onTogglePass, modalOpen]);
 }
 
-export function TrailTopBar({ sermon, onExit, onPassageClick }) {
+export function TrailTopBar({ sermon, onExit, onPassageClick, onToggleNotebook, notebookOpen, onOpenMap }) {
   return (
     <header className="tw-topbar">
       <div className="tw-topbar-left">
@@ -150,8 +150,30 @@ export function TrailTopBar({ sermon, onExit, onPassageClick }) {
           {(sermon?.passage || "").toUpperCase()}
         </button>
       </div>
-      <h1 className="tw-topbar-title">{sermon?.title || "Untitled"}</h1>
+      <h1 className="tw-topbar-title" data-tour-id="workspace-title">{sermon?.title || "Untitled"}</h1>
       <div className="tw-topbar-right">
+        {onOpenMap && (
+          /* eslint-disable-next-line sermonforge/no-raw-button */
+          <button
+            className="tw-map-toggle tw-mono"
+            onClick={onOpenMap}
+            data-tour-id="trail-map-button"
+            title="Open the sermon trail map (Cmd/Ctrl+M)"
+          >
+            Map
+          </button>
+        )}
+        {onToggleNotebook && (
+          /* eslint-disable-next-line sermonforge/no-raw-button */
+          <button
+            className={`tw-notebook-toggle tw-mono ${notebookOpen ? "is-open" : ""}`}
+            onClick={onToggleNotebook}
+            aria-pressed={!!notebookOpen}
+            title="Toggle notebook (Cmd/Ctrl+N)"
+          >
+            Notebook
+          </button>
+        )}
         {onExit && (
           /* eslint-disable-next-line sermonforge/no-raw-button */
           <button
@@ -166,6 +188,94 @@ export function TrailTopBar({ sermon, onExit, onPassageClick }) {
       </div>
     </header>
   );
+}
+
+// useTrailMapToggle — Cmd/Ctrl+M to open the workspace trail map; Esc to
+// close. Mirrors the notebook hook so each trail wires the map button
+// and the modal with a single tuple. The modal handles its own outside
+// behavior via `tw-map-backdrop`.
+export function useTrailMapToggle() {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const onKey = (e) => {
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && (e.key === "m" || e.key === "M")) {
+        e.preventDefault();
+        setOpen((v) => !v);
+        return;
+      }
+      if (e.key === "Escape" && open) {
+        const t = e.target;
+        const inEditor = t && (t.tagName === "TEXTAREA" || t.tagName === "INPUT");
+        if (inEditor) return;
+        setOpen(false);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+  return { open, openMap: () => setOpen(true), close: () => setOpen(false), toggle: () => setOpen((v) => !v) };
+}
+
+// NotebookDrawer — per-stage notebook surfaces inside the trail shell
+// (WTC DW8). Slides up from the bottom of the trail viewport with the
+// existing notebook column as a free-form scratchpad. Title + close + a
+// single textarea — the contemplative posture of the trail survives
+// because the drawer doesn't compete with the scripture column or the
+// active clearing; it sits underneath them until summoned.
+export function NotebookDrawer({ open, onClose, label, value, onChange, placeholder }) {
+  return (
+    <div
+      className={`tw-notebook-drawer ${open ? "is-open" : ""}`}
+      role="dialog"
+      aria-label={label}
+      aria-hidden={!open}
+    >
+      <header className="tw-notebook-drawer-header">
+        <div className="tw-mono tw-notebook-drawer-label">{label}</div>
+        {/* eslint-disable-next-line sermonforge/no-raw-button */}
+        <button className="tw-notebook-drawer-close" onClick={onClose} aria-label="Close notebook">
+          ×
+        </button>
+      </header>
+      <div className="tw-notebook-drawer-body">
+        <textarea
+          className="tw-notebook-drawer-input"
+          value={value || ""}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          spellCheck={true}
+        />
+      </div>
+    </div>
+  );
+}
+
+// useNotebookToggle — shared (open, toggle, close) bundle so each trail
+// wires identically. Cmd/Ctrl+N flips it; Esc closes when open and the
+// trail's modalOpen flag tells the existing useTrailKeyboard to defer
+// the exit shortcut while the drawer holds focus.
+export function useNotebookToggle() {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const onKey = (e) => {
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && (e.key === "n" || e.key === "N")) {
+        e.preventDefault();
+        setOpen((v) => !v);
+        return;
+      }
+      if (e.key === "Escape" && open) {
+        const t = e.target;
+        const inEditor = t && (t.tagName === "TEXTAREA" || t.tagName === "INPUT");
+        if (inEditor) return; // let the textarea blur naturally first
+        setOpen(false);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+  return { open, toggle: () => setOpen((v) => !v), close: () => setOpen(false) };
 }
 
 // SVG <defs> shared across every trail canvas. Mist + paper-grain colors
@@ -198,6 +308,140 @@ export function TrailDefs() {
         />
       </pattern>
     </defs>
+  );
+}
+
+// Stage overview — fires once per session when a trail mounts following
+// a cross-stage handoff (DW12). Frames the stage the pastor is entering:
+// names the work, the shape, and the named outcomes that travel forward.
+// Same shell (topbar + scripture column) as the active clearing; the
+// overview replaces the body area until the pastor dismisses it.
+//
+// `stageKey` is the sessionStorage namespace — distinct per stage so
+// Assembly and Manuscript fire independently. The hook returns a tuple of
+// `[seen, markSeen]`; consumers render the overview when `!seen` and call
+// `markSeen()` from the continue affordance. SessionStorage persists for
+// the active app session and resets on browser/Electron close — matching
+// the charter's "once per session" wording.
+export function useStageOverviewSeen(stageKey) {
+  const storageKey = `sf_stage_overview_${stageKey}_seen`;
+  const [seen, setSeen] = useState(() => {
+    try {
+      return typeof window !== "undefined" && window.sessionStorage?.getItem(storageKey) === "1";
+    } catch {
+      return false;
+    }
+  });
+  const markSeen = () => {
+    setSeen(true);
+    try { window.sessionStorage?.setItem(storageKey, "1"); } catch { /* private mode etc. */ }
+  };
+  return [seen, markSeen];
+}
+
+export function StageOverview({
+  eyebrow,           // "ENTERING ASSEMBLY" / "ENTERING THE WRITING ROOM"
+  title,             // "Assembly — where the sermon takes shape."
+  body,              // descriptive paragraph
+  outcomes,          // [{ label, text }, ...] — the named outcomes this stage will produce
+  carriedForward,    // optional [{ label, text }, ...] — outcomes already produced in prior stages
+  continueLabel,     // "Walk into Assembly" / "Walk into the writing room"
+  onContinue,
+}) {
+  return (
+    <div className="tw-clearing tw-clearing-stage-overview">
+      <div className="tw-stage-marker" aria-hidden="true" />
+      <div className="tw-pause-eyebrow tw-stage-eyebrow tw-mono">{eyebrow}</div>
+      <h2 className="tw-pause-title tw-stage-title">{title}</h2>
+      <p className="tw-pause-sub tw-stage-sub">{body}</p>
+      {outcomes && outcomes.length > 0 && (
+        <div className="tw-stage-overview-section">
+          <div className="tw-stage-overview-section-label tw-mono">YOU WILL PRODUCE</div>
+          <ul className="tw-stage-overview-list">
+            {outcomes.map((o) => (
+              <li key={o.label}>
+                <span className="tw-stage-overview-outcome-label tw-mono">{o.label}</span>
+                <span className="tw-stage-overview-outcome-text">{o.text}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {carriedForward && carriedForward.length > 0 && (
+        <div className="tw-stage-overview-section">
+          <div className="tw-stage-overview-section-label tw-mono">YOU ALREADY HAVE</div>
+          <ul className="tw-stage-overview-list">
+            {carriedForward.map((o) => (
+              <li key={o.label}>
+                <span className="tw-stage-overview-outcome-label tw-mono">{o.label}</span>
+                <span className="tw-stage-overview-outcome-text">{o.text}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <div className="tw-clearing-actions">
+        {/* eslint-disable-next-line sermonforge/no-raw-button */}
+        <button className="tw-advance" onClick={onContinue}>
+          <span>{continueLabel}</span>
+          <span className="tw-advance-arrow">→</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Stage-boundary pause — the heavier visual register used at Study →
+// Assembly and Assembly → Manuscript. Distinguished from the sub-phase
+// `PauseClearing` (lightweight "A BREATH BETWEEN PHASES") by a wider
+// card, a gold hairline marker, the "A THRESHOLD" eyebrow, and a
+// multi-outcome read-back instead of a single synthesis input. The
+// stage's terminal named outcome (Implications Synthesis / Sermon Frame)
+// stays editable inline so the pastor can refine the last piece before
+// crossing the bend.
+//
+// Each row passes its own `content` node so the caller controls whether
+// it renders read-back text, an editable input, or a paired sub-shape
+// (Frame's Intro + Conclusion). Keeping content opaque to this component
+// avoids growing a prop-flag surface for every read-back variation.
+export function StageBoundaryPause({
+  eyebrow = "A THRESHOLD",
+  title,
+  body,
+  rows,
+  nextLabel,
+  advanceLabel,
+  advance,
+  lookBack,
+}) {
+  return (
+    <div className="tw-clearing tw-clearing-stage-pause">
+      <div className="tw-stage-marker" aria-hidden="true" />
+      <div className="tw-pause-eyebrow tw-stage-eyebrow tw-mono">{eyebrow}</div>
+      <h2 className="tw-pause-title tw-stage-title">{title}</h2>
+      <p className="tw-pause-sub tw-stage-sub">{body}</p>
+      <div className="tw-stage-outcomes">
+        {rows.map((row, i) => (
+          <div className="tw-stage-outcome" key={row.label || i}>
+            <div className="tw-stage-outcome-label tw-mono">{row.label}</div>
+            <div className="tw-stage-outcome-body">{row.content}</div>
+          </div>
+        ))}
+      </div>
+      <p className="tw-pause-next tw-stage-next">
+        <span className="tw-mono">NEXT</span>
+        <span> {nextLabel}</span>
+      </p>
+      <div className="tw-clearing-actions">
+        {/* eslint-disable-next-line sermonforge/no-raw-button */}
+        <button className="tw-link-back" onClick={lookBack}>← look back</button>
+        {/* eslint-disable-next-line sermonforge/no-raw-button */}
+        <button className="tw-advance" onClick={advance}>
+          <span>{advanceLabel}</span>
+          <span className="tw-advance-arrow">→</span>
+        </button>
+      </div>
+    </div>
   );
 }
 

@@ -28,6 +28,7 @@ import {
   getQuestionAnswer,
   getQuestionString,
   isQuestionNA,
+  parseStructuredField,
 } from "../utils/studyFields";
 import { MAIN_POINT_PAIR_FIELDS } from "../utils/sadiAnchorFields";
 import { SERMON_FRAME_FIELDS } from "../utils/sermonFrameFields";
@@ -41,8 +42,11 @@ import {
   SCRIPTURE_COL_WIDTH, padNum,
   firstIncompleteFieldKey, fieldHasAnyAnswer,
   useViewportSize, useSyncActiveQuestion, useTrailKeyboard,
-  TrailTopBar, TrailDefs, Station,
+  TrailTopBar, TrailDefs, Station, StageBoundaryPause,
+  StageOverview, useStageOverviewSeen,
+  NotebookDrawer, useNotebookToggle, useTrailMapToggle,
 } from "./studyTrailShared";
+import WorkspaceTrailMap from "./WorkspaceTrailMap";
 import "./studyTrail.css";
 
 // Stop kinds.
@@ -154,12 +158,16 @@ export default function AssemblyTrail({
   advanceSubPhase,
   jumpToSubPhase,
   jumpToStudy,
+  onUpdate,
   onExit,
 }) {
   const viewport = useViewportSize();
   const [maxVisitedStop, setMaxVisitedStop] = useState(0);
   const [passageOpen, setPassageOpen] = useState(false);
   const [dismissedOverviews, setDismissedOverviews] = useState(() => new Set());
+  const [stageOverviewSeen, markStageOverviewSeen] = useStageOverviewSeen("assembly");
+  const notebook = useNotebookToggle();
+  const map = useTrailMapToggle();
 
   // Active field within the current sub-phase. For Anchor + Frame, this is
   // the MPT/MPS or Intro/Conclusion key. Workshop sub-phases don't use it.
@@ -420,16 +428,85 @@ export default function AssemblyTrail({
     );
   })();
 
+  // Stage overview (DW12) — short-circuit the trail body on the first
+  // mount of Assembly in a session so the pastor reads the framing before
+  // walking the trail. `useStageOverviewSeen` persists in sessionStorage,
+  // so reloads stay quiet but a fresh app boot re-fires the framing.
+  if (!stageOverviewSeen) {
+    const readSynth = (col) => {
+      try {
+        const data = parseStructuredField(sermon?.[col]);
+        const v = getQuestionAnswer(data, "_synthesis");
+        return typeof v === "string" ? v : "";
+      } catch { return ""; }
+    };
+    const carriedForward = [
+      { label: "OBSERVATION SET",            text: readSynth("observations")     || "(not yet written)" },
+      { label: "INTERPRETATION SET",         text: readSynth("interpretation")   || "(not yet written)" },
+      { label: "CHRIST-CONNECTION STATEMENT",text: readSynth("redemptive_thread")|| "(not yet written)" },
+      { label: "IMPLICATIONS SYNTHESIS",     text: readSynth("implications")     || "(not yet written)" },
+    ];
+    return (
+      <div className="tw-shell">
+        <TrailTopBar sermon={sermon} onExit={onExit} onPassageClick={() => setPassageOpen(true)} />
+        <PassagePopup passage={sermon?.passage} isOpen={passageOpen} onClose={() => setPassageOpen(false)} />
+        <aside className="tw-scripture">
+          <ScripturePanel passage={sermon?.passage} />
+        </aside>
+        <StageOverview
+          eyebrow="ENTERING ASSEMBLY"
+          title="Assembly — where the sermon takes shape."
+          body="Four sub-phases. The Anchor forges the Main Point Pair from the four syntheses you've already produced; the Outline lays the body; Equip fills each point with Scripture, explanation, application, and illustration; the Frame writes the Intro and Conclusion. Walk one bend at a time."
+          outcomes={[
+            { label: "MAIN POINT PAIR", text: "Past-tense MPT + present-tense MPS — the spine the body hangs on." },
+            { label: "SERMON OUTLINE",  text: "The points that move the listener toward the MPS." },
+            { label: "SERMON BODY",     text: "Each point equipped with Scripture / Explanation / Application / Illustration." },
+            { label: "SERMON FRAME",    text: "The Intro that opens, the Conclusion that lands." },
+          ]}
+          carriedForward={carriedForward}
+          continueLabel="Walk into Assembly"
+          onContinue={markStageOverviewSeen}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="tw-shell">
-      <TrailTopBar sermon={sermon} onExit={onExit} onPassageClick={() => setPassageOpen(true)} />
+      <TrailTopBar
+        sermon={sermon}
+        onExit={onExit}
+        onPassageClick={() => setPassageOpen(true)}
+        onToggleNotebook={onUpdate ? notebook.toggle : undefined}
+        notebookOpen={notebook.open}
+        onOpenMap={map.openMap}
+      />
       <PassagePopup passage={sermon?.passage} isOpen={passageOpen} onClose={() => setPassageOpen(false)} />
       <aside className="tw-scripture">
         <ScripturePanel passage={sermon?.passage} />
       </aside>
       <TrailCanvas tx={tx} ty={ty} stopIdx={stopIdx} maxVisitedStop={maxVisitedStop} viewport={viewport} />
       <SubPhaseRibbon stop={stop} subPhaseMeta={subPhaseMeta} activeQKey={activeQKey} />
-      {clearing}
+      <div data-tour-id={
+        subPhaseMeta.key === SUB_PHASE.Anchor  ? "mpt-field" :
+        subPhaseMeta.key === SUB_PHASE.Outline ? "outline-builder" :
+        subPhaseMeta.key === SUB_PHASE.Equip   ? "functional-elements" :
+        subPhaseMeta.key === SUB_PHASE.Frame   ? "frame-worksheet" :
+        undefined
+      }>
+        {clearing}
+      </div>
+      {onUpdate && (
+        <NotebookDrawer
+          open={notebook.open}
+          onClose={notebook.close}
+          label="Assembly Notebook"
+          value={sermon?.notebook_blueprint || ""}
+          onChange={(value) => onUpdate({ notebook_blueprint: value })}
+          placeholder="Free-form notes for your assembly thinking — alternate orderings, points to test, things to revisit."
+        />
+      )}
+      {map.open && <WorkspaceTrailMap sermon={sermon} onClose={map.close} />}
     </div>
   );
 }
@@ -958,18 +1035,108 @@ function PauseClearing({
       </NamedOutcomePause>
     );
   }
-  // Frame sub-phase pause doubles as the Assembly → Manuscript boundary —
-  // dismiss flips the tab via AssemblyTab's setPausePoint wrapper.
+  // Frame sub-phase pause doubles as the Assembly → Manuscript stage-
+  // boundary — dismiss flips the tab via AssemblyTab's setPausePoint
+  // wrapper. Heavier register: read-back of all four Assembly named
+  // outcomes (Main Point Pair / Sermon Outline / Sermon Body / Sermon
+  // Frame) with the Frame pair still editable inline so the pastor can
+  // refine the last piece before crossing into the writing room.
+  const mptStr = getQuestionString(mppData, "mpt", "tighten");
+  const mpsStr = getQuestionString(mppData, "mps", "tighten");
+  const introStr = getQuestionString(frameData, "intro", "hook");
+  const conclusionStr = getQuestionString(frameData, "conclusion", "land_call");
+  const empty = (text) => <em className="tw-stage-empty">{text}</em>;
+  const rows = [
+    {
+      label: "MAIN POINT PAIR",
+      content: (
+        <>
+          <div className="tw-stage-outcome-mpt">
+            {mptStr || empty("MPT not yet tightened")}
+          </div>
+          <div className="tw-stage-outcome-mps">
+            {mpsStr || empty("MPS not yet tightened")}
+          </div>
+        </>
+      ),
+    },
+    {
+      label: "SERMON OUTLINE",
+      content: outline.length === 0 ? (
+        empty("No outline points yet")
+      ) : (
+        <ol className="tw-stage-outcome-list">
+          {outline.map((p) => (
+            <li key={p.id}>{p.text || empty("(untitled)")}</li>
+          ))}
+        </ol>
+      ),
+    },
+    {
+      label: "SERMON BODY",
+      content: outline.length === 0 ? (
+        empty("No points equipped yet")
+      ) : (
+        <div>
+          {outline.map((p) => {
+            const fe = funcData[p.id] || {};
+            const filled = ["scripture", "explanation", "application", "illustration"]
+              .filter((k) => fe[k] && fe[k].trim()).length;
+            return (
+              <div key={p.id} className="tw-stage-outcome-equip-row">
+                <span>{p.text || empty("(untitled)")}</span>
+                <span className={`tw-stage-outcome-equip-count tw-mono ${filled === 4 ? "is-full" : ""}`}>
+                  {filled}/4 EQUIPPED
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      ),
+    },
+    {
+      label: "SERMON FRAME",
+      content: (
+        <div className="tw-stage-outcome-pair">
+          <div>
+            <div className="tw-stage-outcome-sublabel tw-mono">INTRO — HOW THEY ENTER</div>
+            <textarea
+              className="tw-pair-input"
+              value={introStr}
+              onChange={(e) => updateFrame("intro", "hook", e.target.value)}
+              onInput={(e) => autoResize(e.target)}
+              ref={(el) => autoResize(el)}
+              placeholder="The hook that opens the sermon…"
+              spellCheck={false}
+            />
+          </div>
+          <div>
+            <div className="tw-stage-outcome-sublabel tw-mono">CONCLUSION — HOW THEY EXIT</div>
+            <textarea
+              className="tw-pair-input"
+              value={conclusionStr}
+              onChange={(e) => updateFrame("conclusion", "land_call", e.target.value)}
+              onInput={(e) => autoResize(e.target)}
+              ref={(el) => autoResize(el)}
+              placeholder="The call the conclusion lands…"
+              spellCheck={false}
+            />
+          </div>
+        </div>
+      ),
+    },
+  ];
+
   return (
-    <PairPauseClearing
-      eyebrow="A BREATH BETWEEN STEPS"
-      title="The Sermon Frame"
-      body="Read the way your sermon enters and exits — the Intro that ushers the listener in, the Conclusion that lands them. Refine if anything still rings off; otherwise walk into the writing room."
-      outcomeLabel="SERMON FRAME"
+    <StageBoundaryPause
+      eyebrow="A THRESHOLD — ASSEMBLY IS BUILT"
+      title="The sermon stands."
+      body="Read the four pieces you've assembled. If anything still rings off, walk back and refine. Otherwise refine the Sermon Frame here and cross into the writing room."
+      rows={rows}
       nextLabel={<><em>Manuscript</em><span> — the writing room — waits beyond this last bend.</span></>}
       advanceLabel="Walk into the writing room"
-      data={frameData} updater={updateFrame} rows={SERMON_FRAME_PAIR_ROWS}
-      advance={advance} lookBack={lookBack}
+      advance={advance}
+      lookBack={lookBack}
     />
   );
 }
@@ -1028,11 +1195,6 @@ function PairPauseClearing({
 const MAIN_POINT_PAIR_ROWS = [
   { label: "MPT — WHAT THE TEXT SAID",       fieldKey: "mpt", qKey: "tighten", placeholder: "One past-tense sentence…" },
   { label: "MPS — WHAT THE TEXT SAYS TO US", fieldKey: "mps", qKey: "tighten", placeholder: "One present/future-tense sentence…" },
-];
-
-const SERMON_FRAME_PAIR_ROWS = [
-  { label: "INTRO — HOW THEY ENTER",     fieldKey: "intro",      qKey: "hook",      placeholder: "The hook that opens the sermon…" },
-  { label: "CONCLUSION — HOW THEY EXIT", fieldKey: "conclusion", qKey: "land_call", placeholder: "The call the conclusion lands…" },
 ];
 
 function NamedOutcomePause({

@@ -143,16 +143,18 @@ function FuncElem({ pointText, pointId, displayIndex, funcData, onUpdate, onUpda
   );
 }
 
-export default function AssemblyTab({ sermon, onUpdate, onTabChange, onMovement }) {
+export default function AssemblyTab({ sermon, onUpdate, onTabChange, onMovement, onClose }) {
   const { active: tourActive, desiredUi } = useTour();
   const [activeSubPhase, setActiveSubPhase] = useState(() => {
     const saved = localStorage.getItem(`sermonforge_assembly_subphase_${sermon.id}`);
     return saved ? parseInt(saved, 10) : 1;
   });
   const [advanceError, setAdvanceError] = useState(null);
-  // Trail suppression — pastor exits the trail via × / Esc; the legacy
-  // sub-phase tab strip renders until re-entry via "Trail mode →".
-  const [trailSuppressed, setTrailSuppressed] = useState(false);
+  // WTC sequel Item 8: user-facing trail-suppress toggle is retired —
+  // × Exit / Esc return the pastor to the Dashboard (`onClose`). The
+  // `sermonforge_trail_disabled` localStorage flag below still gates the
+  // legacy sub-phase tab strip on for contract tests that assert on
+  // its markup; that's the only remaining consumer of the fallback path.
 
   useEffect(() => {
     localStorage.setItem(`sermonforge_assembly_subphase_${sermon.id}`, activeSubPhase);
@@ -341,7 +343,7 @@ export default function AssemblyTab({ sermon, onUpdate, onTabChange, onMovement 
     typeof window !== "undefined" &&
     window.localStorage &&
     window.localStorage.getItem("sermonforge_trail_disabled") === "1";
-  const showAssemblyTrail = !trailSuppressed && !trailDisabledByFlag;
+  const showAssemblyTrail = !trailDisabledByFlag;
 
   if (showAssemblyTrail) {
     return (
@@ -366,7 +368,8 @@ export default function AssemblyTab({ sermon, onUpdate, onTabChange, onMovement 
         advanceSubPhase={advanceSubPhase}
         jumpToSubPhase={jumpToSubPhase}
         jumpToStudy={jumpToStudy}
-        onExit={() => setTrailSuppressed(true)}
+        onUpdate={onUpdate}
+        onExit={onClose}
       />
     );
   }
@@ -407,28 +410,6 @@ export default function AssemblyTab({ sermon, onUpdate, onTabChange, onMovement 
             })}
           </div>
           <div style={{ marginLeft: "auto", display: "flex", gap: "12px", alignItems: "center" }}>
-            {trailSuppressed && (
-              /* eslint-disable-next-line sermonforge/no-raw-button */
-              <button
-                type="button"
-                onClick={() => setTrailSuppressed(false)}
-                title="Re-enter Assembly trail"
-                style={{
-                  background: "transparent",
-                  border: "1px solid rgba(212, 160, 23, 0.4)",
-                  borderRadius: "2px",
-                  padding: "6px 12px",
-                  fontFamily: "'JetBrains Mono', ui-monospace, monospace",
-                  fontSize: "10px",
-                  letterSpacing: "0.18em",
-                  color: "var(--gold)",
-                  cursor: "pointer",
-                  textTransform: "uppercase",
-                }}
-              >
-                Trail mode →
-              </button>
-            )}
             <FeedbackFlag surface="assembly-tab" sermonId={sermon?.id ?? null} step={activeSubPhase ?? null} />
           </div>
         </div>
@@ -599,38 +580,48 @@ function AssemblyToManuscriptPause({ sermon, mppData, frameData, outline, funcDa
       background: "var(--parchment-warm)",
       border: "1px solid var(--parchment-deep)",
       borderRadius: "2px",
-      padding: "32px 40px",
-      maxWidth: "740px",
+      padding: "36px 44px",
+      maxWidth: "820px",
       margin: "40px auto",
       boxShadow: "var(--shadow-soft)",
     }}>
+      {/* Gold-bright hairline marker — matches the in-trail stage-boundary
+          pause so the visual register stays continuous if the pastor exits
+          the trail. */}
+      <div style={{
+        width: "88px",
+        height: "2px",
+        background: "var(--gold-bright)",
+        opacity: 0.85,
+        marginBottom: "20px",
+      }} aria-hidden="true" />
       <div style={{
         fontFamily: "'JetBrains Mono', ui-monospace, monospace",
-        fontSize: "10px",
-        letterSpacing: "0.32em",
-        color: "var(--gold)",
-        marginBottom: "16px",
+        fontSize: "11px",
+        letterSpacing: "0.4em",
+        color: "var(--gold-bright)",
+        marginBottom: "20px",
         textTransform: "uppercase",
       }}>
-        A breath between steps
+        A threshold — Assembly is built
       </div>
       <h2 style={{
         fontFamily: "'Playfair Display', serif",
         fontStyle: "italic",
         fontWeight: 400,
-        fontSize: "36px",
-        lineHeight: 1.2,
+        fontSize: "44px",
+        lineHeight: 1.15,
         color: "var(--ink)",
-        margin: "0 0 12px",
+        margin: "0 0 14px",
       }}>
-        Assembly is built.
+        The sermon stands.
       </h2>
       <p style={{
         fontSize: "16px",
         lineHeight: 1.55,
         color: "var(--ink-soft)",
-        margin: "0 0 24px",
-        maxWidth: "560px",
+        margin: "0 0 28px",
+        maxWidth: "620px",
       }}>
         Read the four pieces you've assembled. If anything still rings
         off, walk back and refine. Otherwise, cross into the writing room.

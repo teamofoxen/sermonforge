@@ -1,13 +1,30 @@
 # Workspace Trail Charter — Trail Metaphor Across the Whole Sermon Workspace
 
-> **Post-walkthrough status (2026-05-10):** Stages A–E shipped + pastor-tested + merged to main. Per-stage trail surfaces are the production rendering for Study + Assembly. The remaining DW-questions resolved post-walkthrough land on a sequel arc.
+> **Sequel arc closed (2026-05-11):** All eight items shipped on `claude/workspace-trail-sequel` (6 commits, +1568/-156 across 13 files). The trail is now the sole user-facing rendering of every stage. × Exit returns to the Dashboard. Pending merge into main.
+>
+> | Item | Resolution(s) | Files / surfaces |
+> |---|---|---|
+> | 1 — Heavier step-boundary pauses | RW4 + RW9 + DW9 | `StageBoundaryPause` in `studyTrailShared.jsx`; Implications-pause (Study→Assembly) + Frame-pause (Assembly→Manuscript) read back the stage's four named outcomes with the terminal outcome editable inline. CSS `.tw-clearing-stage-pause`. |
+> | 2 — Manuscript writing room | DW5 | New `ManuscriptTrail.jsx` wraps `ManuscriptTab` in the `.tw-shell-writing-room` shell — Ink topbar, scripture column on the right, 820px reading-column body, soft enter animation. |
+> | 3 — Camera handoff between stages | DW7 | CSS `tw-trail-handoff` keyframe + 0.55s ease-out on `.tw-shell`. Per-stage STOPS arrays were already in code; the missing piece was the visual handoff motion. |
+> | 4 — Stage-level overviews | DW12 | `StageOverview` + `useStageOverviewSeen(stageKey)` (sessionStorage). Fires once per session on first mount of Assembly + Manuscript; reads back prior-stage outcomes + previews this stage's. |
+> | 5 — Per-stage notebook | DW8 | `NotebookDrawer` + `useNotebookToggle` — bottom slide-up, gold pill toggle in topbar, Cmd/Ctrl+N. Wired into all three trails; persists to `notebook_study` / `notebook_blueprint` / `notebook_manuscript`. |
+> | 6 — Workspace Trail Map | DW11 | New `WorkspaceTrailMap.jsx` modal. Single-screen three-row switchback (Study → Assembly → Manuscript) with 9 sub-phase stops and named-outcome labels. Current location pinned. Clean — no checklists, no counters, no per-field labels. |
+> | 7 — Tour rewrite | RW8 + DW10 | `WORKSPACE_TOUR_STOPS` re-anchored to trail surfaces. Stops 1/2/11 retitled. New `data-tour-id` attrs on TrailTopBar h1, Map button, trail clearings, Assembly sub-phase clearings, writing-room body. Spec doc banner-tagged. |
+> | 8 — Trail-suppress escape hatch retired | (final cutover) | `trailSuppressed` state removed from StudyTab + AssemblyTab + ManuscriptTrail. × Exit / Esc route to `onClose` → Dashboard. `sermonforge_trail_disabled` localStorage flag retained only as a contract-test escape (the two `process-*-evidence`/`movement` tests still set it; migrating those tests onto the trail surface is the only remaining cleanup). |
+>
+> Pastor-test gate (Phase M) is the next user-driven step: at least one full sermon prepped from text to manuscript through the trail, validating the qualitative "feels continuous" test from this charter's Orientation section.
+
+> **Post-walkthrough status (2026-05-10):** Stages A–E shipped + pastor-tested + merged to main. Per-stage trail surfaces are the production rendering for Study + Assembly. The remaining DW-questions resolved post-walkthrough land on the sequel arc.
+>
+> **Sequel branch:** [`claude/workspace-trail-sequel`](https://github.com/teamofoxen/sermonforge/tree/claude/workspace-trail-sequel) — the working branch for the polish queue listed below. The trail-suppress escape hatch retires when this arc lands; everything else gets implemented incrementally without a feature-flag layer.
 >
 > - **Stage A** (Study Step 1 / Exegesis trail) → [`StudyTrailExegesis.jsx`](../../src/components/StudyTrailExegesis.jsx). Shipped.
 > - **Stages B + C + D + E** (Anchor + Outline + Equip + Frame) → one unified [`AssemblyTrail.jsx`](../../src/components/AssemblyTrail.jsx) switchback with workshop-clearings for Outline + Equip. Shipped.
 > - **Stage F** (Manuscript writing-room) → DW5 resolved (yes, writing-room mode); implementation on the sequel arc.
-> - **Stage G** (workspace shell retirement) → partially shipped: tab strip collapsed 4 → 3, OutlineTab / FrameTab deleted as standalone stages. Trail-suppress falls through to the sub-phase tab strip inside AssemblyTab as a temporary escape hatch.
+> - **Stage G** (workspace shell retirement) → partially shipped: tab strip collapsed 4 → 3, OutlineTab / FrameTab deleted as standalone stages. Trail-suppress falls through to the sub-phase tab strip inside AssemblyTab as a temporary escape hatch (retires on the sequel arc).
 >
-> Resolved through this arc: DW1, DW2, DW3, DW4. Resolved post-walkthrough and queued for the sequel: DW5, DW6, DW7, DW8, DW9, DW10, DW11, DW12, DW13, DW14, DW15. See each question's resolution note below for the binding decision.
+> Resolved through the merged arc: DW1, DW2, DW3, DW4. Resolved post-walkthrough and queued for the sequel arc: DW5, DW6, DW7, DW8, DW9, DW10, DW11, DW12, DW13, DW14, DW15. RW4 + RW8 + RW9 (workspace-restructure-charter) also queued there. See each question's resolution note below for the binding decision.
 >
 > See [`workspace-restructure-charter.md`](./workspace-restructure-charter.md) for the structural restructure that supersedes this charter's per-step phasing. The trail-rendering goals (single immersive walk, contemplative pause-clearings, named-outcome handoffs) remain binding.
 

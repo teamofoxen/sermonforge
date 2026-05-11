@@ -40,8 +40,10 @@ import {
   SCRIPTURE_COL_WIDTH, padNum,
   firstIncompleteFieldKey, fieldHasAnyAnswer,
   useViewportSize, useSyncActiveQuestion, useTrailKeyboard,
-  TrailTopBar, TrailDefs, Station,
+  TrailTopBar, TrailDefs, Station, StageBoundaryPause,
+  NotebookDrawer, useNotebookToggle, useTrailMapToggle,
 } from "./studyTrailShared";
+import WorkspaceTrailMap from "./WorkspaceTrailMap";
 import "./studyTrail.css";
 
 const PHASES = [
@@ -191,6 +193,7 @@ export default function StudyTrailExegesis({
   advanceSubPhase,
   jumpToSubPhase,
   subPhaseSufficiency,
+  onUpdate,
   onExit,
 }) {
   const viewport = useViewportSize();
@@ -219,6 +222,8 @@ export default function StudyTrailExegesis({
   // existing PassagePopup as a modal overlay so the pastor can read the
   // text without leaving the clearing.
   const [passageOpen, setPassageOpen] = useState(false);
+  const notebook = useNotebookToggle();
+  const map = useTrailMapToggle();
   const dismissOverview = (fieldKey) => {
     setDismissedOverviews((prev) => {
       if (prev.has(fieldKey)) return prev;
@@ -413,6 +418,9 @@ export default function StudyTrailExegesis({
         sermon={sermon}
         onExit={onExit}
         onPassageClick={() => setPassageOpen(true)}
+        onToggleNotebook={onUpdate ? notebook.toggle : undefined}
+        notebookOpen={notebook.open}
+        onOpenMap={map.openMap}
       />
       <PassagePopup
         passage={sermon?.passage}
@@ -422,6 +430,17 @@ export default function StudyTrailExegesis({
       <aside className="tw-scripture">
         <ScripturePanel passage={sermon?.passage} />
       </aside>
+      {onUpdate && (
+        <NotebookDrawer
+          open={notebook.open}
+          onClose={notebook.close}
+          label="Study Notebook"
+          value={sermon?.notebook_study || ""}
+          onChange={(value) => onUpdate({ notebook_study: value })}
+          placeholder="Free-form notes for your exegesis thinking — questions to come back to, threads to chase, half-formed connections."
+        />
+      )}
+      {map.open && <WorkspaceTrailMap sermon={sermon} onClose={map.close} />}
       <TrailCanvas
         tx={tx}
         ty={ty}
@@ -430,6 +449,7 @@ export default function StudyTrailExegesis({
         viewport={viewport}
       />
       <PhaseRibbon stop={stop} activeQKey={activeQKey} />
+      <div data-tour-id="trail-clearing">
       {stop.kind === "field" && (() => {
         const field = phaseDef.fields.find((f) => f.key === stop.fieldKey);
         if (!field?.overview) return false;
@@ -466,11 +486,14 @@ export default function StudyTrailExegesis({
           phaseDef={phaseDef}
           nextPhase={PHASES[stop.phase + 1] || null}
           phaseData={phaseData[stop.phase]}
+          allPhaseData={phaseData}
+          phases={PHASES}
           updateStructured={updateStructured}
           advance={advance}
           lookBack={lookBack}
         />
       )}
+      </div>
     </div>
   );
 }
@@ -729,7 +752,7 @@ function OverviewClearing({ stop, phaseDef, field, onContinue, onLookBack }) {
 
 // ── Pause clearing (between phases) ───────────────────────────────────────
 
-function PauseClearing({ stop, phaseDef, nextPhase, phaseData, updateStructured, advance, lookBack }) {
+function PauseClearing({ stop, phaseDef, nextPhase, phaseData, allPhaseData, phases, updateStructured, advance, lookBack }) {
   const promptText = PAUSE_PROMPTS[stop.pauseIdx] || "";
   const { data, column } = phaseData;
   // The synthesis answer is stored on the same envelope under a `_synthesis`
@@ -739,6 +762,55 @@ function PauseClearing({ stop, phaseDef, nextPhase, phaseData, updateStructured,
     const v = getQuestionAnswer(data, "_synthesis");
     return typeof v === "string" ? v : "";
   })();
+
+  // Stage-boundary outbound — `nextPhase === null` means this is the
+  // Implications-synthesis pause, which doubles as Study → Assembly. The
+  // heavier register reads back the three prior sub-phase syntheses + lets
+  // the pastor refine the Implications synthesis inline before crossing.
+  if (!nextPhase && allPhaseData && phases) {
+    const synthFor = (phaseIdx) => {
+      const v = getQuestionAnswer(allPhaseData[phaseIdx].data, "_synthesis");
+      return typeof v === "string" ? v : "";
+    };
+    const readBack = (text) =>
+      text ? text : <em className="tw-stage-empty">Not yet written — walk back to write it.</em>;
+
+    const rows = phases.map((p, i) => {
+      if (i < phases.length - 1) {
+        return {
+          label: p.outcome.toUpperCase(),
+          content: readBack(synthFor(i)),
+        };
+      }
+      return {
+        label: p.outcome.toUpperCase(),
+        content: (
+          <textarea
+            className="tw-pair-input"
+            value={synthValue}
+            onChange={(e) => updateStructured(column, data, "_synthesis", e.target.value)}
+            onInput={(e) => autoResize(e.target)}
+            ref={(el) => autoResize(el)}
+            placeholder="One sentence — how does this text land on your people?"
+            spellCheck={false}
+          />
+        ),
+      };
+    });
+
+    return (
+      <StageBoundaryPause
+        eyebrow="A THRESHOLD — STUDY IS COMPLETE"
+        title="The text has given you four things."
+        body="Read back what each sub-phase put in your hands. If a synthesis still rings off, walk back and refine it. Otherwise, refine the Implications synthesis here and cross into Assembly to forge the Main Point Pair."
+        rows={rows}
+        nextLabel={<><em>Assembly</em><span> — the </span><em>Main Point Pair</em><span> — waits beyond this last bend.</span></>}
+        advanceLabel="Walk into Assembly"
+        advance={advance}
+        lookBack={lookBack}
+      />
+    );
+  }
 
   return (
     <div className="tw-clearing tw-clearing-pause">
@@ -763,22 +835,13 @@ function PauseClearing({ stop, phaseDef, nextPhase, phaseData, updateStructured,
         </div>
       </div>
 
-      {nextPhase ? (
-        <p className="tw-pause-next">
-          <span className="tw-mono">NEXT</span>
-          <span> The trail descends into </span>
-          <em>{nextPhase.label}</em>
-          <span> — </span>
-          <span className="tw-pause-next-q">{nextPhase.question.toLowerCase()}</span>
-        </p>
-      ) : (
-        <p className="tw-pause-next">
-          <span className="tw-mono">NEXT</span>
-          <span> Assembly — the </span>
-          <em>Main Point Pair</em>
-          <span> — waits beyond this last bend.</span>
-        </p>
-      )}
+      <p className="tw-pause-next">
+        <span className="tw-mono">NEXT</span>
+        <span> The trail descends into </span>
+        <em>{nextPhase.label}</em>
+        <span> — </span>
+        <span className="tw-pause-next-q">{nextPhase.question.toLowerCase()}</span>
+      </p>
 
       <div className="tw-clearing-actions">
         {/* eslint-disable-next-line sermonforge/no-raw-button */}

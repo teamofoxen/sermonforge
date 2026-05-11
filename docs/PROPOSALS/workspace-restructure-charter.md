@@ -1,6 +1,6 @@
 # Workspace Restructure — Three-Step Sermon Arc (Study → Assembly → Manuscript)
 
-> **Status:** Drafted 2026-05-10. **Proposal only.** Surfaces a structural rethink that came out of Phase B of the Workspace Trail experiment: the existing four-step Study + Blueprint + Frame structure conflates exegesis (deepening into the text) with assembly (building the sermon from what the text gave). This charter proposes collapsing assembly-side work into a single Step 2 (Assembly) with four sub-phases, leaving a clean three-step workspace.
+> **Status (2026-05-10):** Shipped + merged to main. Three-stage shell (Study / Assembly / Manuscript) is the production workspace; unified Assembly trail across all four sub-phases is the production rendering. Pastor walkthrough closed. RW1 + RW2 + RW3 + RW5 + RW6 + RW7 + RW10 resolved here. RW4 + RW8 + RW9 resolved post-walkthrough; implementation queued on [`claude/workspace-trail-sequel`](https://github.com/teamofoxen/sermonforge/tree/claude/workspace-trail-sequel) (heavier step-boundary register + full tour rewrite). See [`workspace-trail-charter.md`](./workspace-trail-charter.md) for the sequel scope.
 >
 > **Audience:** The lone developer of SermonForge, who is also a pastor and the pastor-user. Plain language; technical specifics where they matter.
 >
