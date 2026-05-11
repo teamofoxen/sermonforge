@@ -12,39 +12,56 @@
 // runtime values, not the TypeScript types.
 'use strict';
 
+// Workspace Restructure (2026-05-10) — three-step sermon arc.
+// Stage collapses Blueprint + Frame into Assembly. The within-Study Step
+// layer retires; what were Study Steps 2/3/4 + Frame stage become Assembly's
+// four sub-phases (Anchor / Outline / Equip / Frame). Legacy "Blueprint" /
+// "Frame" current_stage values are coerced to "Assembly" on read in the spine.
 const STAGE = Object.freeze({
   Study: "Study",
-  Blueprint: "Blueprint",
-  Frame: "Frame",
+  Assembly: "Assembly",
   Manuscript: "Manuscript",
   Delivery: "Delivery",
 });
 
 // ARI Phase 7 — "Delivery" removed from the visible tab sequence; the Stage
 // type still admits it so legacy data doesn't break.
-const STAGE_SEQUENCE = Object.freeze(["Study", "Blueprint", "Frame", "Manuscript"]);
-
-const STEP = Object.freeze({
-  Exegesis: "Exegesis",
-  MPT_MPS: "MPT_MPS",
-  Outline: "Outline",
-  FunctionalElements: "FunctionalElements",
-});
-
-const STEP_CANONICAL_SEQUENCE = Object.freeze([
-  "Exegesis", "MPT_MPS", "Outline", "FunctionalElements",
-]);
+const STAGE_SEQUENCE = Object.freeze(["Study", "Assembly", "Manuscript"]);
 
 const SUB_PHASE = Object.freeze({
   Observe: "Observe",
   Interpret: "Interpret",
   RedemptiveThread: "RedemptiveThread",
   Implications: "Implications",
+  Anchor: "Anchor",
+  Outline: "Outline",
+  Equip: "Equip",
+  Frame: "Frame",
 });
 
-const SUB_PHASE_CANONICAL_SEQUENCE = Object.freeze([
+const STUDY_SUB_PHASE_SEQUENCE = Object.freeze([
   "Observe", "Interpret", "RedemptiveThread", "Implications",
 ]);
+
+const ASSEMBLY_SUB_PHASE_SEQUENCE = Object.freeze([
+  "Anchor", "Outline", "Equip", "Frame",
+]);
+
+const SUB_PHASE_CANONICAL_SEQUENCE = Object.freeze([
+  ...STUDY_SUB_PHASE_SEQUENCE,
+  ...ASSEMBLY_SUB_PHASE_SEQUENCE,
+]);
+
+const SUB_PHASE_STAGE = Object.freeze({
+  Observe: "Study",
+  Interpret: "Study",
+  RedemptiveThread: "Study",
+  Implications: "Study",
+  Anchor: "Assembly",
+  Outline: "Assembly",
+  Equip: "Assembly",
+  Frame: "Assembly",
+});
 
 const SERMON_STATUS = Object.freeze({
   InProgress: "in_progress",
@@ -131,10 +148,11 @@ class ContractViolation extends Error {
 module.exports = {
   STAGE,
   STAGE_SEQUENCE,
-  STEP,
-  STEP_CANONICAL_SEQUENCE,
   SUB_PHASE,
   SUB_PHASE_CANONICAL_SEQUENCE,
+  STUDY_SUB_PHASE_SEQUENCE,
+  ASSEMBLY_SUB_PHASE_SEQUENCE,
+  SUB_PHASE_STAGE,
   SERMON_STATUS,
   SERIES_STATUS,
   MUTATION_KIND,

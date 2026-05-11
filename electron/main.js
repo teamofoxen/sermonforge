@@ -7,14 +7,25 @@ const { isDev, paths, legacyDbPaths, devServerUrl } = require("./config");
 const { logInfo, logError, readRecent } = require("./logger");
 const {
   STAGE, STAGE_SEQUENCE,
-  STEP, STEP_CANONICAL_SEQUENCE,
   SUB_PHASE, SUB_PHASE_CANONICAL_SEQUENCE,
+  STUDY_SUB_PHASE_SEQUENCE, ASSEMBLY_SUB_PHASE_SEQUENCE,
+  SUB_PHASE_STAGE,
   SERMON_STATUS, SERIES_STATUS,
   MUTATION_KIND,
   SERMON_COLUMNS, SERIES_COLUMNS, SECTION_COLUMNS,
   STRUCTURED_FIELDS,
   ContractViolation,
 } = require("./contracts.cjs");
+
+// Workspace Restructure (2026-05-10) — legacy stage value coercion.
+// Pre-restructure DBs may carry current_stage = "Blueprint" or "Frame";
+// these collapse into "Assembly" at the read boundary so the canonical
+// Stage enum stays clean. Same shape as the ARI Phase 7 "Delivery"
+// tolerance — admitted at the data layer, never re-emitted by the spine.
+function coerceLegacyStage(stage) {
+  if (stage === "Blueprint" || stage === "Frame") return STAGE.Assembly;
+  return stage || STAGE.Study;
+}
 let _isQuitting = false;
 
 // Catch anything that slips through before app ready
@@ -718,19 +729,16 @@ function runMigrations() {
       db.run("ALTER TABLE sermons ADD COLUMN current_sub_phase TEXT");
     }
     // Backfill: any sermon currently in_progress and at Study stage
-    // (the schema default) gets a starting Step+SubPhase so getSermon's
+    // (the schema default) gets a starting SubPhase so getSermon's
     // ProcessPosition is fully populated for new sermons too.
-    db.run(
-      `UPDATE sermons
-         SET current_step = ?
-       WHERE current_stage = ? AND current_step IS NULL`,
-      [STEP.Exegesis, STAGE.Study]
-    );
+    // Workspace Restructure (2026-05-10) — current_step column retired
+    // from active use (kept on disk for legacy data); only SubPhase is
+    // backfilled.
     db.run(
       `UPDATE sermons
          SET current_sub_phase = ?
-       WHERE current_stage = ? AND current_step = ? AND current_sub_phase IS NULL`,
-      [SUB_PHASE.Observe, STAGE.Study, STEP.Exegesis]
+       WHERE current_stage = ? AND current_sub_phase IS NULL`,
+      [SUB_PHASE.Observe, STAGE.Study]
     );
     // Record the cutoff once. queryOne ensures we don't overwrite if v17
     // re-runs (idempotency for partially-applied migrations).
@@ -1044,14 +1052,16 @@ function success(value) {
 
 function shapeSermon(row, parentContext) {
   if (!row) return null;
+  // Workspace Restructure (2026-05-10) — coerce legacy stage values
+  // (Blueprint, Frame) to Assembly so the canonical position is clean.
+  const stage = coerceLegacyStage(row.current_stage);
   const out = {
     // Canonical shape (per src/core/contracts.ts `Sermon`).
     id: row.id,
     name: row.title || "",
     status: row.stage || SERMON_STATUS.InProgress,
     position: {
-      stage: row.current_stage || STAGE.Study,
-      step: row.current_step || undefined,
+      stage,
       subPhase: row.current_sub_phase || undefined,
     },
     parentContext: parentContext || null,
@@ -1062,6 +1072,7 @@ function shapeSermon(row, parentContext) {
     // Backward-compat raw row fields. Existing components read these directly;
     // migration to the canonical shape (Sermon.name, Sermon.position) is gradual.
     ...row,
+    current_stage: stage,
   };
   return out;
 }
@@ -1239,12 +1250,15 @@ function validateAndCommit(op, payload) {
         );
       }
       const id = randomUUID();
+      // Workspace Restructure (2026-05-10) — current_step initialized to
+      // NULL (column kept for legacy data; canonical position is stage +
+      // sub_phase only).
       db.run(
         `INSERT INTO sermons
            (id, series_id, section_id, is_one_off, title, passage, date, preacher,
             stage, mpt, mps, observations, outline, manuscript,
             current_stage, current_step, current_sub_phase)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, '', '', '', '[]', '', ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, '', '', '', '[]', '', ?, NULL, ?)`,
         [
           id,
           payload.series_id || null,
@@ -1256,7 +1270,6 @@ function validateAndCommit(op, payload) {
           payload.preacher || "",
           SERMON_STATUS.InProgress,
           STAGE.Study,
-          STEP.Exegesis,
           SUB_PHASE.Observe,
         ],
       );
@@ -1403,11 +1416,20 @@ function validateAndCommit(op, payload) {
       return success();
 
     case "transition-state": {
-      const { sermonId, to, evidence, direction, kind } = payload || {};
+      const { sermonId, evidence, direction, kind } = payload || {};
+      let { to } = payload || {};
       const row = fetchSermonRow(sermonId);
       if (!row) {
         return rejection("NOT_FOUND", "State #1", `Sermon ${sermonId} not found.`);
       }
+      // Workspace Restructure (2026-05-10) — coerce legacy stage values in
+      // the `to` payload so older renderer code calling `transitionState({
+      // to: STAGE.Blueprint })` lands on Assembly without an extra round-
+      // trip. Same coercion shape as the read-side shapeSermon.
+      if (kind === "stage") {
+        to = coerceLegacyStage(to);
+      }
+      const currentStage = coerceLegacyStage(row.current_stage);
       // Process #2 (empty-evidence gate) only fires on forward movement.
       // The constraint is "the system does not advance unless evidence
       // exists" — backward navigation is retreat, not advancement, and
@@ -1421,7 +1443,7 @@ function validateAndCommit(op, payload) {
         );
       }
       if (kind === "stage" && direction === "forward") {
-        const fromIdx = STAGE_SEQUENCE.indexOf(row.current_stage);
+        const fromIdx = STAGE_SEQUENCE.indexOf(currentStage);
         const toIdx = STAGE_SEQUENCE.indexOf(to);
         if (fromIdx >= 0 && toIdx >= 0 && toIdx <= fromIdx) {
           return rejection(
@@ -1431,18 +1453,14 @@ function validateAndCommit(op, payload) {
           );
         }
       }
-      if (kind === "step" && direction === "forward") {
-        const fromIdx = STEP_CANONICAL_SEQUENCE.indexOf(row.current_step);
-        const toIdx = STEP_CANONICAL_SEQUENCE.indexOf(to);
-        if (fromIdx >= 0 && toIdx >= 0 && toIdx <= fromIdx) {
-          return rejection(
-            "PROCESS_1_FORWARD_TO_PRIOR",
-            "Process #1",
-            "Process Contract #1 violation: forward direction cannot move to a prior step.",
-          );
-        }
-      }
       if (kind === "sub_phase" && direction === "forward") {
+        // Sub-phase monotonicity uses the combined canonical sequence
+        // (Study sub-phases followed by Assembly sub-phases), so forward
+        // motion from Implications (Study) to Anchor (Assembly) reads as a
+        // forward step across the combined sequence — but cross-stage
+        // sub-phase transitions are rare (typically routed as stage
+        // transitions); the index comparison still catches the in-stage
+        // case.
         const fromIdx = SUB_PHASE_CANONICAL_SEQUENCE.indexOf(row.current_sub_phase);
         const toIdx = SUB_PHASE_CANONICAL_SEQUENCE.indexOf(to);
         if (fromIdx >= 0 && toIdx >= 0 && toIdx <= fromIdx) {
@@ -1454,28 +1472,37 @@ function validateAndCommit(op, payload) {
         }
       }
       if (kind === "stage") {
-        const stepDefault = to === STAGE.Study ? STEP.Exegesis : null;
-        const subDefault = to === STAGE.Study ? SUB_PHASE.Observe : null;
+        // Stage entry default — first sub-phase of the destination stage.
+        let subDefault = null;
+        if (to === STAGE.Study) subDefault = SUB_PHASE.Observe;
+        else if (to === STAGE.Assembly) subDefault = SUB_PHASE.Anchor;
         db.run(
-          `UPDATE sermons SET current_stage = ?, current_step = ?, current_sub_phase = ?, updated_at = datetime('now') WHERE id = ?`,
-          [to, stepDefault, subDefault, sermonId],
-        );
-      } else if (kind === "step") {
-        const subDefault = to === STEP.Exegesis ? SUB_PHASE.Observe : null;
-        db.run(
-          `UPDATE sermons SET current_step = ?, current_sub_phase = ?, updated_at = datetime('now') WHERE id = ?`,
+          `UPDATE sermons SET current_stage = ?, current_step = NULL, current_sub_phase = ?, updated_at = datetime('now') WHERE id = ?`,
           [to, subDefault, sermonId],
         );
       } else if (kind === "sub_phase") {
-        db.run(
-          `UPDATE sermons SET current_sub_phase = ?, updated_at = datetime('now') WHERE id = ?`,
-          [to, sermonId],
-        );
+        // Sub-phase transition. Update current_sub_phase, and also align
+        // current_stage if the new sub-phase belongs to a different stage
+        // (e.g., the Implications → Anchor cross would otherwise leave
+        // current_stage at "Study" while sub-phase is "Anchor", which
+        // would confuse downstream readers). SUB_PHASE_STAGE is the map.
+        const targetStage = SUB_PHASE_STAGE[to];
+        if (targetStage && targetStage !== currentStage) {
+          db.run(
+            `UPDATE sermons SET current_stage = ?, current_sub_phase = ?, updated_at = datetime('now') WHERE id = ?`,
+            [targetStage, to, sermonId],
+          );
+        } else {
+          db.run(
+            `UPDATE sermons SET current_sub_phase = ?, updated_at = datetime('now') WHERE id = ?`,
+            [to, sermonId],
+          );
+        }
       } else {
         return rejection(
           "STATE_5_NONCANONICAL_TO",
           "State #5",
-          `'to' must be a canonical Stage/Step/SubPhase value (got '${to}').`,
+          `'to' must be a canonical Stage or SubPhase value (got '${to}').`,
         );
       }
       saveDb();
@@ -1566,7 +1593,7 @@ function validateAndCommit(op, payload) {
             sermon.outline, sermon.functional_elements,
             sermon.manuscript, sermon.delivery_notes, sermon.timing_notes,
             sermon.study_guide_note, sermon.sermon_frame,
-            STAGE.Study, STEP.Exegesis, SUB_PHASE.Observe,
+            STAGE.Study, null, SUB_PHASE.Observe,
           ],
         );
         db.run("COMMIT");

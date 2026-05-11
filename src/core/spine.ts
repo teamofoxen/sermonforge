@@ -35,8 +35,8 @@
 // Authority: docs/CORE.md → "The Framework."
 
 import {
-  Stage, Step, SubPhase, Sermon, Series,
-  STAGE, STAGE_SEQUENCE, STEP_CANONICAL_SEQUENCE, SUB_PHASE_CANONICAL_SEQUENCE,
+  Stage, SubPhase, Sermon, Series,
+  STAGE, STAGE_SEQUENCE, SUB_PHASE_CANONICAL_SEQUENCE,
   STRUCTURED_FIELDS,
   OutlineUpdate, FunctionalElementUpdate,
   ObservationUpdate, InterpretationUpdate,
@@ -111,11 +111,11 @@ function browserPreviewMock(op: string, payload?: unknown): unknown {
       last_tune_up: "",
       sermon_frame: "",
       current_stage: STAGE.Study,
-      current_step: "exegesis",
-      current_sub_phase: "observe",
+      current_step: null,
+      current_sub_phase: "Observe",
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
-      position: { stage: STAGE.Study, step: "exegesis", sub_phase: "observe" },
+      position: { stage: STAGE.Study, sub_phase: "Observe" },
       parentContext: null,
       legacy: false,
     };
@@ -270,18 +270,21 @@ export function removeTourSermon(): Promise<void> {
 
 export interface TransitionInput {
   sermonId: string;
-  to: Stage | Step | SubPhase;
+  to: Stage | SubPhase;
   evidence: string;
   direction: "forward" | "backward";
 }
 
-const STAGE_VALUES: ReadonlySet<string> = new Set(STAGE_SEQUENCE as readonly string[]);
-const STEP_VALUES: ReadonlySet<string> = new Set(STEP_CANONICAL_SEQUENCE as readonly string[]);
+const STAGE_VALUES: ReadonlySet<string> = new Set([
+  ...STAGE_SEQUENCE as readonly string[],
+  // Legacy stage values still admitted at the boundary (spine main-side
+  // coerces them) so a transition payload from older code doesn't fast-fail.
+  "Blueprint", "Frame", "Delivery",
+]);
 const SUB_PHASE_VALUES: ReadonlySet<string> = new Set(SUB_PHASE_CANONICAL_SEQUENCE as readonly string[]);
 
-function classify(target: string): "stage" | "step" | "sub_phase" | null {
+function classify(target: string): "stage" | "sub_phase" | null {
   if (STAGE_VALUES.has(target)) return "stage";
-  if (STEP_VALUES.has(target)) return "step";
   if (SUB_PHASE_VALUES.has(target)) return "sub_phase";
   return null;
 }

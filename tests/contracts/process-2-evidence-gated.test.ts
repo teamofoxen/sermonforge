@@ -34,7 +34,7 @@ describe("Process Contract #2: movement gated by user evidence (non-legacy sermo
     const bridge = (globalThis as any).electronAPI.spine;
     const result = await bridge("transition-state", {
       sermonId,
-      to: STAGE.Blueprint,
+      to: STAGE.Assembly,
       evidence: "",
       direction: "forward",
       kind: "stage",
@@ -54,7 +54,7 @@ describe("Process Contract #2: movement gated by user evidence (non-legacy sermo
     const bridge = (globalThis as any).electronAPI.spine;
     const result = await bridge("transition-state", {
       sermonId,
-      to: STAGE.Blueprint,
+      to: STAGE.Assembly,
       evidence: "   ",
       direction: "forward",
       kind: "stage",
@@ -78,7 +78,7 @@ describe("Process Contract #2: backward direction is not gated", () => {
   it("backward transition with empty evidence succeeds on a non-legacy sermon", async () => {
     const sermonId = insertSermonRow({
       title: "Test",
-      current_stage: STAGE.Frame,
+      current_stage: STAGE.Assembly,
       created_at: new Date().toISOString(),
     });
     const bridge = (globalThis as any).electronAPI.spine;
@@ -111,7 +111,7 @@ describe("Process Contract #2: legacy carve-out", () => {
     const bridge = (globalThis as any).electronAPI.spine;
     const result = await bridge("transition-state", {
       sermonId,
-      to: STAGE.Blueprint,
+      to: STAGE.Assembly,
       evidence: "",
       direction: "forward",
       kind: "stage",

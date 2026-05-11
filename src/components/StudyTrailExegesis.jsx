@@ -954,7 +954,7 @@ function PauseClearing({ stop, phaseDef, nextPhase, phaseData, updateStructured,
       ) : (
         <p className="tw-pause-next">
           <span className="tw-mono">NEXT</span>
-          <span> Step 2 of Study — the </span>
+          <span> Assembly — the </span>
           <em>Main Point Pair</em>
           <span> — waits beyond this last bend.</span>
         </p>

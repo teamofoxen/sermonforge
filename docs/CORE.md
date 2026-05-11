@@ -62,15 +62,19 @@ When contracts appear to conflict, this resolves it:
 Terms used by the contracts below. Code, docs, and contract clauses bind to
 these names. (See State Contract clause 5: *one name per concept*.)
 
-- **Stage** — one of Study, Blueprint, Manuscript, Delivery. Tracked as
-  `current_stage` on every sermon.
-- **Step** — within Study only: Exegesis, MPT/MPS, Outline, Functional
-  Elements. Tracked as `current_step`.
-- **Sub-phase** — within Exegesis only: Observe, Interpret, Redemptive Thread,
-  Implications. Tracked as `current_sub_phase`.
+- **Stage** — one of Study, Assembly, Manuscript, Delivery. Tracked as
+  `current_stage` on every sermon. (Workspace Restructure 2026-05-10:
+  pre-restructure stages `Blueprint` and `Frame` retired, both coerced to
+  `Assembly` on read.)
+- **Sub-phase** — within Study: Observe, Interpret, Redemptive Thread,
+  Implications. Within Assembly: Anchor, Outline, Equip, Frame. Tracked as
+  `current_sub_phase`. (Workspace Restructure 2026-05-10: the within-Study
+  Step layer — Exegesis / MPT_MPS / Outline / FunctionalElements — retired.
+  The `current_step` column is legacy-tolerated, parsed but ignored.)
 - **Boundary** — the transition point between two adjacent values at the same
-  level. *Stage boundary* (e.g., Study → Blueprint). *Step boundary* (e.g.,
-  Exegesis → MPT/MPS). *Sub-phase boundary* (e.g., Observe → Interpret).
+  level. *Stage boundary* (e.g., Study → Assembly, Assembly → Manuscript).
+  *Sub-phase boundary* (e.g., Observe → Interpret inside Study, Anchor →
+  Outline inside Assembly).
 - **Field** — an isolated focused workspace the pastor works inside a
   sub-phase, persisted as a JSON key inside that sub-phase's database column.
   Each field contains one or more **questions** in an ordered sequence.
@@ -83,10 +87,12 @@ these names. (See State Contract clause 5: *one name per concept*.)
 - **Answer** — what the pastor writes for each question. Answers persist
   individually; previous answers stay visible while the current question is
   active.
-- **Named outcome** — the artifact each sub-phase produces, named explicitly:
-  the Observation Set (Observe), the Interpretation Set (Interpret), the
-  Christ-Connection Statement (Redemptive Thread), the Implications Synthesis
-  (Implications). One named outcome per sub-phase.
+- **Named outcome** — the artifact each sub-phase produces, named explicitly.
+  *Study sub-phases:* Observation Set (Observe), Interpretation Set
+  (Interpret), Christ-Connection Statement (Redemptive Thread), Implications
+  Synthesis (Implications). *Assembly sub-phases:* Main Point Pair (Anchor),
+  Sermon Outline (Outline), Sermon Body (Equip), Sermon Frame (Frame). One
+  named outcome per sub-phase.
 - **Handoff** — what passes from one sub-phase's named outcome into the
   opening of the next sub-phase.
 - **Throughline** — the line of deepening exegetical work that runs through a
@@ -110,18 +116,19 @@ these names. (See State Contract clause 5: *one name per concept*.)
    without a series (one-off preaching); when it has one, the series is its
    primary parent context.
 2. **Every sermon has a canonical position in the process.** A sermon is at
-   exactly one stage (Study → Blueprint → Manuscript → Delivery), and within
-   Study at one step (1 Exegesis → 2 MPT/MPS → 3 Outline → 4 Functional
-   Elements). Position is queryable from any surface that touches the sermon.
+   exactly one stage (Study → Assembly → Manuscript), and within Study or
+   Assembly at one sub-phase (Study: Observe → Interpret → Redemptive Thread
+   → Implications; Assembly: Anchor → Outline → Equip → Frame). Position is
+   queryable from any surface that touches the sermon.
 3. **No anonymous atoms.** A sermon must have a name. A series must have a
    name. The system refuses to admit a nameless atom into canonical state.
 4. **Parent context is first-class.** A sermon that belongs to a series carries
    that membership as canonical state, including its position-in-series
    ("Sermon 3 of 7"). It is a property of the sermon, not a join surfaced only
    in one place.
-5. **One name per concept.** "Outline" is one tab and one stage and one
+5. **One name per concept.** "Assembly" is one tab and one stage and one
    dropdown value, with one spelling, everywhere it appears. Vocabulary is part
-   of state, not a UI decoration. Stage values, tab names, step names, and
+   of state, not a UI decoration. Stage values, tab names, sub-phase names, and
    dropdown options must be the canonical names — never aliases or drifts.
 6. **In-progress work is queryable from the front door.** "What sermons am I
    currently working on" has an answer the dashboard can show. There is no
@@ -151,31 +158,34 @@ these names. (See State Contract clause 5: *one name per concept*.)
    from the product entirely. The `ai_proposal`/`ai_apply` mutation cycle
    that previously enforced "AI augments, never substitutes" was removed
    alongside the AI surfaces it gated.)
-6. **The workspace throughline is structural.** Each workspace step (and
-   each Study sub-phase) produces a named outcome by way of a throughline
-   that runs through its fields and crosses each step or sub-phase boundary
-   by handoff. The throughline must be coherent: every field contributes;
-   every named outcome is built from the field-work that precedes it;
-   every handoff is explicit. The pedagogical content — number of fields,
-   wording, exact named-outcome text — may evolve. The structural integrity
-   — that the throughline exists, holds, and produces the named outcomes
-   it claims — does not. The canonical articulation lives across two
-   documents: the Study Field Definition Initiative document at
-   `docs/PROPOSALS/study-field-definition-initiative.md` carries Study
-   (Step 1 — the four sub-phases), and the Sermon Anchor Definition
-   Initiative document at
-   `docs/PROPOSALS/sermon-anchor-definition-initiative.md` carries Steps 2
-   (MPT/MPS) and 5 (Intro/Conclusion). As of 2026-05-04, SFDI carries
-   seven-slot entries for all 25 fields across the four Study sub-phases,
-   four named outcomes (Observation Set, Interpretation Set,
-   Christ-Connection Statement, Implications Synthesis), and four
-   sub-phase boundary handoffs (including the handoff out of Study into
-   MPT/MPS); SADI carries seven-slot entries for all four anchor fields
-   (MPT, MPS, Intro, Conclusion), two named outcomes (Main Point Pair for
-   Step 2; Sermon Frame for Step 5), and step-boundary handoff
-   articulations. This clause is therefore binding in full — the
-   throughline's structural integrity is testable against the SFDI
-   document AND the SADI document together.
+6. **The workspace throughline is structural.** Each Study or Assembly
+   sub-phase produces a named outcome by way of a throughline that runs
+   through its fields and crosses each sub-phase boundary by handoff. The
+   throughline must be coherent: every field contributes; every named
+   outcome is built from the field-work that precedes it; every handoff
+   is explicit. The pedagogical content — number of fields, wording, exact
+   named-outcome text — may evolve. The structural integrity — that the
+   throughline exists, holds, and produces the named outcomes it claims
+   — does not. The canonical articulation lives across two documents: the
+   Study Field Definition Initiative document at
+   `docs/PROPOSALS/study-field-definition-initiative.md` carries Study's
+   four sub-phases, and the Sermon Anchor Definition Initiative document
+   at `docs/PROPOSALS/sermon-anchor-definition-initiative.md` carries
+   Assembly's two SADI-walked anchor sub-phases (Anchor — MPT/MPS;
+   Frame — Intro/Conclusion). As of 2026-05-04, SFDI carries seven-slot
+   entries for all 25 fields across the four Study sub-phases, four
+   named outcomes (Observation Set, Interpretation Set, Christ-Connection
+   Statement, Implications Synthesis), and four sub-phase boundary
+   handoffs (including the handoff out of Study into Assembly's Anchor
+   sub-phase); SADI carries seven-slot entries for all four anchor fields
+   (MPT, MPS, Intro, Conclusion), two named outcomes (Main Point Pair
+   for Anchor; Sermon Frame for Frame), and sub-phase-boundary handoff
+   articulations. (Pre-restructure language: SFDI was scoped to
+   "Step 1 — the four sub-phases"; SADI's anchor *steps* were Step 2
+   and Step 5. Workspace Restructure 2026-05-10 collapsed the Step layer
+   so the anchors are sub-phases inside Assembly.) This clause is
+   therefore binding in full — the throughline's structural integrity is
+   testable against the SFDI document AND the SADI document together.
 
 ### 3. Mutation Contract — what happens when something changes
 

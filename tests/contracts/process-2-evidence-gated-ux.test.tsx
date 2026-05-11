@@ -7,7 +7,6 @@ import {
   resetTestSpine,
   insertSermonRow,
   STAGE,
-  STEP,
   SUB_PHASE,
 } from "./_helpers/test-spine";
 
@@ -107,13 +106,19 @@ describe("SPRD Q3 hard-gate UX: Continue button disabled when source empty", () 
   beforeEach(() => {
     installTestSpine();
     resetTestSpine();
+    // Workspace Restructure (2026-05-10) — opt out of the switchback trail
+    // so the legacy `Continue to Interpret →` / `advance-hint` markup
+    // these tests assert on is what renders.
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem("sermonforge_trail_disabled", "1");
+    }
   });
 
   it("Continue is disabled at Observe with empty observations; inline hint visible", async () => {
     const sermonId = insertSermonRow({
       title: "Empty observe sermon",
       current_stage: STAGE.Study,
-      current_step: STEP.Exegesis,
+      current_step: null,
       current_sub_phase: SUB_PHASE.Observe,
       observations: "",
     });
@@ -152,7 +157,7 @@ describe("SPRD Q3 hard-gate UX: Continue button disabled when source empty", () 
     const sermonId = insertSermonRow({
       title: "Filled observe sermon",
       current_stage: STAGE.Study,
-      current_step: STEP.Exegesis,
+      current_step: null,
       current_sub_phase: SUB_PHASE.Observe,
       observations: JSON.stringify({
         context: "Romans 8:1 sets the believers in Christ Jesus.",

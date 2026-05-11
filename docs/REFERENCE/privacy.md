@@ -52,7 +52,7 @@ These are **metadata about your interactions, not the content of your work.** No
 
 **Flag clicks.** When you click the small flag button at a workspace tab and choose to send:
 
-- The surface (Study, Blueprint), the active step, the sermon ID.
+- The surface (Study, Assembly, Manuscript), the active sub-phase, the sermon ID.
 - Your one-line note (if you typed one).
 
 **Form submissions.** When you open "Send feedback…" from the sidebar and submit:

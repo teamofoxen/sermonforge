@@ -12,8 +12,7 @@ import { buildStageEvidence, formatTabRejection } from "../utils/studyAdvancemen
 import { autoResize } from "../utils";
 import DeleteButton from "./DeleteButton";
 import StudyTab from "./StudyTab";
-import OutlineTab from "./OutlineTab";
-import FrameTab from "./FrameTab";
+import AssemblyTab from "./AssemblyTab";
 import ManuscriptTab from "./ManuscriptTab";
 import PassagePopup from "./PassagePopup";
 import SecondaryButton from "./primitives/SecondaryButton";
@@ -24,11 +23,15 @@ import TextButton from "./primitives/TextButton";
 const TABS = STAGE_SEQUENCE;
 const TAB_LABELS = STAGE_LABELS;
 
-// Pre-vocabulary-completion lowercase tab keys, plus "delivery" which is no
-// longer a renderable tab post-ARI — remapped to Manuscript (the terminal stage).
+// Pre-vocabulary-completion lowercase tab keys, plus retired stages.
+// Workspace Restructure (2026-05-10) — "outline" + legacy "Blueprint" /
+// "Frame" all route to STAGE.Assembly (the new home of MPT/MPS + Outline
+// + FE + Frame work). "delivery" still routes to Manuscript per ARI Phase 7.
 const LEGACY_TAB_MAP = {
   study: STAGE.Study,
-  outline: STAGE.Blueprint,
+  outline: STAGE.Assembly,
+  Blueprint: STAGE.Assembly,
+  Frame: STAGE.Assembly,
   manuscript: STAGE.Manuscript,
   delivery: STAGE.Manuscript,
 };
@@ -393,16 +396,17 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSermon }) {
             <StudyTab
               sermon={sermon}
               onUpdate={handleUpdate}
-              onStepChange={setActiveStep}
               onTabChange={handleTabChange}
               onMovement={({ from, to }) => setLastMovement({ from, to, at: Date.now() })}
             />
           )}
-          {activeTab === STAGE.Blueprint && (
-            <OutlineTab sermon={sermon} onUpdate={handleUpdate} onTabChange={handleTabChange} />
-          )}
-          {activeTab === STAGE.Frame && (
-            <FrameTab sermon={sermon} onUpdate={handleUpdate} onTabChange={handleTabChange} />
+          {activeTab === STAGE.Assembly && (
+            <AssemblyTab
+              sermon={sermon}
+              onUpdate={handleUpdate}
+              onTabChange={handleTabChange}
+              onMovement={({ from, to }) => setLastMovement({ from, to, at: Date.now() })}
+            />
           )}
           {activeTab === STAGE.Manuscript && (
             <ManuscriptTab
@@ -460,82 +464,66 @@ function SermonHowItWorksModal({ onClose }) {
         <p style={{
           fontSize: "13px", color: "var(--ink-ghost)",
           marginBottom: "24px", fontFamily: "var(--font-serif)",
-        }}>Each sermon moves through four stages from text to manuscript.</p>
+        }}>Each sermon moves through three stages from text to manuscript.</p>
         <div style={{ overflowX: "auto" }}>
-          <svg viewBox="0 0 860 336" style={{ width: "100%", height: "auto", display: "block" }}>
+          <svg viewBox="0 0 720 240" style={{ width: "100%", height: "auto", display: "block" }}>
 
-            <rect x="10" y="16" width="180" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
-            <text x="100" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "var(--font-serif)", fontWeight: 600 }}>Study</text>
+            {/* Three stage chips. */}
+            <rect x="20" y="16" width="200" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
+            <text x="120" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "var(--font-serif)", fontWeight: 600 }}>Study</text>
 
-            <rect x="230" y="16" width="180" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
-            <text x="320" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "var(--font-serif)", fontWeight: 600 }}>Blueprint</text>
+            <rect x="260" y="16" width="200" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
+            <text x="360" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "var(--font-serif)", fontWeight: 600 }}>Assembly</text>
 
-            <rect x="450" y="16" width="180" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
-            <text x="540" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "var(--font-serif)", fontWeight: 600 }}>Frame</text>
+            <rect x="500" y="16" width="200" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
+            <text x="600" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "var(--font-serif)", fontWeight: 600 }}>Manuscript</text>
 
-            <rect x="670" y="16" width="180" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
-            <text x="760" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "var(--font-serif)", fontWeight: 600 }}>Manuscript</text>
+            <text x="240" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-ghost)", fontSize: "14px" }}>→</text>
+            <text x="480" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-ghost)", fontSize: "14px" }}>→</text>
 
-            <text x="210" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-ghost)", fontSize: "14px" }}>→</text>
-            <text x="430" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-ghost)", fontSize: "14px" }}>→</text>
-            <text x="650" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-ghost)", fontSize: "14px" }}>→</text>
+            {/* Sub-phase connectors. */}
+            <line x1="120" y1="56" x2="120" y2="76" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <line x1="360" y1="56" x2="360" y2="76" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <line x1="600" y1="56" x2="600" y2="76" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
 
-            <line x1="100" y1="56" x2="100" y2="76" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <line x1="320" y1="56" x2="320" y2="76" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <line x1="540" y1="56" x2="540" y2="76" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <line x1="760" y1="56" x2="760" y2="76" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            {/* Study sub-phases. */}
+            <rect x="20" y="76" width="200" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <text x="120" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Observe</text>
 
-            <rect x="10" y="76" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="100" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Observe</text>
-            <line x1="100" y1="104" x2="100" y2="112" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <rect x="20" y="112" width="200" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <text x="120" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Interpret</text>
 
-            <rect x="10" y="112" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="100" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Interpret</text>
-            <line x1="100" y1="140" x2="100" y2="148" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <rect x="20" y="148" width="200" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <text x="120" y="162" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Redemptive Thread</text>
 
-            <rect x="10" y="148" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="100" y="162" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Redemptive Thread</text>
-            <line x1="100" y1="176" x2="100" y2="184" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <rect x="20" y="184" width="200" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <text x="120" y="198" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Implications</text>
 
-            <rect x="10" y="184" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="100" y="198" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Implications</text>
-            <line x1="100" y1="212" x2="100" y2="220" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            {/* Assembly sub-phases. */}
+            <rect x="260" y="76" width="200" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <text x="360" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Anchor (MPT/MPS)</text>
 
-            <rect x="10" y="220" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="100" y="234" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>MPT / MPS</text>
-            <line x1="100" y1="248" x2="100" y2="256" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <rect x="260" y="112" width="200" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <text x="360" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Outline</text>
 
-            <rect x="10" y="256" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="100" y="270" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Outline</text>
-            <line x1="100" y1="284" x2="100" y2="292" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <rect x="260" y="148" width="200" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <text x="360" y="162" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Equip (FE)</text>
 
-            <rect x="10" y="292" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="100" y="306" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Functional Elements</text>
+            <rect x="260" y="184" width="200" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <text x="360" y="198" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Frame (Intro/Conclusion)</text>
 
-            <rect x="230" y="76" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="320" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Outline Editor</text>
+            {/* Manuscript surfaces. */}
+            <rect x="500" y="76" width="200" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <text x="600" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Manuscript Editor</text>
 
-            <rect x="450" y="76" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="540" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Introduction</text>
-            <line x1="540" y1="104" x2="540" y2="112" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <rect x="500" y="112" width="200" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <text x="600" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Manuscript Notebook</text>
 
-            <rect x="450" y="112" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="540" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Conclusion</text>
+            <rect x="500" y="148" width="200" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <text x="600" y="162" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Review Checklists</text>
 
-            <rect x="670" y="76" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="760" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Manuscript Editor</text>
-            <line x1="760" y1="104" x2="760" y2="112" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-
-            <rect x="670" y="112" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="760" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Manuscript Notebook</text>
-            <line x1="760" y1="140" x2="760" y2="148" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-
-            <rect x="670" y="148" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="760" y="162" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Review Checklists</text>
-            <line x1="760" y1="176" x2="760" y2="184" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-
-            <rect x="670" y="184" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="760" y="198" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Export to Word</text>
+            <rect x="500" y="184" width="200" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+            <text x="600" y="198" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Export to Word</text>
 
           </svg>
         </div>

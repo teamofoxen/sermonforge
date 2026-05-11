@@ -1,6 +1,20 @@
 # Workspace Trail Charter — Trail Metaphor Across the Whole Sermon Workspace
 
-> **Status:** Drafted 2026-05-10. Pre-execution. The Step 1 trail experiment ([`study-trail-charter.md`](./study-trail-charter.md)) shipped feel-complete in worktree `thirsty-bell-2d469b`; this charter extends the trail metaphor to the entire sermon workspace — Step 2 (MPT/MPS), Step 3 (Outline), Step 4 (Functional Elements), Step 5 / Frame (Intro/Conclusion), and Manuscript. After this lands, the legacy three-column shell, the tab strip, and the throughline rail all retire from the sermon workspace.
+> **Post-workspace-restructure status (2026-05-10):** This charter's Stage A–G phasing and the Step 2 / Step 3 / Step 4 / Frame / Manuscript phasing terminology were drafted before the Workspace Restructure (same day, evening). Re-map references:
+>
+> - **Stage A** (Study Step 1 / Exegesis trail) → unchanged. Shipped.
+> - **Stage B** (Study Step 2 / MPT-MPS Forge trail) → now the **Anchor sub-phase** of the new Assembly stage. `StudyTrailForge.jsx` is mounted by `AssemblyTab` as the Anchor sub-phase renderer. Shipped.
+> - **Stage C** (Study Step 3 / Outline) → now the **Outline sub-phase** of Assembly. DW3 (visual mode) still open.
+> - **Stage D** (Study Step 4 / Functional Elements) → now the **Equip sub-phase** of Assembly. DW4 still open.
+> - **Stage E** (Frame / Step 5) → now the **Frame sub-phase** of Assembly. SADI walk content unchanged.
+> - **Stage F** (Manuscript) → unchanged.
+> - **Stage G** (workspace shell retirement) → partially shipped: tab strip collapsed from 4 to 3 tabs; OutlineTab / FrameTab as standalone stages deleted; tour anchors moved.
+>
+> See [`workspace-restructure-charter.md`](./workspace-restructure-charter.md) for the structural restructure that supersedes this charter's per-step phasing. The trail-rendering goals (single immersive walk, contemplative pause-clearings, named-outcome handoffs) remain binding; only the per-step phase layout changed.
+
+> **Status:** Drafted 2026-05-10. Phase A (Study Step 1) shipped via [`study-trail-charter.md`](./study-trail-charter.md). **Phase B (Study Step 2 / MPT/MPS Forge) landed 2026-05-10 in worktree `thirsty-bell-2d469b`** — DW1 + DW2 resolved, `StudyTrailForge.jsx` built as parallel sibling to the Exegesis trail, mount conditions split per-step in `StudyTab.jsx`, cross-step look-back routes through the spine. Phases C–M open. After all phases land, the legacy three-column shell, the tab strip, and the throughline rail all retire from the sermon workspace.
+
+> **Phase B build session log — 2026-05-10:** DW1 (horizontal single-row geometry) and DW2 (stacked editable Main Point Pair pause-clearing) resolved. `StudyTrailForge` walks MPT (2Q) → MPS overview → MPS (3Q) → Main Point Pair pause → Step 3. Composite step-gate (`evaluateAdvance(sermon, "step", 2)`) blocks advance at MPS Q3 until both MPT + MPS tighten answers exist. N/A link surfaces only on MPS Q2 (gospel_check) per SADI. Cross-step look-back from MPT Q1 routes `await jumpToStep(1)` so the Exegesis trail re-mounts cleanly; pause look-back routes `await jumpToStep(2)` so the Forge trail stays mounted after the pausePoint clears. Trail-suppress toggle (`× Exit` + Esc + "Trail mode →" re-entry) extended to `activeStep === 2`. Verified end-to-end in browser preview at 1440×900: walk MPT Q1 → MPS Q3 → pause → walk-on hands off to Step 3 Outline legacy; look-back from pause restores MPS Q3 with answer preserved; look-back from MPT Q1 mounts Exegesis. Drift-check PASS. Pastor-test gate (Phase M) deferred per user instruction.
 >
 > **Audience:** The lone developer of SermonForge, who is also a pastor and the pastor-user. Plain language; technical specifics where they matter.
 >
@@ -206,9 +220,17 @@ Step 2 has only 2 fields. The Step 1 trail's switchback (4 rows, alternating dir
 - A single vertical column with 2 stops + pause
 - Same switchback shape but compressed (2 bends instead of 7)
 
+**Resolved 2026-05-10 — Option 1 (single horizontal row).** STOPS = `[mpt, mps, mainPointPair-pause]`. Fields occupy the left 62% of the row span (so they read as "the work" before the pause); the pause stop sits at 88% along the row with breathing room past MPS. Single ROW_Y constant; no Bézier needed because there's no row change — `buildPathToIndex` emits straight `L` lines.
+
+Rationale: 2 fields + 1 pause = 3 stops, which can't carry a switchback's visual weight. Vertical column inverts the "walking forward" gesture that Step 1's horizontal rows establish. Compressed switchback (one bend) is more visual noise than 3 stops earn. A horizontal row reads as "the trail straightens out as you reach the anchor" — the serpentine exegesis deepening gives way to a direct anchor-forging walk. Camera math, station styling, recede ramp, mist mask, and tween (D6) all carry over from Phase A unchanged.
+
 ### DW2 — Main Point Pair pause-clearing shape
 
 Step 1's pause-clearings prompt one synthesis sentence. Step 2's named outcome is the *pair* (MPT + MPS). Pause-clearing likely shows MPT and MPS side-by-side or stacked, not a single input. Define the shape.
+
+**Resolved 2026-05-10 — stacked, editable two-row card.** The pause-clearing displays both tightened values stacked top-to-bottom (MPT above, MPS below) inside a single `.tw-pair-card`. Each row carries a small gold-mono label (`MPT — WHAT THE TEXT SAID` / `MPS — WHAT THE TEXT SAYS TO US`) plus a Playfair-italic textarea pre-filled with the saved `mpt.tighten` / `mps.tighten`. Both textareas remain editable in the pause — the pastor can refine the pair without leaving the pause-clearing. Edits route through `updateMPP(fieldKey, "tighten", value)` so they write to the v19 envelope AND mirror to the flat `sermon.mpt` / `sermon.mps` columns. The handoff strip "BECOMES YOUR MAIN POINT PAIR" sits at the bottom of the card. No new synthesis envelope key (`_synthesis`) — the pair IS the synthesis, already persisted.
+
+Rationale: stacking reads chronologically (past tense → present tense; what the text said → what the text says to us). Side-by-side competes for narrow-viewport real estate and breaks down at <1100px. Read-only display would feel like a confirmation modal; editable display preserves the contemplative "you can still shape this" quality of the Step 1 pause-clearings while honoring the fact that Step 2's work IS sentence-shaped from the field walk forward.
 
 ### DW3 — Outline Builder visual mode
 
@@ -281,7 +303,7 @@ Stage by stage. Each phase ends in a green-state worktree commit + pastor-test.
 | Phase | Scope | Ships when |
 |---|---|---|
 | **A** | Study Step 1 (Exegesis) trail | ✅ DONE 2026-05-10 (`study-trail-charter.md`) |
-| **B** | Study Step 2 (MPT/MPS Forge) trail | DW1 + DW2 decided + implemented; pastor-tested |
+| **B** | Study Step 2 (MPT/MPS Forge) trail | ✅ DONE 2026-05-10 — `StudyTrailForge.jsx` built; DW1 + DW2 resolved; pastor-test deferred per user instruction |
 | **C** | Study Step 3 (Outline Builder) trail | DW3 decided + implemented; pastor-tested |
 | **D** | Study Step 4 (Functional Elements) trail | DW4 decided + implemented; pastor-tested |
 | **E** | Frame (Step 5: Intro/Conclusion) trail | Like Phase B; SADI Step 5 walks already done |

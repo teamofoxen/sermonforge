@@ -686,6 +686,63 @@
   box-shadow: 0 0 0 3px rgba(107, 156, 96, 0.18);
 }
 
+/* ── Main Point Pair pause variant (WTC Phase B / DW2) ───────────────── *
+ * Step 2's named outcome is the *pair* (MPT + MPS), not a single synthesis
+ * sentence. The pause-clearing shows both tightened fields stacked,
+ * editable in-place so the pastor can refine before walking on to Outline.
+ * Width is slightly wider than the Step-1 pause variant to give the two
+ * textareas reading room.
+ */
+.tw-shell .tw-clearing-pause-pair {
+  width: min(720px, 90vw);
+}
+.tw-shell .tw-pair-card {
+  background: var(--parchment-warm);
+  border: 1px solid var(--parchment-deep);
+  border-radius: 2px;
+  padding: 22px 26px 18px;
+  text-align: left;
+  box-shadow: var(--shadow-soft);
+  max-width: 600px;
+  margin: 0 auto 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.tw-shell .tw-pair-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tw-shell .tw-pair-row-label {
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  color: var(--gold);
+}
+.tw-shell .tw-pair-input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
+  font-size: 20px;
+  line-height: 1.4;
+  color: var(--ink);
+  padding: 4px 0 10px;
+  border-bottom: 1px solid var(--parchment-deep);
+  resize: none;
+  min-height: 56px;
+}
+.tw-shell .tw-pair-input::placeholder {
+  color: var(--ink-ghost);
+}
+.tw-shell .tw-pair-card .tw-pause-handoff {
+  border-top: 1px dotted var(--parchment-deep);
+  padding-top: 12px;
+  justify-content: center;
+}
+
 /* ── Vignette around the clearing for depth ──────────────────────────── *
  * Vignette colors are derived from the parchment tokens via color-mix so
  * dark mode dissolves the vignette into the background instead of pushing

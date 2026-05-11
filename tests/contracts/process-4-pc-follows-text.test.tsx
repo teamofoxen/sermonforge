@@ -7,7 +7,6 @@ import {
   resetTestSpine,
   insertSermonRow,
   STAGE,
-  STEP,
   SUB_PHASE,
 } from "./_helpers/test-spine";
 
@@ -39,7 +38,7 @@ describe("Process Contract #4: PC follows the text (text speaks first)", () => {
       title: "Brand new sermon",
       passage: "Romans 8:1",
       current_stage: STAGE.Study,
-      current_step: STEP.Exegesis,
+      current_step: null,
       current_sub_phase: SUB_PHASE.Observe,
       // PC fields are explicitly empty — text-first invariant.
       topic_theme: "",

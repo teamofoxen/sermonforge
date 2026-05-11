@@ -4,7 +4,6 @@ import {
   resetTestSpine,
   insertSermonRow,
   STAGE,
-  STEP,
   SUB_PHASE,
 } from "./_helpers/test-spine";
 
@@ -13,8 +12,10 @@ import {
 //   direction. Backward movement is allowed but explicit — the user knows
 //   they went back."
 //
-// The test sets a sermon at Blueprint, attempts a FORWARD transition back
-// to Study, and verifies validateAndCommit rejects with clause "Process #1".
+// Workspace Restructure (2026-05-10) — Stage collapses to three (Study /
+// Assembly / Manuscript) and the within-Study Step layer retires. The tests
+// here cover all three boundaries (stage, study sub-phase, assembly
+// sub-phase) the spine now enforces.
 
 describe("Process Contract #1: movement is monotonic by default", () => {
   beforeEach(() => {
@@ -25,7 +26,7 @@ describe("Process Contract #1: movement is monotonic by default", () => {
   it("transitionState(forward, to=prior stage) rejects with clause Process #1", async () => {
     const sermonId = insertSermonRow({
       title: "Test",
-      current_stage: STAGE.Blueprint,
+      current_stage: STAGE.Assembly,
       current_step: null,
       current_sub_phase: null,
     });
@@ -45,7 +46,7 @@ describe("Process Contract #1: movement is monotonic by default", () => {
   it("transitionState(backward, to=prior stage) is allowed (explicit movement)", async () => {
     const sermonId = insertSermonRow({
       title: "Test",
-      current_stage: STAGE.Blueprint,
+      current_stage: STAGE.Assembly,
     });
     const bridge = (globalThis as any).electronAPI.spine;
     const result = await bridge("transition-state", {
@@ -66,7 +67,7 @@ describe("Process Contract #1: movement is monotonic by default", () => {
     const bridge = (globalThis as any).electronAPI.spine;
     const result = await bridge("transition-state", {
       sermonId,
-      to: STAGE.Blueprint,
+      to: STAGE.Assembly,
       evidence: "Exegesis complete",
       direction: "forward",
       kind: "stage",
@@ -74,11 +75,11 @@ describe("Process Contract #1: movement is monotonic by default", () => {
     expect(result.ok).toBe(true);
   });
 
-  // Q1 spine routing — sub-phase + step boundaries now move through the spine.
-  // The monotonic rule extends to those resolutions: forward to a prior
-  // sub-phase / step rejects; backward to a prior sub-phase / step is allowed.
+  // Sub-phase boundaries — both Study and Assembly. The monotonic rule
+  // applies across the combined canonical sequence so forward into a prior
+  // sub-phase of EITHER stage rejects.
 
-  it("transitionState(forward, to=prior sub-phase) rejects with clause Process #1", async () => {
+  it("transitionState(forward, to=prior Study sub-phase) rejects with clause Process #1", async () => {
     const sermonId = insertSermonRow({
       title: "Test",
       current_stage: STAGE.Study,
@@ -97,7 +98,7 @@ describe("Process Contract #1: movement is monotonic by default", () => {
     expect(result.code).toBe("PROCESS_1_FORWARD_TO_PRIOR");
   });
 
-  it("transitionState(backward, to=prior sub-phase) is allowed (revisit is explicit)", async () => {
+  it("transitionState(backward, to=prior Study sub-phase) is allowed (revisit is explicit)", async () => {
     const sermonId = insertSermonRow({
       title: "Test",
       current_stage: STAGE.Study,
@@ -114,7 +115,7 @@ describe("Process Contract #1: movement is monotonic by default", () => {
     expect(result.ok).toBe(true);
   });
 
-  it("transitionState(forward, to=next sub-phase) is allowed (the natural direction)", async () => {
+  it("transitionState(forward, to=next Study sub-phase) is allowed (the natural direction)", async () => {
     const sermonId = insertSermonRow({
       title: "Test",
       current_stage: STAGE.Study,
@@ -131,38 +132,38 @@ describe("Process Contract #1: movement is monotonic by default", () => {
     expect(result.ok).toBe(true);
   });
 
-  it("transitionState(forward, to=prior step) rejects with clause Process #1", async () => {
+  it("transitionState(forward, to=prior Assembly sub-phase) rejects with clause Process #1", async () => {
     const sermonId = insertSermonRow({
       title: "Test",
-      current_stage: STAGE.Study,
-      current_step: STEP.Outline,
+      current_stage: STAGE.Assembly,
+      current_sub_phase: SUB_PHASE.Equip,
     });
     const bridge = (globalThis as any).electronAPI.spine;
     const result = await bridge("transition-state", {
       sermonId,
-      to: STEP.Exegesis,
-      evidence: "I want to redo exegesis",
+      to: SUB_PHASE.Anchor,
+      evidence: "I want to revise the main point pair",
       direction: "forward",
-      kind: "step",
+      kind: "sub_phase",
     });
     expect(result.ok).toBe(false);
     expect(result.clause).toBe("Process #1");
     expect(result.code).toBe("PROCESS_1_FORWARD_TO_PRIOR");
   });
 
-  it("transitionState(backward, to=prior step) is allowed", async () => {
+  it("transitionState(backward, to=prior Assembly sub-phase) is allowed", async () => {
     const sermonId = insertSermonRow({
       title: "Test",
-      current_stage: STAGE.Study,
-      current_step: STEP.Outline,
+      current_stage: STAGE.Assembly,
+      current_sub_phase: SUB_PHASE.Equip,
     });
     const bridge = (globalThis as any).electronAPI.spine;
     const result = await bridge("transition-state", {
       sermonId,
-      to: STEP.Exegesis,
-      evidence: "I want to redo exegesis",
+      to: SUB_PHASE.Anchor,
+      evidence: "I want to revise the main point pair",
       direction: "backward",
-      kind: "step",
+      kind: "sub_phase",
     });
     expect(result.ok).toBe(true);
   });

@@ -129,12 +129,11 @@ SermonForge/
         ├── CompletedSermons.jsx
         ├── Archive.jsx              — legacy Archive surface; CompletedSermons is the canonical re-entry
         ├── SermonWorkspace.jsx
-        ├── StudyTab.jsx             — Study tab (4 steps: Exegesis / MPT-MPS / Outline / Functional Elements)
-        ├── OutlineTab.jsx           — Blueprint tab (renamed; file kept legacy name)
+        ├── StudyTab.jsx             — Study tab (Exegesis only — 4 sub-phases: Observe / Interpret / Redemptive Thread / Implications)
+        ├── AssemblyTab.jsx          — Assembly tab (4 sub-phases: Anchor / Outline / Equip / Frame). Hosts MPT/MPS, Outline, FE, Intro/Conclusion. Post-workspace-restructure 2026-05-10.
         ├── ManuscriptTab.jsx        — Manuscript tab (terminal sermon-prep stage post-ARI)
-        ├── FrameTab.jsx             — Frame tab (SADI Step 5: Intro + Conclusion)
         ├── ManuscriptReview.jsx     — Flow Check / Ear Check / Final Tune-Up structured prompts (read-only)
-        ├── NotebookPanel.jsx        — Per-tab notebook (Study/Blueprint/Manuscript)
+        ├── NotebookPanel.jsx        — Per-tab notebook (Study/Assembly/Manuscript). Columns `notebook_study` / `notebook_blueprint` / `notebook_manuscript` (column name `notebook_blueprint` is legacy-tolerated; feeds Assembly's notebook).
         ├── PausePointScreen.jsx     — Sub-phase boundary screen with synthesis question
         ├── SpotlightWorksheet.jsx   — Renders SFDI fields with question dispatch
         ├── IndentedSentenceCanvas.jsx — Phase 1 Field 3 unified-canvas
@@ -152,7 +151,7 @@ SermonForge/
         ├── DeleteButton.jsx         — Two-step confirm (re-exported from primitives/)
         ├── InlineError.jsx
         ├── Logo.jsx
-        ├── FeedbackFlag.jsx         — BTI Tier 1 flag button (Study/Blueprint/Manuscript)
+        ├── FeedbackFlag.jsx         — BTI Tier 1 flag button (Study/Assembly/Manuscript)
         ├── FeedbackForm.jsx         — BTI Tier 2 form (sidebar entry → modal)
         ├── FeedbackModal.jsx        — Legacy feedback modal
         ├── TourOverlay.jsx
