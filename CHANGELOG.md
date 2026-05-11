@@ -2,6 +2,25 @@
 
 ---
 
+## 2026-05-11 — Workspace Trail Charter sequel arc: 8 items shipped (DW5/7/8/9/10/11/12 + RW4/8/9 + escape-hatch retirement)
+
+Closes the Workspace Trail Charter. All eight items queued for the sequel arc on `claude/workspace-trail-sequel` shipped in six commits (`d098219` → `b0adf2b`); the trail is now the sole user-facing rendering of every stage and × Exit returns to the Dashboard.
+
+- **Item 1 (RW4 + RW9 + DW9): heavier step-boundary pauses.** New `StageBoundaryPause` in `studyTrailShared.jsx` renders Study → Assembly and Assembly → Manuscript with a gold-bright hairline marker, "A THRESHOLD" eyebrow, italic Playfair 48px title, 880px card, and a four-outcome stack. Study reads back Observation Set / Interpretation Set / Christ-Connection Statement with the Implications synthesis editable inline; Assembly reads back Main Point Pair / Sermon Outline / Sermon Body with the Sermon Frame's Intro + Conclusion pair editable inline. Sub-phase pauses stay light. AssemblyTab tab-strip fallback `AssemblyToManuscriptPause` aligned to the new register.
+- **Item 2 (DW5): Manuscript writing-room.** New `ManuscriptTrail.jsx` wraps `ManuscriptTab` in a `.tw-shell-writing-room` variant — Ink topbar, scripture column on the right, 820px reading-column body, soft enter animation. Manuscript content (Intro / points / transitions / conclusion / review / notebook) keeps its UX inside the trail shell.
+- **Item 3 (DW7): camera handoff.** New `tw-trail-handoff` keyframe + 0.55s ease-out on `.tw-shell`. Cross-stage trail mounts glide in from a 48px right-offset and fade up so the cut reads as a camera pan around the bend. Per-stage STOPS arrays were already in code from the prior merge.
+- **Item 4 (DW12): stage-level overviews.** New `StageOverview` + `useStageOverviewSeen(stageKey)` (sessionStorage). Fires once per session on first mount of Assembly + Manuscript — Assembly's overview reads back the four Study syntheses from each phase's `_synthesis` envelope; Manuscript's reads back MPP + Outline + Frame as preview lines.
+- **Item 5 (DW8): per-stage notebook.** New `NotebookDrawer` + `useNotebookToggle` — bottom slide-up sheet (55vh, 540px cap), gold pill toggle in `TrailTopBar`, Cmd/Ctrl+N. All three trails wire it; persists to `notebook_study` / `notebook_blueprint` / `notebook_manuscript` via `onUpdate` — no schema change.
+- **Item 6 (DW11): Workspace Trail Map.** New `WorkspaceTrailMap.jsx` modal — single-screen three-row switchback (Study → Assembly → Manuscript), 9 sub-phase stops, named-outcome labels, current location pinned with gold glow. Visited stops fade-fill; unvisited stay outline-only. `useTrailMapToggle` (Cmd/Ctrl+M) + Map button in topbar (`.tw-map-toggle`).
+- **Item 7 (RW8 + DW10): tour re-anchored.** `WORKSPACE_TOUR_STOPS` rewritten — Stops 1/2/11 retitled for the trail metaphor ("The Sermon Trail." / "The Trail Map." / "The Writing Room."); stops 3-6 share `trail-clearing` (prerequisite-driven `studySubPhase` swaps content per stop); stops 7-10 target Assembly trail's active sub-phase clearing via conditional `data-tour-id`; stop 11 targets the writing-room body. `docs/PROPOSALS/sermon-workspace-tour.md` re-anchor banner added + Codebase touchpoints rewritten.
+- **Item 8: trail-suppress escape hatch retired.** User-facing `trailSuppressed` state removed from StudyTab + AssemblyTab + ManuscriptTrail; "Trail mode →" re-entry pills removed; × Exit + Esc now route through `SermonWorkspace.onClose` → Dashboard. The `sermonforge_trail_disabled` localStorage flag is retained as a test-only escape (the two `process-*` contract tests still set it); migrating those tests onto the trail surface is the only remaining cleanup before the legacy fallback bodies in StudyTab + AssemblyTab can be deleted.
+
+All four data round-trips remain on the existing column envelopes — no schema or contract change. Composite gates still fire from the spine; this whole arc is rendering work. 291/291 vitest green; ESLint clean on the new code (12 pre-existing `no-raw-button` errors in deferred-Pilot-C files only); drift-check PASS; architectural audit PASS across all 10 contract + integrity checks.
+
+`workspace-trail-charter.md` banner-tagged 2026-05-11 with the eight items + their resolutions in one table. `MEMORY.md` updated to reflect closure. Pastor-test gate (Phase M of the charter — "at least one full sermon prepped from text to manuscript through the trail") is the next user-driven step.
+
+---
+
 ## 2026-05-10 — ESV key: validate on entry, add in-app update path
 
 - `app-save-api-key` IPC handler now validates the key against the ESV API before saving; 401/403 returns a clear error, network failures save the key silently.
