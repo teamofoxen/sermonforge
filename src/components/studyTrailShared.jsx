@@ -150,13 +150,14 @@ export function TrailTopBar({ sermon, onExit, onPassageClick, onToggleNotebook, 
           {(sermon?.passage || "").toUpperCase()}
         </button>
       </div>
-      <h1 className="tw-topbar-title">{sermon?.title || "Untitled"}</h1>
+      <h1 className="tw-topbar-title" data-tour-id="workspace-title">{sermon?.title || "Untitled"}</h1>
       <div className="tw-topbar-right">
         {onOpenMap && (
           /* eslint-disable-next-line sermonforge/no-raw-button */
           <button
             className="tw-map-toggle tw-mono"
             onClick={onOpenMap}
+            data-tour-id="trail-map-button"
             title="Open the sermon trail map (Cmd/Ctrl+M)"
           >
             Map

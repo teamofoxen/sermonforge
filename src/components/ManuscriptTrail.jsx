@@ -166,7 +166,7 @@ export default function ManuscriptTrail({ sermon, onUpdate }) {
       <aside className="tw-scripture">
         <ScripturePanel passage={sermon?.passage} />
       </aside>
-      <main className="tw-writing-room-body">
+      <main className="tw-writing-room-body" data-tour-id="manuscript-body">
         <div className="tw-writing-room-eyebrow tw-mono">
           THE WRITING ROOM · WRITE THE SERMON
         </div>

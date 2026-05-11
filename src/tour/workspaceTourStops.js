@@ -1,10 +1,18 @@
-// Workspace tour — guided tour through the Sermon Workspace.
+// Workspace tour — guided tour through the Sermon Trail.
 //
-// Stops within Study walk the four Exegesis sub-phases via studySubPhase;
-// stops within Assembly walk Anchor / Outline / Equip / Frame via
-// assemblySubPhase. Tab keys come from `STAGE` in `src/core/contracts.ts`.
-// The orchestrator (TourContext + workspace observers) aligns
-// SermonWorkspace + StudyTab + AssemblyTab state when the tour is active.
+// Re-authored for WTC sequel Item 6 (RW8 + DW10). Anchors target the
+// trail surfaces directly: `workspace-title` rides the trail topbar;
+// `trail-map-button` introduces the Trail Map (DW11); `trail-clearing`
+// is the active Study clearing (camera tween + spotlight cover the
+// per-phase variants); Assembly anchors live on the active Assembly
+// sub-phase clearing; `manuscript-body` is the writing room.
+//
+// Stops within Study walk the four Exegesis sub-phases via
+// `studySubPhase`; stops within Assembly walk Anchor / Outline / Equip /
+// Frame via `assemblySubPhase`. Tab keys come from `STAGE` in
+// `src/core/contracts.ts`. The orchestrator (TourContext + workspace
+// observers) aligns SermonWorkspace + StudyTab + AssemblyTab state when
+// the tour is active.
 
 import { STAGE } from "../core/contracts";
 
@@ -16,41 +24,41 @@ export const WORKSPACE_TOUR_STOPS = [
   {
     id: "workspace-shell",
     anchorId: "workspace-title",
-    title: "The Sermon Workspace.",
-    body: "This is where you build one sermon, start to finish.",
+    title: "The Sermon Trail.",
+    body: "This is where you walk one sermon, text to manuscript.",
     prerequisites: STUDY_BASE,
   },
   {
-    id: "study-rail",
-    anchorId: "throughline-rail",
-    title: "Your Study at a Glance.",
-    body: "Watch your study come together here.",
+    id: "trail-map",
+    anchorId: "trail-map-button",
+    title: "The Trail Map.",
+    body: "Open the map any time to see the whole journey at a glance.",
     prerequisites: { ...STUDY_BASE, studySubPhase: 1 },
   },
   {
     id: "observe",
-    anchorId: "rail-phase-1",
+    anchorId: "trail-clearing",
     title: "Observe.",
     body: "Anchor your sermon in the text.",
     prerequisites: { ...STUDY_BASE, studySubPhase: 1 },
   },
   {
     id: "interpret",
-    anchorId: "rail-phase-2",
+    anchorId: "trail-clearing",
     title: "Interpret.",
     body: "Surface the meaning of the text.",
     prerequisites: { ...STUDY_BASE, studySubPhase: 2 },
   },
   {
     id: "redemptive-thread",
-    anchorId: "rail-phase-3",
+    anchorId: "trail-clearing",
     title: "Redemptive Thread.",
     body: "Show how the text points to Christ.",
     prerequisites: { ...STUDY_BASE, studySubPhase: 3 },
   },
   {
     id: "implications",
-    anchorId: "rail-phase-4",
+    anchorId: "trail-clearing",
     title: "Implications.",
     body: "Show what the text asks of us.",
     prerequisites: { ...STUDY_BASE, studySubPhase: 4 },
@@ -85,9 +93,9 @@ export const WORKSPACE_TOUR_STOPS = [
   },
   {
     id: "manuscript",
-    anchorId: "stage-tab-Manuscript",
-    title: "Manuscript.",
-    body: "Write your sermon.",
+    anchorId: "manuscript-body",
+    title: "The Writing Room.",
+    body: "Expand the trail into prose; export when it's ready to preach.",
     prerequisites: { tab: STAGE.Manuscript },
   },
 ];

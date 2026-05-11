@@ -449,6 +449,7 @@ export default function StudyTrailExegesis({
         viewport={viewport}
       />
       <PhaseRibbon stop={stop} activeQKey={activeQKey} />
+      <div data-tour-id="trail-clearing">
       {stop.kind === "field" && (() => {
         const field = phaseDef.fields.find((f) => f.key === stop.fieldKey);
         if (!field?.overview) return false;
@@ -492,6 +493,7 @@ export default function StudyTrailExegesis({
           lookBack={lookBack}
         />
       )}
+      </div>
     </div>
   );
 }

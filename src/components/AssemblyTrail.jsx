@@ -487,7 +487,15 @@ export default function AssemblyTrail({
       </aside>
       <TrailCanvas tx={tx} ty={ty} stopIdx={stopIdx} maxVisitedStop={maxVisitedStop} viewport={viewport} />
       <SubPhaseRibbon stop={stop} subPhaseMeta={subPhaseMeta} activeQKey={activeQKey} />
-      {clearing}
+      <div data-tour-id={
+        subPhaseMeta.key === SUB_PHASE.Anchor  ? "mpt-field" :
+        subPhaseMeta.key === SUB_PHASE.Outline ? "outline-builder" :
+        subPhaseMeta.key === SUB_PHASE.Equip   ? "functional-elements" :
+        subPhaseMeta.key === SUB_PHASE.Frame   ? "frame-worksheet" :
+        undefined
+      }>
+        {clearing}
+      </div>
       {onUpdate && (
         <NotebookDrawer
           open={notebook.open}

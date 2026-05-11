@@ -1,5 +1,19 @@
 # Sermon Workspace Tour — Implementation Spec
 
+> **WTC sequel re-anchor (2026-05-11):** Tour now anchors on trail surfaces.
+> Stop 1 sits on the trail topbar's title; Stop 2 introduces the new Trail
+> Map (DW11) instead of the retired throughline rail; Stops 3-6 share the
+> `trail-clearing` anchor while the trail's active sub-phase advances per
+> stop; Stops 7-10 anchor on the Assembly trail's active sub-phase clearing
+> (Anchor / Outline / Equip / Frame); Stop 11 anchors on the Manuscript
+> writing-room body. Sample sermon, engine, prerequisites mechanism, and
+> 11-stop count unchanged. The `throughline-rail` and `rail-phase-1..4`
+> anchors are removed from the tour; the rail itself is gone from trail
+> renderings. `mpt-field` / `outline-builder` / `functional-elements` /
+> `frame-worksheet` anchor IDs are retained (now on the trail's active
+> clearings; the tab-strip fallback still carries them for trail-suppress
+> exits — retires with WTC sequel Item 8).
+
 > **Post-ARI status (2026-05-09):** ARI Phase 7 deleted the Delivery tab and its
 > tour stop, so the current shipping tour is **11 stops, ending at Manuscript**
 > (Stop 12 below is retired). The AI-philosophy stop was already retired in the
@@ -82,25 +96,25 @@ later effort — do not entangle the two.
   the tour
 - `src/components/SermonWorkspace.jsx` — top-level workspace; tab
   orchestration; tour drives tab switches via `desiredUi`
-- `src/components/StudyTab.jsx` — exegesis phases, MPT/MPS, outline,
-  functional elements steps; consumes `desiredUi.studyStep` /
-  `desiredUi.studySubPhase`
-- `src/components/ThroughlineRail.jsx` — vertical rail down the left of
-  the Study tab tracking the four sub-phases and field nodes; anchored at
-  `data-tour-id="throughline-rail"` for stop 2 and per-phase
-  `data-tour-id="rail-phase-{1..4}"` on each `tl-segment` for stops 3-6
-  (the phase tour stops point at the rail, not the worksheet, so the
-  spotlight lands on a small named node instead of the full-height
-  worksheet body)
-- `src/components/FrameTab.jsx` — Step 5 (Sermon Frame: Intro +
-  Conclusion); anchored at `data-tour-id="frame-worksheet"` for stop 10
-- `src/components/ManuscriptTab.jsx` — Manuscript tab (terminal stage
-  post-ARI); the Flow Coach / Ear Check / Tune-Up surfaces are now
-  read-only structured prompts in `src/components/ManuscriptReview.jsx`,
-  not surfaced in the tour
-- `src/tour/workspaceTourStops.js` — the 11-stop array (Stop 12 Delivery
-  retired with ARI Phase 7); `TourContext` drives prerequisite-aligned
-  UI state for each stop
+- `src/components/StudyTab.jsx` / `src/components/AssemblyTab.jsx` —
+  consume `desiredUi.studySubPhase` / `desiredUi.assemblySubPhase` to
+  align the trail's active sub-phase to each stop's prerequisites
+- `src/components/studyTrailShared.jsx` — `TrailTopBar` carries
+  `data-tour-id="workspace-title"` on its `h1` (stop 1) and
+  `data-tour-id="trail-map-button"` on the Map pill (stop 2)
+- `src/components/StudyTrailExegesis.jsx` — wraps the active clearing in
+  `data-tour-id="trail-clearing"`. Stops 3-6 share this anchor; the
+  prerequisite-driven `studySubPhase` swaps the clearing's content per
+  stop (Observe → Interpret → Redemptive Thread → Implications) without
+  moving the spotlight
+- `src/components/AssemblyTrail.jsx` — wraps the active sub-phase
+  clearing in `data-tour-id="mpt-field"` / `outline-builder` /
+  `functional-elements` / `frame-worksheet` depending on
+  `subPhaseMeta.key`. Stops 7-10 each align via `assemblySubPhase`
+- `src/components/ManuscriptTrail.jsx` — the writing-room `<main>`
+  carries `data-tour-id="manuscript-body"` for stop 11
+- `src/tour/workspaceTourStops.js` — the 11-stop array; `TourContext`
+  drives prerequisite-aligned UI state for each stop
 - `electron/tourData.js` + the spine ops `load-tour-sermon` /
   `remove-tour-sermon` — tour sermon seeding (delete-then-insert per
   launch); list-query filters (`id NOT LIKE 'tour-%'`) keep the sample
@@ -115,10 +129,10 @@ later effort — do not entangle the two.
 > Heading is bold. Body is one imperative sentence. Copy verbatim.
 
 ### Stop 1 — Workspace shell
-**The Sermon Workspace.** This is where you build one sermon, start to finish.
+**The Sermon Trail.** This is where you walk one sermon, text to manuscript.
 
-### Stop 2 — Study rail
-**Your Study at a Glance.** Watch your study come together here.
+### Stop 2 — Trail map
+**The Trail Map.** Open the map any time to see the whole journey at a glance.
 
 ### Stop 3 — Observe
 **Observe.** Anchor your sermon in the text.
@@ -144,8 +158,8 @@ later effort — do not entangle the two.
 ### Stop 10 — Frame
 **Frame.** Write your intro and conclusion.
 
-### Stop 11 — Manuscript
-**Manuscript.** Write your sermon.
+### Stop 11 — Manuscript (the Writing Room)
+**The Writing Room.** Expand the trail into prose; export when it's ready to preach.
 
 > Stop 12 (Delivery) was retired by ARI Phase 7 (2026-05-09) when the
 > Delivery tab was deleted. Manuscript is now the terminal sermon-prep
