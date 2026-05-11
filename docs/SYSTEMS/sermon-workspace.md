@@ -74,18 +74,30 @@ The three legacy schema columns (`topic_theme`, `audience_assumptions`,
 
 ## Study Tab
 
-Component: `src/components/StudyTab.jsx`. Four steps (Exegesis, MPT/MPS, Outline,
-Functional Elements). Field definitions live in `src/utils/studyFields.js`.
+Component: `src/components/StudyTab.jsx`. The Study stage walks the pastor
+through four Exegesis sub-phases — Observe, Interpret, Redemptive Thread,
+Implications — rendered as the switchback trail (`StudyTrailExegesis.jsx`)
+since the WTC arc retired the legacy three-column shell on 2026-05-11. Field
+definitions live in `src/utils/studyFields.js`.
 
-### Step 1 — Exegesis
+### Step layer retired (Workspace Restructure 2026-05-10)
 
-Four sub-phases rendered through `SpotlightWorksheet`. Each phase:
-- Renders labeled fields per question from the prep guide
-- Stores data as JSON in its respective DB column
-- Has a sticky **"Show Text"** button that opens `PassagePopup`
+The pre-restructure "Step 1 / Step 2 / Step 3 / Step 4" layer inside Study is
+gone. Steps 2-5 became sub-phases inside Assembly (Anchor / Outline / Equip /
+Frame). The `current_step` column is legacy-tolerated — parsed but ignored.
+Study's only sub-phase walk is the four Exegesis sub-phases below.
 
-Gates between sub-phases are enforced by `evaluateAdvance` in
-`src/utils/studyAdvancement.js`. When a gate passes, `PausePointScreen` renders.
+### Exegesis sub-phases
+
+Each sub-phase renders as a sequence of clearings on the trail. The clearing
+hosts the existing field-level editors (unified canvas, synthesis tables)
+unchanged; the trail supplies the topbar, scripture column, station marks,
+and stage-boundary pause-clearings. Gates between sub-phases are enforced by
+`evaluateAdvance` in `src/utils/studyAdvancement.js`; the gate UI lives on
+the clearing's `← look back` / Continue actions. The stage-boundary pause
+between Implications and Assembly is the `StageBoundaryPause` clearing in
+`studyTrailShared.jsx` — heavier visual register, reads back all four named
+outcomes.
 
 #### Phase 1: Observe → `sermons.observations` (JSON)
 
@@ -97,7 +109,8 @@ Gates between sub-phases are enforced by `evaluateAdvance` in
   produce the canonical `thought_units` array via `deriveThoughtUnitsFromCanvas`
   on every save. Phases 2/3/4 all read from this array.
 - **Field 8 (Possible Implications)** — first PC awareness-layer surface.
-- Fields 3 and 8 open with `FieldOverviewScreen` on first per-sermon entry.
+- Fields 3 and 8 open with an overview clearing (`OverviewClearing` inside
+  `StudyTrailExegesis.jsx`) on first per-sermon entry.
 
 #### Phase 2: Interpret → `sermons.interpretation` (JSON)
 
@@ -105,11 +118,11 @@ Gates between sub-phases are enforced by `evaluateAdvance` in
 → `character_purpose` → `contrasts` → `cross_refs` → `commentary`
 → `interpretation_synthesis`.
 
-- **Field 8 (Interpretation Synthesis)** — heavy-lifting, opens with `FieldOverviewScreen`.
-  Q1 is a `cumulative-synthesis-table` extending the canonical thought-unit array
-  with a writable `meaning` column. Q2 is the whole-passage Interpretation Set
-  (text-prompt). Gate to Phase 3 requires every thought-unit row has `meaning` and
-  Q2 is non-empty.
+- **Field 8 (Interpretation Synthesis)** — heavy-lifting, opens with an
+  overview clearing. Q1 is a `cumulative-synthesis-table` extending the
+  canonical thought-unit array with a writable `meaning` column. Q2 is the
+  whole-passage Interpretation Set (text-prompt). Gate to Phase 3 requires
+  every thought-unit row has `meaning` and Q2 is non-empty.
 
 #### Phase 3: Redemptive Thread → `sermons.redemptive_thread` (JSON)
 
@@ -132,13 +145,12 @@ Gates between sub-phases are enforced by `evaluateAdvance` in
   `implication` column. Q2 (`synthesis`) is the whole-passage Implications Synthesis.
   Gate to Step 2 requires every row has `implication` and `synthesis` is non-empty.
 
-### PausePointScreen
+### Sub-phase pause-clearings
 
-Renders between sub-phases after a gate passes. Component: `src/components/PausePointScreen.jsx`.
-
-**"What you just did"** — a single synthesis question the pastor answers in one sentence.
-Their answer persists via `updateStructured` into the `_synthesis` key of the completed
-sub-phase's data column. The four questions:
+After each Exegesis gate passes, a pause-clearing renders inside the trail
+(`PauseClearing` inside `StudyTrailExegesis.jsx`). The pastor answers a
+single synthesis question; the answer persists via `updateStructured` into
+the `_synthesis` key of the completed sub-phase's data column.
 
 | Sub-phase | Question |
 |-----------|----------|
@@ -147,57 +159,50 @@ sub-phase's data column. The four questions:
 | Redemptive Thread (3) | "In one sentence, where is Christ in this text?" |
 | Implications (4) | "In one sentence, how does this text land on your people?" |
 
-**"What's next"** — static description of the upcoming sub-phase.
-
-The Begin button calls `onContinue`, which clears `pausePoint` state in StudyTab.
-
-### Step 2 — MPT / MPS Forge
-
-Two fields: `mpt` (Main Point of the Text, past tense) and `mps` (Main Point of the
-Sermon, present tense). Both are plain `sermon.*` columns. SADI Step 2 question flows
-are the designed path for forging these; see
-`src/utils/sadiAnchorFields.js` + `MAIN_POINT_PAIR_FIELDS`.
-
-### Step 3 — Outline Builder
-
-Add/remove/reorder outline points. Syncs bidirectionally with the Blueprint tab.
-Use only `createOutlinePoint(text)` from `src/utils.js` to create points —
-the stable UUID it assigns is the key that `functional_elements` depends on.
-
-### Step 4 — Functional Elements
-
-Per outline point: Explanation, Application, Illustration, Scripture fields.
-Component: inline `FuncElem` in `StudyTab.jsx`.
+The pause-clearing also previews the upcoming sub-phase and surfaces a
+"Walk on" affordance that clears `pausePoint` state and advances. The
+final pause (Implications → Assembly) is the heavier `StageBoundaryPause`
+that reads back all four named outcomes before crossing into Assembly.
 
 ### Study Notebook
 
-`NotebookPanel` at the bottom of the Study tab. Free-form scratchpad, scoped to
-the sermon. Persists as `sermons.notebook_study`. See ARI Phase 3.
+The trail's bottom-slide `NotebookDrawer` (`studyTrailShared.jsx`,
+WTC DW8) wires to `sermons.notebook_study`. Cmd/Ctrl+N toggles it from
+inside any clearing.
 
 ---
 
-## Blueprint Tab (OutlineTab)
+## Assembly Tab
 
-Component: `src/components/OutlineTab.jsx`.
+Component: `src/components/AssemblyTab.jsx`. Hosts four sub-phases in one
+continuous switchback trail (`AssemblyTrail.jsx`) — pre-restructure tabs
+Blueprint and Frame were absorbed here on 2026-05-10.
 
-**Outline Questions** — a collapsible `Collapsible` panel with four questions that
-walk the pastor from MPS to outline structure (ARI Phase 6). Read-only; the pastor
-uses the Blueprint Notebook for answers.
+- **Anchor** — MPT + MPS forge, two-field clearing walk. SADI Step 2 fields
+  in `src/utils/sadiAnchorFields.js` (`MAIN_POINT_PAIR_FIELDS`). Named outcome:
+  Main Point Pair (stacked pause-clearing edits both `tighten` values).
+- **Outline** — workshop clearing hosting `OutlineBuilder` inline. Use only
+  `createOutlinePoint(text)` from `src/utils.js` to create points — the
+  stable UUID is the key `functional_elements` depends on. Named outcome:
+  Sermon Outline.
+- **Equip** — workshop clearing hosting per-point Functional Elements
+  editors (Scripture / Explanation / Application / Illustration). Named
+  outcome: Sermon Body.
+- **Frame** — Intro + Conclusion two-field clearing walk. SADI Step 5
+  fields in `src/utils/sermonFrameFields.js`. Named outcome: Sermon Frame.
+  Frame's pause doubles as the Assembly → Manuscript stage boundary.
 
-**Reference card** — passage, MPT, MPS displayed at top when present. If MPS ends
-with `:`, a structural preview shows outline points with E/A/I fill indicators.
-
-**Sermon Body Structure** — `OutlineBuilder` component.
-
-**Blueprint Notebook** — `NotebookPanel`. Persists as `sermons.notebook_blueprint`.
-
-The "Continue to Manuscript →" button is gated on `outline.length > 0`.
+The trail's `NotebookDrawer` wires to `sermons.notebook_blueprint` (column
+name preserved from the pre-restructure schema).
 
 ---
 
 ## Manuscript Tab
 
-Component: `src/components/ManuscriptTab.jsx`.
+Component: `src/components/ManuscriptTab.jsx`, wrapped inside the
+writing-room shell (`ManuscriptTrail.jsx`, WTC DW5). The pastor arrives
+in a contemplative writing room — trail topbar stays for context, scripture
+column on the right, 820px reading-column body.
 
 Fields: Introduction, per-point Transition, Conclusion. Each is a free-form textarea
 in `sermons.manuscript` (JSON).
@@ -208,7 +213,8 @@ sections of structured read-only prompts:
 - **Ear Check** — fixed scan-list (long sentences, abstract nouns, jargon, etc.).
 - **Final Tune-Up** — five editorial-pass sections with prompt questions.
 
-**Manuscript Notebook** — `NotebookPanel`. Persists as `sermons.notebook_manuscript`.
+**Manuscript Notebook** — the writing-room's bottom-slide `NotebookDrawer`
+wires to `sermons.notebook_manuscript`. Cmd/Ctrl+N toggles it.
 
 **Export to Word** — dispatches `sermon-export-manuscript` IPC. Main builds a `.docx`
 to `Documents/SermonForge/exports/Manuscripts/` and opens it. Manuscript is the
@@ -247,9 +253,9 @@ exegesis phase.
 
 - Adding columns to `sermons` requires updating `SERMON_COLUMNS` in `electron/main.js`.
   `buildUpdate()` throws in dev if you miss this, but only if you exercise the save path.
-- `SpotlightWorksheet` dispatches on `question.kind`; `unified-canvas` mounts
-  `IndentedSentenceCanvas`. For `crossPhaseRead` / `crossPhaseWrite` wiring see
-  `src/components/SpotlightWorksheet.jsx`.
-- The `Collapsible` primitive at `src/components/primitives/Collapsible.jsx` is
-  shared by `NotebookPanel`, `ManuscriptReview`, and the Blueprint Outline Questions.
-- `FeedbackFlag` mounts on Study, Blueprint, and Manuscript tabs (BTI Phase 1.5).
+- Field-level editors (unified canvas, synthesis tables, outline builder,
+  functional elements stack) mount inside the trail's clearings unchanged.
+  See `IndentedSentenceCanvas`, `SynthesisTable`, `OutlineBuilder`, and the
+  `EquipBody` / `EquipPoint` blocks in `AssemblyTrail.jsx`.
+- `FeedbackFlag` mounts on the Manuscript trail today; future trail-aware
+  flags can attach in `studyTrailShared.jsx` topbar.

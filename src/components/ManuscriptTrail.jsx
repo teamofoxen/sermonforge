@@ -39,19 +39,26 @@ import { getQuestionString, parseStructuredField } from "../utils/studyFields";
 import { getOutline } from "../utils";
 import "./studyTrail.css";
 
-export default function ManuscriptTrail({ sermon, onUpdate, onClose }) {
+export default function ManuscriptTrail({
+  sermon, onUpdate, onClose,
+  seriesTitle, seriesPosition, seriesTotal, onOpenPrev, onOpenNext,
+}) {
   const [passageOpen, setPassageOpen] = useState(false);
   const [stageOverviewSeen, markStageOverviewSeen] = useStageOverviewSeen("manuscript");
   const notebook = useNotebookToggle();
   const map = useTrailMapToggle();
 
+  // Cmd/Ctrl+. opens the passage popup from the writing room (the
+  // manuscript stage has no N/A toggle — every other trail uses the chord
+  // for N/A on allowlisted Qs). modalOpen gates the trail's Esc handler
+  // so a stray Esc can't exit the trail while a drawer or modal is open.
   useTrailKeyboard({
     advance: () => {},
     lookBack: () => {},
     advanceDisabled: true,
     onExit: onClose,
     onTogglePass: () => setPassageOpen((v) => !v),
-    modalOpen: passageOpen,
+    modalOpen: passageOpen || notebook.open || map.open,
   });
 
   // Stage overview (DW12) — fires on first arrival at the writing room
@@ -97,6 +104,11 @@ export default function ManuscriptTrail({ sermon, onUpdate, onClose }) {
           sermon={sermon}
           onExit={onClose}
           onPassageClick={() => setPassageOpen(true)}
+          seriesTitle={seriesTitle}
+          seriesPosition={seriesPosition}
+          seriesTotal={seriesTotal}
+          onOpenPrev={onOpenPrev}
+          onOpenNext={onOpenNext}
         />
         <PassagePopup
           passage={sermon?.passage}
@@ -133,6 +145,11 @@ export default function ManuscriptTrail({ sermon, onUpdate, onClose }) {
         onToggleNotebook={notebook.toggle}
         notebookOpen={notebook.open}
         onOpenMap={map.openMap}
+        seriesTitle={seriesTitle}
+        seriesPosition={seriesPosition}
+        seriesTotal={seriesTotal}
+        onOpenPrev={onOpenPrev}
+        onOpenNext={onOpenNext}
       />
       <PassagePopup
         passage={sermon?.passage}

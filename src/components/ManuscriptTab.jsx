@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { getOutline, getFunctionalElements, serializeOutline, serializeFunctionalElements, autoResize, parseManuscript } from "../utils";
 import { exportManuscript } from "../db/database";
-import NotebookPanel from "./NotebookPanel";
+// NotebookPanel removed 2026-05-11 — the writing-room (ManuscriptTrail)
+// wires the canonical bottom-slide NotebookDrawer for the manuscript
+// notebook. Keeping an inline panel here too created two surfaces over
+// the same `notebook_manuscript` column.
 import ManuscriptReview from "./ManuscriptReview";
 import FeedbackFlag from "./FeedbackFlag";
 import SecondaryButton from "./primitives/SecondaryButton";
@@ -271,13 +274,6 @@ export default function ManuscriptTab({ sermon, onUpdate }) {
         sermon={sermon}
         openReview={openReview}
         onToggle={setOpenReview}
-      />
-
-      <NotebookPanel
-        value={sermon.notebook_manuscript}
-        onChange={(value) => onUpdate({ notebook_manuscript: value })}
-        label="Manuscript Notebook"
-        placeholder="Free-form notes for delivery — pacing marks, lines to land hard, sections to slow down on."
       />
 
     </div>

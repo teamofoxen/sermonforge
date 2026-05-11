@@ -110,7 +110,6 @@ h4 { font-size: var(--fs-lg); line-height: var(--lh-snug); }
 
 /* Field labels — uppercase letterspaced mono, the SermonForge house style */
 .field-label,
-.worksheet-field-label,
 .nav-section-label {
   font-family: var(--font-mono);
   font-weight: 500;

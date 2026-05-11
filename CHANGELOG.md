@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-11 — Post-WTC audit fixes: pastor UX, accessibility, contract repair, dark mode
+
+- Trail keyboard + focus: Cmd/Ctrl+. now respects editor focus so it stops eating period keystrokes in textareas; the trail's Esc handler defers when the notebook drawer or trail map is open so closing a drawer no longer also exits the trail; equip-point accordion is a real `<button>` with `aria-expanded`; `PassagePopup` + `NotebookDrawer` got proper `role="dialog"` + `aria-modal="true"` + focus return on close.
+- State Contract #4 — `TrailTopBar` now renders the series breadcrumb (`Series · 3 of 7`) with prev/next sibling navigation; SermonWorkspace forwards `siblingIds` through StudyTab / AssemblyTab / ManuscriptTrail. Process Contract #3 — tour-driven tab change now routes through `handleTabChange` so the `data-testid="movement-event"` marker fires.
+- Dark-mode parity — six hardcoded shadow/border RGBs in `studyTrail.css` extracted to new themed `--tw-*` tokens that flip in `[data-theme="dark"]`. New `TrailLiveRegion` (sr-only `aria-live="polite"`) announces sub-phase/field changes for screen-reader users.
+- Cleanups — ~350 lines of dead CSS removed (`.spotlight-*`, `.pause-point-*`, `.func-elem-*`, `.worksheet-*`); manuscript inline `NotebookPanel` deduped against the writing-room `NotebookDrawer`; unused `SUB_PHASE` import dropped from `StudyTab`; `TrailCanvas` wrapped in `React.memo`; `useViewportSize` throttled to 120ms.
+- Docs drift — `sermon-workspace.md` rewritten for trail surfaces; `schema.md` bumped to v21 with migrations v14–v21 + notebook/MPP/last_*_subphase columns; `project-structure.md` file tree updated. `drift-check.sh` PASS.
+
+---
+
 ## 2026-05-11 — Per-stage sub-phase memory in DB; sample sermon always lands at the beginning
 
 - Schema v21 adds `last_study_subphase` + `last_assembly_subphase` columns so per-stage position lives in the canonical sermon record instead of scattered localStorage; `transitionState` writes them on every sub-phase movement, stage transitions COALESCE from them so tab-out + tab-back preserves position.

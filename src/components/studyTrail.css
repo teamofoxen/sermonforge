@@ -5,8 +5,31 @@
  * the Exegesis and Anchor walks use.
  *
  * Tokens are pulled from src/styles/global.css (--ink / --parchment / --gold
- * etc.) — no new design tokens introduced.
+ * etc.). The trail-local shadow and border tokens below redirect through
+ * the theme so dark mode flips them — six places previously hardcoded the
+ * RGB ink/gold values and stayed bright in dark mode.
  */
+
+/* Trail-local shadow + border tokens. Defined as defaults here (light
+ * mode) and overridden in [data-theme="dark"] below. */
+.tw-shell {
+  --tw-border-gold-soft: rgba(212, 160, 23, 0.22);
+  --tw-border-gold-mid:  rgba(212, 160, 23, 0.32);
+  --tw-shadow-gold-hint: rgba(212, 160, 23, 0.10);
+  --tw-bg-gold-hover:    rgba(212, 160, 23, 0.06);
+  --tw-shadow-ink-hair:  rgba(26, 20, 16, 0.04);
+  --tw-shadow-ink-drawer:rgba(26, 20, 16, 0.18);
+  --tw-shadow-ink-modal: rgba(26, 20, 16, 0.36);
+}
+[data-theme="dark"] .tw-shell {
+  --tw-border-gold-soft: rgba(200, 150, 15, 0.34);
+  --tw-border-gold-mid:  rgba(200, 150, 15, 0.48);
+  --tw-shadow-gold-hint: rgba(200, 150, 15, 0.18);
+  --tw-bg-gold-hover:    rgba(200, 150, 15, 0.12);
+  --tw-shadow-ink-hair:  rgba(0, 0, 0, 0.45);
+  --tw-shadow-ink-drawer:rgba(0, 0, 0, 0.55);
+  --tw-shadow-ink-modal: rgba(0, 0, 0, 0.70);
+}
 
 /* Fixed-position takeover: the trail owns the full viewport whenever it
  * mounts. The workspace chrome (topbar / tab strip / sidebar) stays in the
@@ -62,8 +85,8 @@
   grid-template-columns: auto 1fr auto;
   align-items: center;
   padding: 0 24px;
-  border-bottom: 1px solid rgba(212, 160, 23, 0.22);
-  box-shadow: 0 1px 0 rgba(212, 160, 23, 0.10);
+  border-bottom: 1px solid var(--tw-border-gold-soft);
+  box-shadow: 0 1px 0 var(--tw-shadow-gold-hint);
 }
 
 .tw-shell .tw-topbar-left {
@@ -84,6 +107,60 @@
 }
 .tw-shell .tw-meta-passage:hover {
   color: var(--parchment);
+}
+
+/* Series breadcrumb in trail topbar — State Contract #4. Sits beside the
+ * passage chip with a thin gold divider; the series title + position +
+ * prev/next chevrons keep the pastor oriented inside the trail. */
+.tw-shell .tw-meta-series {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 14px;
+  padding-left: 14px;
+  border-left: 1px solid var(--tw-border-gold-soft);
+  color: var(--parchment-deep);
+}
+.tw-shell .tw-meta-series-text {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--parchment-deep);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 240px;
+}
+.tw-shell .tw-series-nav {
+  background: transparent;
+  border: 0;
+  color: var(--parchment-deep);
+  font-size: 14px;
+  line-height: 1;
+  padding: 2px 6px;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: color 0.12s ease, background 0.12s ease;
+}
+.tw-shell .tw-series-nav:hover,
+.tw-shell .tw-series-nav:focus-visible {
+  color: var(--gold-bright);
+  background: var(--tw-bg-gold-hover);
+  outline: 0;
+}
+
+/* Screen-reader-only utility for the TrailLiveRegion. Visually hidden but
+ * available to assistive tech, so position/sub-phase changes get
+ * announced as the pastor advances. */
+.tw-shell .tw-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .tw-shell .tw-topbar-title {
@@ -122,7 +199,7 @@
 }
 .tw-shell .tw-exit:hover {
   color: var(--gold-bright);
-  background: rgba(212, 160, 23, 0.06);
+  background: var(--tw-bg-gold-hover);
 }
 
 /* ── Phase ribbon ────────────────────────────────────────────────────── */
@@ -251,7 +328,7 @@
   z-index: 6;
   background: var(--parchment-warm);
   border-left: 1px solid var(--parchment-deep);
-  box-shadow: -2px 0 0 rgba(26, 20, 16, 0.04);
+  box-shadow: -2px 0 0 var(--tw-shadow-ink-hair);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -946,7 +1023,7 @@
  */
 .tw-shell .tw-notebook-toggle {
   background: transparent;
-  border: 1px solid rgba(212, 160, 23, 0.32);
+  border: 1px solid var(--tw-border-gold-mid);
   color: var(--gold);
   font-size: 10px;
   letter-spacing: 0.22em;
@@ -977,7 +1054,7 @@
   z-index: 12;
   background: var(--parchment-warm);
   border-top: 2px solid var(--gold);
-  box-shadow: 0 -12px 36px rgba(26, 20, 16, 0.18);
+  box-shadow: 0 -12px 36px var(--tw-shadow-ink-drawer);
   transform: translateY(100%);
   transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
   display: flex;
@@ -1060,7 +1137,7 @@
   max-height: 88vh;
   background: var(--parchment);
   border-radius: 4px;
-  box-shadow: 0 24px 80px rgba(26, 20, 16, 0.36);
+  box-shadow: 0 24px 80px var(--tw-shadow-ink-modal);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -1195,7 +1272,7 @@
 /* Map-trigger button in the topbar — sibling to the notebook toggle. */
 .tw-shell .tw-map-toggle {
   background: transparent;
-  border: 1px solid rgba(212, 160, 23, 0.32);
+  border: 1px solid var(--tw-border-gold-mid);
   color: var(--gold);
   font-size: 10px;
   letter-spacing: 0.22em;
@@ -1336,7 +1413,6 @@
   align-items: center;
   gap: 10px;
   padding: 10px 14px;
-  cursor: pointer;
   user-select: none;
 }
 .tw-shell .tw-equip-point-num {
@@ -1355,11 +1431,31 @@
   color: var(--ink-mid);
   min-width: 0;
 }
-.tw-shell .tw-equip-point-chevron {
+/* Real button (keyboard-reachable) for the equip-point expand/collapse
+ * affordance. The chevron is the visible cue inside it; this button
+ * carries aria-expanded / aria-controls / aria-label for AT users. */
+.tw-shell .tw-equip-point-toggle {
+  flex-shrink: 0;
+  background: transparent;
+  border: 0;
+  padding: 4px 6px;
   color: var(--ink-ghost);
+  cursor: pointer;
+  border-radius: 2px;
+  display: inline-flex;
+  align-items: center;
+}
+.tw-shell .tw-equip-point-toggle:hover,
+.tw-shell .tw-equip-point-toggle:focus-visible {
+  color: var(--gold);
+  background: var(--tw-bg-gold-hover);
+  outline: 0;
+}
+.tw-shell .tw-equip-point-chevron {
   font-size: 16px;
   transition: transform 0.2s ease;
 }
+.tw-shell .tw-equip-point-toggle.is-open .tw-equip-point-chevron,
 .tw-shell .tw-equip-point-chevron.is-open {
   transform: rotate(90deg);
 }

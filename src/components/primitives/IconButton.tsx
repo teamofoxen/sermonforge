@@ -20,6 +20,7 @@
 // classes continue to drive appearance. A future pilot may collapse them
 // into a single canonical icon-button shape; that's out of Pilot C.
 
+import { forwardRef } from "react";
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 
 export interface IconButtonProps
@@ -29,17 +30,16 @@ export interface IconButtonProps
   children: ReactNode;
 }
 
-export function IconButton({
-  type = "button",
-  className,
-  children,
-  ...rest
-}: IconButtonProps) {
-  return (
-    <button type={type} className={className} {...rest}>
-      {children}
-    </button>
-  );
-}
+// forwardRef so modals (PassagePopup, drawers) can move focus to a close
+// button on open.
+export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
+  function IconButton({ type = "button", className, children, ...rest }, ref) {
+    return (
+      <button ref={ref} type={type} className={className} {...rest}>
+        {children}
+      </button>
+    );
+  },
+);
 
 export default IconButton;

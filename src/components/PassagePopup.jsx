@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ReactDOM from "react-dom";
 import { fetchPassage } from "../db/database";
 import IconButton from "./primitives/IconButton";
@@ -10,10 +10,18 @@ import IconButton from "./primitives/IconButton";
  *   passage — sermon.passage string (e.g. "Galatians 1:1-10")
  *   isOpen  — whether the panel is visible
  *   onClose — called when the close button is clicked
+ *
+ * Accessibility: rendered as a modal dialog (role="dialog",
+ * aria-modal="true") so screen readers announce it correctly. Focus moves
+ * to the close button when the popup opens, and is restored to the
+ * trigger element when it closes. Esc closes the popup from anywhere
+ * inside it.
  */
 export default function PassagePopup({ passage, isOpen, onClose }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const closeRef = useRef(null);
+  const triggerRef = useRef(null);
 
   useEffect(() => {
     if (!isOpen || !passage) return;
@@ -24,13 +32,50 @@ export default function PassagePopup({ passage, isOpen, onClose }) {
       .catch((e) => { setData({ fetchError: e.message }); setLoading(false); });
   }, [isOpen, passage]);
 
+  // Focus management — capture the active element on open, focus the
+  // close button, restore focus on close.
+  useEffect(() => {
+    if (isOpen) {
+      triggerRef.current = typeof document !== "undefined" ? document.activeElement : null;
+      const id = setTimeout(() => closeRef.current?.focus({ preventScroll: true }), 30);
+      return () => clearTimeout(id);
+    }
+    if (triggerRef.current && typeof triggerRef.current.focus === "function") {
+      try { triggerRef.current.focus({ preventScroll: true }); } catch { /* element removed */ }
+      triggerRef.current = null;
+    }
+  }, [isOpen]);
+
+  // Esc-close handler scoped to this modal.
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose?.();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return ReactDOM.createPortal(
-    <div className="passage-popup">
+    <div
+      className="passage-popup"
+      role="dialog"
+      aria-modal="true"
+      aria-label={passage ? `Scripture passage: ${passage}` : "Scripture passage"}
+    >
       <div className="passage-popup-header">
         <span className="passage-popup-ref">{passage || "Passage"}</span>
-        <IconButton className="passage-popup-close" onClick={onClose} aria-label="Close">✕</IconButton>
+        <IconButton
+          ref={closeRef}
+          className="passage-popup-close"
+          onClick={onClose}
+          aria-label="Close passage popup"
+        >✕</IconButton>
       </div>
 
       {loading && (

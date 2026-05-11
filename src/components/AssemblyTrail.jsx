@@ -22,7 +22,7 @@
 //     walks back across a sub-phase boundary.
 //   - `jumpToStudy()` is the cross-stage look-back from Anchor MPT Q1.
 
-import { useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import {
   fieldQuestions,
   getQuestionAnswer,
@@ -45,6 +45,7 @@ import {
   TrailTopBar, TrailDefs, Station, StageBoundaryPause,
   StageOverview, useStageOverviewSeen,
   NotebookDrawer, useNotebookToggle, useTrailMapToggle,
+  TrailLiveRegion,
 } from "./studyTrailShared";
 import WorkspaceTrailMap from "./WorkspaceTrailMap";
 import "./studyTrail.css";
@@ -160,6 +161,7 @@ export default function AssemblyTrail({
   jumpToStudy,
   onUpdate,
   onExit,
+  seriesTitle, seriesPosition, seriesTotal, onOpenPrev, onOpenNext,
 }) {
   const viewport = useViewportSize();
   const [maxVisitedStop, setMaxVisitedStop] = useState(0);
@@ -361,9 +363,12 @@ export default function AssemblyTrail({
       toggleFrameNA?.(stop.fieldKey, activeQKey);
     }
   };
+  // modalOpen gates the trail's Esc handler so a stray Esc can't exit the
+  // trail while a drawer or modal is open. Any of: passage popup,
+  // notebook drawer, or trail map count as "modal open."
   useTrailKeyboard({
     advance, lookBack, advanceDisabled, onExit, onTogglePass,
-    modalOpen: passageOpen,
+    modalOpen: passageOpen || notebook.open || map.open,
   });
 
   // First-arrival overview for heavy-lifting Anchor/Frame fields.
@@ -448,7 +453,16 @@ export default function AssemblyTrail({
     ];
     return (
       <div className="tw-shell">
-        <TrailTopBar sermon={sermon} onExit={onExit} onPassageClick={() => setPassageOpen(true)} />
+        <TrailTopBar
+          sermon={sermon}
+          onExit={onExit}
+          onPassageClick={() => setPassageOpen(true)}
+          seriesTitle={seriesTitle}
+          seriesPosition={seriesPosition}
+          seriesTotal={seriesTotal}
+          onOpenPrev={onOpenPrev}
+          onOpenNext={onOpenNext}
+        />
         <PassagePopup passage={sermon?.passage} isOpen={passageOpen} onClose={() => setPassageOpen(false)} />
         <aside className="tw-scripture">
           <ScripturePanel passage={sermon?.passage} />
@@ -471,8 +485,28 @@ export default function AssemblyTrail({
     );
   }
 
+  // Live-region announcement of the pastor's position. Computed from
+  // current stop, sub-phase, field, and question so screen readers can
+  // hear "Assembly · Anchor, MPT, question 1 of 2" as the trail advances.
+  const liveText = (() => {
+    const base = `Assembly · ${subPhaseMeta.label}`;
+    if (stop.kind === PAUSE) return `${base} · pause point — ${subPhaseMeta.outcome}`;
+    if (stop.kind === WORKSHOP) return `${base} · workshop — ${subPhaseMeta.outcome}`;
+    if (stop.kind === FIELD) {
+      const fIdx = subPhaseMeta.fields.findIndex((f) => f.key === stop.fieldKey);
+      const fLabel = subPhaseMeta.fields[fIdx]?.label || "";
+      const field = subPhaseMeta.fields[fIdx];
+      const qs = field ? fieldQuestions(field) : [];
+      const qIdx = qs.findIndex((q) => q.key === activeQKey);
+      const qPart = qs.length > 1 && qIdx >= 0 ? `, question ${qIdx + 1} of ${qs.length}` : "";
+      return `${base} · ${fLabel} (field ${fIdx + 1} of ${subPhaseMeta.fields.length})${qPart}`;
+    }
+    return base;
+  })();
+
   return (
     <div className="tw-shell">
+      <TrailLiveRegion text={liveText} />
       <TrailTopBar
         sermon={sermon}
         onExit={onExit}
@@ -480,6 +514,11 @@ export default function AssemblyTrail({
         onToggleNotebook={onUpdate ? notebook.toggle : undefined}
         notebookOpen={notebook.open}
         onOpenMap={map.openMap}
+        seriesTitle={seriesTitle}
+        seriesPosition={seriesPosition}
+        seriesTotal={seriesTotal}
+        onOpenPrev={onOpenPrev}
+        onOpenNext={onOpenNext}
       />
       <PassagePopup passage={sermon?.passage} isOpen={passageOpen} onClose={() => setPassageOpen(false)} />
       <aside className="tw-scripture">
@@ -549,7 +588,10 @@ const RIBBON_PROMPTS = {
 
 // ── Trail SVG ─────────────────────────────────────────────────────────────
 
-function TrailCanvas({ tx, ty, stopIdx, maxVisitedStop, viewport }) {
+// Memo'd because the canvas only changes on stopIdx / maxVisitedStop /
+// viewport / camera-tx-ty. Parent re-renders driven by typing keystrokes
+// (autosave) shouldn't rebuild the SVG every time.
+const TrailCanvas = memo(function TrailCanvas({ tx, ty, stopIdx, maxVisitedStop, viewport }) {
   const horizon = Math.max(stopIdx, maxVisitedStop);
   const pathD = buildPathToIndex(horizon);
   return (
@@ -599,7 +641,7 @@ function TrailCanvas({ tx, ty, stopIdx, maxVisitedStop, viewport }) {
       />
     </svg>
   );
-}
+});
 
 // ── Field clearing (Anchor MPT/MPS, Frame Intro/Conclusion) ──────────────
 
@@ -858,18 +900,29 @@ function EquipBody({ outline, funcData, onOutlineTextChange, onFuncDataChange })
 function EquipPoint({ pointId, pointText, displayIndex, fe, onTextChange, onFEChange }) {
   const [open, setOpen] = useState(() => !!(fe.explanation || fe.application || fe.illustration || fe.scripture));
   const update = (k, v) => onFEChange(pointId, { ...fe, [k]: v });
+  const bodyId = `tw-equip-body-${pointId}`;
   return (
     <div className="tw-equip-point">
-      <div className="tw-equip-point-header" onClick={() => setOpen((v) => !v)}>
+      <div className="tw-equip-point-header">
         <span className="tw-equip-point-num tw-mono">{displayIndex + 1}</span>
         <input
           className="tw-equip-point-title"
           value={pointText || ""}
           onChange={(e) => onTextChange?.(pointId, e.target.value)}
-          onClick={(e) => e.stopPropagation()}
           placeholder={`Point ${displayIndex + 1}`}
         />
-        <span className={`tw-equip-point-chevron ${open ? "is-open" : ""}`}>›</span>
+        {/* eslint-disable-next-line sermonforge/no-raw-button */}
+        <button
+          type="button"
+          className={`tw-equip-point-toggle ${open ? "is-open" : ""}`}
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          aria-controls={bodyId}
+          aria-label={open ? `Collapse point ${displayIndex + 1}` : `Expand point ${displayIndex + 1}`}
+          title={open ? "Collapse" : "Expand"}
+        >
+          <span className="tw-equip-point-chevron">›</span>
+        </button>
       </div>
       {!open && fe.explanation && (
         <div className="tw-equip-point-preview">
@@ -877,7 +930,7 @@ function EquipPoint({ pointId, pointText, displayIndex, fe, onTextChange, onFECh
         </div>
       )}
       {open && (
-        <div className="tw-equip-point-body">
+        <div className="tw-equip-point-body" id={bodyId}>
           <EquipField label="Scripture" badge="ESV" badgeClass="badge-scripture"
             value={fe.scripture}
             onChange={(v) => update("scripture", v)}

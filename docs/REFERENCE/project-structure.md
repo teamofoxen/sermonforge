@@ -131,16 +131,16 @@ SermonForge/
         ├── SermonWorkspace.jsx
         ├── StudyTab.jsx             — Study tab (Exegesis only — 4 sub-phases: Observe / Interpret / Redemptive Thread / Implications)
         ├── AssemblyTab.jsx          — Assembly tab (4 sub-phases: Anchor / Outline / Equip / Frame). Hosts MPT/MPS, Outline, FE, Intro/Conclusion. Post-workspace-restructure 2026-05-10.
-        ├── ManuscriptTab.jsx        — Manuscript tab (terminal sermon-prep stage post-ARI)
+        ├── ManuscriptTab.jsx        — Manuscript editor body (terminal sermon-prep stage post-ARI). Mounts inside `ManuscriptTrail` writing-room shell.
+        ├── ManuscriptTrail.jsx      — Writing-room shell wrapping ManuscriptTab (WTC DW5).
         ├── ManuscriptReview.jsx     — Flow Check / Ear Check / Final Tune-Up structured prompts (read-only)
-        ├── NotebookPanel.jsx        — Per-tab notebook (Study/Assembly/Manuscript). Columns `notebook_study` / `notebook_blueprint` / `notebook_manuscript` (column name `notebook_blueprint` is legacy-tolerated; feeds Assembly's notebook).
-        ├── PausePointScreen.jsx     — Sub-phase boundary screen with synthesis question
-        ├── SpotlightWorksheet.jsx   — Renders SFDI fields with question dispatch
+        ├── StudyTrailExegesis.jsx   — Switchback-trail rendering for Study (4 sub-phases × 25 fields + 4 pauses)
+        ├── AssemblyTrail.jsx        — Switchback-trail rendering for Assembly (4 sub-phases — Anchor / Outline / Equip / Frame)
+        ├── studyTrailShared.jsx     — Shared trail primitives: TrailTopBar, NotebookDrawer, StageBoundaryPause, useTrailKeyboard, useViewportSize, TrailLiveRegion, etc.
+        ├── studyTrail.css           — Scoped CSS for the trail (.tw-shell namespace)
+        ├── WorkspaceTrailMap.jsx    — Three-row switchback overview modal (WTC DW11)
         ├── IndentedSentenceCanvas.jsx — Phase 1 Field 3 unified-canvas
-        ├── ThroughlineCanvas.jsx    — Throughline visualization
-        ├── ThroughlineRail.jsx      — Side rail showing pastor's progress
         ├── SynthesisTable.jsx       — Cumulative thought-unit table (Phases 2/3/4)
-        ├── FieldOverviewScreen.jsx  — First-entry overview for heavy fields
         ├── PeripheralReferencePanel.jsx — Cross-field reference cards
         ├── ScripturePanel.jsx       — In-workspace passage display
         ├── PassagePopup.jsx         — Floating ESV scripture viewer (portal to document.body)

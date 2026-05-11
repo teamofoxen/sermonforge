@@ -145,8 +145,8 @@ export function buildStageEvidence(sermon, stage) {
 // is a STEP transition (Exegesis → MPT/MPS); evidence is the entire Exegesis
 // step's content, not just Implications.
 
-// Per-question completeness check shared with SpotlightWorksheet — a question
-// counts as "answered" when it has flat-text content OR is marked N/A.
+// Per-question completeness check used by the trail's gate evaluation — a
+// question counts as "answered" when it has flat-text content OR is marked N/A.
 function isQuestionAnswered(data, fieldKey, questionKey) {
   if (isQuestionNA(data, fieldKey, questionKey)) return true;
   return !!flattenAnswerValue(getQuestionAnswer(data, fieldKey, questionKey));

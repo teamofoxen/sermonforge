@@ -69,12 +69,22 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSermon }) {
 
   // When the tour is active, align workspace state with the current stop's
   // declared prerequisites. Only writes when there's a real change so we don't
-  // fight the user mid-step.
+  // fight the user mid-step. Route the tab change through `handleTabChange`
+  // so Process Contract #3 (movement is a visible event) holds — a tour-
+  // driven advance must still emit the `data-testid="movement-event"`
+  // marker. `handleTabChange` writes that marker; raw `setActiveTab`
+  // would skip it.
   useEffect(() => {
     if (!tourActive || !desiredUi) return;
     if (desiredUi.tab && desiredUi.tab !== activeTab) {
-      setActiveTab(desiredUi.tab);
+      // handleTabChange is async + may reject via ContractViolation;
+      // tour advance should still attempt the spine transition so the
+      // movement marker fires. Errors are surfaced via tabError state.
+      handleTabChange(desiredUi.tab).catch(() => { /* surfaced via tabError */ });
     }
+    // handleTabChange intentionally excluded — it captures `activeTab` via
+    // closure; the dep array drives this effect on tour-state changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tourActive, desiredUi, activeTab]);
   const sermonRef = useRef(null);
 
@@ -404,31 +414,60 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSermon }) {
               defensively so legacy data can migrate into Field 3's
               legacy_notes on first open. */}
 
-          {activeTab === STAGE.Study && (
-            <StudyTab
-              sermon={sermon}
-              onUpdate={handleUpdate}
-              onTabChange={handleTabChange}
-              onMovement={({ from, to }) => setLastMovement({ from, to, at: Date.now() })}
-              onClose={onClose}
-            />
-          )}
-          {activeTab === STAGE.Assembly && (
-            <AssemblyTab
-              sermon={sermon}
-              onUpdate={handleUpdate}
-              onTabChange={handleTabChange}
-              onMovement={({ from, to }) => setLastMovement({ from, to, at: Date.now() })}
-              onClose={onClose}
-            />
-          )}
-          {activeTab === STAGE.Manuscript && (
-            <ManuscriptTrail
-              sermon={sermon}
-              onUpdate={handleUpdate}
-              onClose={onClose}
-            />
-          )}
+          {(() => {
+            // State Contract #4 — surface series parent context inside
+            // the trail topbar too. The workspace shell topbar already
+            // shows the series breadcrumb, but the trail's `.tw-shell`
+            // covers it during the walk. Compute position-in-series here
+            // once and forward to whichever trail-hosting tab mounts.
+            const idx = sermon?.series_id && siblingIds.length > 0
+              ? siblingIds.indexOf(sermonId)
+              : -1;
+            const seriesProps = idx >= 0
+              ? {
+                  seriesTitle: sermon.series_title || sermon.series?.title || "",
+                  seriesPosition: idx + 1,
+                  seriesTotal: siblingIds.length,
+                  onOpenPrev: idx > 0 && onOpenSermon ? () => onOpenSermon(siblingIds[idx - 1]) : undefined,
+                  onOpenNext: idx < siblingIds.length - 1 && onOpenSermon ? () => onOpenSermon(siblingIds[idx + 1]) : undefined,
+                }
+              : {};
+            if (activeTab === STAGE.Study) {
+              return (
+                <StudyTab
+                  sermon={sermon}
+                  onUpdate={handleUpdate}
+                  onTabChange={handleTabChange}
+                  onMovement={({ from, to }) => setLastMovement({ from, to, at: Date.now() })}
+                  onClose={onClose}
+                  {...seriesProps}
+                />
+              );
+            }
+            if (activeTab === STAGE.Assembly) {
+              return (
+                <AssemblyTab
+                  sermon={sermon}
+                  onUpdate={handleUpdate}
+                  onTabChange={handleTabChange}
+                  onMovement={({ from, to }) => setLastMovement({ from, to, at: Date.now() })}
+                  onClose={onClose}
+                  {...seriesProps}
+                />
+              );
+            }
+            if (activeTab === STAGE.Manuscript) {
+              return (
+                <ManuscriptTrail
+                  sermon={sermon}
+                  onUpdate={handleUpdate}
+                  onClose={onClose}
+                  {...seriesProps}
+                />
+              );
+            }
+            return null;
+          })()}
         </div>
 
       </div>

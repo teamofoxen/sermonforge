@@ -18,7 +18,7 @@ import {
   setDivisionsCanvas,
 } from "../utils/studyFields";
 import StudyTrailExegesis from "./StudyTrailExegesis";
-import { STAGE, SUB_PHASE, ContractViolation } from "../core/contracts";
+import { STAGE, ContractViolation } from "../core/contracts";
 import { transitionState } from "../core/spine";
 import {
   canonicalSubPhase, subPhaseToIndex,
@@ -26,7 +26,10 @@ import {
   evaluateAdvance, formatAdvanceRejection,
 } from "../utils/studyAdvancement";
 
-export default function StudyTab({ sermon, onUpdate, onTabChange, onMovement, onClose }) {
+export default function StudyTab({
+  sermon, onUpdate, onTabChange, onMovement, onClose,
+  seriesTitle, seriesPosition, seriesTotal, onOpenPrev, onOpenNext,
+}) {
   const { active: tourActive, desiredUi } = useTour();
   // Initial sub-phase derives from the DB column `last_study_subphase`,
   // populated by spine.transitionState on every Study sub-phase movement.
@@ -194,6 +197,11 @@ export default function StudyTab({ sermon, onUpdate, onTabChange, onMovement, on
       subPhaseSufficiency={subPhaseSufficiency}
       onUpdate={onUpdate}
       onExit={onClose}
+      seriesTitle={seriesTitle}
+      seriesPosition={seriesPosition}
+      seriesTotal={seriesTotal}
+      onOpenPrev={onOpenPrev}
+      onOpenNext={onOpenNext}
     />
   );
 }

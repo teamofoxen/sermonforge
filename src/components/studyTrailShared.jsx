@@ -17,7 +17,7 @@
 //   - `Station` — the SVG dot drawn at every stop. Field stations render
 //     a circle + ordinal; pause stations render a circle with a tick.
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, memo } from "react";
 import {
   fieldQuestions,
   getQuestionAnswer,
@@ -63,15 +63,39 @@ export function fieldHasAnyAnswer(field, data) {
   return false;
 }
 
+// useViewportSize — tracks window dimensions for the trail's camera math.
+// Resize fires up to ~60Hz during a drag; we throttle with a 120ms tail so
+// the trail re-renders at most a handful of times per resize gesture
+// instead of once per browser tick. The leading edge fires immediately so
+// the first resize doesn't feel laggy. Cleanup cancels any pending tail
+// fire on unmount.
 export function useViewportSize() {
   const [viewport, setViewport] = useState({
     w: typeof window !== "undefined" ? window.innerWidth : 1280,
     h: typeof window !== "undefined" ? window.innerHeight : 800,
   });
   useEffect(() => {
-    const onResize = () => setViewport({ w: window.innerWidth, h: window.innerHeight });
+    let trailingId = null;
+    let lastFireAt = 0;
+    const apply = () => setViewport({ w: window.innerWidth, h: window.innerHeight });
+    const onResize = () => {
+      const now = Date.now();
+      if (now - lastFireAt > 120) {
+        lastFireAt = now;
+        apply();
+      } else if (trailingId == null) {
+        trailingId = setTimeout(() => {
+          trailingId = null;
+          lastFireAt = Date.now();
+          apply();
+        }, 120);
+      }
+    };
     window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      if (trailingId != null) clearTimeout(trailingId);
+    };
   }, []);
   return viewport;
 }
@@ -127,7 +151,7 @@ export function useTrailKeyboard({
         }
         return;
       }
-      if (mod && e.key === ".") {
+      if (mod && e.key === "." && !inEditor) {
         e.preventDefault();
         onTogglePass?.();
       }
@@ -137,7 +161,15 @@ export function useTrailKeyboard({
   }, [advance, lookBack, advanceDisabled, onExit, onTogglePass, modalOpen]);
 }
 
-export function TrailTopBar({ sermon, onExit, onPassageClick, onToggleNotebook, notebookOpen, onOpenMap }) {
+export function TrailTopBar({
+  sermon, onExit, onPassageClick, onToggleNotebook, notebookOpen, onOpenMap,
+  // State Contract #4 — parent context first-class. When the sermon
+  // belongs to a series, the trail topbar surfaces the series name and
+  // position-in-series so the pastor can answer "which sermon of how
+  // many am I on" without leaving the trail.
+  seriesTitle, seriesPosition, seriesTotal, onOpenPrev, onOpenNext,
+}) {
+  const hasSeries = !!seriesTitle && typeof seriesPosition === "number" && typeof seriesTotal === "number";
   return (
     <header className="tw-topbar">
       <div className="tw-topbar-left">
@@ -149,6 +181,31 @@ export function TrailTopBar({ sermon, onExit, onPassageClick, onToggleNotebook, 
         >
           {(sermon?.passage || "").toUpperCase()}
         </button>
+        {hasSeries && (
+          <span className="tw-meta-series" title={`${seriesTitle} — Sermon ${seriesPosition} of ${seriesTotal}`}>
+            {onOpenPrev && (
+              /* eslint-disable-next-line sermonforge/no-raw-button */
+              <button
+                className="tw-series-nav"
+                onClick={onOpenPrev}
+                aria-label="Previous sermon in series"
+                title="Previous sermon in series"
+              >‹</button>
+            )}
+            <span className="tw-mono tw-meta-series-text">
+              {seriesTitle} · {seriesPosition} of {seriesTotal}
+            </span>
+            {onOpenNext && (
+              /* eslint-disable-next-line sermonforge/no-raw-button */
+              <button
+                className="tw-series-nav"
+                onClick={onOpenNext}
+                aria-label="Next sermon in series"
+                title="Next sermon in series"
+              >›</button>
+            )}
+          </span>
+        )}
       </div>
       <h1 className="tw-topbar-title" data-tour-id="workspace-title">{sermon?.title || "Untitled"}</h1>
       <div className="tw-topbar-right">
@@ -224,10 +281,30 @@ export function useTrailMapToggle() {
 // because the drawer doesn't compete with the scripture column or the
 // active clearing; it sits underneath them until summoned.
 export function NotebookDrawer({ open, onClose, label, value, onChange, placeholder }) {
+  const textareaRef = useRef(null);
+  const triggerRef = useRef(null);
+  // Focus management — move focus into the drawer's textarea on open, and
+  // restore focus to whichever element triggered the drawer when it
+  // closes. Captures `document.activeElement` at the moment `open` flips
+  // to true so a stale ref from an earlier session can't redirect focus.
+  useEffect(() => {
+    if (open) {
+      triggerRef.current = typeof document !== "undefined" ? document.activeElement : null;
+      const t = textareaRef.current;
+      if (t) {
+        const id = setTimeout(() => t.focus({ preventScroll: true }), 30);
+        return () => clearTimeout(id);
+      }
+    } else if (triggerRef.current && typeof triggerRef.current.focus === "function") {
+      try { triggerRef.current.focus({ preventScroll: true }); } catch { /* element removed */ }
+      triggerRef.current = null;
+    }
+  }, [open]);
   return (
     <div
       className={`tw-notebook-drawer ${open ? "is-open" : ""}`}
       role="dialog"
+      aria-modal="true"
       aria-label={label}
       aria-hidden={!open}
     >
@@ -240,6 +317,7 @@ export function NotebookDrawer({ open, onClose, label, value, onChange, placehol
       </header>
       <div className="tw-notebook-drawer-body">
         <textarea
+          ref={textareaRef}
           className="tw-notebook-drawer-input"
           value={value || ""}
           onChange={(e) => onChange(e.target.value)}
@@ -441,6 +519,20 @@ export function StageBoundaryPause({
           <span className="tw-advance-arrow">→</span>
         </button>
       </div>
+    </div>
+  );
+}
+
+// TrailLiveRegion — screen-reader-only aria-live announcement of the
+// pastor's position on the trail. Each trail computes a short text
+// (sub-phase + field + question) and renders this once; React updates
+// the text whenever the position changes, and screen readers announce
+// politely. The visual SubPhaseRibbon already shows this to sighted
+// users; this gives non-sighted users the same beat.
+export function TrailLiveRegion({ text }) {
+  return (
+    <div className="tw-sr-only" role="status" aria-live="polite" aria-atomic="true">
+      {text}
     </div>
   );
 }

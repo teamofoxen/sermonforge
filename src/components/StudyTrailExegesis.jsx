@@ -18,7 +18,7 @@
 // REDEMPTIVE_FIELDS / IMPLICATIONS_FIELDS so any future schema change adapts
 // automatically.
 
-import { useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import {
   OBSERVE_FIELDS,
   INTERPRET_FIELDS,
@@ -42,6 +42,7 @@ import {
   useViewportSize, useSyncActiveQuestion, useTrailKeyboard,
   TrailTopBar, TrailDefs, Station, StageBoundaryPause,
   NotebookDrawer, useNotebookToggle, useTrailMapToggle,
+  TrailLiveRegion,
 } from "./studyTrailShared";
 import WorkspaceTrailMap from "./WorkspaceTrailMap";
 import "./studyTrail.css";
@@ -195,6 +196,7 @@ export default function StudyTrailExegesis({
   subPhaseSufficiency,
   onUpdate,
   onExit,
+  seriesTitle, seriesPosition, seriesTotal, onOpenPrev, onOpenNext,
 }) {
   const viewport = useViewportSize();
 
@@ -407,13 +409,37 @@ export default function StudyTrailExegesis({
     const { column, data } = phaseData[stop.phase];
     toggleStructuredNA?.(column, data, stop.fieldKey, activeQKey);
   };
+  // modalOpen gates the trail's Esc handler so a stray Esc can't exit the
+  // trail while a drawer or modal is open. Any of: passage popup,
+  // notebook drawer, or trail map count as "modal open."
   useTrailKeyboard({
     advance, lookBack, advanceDisabled, onExit, onTogglePass,
-    modalOpen: passageOpen,
+    modalOpen: passageOpen || notebook.open || map.open,
   });
+
+  // Live-region announcement of the pastor's position. Computed from
+  // current stop, phase, field, and active question so screen readers can
+  // hear "Study · Observe, Context (field 1 of 5), question 1 of 2" as
+  // the trail advances.
+  const liveText = (() => {
+    const phaseLabel = phaseDef?.label || "";
+    const base = `Study · ${phaseLabel}`;
+    if (stop.kind === "pause") return `${base} · pause point — ${phaseDef?.outcome || ""}`;
+    if (stop.kind === "field") {
+      const fIdx = phaseDef.fields.findIndex((f) => f.key === stop.fieldKey);
+      const field = phaseDef.fields[fIdx];
+      const fLabel = field?.label || "";
+      const qs = field ? fieldQuestions(field) : [];
+      const qIdx = qs.findIndex((q) => q.key === activeQKey);
+      const qPart = qs.length > 1 && qIdx >= 0 ? `, question ${qIdx + 1} of ${qs.length}` : "";
+      return `${base} · ${fLabel} (field ${fIdx + 1} of ${phaseDef.fields.length})${qPart}`;
+    }
+    return base;
+  })();
 
   return (
     <div className="tw-shell">
+      <TrailLiveRegion text={liveText} />
       <TrailTopBar
         sermon={sermon}
         onExit={onExit}
@@ -421,6 +447,11 @@ export default function StudyTrailExegesis({
         onToggleNotebook={onUpdate ? notebook.toggle : undefined}
         notebookOpen={notebook.open}
         onOpenMap={map.openMap}
+        seriesTitle={seriesTitle}
+        seriesPosition={seriesPosition}
+        seriesTotal={seriesTotal}
+        onOpenPrev={onOpenPrev}
+        onOpenNext={onOpenNext}
       />
       <PassagePopup
         passage={sermon?.passage}
@@ -529,7 +560,10 @@ function PhaseRibbon({ stop, activeQKey }) {
 
 // ── Trail SVG canvas ──────────────────────────────────────────────────────
 
-function TrailCanvas({ tx, ty, stopIdx, maxVisitedStop, viewport }) {
+// Memo'd because the canvas only changes on stopIdx / maxVisitedStop /
+// viewport / camera-tx-ty. Parent re-renders driven by typing keystrokes
+// (autosave) shouldn't rebuild the SVG every time.
+const TrailCanvas = memo(function TrailCanvas({ tx, ty, stopIdx, maxVisitedStop, viewport }) {
   const horizon = Math.max(stopIdx, maxVisitedStop);
   const pathD = buildPathToIndex(horizon);
   return (
@@ -578,7 +612,7 @@ function TrailCanvas({ tx, ty, stopIdx, maxVisitedStop, viewport }) {
       />
     </svg>
   );
-}
+});
 
 // ── Field clearing (active card) ──────────────────────────────────────────
 

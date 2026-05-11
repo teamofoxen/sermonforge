@@ -26,7 +26,10 @@ import {
   evaluateAdvance, formatAdvanceRejection,
 } from "../utils/studyAdvancement";
 
-export default function AssemblyTab({ sermon, onUpdate, onTabChange, onMovement, onClose }) {
+export default function AssemblyTab({
+  sermon, onUpdate, onTabChange, onMovement, onClose,
+  seriesTitle, seriesPosition, seriesTotal, onOpenPrev, onOpenNext,
+}) {
   const { active: tourActive, desiredUi } = useTour();
   // Initial sub-phase derives from the DB column `last_assembly_subphase`,
   // populated by spine.transitionState on every Assembly sub-phase movement.
@@ -239,6 +242,11 @@ export default function AssemblyTab({ sermon, onUpdate, onTabChange, onMovement,
       jumpToStudy={jumpToStudy}
       onUpdate={onUpdate}
       onExit={onClose}
+      seriesTitle={seriesTitle}
+      seriesPosition={seriesPosition}
+      seriesTotal={seriesTotal}
+      onOpenPrev={onOpenPrev}
+      onOpenNext={onOpenNext}
     />
   );
 }
