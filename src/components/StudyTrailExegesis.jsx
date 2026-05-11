@@ -438,6 +438,23 @@ export default function StudyTrailExegesis({
     return base;
   })();
 
+  // Canvas-field panel mode — when the active question is `unified-canvas`,
+  // the centered clearing card clips the tall content. Switch to a full-height
+  // scrollable panel and hide the scripture column (the canvas embeds the text).
+  const showingOverview = stop.kind === "field" && (() => {
+    const field = phaseDef.fields.find((f) => f.key === stop.fieldKey);
+    if (!field?.overview) return false;
+    if (dismissedOverviews.has(field.key)) return false;
+    return !fieldHasAnyAnswer(field, phaseData[stop.phase].data);
+  })();
+  const isCanvasField = !showingOverview && stop.kind === "field" && (() => {
+    const field = phaseDef.fields.find((f) => f.key === stop.fieldKey);
+    if (!field) return false;
+    const qs = fieldQuestions(field);
+    const q = qs.find((q) => q.key === activeQKey) || qs[0];
+    return q?.kind === "unified-canvas";
+  })();
+
   return (
     <div className="tw-shell">
       <TrailLiveRegion text={liveText} />
@@ -459,9 +476,11 @@ export default function StudyTrailExegesis({
         isOpen={passageOpen}
         onClose={() => setPassageOpen(false)}
       />
-      <aside className="tw-scripture">
-        <ScripturePanel passage={sermon?.passage} />
-      </aside>
+      {!isCanvasField && (
+        <aside className="tw-scripture">
+          <ScripturePanel passage={sermon?.passage} />
+        </aside>
+      )}
       {onUpdate && (
         <NotebookDrawer
           open={notebook.open}
@@ -482,18 +501,26 @@ export default function StudyTrailExegesis({
       />
       <PhaseRibbon stop={stop} activeQKey={activeQKey} />
       <div data-tour-id="trail-clearing">
-      {stop.kind === "field" && (() => {
-        const field = phaseDef.fields.find((f) => f.key === stop.fieldKey);
-        if (!field?.overview) return false;
-        if (dismissedOverviews.has(field.key)) return false;
-        return !fieldHasAnyAnswer(field, phaseData[stop.phase].data);
-      })() ? (
+      {showingOverview ? (
         <OverviewClearing
           stop={stop}
           phaseDef={phaseDef}
           field={phaseDef.fields.find((f) => f.key === stop.fieldKey)}
           onContinue={() => dismissOverview(stop.fieldKey)}
           onLookBack={lookBack}
+        />
+      ) : isCanvasField ? (
+        <CanvasFieldClearing
+          stop={stop}
+          phaseDef={phaseDef}
+          phaseData={phaseData[stop.phase]}
+          updateStructured={updateStructured}
+          advance={advance}
+          lookBack={lookBack}
+          advanceDisabled={advanceDisabled}
+          isLastFieldInPhase={isLastFieldInPhase}
+          subPhaseSufficiency={subPhaseSufficiency}
+          activeQKey={activeQKey}
         />
       ) : stop.kind === "field" ? (
         <FieldClearing
@@ -599,6 +626,7 @@ const TrailCanvas = memo(function TrailCanvas({ tx, ty, stopIdx, maxVisitedStop,
               isPause={isPause}
               ordinal={ordinal}
               distance={Math.abs(stopIdx - i)}
+              isBehind={i <= stopIdx}
             />
           );
         })}
@@ -726,6 +754,84 @@ function FieldClearing({
           <AdvanceGateChecklist sufficiency={subPhaseSufficiency} />
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Canvas field panel ────────────────────────────────────────────────────
+//
+// Full-height scrollable panel for unified-canvas questions. The centered
+// clearing card clips a multi-verse structural editor; this layout fills the
+// viewport below the topbar+ribbon so the canvas can scroll freely, and
+// hides the scripture column since the canvas embeds the text inline.
+
+function CanvasFieldClearing({
+  stop,
+  phaseDef,
+  phaseData,
+  updateStructured,
+  advance,
+  lookBack,
+  advanceDisabled,
+  isLastFieldInPhase,
+  subPhaseSufficiency,
+  activeQKey,
+}) {
+  const field = phaseDef.fields.find((f) => f.key === stop.fieldKey);
+  if (!field) return null;
+  const idx = phaseDef.fields.findIndex((f) => f.key === stop.fieldKey);
+  const { data, column } = phaseData;
+  const questions = fieldQuestions(field);
+  const activeQuestion = questions.find((q) => q.key === activeQKey) || questions[0];
+  const value = getQuestionAnswer(data, field.key, activeQuestion?.key ?? DEFAULT_QUESTION_KEY);
+
+  return (
+    <div className="tw-canvas-panel" key={`canvas:${stop.phase}:${stop.fieldKey}`}>
+      <div className="tw-canvas-panel-inner">
+        <div className="tw-clearing-eyebrow">
+          <span className="tw-mono">
+            PHASE {toRoman(stop.phase + 1)} · {phaseDef.label.toUpperCase()}
+          </span>
+          <span className="tw-clearing-eyebrow-sep">/</span>
+          <span className="tw-mono">
+            FIELD {padNum(idx + 1)} OF {padNum(phaseDef.fields.length)}
+          </span>
+        </div>
+        <h2 className="tw-clearing-title">{field.label}</h2>
+        {activeQuestion?.prompt && (
+          <p className="tw-clearing-prompt">{activeQuestion.prompt}</p>
+        )}
+        <IndentedSentenceCanvas
+          value={Array.isArray(value) ? value : []}
+          onChange={(next) =>
+            updateStructured(column, data, field.key, next, activeQuestion?.key ?? DEFAULT_QUESTION_KEY)
+          }
+          disabled={activeQuestion ? isQuestionNA(data, field.key, activeQuestion.key) : false}
+        />
+        <div className="tw-clearing-actions">
+          <div className="tw-clearing-actions-left">
+            {/* eslint-disable-next-line sermonforge/no-raw-button */}
+            <button className="tw-link-back" onClick={lookBack}>
+              ← look back
+            </button>
+          </div>
+          {/* eslint-disable-next-line sermonforge/no-raw-button */}
+          <button
+            className="tw-advance"
+            onClick={advance}
+            disabled={advanceDisabled}
+            title={advanceDisabled ? subPhaseSufficiency?.reason || "" : ""}
+          >
+            <span>Continue</span>
+            <span className="tw-advance-arrow">→</span>
+          </button>
+        </div>
+        {advanceDisabled && (
+          <div className="tw-clearing-gate">
+            <AdvanceGateChecklist sufficiency={subPhaseSufficiency} />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

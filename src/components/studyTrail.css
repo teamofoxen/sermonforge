@@ -77,7 +77,7 @@
  * the pastor along the trail. */
 .tw-shell .tw-topbar {
   position: relative;
-  z-index: 4;
+  z-index: 6;
   height: 62px;
   background: var(--ink);
   color: var(--parchment);
@@ -205,7 +205,7 @@
 /* ── Phase ribbon ────────────────────────────────────────────────────── */
 .tw-shell .tw-ribbon {
   position: relative;
-  z-index: 3;
+  z-index: 5;
   height: 44px;
   display: flex;
   align-items: center;
@@ -343,7 +343,9 @@
   top: 58%;
   transform: translate(-50%, -50%);
   width: min(740px, calc(100vw - 400px - 64px));
-  z-index: 5;
+  /* z-index below topbar(6) and ribbon(5) so chrome always renders above
+   * the clearing even when a tall card extends into the topbar area. */
+  z-index: 3;
   padding: 44px 56px 36px;
   text-align: left;
   animation: tw-bloom .55s ease-out;
@@ -399,6 +401,11 @@
   padding: 22px 24px 14px;
   position: relative;
   box-shadow: var(--shadow-soft);
+  /* Scroll tall input areas rather than pushing the action buttons off-screen.
+   * The clearing card is centered in the viewport; without this, a textarea
+   * with many lines or a synthesis table can clip the Continue/look back row. */
+  max-height: 420px;
+  overflow-y: auto;
 }
 .tw-shell .tw-clearing-body::before {
   content: '';
@@ -409,6 +416,35 @@
   width: 2px;
   background: var(--gold);
   opacity: 0.7;
+}
+
+/* ── Canvas field panel ───────────────────────────────────────────────── *
+ * Full-height scrollable surface for unified-canvas questions. Replaces
+ * the centered clearing card (which clips tall content) with a panel that
+ * fills the viewport below the topbar + ribbon. The scripture column is
+ * hidden while this panel is active since the canvas embeds the text.
+ */
+.tw-shell .tw-canvas-panel {
+  position: fixed;
+  top: 106px;  /* 62px topbar + 44px ribbon */
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow-y: auto;
+  z-index: 5;
+  background: var(--parchment-warm);
+  border-top: 1px solid var(--parchment-deep);
+  animation: tw-writing-room-enter 0.45s ease-out;
+}
+
+.tw-shell .tw-canvas-panel-inner {
+  padding: 36px 48px 80px;
+}
+
+.tw-shell .tw-canvas-panel .tw-clearing-eyebrow,
+.tw-shell .tw-canvas-panel .tw-clearing-title,
+.tw-shell .tw-canvas-panel .tw-clearing-prompt {
+  max-width: 820px;
 }
 
 /* ── Trail-native field inputs (replace spotlight chrome) ─────────────── */

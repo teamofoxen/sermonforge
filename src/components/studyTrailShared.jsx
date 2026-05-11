@@ -540,7 +540,7 @@ export function TrailLiveRegion({ text }) {
   );
 }
 
-export function Station({ point, isActive, isPause, ordinal, distance }) {
+export function Station({ point, isActive, isPause, ordinal, distance, isBehind }) {
   const recede = Math.min(distance, 8);
   const fade = Math.max(0.32, 1 - recede * 0.08);
   const r = isActive ? (isPause ? 26 : 22) : isPause ? 14 : 10 - Math.min(recede * 0.4, 4);
@@ -560,7 +560,7 @@ export function Station({ point, isActive, isPause, ordinal, distance }) {
       ) : (
         <g className={`tw-station ${isActive ? "is-active" : ""}`}>
           <circle r={r} />
-          {distance < 6 && ordinal != null && (
+          {distance < 6 && ordinal != null && isBehind && (
             <text className="tw-mono tw-station-num" y={r + 16} textAnchor="middle">
               {padNum(ordinal)}
             </text>

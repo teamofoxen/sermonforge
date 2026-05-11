@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-05-11 — Study trail layout fixes: canvas panel, clearing chrome, footprint labels
+
+- Divisions (unified-canvas) field now renders as a full-height scrollable panel below the topbar+ribbon instead of the centered clearing card. The scripture column hides while the canvas is active since the text is embedded inline. Resolves the multi-verse clipping that pushed the topbar off the top and the actions off the bottom.
+- Re-stacked z-index on the regular clearing (`.tw-clearing` → 3, ribbon → 5, topbar → 6) so chrome always paints above a tall card. Added `max-height: 420px` + `overflow-y: auto` to `.tw-clearing-body` so long textareas / synthesis tables scroll inside the body instead of pushing "← look back" / "Continue" off the viewport.
+- Trail station ordinal labels now only render when the station is at or behind the active stop (`isBehind` prop on `Station`). Looking back no longer surfaces higher-numbered footprints ahead of the current position. Applied symmetrically in `StudyTrailExegesis` and `AssemblyTrail`.
+- Preflight + drift-check PASS; preview verified clean (no console errors, app boots).
+
+---
+
 ## 2026-05-11 — Search-driven navigation: click a hit, land on the right surface
 
 - New `src/utils/searchHints.js` maps each search-result `matchedColumn` to a `{ stage?, subPhase?, openNotebook? }` hint. A notebook match opens the workspace at that stage with the drawer pre-opened; a sub-phase match (Observe / Interpret / Anchor / Frame, etc.) lands at that sub-phase; a Manuscript-bucket match lands in the writing room.

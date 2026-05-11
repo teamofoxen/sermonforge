@@ -631,6 +631,7 @@ const TrailCanvas = memo(function TrailCanvas({ tx, ty, stopIdx, maxVisitedStop,
               isPause={isPause}
               ordinal={ordinal}
               distance={Math.abs(stopIdx - i)}
+              isBehind={i <= stopIdx}
             />
           );
         })}
