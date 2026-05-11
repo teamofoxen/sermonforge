@@ -23,7 +23,11 @@ import {
   useTrailKeyboard,
   StageOverview,
   useStageOverviewSeen,
+  NotebookDrawer,
+  useNotebookToggle,
+  useTrailMapToggle,
 } from "./studyTrailShared";
+import WorkspaceTrailMap from "./WorkspaceTrailMap";
 import { getQuestionAnswer, getQuestionString, parseStructuredField } from "../utils/studyFields";
 import { getOutline } from "../utils";
 import "./studyTrail.css";
@@ -36,6 +40,8 @@ export default function ManuscriptTrail({ sermon, onUpdate }) {
   // the contract is the same across stages.
   const [trailSuppressed, setTrailSuppressed] = useState(false);
   const [stageOverviewSeen, markStageOverviewSeen] = useStageOverviewSeen("manuscript");
+  const notebook = useNotebookToggle();
+  const map = useTrailMapToggle();
 
   useTrailKeyboard({
     advance: () => {},
@@ -148,6 +154,9 @@ export default function ManuscriptTrail({ sermon, onUpdate }) {
         sermon={sermon}
         onExit={() => setTrailSuppressed(true)}
         onPassageClick={() => setPassageOpen(true)}
+        onToggleNotebook={notebook.toggle}
+        notebookOpen={notebook.open}
+        onOpenMap={map.openMap}
       />
       <PassagePopup
         passage={sermon?.passage}
@@ -163,6 +172,15 @@ export default function ManuscriptTrail({ sermon, onUpdate }) {
         </div>
         <ManuscriptTab sermon={sermon} onUpdate={onUpdate} />
       </main>
+      <NotebookDrawer
+        open={notebook.open}
+        onClose={notebook.close}
+        label="Manuscript Notebook"
+        value={sermon?.notebook_manuscript || ""}
+        onChange={(value) => onUpdate({ notebook_manuscript: value })}
+        placeholder="Free-form notes for delivery — pacing marks, lines to land hard, sections to slow down on."
+      />
+      {map.open && <WorkspaceTrailMap sermon={sermon} onClose={map.close} />}
     </div>
   );
 }

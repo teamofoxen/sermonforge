@@ -44,7 +44,9 @@ import {
   useViewportSize, useSyncActiveQuestion, useTrailKeyboard,
   TrailTopBar, TrailDefs, Station, StageBoundaryPause,
   StageOverview, useStageOverviewSeen,
+  NotebookDrawer, useNotebookToggle, useTrailMapToggle,
 } from "./studyTrailShared";
+import WorkspaceTrailMap from "./WorkspaceTrailMap";
 import "./studyTrail.css";
 
 // Stop kinds.
@@ -156,6 +158,7 @@ export default function AssemblyTrail({
   advanceSubPhase,
   jumpToSubPhase,
   jumpToStudy,
+  onUpdate,
   onExit,
 }) {
   const viewport = useViewportSize();
@@ -163,6 +166,8 @@ export default function AssemblyTrail({
   const [passageOpen, setPassageOpen] = useState(false);
   const [dismissedOverviews, setDismissedOverviews] = useState(() => new Set());
   const [stageOverviewSeen, markStageOverviewSeen] = useStageOverviewSeen("assembly");
+  const notebook = useNotebookToggle();
+  const map = useTrailMapToggle();
 
   // Active field within the current sub-phase. For Anchor + Frame, this is
   // the MPT/MPS or Intro/Conclusion key. Workshop sub-phases don't use it.
@@ -468,7 +473,14 @@ export default function AssemblyTrail({
 
   return (
     <div className="tw-shell">
-      <TrailTopBar sermon={sermon} onExit={onExit} onPassageClick={() => setPassageOpen(true)} />
+      <TrailTopBar
+        sermon={sermon}
+        onExit={onExit}
+        onPassageClick={() => setPassageOpen(true)}
+        onToggleNotebook={onUpdate ? notebook.toggle : undefined}
+        notebookOpen={notebook.open}
+        onOpenMap={map.openMap}
+      />
       <PassagePopup passage={sermon?.passage} isOpen={passageOpen} onClose={() => setPassageOpen(false)} />
       <aside className="tw-scripture">
         <ScripturePanel passage={sermon?.passage} />
@@ -476,6 +488,17 @@ export default function AssemblyTrail({
       <TrailCanvas tx={tx} ty={ty} stopIdx={stopIdx} maxVisitedStop={maxVisitedStop} viewport={viewport} />
       <SubPhaseRibbon stop={stop} subPhaseMeta={subPhaseMeta} activeQKey={activeQKey} />
       {clearing}
+      {onUpdate && (
+        <NotebookDrawer
+          open={notebook.open}
+          onClose={notebook.close}
+          label="Assembly Notebook"
+          value={sermon?.notebook_blueprint || ""}
+          onChange={(value) => onUpdate({ notebook_blueprint: value })}
+          placeholder="Free-form notes for your assembly thinking — alternate orderings, points to test, things to revisit."
+        />
+      )}
+      {map.open && <WorkspaceTrailMap sermon={sermon} onClose={map.close} />}
     </div>
   );
 }

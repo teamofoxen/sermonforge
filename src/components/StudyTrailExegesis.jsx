@@ -41,7 +41,9 @@ import {
   firstIncompleteFieldKey, fieldHasAnyAnswer,
   useViewportSize, useSyncActiveQuestion, useTrailKeyboard,
   TrailTopBar, TrailDefs, Station, StageBoundaryPause,
+  NotebookDrawer, useNotebookToggle, useTrailMapToggle,
 } from "./studyTrailShared";
+import WorkspaceTrailMap from "./WorkspaceTrailMap";
 import "./studyTrail.css";
 
 const PHASES = [
@@ -191,6 +193,7 @@ export default function StudyTrailExegesis({
   advanceSubPhase,
   jumpToSubPhase,
   subPhaseSufficiency,
+  onUpdate,
   onExit,
 }) {
   const viewport = useViewportSize();
@@ -219,6 +222,8 @@ export default function StudyTrailExegesis({
   // existing PassagePopup as a modal overlay so the pastor can read the
   // text without leaving the clearing.
   const [passageOpen, setPassageOpen] = useState(false);
+  const notebook = useNotebookToggle();
+  const map = useTrailMapToggle();
   const dismissOverview = (fieldKey) => {
     setDismissedOverviews((prev) => {
       if (prev.has(fieldKey)) return prev;
@@ -413,6 +418,9 @@ export default function StudyTrailExegesis({
         sermon={sermon}
         onExit={onExit}
         onPassageClick={() => setPassageOpen(true)}
+        onToggleNotebook={onUpdate ? notebook.toggle : undefined}
+        notebookOpen={notebook.open}
+        onOpenMap={map.openMap}
       />
       <PassagePopup
         passage={sermon?.passage}
@@ -422,6 +430,17 @@ export default function StudyTrailExegesis({
       <aside className="tw-scripture">
         <ScripturePanel passage={sermon?.passage} />
       </aside>
+      {onUpdate && (
+        <NotebookDrawer
+          open={notebook.open}
+          onClose={notebook.close}
+          label="Study Notebook"
+          value={sermon?.notebook_study || ""}
+          onChange={(value) => onUpdate({ notebook_study: value })}
+          placeholder="Free-form notes for your exegesis thinking — questions to come back to, threads to chase, half-formed connections."
+        />
+      )}
+      {map.open && <WorkspaceTrailMap sermon={sermon} onClose={map.close} />}
       <TrailCanvas
         tx={tx}
         ty={ty}

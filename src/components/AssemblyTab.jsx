@@ -366,6 +366,7 @@ export default function AssemblyTab({ sermon, onUpdate, onTabChange, onMovement 
         advanceSubPhase={advanceSubPhase}
         jumpToSubPhase={jumpToSubPhase}
         jumpToStudy={jumpToStudy}
+        onUpdate={onUpdate}
         onExit={() => setTrailSuppressed(true)}
       />
     );

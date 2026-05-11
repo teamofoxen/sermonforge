@@ -137,7 +137,7 @@ export function useTrailKeyboard({
   }, [advance, lookBack, advanceDisabled, onExit, onTogglePass, modalOpen]);
 }
 
-export function TrailTopBar({ sermon, onExit, onPassageClick }) {
+export function TrailTopBar({ sermon, onExit, onPassageClick, onToggleNotebook, notebookOpen, onOpenMap }) {
   return (
     <header className="tw-topbar">
       <div className="tw-topbar-left">
@@ -152,6 +152,27 @@ export function TrailTopBar({ sermon, onExit, onPassageClick }) {
       </div>
       <h1 className="tw-topbar-title">{sermon?.title || "Untitled"}</h1>
       <div className="tw-topbar-right">
+        {onOpenMap && (
+          /* eslint-disable-next-line sermonforge/no-raw-button */
+          <button
+            className="tw-map-toggle tw-mono"
+            onClick={onOpenMap}
+            title="Open the sermon trail map (Cmd/Ctrl+M)"
+          >
+            Map
+          </button>
+        )}
+        {onToggleNotebook && (
+          /* eslint-disable-next-line sermonforge/no-raw-button */
+          <button
+            className={`tw-notebook-toggle tw-mono ${notebookOpen ? "is-open" : ""}`}
+            onClick={onToggleNotebook}
+            aria-pressed={!!notebookOpen}
+            title="Toggle notebook (Cmd/Ctrl+N)"
+          >
+            Notebook
+          </button>
+        )}
         {onExit && (
           /* eslint-disable-next-line sermonforge/no-raw-button */
           <button
@@ -166,6 +187,94 @@ export function TrailTopBar({ sermon, onExit, onPassageClick }) {
       </div>
     </header>
   );
+}
+
+// useTrailMapToggle — Cmd/Ctrl+M to open the workspace trail map; Esc to
+// close. Mirrors the notebook hook so each trail wires the map button
+// and the modal with a single tuple. The modal handles its own outside
+// behavior via `tw-map-backdrop`.
+export function useTrailMapToggle() {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const onKey = (e) => {
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && (e.key === "m" || e.key === "M")) {
+        e.preventDefault();
+        setOpen((v) => !v);
+        return;
+      }
+      if (e.key === "Escape" && open) {
+        const t = e.target;
+        const inEditor = t && (t.tagName === "TEXTAREA" || t.tagName === "INPUT");
+        if (inEditor) return;
+        setOpen(false);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+  return { open, openMap: () => setOpen(true), close: () => setOpen(false), toggle: () => setOpen((v) => !v) };
+}
+
+// NotebookDrawer — per-stage notebook surfaces inside the trail shell
+// (WTC DW8). Slides up from the bottom of the trail viewport with the
+// existing notebook column as a free-form scratchpad. Title + close + a
+// single textarea — the contemplative posture of the trail survives
+// because the drawer doesn't compete with the scripture column or the
+// active clearing; it sits underneath them until summoned.
+export function NotebookDrawer({ open, onClose, label, value, onChange, placeholder }) {
+  return (
+    <div
+      className={`tw-notebook-drawer ${open ? "is-open" : ""}`}
+      role="dialog"
+      aria-label={label}
+      aria-hidden={!open}
+    >
+      <header className="tw-notebook-drawer-header">
+        <div className="tw-mono tw-notebook-drawer-label">{label}</div>
+        {/* eslint-disable-next-line sermonforge/no-raw-button */}
+        <button className="tw-notebook-drawer-close" onClick={onClose} aria-label="Close notebook">
+          ×
+        </button>
+      </header>
+      <div className="tw-notebook-drawer-body">
+        <textarea
+          className="tw-notebook-drawer-input"
+          value={value || ""}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          spellCheck={true}
+        />
+      </div>
+    </div>
+  );
+}
+
+// useNotebookToggle — shared (open, toggle, close) bundle so each trail
+// wires identically. Cmd/Ctrl+N flips it; Esc closes when open and the
+// trail's modalOpen flag tells the existing useTrailKeyboard to defer
+// the exit shortcut while the drawer holds focus.
+export function useNotebookToggle() {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    const onKey = (e) => {
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && (e.key === "n" || e.key === "N")) {
+        e.preventDefault();
+        setOpen((v) => !v);
+        return;
+      }
+      if (e.key === "Escape" && open) {
+        const t = e.target;
+        const inEditor = t && (t.tagName === "TEXTAREA" || t.tagName === "INPUT");
+        if (inEditor) return; // let the textarea blur naturally first
+        setOpen(false);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+  return { open, toggle: () => setOpen((v) => !v), close: () => setOpen(false) };
 }
 
 // SVG <defs> shared across every trail canvas. Mist + paper-grain colors

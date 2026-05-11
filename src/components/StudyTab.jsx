@@ -361,6 +361,7 @@ export default function StudyTab({ sermon, onUpdate, onTabChange, onMovement }) 
         advanceSubPhase={advanceSubPhase}
         jumpToSubPhase={jumpToSubPhase}
         subPhaseSufficiency={subPhaseSufficiency}
+        onUpdate={onUpdate}
         onExit={() => setTrailSuppressed(true)}
       />
     );

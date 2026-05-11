@@ -937,6 +937,287 @@
   color: var(--ink-mid);
 }
 
+/* ── Notebook drawer (WTC DW8) ───────────────────────────────────────── *
+ * Per-stage free-form scratchpad surfaced from a topbar toggle. Slides
+ * up from the bottom of the trail viewport — sits above the active
+ * clearing but below the topbar/scripture column so the pastor stays
+ * oriented. Single textarea inside; the existing notebook column round-
+ * trips through `onUpdate` unchanged.
+ */
+.tw-shell .tw-notebook-toggle {
+  background: transparent;
+  border: 1px solid rgba(212, 160, 23, 0.32);
+  color: var(--gold);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  padding: 6px 12px;
+  border-radius: 2px;
+  cursor: pointer;
+  margin-right: 6px;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+.tw-shell .tw-notebook-toggle:hover {
+  border-color: var(--gold-bright);
+  color: var(--gold-bright);
+}
+.tw-shell .tw-notebook-toggle.is-open {
+  background: var(--gold);
+  color: var(--parchment);
+  border-color: var(--gold);
+}
+
+.tw-shell .tw-notebook-drawer {
+  position: fixed;
+  left: 0;
+  right: 400px; /* clear of the scripture column */
+  bottom: 0;
+  height: 55vh;
+  max-height: 540px;
+  z-index: 12;
+  background: var(--parchment-warm);
+  border-top: 2px solid var(--gold);
+  box-shadow: 0 -12px 36px rgba(26, 20, 16, 0.18);
+  transform: translateY(100%);
+  transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+  display: flex;
+  flex-direction: column;
+}
+.tw-shell .tw-notebook-drawer.is-open {
+  transform: translateY(0);
+}
+.tw-shell .tw-notebook-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 28px 12px;
+  border-bottom: 1px solid var(--parchment-deep);
+}
+.tw-shell .tw-notebook-drawer-label {
+  font-size: 10px;
+  letter-spacing: 0.32em;
+  color: var(--gold);
+  text-transform: uppercase;
+}
+.tw-shell .tw-notebook-drawer-close {
+  background: transparent;
+  border: 0;
+  font-size: 22px;
+  color: var(--ink-soft);
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}
+.tw-shell .tw-notebook-drawer-close:hover {
+  color: var(--ink);
+}
+.tw-shell .tw-notebook-drawer-body {
+  flex: 1;
+  padding: 18px 28px 24px;
+  overflow-y: auto;
+}
+.tw-shell .tw-notebook-drawer-input {
+  width: 100%;
+  height: 100%;
+  min-height: 240px;
+  border: 0;
+  outline: 0;
+  resize: none;
+  background: transparent;
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--ink);
+}
+.tw-shell .tw-notebook-drawer-input::placeholder {
+  color: var(--ink-ghost);
+  font-style: italic;
+}
+
+/* Writing-room notebook drawer slides over the right edge instead of
+ * clearing the scripture column, because the writing room's body
+ * already uses the central reading column. */
+.tw-shell-writing-room .tw-notebook-drawer {
+  right: 400px;
+}
+
+/* ── Workspace Trail Map (WTC DW11) ──────────────────────────────────── *
+ * Single-screen overview modal showing the three-stage switchback at a
+ * glance. Locked to "clean or doesn't ship": no checkmarks, no progress
+ * counters, no per-field labels — only the nine sub-phase stops with
+ * their named outcomes, and a single gold pin where the pastor is now.
+ */
+.tw-map-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  background: color-mix(in srgb, var(--ink) 78%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  animation: tw-map-fade 0.28s ease-out;
+}
+@keyframes tw-map-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.tw-map-modal {
+  width: min(1180px, 96vw);
+  max-height: 88vh;
+  background: var(--parchment);
+  border-radius: 4px;
+  box-shadow: 0 24px 80px rgba(26, 20, 16, 0.36);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: tw-map-rise 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@keyframes tw-map-rise {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.tw-map-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 28px 40px 8px;
+}
+.tw-map-eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.4em;
+  color: var(--gold-bright);
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+.tw-map-title {
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: 38px;
+  line-height: 1.1;
+  color: var(--ink);
+  margin: 0;
+}
+.tw-map-close {
+  background: transparent;
+  border: 0;
+  font-size: 26px;
+  color: var(--ink-soft);
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}
+.tw-map-close:hover { color: var(--ink); }
+.tw-map-svg {
+  width: 100%;
+  flex: 1;
+  display: block;
+  padding: 0 20px;
+}
+.tw-map-stage-label {
+  font-size: 10px;
+  letter-spacing: 0.32em;
+  fill: var(--gold);
+}
+.tw-map-stage-sub {
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-style: italic;
+  font-size: 11px;
+  fill: var(--ink-ghost);
+}
+.tw-map-band-divider {
+  stroke: var(--parchment-deep);
+  stroke-width: 1;
+  stroke-dasharray: 2 6;
+}
+.tw-map-path {
+  fill: none;
+  stroke: url(#tw-map-path-grad);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+.tw-map-stop {
+  fill: var(--parchment);
+  stroke: var(--gold);
+  stroke-width: 2;
+  transition: fill 0.16s ease;
+}
+.tw-map-stop.is-visited {
+  fill: var(--gold);
+  fill-opacity: 0.4;
+}
+.tw-map-stop.is-here {
+  fill: var(--gold-bright);
+  stroke: var(--gold-bright);
+  stroke-width: 0;
+}
+.tw-map-stop-glow {
+  fill: var(--gold-bright);
+  fill-opacity: 0.18;
+}
+.tw-map-stop-glow-2 {
+  fill-opacity: 0.32;
+}
+.tw-map-stop-label {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  fill: var(--ink-soft);
+}
+.tw-map-stop-label.is-here {
+  fill: var(--gold-bright);
+}
+.tw-map-stop-outcome {
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-style: italic;
+  font-size: 12px;
+  fill: var(--ink-mid);
+}
+.tw-map-stop-outcome.is-here {
+  fill: var(--ink);
+}
+.tw-map-footer {
+  padding: 14px 40px 24px;
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  border-top: 1px solid var(--parchment-deep);
+  background: var(--parchment-warm);
+}
+.tw-map-footer .tw-mono {
+  font-size: 10px;
+  letter-spacing: 0.32em;
+  color: var(--gold);
+}
+.tw-map-here-label {
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-size: 15px;
+  color: var(--ink);
+}
+.tw-map-here-label em {
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
+  color: var(--gold);
+}
+/* Map-trigger button in the topbar — sibling to the notebook toggle. */
+.tw-shell .tw-map-toggle {
+  background: transparent;
+  border: 1px solid rgba(212, 160, 23, 0.32);
+  color: var(--gold);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  padding: 6px 12px;
+  border-radius: 2px;
+  cursor: pointer;
+  margin-right: 6px;
+  transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+}
+.tw-shell .tw-map-toggle:hover {
+  border-color: var(--gold-bright);
+  color: var(--gold-bright);
+}
+
 /* ── Vignette around the clearing for depth ──────────────────────────── *
  * Vignette colors are derived from the parchment tokens via color-mix so
  * dark mode dissolves the vignette into the background instead of pushing
