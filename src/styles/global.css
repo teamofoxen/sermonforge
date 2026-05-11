@@ -627,6 +627,41 @@ button {
   color: var(--ink-ghost);
 }
 
+/* Search-result snippet — appears on a sermon card when the active search
+ * matched something in the sermon's content (notebooks, structured fields,
+ * manuscript). The `mark` element wraps the matched range. Color uses gold
+ * to match the rest of the highlight system; background is parchment-warm
+ * so the snippet sits below the card's main text without competing. */
+.sermon-card-snippet {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: var(--parchment-warm);
+  border-left: 2px solid var(--gold);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink-mid);
+  font-family: var(--font-serif);
+  font-style: italic;
+}
+.sermon-card-snippet mark {
+  background: var(--gold-pale);
+  color: var(--ink);
+  padding: 0 2px;
+  border-radius: 2px;
+  font-style: normal;
+}
+.sermon-card-snippet-label {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-ghost);
+  margin-right: 6px;
+  font-style: normal;
+}
+
 /* ── Stage tabs ───────────────────────────────────────────────────────────── */
 .stage-tabs {
   display: flex;

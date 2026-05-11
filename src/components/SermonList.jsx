@@ -1,8 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { getAllSermons, deleteSermon, updateSermon } from "../core/spine";
+import { searchSermons } from "../db/database";
 import { formatDate } from "../utils";
 import NewSermonModal from "./NewSermonModal";
 import DeleteButton from "./DeleteButton";
+import SearchResultSnippet from "./SearchResultSnippet";
 import { SERMON_STATUS, SERMON_STATUS_LABELS } from "../core/contracts";
 import PrimaryButton from "./primitives/PrimaryButton";
 import EmptyState from "./primitives/EmptyState";
@@ -13,6 +15,8 @@ const SERMON_STATUS_VALUES = [SERMON_STATUS.InProgress, SERMON_STATUS.Complete];
 export default function SermonList({ onOpenSermon }) {
   const [sermons, setSermons] = useState([]);
   const [search, setSearch] = useState("");
+  const [searchResults, setSearchResults] = useState(null);  // null = not searching; [] = empty result
+  const [searching, setSearching] = useState(false);
   const [showNewModal, setShowNewModal] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -23,17 +27,36 @@ export default function SermonList({ onOpenSermon }) {
       .finally(() => setLoading(false));
   }, []);
 
-  const filtered = sermons.filter((s) => {
-    if (search) {
-      const q = search.toLowerCase();
-      return (
-        s.title?.toLowerCase().includes(q) ||
-        s.passage?.toLowerCase().includes(q) ||
-        s.series_title?.toLowerCase().includes(q)
-      );
+  // Server-side full-content search (v22) — every text column on every
+  // sermon, debounced 200ms so we don't fire one IPC per keystroke.
+  // Empty query restores the full list (client-side filter path below).
+  const searchTimer = useRef(null);
+  useEffect(() => {
+    if (!search) {
+      setSearchResults(null);
+      setSearching(false);
+      return;
     }
-    return true;
-  });
+    setSearching(true);
+    clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(async () => {
+      try {
+        const rows = await searchSermons(search);
+        const list = Array.isArray(rows) ? rows : [];
+        // Keep the in-progress view's lifecycle filter — completed
+        // sermons don't appear here even if they match the query.
+        setSearchResults(list.filter((r) => r.stage !== SERMON_STATUS.Complete));
+      } catch (e) {
+        console.error("[SermonList] search failed:", e);
+        setSearchResults([]);
+      } finally {
+        setSearching(false);
+      }
+    }, 200);
+    return () => clearTimeout(searchTimer.current);
+  }, [search]);
+
+  const filtered = searchResults != null ? searchResults : sermons;
 
   return (
     <>
@@ -56,13 +79,13 @@ export default function SermonList({ onOpenSermon }) {
           </svg>
           <input
             className="search-input"
-            placeholder="Search by title, passage, or series…"
+            placeholder="Search anywhere in your sermons — title, passage, study notes, manuscript, notebooks…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
 
-        {loading ? (
+        {loading || (search && searching) ? (
           <LoadingState />
         ) : filtered.length === 0 ? (
           <EmptyState title="No sermons found." />
@@ -82,6 +105,13 @@ export default function SermonList({ onOpenSermon }) {
                 </div>
                 {sermon.series_title && (
                   <div className="sermon-card-series">{sermon.series_title}</div>
+                )}
+
+                {sermon.snippet && (
+                  <SearchResultSnippet
+                    matchedColumn={sermon.matchedColumn}
+                    snippet={sermon.snippet}
+                  />
                 )}
 
                 <div className="sermon-card-footer">

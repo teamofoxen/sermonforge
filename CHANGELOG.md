@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-11 — Sermon search UI: list views wired to the new full-content search
+
+- `SermonList.jsx` and `CompletedSermons.jsx` now call the v22 `searchSermons` IPC instead of filtering client-side on title / passage / series only. A 200ms debounce keeps the IPC traffic sane during typing; each view still constrains results to its lifecycle scope (`in_progress` for the active list, `complete` for the completed view) so the search doesn't bleed across surfaces.
+- New `SearchResultSnippet.jsx` renders the backend snippet with `‹mark›…‹/mark›` markers split into `<mark>` elements. A per-column label sits in front of the snippet so the pastor sees WHERE the match landed — "STUDY NOTEBOOK · …prodigal…" or "MANUSCRIPT · …prodigal son's father…".
+- Snippet card styling added to `global.css`: parchment-warm background, gold left border + gold-pale mark highlight. Matches the rest of the design system tokens.
+- Placeholder updated to "Search anywhere in your sermons — title, passage, study notes, manuscript, notebooks…" so the new scope is visible without explanation.
+- 839/839 vitest green; preflight + drift-check PASS; preview verified the snippet path mounts + renders cleanly with the stub returning empty results.
+
+---
+
 ## 2026-05-11 — Sermon full-content search backend (v22 schema)
 
 - New `sermon_search` table (v22 migration) holds flattened plain text per indexed column for every sermon. Indexed columns cover title, passage, series_title (JOINed), the four Study sub-phase JSON envelopes, Main Point Pair, Sermon Frame, outline, manuscript, all three notebooks, delivery notes, and timing notes. JSON envelopes are flattened to concatenated leaf text so search hits read as natural prose instead of tokenizing on `{`, `}`, `"`.

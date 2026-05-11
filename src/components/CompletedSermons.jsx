@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { getAllSermons, deleteSermon } from "../core/spine";
-import { exportManuscript } from "../db/database";
+import { exportManuscript, searchSermons } from "../db/database";
 import { formatDate, parseManuscript, getOutline, getFunctionalElements } from "../utils";
 import DeleteButton from "./DeleteButton";
 import InlineError from "./InlineError";
+import SearchResultSnippet from "./SearchResultSnippet";
 import { SERMON_STATUS } from "../core/contracts";
 import EmptyState from "./primitives/EmptyState";
 import LoadingState from "./primitives/LoadingState";
@@ -25,6 +26,8 @@ import SecondaryButton from "./primitives/SecondaryButton";
 export default function CompletedSermons({ onOpenSermon }) {
   const [sermons, setSermons] = useState([]);
   const [search, setSearch] = useState("");
+  const [searchResults, setSearchResults] = useState(null);
+  const [searching, setSearching] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [exportingId, setExportingId] = useState(null);
@@ -40,15 +43,33 @@ export default function CompletedSermons({ onOpenSermon }) {
       .finally(() => setLoading(false));
   }, []);
 
-  const filtered = sermons.filter((s) => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return (
-      s.title?.toLowerCase().includes(q) ||
-      s.passage?.toLowerCase().includes(q) ||
-      s.series_title?.toLowerCase().includes(q)
-    );
-  });
+  // Server-side full-content search (v22). Debounced 200ms; restricted to
+  // Complete sermons to match the view's lifecycle scope.
+  const searchTimer = useRef(null);
+  useEffect(() => {
+    if (!search) {
+      setSearchResults(null);
+      setSearching(false);
+      return;
+    }
+    setSearching(true);
+    clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(async () => {
+      try {
+        const rows = await searchSermons(search);
+        const list = Array.isArray(rows) ? rows : [];
+        setSearchResults(list.filter((r) => r.stage === SERMON_STATUS.Complete));
+      } catch (e) {
+        console.error("[CompletedSermons] search failed:", e);
+        setSearchResults([]);
+      } finally {
+        setSearching(false);
+      }
+    }, 200);
+    return () => clearTimeout(searchTimer.current);
+  }, [search]);
+
+  const filtered = searchResults != null ? searchResults : sermons;
 
   async function handleReexport(sermon, e) {
     e.stopPropagation();
@@ -93,7 +114,7 @@ export default function CompletedSermons({ onOpenSermon }) {
           </svg>
           <input
             className="search-input"
-            placeholder="Search completed sermons…"
+            placeholder="Search anywhere in your completed sermons — title, passage, study notes, manuscript, notebooks…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -105,7 +126,7 @@ export default function CompletedSermons({ onOpenSermon }) {
           </div>
         )}
 
-        {loading ? (
+        {loading || (search && searching) ? (
           <LoadingState />
         ) : loadError ? (
           <div style={{ padding: "40px 0", display: "flex", justifyContent: "center" }}>
@@ -131,6 +152,13 @@ export default function CompletedSermons({ onOpenSermon }) {
                 </div>
                 {sermon.series_title && (
                   <div className="sermon-card-series">{sermon.series_title}</div>
+                )}
+
+                {sermon.snippet && (
+                  <SearchResultSnippet
+                    matchedColumn={sermon.matchedColumn}
+                    snippet={sermon.snippet}
+                  />
                 )}
 
                 <div className="sermon-card-footer">
