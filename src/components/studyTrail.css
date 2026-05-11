@@ -340,7 +340,10 @@
   /* Center horizontally in (viewport - scripture column). The 400px must
    * stay synced with SCRIPTURE_COL_WIDTH in the JSX. */
   left: calc((100% - 400px) / 2);
-  top: 58%;
+  /* Center vertically within the trail body (below topbar 62px + ribbon
+   * 44px = 106px chrome), not the full viewport. This guarantees a tall
+   * card never bleeds into the chrome zone above. */
+  top: calc(106px + (100vh - 106px) / 2);
   transform: translate(-50%, -50%);
   width: min(740px, calc(100vw - 400px - 64px));
   /* z-index below topbar(6) and ribbon(5) so chrome always renders above
@@ -349,6 +352,23 @@
   padding: 44px 56px 36px;
   text-align: left;
   animation: tw-bloom .55s ease-out;
+  /* Cap to the trail body. Flex column + a scrollable body lets the input
+   * area absorb excess height so eyebrow / title / prompt / actions stay
+   * full-size — actions are always visible at the bottom, no scrolling
+   * required. Pause / stage variants (no `.tw-clearing-body`) fall back
+   * to whole-card scroll via the overflow-y on the clearing itself. */
+  max-height: calc(100vh - 106px - 32px);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.tw-shell .tw-clearing > .tw-clearing-body {
+  /* In flex column, this child shrinks and scrolls internally so the
+   * actions row stays anchored at the visible bottom of the card. */
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
 }
 @keyframes tw-bloom {
   from { opacity: 0; transform: translate(-50%, -46%); }
@@ -401,11 +421,6 @@
   padding: 22px 24px 14px;
   position: relative;
   box-shadow: var(--shadow-soft);
-  /* Scroll tall input areas rather than pushing the action buttons off-screen.
-   * The clearing card is centered in the viewport; without this, a textarea
-   * with many lines or a synthesis table can clip the Continue/look back row. */
-  max-height: 420px;
-  overflow-y: auto;
 }
 .tw-shell .tw-clearing-body::before {
   content: '';
@@ -534,6 +549,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-shrink: 0;
 }
 .tw-shell .tw-clearing-actions-left {
   display: flex;
@@ -599,6 +615,7 @@
   margin-top: 22px;
   padding-top: 18px;
   border-top: 1px dotted var(--parchment-deep);
+  flex-shrink: 0;
 }
 .tw-shell .tw-clearing-gate::before {
   content: 'BEFORE YOU CROSS THE BEND';

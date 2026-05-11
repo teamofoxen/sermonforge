@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-11 — Trail clearing: flex column so actions stay anchored, top-clamped so chrome never overlaps
+
+- Repositioned `.tw-clearing` so it centers within the trail body (below the 106px topbar+ribbon chrome) instead of 58% of the full viewport. A tall card can no longer bleed upward into the topbar zone regardless of content height — fixes the "jumbled rats nest" overlap at the top.
+- `.tw-clearing` is now a flex column with `max-height: calc(100vh - 106px - 32px)`. `.tw-clearing-body` gets `flex: 1 1 auto; min-height: 0; overflow-y: auto` so the input area absorbs excess height while eyebrow / title / prompt / actions / gate stay full-size. The "← look back" / "Continue" row is always visible at the bottom of the card — no scrolling required.
+- Pause / stage variants (no `.tw-clearing-body`) fall back to whole-card scroll via `overflow-y: auto` on the clearing itself; `.tw-clearing-gate` gets `flex-shrink: 0` so the composite-gate checklist never gets squeezed.
+- Removed the prior `.tw-clearing-body { max-height: 420px }` cap from the earlier session — flex now governs sizing end-to-end.
+- Preflight + drift-check PASS; preview verified clean.
+
+---
+
 ## 2026-05-11 — Study trail layout fixes: canvas panel, clearing chrome, footprint labels
 
 - Divisions (unified-canvas) field now renders as a full-height scrollable panel below the topbar+ribbon instead of the centered clearing card. The scripture column hides while the canvas is active since the text is embedded inline. Resolves the multi-verse clipping that pushed the topbar off the top and the actions off the bottom.
