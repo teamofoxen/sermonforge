@@ -78,9 +78,9 @@ const legacyDbPaths = [
 ];
 
 // ── Dev server ────────────────────────────────────────────────────────────────
-// Worktree experiment: this trail-experiment worktree uses the
-// `sermonforge-trail` Vite preview on port 5181 so it doesn't fight the
-// main repo's dev session on 5173. Restore to 5173 before merging back.
-const devServerUrl = "http://localhost:5181";
+// Matches Vite's default port (set in `vite.config.mjs` and the `wait-on`
+// check in `package.json`'s `dev` script). The earlier worktree
+// experiment briefly pointed this at 5181; restored on WTC closure.
+const devServerUrl = "http://localhost:5173";
 
 module.exports = { isDev, isPackaged, paths, legacyDbPaths, devServerUrl };
