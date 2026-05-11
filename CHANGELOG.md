@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-05-11 — WTC charter: pre-WTC rollback note
+
+- Added a rollback callout to `workspace-trail-charter.md` recording the pre-WTC SHA (`348e438` — "Post-ARI doc-drift sweep", parent of `3090d20` "Trail experiment") and the `git checkout -b pre-wtc-restore 348e438` branch command.
+- Note enumerates what a revert restores (three-column shell, Study/Frame/Manuscript tab strip, `ThroughlineRail`, standalone `OutlineBuilder` / `FunctionalElements` / `FrameTab` / `ManuscriptTab`) and what it loses (every trail surface, step-boundary pauses, per-stage notebook, Trail Map, rewritten workspace tour, writing-room mode).
+- Chosen over a separate "old workspace state" doc — git already preserves the state, and a 3-line note keeps the rollback path discoverable 6 months out without a parallel description to drift.
+
+---
+
 ## 2026-05-11 — WTC closure: contract tests migrated, legacy fallbacks retired, Phase M complete
 
 - The two `process-*` UI contract tests (`process-2-evidence-gated-ux`, `process-3-movement-visible`) migrated off the retired `sermonforge_trail_disabled` flag onto trail surfaces — deep gate behavior stays covered by `evaluateAdvance` unit cases plus `AdvanceGateChecklist.test.jsx`, and the meta-test still guards `data-testid="movement-event"` against silent removal.

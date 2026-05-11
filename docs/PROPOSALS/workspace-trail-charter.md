@@ -17,6 +17,8 @@
 >
 > Pastor-test gate (Phase M): **complete** as of 2026-05-11. Pastor walked a full sermon end-to-end through the trail; the qualitative "feels continuous" test from this charter's Orientation section passed. Charter closed.
 
+> **Rollback (pre-WTC restore):** if you ever want the sermon workspace back the way it was before this trail work, the last pre-WTC commit on main is `348e438` ("Post-ARI doc-drift sweep" — the parent of `3090d20` "Trail experiment"). Branch from it with `git checkout -b pre-wtc-restore 348e438`. Reverting brings back the three-column shell + Study/Frame/Manuscript tab strip + `ThroughlineRail` + standalone `OutlineBuilder` / `FunctionalElements` / `FrameTab` / `ManuscriptTab` tab bodies; you lose every trail surface (Exegesis / Forge / Assembly / Manuscript), the step-boundary pauses, the per-stage notebook, the Trail Map, the rewritten workspace tour, and the writing-room mode.
+
 > **Post-walkthrough status (2026-05-10):** Stages A–E shipped + pastor-tested + merged to main. Per-stage trail surfaces are the production rendering for Study + Assembly. The remaining DW-questions resolved post-walkthrough land on the sequel arc.
 >
 > **Sequel branch:** [`claude/workspace-trail-sequel`](https://github.com/teamofoxen/sermonforge/tree/claude/workspace-trail-sequel) — the working branch for the polish queue listed below. The trail-suppress escape hatch retires when this arc lands; everything else gets implemented incrementally without a feature-flag layer.
