@@ -343,10 +343,13 @@ export function useNotebookToggle() {
         setOpen((v) => !v);
         return;
       }
+      // Esc closes the drawer regardless of focus (standard modal pattern).
+      // Pre-2026-05-11 behavior deferred when focus was in a textarea, which
+      // meant the pastor had to Tab out before Esc could close. The trail's
+      // own Esc handler is gated on `modalOpen: notebook.open || ...` so it
+      // won't ALSO fire and exit the trail when the drawer is closing here.
       if (e.key === "Escape" && open) {
-        const t = e.target;
-        const inEditor = t && (t.tagName === "TEXTAREA" || t.tagName === "INPUT");
-        if (inEditor) return; // let the textarea blur naturally first
+        e.preventDefault();
         setOpen(false);
       }
     };

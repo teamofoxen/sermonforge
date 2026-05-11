@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-05-11 — Cleanups: drawer Esc, orphan-file delete, doc-drift quieting
+
+- Notebook drawer Esc now closes the drawer from anywhere — including inside the textarea — instead of requiring the pastor to Tab out first. The trail's own Esc handler is already gated on `modalOpen: notebook.open` so it won't also fire and exit the trail.
+- Deleted orphan `src/components/NotebookPanel.jsx` and its stale mention in `Collapsible.jsx`'s header comment — no remaining imports after the 2026-05-11 manuscript dedupe.
+- Doc-drift quieting: stripped backticks from historical mentions of ARI-deleted files (electron/ai.js, src/prompts/study.js, electron/ai/provider.js, src/utils/ai.js) in `ENFORCEMENT_STATUS.md` + `project-structure.md`, and reshaped `handoff/sermon-workspace-cd-brief.md`'s file list to separate deleted-by-WTC names from current pointers. `drift-check.sh` C2 now reports `none`.
+- Committed pre-existing `docs/RULES.md` push-flow addition (single-dev, direct-to-main, `/end-session` flow) that had been sitting unstaged.
+
+---
+
 ## 2026-05-11 — Post-WTC audit fixes: pastor UX, accessibility, contract repair, dark mode
 
 - Trail keyboard + focus: Cmd/Ctrl+. now respects editor focus so it stops eating period keystrokes in textareas; the trail's Esc handler defers when the notebook drawer or trail map is open so closing a drawer no longer also exits the trail; equip-point accordion is a real `<button>` with `aria-expanded`; `PassagePopup` + `NotebookDrawer` got proper `role="dialog"` + `aria-modal="true"` + focus return on close.

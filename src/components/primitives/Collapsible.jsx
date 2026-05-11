@@ -1,6 +1,6 @@
 // Collapsible — shared parchment-warm panel with clickable header + chevron.
 //
-// Used by NotebookPanel and ManuscriptReview. Controlled component: parent
+// Used by ManuscriptReview. Controlled component: parent
 // owns open/close state via `open` + `onToggle`. Children render in the
 // expanded body when `open` is true.
 

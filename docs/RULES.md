@@ -107,6 +107,10 @@ variables. Never hardcode these values anywhere else.
   `git checkout -b feature/desc` or `fix/desc` or `refactor/desc`
 - Low-risk, single-file changes may be made directly on main.
 
+### Pushing
+- Push to `origin/main`. No PR gate — this is a solo-developer project and review is live as work is done.
+- `/end-session` runs preflight + drift-check + CHANGELOG + commit + push as one flow. Manual `git push origin main` is fine when the work doesn't need that ceremony.
+
 ### Branch naming
 - `feature/` — new functionality (e.g. `feature/booklet-export`)
 - `fix/` — bug fixes (e.g. `fix/calendar-feedback`)

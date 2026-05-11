@@ -1,10 +1,16 @@
 # SermonForge — Project Structure Reference
 
-> Last verified: 2026-05-09 (post-ARI). The AI subsystem (`electron/ai.js`,
-> `src/utils/ai.js`, `src/prompts/`, `AIPanel.jsx`, `ProposalPanel.jsx`,
-> `InlineAIResponse.jsx`, `SeriesPlanner.jsx`, `Planning.jsx`, `NewSeriesModal.jsx`,
-> `DeliveryTab.jsx`, the localStorage `memory.js` layer, `contextBuilder.js`,
-> `contextSchema.js`) was deleted in ARI Phase 8 / Phase 9.
+> Last verified: 2026-05-11 (post-WTC audit fixes).
+>
+> Removed-files note (ARI Phase 8 / Phase 9, 2026-05-09): the AI subsystem
+> was deleted. Paths shown unwrapped (not in backticks) so the drift-check
+> doesn't flag them as broken references — they are historical, not
+> current. Names retained for searchability when reading old git history:
+> electron/ai.js, src/utils/ai.js, src/prompts/, AIPanel.jsx,
+> ProposalPanel.jsx, InlineAIResponse.jsx, SeriesPlanner.jsx, Planning.jsx,
+> NewSeriesModal.jsx, DeliveryTab.jsx, memory.js (localStorage layer),
+> contextBuilder.js, contextSchema.js. None of them exist in the current
+> tree.
 
 ---
 
