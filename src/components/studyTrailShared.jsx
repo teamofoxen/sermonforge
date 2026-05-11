@@ -201,6 +201,60 @@ export function TrailDefs() {
   );
 }
 
+// Stage-boundary pause — the heavier visual register used at Study →
+// Assembly and Assembly → Manuscript. Distinguished from the sub-phase
+// `PauseClearing` (lightweight "A BREATH BETWEEN PHASES") by a wider
+// card, a gold hairline marker, the "A THRESHOLD" eyebrow, and a
+// multi-outcome read-back instead of a single synthesis input. The
+// stage's terminal named outcome (Implications Synthesis / Sermon Frame)
+// stays editable inline so the pastor can refine the last piece before
+// crossing the bend.
+//
+// Each row passes its own `content` node so the caller controls whether
+// it renders read-back text, an editable input, or a paired sub-shape
+// (Frame's Intro + Conclusion). Keeping content opaque to this component
+// avoids growing a prop-flag surface for every read-back variation.
+export function StageBoundaryPause({
+  eyebrow = "A THRESHOLD",
+  title,
+  body,
+  rows,
+  nextLabel,
+  advanceLabel,
+  advance,
+  lookBack,
+}) {
+  return (
+    <div className="tw-clearing tw-clearing-stage-pause">
+      <div className="tw-stage-marker" aria-hidden="true" />
+      <div className="tw-pause-eyebrow tw-stage-eyebrow tw-mono">{eyebrow}</div>
+      <h2 className="tw-pause-title tw-stage-title">{title}</h2>
+      <p className="tw-pause-sub tw-stage-sub">{body}</p>
+      <div className="tw-stage-outcomes">
+        {rows.map((row, i) => (
+          <div className="tw-stage-outcome" key={row.label || i}>
+            <div className="tw-stage-outcome-label tw-mono">{row.label}</div>
+            <div className="tw-stage-outcome-body">{row.content}</div>
+          </div>
+        ))}
+      </div>
+      <p className="tw-pause-next tw-stage-next">
+        <span className="tw-mono">NEXT</span>
+        <span> {nextLabel}</span>
+      </p>
+      <div className="tw-clearing-actions">
+        {/* eslint-disable-next-line sermonforge/no-raw-button */}
+        <button className="tw-link-back" onClick={lookBack}>← look back</button>
+        {/* eslint-disable-next-line sermonforge/no-raw-button */}
+        <button className="tw-advance" onClick={advance}>
+          <span>{advanceLabel}</span>
+          <span className="tw-advance-arrow">→</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function Station({ point, isActive, isPause, ordinal, distance }) {
   const recede = Math.min(distance, 8);
   const fade = Math.max(0.32, 1 - recede * 0.08);

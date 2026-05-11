@@ -720,6 +720,144 @@
   justify-content: center;
 }
 
+/* ── Stage-boundary pause (heavier register) ─────────────────────────── *
+ * The pause-clearing variant fired at Study → Assembly and Assembly →
+ * Manuscript. Distinguished from the lightweight sub-phase pause-clearing
+ * by a wider card, a gold-bright hairline marker, a heavier eyebrow, a
+ * larger italic title, and a multi-outcome read-back stack instead of a
+ * single synthesis input.
+ *
+ * The stage's terminal named outcome (Implications Synthesis / Sermon
+ * Frame) stays editable inline so the pastor can refine the last piece
+ * before crossing the bend. Each row gets a content node from the caller
+ * so the read-back, single-input, and paired-input shapes coexist
+ * without growing a prop-flag surface on `StageBoundaryPause`.
+ */
+.tw-shell .tw-clearing-stage-pause {
+  text-align: center;
+  width: min(880px, 92vw);
+}
+.tw-shell .tw-clearing-stage-pause .tw-clearing-actions {
+  justify-content: center;
+  gap: 28px;
+}
+.tw-shell .tw-stage-marker {
+  width: 88px;
+  height: 2px;
+  background: var(--gold-bright);
+  margin: 0 auto 22px;
+  opacity: 0.85;
+}
+.tw-shell .tw-stage-eyebrow {
+  color: var(--gold-bright);
+  letter-spacing: 0.4em;
+  font-size: 11px;
+  margin-bottom: 24px;
+}
+.tw-shell .tw-stage-title {
+  font-size: 48px;
+  line-height: 1.15;
+  margin-bottom: 14px;
+}
+.tw-shell .tw-stage-sub {
+  max-width: 620px;
+  margin: 0 auto 36px;
+}
+.tw-shell .tw-stage-outcomes {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 760px;
+  margin: 0 auto 32px;
+  text-align: left;
+}
+.tw-shell .tw-stage-outcome {
+  background: var(--parchment-warm);
+  border-left: 2px solid var(--gold);
+  padding: 14px 20px 16px;
+  border-radius: 2px;
+  box-shadow: var(--shadow-soft);
+}
+.tw-shell .tw-stage-outcome-label {
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  color: var(--gold);
+  margin-bottom: 8px;
+}
+.tw-shell .tw-stage-outcome-body {
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--ink-mid);
+}
+.tw-shell .tw-stage-empty {
+  color: var(--ink-ghost);
+  font-style: italic;
+}
+.tw-shell .tw-stage-outcome-pair {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.tw-shell .tw-stage-outcome-pair .tw-pair-input {
+  font-size: 18px;
+  min-height: 48px;
+}
+.tw-shell .tw-stage-outcome-sublabel {
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: var(--ink-ghost);
+  margin-bottom: 4px;
+}
+.tw-shell .tw-stage-outcome-mpt {
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
+  font-size: 17px;
+  color: var(--ink-mid);
+  line-height: 1.45;
+  margin-bottom: 4px;
+}
+.tw-shell .tw-stage-outcome-mps {
+  font-family: 'Playfair Display', serif;
+  font-style: italic;
+  font-size: 17px;
+  color: var(--ink);
+  line-height: 1.45;
+}
+.tw-shell .tw-stage-outcome-list {
+  margin: 0;
+  padding-left: 20px;
+}
+.tw-shell .tw-stage-outcome-list li {
+  margin-bottom: 4px;
+}
+.tw-shell .tw-stage-outcome-list li:last-child {
+  margin-bottom: 0;
+}
+.tw-shell .tw-stage-outcome-equip-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+.tw-shell .tw-stage-outcome-equip-row:last-child {
+  margin-bottom: 0;
+}
+.tw-shell .tw-stage-outcome-equip-count {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: var(--ink-ghost);
+  white-space: nowrap;
+}
+.tw-shell .tw-stage-outcome-equip-count.is-full {
+  color: var(--gold);
+}
+.tw-shell .tw-stage-next {
+  max-width: 620px;
+  margin: 0 auto 28px;
+}
+
 /* ── Vignette around the clearing for depth ──────────────────────────── *
  * Vignette colors are derived from the parchment tokens via color-mix so
  * dark mode dissolves the vignette into the background instead of pushing

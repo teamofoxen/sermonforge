@@ -41,7 +41,7 @@ import {
   SCRIPTURE_COL_WIDTH, padNum,
   firstIncompleteFieldKey, fieldHasAnyAnswer,
   useViewportSize, useSyncActiveQuestion, useTrailKeyboard,
-  TrailTopBar, TrailDefs, Station,
+  TrailTopBar, TrailDefs, Station, StageBoundaryPause,
 } from "./studyTrailShared";
 import "./studyTrail.css";
 
@@ -958,18 +958,108 @@ function PauseClearing({
       </NamedOutcomePause>
     );
   }
-  // Frame sub-phase pause doubles as the Assembly → Manuscript boundary —
-  // dismiss flips the tab via AssemblyTab's setPausePoint wrapper.
+  // Frame sub-phase pause doubles as the Assembly → Manuscript stage-
+  // boundary — dismiss flips the tab via AssemblyTab's setPausePoint
+  // wrapper. Heavier register: read-back of all four Assembly named
+  // outcomes (Main Point Pair / Sermon Outline / Sermon Body / Sermon
+  // Frame) with the Frame pair still editable inline so the pastor can
+  // refine the last piece before crossing into the writing room.
+  const mptStr = getQuestionString(mppData, "mpt", "tighten");
+  const mpsStr = getQuestionString(mppData, "mps", "tighten");
+  const introStr = getQuestionString(frameData, "intro", "hook");
+  const conclusionStr = getQuestionString(frameData, "conclusion", "land_call");
+  const empty = (text) => <em className="tw-stage-empty">{text}</em>;
+  const rows = [
+    {
+      label: "MAIN POINT PAIR",
+      content: (
+        <>
+          <div className="tw-stage-outcome-mpt">
+            {mptStr || empty("MPT not yet tightened")}
+          </div>
+          <div className="tw-stage-outcome-mps">
+            {mpsStr || empty("MPS not yet tightened")}
+          </div>
+        </>
+      ),
+    },
+    {
+      label: "SERMON OUTLINE",
+      content: outline.length === 0 ? (
+        empty("No outline points yet")
+      ) : (
+        <ol className="tw-stage-outcome-list">
+          {outline.map((p) => (
+            <li key={p.id}>{p.text || empty("(untitled)")}</li>
+          ))}
+        </ol>
+      ),
+    },
+    {
+      label: "SERMON BODY",
+      content: outline.length === 0 ? (
+        empty("No points equipped yet")
+      ) : (
+        <div>
+          {outline.map((p) => {
+            const fe = funcData[p.id] || {};
+            const filled = ["scripture", "explanation", "application", "illustration"]
+              .filter((k) => fe[k] && fe[k].trim()).length;
+            return (
+              <div key={p.id} className="tw-stage-outcome-equip-row">
+                <span>{p.text || empty("(untitled)")}</span>
+                <span className={`tw-stage-outcome-equip-count tw-mono ${filled === 4 ? "is-full" : ""}`}>
+                  {filled}/4 EQUIPPED
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      ),
+    },
+    {
+      label: "SERMON FRAME",
+      content: (
+        <div className="tw-stage-outcome-pair">
+          <div>
+            <div className="tw-stage-outcome-sublabel tw-mono">INTRO — HOW THEY ENTER</div>
+            <textarea
+              className="tw-pair-input"
+              value={introStr}
+              onChange={(e) => updateFrame("intro", "hook", e.target.value)}
+              onInput={(e) => autoResize(e.target)}
+              ref={(el) => autoResize(el)}
+              placeholder="The hook that opens the sermon…"
+              spellCheck={false}
+            />
+          </div>
+          <div>
+            <div className="tw-stage-outcome-sublabel tw-mono">CONCLUSION — HOW THEY EXIT</div>
+            <textarea
+              className="tw-pair-input"
+              value={conclusionStr}
+              onChange={(e) => updateFrame("conclusion", "land_call", e.target.value)}
+              onInput={(e) => autoResize(e.target)}
+              ref={(el) => autoResize(el)}
+              placeholder="The call the conclusion lands…"
+              spellCheck={false}
+            />
+          </div>
+        </div>
+      ),
+    },
+  ];
+
   return (
-    <PairPauseClearing
-      eyebrow="A BREATH BETWEEN STEPS"
-      title="The Sermon Frame"
-      body="Read the way your sermon enters and exits — the Intro that ushers the listener in, the Conclusion that lands them. Refine if anything still rings off; otherwise walk into the writing room."
-      outcomeLabel="SERMON FRAME"
+    <StageBoundaryPause
+      eyebrow="A THRESHOLD — ASSEMBLY IS BUILT"
+      title="The sermon stands."
+      body="Read the four pieces you've assembled. If anything still rings off, walk back and refine. Otherwise refine the Sermon Frame here and cross into the writing room."
+      rows={rows}
       nextLabel={<><em>Manuscript</em><span> — the writing room — waits beyond this last bend.</span></>}
       advanceLabel="Walk into the writing room"
-      data={frameData} updater={updateFrame} rows={SERMON_FRAME_PAIR_ROWS}
-      advance={advance} lookBack={lookBack}
+      advance={advance}
+      lookBack={lookBack}
     />
   );
 }
@@ -1028,11 +1118,6 @@ function PairPauseClearing({
 const MAIN_POINT_PAIR_ROWS = [
   { label: "MPT — WHAT THE TEXT SAID",       fieldKey: "mpt", qKey: "tighten", placeholder: "One past-tense sentence…" },
   { label: "MPS — WHAT THE TEXT SAYS TO US", fieldKey: "mps", qKey: "tighten", placeholder: "One present/future-tense sentence…" },
-];
-
-const SERMON_FRAME_PAIR_ROWS = [
-  { label: "INTRO — HOW THEY ENTER",     fieldKey: "intro",      qKey: "hook",      placeholder: "The hook that opens the sermon…" },
-  { label: "CONCLUSION — HOW THEY EXIT", fieldKey: "conclusion", qKey: "land_call", placeholder: "The call the conclusion lands…" },
 ];
 
 function NamedOutcomePause({

@@ -599,38 +599,48 @@ function AssemblyToManuscriptPause({ sermon, mppData, frameData, outline, funcDa
       background: "var(--parchment-warm)",
       border: "1px solid var(--parchment-deep)",
       borderRadius: "2px",
-      padding: "32px 40px",
-      maxWidth: "740px",
+      padding: "36px 44px",
+      maxWidth: "820px",
       margin: "40px auto",
       boxShadow: "var(--shadow-soft)",
     }}>
+      {/* Gold-bright hairline marker — matches the in-trail stage-boundary
+          pause so the visual register stays continuous if the pastor exits
+          the trail. */}
+      <div style={{
+        width: "88px",
+        height: "2px",
+        background: "var(--gold-bright)",
+        opacity: 0.85,
+        marginBottom: "20px",
+      }} aria-hidden="true" />
       <div style={{
         fontFamily: "'JetBrains Mono', ui-monospace, monospace",
-        fontSize: "10px",
-        letterSpacing: "0.32em",
-        color: "var(--gold)",
-        marginBottom: "16px",
+        fontSize: "11px",
+        letterSpacing: "0.4em",
+        color: "var(--gold-bright)",
+        marginBottom: "20px",
         textTransform: "uppercase",
       }}>
-        A breath between steps
+        A threshold — Assembly is built
       </div>
       <h2 style={{
         fontFamily: "'Playfair Display', serif",
         fontStyle: "italic",
         fontWeight: 400,
-        fontSize: "36px",
-        lineHeight: 1.2,
+        fontSize: "44px",
+        lineHeight: 1.15,
         color: "var(--ink)",
-        margin: "0 0 12px",
+        margin: "0 0 14px",
       }}>
-        Assembly is built.
+        The sermon stands.
       </h2>
       <p style={{
         fontSize: "16px",
         lineHeight: 1.55,
         color: "var(--ink-soft)",
-        margin: "0 0 24px",
-        maxWidth: "560px",
+        margin: "0 0 28px",
+        maxWidth: "620px",
       }}>
         Read the four pieces you've assembled. If anything still rings
         off, walk back and refine. Otherwise, cross into the writing room.
