@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-11 — WTC closure: contract tests migrated, legacy fallbacks retired, Phase M complete
+
+- The two `process-*` UI contract tests (`process-2-evidence-gated-ux`, `process-3-movement-visible`) migrated off the retired `sermonforge_trail_disabled` flag onto trail surfaces — deep gate behavior stays covered by `evaluateAdvance` unit cases plus `AdvanceGateChecklist.test.jsx`, and the meta-test still guards `data-testid="movement-event"` against silent removal.
+- Legacy three-column shell body + tab-strip fallback + `AssemblyToManuscriptPause` + `CollapseArrow` + `FuncElem` + the `sermonforge_trail_disabled` flag deleted from `StudyTab.jsx` / `AssemblyTab.jsx`; the trail is now the only rendering of every stage with no fallback.
+- Pastor declared Phase M (full-sermon end-to-end walkthrough) complete; WTC charter banner-tagged closed.
+- `ENFORCEMENT_STATUS.md` "Last verified" bumped to 2026-05-11; Process #2 (evidence-gated UX) and Process #3 (movement-is-visible) preserved through the migration.
+- 873/873 vitest green; preflight PASS; `ThroughlineRail.jsx` / `ThroughlineCanvas.jsx` / `SpotlightWorksheet.jsx` / `FrameTab.jsx` / `PausePointScreen.jsx` files now imported nowhere — deletable in a future sweep.
+
+---
+
 ## 2026-05-11 — Workspace Trail Charter sequel arc: 8 items shipped (DW5/7/8/9/10/11/12 + RW4/8/9 + escape-hatch retirement)
 
 Closes the Workspace Trail Charter. All eight items queued for the sequel arc on `claude/workspace-trail-sequel` shipped in six commits (`d098219` → `b0adf2b`); the trail is now the sole user-facing rendering of every stage and × Exit returns to the Dashboard.

@@ -1,6 +1,8 @@
 # Workspace Trail Charter — Trail Metaphor Across the Whole Sermon Workspace
 
-> **Sequel arc closed (2026-05-11):** All eight items shipped on `claude/workspace-trail-sequel` (6 commits, +1568/-156 across 13 files). The trail is now the sole user-facing rendering of every stage. × Exit returns to the Dashboard. Pending merge into main.
+> **Phase M complete + WTC fully closed (2026-05-11):** Pastor declared the full-sermon end-to-end walkthrough complete. The two contract tests (`process-2-evidence-gated-ux`, `process-3-movement-visible`) migrated off the legacy fallback onto trail surfaces; the legacy three-column shell + tab-strip body + `AssemblyToManuscriptPause` + `sermonforge_trail_disabled` flag all retired from `StudyTab.jsx` / `AssemblyTab.jsx`. The trail is now the only rendering of every stage, period. WTC charter is closed; remaining `ThroughlineRail.jsx` / `ThroughlineCanvas.jsx` / `SpotlightWorksheet.jsx` / `FrameTab.jsx` / `PausePointScreen.jsx` files are deletable in a separate sweep — they're imported nowhere live.
+
+> **Sequel arc closed (2026-05-11):** All eight items shipped on `claude/workspace-trail-sequel` (7 commits + merge + cleanup, +1568/-156 across 13 files). The trail is now the sole user-facing rendering of every stage. × Exit returns to the Dashboard. Merged to main as `7fb1bd5`.
 >
 > | Item | Resolution(s) | Files / surfaces |
 > |---|---|---|
@@ -11,9 +13,9 @@
 > | 5 — Per-stage notebook | DW8 | `NotebookDrawer` + `useNotebookToggle` — bottom slide-up, gold pill toggle in topbar, Cmd/Ctrl+N. Wired into all three trails; persists to `notebook_study` / `notebook_blueprint` / `notebook_manuscript`. |
 > | 6 — Workspace Trail Map | DW11 | New `WorkspaceTrailMap.jsx` modal. Single-screen three-row switchback (Study → Assembly → Manuscript) with 9 sub-phase stops and named-outcome labels. Current location pinned. Clean — no checklists, no counters, no per-field labels. |
 > | 7 — Tour rewrite | RW8 + DW10 | `WORKSPACE_TOUR_STOPS` re-anchored to trail surfaces. Stops 1/2/11 retitled. New `data-tour-id` attrs on TrailTopBar h1, Map button, trail clearings, Assembly sub-phase clearings, writing-room body. Spec doc banner-tagged. |
-> | 8 — Trail-suppress escape hatch retired | (final cutover) | `trailSuppressed` state removed from StudyTab + AssemblyTab + ManuscriptTrail. × Exit / Esc route to `onClose` → Dashboard. `sermonforge_trail_disabled` localStorage flag retained only as a contract-test escape (the two `process-*-evidence`/`movement` tests still set it; migrating those tests onto the trail surface is the only remaining cleanup). |
+> | 8 — Trail-suppress escape hatch retired | (final cutover) | `trailSuppressed` state removed from StudyTab + AssemblyTab + ManuscriptTrail. × Exit / Esc route to `onClose` → Dashboard. Follow-up (also closed 2026-05-11): contract tests migrated off the `sermonforge_trail_disabled` flag onto trail surfaces; legacy fallback bodies + the flag itself deleted from StudyTab + AssemblyTab. |
 >
-> Pastor-test gate (Phase M) is the next user-driven step: at least one full sermon prepped from text to manuscript through the trail, validating the qualitative "feels continuous" test from this charter's Orientation section.
+> Pastor-test gate (Phase M): **complete** as of 2026-05-11. Pastor walked a full sermon end-to-end through the trail; the qualitative "feels continuous" test from this charter's Orientation section passed. Charter closed.
 
 > **Post-walkthrough status (2026-05-10):** Stages A–E shipped + pastor-tested + merged to main. Per-stage trail surfaces are the production rendering for Study + Assembly. The remaining DW-questions resolved post-walkthrough land on the sequel arc.
 >
