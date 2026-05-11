@@ -1,13 +1,15 @@
 # Workspace Trail Charter — Trail Metaphor Across the Whole Sermon Workspace
 
-> **Post-walkthrough status (2026-05-10):** Stages A–E shipped + pastor-tested + merged to main. Per-stage trail surfaces are the production rendering for Study + Assembly. The remaining DW-questions resolved post-walkthrough land on a sequel arc.
+> **Post-walkthrough status (2026-05-10):** Stages A–E shipped + pastor-tested + merged to main. Per-stage trail surfaces are the production rendering for Study + Assembly. The remaining DW-questions resolved post-walkthrough land on the sequel arc.
+>
+> **Sequel branch:** [`claude/workspace-trail-sequel`](https://github.com/teamofoxen/sermonforge/tree/claude/workspace-trail-sequel) — the working branch for the polish queue listed below. The trail-suppress escape hatch retires when this arc lands; everything else gets implemented incrementally without a feature-flag layer.
 >
 > - **Stage A** (Study Step 1 / Exegesis trail) → [`StudyTrailExegesis.jsx`](../../src/components/StudyTrailExegesis.jsx). Shipped.
 > - **Stages B + C + D + E** (Anchor + Outline + Equip + Frame) → one unified [`AssemblyTrail.jsx`](../../src/components/AssemblyTrail.jsx) switchback with workshop-clearings for Outline + Equip. Shipped.
 > - **Stage F** (Manuscript writing-room) → DW5 resolved (yes, writing-room mode); implementation on the sequel arc.
-> - **Stage G** (workspace shell retirement) → partially shipped: tab strip collapsed 4 → 3, OutlineTab / FrameTab deleted as standalone stages. Trail-suppress falls through to the sub-phase tab strip inside AssemblyTab as a temporary escape hatch.
+> - **Stage G** (workspace shell retirement) → partially shipped: tab strip collapsed 4 → 3, OutlineTab / FrameTab deleted as standalone stages. Trail-suppress falls through to the sub-phase tab strip inside AssemblyTab as a temporary escape hatch (retires on the sequel arc).
 >
-> Resolved through this arc: DW1, DW2, DW3, DW4. Resolved post-walkthrough and queued for the sequel: DW5, DW6, DW7, DW8, DW9, DW10, DW11, DW12, DW13, DW14, DW15. See each question's resolution note below for the binding decision.
+> Resolved through the merged arc: DW1, DW2, DW3, DW4. Resolved post-walkthrough and queued for the sequel arc: DW5, DW6, DW7, DW8, DW9, DW10, DW11, DW12, DW13, DW14, DW15. RW4 + RW8 + RW9 (workspace-restructure-charter) also queued there. See each question's resolution note below for the binding decision.
 >
 > See [`workspace-restructure-charter.md`](./workspace-restructure-charter.md) for the structural restructure that supersedes this charter's per-step phasing. The trail-rendering goals (single immersive walk, contemplative pause-clearings, named-outcome handoffs) remain binding.
 
