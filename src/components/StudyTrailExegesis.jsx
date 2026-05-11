@@ -321,6 +321,20 @@ export default function StudyTrailExegesis({
 
   const advance = () => {
     if (stop.kind === "pause") {
+      // Walking on from a sub-phase pause should land at the FIRST field of
+      // the next sub-phase, not at whatever `firstIncompleteFieldKey` returns
+      // — on a sermon where the next sub-phase is partially filled (e.g.,
+      // the Romans 5:1-5 worked example with everything done except
+      // Interpretation Synthesis), the fallback jumps the pastor to the
+      // last incomplete field, skipping the start of the sub-phase entirely.
+      const nextSubPhase = pausePoint?.nextKey;
+      if (typeof nextSubPhase === "number") {
+        const nextFields = PHASES[nextSubPhase - 1]?.fields;
+        if (Array.isArray(nextFields) && nextFields.length > 0) {
+          setCurrentActiveFieldKey(nextFields[0].key);
+          setActiveQKey(null);
+        }
+      }
       setPausePoint(null);
       return;
     }

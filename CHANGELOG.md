@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-05-11 — Walking on from a sub-phase pause lands at the first field of the next sub-phase
+
+- `advance()` in `StudyTrailExegesis` now sets `currentActiveFieldKey` to the first field of the next sub-phase before clearing the pause point, when `pausePoint.nextKey` is a numeric sub-phase (2 / 3 / 4).
+- Fixes the bug where walking on from the Observation Set pause (end of Observe) landed the pastor directly on Interpretation Synthesis — `firstIncompleteFieldKey`'s fallback returns the last incomplete field, which on the Romans 5:1-5 worked example (every Interpret field filled except Synthesis) skips the entire sub-phase. Look-back from there then walks Interpret in reverse, which is the symptom that surfaced the bug.
+- Same pattern is present in `AssemblyTrail`, left untouched — Anchor and Frame have only 2 fields each so the mid-phase landing case is much rarer. Will revisit if it surfaces.
+- Preflight + drift-check PASS; preview clean.
+
+---
+
 ## 2026-05-11 — Trail clearing: flex column so actions stay anchored, top-clamped so chrome never overlaps
 
 - Repositioned `.tw-clearing` so it centers within the trail body (below the 106px topbar+ribbon chrome) instead of 58% of the full viewport. A tall card can no longer bleed upward into the topbar zone regardless of content height — fixes the "jumbled rats nest" overlap at the top.
