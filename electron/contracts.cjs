@@ -96,6 +96,9 @@ const SERMON_COLUMNS = Object.freeze(new Set([
   "topic_theme", "audience_assumptions", "background_noise", "study_guide_note",
   "preaching_blocks", "manuscript_delivery", "last_tune_up",
   "current_stage", "current_step", "current_sub_phase",
+  // v21 — per-stage sub-phase memory; renderer derives initial sub-phase
+  // from these so tabbing across stages restores per-stage position.
+  "last_study_subphase", "last_assembly_subphase",
   // v18 — SPRD C3 Sermon Frame.
   "sermon_frame",
   // v19 — SADI Step 2 Main Point Pair.
@@ -105,6 +108,14 @@ const SERMON_COLUMNS = Object.freeze(new Set([
   "notebook_study", "notebook_blueprint", "notebook_manuscript",
 ]));
 /* eslint-enable sermonforge/canonical-stage-name */
+
+// Spine-controlled columns. Written by `transitionState` and the tour-sermon
+// seed; never by user-edit saves (renderer's `pickSermonColumns` excludes
+// them). Mirrors `SPINE_ONLY_COLUMNS` in src/core/contracts.ts.
+const SPINE_ONLY_COLUMNS = Object.freeze(new Set([
+  "current_stage", "current_step", "current_sub_phase",
+  "last_study_subphase", "last_assembly_subphase",
+]));
 
 const SERIES_COLUMNS = Object.freeze(new Set([
   "title", "color", "description", "year", "big_idea", "overview",
@@ -156,6 +167,7 @@ module.exports = {
   MUTATION_KIND,
   LOADING_VERB,
   SERMON_COLUMNS,
+  SPINE_ONLY_COLUMNS,
   SERIES_COLUMNS,
   SECTION_COLUMNS,
   STRUCTURED_FIELDS,

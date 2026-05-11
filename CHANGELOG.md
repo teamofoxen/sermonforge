@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-11 — Per-stage sub-phase memory in DB; sample sermon always lands at the beginning
+
+- Schema v21 adds `last_study_subphase` + `last_assembly_subphase` columns so per-stage position lives in the canonical sermon record instead of scattered localStorage; `transitionState` writes them on every sub-phase movement, stage transitions COALESCE from them so tab-out + tab-back preserves position.
+- Tour sermon seed resets both columns to first sub-phase on every reseed, so "Open a sample sermon" always lands at Study / Observe regardless of where the pastor wandered last session — replaces the patchwork tour-skip in localStorage reads from `1dd320e`.
+- New `SPINE_ONLY_COLUMNS` set (mirrored in `src/core/contracts.ts` + `electron/contracts.cjs`); `pickSermonColumns` filters spine-written columns out of user-edit saves so a stale renderer view can't clobber a fresh spine write. `subPhaseToIndex` helper in `studyAdvancement.js` unifies the StudyTab + AssemblyTab init.
+- `persistMutation` guards against empty payloads; six orphaned legacy files removed (`SpotlightWorksheet.jsx` + test, `ThroughlineRail`, `ThroughlineCanvas`, `PausePointScreen`, `throughline.css`) along with their dead imports in `AssemblyTab`; synthesis-table renders as labeled cards when columns exceed 3, and `.dash-row` gets `flex-shrink: 0` so the Resume Work tile scrolls instead of squashing.
+- 826/826 vitest green.
+
+---
+
 ## 2026-05-11 — Fix trail clearings overflowing at 1200px + hidden passage popup
 
 - Stage-boundary pause and stage-overview clearings now use scripture-aware widths (`calc(100vw - 400px - 64px)`) so they fit at 1200px instead of overflowing 40px and 10px each side respectively into the scripture column and off-screen.

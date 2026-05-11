@@ -317,6 +317,9 @@ export const SERMON_COLUMNS: ReadonlySet<string> = Object.freeze(new Set([
   "preaching_blocks", "manuscript_delivery", "last_tune_up",
   // v17 — canonical process position columns added by spine layer.
   "current_stage", "current_step", "current_sub_phase",
+  // v21 — per-stage sub-phase memory; renderer derives initial sub-phase
+  // from these so tabbing across stages restores per-stage position.
+  "last_study_subphase", "last_assembly_subphase",
   // v18 — Sermon Frame JSON column (SPRD C3, 2026-05-04). Holds Intro +
   // Conclusion field-data per the SADI Step 5 ratification, in the same
   // envelope shape as the four Exegesis sub-phase columns.
@@ -344,11 +347,23 @@ export const SECTION_COLUMNS: ReadonlySet<string> = Object.freeze(new Set([
   "title", "passage_range", "big_idea", "overview", "sort_order",
 ])) as ReadonlySet<string>;
 
+// Spine-controlled columns. These are written by `transitionState` (and the
+// tour-sermon seed) and must NOT be sent on user-edit saves — the renderer's
+// in-memory sermon view can lag a fresh spine write, and including these in
+// the persistUpdate payload would let stale state clobber the spine's record
+// of the pastor's position. They stay in `SERMON_COLUMNS` so reads/seeds and
+// `assertSchemaContract()` still see them; `pickSermonColumns` filters them
+// out of writes.
+export const SPINE_ONLY_COLUMNS: ReadonlySet<string> = Object.freeze(new Set([
+  "current_stage", "current_step", "current_sub_phase",
+  "last_study_subphase", "last_assembly_subphase",
+])) as ReadonlySet<string>;
+
 export function pickSermonColumns(obj: Record<string, unknown> | null | undefined): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   if (!obj) return out;
   for (const k of Object.keys(obj)) {
-    if (SERMON_COLUMNS.has(k)) out[k] = obj[k];
+    if (SERMON_COLUMNS.has(k) && !SPINE_ONLY_COLUMNS.has(k)) out[k] = obj[k];
   }
   return out;
 }

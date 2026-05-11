@@ -112,18 +112,12 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSermon }) {
         setSermon(data);
         sermonRef.current = data;
         setSiblingIds(Array.isArray(siblings) ? siblings.map(s => s.id) : []);
-        // Restore last active tab across restarts — except for the tour
-        // sample sermon, whose fixed ID (`tour-romans-sermon-01`) means a
-        // tab the pastor clicked into during a prior session would stick
-        // even after the DELETE+INSERT reseed regenerates the row at
-        // STAGE.Study. Tour sermons always honor the freshly-seeded
-        // `current_stage` and start at the beginning of the trail.
-        const isTourSermon = typeof sermonId === "string" && sermonId.startsWith("tour-");
-        if (!isTourSermon) {
-          const savedTab = localStorage.getItem(`sermonforge_sermon_tab_${sermonId}`);
-          const migratedTab = savedTab && (LEGACY_TAB_MAP[savedTab] || savedTab);
-          if (migratedTab && TABS.includes(migratedTab)) setActiveTab(migratedTab);
-        } else if (data?.current_stage) {
+        // Active tab derives from `data.current_stage`, which the spine
+        // writes via transitionState on every tab change. Tour sermons
+        // reseed to STAGE.Study on every load (DELETE+INSERT), so they
+        // always land at the start of the trail. Regular sermons resume
+        // to wherever the pastor was last.
+        if (data?.current_stage) {
           const seededTab = LEGACY_TAB_MAP[data.current_stage] || data.current_stage;
           if (TABS.includes(seededTab)) setActiveTab(seededTab);
         }
@@ -142,7 +136,13 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSermon }) {
       // attached series/section objects that are not in SERMON_COLUMNS.
       // Filter to the writable allowlist before sending — buildUpdate
       // throws in dev / drops in prod when an unknown column appears.
-      const payload = pickSermonColumns(sermonRef.current);
+      // The cleanup-effect at unmount fires this unconditionally, so
+      // skip when there's nothing to save (sermon never loaded, or the
+      // payload has no writable fields after the filter).
+      const data = sermonRef.current;
+      if (!data) return;
+      const payload = pickSermonColumns(data);
+      if (!payload || Object.keys(payload).length === 0) return;
       await persistMutation(setSaveState, async () => {
         await updateSermon(sermonId, payload);
       });
@@ -191,7 +191,9 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSermon }) {
 
     setActiveTab(tab);
     setActiveStep(null);
-    localStorage.setItem(`sermonforge_sermon_tab_${sermonId}`, tab);
+    // Tab persistence lives in the DB via transitionState above (it writes
+    // current_stage). No localStorage write needed — initial mount reads
+    // current_stage on next load.
     setLastMovement({ from: previousTab, to: tab, at: Date.now() });
   }
 

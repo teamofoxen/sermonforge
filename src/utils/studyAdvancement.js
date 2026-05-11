@@ -58,6 +58,18 @@ export function canonicalSubPhase(n, stage = STAGE.Study) {
   return seq ? seq[n - 1] : undefined;
 }
 
+// Inverse of `canonicalSubPhase`: resolve a stored SUB_PHASE string back
+// to its 1-based index within the named stage. Returns 1 when the input
+// is missing or doesn't belong to the stage — both StudyTab and AssemblyTab
+// derive `activeSubPhase` from `sermon.last_*_subphase` through this helper.
+export function subPhaseToIndex(value, stage = STAGE.Study) {
+  if (typeof value !== "string") return 1;
+  const seq = SUB_PHASE_BY_INDEX[stage];
+  if (!seq) return 1;
+  const idx = seq.indexOf(value);
+  return idx >= 0 ? idx + 1 : 1;
+}
+
 // Evidence joins all answered (non-N/A, non-empty) text-prompt values across
 // the phase's fields. Legacy free-text data still surfaces under data.legacy_notes.
 export function buildSubPhaseEvidence(sermon, subPhase) {

@@ -807,6 +807,36 @@ function runMigrations() {
     db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '20')");
     version = 20;
   }
+
+  if (version < 21) {
+    // v21: Per-stage sub-phase memory. `current_sub_phase` records the one
+    // active position (State Contract #2). `last_*_subphase` records the
+    // pastor's last position within each stage so tabbing across stages
+    // restores where they were within each one. Replaces the per-sermon
+    // `sermonforge_*_subphase_*` localStorage scatter that broke for tour
+    // sermons (DELETE+INSERT reseeds the row but leaves localStorage stale).
+    const sermonInfo = queryAll("PRAGMA table_info(sermons)");
+    const have = new Set(sermonInfo.map(r => r.name));
+    if (!have.has("last_study_subphase")) {
+      db.run("ALTER TABLE sermons ADD COLUMN last_study_subphase TEXT");
+    }
+    if (!have.has("last_assembly_subphase")) {
+      db.run("ALTER TABLE sermons ADD COLUMN last_assembly_subphase TEXT");
+    }
+    // Backfill from current_sub_phase where it belongs to the matching stage.
+    db.run(
+      `UPDATE sermons SET last_study_subphase = current_sub_phase
+         WHERE last_study_subphase IS NULL
+           AND current_sub_phase IN ('Observe', 'Interpret', 'RedemptiveThread', 'Implications')`
+    );
+    db.run(
+      `UPDATE sermons SET last_assembly_subphase = current_sub_phase
+         WHERE last_assembly_subphase IS NULL
+           AND current_sub_phase IN ('Anchor', 'Outline', 'Equip', 'Frame')`
+    );
+    db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '21')");
+    version = 21;
+  }
 }
 
 // Verify the live schema matches the SERMON_COLUMNS / SERIES_COLUMNS allowlists
@@ -1469,25 +1499,56 @@ function validateAndCommit(op, payload) {
         }
       }
       if (kind === "stage") {
-        // Stage entry default — first sub-phase of the destination stage.
+        // Stage entry restores the pastor's last position WITHIN the
+        // destination stage (per-stage memory), so tabbing across stages
+        // returns them to where they were last. COALESCE falls back to the
+        // first sub-phase when last_*_subphase is NULL (never been to that
+        // stage). Stage transitions do NOT write last_*_subphase — that
+        // column is only updated by sub-phase transitions within its stage,
+        // so a stage tab-out followed by tab-back preserves position.
         let subDefault = null;
-        if (to === STAGE.Study) subDefault = SUB_PHASE.Observe;
-        else if (to === STAGE.Assembly) subDefault = SUB_PHASE.Anchor;
-        db.run(
-          `UPDATE sermons SET current_stage = ?, current_step = NULL, current_sub_phase = ?, updated_at = datetime('now') WHERE id = ?`,
-          [to, subDefault, sermonId],
-        );
+        let lastCol = null;
+        if (to === STAGE.Study) { subDefault = SUB_PHASE.Observe; lastCol = "last_study_subphase"; }
+        else if (to === STAGE.Assembly) { subDefault = SUB_PHASE.Anchor; lastCol = "last_assembly_subphase"; }
+        if (lastCol) {
+          db.run(
+            `UPDATE sermons SET current_stage = ?, current_step = NULL,
+                                current_sub_phase = COALESCE(${lastCol}, ?),
+                                updated_at = datetime('now')
+             WHERE id = ?`,
+            [to, subDefault, sermonId],
+          );
+        } else {
+          db.run(
+            `UPDATE sermons SET current_stage = ?, current_step = NULL, current_sub_phase = ?, updated_at = datetime('now') WHERE id = ?`,
+            [to, subDefault, sermonId],
+          );
+        }
       } else if (kind === "sub_phase") {
-        // Sub-phase transition. Update current_sub_phase, and also align
-        // current_stage if the new sub-phase belongs to a different stage
-        // (e.g., the Implications → Anchor cross would otherwise leave
-        // current_stage at "Study" while sub-phase is "Anchor", which
-        // would confuse downstream readers). SUB_PHASE_STAGE is the map.
+        // Sub-phase transition. Update current_sub_phase, align current_stage
+        // if the new sub-phase belongs to a different stage (e.g., the
+        // Implications → Anchor cross would otherwise leave current_stage at
+        // "Study" while sub-phase is "Anchor"). Also update the per-stage
+        // memory column for the destination stage so tab-back restores cleanly.
         const targetStage = SUB_PHASE_STAGE[to];
-        if (targetStage && targetStage !== currentStage) {
+        let lastCol = null;
+        if (targetStage === STAGE.Study) lastCol = "last_study_subphase";
+        else if (targetStage === STAGE.Assembly) lastCol = "last_assembly_subphase";
+        const crossStage = targetStage && targetStage !== currentStage;
+        if (crossStage && lastCol) {
+          db.run(
+            `UPDATE sermons SET current_stage = ?, current_sub_phase = ?, ${lastCol} = ?, updated_at = datetime('now') WHERE id = ?`,
+            [targetStage, to, to, sermonId],
+          );
+        } else if (crossStage) {
           db.run(
             `UPDATE sermons SET current_stage = ?, current_sub_phase = ?, updated_at = datetime('now') WHERE id = ?`,
             [targetStage, to, sermonId],
+          );
+        } else if (lastCol) {
+          db.run(
+            `UPDATE sermons SET current_sub_phase = ?, ${lastCol} = ?, updated_at = datetime('now') WHERE id = ?`,
+            [to, to, sermonId],
           );
         } else {
           db.run(
@@ -1581,8 +1642,9 @@ function validateAndCommit(op, payload) {
             outline, functional_elements,
             manuscript, delivery_notes, timing_notes,
             study_guide_note, sermon_frame,
-            current_stage, current_step, current_sub_phase
-          ) VALUES (?,?,0,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+            current_stage, current_step, current_sub_phase,
+            last_study_subphase, last_assembly_subphase
+          ) VALUES (?,?,0,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
           [
             sermon.id, sermon.series_id, sermon.title, sermon.passage, sermon.date, sermon.stage,
             sermon.mpt, sermon.mps,
@@ -1591,6 +1653,10 @@ function validateAndCommit(op, payload) {
             sermon.manuscript, sermon.delivery_notes, sermon.timing_notes,
             sermon.study_guide_note, sermon.sermon_frame,
             STAGE.Study, null, SUB_PHASE.Observe,
+            // Per-stage memory: tour sermons always reset to the first
+            // sub-phase of each stage so re-opens land at the beginning,
+            // regardless of where the pastor wandered last time.
+            SUB_PHASE.Observe, SUB_PHASE.Anchor,
           ],
         );
         db.run("COMMIT");

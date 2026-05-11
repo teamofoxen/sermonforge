@@ -15,45 +15,26 @@ import { useTour } from "../contexts/TourContext";
 import {
   parseStructuredField, serializeStructuredField,
   setQuestionAnswer, setQuestionNA, isQuestionNA, DEFAULT_QUESTION_KEY,
-  getQuestionString,
 } from "../utils/studyFields";
-import { MAIN_POINT_PAIR_FIELDS } from "../utils/sadiAnchorFields";
-import { SERMON_FRAME_FIELDS } from "../utils/sermonFrameFields";
-import { getOutline, serializeOutline, getFunctionalElements, serializeFunctionalElements, autoResize } from "../utils";
-import SpotlightWorksheet from "./SpotlightWorksheet";
-import OutlineBuilder from "./OutlineBuilder";
-import AdvanceGateChecklist from "./AdvanceGateChecklist";
-import NotebookPanel from "./NotebookPanel";
-import FeedbackFlag from "./FeedbackFlag";
+import { getOutline, serializeOutline, getFunctionalElements, serializeFunctionalElements } from "../utils";
 import AssemblyTrail from "./AssemblyTrail";
-import PrimaryButton from "./primitives/PrimaryButton";
-import { STAGE, SUB_PHASE, ContractViolation } from "../core/contracts";
+import { STAGE, ContractViolation } from "../core/contracts";
 import { transitionState } from "../core/spine";
 import {
-  canonicalSubPhase,
+  canonicalSubPhase, subPhaseToIndex,
   buildSubPhaseEvidence, buildStageEvidence,
   evaluateAdvance, formatAdvanceRejection,
 } from "../utils/studyAdvancement";
 
-const SUB_PHASE_LABELS = ["Anchor", "Outline", "Equip", "Frame"];
-const SUB_PHASE_NAMED_OUTCOMES = ["Main Point Pair", "Sermon Outline", "Sermon Body", "Sermon Frame"];
-
 export default function AssemblyTab({ sermon, onUpdate, onTabChange, onMovement, onClose }) {
   const { active: tourActive, desiredUi } = useTour();
-  const [activeSubPhase, setActiveSubPhase] = useState(() => {
-    const saved = localStorage.getItem(`sermonforge_assembly_subphase_${sermon.id}`);
-    return saved ? parseInt(saved, 10) : 1;
-  });
+  // Initial sub-phase derives from the DB column `last_assembly_subphase`,
+  // populated by spine.transitionState on every Assembly sub-phase movement.
+  // Tour sermons reseed this to "Anchor" on every load.
+  const [activeSubPhase, setActiveSubPhase] = useState(
+    () => subPhaseToIndex(sermon.last_assembly_subphase, STAGE.Assembly),
+  );
   const [advanceError, setAdvanceError] = useState(null);
-  // WTC sequel Item 8: user-facing trail-suppress toggle is retired —
-  // × Exit / Esc return the pastor to the Dashboard (`onClose`). The
-  // `sermonforge_trail_disabled` localStorage flag below still gates the
-  // legacy sub-phase tab strip on for contract tests that assert on
-  // its markup; that's the only remaining consumer of the fallback path.
-
-  useEffect(() => {
-    localStorage.setItem(`sermonforge_assembly_subphase_${sermon.id}`, activeSubPhase);
-  }, [activeSubPhase, sermon.id]);
 
   useEffect(() => {
     if (!tourActive || !desiredUi) return;

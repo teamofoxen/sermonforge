@@ -2642,6 +2642,7 @@ button {
   border: 1px solid rgba(228,218,206,0.7);
   overflow: hidden;
   cursor: pointer;
+  flex-shrink: 0;
   font-family: 'IBM Plex Serif', serif;
   transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
 }
@@ -3368,6 +3369,68 @@ button {
   color: var(--ink);
   border-color: var(--gold);
   background: var(--parchment-warm);
+}
+
+/* Stacked card layout (Phase 2+ cumulative tables). Each row becomes a
+ * labeled vertical card so prose cells stay readable inside the trail's
+ * narrow clearing instead of squashing into one-word-per-line columns.
+ * The column header row is replaced by per-cell ::before labels driven
+ * by each <td>'s data-label attribute. */
+.synthesis-table-stack,
+.synthesis-table-stack thead,
+.synthesis-table-stack tbody,
+.synthesis-table-stack tr,
+.synthesis-table-stack td {
+  display: block;
+}
+.synthesis-table-stack thead {
+  display: none;
+}
+.synthesis-table-stack .synthesis-table-row {
+  position: relative;
+  border: 1px solid var(--parchment-deep);
+  border-radius: var(--radius);
+  padding: 14px 16px 12px;
+  margin-bottom: 12px;
+  background: var(--parchment-warm);
+}
+.synthesis-table-stack .synthesis-table-row + .synthesis-table-row .synthesis-table-cell {
+  border-top: none;
+}
+.synthesis-table-stack .synthesis-table-cell {
+  padding: 10px 0 4px;
+  border-top: 1px dotted var(--parchment-deep);
+}
+.synthesis-table-stack .synthesis-table-cell:first-of-type {
+  border-top: none;
+  padding-top: 0;
+}
+.synthesis-table-stack .synthesis-table-cell::before {
+  content: attr(data-label);
+  display: block;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-ghost);
+  margin-bottom: 6px;
+}
+.synthesis-table-stack .synthesis-table-cell-actions {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  border-top: none;
+  padding: 0;
+}
+.synthesis-table-stack .synthesis-table-cell-actions::before {
+  display: none;
+}
+.synthesis-table-stack .synthesis-table-cell-readonly .synthesis-table-readonly-display {
+  padding: 0;
+}
+.synthesis-table-stack .synthesis-table-input-line-number {
+  width: 110px;
+  text-align: left;
 }
 
 .synthesis-table-add-row:disabled {

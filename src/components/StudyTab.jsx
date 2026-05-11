@@ -21,23 +21,23 @@ import StudyTrailExegesis from "./StudyTrailExegesis";
 import { STAGE, SUB_PHASE, ContractViolation } from "../core/contracts";
 import { transitionState } from "../core/spine";
 import {
-  canonicalSubPhase,
+  canonicalSubPhase, subPhaseToIndex,
   buildSubPhaseEvidence, buildStageEvidence,
   evaluateAdvance, formatAdvanceRejection,
 } from "../utils/studyAdvancement";
 
 export default function StudyTab({ sermon, onUpdate, onTabChange, onMovement, onClose }) {
   const { active: tourActive, desiredUi } = useTour();
-  const [activeSubPhase, setActiveSubPhase] = useState(() => {
-    const saved = localStorage.getItem(`sermonforge_study_subphase_${sermon.id}`);
-    return saved ? parseInt(saved, 10) : 1;
-  });
+  // Initial sub-phase derives from the DB column `last_study_subphase`,
+  // populated by spine.transitionState on every Study sub-phase movement.
+  // Tour sermons reseed this to "Observe" on every load, so re-opens
+  // always land at the start of the trail. Regular sermons resume to
+  // wherever the pastor was last in Study.
+  const [activeSubPhase, setActiveSubPhase] = useState(
+    () => subPhaseToIndex(sermon.last_study_subphase, STAGE.Study),
+  );
   const [advanceError, setAdvanceError] = useState(null);
   const [currentActiveFieldKey, setCurrentActiveFieldKey] = useState(null);
-
-  useEffect(() => {
-    localStorage.setItem(`sermonforge_study_subphase_${sermon.id}`, activeSubPhase);
-  }, [activeSubPhase, sermon.id]);
 
   useEffect(() => {
     if (!tourActive || !desiredUi) return;
@@ -47,8 +47,9 @@ export default function StudyTab({ sermon, onUpdate, onTabChange, onMovement, on
   }, [tourActive, desiredUi, activeSubPhase]);
 
   // Pause-point state. Set by `advanceSubPhase` after a successful spine
-  // transition; cleared by `PausePointScreen.onContinue` or by manual jumps.
-  // Shape: { priorSubPhase: 1|2|3|4, nextKey: 2|3|4|"assembly", priorSummaryKey: ... }
+  // transition; cleared when the trail's pause-clearing dismisses or by
+  // manual jumps. Shape:
+  //   { priorSubPhase: 1|2|3|4, nextKey: 2|3|4|"assembly", priorSummaryKey: ... }
   const [pausePoint, setPausePointRaw] = useState(null);
 
   // Dismissing the Study → Assembly pause ("Walk on" from the Implications

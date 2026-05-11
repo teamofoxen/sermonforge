@@ -102,6 +102,9 @@ export default function SynthesisTable({
 
   const hasRows = Array.isArray(value) && value.length > 0;
   const rows = hasRows ? value : [emptyRowFor(columns)];
+  // Stack rows as labeled cards once a phase's column count exceeds what
+  // fits horizontally inside the trail's narrow clearing.
+  const stack = columns.length > 3;
 
   const emit = (next) => {
     onChange(next.map((r) => normalizeRow(r, columns)));
@@ -135,7 +138,7 @@ export default function SynthesisTable({
       role="group"
       aria-label="Synthesis table"
     >
-      <table className="synthesis-table-grid">
+      <table className={`synthesis-table-grid${stack ? " synthesis-table-stack" : ""}`}>
         <thead>
           <tr>
             {columns.map((col) => (
@@ -158,7 +161,7 @@ export default function SynthesisTable({
                 const cellClass = `synthesis-table-cell synthesis-table-cell-${col.key}${col.readOnly ? " synthesis-table-cell-readonly" : ""}`;
                 if (col.readOnly) {
                   return (
-                    <td key={col.key} className={cellClass} data-column={col.key}>
+                    <td key={col.key} className={cellClass} data-column={col.key} data-label={col.label}>
                       <div className="synthesis-table-readonly-display">{v}</div>
                     </td>
                   );
@@ -167,7 +170,7 @@ export default function SynthesisTable({
                   const charLimit = TEXTAREA_CHAR_LIMIT;
                   const charCount = v.length;
                   return (
-                    <td key={col.key} className={cellClass} data-column={col.key}>
+                    <td key={col.key} className={cellClass} data-column={col.key} data-label={col.label}>
                       <textarea
                         className="synthesis-table-input"
                         value={v}
@@ -190,7 +193,7 @@ export default function SynthesisTable({
                 if (col.kind === "line-number") {
                   const stale = isAfterLineStale(v, canvasLineCount);
                   return (
-                    <td key={col.key} className={cellClass} data-column={col.key}>
+                    <td key={col.key} className={cellClass} data-column={col.key} data-label={col.label}>
                       <div className="synthesis-table-line-number-wrap">
                         <input
                           className={`synthesis-table-input synthesis-table-input-line-number${stale ? " synthesis-table-input-stale" : ""}`}
@@ -218,7 +221,7 @@ export default function SynthesisTable({
                   );
                 }
                 return (
-                  <td key={col.key} className={cellClass} data-column={col.key}>
+                  <td key={col.key} className={cellClass} data-column={col.key} data-label={col.label}>
                     <input
                       className="synthesis-table-input"
                       type="text"

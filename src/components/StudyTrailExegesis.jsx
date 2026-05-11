@@ -587,10 +587,8 @@ function FieldClearing({
   phaseDef,
   phaseData,
   updateStructured,
-  // D2 — toggleStructuredNA is now exposed via a quiet "Mark not applicable"
-  // text link in the clearing-actions row. The trail still suppresses the
-  // SpotlightWorksheet's button-style N/A toggle, but the affordance is
-  // present in trail-native form (mono link, not a control).
+  // D2 — toggleStructuredNA is exposed via a quiet "Mark not applicable"
+  // text link in the clearing-actions row (trail-native form, mono link).
   toggleStructuredNA,
   crossPhaseRead,
   crossPhaseWrite,
@@ -701,12 +699,10 @@ function FieldClearing({
 //
 // D19 — When the pastor lands on a heavy-lifting field for the first time
 // in this session AND the field has no content yet, the trail surfaces the
-// field's `overview` block before the question walk begins. This restores
-// the contemplative "you are entering a field that asks for sustained work"
-// beat that lives in `FieldOverviewScreen` in the legacy SpotlightWorksheet
-// layout, dressed for trail typography. Pastor dismisses with "Continue to
-// begin"; the dismissal is session-scoped per field key (re-firing on
-// re-entry would be noise).
+// field's `overview` block before the question walk begins — a contemplative
+// "you are entering a field that asks for sustained work" beat dressed for
+// trail typography. Pastor dismisses with "Continue to begin"; the dismissal
+// is session-scoped per field key (re-firing on re-entry would be noise).
 
 function OverviewClearing({ stop, phaseDef, field, onContinue, onLookBack }) {
   const overview = field.overview || {};
@@ -756,8 +752,8 @@ function PauseClearing({ stop, phaseDef, nextPhase, phaseData, allPhaseData, pha
   const promptText = PAUSE_PROMPTS[stop.pauseIdx] || "";
   const { data, column } = phaseData;
   // The synthesis answer is stored on the same envelope under a `_synthesis`
-  // pseudo-field-key — mirroring the existing PausePointScreen contract so
-  // the value round-trips through the same column without schema churn.
+  // pseudo-field-key so the value round-trips through the same column
+  // without schema churn.
   const synthValue = (() => {
     const v = getQuestionAnswer(data, "_synthesis");
     return typeof v === "string" ? v : "";
