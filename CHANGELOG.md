@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-11 — Sermon full-content search backend (v22 schema)
+
+- New `sermon_search` table (v22 migration) holds flattened plain text per indexed column for every sermon. Indexed columns cover title, passage, series_title (JOINed), the four Study sub-phase JSON envelopes, Main Point Pair, Sermon Frame, outline, manuscript, all three notebooks, delivery notes, and timing notes. JSON envelopes are flattened to concatenated leaf text so search hits read as natural prose instead of tokenizing on `{`, `}`, `"`.
+- Indexer (`indexSermonFts` / `indexSermonFtsFromRow` / `dropSermonFts`) wired into every sermon write path inside `validateAndCommit` — `create-sermon`, `update-sermon`, `update-series` (when title changes, re-indexes all attached sermons for series_title sync), `apply-mutation`, `delete-sermon`, `delete-series` (clears series_title from affected sermons), `load-tour-sermon`, `remove-tour-sermon`. First-launch backfill indexes every existing sermon.
+- New IPC channel `db-searchSermons` with LIKE-based matching across all indexed columns, AND semantics across tokens (each query word must appear somewhere on the row, OR'd across columns). Returns sermon metadata + a JS-side snippet with `‹mark›…‹/mark›` highlighting around the first matched range. Renderer wrapper exported as `searchSermons(query, limit = 50)` from `src/db/database.js`.
+- Why not FTS5: `sql.js` doesn't compile the FTS5 extension; LIKE-based matching on the flattened text is fast enough at pastor library sizes (<500 sermons).
+- 839/839 vitest green; preflight + drift-check + sweep-the-house + simplify PASS. Schema reference docs the new `sermon_search` table.
+
+---
+
 ## 2026-05-11 — Trail-layer contract tests
 
 - New `tests/contracts/trail-layer-integration.test.tsx` — 13 tests covering the integration gap the post-WTC audit flagged: spine contracts were unit-tested in isolation, but no test asserted that the trail's advance / look-back / cross-stage paths actually route through `transitionState`.

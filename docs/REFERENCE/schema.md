@@ -1,6 +1,6 @@
 # SermonForge — Database Schema Reference
 
-Current schema version: **21**
+Current schema version: **22**
 
 | Version | Bumped for |
 |---------|-----------|
@@ -12,6 +12,7 @@ Current schema version: **21**
 | v19 | SADI Step 2 — `main_point_pair` JSON column for MPT + MPS questions |
 | v20 | ARI Phase 3 — `notebook_study`, `notebook_blueprint`, `notebook_manuscript` |
 | v21 | Per-stage sub-phase memory — `last_study_subphase`, `last_assembly_subphase` |
+| v22 | Sermon full-content search — `sermon_search` table (flattened text per indexed column for LIKE-based search) |
 
 ---
 
@@ -102,6 +103,39 @@ Current schema version: **21**
 | `last_assembly_subphase` | TEXT | Pastor's last position within Assembly (one of `Anchor \| Outline \| Equip \| Frame`). Same purpose as `last_study_subphase` for the Assembly stage. Added v21 migration. |
 | `created_at` | TEXT | |
 | `updated_at` | TEXT | |
+
+---
+
+## Table: sermon_search
+
+System-managed full-content search index for sermons. The renderer never
+writes to it directly; `validateAndCommit` in `electron/main.js` calls the
+indexer on every sermon create / update / delete so this table stays in
+sync. Search runs as LIKE-based matching against the flattened text columns.
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `sermon_id` | TEXT PRIMARY KEY | FK to `sermons.id` |
+| `title` | TEXT | Sermon title, plain text |
+| `passage` | TEXT | Passage reference, plain text |
+| `series_title` | TEXT | Joined from `series.title` at index time; re-indexed when the parent series is renamed |
+| `observations` | TEXT | Flattened text of the Study Observe JSON envelope |
+| `interpretation` | TEXT | Flattened text of the Study Interpret JSON envelope |
+| `redemptive_thread` | TEXT | Flattened text of the Study Redemptive Thread JSON envelope |
+| `implications` | TEXT | Flattened text of the Study Implications JSON envelope |
+| `main_point_pair` | TEXT | Flattened text of the Assembly Anchor Main Point Pair envelope |
+| `outline` | TEXT | Flattened text of the outline JSON array (point titles concatenated) |
+| `manuscript` | TEXT | Flattened text of the manuscript JSON envelope |
+| `sermon_frame` | TEXT | Flattened text of the Assembly Frame envelope (Intro + Conclusion) |
+| `notebook_study` | TEXT | Plain notebook text |
+| `notebook_blueprint` | TEXT | Plain notebook text (column name preserved from pre-restructure schema; feeds Assembly's notebook) |
+| `notebook_manuscript` | TEXT | Plain notebook text |
+| `delivery_notes` | TEXT | Plain text |
+| `timing_notes` | TEXT | Plain text |
+
+Added v22 migration. Backfill on first launch indexes every existing sermon.
+
+> **Why not FTS5:** `sql.js` (the sermon DB's engine) doesn't compile the FTS5 extension by default. Rather than swap the WASM build, the search table is a regular SQLite table with one row per sermon and per-column flattened text. LIKE-based matching is fast enough at typical pastor library sizes (<500 sermons). If libraries grow significantly, swapping to FTS5 (or building a sql.js variant with FTS5 enabled) is the future-state path.
 
 ---
 

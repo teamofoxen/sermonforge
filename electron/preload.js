@@ -21,6 +21,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
   searchTheologyLibrary:  (query, limit)         => ipcRenderer.invoke("theology-search", { query, limit }),
   getTheologyChunks:      (ids, maxChars)        => ipcRenderer.invoke("theology-get-chunks", { ids, maxChars }),
 
+  // ── Sermon full-text search (v22) ─────────────────────────────────────────
+  searchSermons: (query, limit) => ipcRenderer.invoke("db-searchSermons", { query, limit }),
+
   // ── Export ───────────────────────────────────────────────────────────────────
   exportStudyGuide: (seriesId) => ipcRenderer.invoke("series-export-study-guide", seriesId),
   exportManuscript: (data) => ipcRenderer.invoke("sermon-export-manuscript", data),

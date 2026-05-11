@@ -837,6 +837,57 @@ function runMigrations() {
     db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '21')");
     version = 21;
   }
+
+  if (version < 22) {
+    // v22: Full-content sermon search across every text-bearing column.
+    // Previously search filtered client-side on title / passage /
+    // series_title only — the notebooks, structured envelopes (observations
+    // / interpretation / redemptive_thread / implications / main_point_pair
+    // / sermon_frame), outline, and manuscript were invisible to search.
+    // With ~40+ sermons accumulating per year, the pastor's notes need to
+    // be findable across the whole library.
+    //
+    // Implementation: a regular SQLite table holding flattened plain text
+    // for each searchable column on each sermon. sql.js (the main DB's
+    // engine) doesn't compile FTS5 by default, so we use LIKE-based
+    // matching against the flattened text. Library sizes stay in the
+    // low hundreds; LIKE is plenty fast at that scale. The indexer keeps
+    // this table in sync via validateAndCommit hooks; the first-launch
+    // backfill below handles existing sermons.
+    db.run(`
+      CREATE TABLE IF NOT EXISTS sermon_search (
+        sermon_id TEXT PRIMARY KEY,
+        title TEXT NOT NULL DEFAULT '',
+        passage TEXT NOT NULL DEFAULT '',
+        series_title TEXT NOT NULL DEFAULT '',
+        observations TEXT NOT NULL DEFAULT '',
+        interpretation TEXT NOT NULL DEFAULT '',
+        redemptive_thread TEXT NOT NULL DEFAULT '',
+        implications TEXT NOT NULL DEFAULT '',
+        main_point_pair TEXT NOT NULL DEFAULT '',
+        outline TEXT NOT NULL DEFAULT '',
+        manuscript TEXT NOT NULL DEFAULT '',
+        sermon_frame TEXT NOT NULL DEFAULT '',
+        notebook_study TEXT NOT NULL DEFAULT '',
+        notebook_blueprint TEXT NOT NULL DEFAULT '',
+        notebook_manuscript TEXT NOT NULL DEFAULT '',
+        delivery_notes TEXT NOT NULL DEFAULT '',
+        timing_notes TEXT NOT NULL DEFAULT ''
+      )
+    `);
+    // Backfill: index every existing sermon. Cheap for typical libraries
+    // (~40-100 sermons); a no-op on a fresh install with zero rows.
+    const rows = queryAll(
+      `SELECT s.*, sr.title AS series_title
+         FROM sermons s
+         LEFT JOIN series sr ON sr.id = s.series_id`
+    );
+    for (const row of rows) {
+      indexSermonFtsFromRow(row);
+    }
+    db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '22')");
+    version = 22;
+  }
 }
 
 // Verify the live schema matches the SERMON_COLUMNS / SERIES_COLUMNS allowlists
@@ -1038,6 +1089,227 @@ function buildUpdate(fields, allowedColumns) {
     setClauses: entries.map(([k]) => `${k} = ?`).join(", "),
     values: entries.map(([, v]) => v),
   };
+}
+
+// ── Sermon search indexer (v22) ───────────────────────────────────────────────
+//
+// Maintains the `sermon_search` table in sync with `sermons`. Every
+// create / update / delete in `validateAndCommit` calls `indexSermonFts(id)`
+// so the search row reflects current state. JSON-envelope columns
+// (observations / interpretation / redemptive_thread / implications /
+// main_point_pair / sermon_frame / outline / manuscript) are flattened to
+// concatenated text so search hits read as natural prose instead of
+// tokenizing on `{`, `}`, and `"`.
+//
+// Why not FTS5: sql.js (the main DB's engine) doesn't compile the FTS5
+// extension by default. Rather than swap WASM builds, the search table is
+// a regular SQLite table with the flattened text stored column-by-column;
+// search runs as LIKE matching across the indexed columns + JS-side
+// snippet generation. Fast enough at typical pastor library sizes
+// (under ~500 sermons).
+
+// Walk a parsed JSON value, concatenating every string leaf with a space.
+// Returns "" for null / undefined / non-string-non-collection scalars.
+function flattenJsonToText(value) {
+  if (value == null) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return "";
+  if (Array.isArray(value)) {
+    return value.map(flattenJsonToText).filter(Boolean).join(" ");
+  }
+  if (typeof value === "object") {
+    return Object.values(value).map(flattenJsonToText).filter(Boolean).join(" ");
+  }
+  return "";
+}
+
+// Parse a JSON string column (defensive — returns "" if invalid).
+function extractJsonText(raw) {
+  if (!raw || typeof raw !== "string") return "";
+  try {
+    return flattenJsonToText(JSON.parse(raw));
+  } catch {
+    // Legacy plain-text values get indexed as-is.
+    return raw;
+  }
+}
+
+// The set of columns the search row carries, paired with which sermon
+// column to source from. Used by both the indexer and the snippet pass.
+// Order is intentional — earlier entries take precedence in the snippet
+// "which column matched" report.
+const SERMON_SEARCH_COLUMNS = [
+  { key: "title",               source: "title",               json: false },
+  { key: "passage",             source: "passage",             json: false },
+  { key: "series_title",        source: "series_title",        json: false },
+  { key: "manuscript",          source: "manuscript",          json: true  },
+  { key: "notebook_study",      source: "notebook_study",      json: false },
+  { key: "notebook_blueprint",  source: "notebook_blueprint",  json: false },
+  { key: "notebook_manuscript", source: "notebook_manuscript", json: false },
+  { key: "main_point_pair",     source: "main_point_pair",     json: true  },
+  { key: "sermon_frame",        source: "sermon_frame",        json: true  },
+  { key: "observations",        source: "observations",        json: true  },
+  { key: "interpretation",      source: "interpretation",      json: true  },
+  { key: "redemptive_thread",   source: "redemptive_thread",   json: true  },
+  { key: "implications",        source: "implications",        json: true  },
+  { key: "outline",             source: "outline",             json: true  },
+  { key: "delivery_notes",      source: "delivery_notes",      json: false },
+  { key: "timing_notes",        source: "timing_notes",        json: false },
+];
+
+// Index a sermon row (with joined series_title) into sermon_search.
+// Caller passes a row object that already has the JOIN result populated.
+function indexSermonFtsFromRow(row) {
+  if (!row || !row.id) return;
+  db.run("DELETE FROM sermon_search WHERE sermon_id = ?", [row.id]);
+  const values = [row.id];
+  for (const col of SERMON_SEARCH_COLUMNS) {
+    const raw = row[col.source];
+    values.push(col.json ? extractJsonText(raw) : (raw || ""));
+  }
+  const colNames = SERMON_SEARCH_COLUMNS.map((c) => c.key).join(", ");
+  const placeholders = SERMON_SEARCH_COLUMNS.map(() => "?").join(", ");
+  db.run(
+    `INSERT INTO sermon_search (sermon_id, ${colNames}) VALUES (?, ${placeholders})`,
+    values,
+  );
+}
+
+// Look up the sermon (+ joined series title) and re-index. Used by
+// validateAndCommit after every sermon write.
+function indexSermonFts(sermonId) {
+  if (!sermonId) return;
+  const row = queryOne(
+    `SELECT s.*, sr.title AS series_title
+       FROM sermons s
+       LEFT JOIN series sr ON sr.id = s.series_id
+      WHERE s.id = ?`,
+    [sermonId],
+  );
+  if (row) indexSermonFtsFromRow(row);
+}
+
+// Drop the sermon's search row. Used by delete-sermon.
+function dropSermonFts(sermonId) {
+  if (!sermonId) return;
+  db.run("DELETE FROM sermon_search WHERE sermon_id = ?", [sermonId]);
+}
+
+// Build a single-snippet string for a matched search row. Scans every
+// indexed column for the first occurrence of any query token; returns
+// a short window around that occurrence with the matched range marked.
+// `…` ellipsis is added when the window doesn't start/end at the field
+// boundary. Returns "" if no column contains any token.
+function buildSearchSnippet(row, tokens) {
+  if (!tokens.length) return "";
+  const window = 64; // characters around the match
+  for (const col of SERMON_SEARCH_COLUMNS) {
+    const text = row[col.key] || "";
+    if (!text) continue;
+    const lower = text.toLowerCase();
+    let bestStart = -1;
+    let matchedToken = "";
+    for (const tok of tokens) {
+      const idx = lower.indexOf(tok);
+      if (idx >= 0 && (bestStart < 0 || idx < bestStart)) {
+        bestStart = idx;
+        matchedToken = tok;
+      }
+    }
+    if (bestStart < 0) continue;
+    const start = Math.max(0, bestStart - window);
+    const end = Math.min(text.length, bestStart + matchedToken.length + window);
+    const prefix = start > 0 ? "…" : "";
+    const suffix = end < text.length ? "…" : "";
+    // Wrap the matched token in ‹mark› markers so the renderer can
+    // highlight without an extra round-trip. ‹/› (single guillemet) is
+    // chosen over `<>` to avoid HTML-escaping in the render path.
+    const before = text.slice(start, bestStart);
+    const match  = text.slice(bestStart, bestStart + matchedToken.length);
+    const after  = text.slice(bestStart + matchedToken.length, end);
+    return {
+      column: col.key,
+      snippet: `${prefix}${before}‹mark›${match}‹/mark›${after}${suffix}`,
+    };
+  }
+  return { column: "", snippet: "" };
+}
+
+// Search interface — runs LIKE-based queries against sermon_search +
+// joins back to the sermon row so the renderer gets a small, navigation-
+// ready result envelope.
+//
+// Tokenization: split on whitespace, drop tokens shorter than 2 chars,
+// lowercase for case-insensitive matching. A row matches when ANY token
+// appears in ANY indexed column (OR semantics — the looser, more
+// forgiving default).
+function tokenizeSearchInput(input) {
+  if (!input || typeof input !== "string") return [];
+  return input
+    .toLowerCase()
+    .replace(/[%_]/g, " ") // strip LIKE wildcards so the pastor can't bleed pattern syntax
+    .split(/\s+/)
+    .map((t) => t.trim())
+    .filter((t) => t.length >= 2);
+}
+
+function searchSermonsFts(rawQuery, limit = 50) {
+  const tokens = tokenizeSearchInput(rawQuery);
+  if (!tokens.length) return [];
+
+  // Build a WHERE clause that ORs each token against each indexed column.
+  // Parameterized LIKE patterns — safe against injection.
+  const colNames = SERMON_SEARCH_COLUMNS.map((c) => c.key);
+  const tokenClauses = tokens.map(() =>
+    "(" + colNames.map((c) => `LOWER(ss.${c}) LIKE ?`).join(" OR ") + ")"
+  ).join(" AND ");
+  // AND semantics across tokens — every token must appear somewhere on
+  // the row (any column). This narrows results when the pastor types
+  // more words, which matches the "more specific = fewer hits"
+  // expectation. Within a token, OR across columns.
+  const params = [];
+  for (const tok of tokens) {
+    const like = `%${tok}%`;
+    for (const _col of colNames) params.push(like);
+  }
+
+  try {
+    const rows = queryAll(
+      `SELECT
+         s.id, s.title, s.passage, s.series_id, s.stage, s.date,
+         s.current_stage, s.current_sub_phase,
+         sr.title AS series_title,
+         ${colNames.map((c) => `ss.${c} AS ${c}`).join(", ")}
+       FROM sermon_search ss
+       JOIN sermons s ON s.id = ss.sermon_id
+       LEFT JOIN series sr ON sr.id = s.series_id
+       WHERE ${tokenClauses}
+       ORDER BY s.updated_at DESC, s.created_at DESC
+       LIMIT ?`,
+      [...params, limit],
+    );
+    // Build snippets in JS — column-precedence + windowing live here so
+    // the SQL stays simple and the renderer gets a ready-to-render shape.
+    return rows.map((r) => {
+      const { column, snippet } = buildSearchSnippet(r, tokens);
+      return {
+        id: r.id,
+        title: r.title,
+        passage: r.passage,
+        series_id: r.series_id,
+        series_title: r.series_title,
+        stage: r.stage,
+        date: r.date,
+        current_stage: r.current_stage,
+        current_sub_phase: r.current_sub_phase,
+        matchedColumn: column,
+        snippet,
+      };
+    });
+  } catch (e) {
+    logError(`[searchSermonsFts] query failed: ${rawQuery}`, e);
+    return [];
+  }
 }
 
 // ── Spine — the only sermon/series state surface ─────────────────────────────
@@ -1301,6 +1573,7 @@ function validateAndCommit(op, payload) {
           SUB_PHASE.Observe,
         ],
       );
+      indexSermonFts(id);
       saveDb();
       return success({ id });
     }
@@ -1355,6 +1628,7 @@ function validateAndCommit(op, payload) {
         `UPDATE sermons SET ${update.setClauses}, updated_at = datetime('now') WHERE id = ?`,
         [...update.values, id],
       );
+      indexSermonFts(id);
       saveDb();
       return success();
     }
@@ -1376,16 +1650,30 @@ function validateAndCommit(op, payload) {
         return rejection("UPDATE_NO_FIELDS", "State #5", "No valid fields to update.");
       }
       db.run(`UPDATE series SET ${update.setClauses} WHERE id = ?`, [...update.values, id]);
+      // Series title is part of every sermon-FTS row; if it changed,
+      // re-index every sermon attached to this series.
+      if (Object.prototype.hasOwnProperty.call(fields || {}, "title")) {
+        const sermonRows = queryAll("SELECT id FROM sermons WHERE series_id = ?", [id]);
+        for (const r of sermonRows) indexSermonFts(r.id);
+      }
       saveDb();
       return success();
     }
 
     case "delete-sermon":
       db.run("DELETE FROM sermons WHERE id = ?", [payload]);
+      dropSermonFts(payload);
       saveDb();
       return success();
 
-    case "delete-series":
+    case "delete-series": {
+      // Capture the sermon ids attached to this series BEFORE the cascade
+      // nullifies their series_id, so we can re-index each one with its
+      // series_title cleared from the FTS row.
+      const affectedSermonRows = queryAll(
+        "SELECT id FROM sermons WHERE series_id = ?",
+        [payload],
+      );
       db.run("BEGIN");
       try {
         db.run("DELETE FROM series_sections WHERE series_id = ?", [payload]);
@@ -1396,8 +1684,10 @@ function validateAndCommit(op, payload) {
         db.run("ROLLBACK");
         throw e;
       }
+      for (const r of affectedSermonRows) indexSermonFts(r.id);
       saveDb();
       return success();
+    }
 
     case "create-section": {
       const id = randomUUID();
@@ -1601,6 +1891,7 @@ function validateAndCommit(op, payload) {
           `UPDATE sermons SET ${field} = ?, updated_at = datetime('now') WHERE id = ?`,
           [serialized, sermonId],
         );
+        indexSermonFts(sermonId);
         saveDb();
         return success();
       }
@@ -1664,6 +1955,13 @@ function validateAndCommit(op, payload) {
         db.run("ROLLBACK");
         throw e;
       }
+      // Search index: drop any stale tour rows + re-index the freshly-
+      // inserted one. The DELETE above runs against `sermons`;
+      // `sermon_search` is a separate table and needs its own cleanup.
+      // Index the freshly-inserted sermon so search finds the tour
+      // content immediately.
+      db.run("DELETE FROM sermon_search WHERE sermon_id LIKE 'tour-%'");
+      indexSermonFts(SERMON_ID);
       saveDb();
       return success({ sermonId: SERMON_ID, created: true });
     }
@@ -1678,6 +1976,7 @@ function validateAndCommit(op, payload) {
         db.run("ROLLBACK");
         throw e;
       }
+      db.run("DELETE FROM sermon_search WHERE sermon_id LIKE 'tour-%'");
       saveDb();
       return success();
 
@@ -1697,6 +1996,20 @@ const SPINE_READ_OPS = new Set([
   "get-sermons-by-series",
   "get-sections-by-series",
 ]);
+
+// Sermon FTS — full-text search over all sermon content (v22). Separate
+// IPC channel because it's a read-only auxiliary surface, not a spine
+// transition. Returns up to `limit` hits (default 50) ranked by FTS5.
+ipcMain.handle("db-searchSermons", (_, payload) => {
+  try {
+    const query = typeof payload === "string" ? payload : (payload?.query || "");
+    const limit = (payload && typeof payload.limit === "number") ? payload.limit : 50;
+    return searchSermonsFts(query, limit);
+  } catch (e) {
+    logError("[db-searchSermons] uncaught error", e);
+    return [];
+  }
+});
 
 ipcMain.handle("spine", (_, op, payload) => {
   try {

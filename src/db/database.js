@@ -42,6 +42,23 @@ export const getTheologyStatus      = ()                    => api.getTheologySt
 export const searchTheologyLibrary  = (query, limit = 5)   => api.searchTheologyLibrary(query, limit);
 export const getTheologyChunks      = (ids, maxChars = 600) => api.getTheologyChunks(ids, maxChars);
 
+// ── Sermon full-content search (v22 schema, post-WTC audit follow-up) ─────
+//
+// Searches across every text column on every sermon — title, passage,
+// series_title, manuscripts, notebooks, structured envelopes (Study sub-
+// phases + Main Point Pair + Sermon Frame), outline, delivery notes.
+// JSON envelope columns are indexed as their flattened leaf text so search
+// hits read as natural prose. Returns an array of { id, title, passage,
+// series_id, series_title, stage, date, current_stage, current_sub_phase,
+// matchedColumn, snippet } sorted by sermon recency.
+//
+// Implementation note: sql.js doesn't ship FTS5 by default, so the search
+// table is a regular SQLite table with flattened text per column and
+// LIKE-based matching. JS-side snippet generation marks matched ranges
+// with `‹mark›…‹/mark›` (single guillemets, not HTML brackets) so the
+// renderer can split on them without HTML escaping concerns.
+export const searchSermons = (query, limit = 50) => api.searchSermons(query, limit);
+
 // ── Bible passage viewer ──────────────────────────────────────────────────
 export const fetchPassage = (passage) => api.fetchPassage(passage);
 
