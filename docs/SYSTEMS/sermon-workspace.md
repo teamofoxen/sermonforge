@@ -2,8 +2,18 @@
 
 > Rewritten post-ARI (2026-05-09). All AI surfaces are gone. This document
 > reflects the current state of the codebase.
+>
+> **Post-workspace-restructure (2026-05-10):** Workspace collapsed from
+> 4 stages (Study / Blueprint / Frame / Manuscript) to 3 (Study / Assembly /
+> Manuscript). The within-Study Step layer retired. Study is now just
+> Exegesis (4 sub-phases). Assembly hosts the former Step 2/3/4 work plus
+> the former Frame stage's Intro/Conclusion, as four sub-phases: Anchor
+> (MPT/MPS), Outline, Equip (FE), Frame. Sections below referring to "Step 2
+> / 3 / 4 / Blueprint / Frame stage" map onto Assembly's sub-phases —
+> field content unchanged, named outcomes preserved. See
+> [`docs/PROPOSALS/workspace-restructure-charter.md`](../PROPOSALS/workspace-restructure-charter.md).
 
-> Component: `src/components/SermonWorkspace.jsx`.
+> Components: `src/components/SermonWorkspace.jsx` (3-tab shell), `StudyTab.jsx` (Study stage / Exegesis), `AssemblyTab.jsx` (Assembly stage / 4 sub-phases), `ManuscriptTab.jsx` (Manuscript stage).
 
 ---
 

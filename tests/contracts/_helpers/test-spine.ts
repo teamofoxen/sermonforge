@@ -26,12 +26,28 @@ import { randomUUID } from "node:crypto";
 // Mirror of the contract values from src/core/contracts.ts. Importing the
 // .ts directly would pull in browser-side IPC bridge code; safer to mirror
 // the small set the spine handler needs.
-export const STAGE = { Study: "Study", Blueprint: "Blueprint", Frame: "Frame", Manuscript: "Manuscript", Delivery: "Delivery" } as const;
-export const STAGE_SEQUENCE = ["Study", "Blueprint", "Frame", "Manuscript", "Delivery"] as const;
-export const STEP = { Exegesis: "Exegesis", MPT_MPS: "MPT_MPS", Outline: "Outline", FunctionalElements: "FunctionalElements" } as const;
-export const STEP_CANONICAL_SEQUENCE = ["Exegesis", "MPT_MPS", "Outline", "FunctionalElements"] as const;
-export const SUB_PHASE = { Observe: "Observe", Interpret: "Interpret", RedemptiveThread: "RedemptiveThread", Implications: "Implications" } as const;
-export const SUB_PHASE_CANONICAL_SEQUENCE = ["Observe", "Interpret", "RedemptiveThread", "Implications"] as const;
+// Workspace Restructure (2026-05-10) — Stage collapses to three (Blueprint
+// + Frame retired); Step layer retires; SubPhase extends with Assembly's
+// Anchor / Outline / Equip / Frame.
+export const STAGE = { Study: "Study", Assembly: "Assembly", Manuscript: "Manuscript", Delivery: "Delivery" } as const;
+export const STAGE_SEQUENCE = ["Study", "Assembly", "Manuscript"] as const;
+export const SUB_PHASE = {
+  Observe: "Observe", Interpret: "Interpret", RedemptiveThread: "RedemptiveThread", Implications: "Implications",
+  Anchor: "Anchor", Outline: "Outline", Equip: "Equip", Frame: "Frame",
+} as const;
+export const STUDY_SUB_PHASE_SEQUENCE = ["Observe", "Interpret", "RedemptiveThread", "Implications"] as const;
+export const ASSEMBLY_SUB_PHASE_SEQUENCE = ["Anchor", "Outline", "Equip", "Frame"] as const;
+export const SUB_PHASE_CANONICAL_SEQUENCE = [
+  ...STUDY_SUB_PHASE_SEQUENCE, ...ASSEMBLY_SUB_PHASE_SEQUENCE,
+] as const;
+export const SUB_PHASE_STAGE: Record<string, string> = {
+  Observe: "Study", Interpret: "Study", RedemptiveThread: "Study", Implications: "Study",
+  Anchor: "Assembly", Outline: "Assembly", Equip: "Assembly", Frame: "Assembly",
+};
+function coerceLegacyStage(stage: string | null | undefined): string {
+  if (stage === "Blueprint" || stage === "Frame") return STAGE.Assembly;
+  return stage || STAGE.Study;
+}
 export const SERMON_STATUS = { InProgress: "in_progress", Complete: "complete" } as const;
 export const SERIES_STATUS = { InProgress: "in_progress", Complete: "complete" } as const;
 export const MUTATION_KIND = { UserInput: "user_input", AiProposal: "ai_proposal", AiApply: "ai_apply" } as const;
@@ -113,13 +129,15 @@ function isLegacy(row: Row): boolean {
 
 function shapeSermon(row: Row | undefined, parentContext: any) {
   if (!row) return null;
+  // Workspace Restructure (2026-05-10) — legacy stage coercion mirrors
+  // electron/main.js's shapeSermon path.
+  const stage = coerceLegacyStage(row.current_stage);
   return {
     id: row.id,
     name: row.title || "",
     status: row.stage || SERMON_STATUS.InProgress,
     position: {
-      stage: row.current_stage || STAGE.Study,
-      step: row.current_step || undefined,
+      stage,
       subPhase: row.current_sub_phase || undefined,
     },
     parentContext,
@@ -128,6 +146,7 @@ function shapeSermon(row: Row | undefined, parentContext: any) {
     preacher: row.preacher || "",
     legacy: isLegacy(row),
     ...row,
+    current_stage: stage,
   };
 }
 
@@ -214,7 +233,7 @@ function validateAndCommit(op: string, payload: any) {
         stage: SERMON_STATUS.InProgress,
         mpt: "", mps: "", observations: "", interpretation: "", redemptive_thread: "",
         implications: "", outline: "[]", manuscript: "", functional_elements: "{}",
-        current_stage: STAGE.Study, current_step: STEP.Exegesis, current_sub_phase: SUB_PHASE.Observe,
+        current_stage: STAGE.Study, current_step: null, current_sub_phase: SUB_PHASE.Observe,
         created_at: new Date().toISOString(),
       });
       return success({ id });
@@ -295,28 +314,26 @@ function validateAndCommit(op: string, payload: any) {
       return success();
     }
     case "transition-state": {
-      const { sermonId, to, evidence, direction, kind } = payload || {};
+      const { sermonId, evidence, direction, kind } = payload || {};
+      let { to } = payload || {};
       const row = sermons.get(sermonId);
       if (!row) return rejection("NOT_FOUND", "State #1", `Sermon ${sermonId} not found.`);
+      // Workspace Restructure (2026-05-10) — coerce legacy stage values in
+      // `to` so old fixtures using STAGE.Blueprint / STAGE.Frame still
+      // resolve cleanly to STAGE.Assembly.
+      if (kind === "stage") to = coerceLegacyStage(to);
+      const currentStage = coerceLegacyStage(row.current_stage);
       const evidenceTrimmed = (evidence || "").trim();
       if (direction === "forward" && !evidenceTrimmed && !isLegacy(row)) {
         return rejection("PROCESS_2_EMPTY_EVIDENCE", "Process #2",
           "Process Contract #2 violation: movement is gated by user evidence — the constraint is the gate.");
       }
       if (kind === "stage" && direction === "forward") {
-        const fromIdx = STAGE_SEQUENCE.indexOf(row.current_stage);
+        const fromIdx = STAGE_SEQUENCE.indexOf(currentStage as any);
         const toIdx = STAGE_SEQUENCE.indexOf(to);
         if (fromIdx >= 0 && toIdx >= 0 && toIdx <= fromIdx) {
           return rejection("PROCESS_1_FORWARD_TO_PRIOR", "Process #1",
             "Process Contract #1 violation: forward direction cannot move to a prior stage (movement is monotonic by default).");
-        }
-      }
-      if (kind === "step" && direction === "forward") {
-        const fromIdx = STEP_CANONICAL_SEQUENCE.indexOf(row.current_step);
-        const toIdx = STEP_CANONICAL_SEQUENCE.indexOf(to);
-        if (fromIdx >= 0 && toIdx >= 0 && toIdx <= fromIdx) {
-          return rejection("PROCESS_1_FORWARD_TO_PRIOR", "Process #1",
-            "Process Contract #1 violation: forward direction cannot move to a prior step.");
         }
       }
       if (kind === "sub_phase" && direction === "forward") {
@@ -329,16 +346,19 @@ function validateAndCommit(op: string, payload: any) {
       }
       if (kind === "stage") {
         row.current_stage = to;
-        row.current_step = to === STAGE.Study ? STEP.Exegesis : null;
-        row.current_sub_phase = to === STAGE.Study ? SUB_PHASE.Observe : null;
-      } else if (kind === "step") {
-        row.current_step = to;
-        row.current_sub_phase = to === STEP.Exegesis ? SUB_PHASE.Observe : null;
+        row.current_step = null;
+        row.current_sub_phase = to === STAGE.Study ? SUB_PHASE.Observe
+          : to === STAGE.Assembly ? SUB_PHASE.Anchor
+          : null;
       } else if (kind === "sub_phase") {
+        const targetStage = SUB_PHASE_STAGE[to];
+        if (targetStage && targetStage !== currentStage) {
+          row.current_stage = targetStage;
+        }
         row.current_sub_phase = to;
       } else {
         return rejection("STATE_5_NONCANONICAL_TO", "State #5",
-          `'to' must be a canonical Stage/Step/SubPhase value (got '${to}').`);
+          `'to' must be a canonical Stage or SubPhase value (got '${to}').`);
       }
       return success();
     }
@@ -414,7 +434,7 @@ function validateAndCommit(op: string, payload: any) {
       const id = "tour-test-sermon";
       sermons.set(id, {
         id, title: "Tour sermon", stage: SERMON_STATUS.InProgress,
-        current_stage: STAGE.Study, current_step: STEP.Exegesis, current_sub_phase: SUB_PHASE.Observe,
+        current_stage: STAGE.Study, current_step: null, current_sub_phase: SUB_PHASE.Observe,
         outline: "[]", functional_elements: "{}", observations: "", created_at: new Date().toISOString(),
       });
       return success({ sermonId: id, created: true });
@@ -561,7 +581,7 @@ export function insertSermonRow(row: Partial<Row>): string {
     id, title: row.title ?? "fixture",
     stage: row.stage ?? SERMON_STATUS.InProgress,
     current_stage: row.current_stage ?? STAGE.Study,
-    current_step: row.current_step ?? STEP.Exegesis,
+    current_step: row.current_step ?? null,
     current_sub_phase: row.current_sub_phase ?? SUB_PHASE.Observe,
     outline: row.outline ?? "[]",
     functional_elements: row.functional_elements ?? "{}",

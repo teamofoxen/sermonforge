@@ -31,6 +31,13 @@ describe("Process Contract #3: movement is a visible event", () => {
   beforeEach(() => {
     installTestSpine();
     resetTestSpine();
+    // Workspace Restructure (2026-05-10) — Study + Assembly default to the
+    // switchback trail rendering. These tests assert on the legacy three-
+    // column shell's `Continue to Interpret →` button text, so opt out
+    // of the trail via the localStorage flag.
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem("sermonforge_trail_disabled", "1");
+    }
   });
 
   it("changing the active tab in SermonWorkspace renders a movement-event element", async () => {
@@ -55,11 +62,13 @@ describe("Process Contract #3: movement is a visible event", () => {
       );
     });
 
-    // Find the Blueprint tab button and click it. handleTabChange records
+    // Find the Assembly tab button and click it. handleTabChange records
     // a movement event; the canonical marker must then surface in the DOM.
-    const blueprintTab = await screen.findByText(/Blueprint/i);
+    // Workspace Restructure (2026-05-10) — Blueprint tab retired; the
+    // Study → Assembly transition is the canonical first stage advance.
+    const assemblyTab = await screen.findByText(/^Assembly$/);
     await act(async () => {
-      fireEvent.click(blueprintTab);
+      fireEvent.click(assemblyTab);
     });
 
     // findByTestId throws if the marker is absent — prevents vacuous pass.

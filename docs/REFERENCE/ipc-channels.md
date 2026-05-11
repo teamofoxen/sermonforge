@@ -43,7 +43,7 @@ Single channel for all sermon, series, and section state. Operations dispatch to
 | `create-section` | `{ series_id, title, sort_order? }` | — |
 | `update-section` | `{ id, ...fields }` | — |
 | `delete-section` | sectionId string | — |
-| `transition-state` | `{ sermonId, targetStage?, targetStep?, targetSubPhase? }` | Process #1 + #2 enforcement |
+| `transition-state` | `{ sermonId, to, evidence, direction, kind }` where `to` is a `Stage` or `SubPhase` enum value and `kind` is `"stage" \| "sub_phase"` | Process #1 + #2 enforcement. (Workspace Restructure 2026-05-10: legacy `kind: "step"` retired; legacy `to: "Blueprint" \| "Frame"` coerced to `Assembly` server-side.) |
 | `apply-mutation` | `{ sermonId, field, value, proposalId? }` | Mutation #1 + #2 enforcement |
 | `load-tour-sermon` | — | Seeds or reuses tour record |
 | `remove-tour-sermon` | — | Deletes tour record; idempotent |

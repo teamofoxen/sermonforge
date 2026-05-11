@@ -1,6 +1,8 @@
 # Sermon Anchor Definition Initiative (SADI) — Charter
 
 > **Post-ARI status (2026-05-09):** SADI closed before the AI Removal Initiative. The "AI augments. AI does not substitute" non-negotiable below is now structural-by-absence — the AI subsystem was deleted in ARI Phase 8 (2026-05-09). The four anchor fields (MPT, MPS, Intro, Conclusion), the two named outcomes (Main Point Pair, Sermon Frame), and the step-boundary handoffs remain binding. See [`ai-removal-initiative.md`](./ai-removal-initiative.md) for the full initiative.
+>
+> **Post-workspace-restructure status (2026-05-10):** SADI's anchor *steps* (Step 2 — MPT/MPS, Step 5 — Intro/Conclusion) became anchor *sub-phases* inside the new Assembly stage when the Workspace Restructure collapsed the 4-stage shell to 3 stages (Study / Assembly / Manuscript). Anchor = MPT/MPS sub-phase; Frame = Intro/Conclusion sub-phase. Field content, named outcomes, and per-field walks are unchanged — only the level at which the anchors live changed. See [`workspace-restructure-charter.md`](./workspace-restructure-charter.md).
 
 **Status:** Drafted 2026-05-04; **ratification walk complete 2026-05-04** (eleven structural rulings landed). Per-field content-design walks remain (overview body text, Q1-Q4 pastor-side framing copy, example outputs). Working SADI document at [`sermon-anchor-definition-initiative.md`](./sermon-anchor-definition-initiative.md) carries seven-slot entries for all four anchor fields, named-outcome declarations for both steps, handoff articulations, and a SADI-wide commitments section consolidating the cross-field rulings.
 **Audience:** The lone developer of SermonForge, who is also a pastor and the pastor-user. Written in plain language, no engineering vocabulary required.

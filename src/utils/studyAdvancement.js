@@ -11,7 +11,7 @@
 // The Q3 pilot ships the empty-evidence baseline; SFDI's thresholds extend
 // `evaluateAdvance` without UI changes.
 
-import { STAGE, STEP, SUB_PHASE } from "../core/contracts";
+import { STAGE, SUB_PHASE, STUDY_SUB_PHASE_SEQUENCE, ASSEMBLY_SUB_PHASE_SEQUENCE } from "../core/contracts";
 import {
   parseStructuredField,
   answeredQuestions,
@@ -21,25 +21,41 @@ import {
   DEFAULT_QUESTION_KEY,
 } from "./studyFields";
 
-const SUB_PHASE_BY_INDEX = [SUB_PHASE.Observe, SUB_PHASE.Interpret, SUB_PHASE.RedemptiveThread, SUB_PHASE.Implications];
-const STEP_BY_INDEX = [STEP.Exegesis, STEP.MPT_MPS, STEP.Outline, STEP.FunctionalElements];
-// SPRD C3 — STAGE_BY_INDEX mirrors STAGE_SEQUENCE; used by evaluateAdvance
-// when kind === "stage" (currently only Frame → Manuscript at fromIndex=3).
-const STAGE_BY_INDEX = [STAGE.Study, STAGE.Blueprint, STAGE.Frame, STAGE.Manuscript, STAGE.Delivery];
+// Per-stage sub-phase index lookup. `canonicalSubPhase(n, stage)` resolves
+// a 1-based sub-phase index to its enum value within the named stage.
+// Stage defaults to Study so single-arg call sites that predate the
+// per-stage sub-phase layer keep working.
+const SUB_PHASE_BY_INDEX = {
+  [STAGE.Study]: STUDY_SUB_PHASE_SEQUENCE,
+  [STAGE.Assembly]: ASSEMBLY_SUB_PHASE_SEQUENCE,
+};
 
+// STAGE_BY_INDEX mirrors STAGE_SEQUENCE; used by evaluateAdvance
+// when kind === "stage". Indexes: 1=Study, 2=Assembly, 3=Manuscript.
+const STAGE_BY_INDEX = [STAGE.Study, STAGE.Assembly, STAGE.Manuscript, STAGE.Delivery];
+
+// "outline" here is the database column name (the JSON column that holds
+// the sermon's outline data), not the pre-Pilot-B stage alias the
+// `canonical-stage-name` lint rule guards against.
+/* eslint-disable sermonforge/canonical-stage-name */
 const SUB_PHASE_FIELD_MAP = {
   [SUB_PHASE.Observe]: "observations",
   [SUB_PHASE.Interpret]: "interpretation",
   [SUB_PHASE.RedemptiveThread]: "redemptive_thread",
   [SUB_PHASE.Implications]: "implications",
+  // Assembly sub-phases map to their canonical columns. Anchor's source-
+  // column is the v19 main_point_pair envelope; Outline + Equip + Frame
+  // use their existing JSON columns.
+  [SUB_PHASE.Anchor]: "main_point_pair",
+  [SUB_PHASE.Outline]: "outline",
+  [SUB_PHASE.Equip]: "functional_elements",
+  [SUB_PHASE.Frame]: "sermon_frame",
 };
+/* eslint-enable sermonforge/canonical-stage-name */
 
-export function canonicalSubPhase(n) {
-  return SUB_PHASE_BY_INDEX[n - 1];
-}
-
-export function canonicalStep(n) {
-  return STEP_BY_INDEX[n - 1];
+export function canonicalSubPhase(n, stage = STAGE.Study) {
+  const seq = SUB_PHASE_BY_INDEX[stage];
+  return seq ? seq[n - 1] : undefined;
 }
 
 // Evidence joins all answered (non-N/A, non-empty) text-prompt values across
@@ -47,6 +63,16 @@ export function canonicalStep(n) {
 export function buildSubPhaseEvidence(sermon, subPhase) {
   const fieldName = SUB_PHASE_FIELD_MAP[subPhase];
   if (!fieldName || !sermon) return "";
+  // Outline + FE columns are not envelope-shaped; treat as raw JSON strings
+  // with the "[]" / "{}" empty-shape sentinels.
+  if (subPhase === SUB_PHASE.Outline) {
+    const o = (sermon.outline || "").trim();
+    return o === "" || o === "[]" ? "" : o;
+  }
+  if (subPhase === SUB_PHASE.Equip) {
+    const fe = (sermon.functional_elements || "").trim();
+    return fe === "" || fe === "{}" ? "" : fe;
+  }
   const data = parseStructuredField(sermon[fieldName]);
   if (!data || typeof data !== "object") return "";
   const parts = answeredQuestions(data).map((a) => a.value);
@@ -54,30 +80,6 @@ export function buildSubPhaseEvidence(sermon, subPhase) {
     parts.push(data.legacy_notes.trim());
   }
   return parts.join("\n");
-}
-
-export function buildStepEvidence(sermon, step) {
-  if (!sermon) return "";
-  if (step === STEP.Exegesis) {
-    return [
-      buildSubPhaseEvidence(sermon, SUB_PHASE.Observe),
-      buildSubPhaseEvidence(sermon, SUB_PHASE.Interpret),
-      buildSubPhaseEvidence(sermon, SUB_PHASE.RedemptiveThread),
-      buildSubPhaseEvidence(sermon, SUB_PHASE.Implications),
-    ].filter((s) => s).join("\n");
-  }
-  if (step === STEP.MPT_MPS) {
-    return [(sermon.mpt || "").trim(), (sermon.mps || "").trim()].filter((s) => s).join("\n");
-  }
-  if (step === STEP.Outline) {
-    const o = (sermon.outline || "").trim();
-    return o === "" || o === "[]" ? "" : o;
-  }
-  if (step === STEP.FunctionalElements) {
-    const fe = (sermon.functional_elements || "").trim();
-    return fe === "" || fe === "{}" ? "" : fe;
-  }
-  return "";
 }
 
 export function buildStageEvidence(sermon, stage) {
@@ -89,21 +91,19 @@ export function buildStageEvidence(sermon, stage) {
     return t;
   };
   if (stage === STAGE.Study) {
+    // Study = exegesis only (Observe / Interpret / Redemptive / Implications).
     return [
       sermon.observations, sermon.interpretation,
       sermon.redemptive_thread, sermon.implications,
-      sermon.mpt, sermon.mps, sermon.outline, sermon.functional_elements,
     ].map(nonEmpty).filter((s) => s).join("\n");
   }
-  if (stage === STAGE.Blueprint) {
-    return [sermon.outline, sermon.functional_elements].map(nonEmpty).filter((s) => s).join("\n");
-  }
-  if (stage === STAGE.Frame) {
-    // SPRD C3 — Sermon Frame stage. Evidence is the JSON column carrying
-    // Intro + Conclusion; presence is enough at the empty-evidence baseline.
-    // The composite gate (checkSermonFrameComposite) layers stricter
-    // requirements at the Frame → Manuscript boundary.
-    return nonEmpty(sermon.sermon_frame);
+  if (stage === STAGE.Assembly) {
+    // Assembly = Anchor (main_point_pair + flat mpt/mps mirrors) + Outline
+    // + Equip (functional_elements) + Frame (sermon_frame).
+    return [
+      sermon.main_point_pair, sermon.mpt, sermon.mps,
+      sermon.outline, sermon.functional_elements, sermon.sermon_frame,
+    ].map(nonEmpty).filter((s) => s).join("\n");
   }
   if (stage === STAGE.Manuscript) {
     return nonEmpty(sermon.manuscript);
@@ -406,6 +406,51 @@ function checkMPSComposite(mppData) {
 // composite + MPS composite. Returns `{ gates, firstReason }` per the
 // established B1.6 shape; the disabled-Continue UI renders the
 // hover-checklist when there are multiple gates.
+// Anchor → Outline threshold ratification (RW2 resolved post-walkthrough):
+// every outline point must carry non-empty text. The pre-restructure gate
+// only checked outline.length >= 1, which let placeholder rows through.
+// Same `{ gates, firstReason }` shape as the other composites.
+function checkOutlineToEquipThreshold(sermon) {
+  let points = [];
+  try {
+    const raw = sermon?.outline;
+    const parsed = raw ? JSON.parse(raw) : [];
+    if (Array.isArray(parsed)) {
+      points = parsed.map((p, i) => ({
+        idx: i,
+        text: typeof p === "string" ? p : (typeof p?.text === "string" ? p.text : ""),
+      }));
+    }
+  } catch {
+    points = [];
+  }
+  const missing = points.filter((p) => !p.text.trim());
+  const gates = [
+    {
+      key: "outline_has_points",
+      label: "Outline points present",
+      met: points.length > 0,
+      reason: points.length > 0 ? undefined : "Add at least one outline point.",
+    },
+    {
+      key: "outline_all_named",
+      label: "Every point named",
+      met: points.length > 0 && missing.length === 0,
+      reason:
+        points.length === 0
+          ? undefined
+          : missing.length > 0
+            ? `${missing.length === 1 ? "Point" : "Points"} ${missing.map((m) => m.idx + 1).join(", ")} ${missing.length === 1 ? "is" : "are"} empty — name ${missing.length === 1 ? "it" : "them"} before equipping.`
+            : undefined,
+    },
+  ];
+  const firstFailing = gates.find((g) => !g.met);
+  return {
+    gates,
+    firstReason: firstFailing ? firstFailing.reason : null,
+  };
+}
+
 function checkStep2ToOutlineThreshold(sermon) {
   const mppData = parseStructuredField(sermon?.main_point_pair);
 
@@ -611,38 +656,46 @@ function checkObserveToInterpretThreshold(sermon) {
   };
 }
 
-export function evaluateAdvance(sermon, kind, fromIndex) {
+// `evaluateAdvance` gates an outbound transition. The `stage` arg (4th)
+// disambiguates Study sub-phases from Assembly sub-phases when
+// kind === "sub_phase". For kind === "stage", stage is ignored
+// (fromIndex is enough — 1=Study→Assembly, 2=Assembly→Manuscript).
+// kind === "step" is not accepted — returns ok:false. Call sites that
+// used the within-Study Step layer migrate to sub_phase + STAGE.Assembly:
+// `evaluateAdvance(sermon, "sub_phase", 1, STAGE.Assembly)` is Anchor →
+// Outline (the former MPT/MPS → Outline boundary).
+export function evaluateAdvance(sermon, kind, fromIndex, stage = STAGE.Study) {
   if (!sermon) return { ok: false, reason: "" };
   let evidence = "";
   if (kind === "sub_phase") {
     if (fromIndex < 4) {
-      evidence = buildSubPhaseEvidence(sermon, canonicalSubPhase(fromIndex));
+      // Mid-stage sub-phase boundary — evidence is the source sub-phase's
+      // column content.
+      evidence = buildSubPhaseEvidence(sermon, canonicalSubPhase(fromIndex, stage));
     } else {
-      evidence = buildStepEvidence(sermon, STEP.Exegesis);
+      // Advancing past the last sub-phase of a stage = stage transition.
+      // Evidence is the whole stage's accumulated content.
+      evidence = buildStageEvidence(sermon, stage);
     }
-  } else if (kind === "step") {
-    evidence = buildStepEvidence(sermon, canonicalStep(fromIndex));
   } else if (kind === "stage") {
-    // SPRD C3 — stage transitions evaluated against stage evidence. Currently
-    // wired for Frame → Manuscript (the new boundary the Sermon Frame
-    // elevation introduces). Other stage boundaries continue to be evaluated
-    // by the legacy click-then-banner UX in SermonWorkspace.
     evidence = buildStageEvidence(sermon, STAGE_BY_INDEX[fromIndex - 1]);
   }
   if (!evidence) {
     return { ok: false, reason: "Add some content before advancing." };
   }
 
-  // SFDI per-boundary thresholds layer on top of the empty-evidence baseline.
-  // Currently wired:
-  //   - Observe → Interpret              (kind=sub_phase, fromIndex=1) — B1.4 + B1.5
-  //   - Interpret → Redemptive Thread    (kind=sub_phase, fromIndex=2) — B2.2
-  //   - Redemptive Thread → Implications (kind=sub_phase, fromIndex=3) — B3.2
-  //   - Implications → MPT/MPS           (kind=sub_phase, fromIndex=4) — B4.2
-  // The threshold returns a structured `{gates, firstReason}` so the disabled-
-  // Continue UI can render either the legacy single-line hint (firstReason)
-  // or the multi-gate hover-checklist (gates) per B1.6.
-  if (kind === "sub_phase" && fromIndex === 1) {
+  // Study sub-phase boundary thresholds. SFDI per-boundary composites
+  // layer on top of the empty-evidence baseline:
+  //   - Observe → Interpret              (sub_phase, 1, Study) — B1.4 + B1.5
+  //   - Interpret → Redemptive Thread    (sub_phase, 2, Study) — B2.2
+  //   - Redemptive Thread → Implications (sub_phase, 3, Study) — B3.2
+  //   - Implications → next stage        (sub_phase, 4, Study) — B4.2
+  //     (the Study → Assembly stage boundary — fires the
+  //     `checkImplicationsToMPTMPSThreshold` composite)
+  // The threshold returns a structured `{gates, firstReason}` so the
+  // disabled-Continue UI can render either a single-line hint
+  // (firstReason) or the multi-gate hover-checklist (gates) per B1.6.
+  if (kind === "sub_phase" && stage === STAGE.Study && fromIndex === 1) {
     const result = checkObserveToInterpretThreshold(sermon);
     if (result.firstReason) {
       return {
@@ -655,7 +708,7 @@ export function evaluateAdvance(sermon, kind, fromIndex) {
       return { ok: true, gates: result.gates };
     }
   }
-  if (kind === "sub_phase" && fromIndex === 2) {
+  if (kind === "sub_phase" && stage === STAGE.Study && fromIndex === 2) {
     const result = checkInterpretToRedemptiveThreshold(sermon);
     if (result.firstReason) {
       return {
@@ -668,7 +721,7 @@ export function evaluateAdvance(sermon, kind, fromIndex) {
       return { ok: true, gates: result.gates };
     }
   }
-  if (kind === "sub_phase" && fromIndex === 3) {
+  if (kind === "sub_phase" && stage === STAGE.Study && fromIndex === 3) {
     const result = checkRedemptiveToImplicationsThreshold(sermon);
     if (result.firstReason) {
       return {
@@ -681,7 +734,13 @@ export function evaluateAdvance(sermon, kind, fromIndex) {
       return { ok: true, gates: result.gates };
     }
   }
-  if (kind === "sub_phase" && fromIndex === 4) {
+  // Study → Assembly stage boundary. Two equivalent call shapes resolve
+  // here: sub_phase fromIndex=4 with stage=Study (the renderer advancing
+  // past Implications) AND stage fromIndex=1 (an explicit stage advance).
+  if (
+    (kind === "sub_phase" && stage === STAGE.Study && fromIndex === 4) ||
+    (kind === "stage" && fromIndex === 1)
+  ) {
     const result = checkImplicationsToMPTMPSThreshold(sermon);
     if (result.firstReason) {
       return {
@@ -695,11 +754,20 @@ export function evaluateAdvance(sermon, kind, fromIndex) {
     }
   }
 
-  // SPRD C3 — Frame → Manuscript stage boundary composite gate.
-  // STAGE_BY_INDEX[2] === STAGE.Frame (1-indexed: Study=1, Blueprint=2,
-  // Frame=3, Manuscript=4, Delivery=5).
-  if (kind === "stage" && fromIndex === 3) {
-    const result = checkSermonFrameToManuscriptThreshold(sermon);
+  // Assembly sub-phase boundary thresholds.
+  // - Anchor → Outline (sub_phase, 1, Assembly): MPT + MPS composite gate
+  //   inherited from SADI Step 2 → Step 3 plumbing.
+  // - Outline → Equip (sub_phase, 2, Assembly): empty-evidence baseline
+  //   (outline must have at least one point) — no extra threshold today.
+  // - Equip → Frame (sub_phase, 3, Assembly): empty-evidence baseline
+  //   (FE must have content for at least one outline point) — no extra
+  //   threshold today.
+  // - Frame → next stage (sub_phase, 4, Assembly): the Assembly →
+  //   Manuscript stage boundary — fires the checkSermonFrameToManuscriptThreshold
+  //   composite that was previously bound to the Frame stage's outbound
+  //   transition.
+  if (kind === "sub_phase" && stage === STAGE.Assembly && fromIndex === 1) {
+    const result = checkStep2ToOutlineThreshold(sermon);
     if (result.firstReason) {
       return {
         ok: false,
@@ -711,12 +779,27 @@ export function evaluateAdvance(sermon, kind, fromIndex) {
       return { ok: true, gates: result.gates };
     }
   }
-
-  // SADI Step 2 → Step 3 (Outline) boundary composite gate. Reads the new
-  // `main_point_pair` envelope (v19) populated by the SpotlightWorksheet.
-  // STEP_BY_INDEX[1] === STEP.MPT_MPS; fromIndex=2 is Step 2 → Step 3.
-  if (kind === "step" && fromIndex === 2) {
-    const result = checkStep2ToOutlineThreshold(sermon);
+  // Outline → Equip — every outline point must have non-empty text (RW2).
+  if (kind === "sub_phase" && stage === STAGE.Assembly && fromIndex === 2) {
+    const result = checkOutlineToEquipThreshold(sermon);
+    if (result.firstReason) {
+      return {
+        ok: false,
+        reason: result.firstReason,
+        ...(result.gates.length > 0 ? { gates: result.gates } : {}),
+      };
+    }
+    if (result.gates.length > 0) {
+      return { ok: true, gates: result.gates };
+    }
+  }
+  // Assembly → Manuscript stage boundary. Same two-shape pattern as the
+  // Study → Assembly boundary above.
+  if (
+    (kind === "sub_phase" && stage === STAGE.Assembly && fromIndex === 4) ||
+    (kind === "stage" && fromIndex === 2)
+  ) {
+    const result = checkSermonFrameToManuscriptThreshold(sermon);
     if (result.firstReason) {
       return {
         ok: false,

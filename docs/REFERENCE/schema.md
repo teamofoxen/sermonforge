@@ -61,10 +61,10 @@ Current schema version: **13**
 | `big_idea` | TEXT | (legacy — never written via IPC; sermon big idea is always read through the series JOIN) |
 | `mpt` | TEXT | Main Point of the Text (past tense) |
 | `mps` | TEXT | Main Point of the Sermon (present tense) |
-| `observations` | TEXT | Step 1 Phase 1 (JSON: structured per-question fields, or legacy plain text) |
-| `interpretation` | TEXT | Step 1 Phase 2 (JSON: structured per-question fields, or legacy plain text) |
-| `redemptive_thread` | TEXT | Step 1 Phase 3 (JSON: structured per-question fields + summary, or legacy plain text) |
-| `implications` | TEXT | Step 1 Phase 4 (JSON: structured per-question fields + compiled, or legacy plain text) |
+| `observations` | TEXT | Study sub-phase 1 — Observe (JSON: structured per-question fields, or legacy plain text) |
+| `interpretation` | TEXT | Study sub-phase 2 — Interpret (JSON: structured per-question fields, or legacy plain text) |
+| `redemptive_thread` | TEXT | Study sub-phase 3 — Redemptive Thread (JSON: structured per-question fields + summary, or legacy plain text) |
+| `implications` | TEXT | Study sub-phase 4 — Implications (JSON: structured per-question fields + compiled, or legacy plain text) |
 | `outline` | TEXT | JSON array of point strings |
 | `manuscript` | TEXT | |
 | `delivery_notes` | TEXT | |
@@ -80,9 +80,9 @@ Current schema version: **13**
 | `manuscript_delivery` | TEXT | AI-formatted delivery manuscript; added v9 migration |
 | `last_tune_up` | TEXT | JSON `{content, ts}` snapshot of the most recent Final Tune-Up response; added v12 migration |
 | `current_stage` | TEXT | Canonical process position — stage; spine layer; added v17 migration |
-| `current_step` | TEXT | Canonical process position — Study step; spine layer; added v17 migration |
-| `current_sub_phase` | TEXT | Canonical process position — Study sub-phase; spine layer; added v17 migration |
-| `sermon_frame` | TEXT | JSON envelope for Step 5 (Intro / Conclusion) per SADI Step 5 ratification; same per-question shape as the four Exegesis sub-phase columns; added v18 migration (SPRD C3) |
+| `current_step` | TEXT | **Legacy-tolerated post-workspace-restructure 2026-05-10.** Pre-restructure: canonical process position — Study step; spine layer; added v17 migration. Post-restructure: column retained on disk for legacy data; parsed but ignored on read. Position is now (stage, sub-phase) only. |
+| `current_sub_phase` | TEXT | Canonical process position — sub-phase; spine layer. Spans Study sub-phases (Observe / Interpret / RedemptiveThread / Implications) AND Assembly sub-phases (Anchor / Outline / Equip / Frame) post-workspace-restructure 2026-05-10. Added v17 migration. |
+| `sermon_frame` | TEXT | JSON envelope for Intro / Conclusion per SADI ratification; same per-question shape as the four Exegesis sub-phase columns; added v18 migration (originally SPRD C3 — STAGE.Frame elevation; post-workspace-restructure 2026-05-10 the data feeds Assembly's Frame sub-phase). |
 | `created_at` | TEXT | |
 | `updated_at` | TEXT | |
 

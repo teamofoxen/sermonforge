@@ -43,17 +43,19 @@ export {
 } from "../constants/steps";
 
 // ── State Contract #2 — Stage (within-process position) ──────────────────────
-// SPRD C3 (Phase 3 Item 3, 2026-05-04) added "Frame" between Blueprint and
-// Manuscript — the elevation of SADI Step 5 (Intro + Conclusion → Sermon
-// Frame). Pre-C3, Intro/Conclusion lived bundled inside the Manuscript stage;
-// the elevation gives the Sermon Frame its own workspace tab so the named
-// outcome is visible in the throughline.
-export type Stage = "Study" | "Blueprint" | "Frame" | "Manuscript" | "Delivery";
+// The sermon-prep arc is three stages: Study (deepen into the text),
+// Assembly (build the sermon), Manuscript (write it). Each stage carries
+// its own sub-phase sequence (Study: 4 Exegesis sub-phases; Assembly:
+// Anchor / Outline / Equip / Frame; Manuscript: none).
+//
+// Legacy values: `Blueprint` and `Frame` (from a prior 4-stage shape) are
+// coerced to `Assembly` on read in the spine. `Delivery` stays admissible
+// for legacy data per ARI Phase 7 but is not part of the visible sequence.
+export type Stage = "Study" | "Assembly" | "Manuscript" | "Delivery";
 
 export const STAGE = {
   Study: "Study",
-  Blueprint: "Blueprint",
-  Frame: "Frame",
+  Assembly: "Assembly",
   Manuscript: "Manuscript",
   Delivery: "Delivery",
 } as const satisfies Record<Stage, Stage>;
@@ -64,50 +66,54 @@ export const STAGE = {
 // just doesn't render as a tab. Manuscript is now the terminal sermon-prep
 // stage, with Export to Word as the terminal action.
 export const STAGE_SEQUENCE: readonly Stage[] = Object.freeze([
-  "Study", "Blueprint", "Frame", "Manuscript",
+  "Study", "Assembly", "Manuscript",
 ]);
 
 export const STAGE_LABELS: Readonly<Record<Stage, string>> = Object.freeze({
   Study: "Study",
-  Blueprint: "Blueprint",
-  Frame: "Sermon Frame",
+  Assembly: "Assembly",
   Manuscript: "Manuscript",
   Delivery: "Delivery",
 });
 
-// ── State Contract #2 — Step (within-Study position) ─────────────────────────
-export type Step = "Exegesis" | "MPT_MPS" | "Outline" | "FunctionalElements";
-
-export const STEP = {
-  Exegesis: "Exegesis",
-  MPT_MPS: "MPT_MPS",
-  Outline: "Outline",
-  FunctionalElements: "FunctionalElements",
-} as const satisfies Record<Step, Step>;
-
-export const STEP_CANONICAL_SEQUENCE: readonly Step[] = Object.freeze([
-  "Exegesis", "MPT_MPS", "Outline", "FunctionalElements",
-]);
-
-export const STEP_LABELS: Readonly<Record<Step, string>> = Object.freeze({
-  Exegesis: "Exegesis",
-  MPT_MPS: "MPT / MPS",
-  Outline: "Outline",
-  FunctionalElements: "Functional Elements",
-});
-
-// ── Process Contract #4 — SubPhase (within-Exegesis progression) ─────────────
-export type SubPhase = "Observe" | "Interpret" | "RedemptiveThread" | "Implications";
+// ── Process Contract #4 — SubPhase (within-Stage progression) ────────────────
+// SubPhase spans two stages:
+//   Study sub-phases:    Observe → Interpret → RedemptiveThread → Implications
+//   Assembly sub-phases: Anchor → Outline → Equip → Frame
+// Each four-sub-phase shape mirrors the other; the trail renders both with
+// the same switchback geometry. The Stage value disambiguates which set
+// applies.
+export type SubPhase =
+  | "Observe" | "Interpret" | "RedemptiveThread" | "Implications"
+  | "Anchor" | "Outline" | "Equip" | "Frame";
 
 export const SUB_PHASE = {
   Observe: "Observe",
   Interpret: "Interpret",
   RedemptiveThread: "RedemptiveThread",
   Implications: "Implications",
+  Anchor: "Anchor",
+  Outline: "Outline",
+  Equip: "Equip",
+  Frame: "Frame",
 } as const satisfies Record<SubPhase, SubPhase>;
 
-export const SUB_PHASE_CANONICAL_SEQUENCE: readonly SubPhase[] = Object.freeze([
+// Sub-phase sequence per stage. The spine uses these for monotonicity
+// validation; the renderer uses them to derive position from a 1-based
+// index in StudyTab / AssemblyTab.
+export const STUDY_SUB_PHASE_SEQUENCE: readonly SubPhase[] = Object.freeze([
   "Observe", "Interpret", "RedemptiveThread", "Implications",
+]);
+
+export const ASSEMBLY_SUB_PHASE_SEQUENCE: readonly SubPhase[] = Object.freeze([
+  "Anchor", "Outline", "Equip", "Frame",
+]);
+
+// Combined canonical sequence — Study sub-phases first, then Assembly. Used
+// by validators that need a single ordered list across the whole spine.
+export const SUB_PHASE_CANONICAL_SEQUENCE: readonly SubPhase[] = Object.freeze([
+  ...STUDY_SUB_PHASE_SEQUENCE,
+  ...ASSEMBLY_SUB_PHASE_SEQUENCE,
 ]);
 
 export const SUB_PHASE_LABELS: Readonly<Record<SubPhase, string>> = Object.freeze({
@@ -115,6 +121,23 @@ export const SUB_PHASE_LABELS: Readonly<Record<SubPhase, string>> = Object.freez
   Interpret: "Interpret",
   RedemptiveThread: "Redemptive Thread",
   Implications: "Implications",
+  Anchor: "Anchor",
+  Outline: "Outline",
+  Equip: "Equip",
+  Frame: "Frame",
+});
+
+// Maps each SubPhase back to its parent Stage. The spine uses this to know
+// which stage a SubPhase belongs to without threading the stage everywhere.
+export const SUB_PHASE_STAGE: Readonly<Record<SubPhase, Stage>> = Object.freeze({
+  Observe: "Study",
+  Interpret: "Study",
+  RedemptiveThread: "Study",
+  Implications: "Study",
+  Anchor: "Assembly",
+  Outline: "Assembly",
+  Equip: "Assembly",
+  Frame: "Assembly",
 });
 
 // ── Lifecycle status — sermons + series ──────────────────────────────────────
@@ -205,10 +228,11 @@ export interface SecondaryCTA {
 }
 
 // ── State Contract #1, #3, #4 — canonical Sermon and Series shapes ───────────
+// SubPhase is present whenever the stage carries sub-phases (Study or
+// Assembly); Manuscript has none.
 export interface ProcessPosition {
   stage: Stage;
-  step?: Step;          // present when stage === "Study"
-  subPhase?: SubPhase;  // present when step === "Exegesis"
+  subPhase?: SubPhase;
 }
 
 export interface ParentContext {

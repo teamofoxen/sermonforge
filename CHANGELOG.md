@@ -10,6 +10,44 @@
 
 ---
 
+## 2026-05-10 — Pastor walkthrough closure: RW2 gate tightening + DW14 save-indicator retired + 13 charter resolutions locked
+
+- RW2: `checkOutlineToEquipThreshold` added in `studyAdvancement.js` — every outline point must have non-empty text. Placeholder rows no longer pass the Outline → Equip composite gate.
+- RW3: Manuscript locked as a single continuous surface (no sub-phases). DW14: hardcoded "SAVED" indicator + `.tw-save` CSS retired from the trail; autosave runs silent via 500ms `saveDb()` debounce. DW15: no mobile / narrow-viewport support — ~1200px+ is the supported floor.
+- RW4 + RW9 + DW9: step-boundary pauses (Study → Assembly, Assembly → Manuscript) get a heavier visual register; sub-phase pauses stay light. Sequel arc.
+- DW5 (Manuscript writing-room mode), DW6 (sidebar stays hidden during walk — current behavior), DW7 (per-stage STOPS + camera handoff), DW8 (per-stage notebook), DW10 + RW8 (full tour rewrite to match WTC), DW11 (workspace-wide Trail Map — clean or doesn't ship), DW12 (stage-level overviews) all locked; queued for the sequel arc.
+- DW13: all-at-once cutover via the merge itself. Stage-by-stage feature flagging not used. 291/291 vitest green; drift-check PASS.
+
+---
+
+## 2026-05-10 — Workspace Trail Charter Phases 5+6: unified Assembly trail + simplify pass
+
+- New `AssemblyTrail.jsx` collapses Anchor / Outline / Equip / Frame into one switchback (10 stops across 4 rows); workshop-clearings host `OutlineBuilder` + per-point FE editors inline (DW3 + DW4 resolved to Mode 1). `StudyTrailForge.jsx` retired.
+- Shared trail primitives extracted into `studyTrailShared.jsx` (`padNum`, first-incomplete helpers, `useViewportSize`, `useSyncActiveQuestion`, `useTrailKeyboard`, `TrailTopBar`, `TrailDefs`, `Station`, `SaveStatus`); StudyTrailExegesis + AssemblyTrail both consume them.
+- Restored `FuncElem` CollapseArrow + collapsed-preview + (ESV)/(E)/(A)/(I) field-label badges in `AssemblyTab.jsx` that dropped during the move; trimmed restructure-task narration from contract files.
+- New `getQuestionString` helper in `studyFields.js` replaces ~6 inline IIFE patterns + the local `getFrameValue`. Unified `MainPointPairPause` + `SermonFramePause` into a single `PairPauseClearing` parameterized by row config.
+- Sermon Frame pause now fires correctly at the Frame → Manuscript boundary (the stale `nextKey === "manuscript"` exclusion was dropped). 291/291 vitest green; sweep PASS; drift-check PASS.
+
+---
+
+## 2026-05-10 — Workspace Restructure: three-step sermon arc (Study / Assembly / Manuscript)
+
+Top-level workspace collapsed from four stages to three. The within-Study Step layer (Exegesis / MPT_MPS / Outline / FunctionalElements) retired entirely. Study is now just Exegesis (4 sub-phases unchanged); the new Assembly stage hosts MPT/MPS + Outline + FE + Intro/Conclusion as 4 sub-phases (Anchor / Outline / Equip / Frame). Each Assembly sub-phase produces a named outcome (Main Point Pair / Sermon Outline / Sermon Body / Sermon Frame).
+
+Charter: [`docs/PROPOSALS/workspace-restructure-charter.md`](docs/PROPOSALS/workspace-restructure-charter.md). All content commitments preserved (SFDI fields unchanged, SADI anchor walks unchanged, ARI's no-AI binding preserved, save flow + schema unchanged).
+
+- **Contracts (`src/core/contracts.ts` + `electron/contracts.cjs`):** `Stage` collapsed (Blueprint + Frame retired; Assembly added). `Step` type/enum + `STEP_CANONICAL_SEQUENCE` + `STEP_LABELS` retired entirely. `SubPhase` extended with Anchor / Outline / Equip / Frame. `STUDY_SUB_PHASE_SEQUENCE` + `ASSEMBLY_SUB_PHASE_SEQUENCE` + `SUB_PHASE_STAGE` added. `ProcessPosition.step?` field removed.
+- **Spine (`src/core/spine.ts` + `electron/main.js`):** `transitionState` `to` parameter is now `Stage | SubPhase` (Step retired). New main-side `coerceLegacyStage()` maps `Blueprint` / `Frame` → `Assembly` on read AND on `to` payloads, so legacy DB values + older renderer payloads route cleanly. `create-sermon` and `load-tour-sermon` INSERTs set `current_step = NULL`.
+- **Gates (`src/utils/studyAdvancement.js`):** `canonicalStep` + `STEP_BY_INDEX` + `buildStepEvidence` retired. `canonicalSubPhase(n, stage)` takes a stage parameter. `evaluateAdvance(sermon, kind, fromIndex, stage)` is the new shape — `kind: "stage" | "sub_phase"`; `stage` disambiguates Study sub-phases from Assembly sub-phases. Composite gates preserved by content but renamed routes: Anchor → Outline (was Step 2 → 3); Equip → Frame (was Step 4 → next); Assembly → Manuscript (was Frame → Manuscript stage at fromIndex=3, now stage at fromIndex=2).
+- **Workspace shell (`src/components/SermonWorkspace.jsx`):** 3-tab strip. `OutlineTab.jsx` + `FrameTab.jsx` deleted. New `AssemblyTab.jsx` is the parent for the four Assembly sub-phases. `StudyTab.jsx` trimmed to Exegesis-only — `STUDY_STEPS` strip retired; Step 2/3/4 rendering branches deleted. "How it works" modal SVG re-drawn for 3 stages.
+- **Step-boundary pause-clearings:** Study → Assembly outbound pause (Implications Synthesis) deferred tab change to pause dismissal so the pastor walks across the bend deliberately. Assembly → Manuscript outbound pause renders the four named outcomes as a summary review (Main Point Pair + Sermon Outline + Sermon Body + Sermon Frame).
+- **Tests:** `tests/contracts/_helpers/test-spine.ts` mirrors new contracts + coerces legacy stage values. `process-1-monotonic.test.ts` rewritten for the 3-stage + 8-sub-phase shape. `process-2-evidence-gated.test.ts` + `process-2-evidence-gated-ux.test.tsx` + `process-3-movement-visible.test.tsx` + `process-4-pc-follows-text.test.tsx` + `sprd-c3-sermon-frame.test.tsx` migrated. New `localStorage.sermonforge_trail_disabled` flag opts tests out of the trail rendering for legacy-button assertions. 105/105 contract tests green.
+- **Tour (`src/tour/workspaceTourStops.js`):** Frame tour stop re-anchored to `STAGE.Assembly`. (Tour anchor IDs `mpt-field` / `outline-builder` / `frame-worksheet` carry forward — `data-tour-id`s preserved on the new AssemblyTab sub-phase renderers.)
+- **Documentation:** `docs/CORE.md` Canonical Vocabulary, State #2, State #5, Process #6 updated. `docs/REFERENCE/project-structure.md` + `schema.md` + `ipc-channels.md` + `privacy.md` migrated. `docs/SYSTEMS/sermon-workspace.md` banner-tagged. Charters banner-tagged: `workspace-trail-charter.md` (Stage A–G phasing re-mapped), `sadi-charter.md` + `sermon-anchor-definition-initiative.md` (anchor *steps* → anchor *sub-phases*), `sfdi-charter.md` (Step 1 framing maps to Study stage), `study-field-definition-initiative.md`, `study-phase-redesign.md` (SPRD C3 superseded).
+- **Worktree:** Originally shipped on `thirsty-bell-2d469b`; landed on main 2026-05-10 with the unified Assembly trail (Phases 5+6) + pastor-walkthrough resolutions in the same merge. RW8 + DW5 + DW7-DW12 queued for the sequel arc.
+
+---
+
 ## 2026-05-09 — Post-ARI doc-drift sweep: live refs corrected, charters banner-tagged
 
 - `docs/SYSTEMS/ipc.md` and `docs/REFERENCE/project-structure.md` rewritten; `ipc-channels.md` purged of memory channels + Anthropic semantics, BTI telemetry channels added.

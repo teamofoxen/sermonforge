@@ -1,12 +1,15 @@
-// SPRD C3 — Sermon Frame elevation (Phase 3 Item 3, 2026-05-04).
+// SPRD C3 — Sermon Frame composite gate.
 //
-// Covers the new STAGE.Frame and the Frame → Manuscript boundary composite
-// gate. Per SADI Step 5 ratification:
+// Originally bound to STAGE.Frame → STAGE.Manuscript (SPRD C3 elevation,
+// 2026-05-04). After the Workspace Restructure (2026-05-10) collapsed
+// Frame into the Assembly stage's Frame sub-phase, the same composite
+// fires at the Assembly → Manuscript stage boundary — call shape
+// `evaluateAdvance(sermon, "stage", 2)` where 2 is Assembly in the new
+// 3-stage STAGE_SEQUENCE. Gate content unchanged.
+//
+// Per SADI Step 5 ratification:
 //   - Intro requires Q1+Q2+Q3 non-empty + Q4 (redemptive_note) non-empty or N/A
 //   - Conclusion requires Q1+Q2+Q3+Q4 all non-empty (no N/A path)
-//
-// The composite gate lives in `src/utils/studyAdvancement.js`
-// (`evaluateAdvance(sermon, "stage", 3)`). Returns `{ok, reason?, gates?}`.
 
 import { describe, it, expect } from "vitest";
 import { evaluateAdvance } from "../../src/utils/studyAdvancement";
@@ -44,14 +47,14 @@ const FILLED_BOTH = { ...FILLED_INTRO, ...FILLED_CONCLUSION };
 describe("SPRD C3 — Sermon Frame composite gate (Frame → Manuscript)", () => {
   it("rejects when sermon_frame is entirely empty", () => {
     const sermon = frameSermon(null);
-    const result = evaluateAdvance(sermon, "stage", 3);
+    const result = evaluateAdvance(sermon, "stage", 2);
     expect(result.ok).toBe(false);
     expect(result.reason).toBeTruthy();
   });
 
   it("rejects when Intro is filled but Conclusion is empty", () => {
     const sermon = frameSermon(FILLED_INTRO);
-    const result = evaluateAdvance(sermon, "stage", 3);
+    const result = evaluateAdvance(sermon, "stage", 2);
     expect(result.ok).toBe(false);
     expect(result.gates).toBeDefined();
     const conclGate = result.gates!.find((g: any) => g.key === "conclusion");
@@ -61,7 +64,7 @@ describe("SPRD C3 — Sermon Frame composite gate (Frame → Manuscript)", () =>
 
   it("rejects when Conclusion is filled but Intro is empty", () => {
     const sermon = frameSermon(FILLED_CONCLUSION);
-    const result = evaluateAdvance(sermon, "stage", 3);
+    const result = evaluateAdvance(sermon, "stage", 2);
     expect(result.ok).toBe(false);
     expect(result.gates).toBeDefined();
     const introGate = result.gates!.find((g: any) => g.key === "intro");
@@ -70,7 +73,7 @@ describe("SPRD C3 — Sermon Frame composite gate (Frame → Manuscript)", () =>
 
   it("allows advance when both Intro and Conclusion composites are met", () => {
     const sermon = frameSermon(FILLED_BOTH);
-    const result = evaluateAdvance(sermon, "stage", 3);
+    const result = evaluateAdvance(sermon, "stage", 2);
     expect(result.ok).toBe(true);
     expect(result.gates).toBeDefined();
     expect(result.gates!.every((g: any) => g.met)).toBe(true);
@@ -85,7 +88,7 @@ describe("SPRD C3 — Sermon Frame composite gate (Frame → Manuscript)", () =>
       ...FILLED_CONCLUSION,
     };
     const sermon = frameSermon(data);
-    const result = evaluateAdvance(sermon, "stage", 3);
+    const result = evaluateAdvance(sermon, "stage", 2);
     expect(result.ok).toBe(false);
     expect(result.reason).toMatch(/Intro/i);
   });
@@ -95,7 +98,7 @@ describe("SPRD C3 — Sermon Frame composite gate (Frame → Manuscript)", () =>
       intro: { ...FILLED_INTRO.intro, bridge_to_text: { value: "", na: false } },
       ...FILLED_CONCLUSION,
     };
-    const result = evaluateAdvance(frameSermon(data), "stage", 3);
+    const result = evaluateAdvance(frameSermon(data), "stage", 2);
     expect(result.ok).toBe(false);
     expect(result.reason).toMatch(/Intro/i);
   });
@@ -105,7 +108,7 @@ describe("SPRD C3 — Sermon Frame composite gate (Frame → Manuscript)", () =>
       intro: { ...FILLED_INTRO.intro, expectations: { value: "", na: false } },
       ...FILLED_CONCLUSION,
     };
-    const result = evaluateAdvance(frameSermon(data), "stage", 3);
+    const result = evaluateAdvance(frameSermon(data), "stage", 2);
     expect(result.ok).toBe(false);
     expect(result.reason).toMatch(/Intro/i);
   });
@@ -115,7 +118,7 @@ describe("SPRD C3 — Sermon Frame composite gate (Frame → Manuscript)", () =>
       intro: { ...FILLED_INTRO.intro, redemptive_note: { value: "", na: true } },
       ...FILLED_CONCLUSION,
     };
-    const result = evaluateAdvance(frameSermon(data), "stage", 3);
+    const result = evaluateAdvance(frameSermon(data), "stage", 2);
     expect(result.ok).toBe(true);
   });
 
@@ -124,7 +127,7 @@ describe("SPRD C3 — Sermon Frame composite gate (Frame → Manuscript)", () =>
       intro: { ...FILLED_INTRO.intro, redemptive_note: { value: "", na: false } },
       ...FILLED_CONCLUSION,
     };
-    const result = evaluateAdvance(frameSermon(data), "stage", 3);
+    const result = evaluateAdvance(frameSermon(data), "stage", 2);
     expect(result.ok).toBe(false);
     expect(result.reason).toMatch(/redemptive note/i);
   });
@@ -134,7 +137,7 @@ describe("SPRD C3 — Sermon Frame composite gate (Frame → Manuscript)", () =>
       ...FILLED_INTRO,
       conclusion: { ...FILLED_CONCLUSION.conclusion, summate: { value: "", na: false } },
     };
-    const result = evaluateAdvance(frameSermon(data), "stage", 3);
+    const result = evaluateAdvance(frameSermon(data), "stage", 2);
     expect(result.ok).toBe(false);
     expect(result.reason).toMatch(/Conclusion/i);
   });
@@ -144,7 +147,7 @@ describe("SPRD C3 — Sermon Frame composite gate (Frame → Manuscript)", () =>
       ...FILLED_INTRO,
       conclusion: { ...FILLED_CONCLUSION.conclusion, closing_posture: { value: "", na: false } },
     };
-    const result = evaluateAdvance(frameSermon(data), "stage", 3);
+    const result = evaluateAdvance(frameSermon(data), "stage", 2);
     expect(result.ok).toBe(false);
     expect(result.reason).toMatch(/closing posture/i);
   });
@@ -156,7 +159,7 @@ describe("SPRD C3 — Sermon Frame composite gate (Frame → Manuscript)", () =>
       ...FILLED_INTRO,
       conclusion: { ...FILLED_CONCLUSION.conclusion, closing_posture: { value: "", na: true } },
     };
-    const result = evaluateAdvance(frameSermon(data), "stage", 3);
+    const result = evaluateAdvance(frameSermon(data), "stage", 2);
     expect(result.ok).toBe(false);
     expect(result.reason).toMatch(/closing posture/i);
   });
@@ -166,30 +169,39 @@ describe("SPRD C3 — Sermon Frame composite gate (Frame → Manuscript)", () =>
       ...FILLED_INTRO,
       conclusion: { ...FILLED_CONCLUSION.conclusion, gospel_empower: { value: "", na: false } },
     };
-    const result = evaluateAdvance(frameSermon(data), "stage", 3);
+    const result = evaluateAdvance(frameSermon(data), "stage", 2);
     expect(result.ok).toBe(false);
     expect(result.reason).toMatch(/gospel empower/i);
   });
 });
 
-describe("SPRD C3 — STAGE_BY_INDEX positioning (Frame at index 3, 1-indexed)", () => {
-  it("evaluateAdvance routes fromIndex=3 (Frame) through the composite gate", () => {
-    // The all-empty case should reject — confirms the gate fires at index 3.
+describe("STAGE_BY_INDEX positioning post-restructure (Assembly at index 2)", () => {
+  it("evaluateAdvance routes fromIndex=2 (Assembly → Manuscript) through the Sermon Frame composite gate", () => {
+    // The all-empty case should reject — confirms the gate fires at the
+    // Assembly → Manuscript stage boundary (fromIndex=2 in the new
+    // 3-stage STAGE_SEQUENCE [Study, Assembly, Manuscript]).
     const sermon = frameSermon(null);
-    const result = evaluateAdvance(sermon, "stage", 3);
+    const result = evaluateAdvance(sermon, "stage", 2);
     expect(result.ok).toBe(false);
     expect(result.reason).toBeTruthy();
   });
 
-  it("evaluateAdvance does NOT route fromIndex=2 (Blueprint) through Sermon Frame gate", () => {
-    // Blueprint at index 2 with non-empty outline should pass the empty-
-    // evidence baseline; the Frame-specific composite gate must NOT fire here.
+  it("evaluateAdvance routes fromIndex=1 (Study → Assembly) through the Implications threshold, not the Sermon Frame gate", () => {
+    // fromIndex=1 is the Study → Assembly boundary, gated by the
+    // Implications composite (not the Sermon Frame composite). A sermon
+    // with empty sermon_frame but non-empty Study content + outline should
+    // route through the Implications threshold path, which exercises
+    // different threshold logic.
     const sermon = {
       id: "test",
+      observations: '{"context":{"primary":{"value":"obs","na":false}}}',
       outline: '[{"id":"p1","text":"point one"}]',
       functional_elements: "{}",
     };
-    const result = evaluateAdvance(sermon as any, "stage", 2);
-    expect(result.ok).toBe(true);
+    const result = evaluateAdvance(sermon as any, "stage", 1);
+    // The Study → Assembly gate has its own thresholds; the test asserts
+    // only that it doesn't reject with "Intro" / "Conclusion" wording
+    // (that would mean the Sermon Frame gate fired here, which it must not).
+    expect(result.reason || "").not.toMatch(/intro|conclusion|frame/i);
   });
 });

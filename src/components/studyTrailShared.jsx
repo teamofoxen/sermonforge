@@ -1,0 +1,234 @@
+// Shared primitives for the switchback-trail rendering. Used by every
+// trail component (Exegesis, Assembly's sub-phase trails) so the visual
+// language and pastor-facing behavior stay continuous across the walk.
+//
+// What lives here:
+//   - `SCRIPTURE_COL_WIDTH` — the camera-math constant. Must stay synced
+//     with `.tw-scripture { width }` in studyTrail.css.
+//   - `padNum` — zero-padded ordinal helper.
+//   - `firstIncompleteFieldKey` / `firstIncompleteQuestionKey` /
+//     `fieldHasAnyAnswer` — re-entry heuristics. A trail mounting on a
+//     half-finished sermon lands on the right field + question without
+//     blowing past saved work.
+//   - `useViewportSize` — viewport tracking for camera math.
+//   - `TrailTopBar` — the 62px ink topbar (passage chip / title / × exit).
+//   - `TrailDefs` — the shared `<defs>` block (mist gradient + paper
+//     grain pattern) every trail SVG paints into.
+//   - `Station` — the SVG dot drawn at every stop. Field stations render
+//     a circle + ordinal; pause stations render a circle with a tick.
+
+import { useEffect, useState } from "react";
+import {
+  fieldQuestions,
+  getQuestionAnswer,
+  isQuestionNA,
+  flattenAnswerValue,
+  DEFAULT_QUESTION_KEY,
+} from "../utils/studyFields";
+
+export const SCRIPTURE_COL_WIDTH = 400;
+
+export const padNum = (n) => String(n).padStart(2, "0");
+
+export function firstIncompleteFieldKey(fields, data) {
+  for (const def of fields) {
+    const qs = fieldQuestions(def);
+    const allDone = qs.every(
+      (q) =>
+        isQuestionNA(data, def.key, q.key) ||
+        !!flattenAnswerValue(getQuestionAnswer(data, def.key, q.key)),
+    );
+    if (!allDone) return def.key;
+  }
+  return fields[0]?.key ?? null;
+}
+
+export function firstIncompleteQuestionKey(field, data) {
+  const qs = fieldQuestions(field);
+  for (const q of qs) {
+    if (isQuestionNA(data, field.key, q.key)) continue;
+    if (!flattenAnswerValue(getQuestionAnswer(data, field.key, q.key))) {
+      return q.key;
+    }
+  }
+  return qs[0]?.key ?? DEFAULT_QUESTION_KEY;
+}
+
+export function fieldHasAnyAnswer(field, data) {
+  const qs = fieldQuestions(field);
+  for (const q of qs) {
+    if (isQuestionNA(data, field.key, q.key)) continue;
+    if (flattenAnswerValue(getQuestionAnswer(data, field.key, q.key))) return true;
+  }
+  return false;
+}
+
+export function useViewportSize() {
+  const [viewport, setViewport] = useState({
+    w: typeof window !== "undefined" ? window.innerWidth : 1280,
+    h: typeof window !== "undefined" ? window.innerHeight : 800,
+  });
+  useEffect(() => {
+    const onResize = () => setViewport({ w: window.innerWidth, h: window.innerHeight });
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  return viewport;
+}
+
+// Re-seed `activeQKey` to the field's first-incomplete Q whenever the
+// field changes or the saved key isn't valid for the new field. Explicit
+// overrides in advance / lookBack survive because the new key is valid
+// for the new field on the next render.
+export function useSyncActiveQuestion(stop, activeQKey, setActiveQKey, fieldDefForStop, dataForStop) {
+  useEffect(() => {
+    const field = fieldDefForStop();
+    if (!field) return;
+    const data = dataForStop();
+    const qs = fieldQuestions(field);
+    if (!activeQKey || !qs.find((q) => q.key === activeQKey)) {
+      setActiveQKey(firstIncompleteQuestionKey(field, data));
+    }
+    // fieldDefForStop / dataForStop are stable closures captured at call
+    // site; the effect re-fires when `stop` or `activeQKey` change. Data
+    // is read fresh each fire — no stale closure.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stop, activeQKey]);
+}
+
+// Shared keyboard bindings for the trail clearings:
+//   Cmd/Ctrl + Enter      → advance (unless gate blocked)
+//   Cmd/Ctrl + ArrowLeft  → look back
+//   Escape                → exit (when not in editor + no modal open)
+//   Cmd/Ctrl + .          → onTogglePass (caller decides scope)
+export function useTrailKeyboard({
+  advance, lookBack, advanceDisabled, onExit, onTogglePass, modalOpen,
+}) {
+  useEffect(() => {
+    const onKey = (e) => {
+      const t = e.target;
+      const inEditor = t && (t.tagName === "TEXTAREA" || t.tagName === "INPUT");
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && e.key === "Enter") {
+        e.preventDefault();
+        if (!advanceDisabled) advance();
+        return;
+      }
+      if (mod && e.key === "ArrowLeft") {
+        e.preventDefault();
+        lookBack();
+        return;
+      }
+      if (e.key === "Escape" && !inEditor) {
+        if (modalOpen) return;
+        if (onExit) {
+          e.preventDefault();
+          onExit();
+        }
+        return;
+      }
+      if (mod && e.key === ".") {
+        e.preventDefault();
+        onTogglePass?.();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [advance, lookBack, advanceDisabled, onExit, onTogglePass, modalOpen]);
+}
+
+export function TrailTopBar({ sermon, onExit, onPassageClick }) {
+  return (
+    <header className="tw-topbar">
+      <div className="tw-topbar-left">
+        {/* eslint-disable-next-line sermonforge/no-raw-button */}
+        <button
+          className="tw-mono tw-meta-passage"
+          onClick={onPassageClick}
+          title="Open the passage popup"
+        >
+          {(sermon?.passage || "").toUpperCase()}
+        </button>
+      </div>
+      <h1 className="tw-topbar-title">{sermon?.title || "Untitled"}</h1>
+      <div className="tw-topbar-right">
+        {onExit && (
+          /* eslint-disable-next-line sermonforge/no-raw-button */
+          <button
+            className="tw-exit"
+            onClick={onExit}
+            aria-label="Exit trail back to workspace"
+            title="Exit trail (Esc)"
+          >
+            ×
+          </button>
+        )}
+      </div>
+    </header>
+  );
+}
+
+// SVG <defs> shared across every trail canvas. Mist + paper-grain colors
+// flow through CSS classes so dark mode re-tints them via the parchment
+// tokens — hardcoded light stops here would burn through dark mode as a
+// bright spotlight halo around the active clearing.
+export function TrailDefs() {
+  return (
+    <defs>
+      <radialGradient id="clearingMist" cx="50%" cy="58%" r="36%">
+        <stop offset="0%" className="tw-mist-stop" stopOpacity="1" />
+        <stop offset="50%" className="tw-mist-stop" stopOpacity="0.92" />
+        <stop offset="100%" className="tw-mist-stop" stopOpacity="0" />
+      </radialGradient>
+      <pattern
+        id="paperGrain"
+        patternUnits="userSpaceOnUse"
+        width="6"
+        height="6"
+        patternTransform="rotate(35)"
+      >
+        <line
+          x1="0"
+          y1="0"
+          x2="0"
+          y2="6"
+          className="tw-grain-stroke"
+          strokeWidth="0.4"
+          opacity="0.35"
+        />
+      </pattern>
+    </defs>
+  );
+}
+
+export function Station({ point, isActive, isPause, ordinal, distance }) {
+  const recede = Math.min(distance, 8);
+  const fade = Math.max(0.32, 1 - recede * 0.08);
+  const r = isActive ? (isPause ? 26 : 22) : isPause ? 14 : 10 - Math.min(recede * 0.4, 4);
+  return (
+    <g transform={`translate(${point.x} ${point.y})`} opacity={isActive ? 1 : fade}>
+      {isActive && (
+        <>
+          <circle r={r + 22} className="tw-station-glow" />
+          <circle r={r + 12} className="tw-station-glow tw-station-glow-2" />
+        </>
+      )}
+      {isPause ? (
+        <g className={`tw-station tw-station-pause ${isActive ? "is-active" : ""}`}>
+          <circle r={r} />
+          <line x1={-r * 0.5} x2={r * 0.5} y1={0} y2={0} />
+        </g>
+      ) : (
+        <g className={`tw-station ${isActive ? "is-active" : ""}`}>
+          <circle r={r} />
+          {distance < 6 && ordinal != null && (
+            <text className="tw-mono tw-station-num" y={r + 16} textAnchor="middle">
+              {padNum(ordinal)}
+            </text>
+          )}
+        </g>
+      )}
+    </g>
+  );
+}
+
