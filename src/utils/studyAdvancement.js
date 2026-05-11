@@ -406,6 +406,51 @@ function checkMPSComposite(mppData) {
 // composite + MPS composite. Returns `{ gates, firstReason }` per the
 // established B1.6 shape; the disabled-Continue UI renders the
 // hover-checklist when there are multiple gates.
+// Anchor → Outline threshold ratification (RW2 resolved post-walkthrough):
+// every outline point must carry non-empty text. The pre-restructure gate
+// only checked outline.length >= 1, which let placeholder rows through.
+// Same `{ gates, firstReason }` shape as the other composites.
+function checkOutlineToEquipThreshold(sermon) {
+  let points = [];
+  try {
+    const raw = sermon?.outline;
+    const parsed = raw ? JSON.parse(raw) : [];
+    if (Array.isArray(parsed)) {
+      points = parsed.map((p, i) => ({
+        idx: i,
+        text: typeof p === "string" ? p : (typeof p?.text === "string" ? p.text : ""),
+      }));
+    }
+  } catch {
+    points = [];
+  }
+  const missing = points.filter((p) => !p.text.trim());
+  const gates = [
+    {
+      key: "outline_has_points",
+      label: "Outline points present",
+      met: points.length > 0,
+      reason: points.length > 0 ? undefined : "Add at least one outline point.",
+    },
+    {
+      key: "outline_all_named",
+      label: "Every point named",
+      met: points.length > 0 && missing.length === 0,
+      reason:
+        points.length === 0
+          ? undefined
+          : missing.length > 0
+            ? `${missing.length === 1 ? "Point" : "Points"} ${missing.map((m) => m.idx + 1).join(", ")} ${missing.length === 1 ? "is" : "are"} empty — name ${missing.length === 1 ? "it" : "them"} before equipping.`
+            : undefined,
+    },
+  ];
+  const firstFailing = gates.find((g) => !g.met);
+  return {
+    gates,
+    firstReason: firstFailing ? firstFailing.reason : null,
+  };
+}
+
 function checkStep2ToOutlineThreshold(sermon) {
   const mppData = parseStructuredField(sermon?.main_point_pair);
 
@@ -723,6 +768,20 @@ export function evaluateAdvance(sermon, kind, fromIndex, stage = STAGE.Study) {
   //   transition.
   if (kind === "sub_phase" && stage === STAGE.Assembly && fromIndex === 1) {
     const result = checkStep2ToOutlineThreshold(sermon);
+    if (result.firstReason) {
+      return {
+        ok: false,
+        reason: result.firstReason,
+        ...(result.gates.length > 0 ? { gates: result.gates } : {}),
+      };
+    }
+    if (result.gates.length > 0) {
+      return { ok: true, gates: result.gates };
+    }
+  }
+  // Outline → Equip — every outline point must have non-empty text (RW2).
+  if (kind === "sub_phase" && stage === STAGE.Assembly && fromIndex === 2) {
+    const result = checkOutlineToEquipThreshold(sermon);
     if (result.firstReason) {
       return {
         ok: false,

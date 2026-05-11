@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-10 — Pastor walkthrough closure: RW2 gate tightening + DW14 save-indicator retired + 13 charter resolutions locked
+
+- RW2: `checkOutlineToEquipThreshold` added in `studyAdvancement.js` — every outline point must have non-empty text. Placeholder rows no longer pass the Outline → Equip composite gate.
+- RW3: Manuscript locked as a single continuous surface (no sub-phases). DW14: hardcoded "SAVED" indicator + `.tw-save` CSS retired from the trail; autosave runs silent via 500ms `saveDb()` debounce. DW15: no mobile / narrow-viewport support — ~1200px+ is the supported floor.
+- RW4 + RW9 + DW9: step-boundary pauses (Study → Assembly, Assembly → Manuscript) get a heavier visual register; sub-phase pauses stay light. Sequel arc.
+- DW5 (Manuscript writing-room mode), DW6 (sidebar stays hidden during walk — current behavior), DW7 (per-stage STOPS + camera handoff), DW8 (per-stage notebook), DW10 + RW8 (full tour rewrite to match WTC), DW11 (workspace-wide Trail Map — clean or doesn't ship), DW12 (stage-level overviews) all locked; queued for the sequel arc.
+- DW13: all-at-once cutover via the merge itself. Stage-by-stage feature flagging not used. 291/291 vitest green; drift-check PASS.
+
+---
+
 ## 2026-05-10 — Workspace Trail Charter Phases 5+6: unified Assembly trail + simplify pass
 
 - New `AssemblyTrail.jsx` collapses Anchor / Outline / Equip / Frame into one switchback (10 stops across 4 rows); workshop-clearings host `OutlineBuilder` + per-point FE editors inline (DW3 + DW4 resolved to Mode 1). `StudyTrailForge.jsx` retired.

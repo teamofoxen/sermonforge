@@ -235,13 +235,23 @@ The names need to read at the pause-clearing in the same register as Main Point 
 
 Currently the workspace gates Outline → FE by "outline has at least one point." That stays. The composite gate for Outline → Equip could tighten — e.g., "every outline point has non-empty text" — but that's a content-side decision that affects pastor experience. Decide before shipping.
 
+**Resolved post-walkthrough — every outline point must have non-empty text.** Two gates fire at the Outline → Equip boundary:
+1. `outline_has_points` — outline.length >= 1 (preserves the prior baseline)
+2. `outline_all_named` — every point's text is non-empty after trim
+
+A placeholder row with empty text isn't a real outline point; letting it through to Equip surfaces an FE editor for a point the pastor hasn't actually named. The composite returns `firstReason` naming the empty indices so the disabled-Continue UI is actionable. Implemented in `checkOutlineToEquipThreshold` (`src/utils/studyAdvancement.js`).
+
 ### RW3 — Manuscript sub-phases
 
 The Manuscript step is currently treated as one continuous surface. Long-term, it might want sub-phases (Draft / Revise / Tune). Out of scope for this restructure; flag as future work. The `current_step` column gets repurposed-or-retired based on whether Manuscript ever gets sub-phases.
 
+**Resolved post-walkthrough — Manuscript stays a single continuous surface.** The pastor's mental beat at Manuscript is "I'm writing the sermon," not "I'm in Draft mode, then Revise mode." Sub-phases would force a structure that contradicts the work's actual shape (sustained long-form writing, not a question-walk). `current_step` stays retired as legacy-tolerated; no sub-phase layer added. Revisit if lived prep over multiple sermons shows the surface needs internal beats.
+
 ### RW4 — Step-boundary pause shape (Study → Assembly)
 
 The existing Implications → MPT/MPS pause (currently a step-boundary pause) carries Implications Synthesis as the substrate. Under the new structure it becomes a step-boundary pause from Study to Assembly. Does its visual treatment change? The trail charter's Phase B preserved this pause as part of the Exegesis trail's outbound clearing; the new structure could either keep that or elevate the step-boundary pause to a different visual register.
+
+**Resolved post-walkthrough — heavier visual register at step boundaries.** Study → Assembly + Assembly → Manuscript are different beats from sub-phase pauses; they carry summative weight (multiple named outcomes from a whole stage's work). The visual register should reflect that — larger title, more breathing room, and the four-outcome summary card pattern (currently in `AssemblyToManuscriptPause`'s tab-strip fallback) becomes canonical. Implementation deferred to sequel branch (see workspace-trail-sequel arc).
 
 ### RW5 — Step-boundary pause shape (Assembly → Manuscript)
 
@@ -263,9 +273,13 @@ No production sermons exist (per `feedback_verify_migration_concerns.md` — 202
 
 The Sermon Workspace Tour anchors stops on selectors that change with this restructure. Tour either retires (per trail charter DW10) or gets re-anchored after this lands.
 
+**Resolved post-walkthrough — full rewrite to match the workspace trail.** The tour gets re-authored end-to-end against the trail surfaces (not just re-anchored at selectors). Tracked together with DW10. Sequel-branch work.
+
 ### RW9 — Top-level pause-clearings vs sub-phase pause-clearings (visual register)
 
 Step 1 sub-phase pauses today look one way (paper-grain clearing, single textarea, named outcome). The Step 2 → Step 3 pause (Main Point Pair, shipped in Phase B) looks similar but stacks two values. Step-boundary pauses (Study → Assembly, Assembly → Manuscript) under the new structure carry more weight — multiple named outcomes, summative. Do they get a heavier visual register (larger title, more breathing room) or the same shape as sub-phase pauses?
+
+**Resolved post-walkthrough — yes, heavier register at step boundaries.** Same answer as RW4. Sub-phase pauses stay light (a single named outcome, paper-grain clearing); step-boundary pauses elevate (larger title, more breathing room, multi-outcome summary card). Implementation deferred to sequel branch.
 
 ### RW10 — Vocabulary across docs
 

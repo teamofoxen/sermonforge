@@ -16,8 +16,6 @@
 //     grain pattern) every trail SVG paints into.
 //   - `Station` — the SVG dot drawn at every stop. Field stations render
 //     a circle + ordinal; pause stations render a circle with a tick.
-//   - `SaveStatus` — bottom-corner save indicator. Hardcoded SAVED for
-//     now; DW14 will wire it to real save state.
 
 import { useEffect, useState } from "react";
 import {
@@ -234,11 +232,3 @@ export function Station({ point, isActive, isPause, ordinal, distance }) {
   );
 }
 
-export function SaveStatus() {
-  return (
-    <div className="tw-save tw-mono">
-      <span className="tw-save-dot" />
-      <span>SAVED</span>
-    </div>
-  );
-}

@@ -663,27 +663,6 @@
   color: var(--ink-mid);
 }
 
-/* ── Save status (bottom-right) ──────────────────────────────────────── */
-.tw-shell .tw-save {
-  position: fixed;
-  right: 24px;
-  bottom: 18px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 10px;
-  letter-spacing: 0.22em;
-  color: var(--ink-ghost);
-  z-index: 6;
-}
-.tw-shell .tw-save-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--sage-soft, #8fb084);
-  box-shadow: 0 0 0 3px rgba(107, 156, 96, 0.18);
-}
-
 /* ── Main Point Pair pause variant (WTC Phase B / DW2) ───────────────── *
  * Step 2's named outcome is the *pair* (MPT + MPS), not a single synthesis
  * sentence. The pause-clearing shows both tightened fields stacked,

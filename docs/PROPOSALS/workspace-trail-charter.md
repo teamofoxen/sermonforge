@@ -1,15 +1,15 @@
 # Workspace Trail Charter — Trail Metaphor Across the Whole Sermon Workspace
 
-> **Post-workspace-restructure status (2026-05-10):** This charter's Stage A–G phasing and the Step 2 / Step 3 / Step 4 / Frame / Manuscript phasing terminology were drafted before the Workspace Restructure (same day, evening). Re-map references:
+> **Post-walkthrough status (2026-05-10):** Stages A–E shipped + pastor-tested + merged to main. Per-stage trail surfaces are the production rendering for Study + Assembly. The remaining DW-questions resolved post-walkthrough land on a sequel arc.
 >
-> - **Stage A** (Study Step 1 / Exegesis trail) → unchanged. Shipped as [`StudyTrailExegesis.jsx`](../../src/components/StudyTrailExegesis.jsx).
-> - **Stages B + C + D + E** (Study Steps 2/3/4 + Frame trails) → collapsed into one unified [`AssemblyTrail.jsx`](../../src/components/AssemblyTrail.jsx) spanning Anchor / Outline / Equip / Frame sub-phases as a single switchback. Shipped 2026-05-10 in worktree `thirsty-bell-2d469b`. The earlier `StudyTrailForge.jsx` Anchor adapter is retired (replaced by AssemblyTrail's first row).
-> - **Stage F** (Manuscript) → unchanged.
-> - **Stage G** (workspace shell retirement) → partially shipped: tab strip collapsed from 4 to 3 tabs; OutlineTab / FrameTab as standalone stages deleted; tour anchors moved. Trail-suppress falls through to the sub-phase tab strip inside AssemblyTab.
+> - **Stage A** (Study Step 1 / Exegesis trail) → [`StudyTrailExegesis.jsx`](../../src/components/StudyTrailExegesis.jsx). Shipped.
+> - **Stages B + C + D + E** (Anchor + Outline + Equip + Frame) → one unified [`AssemblyTrail.jsx`](../../src/components/AssemblyTrail.jsx) switchback with workshop-clearings for Outline + Equip. Shipped.
+> - **Stage F** (Manuscript writing-room) → DW5 resolved (yes, writing-room mode); implementation on the sequel arc.
+> - **Stage G** (workspace shell retirement) → partially shipped: tab strip collapsed 4 → 3, OutlineTab / FrameTab deleted as standalone stages. Trail-suppress falls through to the sub-phase tab strip inside AssemblyTab as a temporary escape hatch.
 >
-> DW1 + DW2 resolved (Anchor geometry + Main Point Pair pause shape). DW3 + DW4 resolved 2026-05-10 — workshop-clearing mode: Outline and Equip each render as one stop hosting the existing OutlineBuilder / FE editors inline, with a named-outcome pause at the end of the row.
+> Resolved through this arc: DW1, DW2, DW3, DW4. Resolved post-walkthrough and queued for the sequel: DW5, DW6, DW7, DW8, DW9, DW10, DW11, DW12, DW13, DW14, DW15. See each question's resolution note below for the binding decision.
 >
-> See [`workspace-restructure-charter.md`](./workspace-restructure-charter.md) for the structural restructure that supersedes this charter's per-step phasing. The trail-rendering goals (single immersive walk, contemplative pause-clearings, named-outcome handoffs) remain binding; only the per-step phase layout changed.
+> See [`workspace-restructure-charter.md`](./workspace-restructure-charter.md) for the structural restructure that supersedes this charter's per-step phasing. The trail-rendering goals (single immersive walk, contemplative pause-clearings, named-outcome handoffs) remain binding.
 
 > **Status:** Drafted 2026-05-10. Phase A (Study Step 1) shipped via [`study-trail-charter.md`](./study-trail-charter.md). **Phase B (Study Step 2 / MPT/MPS Forge) landed 2026-05-10 in worktree `thirsty-bell-2d469b`** — DW1 + DW2 resolved, `StudyTrailForge.jsx` built as parallel sibling to the Exegesis trail, mount conditions split per-step in `StudyTab.jsx`, cross-step look-back routes through the spine. Phases C–M open. After all phases land, the legacy three-column shell, the tab strip, and the throughline rail all retire from the sermon workspace.
 
@@ -247,6 +247,8 @@ Pairs with DW3 — if Outline went mode (1), FE is its own clearing; if mode (2)
 
 The "writing room" hypothesis (the clearing morphs into a full-screen manuscript editor). Confirm + design the visual handoff (trail arrives → writing settles in → trail still visible behind).
 
+**Resolved post-walkthrough — yes, writing room mode.** Manuscript's clearing morphs into a full-screen long-form editor on arrival. Trail topbar (passage chip, title, × exit) stays for context; trail SVG fades to background. Implementation deferred to sequel branch.
+
 ### DW6 — Sidebar accessibility during trail
 
 The Step 1 trail's `× Exit` retires (DW6 supersedes D20). Pastor exits the workspace by going to Dashboard. Options:
@@ -254,15 +256,21 @@ The Step 1 trail's `× Exit` retires (DW6 supersedes D20). Pastor exits the work
 - Sidebar hidden during walk; revealed on hover at left edge
 - Sidebar accessible only via topbar back-arrow → confirms exit → Dashboard
 
+**Resolved post-walkthrough — sidebar stays hidden during the walk (current behavior).** Full-screen takeover holds; exit via × / Esc / Dashboard. The trail's contemplative posture survives only if peripheral chrome stays out of the way.
+
 ### DW7 — Single workspace-wide STOPS array
 
 The trail's geometry is data-driven from STOPS. Workspace-wide STOPS = Step 1's 29 + Step 2's stops + Step 3's stops + ... Decide:
 - One continuous array, one continuous trail (multi-stage switchback)
 - Per-stage arrays, per-stage trail visualizations (camera handoff between stages)
 
+**Resolved post-walkthrough — per-stage arrays with camera handoff between stages.** Each stage (Study, Assembly, Manuscript) owns its own STOPS + geometry; the cross-stage transition is a handoff beat (the step-boundary pause), not a continuous switchback. Avoids one 40+ stop SVG that scrolls into oblivion. Sequel-branch work.
+
 ### DW8 — Notebook per stage
 
 Where does the notebook drawer live in each stage's clearing? Side drawer? Bottom slide-up? Topbar toggle?
+
+**Resolved post-walkthrough — yes, per-stage notebook.** Each stage's clearing surfaces notebook access. Exact affordance (side drawer / bottom slide / topbar toggle) decided during sequel-branch implementation.
 
 ### DW9 — Step-boundary pause-clearings
 
@@ -271,17 +279,25 @@ Currently only sub-phase boundaries within Step 1 have pause-clearings. Step bou
 - Pause-clearings only between Study sub-phases + Study→Frame + Frame→Manuscript (skip mid-step boundaries inside Study)
 - No step-boundary pause-clearings; stages flow into each other directly
 
+**Resolved post-walkthrough — yes, step-boundary pause-clearings at Study→Assembly and Assembly→Manuscript.** Heavier visual register (RW4 + RW9). Sequel-branch work.
+
 ### DW10 — Tour replacement
 
 Re-write workspace tour for trail surfaces, or retire and replace with per-stage inline guidance, or both.
+
+**Resolved post-walkthrough — rewrite the workspace tour end-to-end to match the trail surfaces.** Walks the pastor through the trail's three stages + four Assembly sub-phases + the writing room. Replaces the current tab-strip-anchored tour stops. Sequel-branch work.
 
 ### DW11 — Trail Map (Step 1 D8) extension
 
 If the Trail Map view (Step 1 D8) is built, does it cover the whole workspace trail or just Step 1? Workspace-wide map likely makes more sense — pastor sees the full journey from text to manuscript at a glance.
 
+**Resolved post-walkthrough — yes, workspace-wide Trail Map, and it needs to be clean.** "Clean" = legible at-a-glance, no clutter, no half-built indicators; ships polished or doesn't ship. Sequel-branch work.
+
 ### DW12 — Heavy-lifting overviews per stage
 
 Step 1 trail D19 fires field-level overviews for heavy-lifting fields. What about *step-level* overviews? Each stage probably wants a "you are entering Step 2 / Forge" framing on first arrival.
+
+**Resolved post-walkthrough — yes, stage-level overviews on first arrival.** "You are entering Assembly" framing fires once per session at the Study → Assembly handoff (and parallel for Manuscript). Sequel-branch work.
 
 ### DW13 — Cutover sequencing
 
@@ -289,13 +305,19 @@ Stage by stage, or all-at-once?
 - Stage by stage: Step 2 lands first behind a flag; pastor tests; flag flips to default; repeat for each stage. Slower but safer.
 - All at once: full workspace trail behind a feature flag; pastor tests end-to-end; flip default. Faster but riskier.
 
+**Resolved post-walkthrough — all-at-once.** The merge to main IS the cutover: Stages A + B + C + D + E ship together on main; the sequel branch ships the remaining polish (RW4 / RW8 / DW5 / DW7 / DW8–DW12) in tighter increments without further feature flags. Trail-suppress (× / Esc) remains as a temporary escape hatch; retires once the sequel arc lands.
+
 ### DW14 — Save status + composite per stage
 
 Step 1 D3 left save-status hardcoded. Workspace-wide trail can't ship that — every stage will surface a save indicator. Wire to real save state from each stage's parent.
 
+**Resolved post-walkthrough — drop the indicator entirely.** Autosave runs invisibly via the 500ms debounce in `saveDb()`; a hardcoded "SAVED" badge was visual noise without information. The indicator + its CSS retired with the merge. Save errors surface through the existing error-banner path; success stays silent.
+
 ### DW15 — Mobile / narrow viewport
 
 Trail's switchback geometry assumes ~1200px+ width. Mobile or narrow desktop will need a stacked-vertical mode. Out of scope for first cut, but flag.
+
+**Resolved post-walkthrough — no mobile.** SermonForge is a desktop preacher's tool; the trail's switchback assumes ~1200px+ and that's the supported floor. Narrow-viewport handling retires from the roadmap.
 
 ---
 

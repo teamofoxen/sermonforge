@@ -41,7 +41,7 @@ import {
   SCRIPTURE_COL_WIDTH, padNum,
   firstIncompleteFieldKey, fieldHasAnyAnswer,
   useViewportSize, useSyncActiveQuestion, useTrailKeyboard,
-  TrailTopBar, TrailDefs, Station, SaveStatus,
+  TrailTopBar, TrailDefs, Station,
 } from "./studyTrailShared";
 import "./studyTrail.css";
 
@@ -430,7 +430,6 @@ export default function AssemblyTrail({
       <TrailCanvas tx={tx} ty={ty} stopIdx={stopIdx} maxVisitedStop={maxVisitedStop} viewport={viewport} />
       <SubPhaseRibbon stop={stop} subPhaseMeta={subPhaseMeta} activeQKey={activeQKey} />
       {clearing}
-      <SaveStatus />
     </div>
   );
 }
