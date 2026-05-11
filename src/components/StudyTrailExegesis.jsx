@@ -36,13 +36,13 @@ import AdvanceGateChecklist from "./AdvanceGateChecklist";
 import PassagePopup from "./PassagePopup";
 import ScripturePanel from "./ScripturePanel";
 import { autoResize } from "../utils";
+import {
+  SCRIPTURE_COL_WIDTH, padNum,
+  firstIncompleteFieldKey, fieldHasAnyAnswer,
+  useViewportSize, useSyncActiveQuestion, useTrailKeyboard,
+  TrailTopBar, TrailDefs, Station, SaveStatus,
+} from "./studyTrailShared";
 import "./studyTrail.css";
-
-// Width reserved on the right edge of the trail for the live scripture
-// column. The clearing's camera math centers in (viewport.w - this) so the
-// trail and clearing sit visually in the left column rather than under the
-// scripture panel. Keep in sync with `.tw-scripture { width }` in CSS.
-const SCRIPTURE_COL_WIDTH = 400;
 
 const PHASES = [
   {
@@ -171,41 +171,7 @@ function buildPathToIndex(uptoIdx) {
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
-const padNum = (n) => String(n).padStart(2, "0");
 const toRoman = (n) => ["I", "II", "III", "IV"][n - 1] || String(n);
-
-function firstIncompleteFieldKey(fields, data) {
-  for (const def of fields) {
-    const qs = fieldQuestions(def);
-    const allDone = qs.every(
-      (q) =>
-        isQuestionNA(data, def.key, q.key) ||
-        !!flattenAnswerValue(getQuestionAnswer(data, def.key, q.key)),
-    );
-    if (!allDone) return def.key;
-  }
-  return fields[0]?.key ?? null;
-}
-
-function firstIncompleteQuestionKey(field, data) {
-  const qs = fieldQuestions(field);
-  for (const q of qs) {
-    if (isQuestionNA(data, field.key, q.key)) continue;
-    if (!flattenAnswerValue(getQuestionAnswer(data, field.key, q.key))) {
-      return q.key;
-    }
-  }
-  return qs[0]?.key ?? DEFAULT_QUESTION_KEY;
-}
-
-function fieldHasAnyAnswer(field, data) {
-  const qs = fieldQuestions(field);
-  for (const q of qs) {
-    if (isQuestionNA(data, field.key, q.key)) continue;
-    if (flattenAnswerValue(getQuestionAnswer(data, field.key, q.key))) return true;
-  }
-  return false;
-}
 
 // ── Component ─────────────────────────────────────────────────────────────
 
@@ -227,16 +193,7 @@ export default function StudyTrailExegesis({
   subPhaseSufficiency,
   onExit,
 }) {
-  const [viewport, setViewport] = useState({
-    w: typeof window !== "undefined" ? window.innerWidth : 1280,
-    h: typeof window !== "undefined" ? window.innerHeight : 800,
-  });
-
-  useEffect(() => {
-    const onResize = () => setViewport({ w: window.innerWidth, h: window.innerHeight });
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, []);
+  const viewport = useViewportSize();
 
   // Footprints don't disappear when you look back. The trail line + visible
   // stations track the furthest stop reached this session, not the current
@@ -321,21 +278,13 @@ export default function StudyTrailExegesis({
     }
   }, [stop, currentActiveFieldKey, setCurrentActiveFieldKey]);
 
-  // Reset activeQKey to the field's first-incomplete Q whenever the field
-  // changes or the saved activeQKey isn't valid for this field. Explicit
-  // overrides set in advance / lookBack survive because the new key is
-  // valid for the new field on the next render.
-  useEffect(() => {
-    if (stop.kind !== "field") return;
-    const field = phaseDef.fields.find((f) => f.key === stop.fieldKey);
-    if (!field) return;
-    const qs = fieldQuestions(field);
-    if (!activeQKey || !qs.find((q) => q.key === activeQKey)) {
-      setActiveQKey(
-        firstIncompleteQuestionKey(field, phaseData[stop.phase].data),
-      );
-    }
-  }, [stop, activeQKey, phaseDef.fields, phaseData]);
+  useSyncActiveQuestion(
+    stop,
+    activeQKey,
+    setActiveQKey,
+    () => stop.kind === "field" ? phaseDef.fields.find((f) => f.key === stop.fieldKey) || null : null,
+    () => phaseData[stop.phase].data,
+  );
 
   // Extend the visible trail whenever we land on a stop further along than
   // we've been. Looking back never retracts.
@@ -447,53 +396,16 @@ export default function StudyTrailExegesis({
   const advanceDisabled =
     isLastFieldInPhase && isLastQuestionInField && !subPhaseSufficiency.ok;
 
-  // D5 — Keyboard navigation. Listen at window level for the trail's quiet
-  // shortcuts. Inside textareas/inputs, only the modifier-bearing shortcuts
-  // fire; bare Enter / Esc inside an input is reserved for text editing.
-  // Placed after `advance` / `lookBack` / `advanceDisabled` so the dep
-  // array sees the live closures (TDZ-safe).
-  useEffect(() => {
-    const onKey = (e) => {
-      const t = e.target;
-      const inEditor =
-        t && (t.tagName === "TEXTAREA" || t.tagName === "INPUT");
-      const mod = e.metaKey || e.ctrlKey;
-      // Cmd/Ctrl + Enter → advance
-      if (mod && e.key === "Enter") {
-        e.preventDefault();
-        if (!advanceDisabled) advance();
-        return;
-      }
-      // Cmd/Ctrl + ArrowLeft → look back
-      if (mod && e.key === "ArrowLeft") {
-        e.preventDefault();
-        lookBack();
-        return;
-      }
-      // Esc → exit trail (only outside editors so Esc can still blur etc.,
-      // and only when the passage popup isn't open — popup owns its own
-      // Esc-to-close so we'd otherwise both close popup AND exit trail).
-      if (e.key === "Escape" && !inEditor) {
-        if (passageOpen) return;
-        if (onExit) {
-          e.preventDefault();
-          onExit();
-        }
-        return;
-      }
-      // Cmd/Ctrl + . → toggle N/A on active question (D2)
-      if (mod && e.key === ".") {
-        e.preventDefault();
-        if (stop.kind === "field" && activeQKey) {
-          const { column, data } = phaseData[stop.phase];
-          toggleStructuredNA?.(column, data, stop.fieldKey, activeQKey);
-        }
-        return;
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [advance, lookBack, onExit, advanceDisabled, stop, activeQKey, phaseData, toggleStructuredNA, passageOpen]);
+  // Cmd/Ctrl+. on a field clearing toggles N/A for the active question.
+  const onTogglePass = () => {
+    if (stop.kind !== "field" || !activeQKey) return;
+    const { column, data } = phaseData[stop.phase];
+    toggleStructuredNA?.(column, data, stop.fieldKey, activeQKey);
+  };
+  useTrailKeyboard({
+    advance, lookBack, advanceDisabled, onExit, onTogglePass,
+    modalOpen: passageOpen,
+  });
 
   return (
     <div className="tw-shell">
@@ -564,39 +476,6 @@ export default function StudyTrailExegesis({
   );
 }
 
-// ── Topbar ────────────────────────────────────────────────────────────────
-
-function TrailTopBar({ sermon, onExit, onPassageClick }) {
-  return (
-    <header className="tw-topbar">
-      <div className="tw-topbar-left">
-        {/* eslint-disable-next-line sermonforge/no-raw-button */}
-        <button
-          className="tw-mono tw-meta-passage"
-          onClick={onPassageClick}
-          title="Open the passage popup"
-        >
-          {(sermon?.passage || "").toUpperCase()}
-        </button>
-      </div>
-      <h1 className="tw-topbar-title">{sermon?.title || "Untitled"}</h1>
-      <div className="tw-topbar-right">
-        {onExit && (
-          /* eslint-disable-next-line sermonforge/no-raw-button */
-          <button
-            className="tw-exit"
-            onClick={onExit}
-            aria-label="Exit trail back to workspace"
-            title="Exit trail (Esc)"
-          >
-            ×
-          </button>
-        )}
-      </div>
-    </header>
-  );
-}
-
 // ── Phase ribbon ──────────────────────────────────────────────────────────
 
 function PhaseRibbon({ stop, activeQKey }) {
@@ -637,34 +516,7 @@ function TrailCanvas({ tx, ty, stopIdx, maxVisitedStop, viewport }) {
       viewBox={`0 0 ${viewport.w} ${viewport.h}`}
       preserveAspectRatio="xMidYMid slice"
     >
-      <defs>
-        {/* Mist + paper-grain colors flow through CSS classes so dark mode
-            re-tints them via the parchment tokens. Hardcoded light parchment
-            stops here would burn through dark mode as a bright spotlight
-            halo around the active clearing. */}
-        <radialGradient id="clearingMist" cx="50%" cy="58%" r="36%">
-          <stop offset="0%" className="tw-mist-stop" stopOpacity="1" />
-          <stop offset="50%" className="tw-mist-stop" stopOpacity="0.92" />
-          <stop offset="100%" className="tw-mist-stop" stopOpacity="0" />
-        </radialGradient>
-        <pattern
-          id="paperGrain"
-          patternUnits="userSpaceOnUse"
-          width="6"
-          height="6"
-          patternTransform="rotate(35)"
-        >
-          <line
-            x1="0"
-            y1="0"
-            x2="0"
-            y2="6"
-            className="tw-grain-stroke"
-            strokeWidth="0.4"
-            opacity="0.35"
-          />
-        </pattern>
-      </defs>
+      <TrailDefs />
       <rect x="0" y="0" width={viewport.w} height={viewport.h} fill="url(#paperGrain)" />
       <g className="tw-camera" style={{ transform: `translate(${tx}px, ${ty}px)` }}>
         {pathD && (
@@ -703,37 +555,6 @@ function TrailCanvas({ tx, ty, stopIdx, maxVisitedStop, viewport }) {
         pointerEvents="none"
       />
     </svg>
-  );
-}
-
-function Station({ point, isActive, isPause, ordinal, distance }) {
-  const recede = Math.min(distance, 8);
-  const fade = Math.max(0.32, 1 - recede * 0.08);
-  const r = isActive ? (isPause ? 26 : 22) : isPause ? 14 : 10 - Math.min(recede * 0.4, 4);
-  return (
-    <g transform={`translate(${point.x} ${point.y})`} opacity={isActive ? 1 : fade}>
-      {isActive && (
-        <>
-          <circle r={r + 22} className="tw-station-glow" />
-          <circle r={r + 12} className="tw-station-glow tw-station-glow-2" />
-        </>
-      )}
-      {isPause ? (
-        <g className={`tw-station tw-station-pause ${isActive ? "is-active" : ""}`}>
-          <circle r={r} />
-          <line x1={-r * 0.5} x2={r * 0.5} y1={0} y2={0} />
-        </g>
-      ) : (
-        <g className={`tw-station ${isActive ? "is-active" : ""}`}>
-          <circle r={r} />
-          {distance < 6 && ordinal != null && (
-            <text className="tw-mono tw-station-num" y={r + 16} textAnchor="middle">
-              {padNum(ordinal)}
-            </text>
-          )}
-        </g>
-      )}
-    </g>
   );
 }
 
@@ -1136,13 +957,3 @@ function TrailQuestionInput({
   );
 }
 
-// ── Save status ───────────────────────────────────────────────────────────
-
-function SaveStatus() {
-  return (
-    <div className="tw-save tw-mono">
-      <span className="tw-save-dot" />
-      <span>SAVED</span>
-    </div>
-  );
-}

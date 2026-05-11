@@ -17,11 +17,11 @@ const {
   ContractViolation,
 } = require("./contracts.cjs");
 
-// Workspace Restructure (2026-05-10) — legacy stage value coercion.
-// Pre-restructure DBs may carry current_stage = "Blueprint" or "Frame";
-// these collapse into "Assembly" at the read boundary so the canonical
-// Stage enum stays clean. Same shape as the ARI Phase 7 "Delivery"
-// tolerance — admitted at the data layer, never re-emitted by the spine.
+// Legacy stage coercion. Databases written before the three-stage shell
+// may carry current_stage = "Blueprint" or "Frame"; both collapse into
+// "Assembly" at the read boundary so the canonical Stage enum stays clean.
+// Admitted at the data layer, never re-emitted by the spine (same shape
+// as the ARI Phase 7 "Delivery" tolerance).
 function coerceLegacyStage(stage) {
   if (stage === "Blueprint" || stage === "Frame") return STAGE.Assembly;
   return stage || STAGE.Study;
@@ -728,12 +728,11 @@ function runMigrations() {
     if (!have.has("current_sub_phase")) {
       db.run("ALTER TABLE sermons ADD COLUMN current_sub_phase TEXT");
     }
-    // Backfill: any sermon currently in_progress and at Study stage
-    // (the schema default) gets a starting SubPhase so getSermon's
-    // ProcessPosition is fully populated for new sermons too.
-    // Workspace Restructure (2026-05-10) — current_step column retired
-    // from active use (kept on disk for legacy data); only SubPhase is
-    // backfilled.
+    // Backfill: any sermon in_progress at Study stage (the schema default)
+    // gets a starting SubPhase so getSermon's ProcessPosition is fully
+    // populated for new sermons too. `current_step` is not backfilled —
+    // it's kept on disk for legacy data only; canonical position is
+    // stage + sub_phase.
     db.run(
       `UPDATE sermons
          SET current_sub_phase = ?
@@ -1052,8 +1051,8 @@ function success(value) {
 
 function shapeSermon(row, parentContext) {
   if (!row) return null;
-  // Workspace Restructure (2026-05-10) — coerce legacy stage values
-  // (Blueprint, Frame) to Assembly so the canonical position is clean.
+  // Coerce legacy Blueprint / Frame values into Assembly before the row
+  // crosses the IPC boundary; the renderer never sees the old enum.
   const stage = coerceLegacyStage(row.current_stage);
   const out = {
     // Canonical shape (per src/core/contracts.ts `Sermon`).
@@ -1250,9 +1249,8 @@ function validateAndCommit(op, payload) {
         );
       }
       const id = randomUUID();
-      // Workspace Restructure (2026-05-10) — current_step initialized to
-      // NULL (column kept for legacy data; canonical position is stage +
-      // sub_phase only).
+      // `current_step` is initialized NULL — the column is retained for
+      // legacy data only; canonical position is stage + sub_phase.
       db.run(
         `INSERT INTO sermons
            (id, series_id, section_id, is_one_off, title, passage, date, preacher,
@@ -1422,10 +1420,9 @@ function validateAndCommit(op, payload) {
       if (!row) {
         return rejection("NOT_FOUND", "State #1", `Sermon ${sermonId} not found.`);
       }
-      // Workspace Restructure (2026-05-10) — coerce legacy stage values in
-      // the `to` payload so older renderer code calling `transitionState({
-      // to: STAGE.Blueprint })` lands on Assembly without an extra round-
-      // trip. Same coercion shape as the read-side shapeSermon.
+      // Coerce legacy stage values in the `to` payload — older renderer
+      // code calling `transitionState({ to: STAGE.Blueprint })` lands on
+      // Assembly without an extra round-trip. Same coercion as shapeSermon.
       if (kind === "stage") {
         to = coerceLegacyStage(to);
       }

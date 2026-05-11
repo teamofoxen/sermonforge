@@ -2,13 +2,12 @@
 
 > **Post-workspace-restructure status (2026-05-10):** This charter's Stage A–G phasing and the Step 2 / Step 3 / Step 4 / Frame / Manuscript phasing terminology were drafted before the Workspace Restructure (same day, evening). Re-map references:
 >
-> - **Stage A** (Study Step 1 / Exegesis trail) → unchanged. Shipped.
-> - **Stage B** (Study Step 2 / MPT-MPS Forge trail) → now the **Anchor sub-phase** of the new Assembly stage. `StudyTrailForge.jsx` is mounted by `AssemblyTab` as the Anchor sub-phase renderer. Shipped.
-> - **Stage C** (Study Step 3 / Outline) → now the **Outline sub-phase** of Assembly. DW3 (visual mode) still open.
-> - **Stage D** (Study Step 4 / Functional Elements) → now the **Equip sub-phase** of Assembly. DW4 still open.
-> - **Stage E** (Frame / Step 5) → now the **Frame sub-phase** of Assembly. SADI walk content unchanged.
+> - **Stage A** (Study Step 1 / Exegesis trail) → unchanged. Shipped as [`StudyTrailExegesis.jsx`](../../src/components/StudyTrailExegesis.jsx).
+> - **Stages B + C + D + E** (Study Steps 2/3/4 + Frame trails) → collapsed into one unified [`AssemblyTrail.jsx`](../../src/components/AssemblyTrail.jsx) spanning Anchor / Outline / Equip / Frame sub-phases as a single switchback. Shipped 2026-05-10 in worktree `thirsty-bell-2d469b`. The earlier `StudyTrailForge.jsx` Anchor adapter is retired (replaced by AssemblyTrail's first row).
 > - **Stage F** (Manuscript) → unchanged.
-> - **Stage G** (workspace shell retirement) → partially shipped: tab strip collapsed from 4 to 3 tabs; OutlineTab / FrameTab as standalone stages deleted; tour anchors moved.
+> - **Stage G** (workspace shell retirement) → partially shipped: tab strip collapsed from 4 to 3 tabs; OutlineTab / FrameTab as standalone stages deleted; tour anchors moved. Trail-suppress falls through to the sub-phase tab strip inside AssemblyTab.
+>
+> DW1 + DW2 resolved (Anchor geometry + Main Point Pair pause shape). DW3 + DW4 resolved 2026-05-10 — workshop-clearing mode: Outline and Equip each render as one stop hosting the existing OutlineBuilder / FE editors inline, with a named-outcome pause at the end of the row.
 >
 > See [`workspace-restructure-charter.md`](./workspace-restructure-charter.md) for the structural restructure that supersedes this charter's per-step phasing. The trail-rendering goals (single immersive walk, contemplative pause-clearings, named-outcome handoffs) remain binding; only the per-step phase layout changed.
 
@@ -236,9 +235,13 @@ Rationale: stacking reads chronologically (past tense → present tense; what th
 
 Workshop clearing (one big stop), point-as-stop (dynamic stops), or hybrid. See Stage C.
 
+**Resolved 2026-05-10 — workshop clearing (Mode 1).** Outline renders as a single trail stop hosting `OutlineBuilder` inline. The trail rests at this stop while the pastor adds / orders / shapes outline points; the row's pause-clearing displays the named outcome (Sermon Outline) and gates advance to Equip via the existing composite (`outline.length >= 1`). Rationale: dynamic-N work doesn't fit per-stop walking — the pastor's mental beat is "I am at the outline workshop" rather than "I am at outline point 3 of 5." Mode 1 also preserves the existing `OutlineBuilder` component unchanged, which keeps the heavy-lifting editor intact.
+
 ### DW4 — Functional Elements visual mode
 
 Pairs with DW3 — if Outline went mode (1), FE is its own clearing; if mode (2), FE attaches to outline-point stops.
+
+**Resolved 2026-05-10 — workshop clearing (Mode 1), parallel to DW3.** Equip renders as a single trail stop hosting a stack of FE editors (one per outline point, each collapsible). The trail rests at this stop while the pastor equips Scripture / Explanation / Application / Illustration for each point. Same rationale as DW3: dynamic-N work, mental beat of "I am at the equip workshop," and the per-point FE editor pattern carries forward from the pre-trail rendering with its (E)/(A)/(I) badges and collapsed-preview affordance intact.
 
 ### DW5 — Manuscript visual mode
 

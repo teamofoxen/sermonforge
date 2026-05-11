@@ -1,10 +1,8 @@
-/* studyTrail.css — switchback-trail rendering of Step 1 (Exegesis).
- *
- * Adapted from tmp/switchback/Workspace - Switchback Trail.html. All selectors
- * are scoped to `.tw-shell` so this stylesheet does not leak into the rest of
- * the workspace. The clearing also overrides a small set of SpotlightField
- * classes so the embedded multi-question UI sits inside the trail's
- * typography without competing chrome.
+/* studyTrail.css — switchback-trail rendering used across the sermon
+ * workspace (Exegesis trail, Assembly trail). All selectors are scoped to
+ * `.tw-shell` so this stylesheet does not leak. Workshop-clearing styles
+ * (Outline / Equip sub-phases) live alongside the field-clearing styles
+ * the Exegesis and Anchor walks use.
  *
  * Tokens are pulled from src/styles/global.css (--ink / --parchment / --gold
  * etc.) — no new design tokens introduced.
@@ -768,4 +766,195 @@
       transparent 85%,
       color-mix(in srgb, var(--parchment-deep) 50%, transparent) 100%
     );
+}
+
+
+/* ── Workshop clearing (Outline + Equip sub-phases) ───────────────────── */
+.tw-shell .tw-clearing-workshop {
+  max-width: 900px;
+}
+.tw-shell .tw-workshop-reference {
+  background: color-mix(in srgb, var(--parchment-warm) 60%, transparent);
+  border-left: 2px solid var(--gold);
+  padding: 10px 14px;
+  margin: 12px 0 18px;
+  border-radius: 2px;
+}
+.tw-shell .tw-workshop-passage {
+  color: var(--gold);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  margin-bottom: 6px;
+}
+.tw-shell .tw-workshop-line {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+  margin-top: 4px;
+  font-size: 14px;
+  color: var(--ink-mid);
+}
+.tw-shell .tw-workshop-line-label {
+  color: var(--ink-ghost);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+.tw-shell .tw-workshop-body {
+  margin-top: 8px;
+  padding: 0;
+}
+.tw-shell .tw-workshop-empty {
+  color: var(--ink-ghost);
+  font-style: italic;
+  text-align: center;
+  padding: 24px;
+}
+
+/* ── Equip sub-phase point stack ─────────────────────────────────────── */
+.tw-shell .tw-equip-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.tw-shell .tw-equip-point {
+  border: 1px solid var(--parchment-deep);
+  border-radius: 3px;
+  background: var(--parchment);
+  overflow: hidden;
+}
+.tw-shell .tw-equip-point-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  user-select: none;
+}
+.tw-shell .tw-equip-point-num {
+  color: var(--gold);
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.tw-shell .tw-equip-point-title {
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink-mid);
+  min-width: 0;
+}
+.tw-shell .tw-equip-point-chevron {
+  color: var(--ink-ghost);
+  font-size: 16px;
+  transition: transform 0.2s ease;
+}
+.tw-shell .tw-equip-point-chevron.is-open {
+  transform: rotate(90deg);
+}
+.tw-shell .tw-equip-point-preview {
+  padding: 0 14px 10px 36px;
+  color: var(--ink-ghost);
+  font-style: italic;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tw-shell .tw-equip-point-body {
+  padding: 4px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-top: 1px dotted var(--parchment-deep);
+}
+.tw-shell .tw-equip-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.tw-shell .tw-equip-field-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-ghost);
+}
+.tw-shell .tw-equip-field-badge {
+  font-size: 10px;
+  padding: 1px 5px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--parchment-deep) 50%, transparent);
+}
+.tw-shell .tw-equip-field-badge.badge-scripture { color: var(--slate, #5a7a8a); }
+.tw-shell .tw-equip-field-badge.badge-explanation { color: var(--gold); }
+.tw-shell .tw-equip-field-badge.badge-application { color: var(--crimson-soft); }
+.tw-shell .tw-equip-field-badge.badge-illustration { color: var(--sage); }
+.tw-shell .tw-equip-field-input {
+  width: 100%;
+  border: 1px solid var(--parchment-deep);
+  background: var(--parchment-warm);
+  border-radius: 2px;
+  padding: 8px 10px;
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ink);
+  resize: none;
+  min-height: 54px;
+}
+
+/* ── Named-outcome pause content (Outline / Equip pauses) ────────────── */
+.tw-shell .tw-pause-outcome {
+  background: color-mix(in srgb, var(--parchment-warm) 55%, transparent);
+  border-left: 2px solid var(--gold);
+  padding: 14px 18px;
+  margin: 16px 0;
+  border-radius: 2px;
+  font-family: 'Crimson Pro', Georgia, serif;
+  font-size: 15px;
+}
+.tw-shell .tw-pause-outline-list {
+  margin: 0;
+  padding-left: 22px;
+  color: var(--ink-mid);
+  line-height: 1.6;
+}
+.tw-shell .tw-pause-outline-list li {
+  margin-bottom: 4px;
+}
+.tw-shell .tw-pause-equip-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.tw-shell .tw-pause-equip-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+  color: var(--ink-mid);
+}
+.tw-shell .tw-pause-equip-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tw-shell .tw-pause-equip-count {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: var(--ink-ghost);
+  flex-shrink: 0;
+}
+.tw-shell .tw-pause-equip-count.is-full {
+  color: var(--gold);
 }

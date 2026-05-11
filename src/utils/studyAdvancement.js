@@ -21,10 +21,10 @@ import {
   DEFAULT_QUESTION_KEY,
 } from "./studyFields";
 
-// Workspace Restructure (2026-05-10) — per-stage sub-phase index lookup.
-// `canonicalSubPhase(n, stage)` resolves a 1-based sub-phase index to its
-// enum value within the named stage. Default stage is Study for backward
-// compat with callers that haven't been updated yet.
+// Per-stage sub-phase index lookup. `canonicalSubPhase(n, stage)` resolves
+// a 1-based sub-phase index to its enum value within the named stage.
+// Stage defaults to Study so single-arg call sites that predate the
+// per-stage sub-phase layer keep working.
 const SUB_PHASE_BY_INDEX = {
   [STAGE.Study]: STUDY_SUB_PHASE_SEQUENCE,
   [STAGE.Assembly]: ASSEMBLY_SUB_PHASE_SEQUENCE,
@@ -611,19 +611,14 @@ function checkObserveToInterpretThreshold(sermon) {
   };
 }
 
-// Workspace Restructure (2026-05-10) — `evaluateAdvance` signature gains
-// a `stage` parameter (4th arg) when kind === "sub_phase" so the call site
-// can disambiguate Study sub-phases from Assembly sub-phases. For kind ===
-// "stage", the stage arg is ignored (fromIndex is enough — 1=Study→Assembly,
-// 2=Assembly→Manuscript). Callers that pre-restructure passed only three
-// args still resolve correctly because stage defaults to Study (matches the
-// pre-restructure shape where sub_phase always meant Study sub-phase).
-//
-// The kind === "step" branch retired with the within-Study Step layer. Old
-// call sites like `evaluateAdvance(sermon, "step", 2)` map to the new
-// `evaluateAdvance(sermon, "sub_phase", 1, STAGE.Assembly)` shape (Anchor
-// → Outline). Migration is done at each call site; this function does not
-// silently rewrite "step" to anything — passing it returns ok:false.
+// `evaluateAdvance` gates an outbound transition. The `stage` arg (4th)
+// disambiguates Study sub-phases from Assembly sub-phases when
+// kind === "sub_phase". For kind === "stage", stage is ignored
+// (fromIndex is enough — 1=Study→Assembly, 2=Assembly→Manuscript).
+// kind === "step" is not accepted — returns ok:false. Call sites that
+// used the within-Study Step layer migrate to sub_phase + STAGE.Assembly:
+// `evaluateAdvance(sermon, "sub_phase", 1, STAGE.Assembly)` is Anchor →
+// Outline (the former MPT/MPS → Outline boundary).
 export function evaluateAdvance(sermon, kind, fromIndex, stage = STAGE.Study) {
   if (!sermon) return { ok: false, reason: "" };
   let evidence = "";
@@ -644,17 +639,16 @@ export function evaluateAdvance(sermon, kind, fromIndex, stage = STAGE.Study) {
     return { ok: false, reason: "Add some content before advancing." };
   }
 
-  // Study sub-phase boundary thresholds. Unchanged from pre-restructure;
-  // SFDI per-boundary gates layer on top of the empty-evidence baseline:
+  // Study sub-phase boundary thresholds. SFDI per-boundary composites
+  // layer on top of the empty-evidence baseline:
   //   - Observe → Interpret              (sub_phase, 1, Study) — B1.4 + B1.5
   //   - Interpret → Redemptive Thread    (sub_phase, 2, Study) — B2.2
   //   - Redemptive Thread → Implications (sub_phase, 3, Study) — B3.2
   //   - Implications → next stage        (sub_phase, 4, Study) — B4.2
-  //     (this is the Study → Assembly stage boundary — fires the
-  //     checkImplicationsToMPTMPSThreshold composite that was previously
-  //     bound to the Implications → MPT/MPS step transition)
+  //     (the Study → Assembly stage boundary — fires the
+  //     `checkImplicationsToMPTMPSThreshold` composite)
   // The threshold returns a structured `{gates, firstReason}` so the
-  // disabled-Continue UI can render either the legacy single-line hint
+  // disabled-Continue UI can render either a single-line hint
   // (firstReason) or the multi-gate hover-checklist (gates) per B1.6.
   if (kind === "sub_phase" && stage === STAGE.Study && fromIndex === 1) {
     const result = checkObserveToInterpretThreshold(sermon);

@@ -23,10 +23,9 @@ import TextButton from "./primitives/TextButton";
 const TABS = STAGE_SEQUENCE;
 const TAB_LABELS = STAGE_LABELS;
 
-// Pre-vocabulary-completion lowercase tab keys, plus retired stages.
-// Workspace Restructure (2026-05-10) — "outline" + legacy "Blueprint" /
-// "Frame" all route to STAGE.Assembly (the new home of MPT/MPS + Outline
-// + FE + Frame work). "delivery" still routes to Manuscript per ARI Phase 7.
+// Legacy tab-key aliases. "outline" + "Blueprint" + "Frame" all route to
+// STAGE.Assembly (which absorbed those former stages). "delivery" routes
+// to Manuscript per ARI Phase 7.
 const LEGACY_TAB_MAP = {
   study: STAGE.Study,
   outline: STAGE.Assembly,

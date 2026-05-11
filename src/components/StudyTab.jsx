@@ -1,17 +1,10 @@
 // StudyTab — the Study (Exegesis) stage of the sermon workspace.
 //
-// Workspace Restructure (2026-05-10) — Study collapses to one step: the
-// 4 Exegesis sub-phases (Observe / Interpret / Redemptive Thread /
-// Implications). The post-exegesis work (MPT/MPS, Outline, FE, Frame)
-// moved out to the new STAGE.Assembly (rendered by AssemblyTab). The
-// within-Study Step layer retired with this restructure.
-//
-// What this tab does:
-//   - Renders the four Exegesis sub-phases via SpotlightWorksheet (legacy)
-//     OR the switchback trail (StudyTrailExegesis, worktree experiment).
-//   - Drives sub-phase transitions through the spine.
-//   - At the last sub-phase (Implications), advance routes to STAGE.Assembly
-//     via a stage transition.
+// Renders the four Exegesis sub-phases (Observe / Interpret / Redemptive
+// Thread / Implications) via either SpotlightWorksheet (the three-column
+// shell) or the switchback trail (StudyTrailExegesis). Sub-phase
+// transitions route through the spine; advancing past Implications
+// performs the stage transition into Assembly.
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useTour } from "../contexts/TourContext";
@@ -186,15 +179,11 @@ export default function StudyTab({ sermon, onUpdate, onTabChange, onMovement }) 
   // Pause-point state. Set by `advanceSubPhase` after a successful spine
   // transition; cleared by `PausePointScreen.onContinue` or by manual jumps.
   // Shape: { priorSubPhase: 1|2|3|4, nextKey: 2|3|4|"assembly", priorSummaryKey: ... }
-  // Workspace Restructure (2026-05-10) — `nextKey: "step_2"` renamed to
-  // `nextKey: "assembly"` (Study → Assembly stage transition).
   const [pausePoint, setPausePointRaw] = useState(null);
 
-  // Pause-dismiss wrapper. When the pastor clears the Study → Assembly
-  // outbound pause ("Walk on" from the Implications synthesis clearing),
-  // also flip the workspace tab forward. This is what makes the
-  // step-boundary pause a real beat — the tab transition is the *next*
-  // act, not the inciting one.
+  // Dismissing the Study → Assembly pause ("Walk on" from the Implications
+  // clearing) is what flips the workspace tab forward — the tab change is
+  // the *next* act, not the inciting one.
   const setPausePoint = useCallback((val) => {
     if (val === null && pausePoint && pausePoint.nextKey === "assembly") {
       onTabChange?.(STAGE.Assembly);
@@ -202,8 +191,8 @@ export default function StudyTab({ sermon, onUpdate, onTabChange, onMovement }) 
     setPausePointRaw(val);
   }, [pausePoint, onTabChange]);
 
-  // Trail-suppression toggle (worktree experiment). Pastor exits the trail
-  // via × / Esc; "Trail mode →" affordance in the legacy view re-enters.
+  // Pastor exits the trail via × / Esc; "Trail mode →" in the three-column
+  // shell re-enters.
   const [trailSuppressed, setTrailSuppressed] = useState(false);
 
   // Structured field data for each Exegesis sub-phase.
@@ -346,8 +335,8 @@ export default function StudyTab({ sermon, onUpdate, onTabChange, onMovement }) 
   // lands in the same surface that produced it.
   //
   // Test opt-out: localStorage `sermonforge_trail_disabled = "1"` forces
-  // the legacy three-column shell. Contract tests that assert on legacy
-  // PrimaryButton/SpotlightWorksheet markup set this flag in their setup.
+  // the three-column shell. Contract tests that assert on PrimaryButton /
+  // SpotlightWorksheet markup set this flag in their setup.
   const trailDisabledByFlag =
     typeof window !== "undefined" &&
     window.localStorage &&

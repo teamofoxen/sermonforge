@@ -1,12 +1,10 @@
 // Workspace tour — guided tour through the Sermon Workspace.
 //
-// Workspace Restructure (2026-05-10) — stops re-mapped to 3-stage shell.
-// Stops within Study walk the four Exegesis sub-phases via studySubPhase.
-// Stops within Assembly walk the four sub-phases (Anchor / Outline / Equip
-// / Frame) via assemblySubPhase. Tab keys come from `STAGE` in
-// `src/core/contracts.ts`. The orchestrator (TourContext + workspace
-// observers) aligns SermonWorkspace + StudyTab + AssemblyTab state when
-// the tour is active.
+// Stops within Study walk the four Exegesis sub-phases via studySubPhase;
+// stops within Assembly walk Anchor / Outline / Equip / Frame via
+// assemblySubPhase. Tab keys come from `STAGE` in `src/core/contracts.ts`.
+// The orchestrator (TourContext + workspace observers) aligns
+// SermonWorkspace + StudyTab + AssemblyTab state when the tour is active.
 
 import { STAGE } from "../core/contracts";
 

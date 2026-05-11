@@ -595,6 +595,14 @@ export function getQuestionAnswer(fieldData, fieldKey, questionKey = DEFAULT_QUE
   return q.value ?? "";
 }
 
+// String-guarded read for textarea / pause-clearing display. Returns "" for
+// missing, N/A, or non-string values (e.g., the array shapes used by
+// unified-canvas fields).
+export function getQuestionString(fieldData, fieldKey, questionKey = DEFAULT_QUESTION_KEY) {
+  const v = getQuestionAnswer(fieldData, fieldKey, questionKey);
+  return typeof v === "string" ? v : "";
+}
+
 // Read a question's N/A flag.
 export function isQuestionNA(fieldData, fieldKey, questionKey = DEFAULT_QUESTION_KEY) {
   const field = fieldData?.[fieldKey];

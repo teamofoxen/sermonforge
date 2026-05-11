@@ -12,9 +12,7 @@
 // runtime values, not the TypeScript types.
 'use strict';
 
-// Workspace Restructure (2026-05-10) — three-step sermon arc.
-// Stage collapses Blueprint + Frame into Assembly. The within-Study Step
-// layer retires; what were Study Steps 2/3/4 + Frame stage become Assembly's
+// Three-stage sermon arc: Study → Assembly → Manuscript. Assembly carries
 // four sub-phases (Anchor / Outline / Equip / Frame). Legacy "Blueprint" /
 // "Frame" current_stage values are coerced to "Assembly" on read in the spine.
 const STAGE = Object.freeze({

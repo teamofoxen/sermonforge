@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-10 — Workspace Trail Charter Phases 5+6: unified Assembly trail + simplify pass
+
+- New `AssemblyTrail.jsx` collapses Anchor / Outline / Equip / Frame into one switchback (10 stops across 4 rows); workshop-clearings host `OutlineBuilder` + per-point FE editors inline (DW3 + DW4 resolved to Mode 1). `StudyTrailForge.jsx` retired.
+- Shared trail primitives extracted into `studyTrailShared.jsx` (`padNum`, first-incomplete helpers, `useViewportSize`, `useSyncActiveQuestion`, `useTrailKeyboard`, `TrailTopBar`, `TrailDefs`, `Station`, `SaveStatus`); StudyTrailExegesis + AssemblyTrail both consume them.
+- Restored `FuncElem` CollapseArrow + collapsed-preview + (ESV)/(E)/(A)/(I) field-label badges in `AssemblyTab.jsx` that dropped during the move; trimmed restructure-task narration from contract files.
+- New `getQuestionString` helper in `studyFields.js` replaces ~6 inline IIFE patterns + the local `getFrameValue`. Unified `MainPointPairPause` + `SermonFramePause` into a single `PairPauseClearing` parameterized by row config.
+- Sermon Frame pause now fires correctly at the Frame → Manuscript boundary (the stale `nextKey === "manuscript"` exclusion was dropped). 291/291 vitest green; sweep PASS; drift-check PASS.
+
+---
+
 ## 2026-05-10 — Workspace Restructure: three-step sermon arc (Study / Assembly / Manuscript)
 
 Top-level workspace collapsed from four stages to three. The within-Study Step layer (Exegesis / MPT_MPS / Outline / FunctionalElements) retired entirely. Study is now just Exegesis (4 sub-phases unchanged); the new Assembly stage hosts MPT/MPS + Outline + FE + Intro/Conclusion as 4 sub-phases (Anchor / Outline / Equip / Frame). Each Assembly sub-phase produces a named outcome (Main Point Pair / Sermon Outline / Sermon Body / Sermon Frame).

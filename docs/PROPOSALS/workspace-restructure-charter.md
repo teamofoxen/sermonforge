@@ -299,12 +299,12 @@ Each phase ends in a green-state worktree commit + drift-check PASS. Pastor-test
 | **2** | Spine routing — `transitionState` accepts new sub-phase enum values; `canonicalStep` retires; `canonicalSubPhase` extends | Spine tests pass; cross-stage transitions still validate |
 | **3** | Gate renaming — `evaluateAdvance` gate keys map to new boundaries; content unchanged | Existing gate behavior preserved across boundary renames |
 | **4** | Workspace shell — three-tab top strip; `OutlineTab` + `FrameTab` retire as stages | Tabs render three values; Assembly tab routes to new `AssemblyTab.jsx` parent |
-| **5** | Trail integration — Assembly trail (one trail across four sub-phases); StudyTrailForge becomes Anchor sub-phase renderer | Trail mounts for Study OR Assembly; visual continuity preserved |
-| **6** | Outline + Equip sub-phase renderings (charters for DW3 / DW4 may be parallel) | Each sub-phase has its clearing-walk or workshop-clearing; named outcomes ratified |
-| **7** | Step-boundary pause-clearings (RW4 + RW5) | Study → Assembly + Assembly → Manuscript both have their named-outcome-summary clearings |
+| **5** | Trail integration — Assembly trail (one trail across four sub-phases) | ✅ Shipped 2026-05-10 — [`AssemblyTrail.jsx`](../../src/components/AssemblyTrail.jsx). Switchback geometry mirrors Exegesis; row 1 (Anchor MPT/MPS → MPP pause) replaces the retired `StudyTrailForge` |
+| **6** | Outline + Equip sub-phase renderings (DW3 / DW4 resolved) | ✅ Shipped 2026-05-10 — workshop-clearing for both; named outcomes Sermon Outline + Sermon Body display the structured artifact at each sub-phase boundary |
+| **7** | Step-boundary pause-clearings (RW4 + RW5) | RW5 shipped (Assembly → Manuscript Sermon Frame pause displays Intro + Conclusion; AssemblyToManuscriptPause four-outcome summary lives in the tab-strip fallback). RW4 (Study → Assembly visual register) — open |
 | **8** | Cross-doc drift sweep (RW10) | SFDI / SADI / SPRD / ARI / workspace-trail-charter banner-tagged or updated; CLAUDE.md updated; CHANGELOG entry |
 | **9** | Tour replacement (RW8) | Tour either re-anchored to new surfaces or retired with inline guidance |
-| **10** | Pastor testing — full end-to-end sermon | Developer-pastor preps at least one sermon through the restructured workspace |
+| **10** | Pastor testing — full end-to-end sermon | Dev-pastor preps at least one sermon through the restructured workspace **in the Electron app** (browser preview can't exercise the data layer; verification is lived prep, not preview clicks) |
 
 Phases 1 → 4 are the heart of the restructure. Phases 5+ build on it. Each phase can ship as its own commit in the worktree.
 

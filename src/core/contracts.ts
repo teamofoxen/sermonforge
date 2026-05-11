@@ -43,16 +43,14 @@ export {
 } from "../constants/steps";
 
 // ── State Contract #2 — Stage (within-process position) ──────────────────────
-// Workspace Restructure (2026-05-10) — three-step sermon arc.
-// Pre-restructure: Stage was 4-tab (Study, Blueprint, Frame, Manuscript)
-// with Study split into 4 internal Steps (Exegesis, MPT_MPS, Outline,
-// FunctionalElements). Restructure collapses Blueprint + Frame into a single
-// "Assembly" stage carrying four sub-phases (Anchor, Outline, Equip, Frame),
-// and retires the within-Study Step layer entirely (Exegesis becomes the
-// whole of the Study stage, with its existing four sub-phases unchanged).
+// The sermon-prep arc is three stages: Study (deepen into the text),
+// Assembly (build the sermon), Manuscript (write it). Each stage carries
+// its own sub-phase sequence (Study: 4 Exegesis sub-phases; Assembly:
+// Anchor / Outline / Equip / Frame; Manuscript: none).
 //
-// Legacy values: `Blueprint` and `Frame` are coerced to `Assembly` on read
-// in the spine. `Delivery` stays admissible for legacy data per ARI Phase 7.
+// Legacy values: `Blueprint` and `Frame` (from a prior 4-stage shape) are
+// coerced to `Assembly` on read in the spine. `Delivery` stays admissible
+// for legacy data per ARI Phase 7 but is not part of the visible sequence.
 export type Stage = "Study" | "Assembly" | "Manuscript" | "Delivery";
 
 export const STAGE = {
@@ -79,17 +77,12 @@ export const STAGE_LABELS: Readonly<Record<Stage, string>> = Object.freeze({
 });
 
 // ── Process Contract #4 — SubPhase (within-Stage progression) ────────────────
-// Workspace Restructure (2026-05-10) — SubPhase now spans two stages:
+// SubPhase spans two stages:
 //   Study sub-phases:    Observe → Interpret → RedemptiveThread → Implications
 //   Assembly sub-phases: Anchor → Outline → Equip → Frame
 // Each four-sub-phase shape mirrors the other; the trail renders both with
 // the same switchback geometry. The Stage value disambiguates which set
 // applies.
-//
-// Pre-restructure: SubPhase covered only Study's 4 Exegesis sub-phases.
-// The within-Study Step layer (Exegesis / MPT_MPS / Outline / FE) is
-// retired; what were Steps 2/3/4 are now Assembly's Anchor / Outline / Equip
-// sub-phases, and the former STAGE.Frame is now Assembly's Frame sub-phase.
 export type SubPhase =
   | "Observe" | "Interpret" | "RedemptiveThread" | "Implications"
   | "Anchor" | "Outline" | "Equip" | "Frame";
@@ -235,9 +228,8 @@ export interface SecondaryCTA {
 }
 
 // ── State Contract #1, #3, #4 — canonical Sermon and Series shapes ───────────
-// Workspace Restructure (2026-05-10) — Step layer retired. SubPhase is
-// present when the stage is Study (Observe/Interpret/Redemptive/Implications)
-// or Assembly (Anchor/Outline/Equip/Frame); Manuscript has no sub-phases.
+// SubPhase is present whenever the stage carries sub-phases (Study or
+// Assembly); Manuscript has none.
 export interface ProcessPosition {
   stage: Stage;
   subPhase?: SubPhase;
