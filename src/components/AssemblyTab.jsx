@@ -143,16 +143,18 @@ function FuncElem({ pointText, pointId, displayIndex, funcData, onUpdate, onUpda
   );
 }
 
-export default function AssemblyTab({ sermon, onUpdate, onTabChange, onMovement }) {
+export default function AssemblyTab({ sermon, onUpdate, onTabChange, onMovement, onClose }) {
   const { active: tourActive, desiredUi } = useTour();
   const [activeSubPhase, setActiveSubPhase] = useState(() => {
     const saved = localStorage.getItem(`sermonforge_assembly_subphase_${sermon.id}`);
     return saved ? parseInt(saved, 10) : 1;
   });
   const [advanceError, setAdvanceError] = useState(null);
-  // Trail suppression — pastor exits the trail via × / Esc; the legacy
-  // sub-phase tab strip renders until re-entry via "Trail mode →".
-  const [trailSuppressed, setTrailSuppressed] = useState(false);
+  // WTC sequel Item 8: user-facing trail-suppress toggle is retired —
+  // × Exit / Esc return the pastor to the Dashboard (`onClose`). The
+  // `sermonforge_trail_disabled` localStorage flag below still gates the
+  // legacy sub-phase tab strip on for contract tests that assert on
+  // its markup; that's the only remaining consumer of the fallback path.
 
   useEffect(() => {
     localStorage.setItem(`sermonforge_assembly_subphase_${sermon.id}`, activeSubPhase);
@@ -341,7 +343,7 @@ export default function AssemblyTab({ sermon, onUpdate, onTabChange, onMovement 
     typeof window !== "undefined" &&
     window.localStorage &&
     window.localStorage.getItem("sermonforge_trail_disabled") === "1";
-  const showAssemblyTrail = !trailSuppressed && !trailDisabledByFlag;
+  const showAssemblyTrail = !trailDisabledByFlag;
 
   if (showAssemblyTrail) {
     return (
@@ -367,7 +369,7 @@ export default function AssemblyTab({ sermon, onUpdate, onTabChange, onMovement 
         jumpToSubPhase={jumpToSubPhase}
         jumpToStudy={jumpToStudy}
         onUpdate={onUpdate}
-        onExit={() => setTrailSuppressed(true)}
+        onExit={onClose}
       />
     );
   }
@@ -408,28 +410,6 @@ export default function AssemblyTab({ sermon, onUpdate, onTabChange, onMovement 
             })}
           </div>
           <div style={{ marginLeft: "auto", display: "flex", gap: "12px", alignItems: "center" }}>
-            {trailSuppressed && (
-              /* eslint-disable-next-line sermonforge/no-raw-button */
-              <button
-                type="button"
-                onClick={() => setTrailSuppressed(false)}
-                title="Re-enter Assembly trail"
-                style={{
-                  background: "transparent",
-                  border: "1px solid rgba(212, 160, 23, 0.4)",
-                  borderRadius: "2px",
-                  padding: "6px 12px",
-                  fontFamily: "'JetBrains Mono', ui-monospace, monospace",
-                  fontSize: "10px",
-                  letterSpacing: "0.18em",
-                  color: "var(--gold)",
-                  cursor: "pointer",
-                  textTransform: "uppercase",
-                }}
-              >
-                Trail mode →
-              </button>
-            )}
             <FeedbackFlag surface="assembly-tab" sermonId={sermon?.id ?? null} step={activeSubPhase ?? null} />
           </div>
         </div>

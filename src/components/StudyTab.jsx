@@ -153,7 +153,7 @@ function buildRailSubPhases(sermon, obsData, intData, redData, impData, activeId
   });
 }
 
-export default function StudyTab({ sermon, onUpdate, onTabChange, onMovement }) {
+export default function StudyTab({ sermon, onUpdate, onTabChange, onMovement, onClose }) {
   const { active: tourActive, desiredUi } = useTour();
   const [activeSubPhase, setActiveSubPhase] = useState(() => {
     const saved = localStorage.getItem(`sermonforge_study_subphase_${sermon.id}`);
@@ -191,9 +191,13 @@ export default function StudyTab({ sermon, onUpdate, onTabChange, onMovement }) 
     setPausePointRaw(val);
   }, [pausePoint, onTabChange]);
 
-  // Pastor exits the trail via × / Esc; "Trail mode →" in the three-column
-  // shell re-enters.
-  const [trailSuppressed, setTrailSuppressed] = useState(false);
+  // WTC sequel Item 8: the user-facing trail-suppress toggle is retired.
+  // × Exit / Esc return the pastor to the Dashboard (`onClose`) rather
+  // than dropping into the legacy three-column shell. The localStorage
+  // `sermonforge_trail_disabled` flag below still gates the trail off
+  // for the two contract tests (process-2 / process-3) that assert on
+  // SpotlightWorksheet markup. Those tests' legacy-shell expectations
+  // are the only remaining consumer of the suppressed branch.
 
   // Structured field data for each Exegesis sub-phase.
   const obsData = useMemo(() => parseStructuredField(sermon.observations), [sermon.observations]);
@@ -341,7 +345,7 @@ export default function StudyTab({ sermon, onUpdate, onTabChange, onMovement }) 
     typeof window !== "undefined" &&
     window.localStorage &&
     window.localStorage.getItem("sermonforge_trail_disabled") === "1";
-  const showTrail = !trailDisabledByFlag && !trailSuppressed;
+  const showTrail = !trailDisabledByFlag;
 
   if (showTrail) {
     return (
@@ -362,38 +366,20 @@ export default function StudyTab({ sermon, onUpdate, onTabChange, onMovement }) 
         jumpToSubPhase={jumpToSubPhase}
         subPhaseSufficiency={subPhaseSufficiency}
         onUpdate={onUpdate}
-        onExit={() => setTrailSuppressed(true)}
+        onExit={onClose}
       />
     );
   }
 
-  // Legacy three-column shell (trail suppressed).
+  // Test-only legacy three-column shell — reached only when the
+  // `sermonforge_trail_disabled` localStorage flag is set in contract-
+  // test setup. The user-facing trail-suppress toggle retired in WTC
+  // sequel Item 8 (no "Trail mode →" re-entry; × Exit returns to
+  // Dashboard via `onClose`).
   return (
     <div className="study-tab-shell">
       <div style={{ position: "relative" }}>
         <div style={{ position: "absolute", top: "8px", right: "10px", display: "flex", gap: "12px", alignItems: "center" }}>
-          {trailSuppressed && (
-            // eslint-disable-next-line sermonforge/no-raw-button
-            <button
-              type="button"
-              onClick={() => setTrailSuppressed(false)}
-              title="Re-enter switchback trail (worktree experiment)"
-              style={{
-                background: "transparent",
-                border: "1px solid rgba(212, 160, 23, 0.4)",
-                borderRadius: "2px",
-                padding: "6px 12px",
-                fontFamily: "'JetBrains Mono', ui-monospace, monospace",
-                fontSize: "10px",
-                letterSpacing: "0.18em",
-                color: "var(--gold)",
-                cursor: "pointer",
-                textTransform: "uppercase",
-              }}
-            >
-              Trail mode →
-            </button>
-          )}
           <FeedbackFlag surface="study-tab" sermonId={sermon?.id ?? null} step={1} />
         </div>
       </div>

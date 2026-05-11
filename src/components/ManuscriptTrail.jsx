@@ -13,6 +13,13 @@
 // Wrap-and-frame, not a rewrite: `ManuscriptTab` retains every section
 // (Intro / points / transitions / conclusion / review / notebook) and all
 // its save behavior; this component supplies the trail shell around it.
+//
+// WTC sequel Item 8: the user-facing trail-suppress escape hatch is gone.
+// × Exit / Esc return the pastor to the Dashboard (`onClose`). There is
+// no legacy fallback for Manuscript — the writing room is the only
+// rendering. The `sermonforge_trail_disabled` localStorage flag used by
+// Study/Assembly contract tests doesn't apply here; Manuscript has no
+// contract test that asserts on legacy markup.
 
 import { useState } from "react";
 import ManuscriptTab from "./ManuscriptTab";
@@ -28,17 +35,12 @@ import {
   useTrailMapToggle,
 } from "./studyTrailShared";
 import WorkspaceTrailMap from "./WorkspaceTrailMap";
-import { getQuestionAnswer, getQuestionString, parseStructuredField } from "../utils/studyFields";
+import { getQuestionString, parseStructuredField } from "../utils/studyFields";
 import { getOutline } from "../utils";
 import "./studyTrail.css";
 
-export default function ManuscriptTrail({ sermon, onUpdate }) {
+export default function ManuscriptTrail({ sermon, onUpdate, onClose }) {
   const [passageOpen, setPassageOpen] = useState(false);
-  // Trail-suppress: Esc / × exit pulls the pastor out of the writing-room
-  // shell into the bare ManuscriptTab. Retires when the escape hatch goes
-  // away in Item 8; until then it matches the Study / Assembly behavior so
-  // the contract is the same across stages.
-  const [trailSuppressed, setTrailSuppressed] = useState(false);
   const [stageOverviewSeen, markStageOverviewSeen] = useStageOverviewSeen("manuscript");
   const notebook = useNotebookToggle();
   const map = useTrailMapToggle();
@@ -47,40 +49,10 @@ export default function ManuscriptTrail({ sermon, onUpdate }) {
     advance: () => {},
     lookBack: () => {},
     advanceDisabled: true,
-    onExit: () => setTrailSuppressed(true),
+    onExit: onClose,
     onTogglePass: () => setPassageOpen((v) => !v),
     modalOpen: passageOpen,
   });
-
-  if (trailSuppressed) {
-    return (
-      <div className="study-tab-shell" style={{ padding: "12px 24px 24px" }}>
-        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "12px" }}>
-          {/* eslint-disable-next-line sermonforge/no-raw-button */}
-          <button
-            type="button"
-            onClick={() => setTrailSuppressed(false)}
-            title="Re-enter the writing room"
-            style={{
-              background: "transparent",
-              border: "1px solid rgba(212, 160, 23, 0.4)",
-              borderRadius: "2px",
-              padding: "6px 12px",
-              fontFamily: "'JetBrains Mono', ui-monospace, monospace",
-              fontSize: "10px",
-              letterSpacing: "0.18em",
-              color: "var(--gold)",
-              cursor: "pointer",
-              textTransform: "uppercase",
-            }}
-          >
-            Writing room →
-          </button>
-        </div>
-        <ManuscriptTab sermon={sermon} onUpdate={onUpdate} />
-      </div>
-    );
-  }
 
   // Stage overview (DW12) — fires on first arrival at the writing room
   // in a session. The carried-forward list reads back the four Assembly
@@ -117,7 +89,7 @@ export default function ManuscriptTrail({ sermon, onUpdate }) {
       <div className="tw-shell tw-shell-writing-room">
         <TrailTopBar
           sermon={sermon}
-          onExit={() => setTrailSuppressed(true)}
+          onExit={onClose}
           onPassageClick={() => setPassageOpen(true)}
         />
         <PassagePopup
@@ -152,7 +124,7 @@ export default function ManuscriptTrail({ sermon, onUpdate }) {
     <div className="tw-shell tw-shell-writing-room">
       <TrailTopBar
         sermon={sermon}
-        onExit={() => setTrailSuppressed(true)}
+        onExit={onClose}
         onPassageClick={() => setPassageOpen(true)}
         onToggleNotebook={notebook.toggle}
         notebookOpen={notebook.open}

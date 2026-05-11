@@ -397,6 +397,7 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSermon }) {
               onUpdate={handleUpdate}
               onTabChange={handleTabChange}
               onMovement={({ from, to }) => setLastMovement({ from, to, at: Date.now() })}
+              onClose={onClose}
             />
           )}
           {activeTab === STAGE.Assembly && (
@@ -405,12 +406,14 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSermon }) {
               onUpdate={handleUpdate}
               onTabChange={handleTabChange}
               onMovement={({ from, to }) => setLastMovement({ from, to, at: Date.now() })}
+              onClose={onClose}
             />
           )}
           {activeTab === STAGE.Manuscript && (
             <ManuscriptTrail
               sermon={sermon}
               onUpdate={handleUpdate}
+              onClose={onClose}
             />
           )}
         </div>
