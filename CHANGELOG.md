@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-11 — Trail-layer contract tests
+
+- New `tests/contracts/trail-layer-integration.test.tsx` — 13 tests covering the integration gap the post-WTC audit flagged: spine contracts were unit-tested in isolation, but no test asserted that the trail's advance / look-back / cross-stage paths actually route through `transitionState`.
+- Three live integration tests confirm each stage's trail shell mounts (`.tw-shell` for Study + Assembly, `.tw-shell-writing-room` for Manuscript) against the test-spine fixture.
+- Five source-level structural checks enforce that `SermonWorkspace.handleTabChange`, `StudyTab.advanceSubPhase` + `jumpToSubPhase`, and `AssemblyTab.advanceSubPhase` + `jumpToSubPhase` + `jumpToStudy` all `await transitionState(...)` — guards against silent removal of spine routing.
+- Two structural checks lock in cross-stage pause-dismissal routing: `StudyTab`'s `setPausePoint` wrapper routes `nextKey === "assembly"` through `onTabChange`, and `AssemblyTab`'s wrapper routes `nextKey === "manuscript"` similarly. Three meta-tests guard the structural checks against vacuous-pass refactors.
+- 839/839 vitest green (up from 826); preflight + drift-check PASS.
+
+---
+
 ## 2026-05-11 — Cleanups: drawer Esc, orphan-file delete, doc-drift quieting
 
 - Notebook drawer Esc now closes the drawer from anywhere — including inside the textarea — instead of requiring the pastor to Tab out first. The trail's own Esc handler is already gated on `modalOpen: notebook.open` so it won't also fire and exit the trail.
