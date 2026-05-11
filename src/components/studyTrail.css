@@ -886,6 +886,46 @@
 }
 
 
+/* ── Writing room (WTC Phase F / DW5) ─────────────────────────────────── *
+ * Manuscript's terminal "stage" of the trail. The clearing-walk metaphor
+ * gives way to a settled place: trail topbar stays, scripture column
+ * stays, the central body hosts the existing ManuscriptTab full-width
+ * (capped to a reading column) so the pastor settles in to long-form
+ * prose. The trail SVG retires — the paper-grain texture + vignette via
+ * `.tw-shell::after` carry the felt continuity without a competing path.
+ */
+.tw-shell-writing-room .tw-writing-room-body {
+  position: absolute;
+  top: 62px;       /* below topbar */
+  left: 0;
+  right: 400px;    /* scripture column reserves this */
+  bottom: 0;
+  padding: 40px 64px 80px;
+  overflow-y: auto;
+  z-index: 4;
+  background: var(--parchment);
+  animation: tw-writing-room-enter 0.45s ease-out;
+}
+@keyframes tw-writing-room-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.tw-shell-writing-room .tw-writing-room-body > * {
+  max-width: 820px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.tw-shell-writing-room .tw-writing-room-eyebrow {
+  font-size: 10px;
+  letter-spacing: 0.32em;
+  color: var(--gold);
+  margin-bottom: 28px;
+  text-transform: uppercase;
+}
+/* Re-enable normal vignette underneath the body so the writing room
+ * inherits the same warm framing as a clearing. The ::after sits on
+ * `.tw-shell` already; nothing extra needed here. */
+
 /* ── Workshop clearing (Outline + Equip sub-phases) ───────────────────── */
 .tw-shell .tw-clearing-workshop {
   max-width: 900px;

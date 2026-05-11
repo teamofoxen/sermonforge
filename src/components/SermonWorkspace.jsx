@@ -13,7 +13,7 @@ import { autoResize } from "../utils";
 import DeleteButton from "./DeleteButton";
 import StudyTab from "./StudyTab";
 import AssemblyTab from "./AssemblyTab";
-import ManuscriptTab from "./ManuscriptTab";
+import ManuscriptTrail from "./ManuscriptTrail";
 import PassagePopup from "./PassagePopup";
 import SecondaryButton from "./primitives/SecondaryButton";
 import IconButton from "./primitives/IconButton";
@@ -408,7 +408,7 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSermon }) {
             />
           )}
           {activeTab === STAGE.Manuscript && (
-            <ManuscriptTab
+            <ManuscriptTrail
               sermon={sermon}
               onUpdate={handleUpdate}
             />
