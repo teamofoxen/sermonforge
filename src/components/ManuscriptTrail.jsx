@@ -85,8 +85,14 @@ export default function ManuscriptTrail({ sermon, onUpdate, onClose }) {
           : "(not yet written)",
       },
     ];
+    // Overview branch: render StageOverview as a direct child of
+    // `.tw-shell` (NOT inside `.tw-writing-room-body`) so the clearing's
+    // absolute-positioning math centers inside the full shell viewport
+    // minus the scripture column. Nesting it inside the body — which is
+    // itself absolutely positioned — would compound the offset and
+    // squash the layout.
     return (
-      <div className="tw-shell tw-shell-writing-room">
+      <div className="tw-shell">
         <TrailTopBar
           sermon={sermon}
           onExit={onClose}
@@ -100,22 +106,20 @@ export default function ManuscriptTrail({ sermon, onUpdate, onClose }) {
         <aside className="tw-scripture">
           <ScripturePanel passage={sermon?.passage} />
         </aside>
-        <main className="tw-writing-room-body">
-          <StageOverview
-            eyebrow="ENTERING THE WRITING ROOM"
-            title="You've walked far. Now expand the trail into prose."
-            body="Every named outcome you've produced — from Observation Set to Sermon Frame — is here. The writing room is one continuous surface; section cards keep the structure visible while you write. The trail recedes; the writing leads from here."
-            outcomes={[
-              { label: "INTRODUCTION",  text: "Opener, MPT, scripture reading, MPS, expectation, title." },
-              { label: "BODY",          text: "Each outline point with transition, point, Scripture, explanation, application, illustration." },
-              { label: "CONCLUSION",    text: "Response that lands what the trail has shaped." },
-              { label: "REVIEW + EXPORT",text: "Flow check, ear check, final tune-up, then export to Word." },
-            ]}
-            carriedForward={carriedForward}
-            continueLabel="Walk into the writing room"
-            onContinue={markStageOverviewSeen}
-          />
-        </main>
+        <StageOverview
+          eyebrow="ENTERING THE WRITING ROOM"
+          title="You've walked far. Now expand the trail into prose."
+          body="Every named outcome you've produced — from Observation Set to Sermon Frame — is here. The writing room is one continuous surface; section cards keep the structure visible while you write. The trail recedes; the writing leads from here."
+          outcomes={[
+            { label: "INTRODUCTION",  text: "Opener, MPT, scripture reading, MPS, expectation, title." },
+            { label: "BODY",          text: "Each outline point with transition, point, Scripture, explanation, application, illustration." },
+            { label: "CONCLUSION",    text: "Response that lands what the trail has shaped." },
+            { label: "REVIEW + EXPORT",text: "Flow check, ear check, final tune-up, then export to Word." },
+          ]}
+          carriedForward={carriedForward}
+          continueLabel="Walk into the writing room"
+          onContinue={markStageOverviewSeen}
+        />
       </div>
     );
   }
