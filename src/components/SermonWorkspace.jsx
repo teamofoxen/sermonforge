@@ -112,10 +112,21 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSermon }) {
         setSermon(data);
         sermonRef.current = data;
         setSiblingIds(Array.isArray(siblings) ? siblings.map(s => s.id) : []);
-        // Restore last active tab across restarts
-        const savedTab = localStorage.getItem(`sermonforge_sermon_tab_${sermonId}`);
-        const migratedTab = savedTab && (LEGACY_TAB_MAP[savedTab] || savedTab);
-        if (migratedTab && TABS.includes(migratedTab)) setActiveTab(migratedTab);
+        // Restore last active tab across restarts — except for the tour
+        // sample sermon, whose fixed ID (`tour-romans-sermon-01`) means a
+        // tab the pastor clicked into during a prior session would stick
+        // even after the DELETE+INSERT reseed regenerates the row at
+        // STAGE.Study. Tour sermons always honor the freshly-seeded
+        // `current_stage` and start at the beginning of the trail.
+        const isTourSermon = typeof sermonId === "string" && sermonId.startsWith("tour-");
+        if (!isTourSermon) {
+          const savedTab = localStorage.getItem(`sermonforge_sermon_tab_${sermonId}`);
+          const migratedTab = savedTab && (LEGACY_TAB_MAP[savedTab] || savedTab);
+          if (migratedTab && TABS.includes(migratedTab)) setActiveTab(migratedTab);
+        } else if (data?.current_stage) {
+          const seededTab = LEGACY_TAB_MAP[data.current_stage] || data.current_stage;
+          if (TABS.includes(seededTab)) setActiveTab(seededTab);
+        }
       } catch (e) {
         console.error("SermonWorkspace load error:", e);
       } finally {
