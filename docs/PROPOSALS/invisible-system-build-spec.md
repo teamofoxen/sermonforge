@@ -216,8 +216,8 @@ deletion sweep** is annotated below; see the sweep state section at the bottom o
 for phase-by-phase detail.
 
 - The trail rendering in its entirety — switchback trail, clearings, station marks.
-  *(Pending Phase E.)*
-- Pause-clearings — all of them, including the stage-boundary pauses. *(Pending Phase E.)*
+  *(Shipped Phase E, 2026-05-17.)*
+- Pause-clearings — all of them, including the stage-boundary pauses. *(Shipped Phase E, 2026-05-17.)*
 - The rail and any rail-collapse / `takeoverWhenActive` logic. *(takeoverWhenActive
   retired in C; rail goes with E.)*
 - Sub-phase headers, phase labels, and field-of-N counters in working views. *(Gone from
@@ -386,6 +386,16 @@ sweep state section is the live tracker.
 Build the new surfaces first where possible, so there is always a working path, then remove
 the old. Do not delete the trail before the writing surface and map can carry the work.
 
+*Acknowledgment (Phase E, 2026-05-17):* the rule above was knowingly under-met when E
+shipped. The writing surface carries Study + Assembly/Anchor + Assembly/Frame; Assembly/
+Outline, Assembly/Equip, and Manuscript have zero registered field defs in `walkOrder.js`.
+Position landing in those stages renders "No field found." The regression was already
+live in production as of D2c (the writing surface stopped mounting the tab-routed trails
+then); E deleted the dead code that previously rendered those stages but did not introduce
+the user-facing gap. Path A chosen: accept the gap as temporary and schedule the field-def
+extraction as its own tracked initiative. The discipline rule above is preserved as the
+rule — its under-met state is named, not silently overridden.
+
 ---
 
 ## Trail deletion sweep — state and commitments
@@ -410,8 +420,8 @@ phases.
 | **D2c** | `SermonWorkspace.jsx` render rewrite — replaced tab/trail render with writing surface + map + threshold overlays. `SermonWorkspaceFixture.jsx` added with three scenarios (empty / populated / at-handoff) all verified through the real render path. `beforePositionChange` async hook added to `SermonWritingSurface` | ✅ Complete |
 | **D2d** | Notebook drawer — `WorkspaceNotebookDrawer.jsx` + CSS, mounted in `SermonWorkspace` as overlay, summon control in writing-surface chrome (quiet mono text link near save indicator per option i), stage→column dispatch (`notebook_study` / `notebook_blueprint` / `notebook_manuscript`) | ✅ Complete |
 | **D2e** | Contract test updates — `process-2-evidence-gated-ux.test.tsx` updated (selector swap `.tw-shell` → `.sws-shell`, test names refreshed). `process-3-movement-visible.test.tsx` rewritten against the threshold vocabulary (`.ssl-overlay`, `.sah-overlay`, no `movement-event` testid) with the meta-test inverted as the no-narration tripwire; Process Contract #3 rearticulated in `docs/CORE.md` per open question 7 option B. `trail-layer-integration.test.tsx` leaves intact; dies with E | ✅ Complete |
-| **E** | Delete trail UI files (`StudyTrailExegesis.jsx`, `AssemblyTrail.jsx`, `ManuscriptTrail.jsx`, `WorkspaceTrailMap.jsx`, `studyTrail.css`, `AdvanceGateChecklist.jsx` + test). Surgical extract `studyTrailShared.jsx` (keep ~4 era-2 helpers, delete the rest). Delete `trail-layer-integration.test.tsx`. Full tour cleanup | ⏸ Pending — destructive, requires explicit authorization |
-| **F** | Delete wall layer in `studyAdvancement.js` — `evaluateAdvance`, `formatAdvanceRejection`, `formatTabRejection`, the 5 `check*Threshold` wrappers, `buildSubPhaseEvidence`, `buildStageEvidence`. Per-caller-classify `answeredQuestions` (content-presence primitive — preserve if any non-wall caller exists). Keep the 9 composite gate functions | ⏸ Pending — gated by E |
+| **E** | Delete trail UI files (`StudyTrailExegesis.jsx`, `AssemblyTrail.jsx`, `ManuscriptTrail.jsx`, `WorkspaceTrailMap.jsx`, `studyTrail.css`, `AdvanceGateChecklist.jsx` + test). Shipped 2026-05-17 as an atomic 12-file delete: the listed 6 trail UI files + `studyTrailShared.jsx` (full-deleted, no extract — grep proved zero external callers for the 3 candidate era-2 helpers) + 3 tab orphans (`StudyTab.jsx`, `AssemblyTab.jsx`, `ManuscriptTab.jsx` — unmounted since D2c) + `trail-layer-integration.test.tsx`. **Tour cleanup was pulled out of E as its own separate pending phase** (touches IPC + spine + allowlists; entangled with E only because the trail was the tour's caller). **Known open gap (Path A):** Assembly/Outline, Assembly/Equip, Manuscript stages have no registered field defs in the writing surface; field-def extraction tracked as a separate initiative | ✅ Complete |
+| **F** | Delete wall layer in `studyAdvancement.js` — `evaluateAdvance`, `formatAdvanceRejection`, `formatTabRejection`, the 5 `check*Threshold` wrappers, `buildSubPhaseEvidence`, `buildStageEvidence`. Per-caller-classify `answeredQuestions` (content-presence primitive — preserve if any non-wall caller exists). Keep the 9 composite gate functions | ⏸ Pending — requires explicit authorization (E shipped; F is no longer gated by E) |
 | **G** | Spine relaxation — delete Process #1 (forward-to-prior) and Process #2 (empty-evidence) rejections in `electron/main.js` `transitionState`. Renderer no longer sends evidence by F's end | ⏸ Pending — gated by F |
 
 ### Hard commitments locked through D2 (must survive into E/F/G)
@@ -493,9 +503,13 @@ the era 3 walls or undoes the calm-surface work.
 When picking up the sweep in a new session:
 
 1. Read this section first (sweep state + commitments) before reading the rest of the spec.
-2. D2 is complete (closed in D2e, 2026-05-17). E is the next authorized step pending
-   preacher go-ahead. E is destructive trail-file deletion; do not self-authorize.
-   Once E is authorized, plan-first (per the discipline carried through B/C/D).
+2. D2 + E both complete (E shipped 2026-05-17 as a 12-file atomic delete). The next
+   authorized step is either the tour-cleanup phase (its own plan + authorization) or
+   F (no longer gated by E — gated by explicit preacher authorization). F is wall-layer
+   deletion in `studyAdvancement.js`; per-caller-classify `answeredQuestions` before
+   deletion. Plan-first per the discipline carried through B/C/D. **Known E open gap:**
+   Manuscript / Assembly Outline / Assembly Equip have no field defs in the writing
+   surface; field-def extraction tracked as a separate initiative, preacher-prioritized.
 3. Memory file at `~/.claude/projects/C--Projects-SermonForge/memory/MEMORY.md` indexes
    project state; the entry pointing to this initiative should be updated when the sweep
    closes.
