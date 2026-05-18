@@ -176,12 +176,20 @@ export default function SermonWritingSurface({
   }, [stage, subPhase, fieldKey, handleInternalPositionChange]);
 
   if (!field) {
+    // Defensive fallback for a state the current code paths cannot produce:
+    // chevron-next + map both consume WALK_ORDER, which skips Assembly/Outline
+    // + Assembly/Equip + Manuscript (OEM field-def gap, Path A). If a position
+    // ever lands here (corrupted last_touched_position, future bug), give the
+    // pastor a humane explanation + the workspace-level Back button as the
+    // escape — within-surface nav chrome is deliberately not rendered (no
+    // current field to navigate from, branch dies entirely when OEM field-def
+    // extraction lands). Post-sweep audit L2, 2026-05-18.
     return (
       <div className="sws-shell">
         <div className="sws-writing">
           <div className="sws-field">
             <div className="sws-field-hint">
-              No field found for {String(stage)} · {String(subPhase)} · {String(fieldKey)}.
+              This part of the sermon isn't available yet. Use the Back button to return to your dashboard. ({String(stage)} · {String(subPhase)} · {String(fieldKey)})
             </div>
           </div>
         </div>
