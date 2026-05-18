@@ -933,8 +933,11 @@ button {
 /* Legacy worksheet / spotlight / pause-point / func-elem rules removed
  * 2026-05-11 post-WTC. The components they styled (SpotlightWorksheet,
  * PausePointScreen, ThroughlineRail, FrameTab, FuncElem inline) were
- * deleted with the WTC sequel arc; the trail surfaces in studyTrail.css
- * own all sermon-workspace styling now. */
+ * deleted with the WTC sequel arc. The trail surfaces (studyTrail.css)
+ * that followed were themselves deleted in the trail deletion sweep
+ * Phase E (2026-05-17). Sermon-workspace styling now lives in the
+ * per-component CSS files (sermonWritingSurface.css, sermonMap.css,
+ * sermonStartLanding.css, studyAnchorHandoff.css, workspaceNotebookDrawer.css). */
 
 /* Handoff summary block */
 .summary-block {

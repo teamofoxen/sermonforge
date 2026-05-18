@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-17 — Invisible-system rebuild: Phase E — trail UI deleted
+
+- Atomic 12-file deletion: 6 trail UI files (`StudyTrailExegesis`, `AssemblyTrail`, `ManuscriptTrail`, `WorkspaceTrailMap`, `AdvanceGateChecklist` + test, `studyTrailShared`, `studyTrail.css`), 3 tab orphans (`StudyTab`, `AssemblyTab`, `ManuscriptTab` — unmounted since D2c), `tests/contracts/trail-layer-integration.test.tsx`. `studyTrailShared.jsx` full-deleted (spec anticipated 4 era-2 helpers to extract; grep proved zero external callers).
+- Tour cleanup pulled out of E as its own phase — touches IPC + spine + allowlists and was only entangled with E because the trail was the tour's caller. SermonWorkspace's no-op `useTour()` call stays until that phase is authorized.
+- Known open gap (Path A decision): Assembly/Outline, Assembly/Equip, Manuscript stages have no field defs in the writing surface — recorded as a separate tracked initiative. Regression already existed in production as of D2c; E only deletes the dead code that previously rendered them.
+- `src/styles/global.css` comment block updated to reflect that `studyTrail.css` is deleted; sermon-workspace styling now lives in per-component CSS files.
+- Lint baseline shifted: 5 pre-E tab/pill nav `no-raw-button` hits gone with the tab files; new baseline is 23 in the D2c/D2d writing-surface stack — Surface #2 catch-up pass now scheduled work. ENFORCEMENT_STATUS rows for Process #1, Process #2, Surface #2 + lint baseline updated to reflect post-E reality.
+
+---
+
 ## 2026-05-17 — Invisible-system rebuild: D2e closes D2 — Process Contract #3 → threshold surface
 
 - Process Contract #3 rearticulated in `docs/CORE.md` from "movement is a visible event" to "movement is visible at thresholds, not narrated continuously," citing the build spec's *Strategic orientation at thresholds* line and the era-2 charter's *Constraint without ceremony* clause.
