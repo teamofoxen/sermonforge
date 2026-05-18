@@ -89,15 +89,22 @@ Frame). The `current_step` column was retired in the trail deletion sweep
 
 ### Exegesis sub-phases
 
-Each sub-phase renders as a sequence of clearings on the trail. The clearing
-hosts the existing field-level editors (unified canvas, synthesis tables)
-unchanged; the trail supplies the topbar, scripture column, station marks,
-and stage-boundary pause-clearings. Gates between sub-phases are enforced by
-`evaluateAdvance` in `src/utils/studyAdvancement.js`; the gate UI lives on
-the clearing's `← look back` / Continue actions. The stage-boundary pause
-between Implications and Assembly is the `StageBoundaryPause` clearing in
-`studyTrailShared.jsx` — heavier visual register, reads back all four named
-outcomes.
+Each sub-phase renders as a sequence of fields on the writing surface. The
+field-level editors (unified canvas, synthesis tables) are unchanged from
+pre-rebuild; the writing surface supplies the topbar, scripture column, and
+threshold orientation overlays. Gates between sub-phases are no longer in
+the navigation path — the trail deletion sweep retired the
+advancement-wall layer (`evaluateAdvance` and its `check*Threshold` wrappers
+in `src/utils/studyAdvancement.js`) in Phase F (2026-05-17). The 8 surviving
+composite gate functions in `studyAdvancement.js` carry the completeness
+contract (the question "is this load-bearing field complete?") and feed map
+state + the "is the sermon done" check, but they do not block movement —
+the writing surface inherits free navigation from day one. The Study →
+Anchor stage boundary is surfaced by `StudyAnchorHandoff` (`.sah-overlay`)
+per Process Contract #3's threshold rearticulation; heavier visual
+register, reads back all four named outcomes. (The broader pre-rebuild
+trail vocabulary in earlier revisions of this doc was retired in Phase E
+and is being rewritten opportunistically.)
 
 #### Phase 1: Observe → `sermons.observations` (JSON)
 

@@ -248,9 +248,23 @@ for phase-by-phase detail.
   ARI-era defensive-tolerance, out of scope for this sweep; decide by name and origin, not
   by association with Blueprint/Frame.
 - The wall layer in `studyAdvancement.js` — `evaluateAdvance`, `formatAdvanceRejection`,
-  `formatTabRejection`, the five `check*Threshold` wrappers, `buildSubPhaseEvidence`,
-  `buildStageEvidence`. *(Pending Phase F.)* **Keep:** the nine composite gate functions
-  (`checkField3Composite`, etc.) — they are the surviving completeness contract.
+  `formatTabRejection`, the seven `check*Threshold` wrappers (the original spec said
+  "five"; grep against the live file at F's execution found seven — the four Study-
+  internal boundary checks + `checkStep2ToOutlineThreshold` +
+  `checkOutlineToEquipThreshold` + `checkSermonFrameToManuscriptThreshold`),
+  `buildSubPhaseEvidence`, `buildStageEvidence`, plus `canonicalSubPhase` +
+  `subPhaseToIndex` (both orphaned with the wrappers — the former only called by
+  `evaluateAdvance`, the latter only by the E-deleted tab files). `answeredQuestions`
+  in `studyFields.js` went with the same chunk (sole caller was
+  `buildSubPhaseEvidence`; map state and completeness use `hasContent` per the
+  per-question-kind dispatch). *(Shipped Phase F, 2026-05-17.)* **Kept:** the
+  eight composite gate functions (the original spec said "nine"; the live file
+  carries eight — `checkField3Composite`, `checkField8Composite`,
+  `checkPhase4Field4Composite`, `checkField5Composite`, `checkIntroComposite`,
+  `checkConclusionComposite`, `checkMPTComposite`, `checkMPSComposite`). They
+  are the surviving completeness contract — uncalled today, kept anyway because
+  the spec assigns them a future role feeding map state and the "is the sermon
+  done" check.
 - The spine-side Process #1 (forward-to-prior rejection) and Process #2 (empty-evidence
   rejection) in `electron/main.js` `transitionState`. *(Pending Phase G.)*
 
@@ -259,11 +273,16 @@ Delete rather than legacy-tolerate. But verify before each deletion that nothing
 load-bearing is tangled in — especially around gate logic and content-presence primitives,
 which historically reused flattening helpers.
 
-**`answeredQuestions` is a content-presence primitive, not wall-only.** Phase F must
-per-caller-classify every caller before deletion: only wall callers go; non-wall callers
-(map state derivation, completeness audits, any future surface that asks "does this field
-have content") preserve it. Same name-discipline as `current_step` vs `last_touched_position`
-— same-looking, different fates, decided by name and caller.
+**`answeredQuestions` per-caller classification (resolved Phase F, 2026-05-17).**
+The original instruction was "preserve if any non-wall caller exists." Grep
+against the live `src/` tree at F's execution found zero non-wall callers — the
+only production call site was `studyAdvancement.js`'s `buildSubPhaseEvidence`,
+which went with the wall. The map state derivation and completeness audits
+use `hasContent` against individual answer envelopes, not phase-wide
+iteration. The condition for preservation failed, so `answeredQuestions` was
+deleted alongside `buildSubPhaseEvidence` as an atomic chunk. Same name-
+discipline as `current_step` vs `last_touched_position` was applied — same-
+looking, different fates, decided by name and caller.
 
 ## Working method — five questions per decision
 
@@ -422,8 +441,8 @@ phases.
 | **D2e** | Contract test updates — `process-2-evidence-gated-ux.test.tsx` updated (selector swap `.tw-shell` → `.sws-shell`, test names refreshed). `process-3-movement-visible.test.tsx` rewritten against the threshold vocabulary (`.ssl-overlay`, `.sah-overlay`, no `movement-event` testid) with the meta-test inverted as the no-narration tripwire; Process Contract #3 rearticulated in `docs/CORE.md` per open question 7 option B. `trail-layer-integration.test.tsx` leaves intact; dies with E | ✅ Complete |
 | **E** | Delete trail UI files (`StudyTrailExegesis.jsx`, `AssemblyTrail.jsx`, `ManuscriptTrail.jsx`, `WorkspaceTrailMap.jsx`, `studyTrail.css`, `AdvanceGateChecklist.jsx` + test). Shipped 2026-05-17 as an atomic 12-file delete: the listed 6 trail UI files + `studyTrailShared.jsx` (full-deleted, no extract — grep proved zero external callers for the 3 candidate era-2 helpers) + 3 tab orphans (`StudyTab.jsx`, `AssemblyTab.jsx`, `ManuscriptTab.jsx` — unmounted since D2c) + `trail-layer-integration.test.tsx`. **Tour cleanup was pulled out of E as its own separate phase** (touches IPC + spine + allowlists; entangled with E only because the trail was the tour's caller) — now shipped, see the Tour-cleanup row below. **Known open gap (Path A):** Assembly/Outline, Assembly/Equip, Manuscript stages have no registered field defs in the writing surface; field-def extraction tracked as a separate initiative | ✅ Complete |
 | **Tour cleanup** (post-E rider) | Atomic chunk shipped 2026-05-17. Deleted the tour engine — `TourContext.jsx`, `TourOverlay.jsx`, `workspaceTourStops.js` — and renamed `electron/tourData.js` → `electron/sampleData.js` with record-ID prefix rename `tour-*` → `sample-*` (5 list-query SQL filters + 3 in-handler filters all aligned with the new prefix). IPC `load-tour-sermon` → `load-sample-sermon` (handler + spine export `loadSampleSermon` + Dashboard caller + test-spine fixture + 2 allowlists in `scripts/spine-integrity.js` and `eslint-plugin-sermonforge/lib/rules/no-direct-database.js` all aligned). `remove-tour-sermon` IPC + `removeTourSermon` spine export retired (per-caller classification: purely tour-teardown — `App.jsx`'s `leaveTour` callback was the only caller; sample-sermon path is self-cleaning via delete-then-insert inside `load-sample-sermon`). `TOUR_STEP` telemetry constant retired (no source emitter). `fieldKeyToTourId` retired (no callers post-trail-deletion). `SermonWorkspace.jsx` no-op `useTour()` call deleted, closing the D2c debt. Dashboard's "Take the guided tour" ExploreRow removed; **"Open a sample sermon" Dashboard feature survives end-to-end** via the renamed plumbing. Two tracked follow-ups recorded as separate initiatives: BTI `tour-step` impact (`beta-testing-initiative.md` + `privacy.md` carry commitments to the deleted event), sample-sermon-landing UX (seed currently lands the curious pastor on `.ssl-overlay` because it has no `thresholds_seen`) | ✅ Complete |
-| **F** | Delete wall layer in `studyAdvancement.js` — `evaluateAdvance`, `formatAdvanceRejection`, `formatTabRejection`, the 5 `check*Threshold` wrappers, `buildSubPhaseEvidence`, `buildStageEvidence`. Per-caller-classify `answeredQuestions` (content-presence primitive — preserve if any non-wall caller exists). Keep the 9 composite gate functions | ⏸ Pending — requires explicit authorization (E shipped; F is no longer gated by E) |
-| **G** | Spine relaxation — delete Process #1 (forward-to-prior) and Process #2 (empty-evidence) rejections in `electron/main.js` `transitionState`. Renderer no longer sends evidence by F's end | ⏸ Pending — gated by F |
+| **F** | Wall layer deleted from `studyAdvancement.js` — `evaluateAdvance`, `formatAdvanceRejection`, `formatTabRejection`, the **7** `check*Threshold` wrappers (spec originally said 5; grep confirmed 7 — corrected here), `buildSubPhaseEvidence`, `buildStageEvidence`, plus orphans `canonicalSubPhase` + `subPhaseToIndex`. `answeredQuestions` in `studyFields.js` deleted alongside (zero non-wall callers — see resumption note below). **Kept:** the **8** composite gate functions (spec originally said 9; live count is 8 — corrected here) as the surviving completeness contract per the spec's deliberate decision. **Atomic test changes:** `process-2-evidence-gated-ux.test.tsx` dropped its `evaluateAdvance` unit-test blocks (kept the writing-surface render tests at the top); `sprd-c3-sermon-frame.test.tsx` deleted entirely. **Verification:** lint baseline holds at 23 `no-raw-button` (D2c/D2d debt unchanged); 41/41 contract test files pass / 262/262 tests pass; preview clean on `/`, `?workspace=populated`, `?workspace=empty`; grep `src/` for deleted symbols → zero callsites | ✅ Complete |
+| **G** | Spine relaxation — delete Process #1 (forward-to-prior) and Process #2 (empty-evidence) rejections in `electron/main.js` `transitionState`. Renderer no longer sends evidence as of F's close | ⏸ Pending — requires explicit authorization (F shipped; G is no longer gated by F's execution but is still gated by F's authorization scope) |
 
 ### Hard commitments locked through D2 (must survive into E/F/G)
 
@@ -464,10 +483,13 @@ the era 3 walls or undoes the calm-surface work.
   and caller.** Same conceptual role (position state), opposite fates. The sweep's
   inventory step grepped both by name. Do not delete by association or spare by association.
 
-- **`answeredQuestions` is a content-presence primitive, not wall-only.** Phase F must
-  per-caller-classify every caller. Wall callers go; non-wall callers (map state derivation
-  in `sermonState.js`, completeness audits, any future surface that asks "does this field
-  have content") preserve it.
+- **`answeredQuestions` per-caller classification (resolved Phase F, 2026-05-17).**
+  Grep against the live `src/` tree at F's execution found zero non-wall callers
+  (the only production call site was `buildSubPhaseEvidence`, deleted with the
+  wall). Map state derivation in `sermonState.js` uses `hasContent` directly,
+  not phase-wide iteration. Per the spec's pre-F instruction ("preserve if any
+  non-wall caller exists"), the condition for preservation failed, so the
+  function was deleted as part of F's atomic chunk.
 
 - **`"Delivery"` stays in `STAGE_VALUES`.** Separate ARI-era defensive-tolerance, out of
   scope for the trail deletion sweep. Decide by name and origin, not by association with
@@ -504,14 +526,14 @@ the era 3 walls or undoes the calm-surface work.
 When picking up the sweep in a new session:
 
 1. Read this section first (sweep state + commitments) before reading the rest of the spec.
-2. D2 + E + tour-cleanup all complete (all shipped 2026-05-17). The next authorized
-   step is F (wall-layer deletion in `studyAdvancement.js`) — preacher authorization
-   granted; plan-first. Watch-item: `answeredQuestions` is a content-presence primitive,
-   NOT wall-only — per-caller-classify every caller before deletion (same discipline
-   as `remove-tour-sermon` callers in the tour-cleanup phase). Keep the 9 composite
-   gate functions. **Known E open gap:** Manuscript / Assembly Outline / Assembly
-   Equip have no field defs in the writing surface; field-def extraction tracked as
-   a separate initiative, preacher-prioritized.
+2. D2 + E + tour-cleanup + F all complete (F shipped 2026-05-17, commit `f7da591`).
+   The next authorized step is **G** (spine relaxation — delete the Process #1 forward-
+   to-prior + Process #2 empty-evidence rejections in `electron/main.js` `transitionState`).
+   G requires its own explicit preacher authorization; do not start it without one.
+   The renderer no longer sends evidence as of F's close — Process #2's spine-side
+   gate is now firing against a renderer that doesn't send the inputs that would trip
+   it. **Known E open gap (carried forward):** Manuscript / Assembly Outline / Assembly
+   Equip have no field defs in the writing surface; field-def extraction tracked as a
+   separate initiative, preacher-prioritized.
 3. Memory file at `~/.claude/projects/C--Projects-SermonForge/memory/MEMORY.md` indexes
-   project state; the entry pointing to this initiative should be updated when the sweep
-   closes.
+   project state; the entry pointing to this initiative was updated when F closed.

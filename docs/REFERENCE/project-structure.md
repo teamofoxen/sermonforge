@@ -123,7 +123,7 @@ SermonForge/
     │   ├── studyFields.js    — Study field defs (OBSERVE_FIELDS, INTERPRET_FIELDS, REDEMPTIVE_FIELDS, IMPLICATIONS_FIELDS)
     │   ├── sadiAnchorFields.js — SADI Step 2 MAIN_POINT_PAIR_FIELDS
     │   ├── sermonFrameFields.js — SADI Step 5 SERMON_FRAME_FIELDS
-    │   ├── studyAdvancement.js — evaluateAdvance(): per-boundary gate logic
+    │   ├── studyAdvancement.js — 8 composite gate functions (completeness contract); hasContent helper. Post-Phase-F (2026-05-17): wall layer deleted (evaluateAdvance + check*Threshold wrappers + evidence builders + formatters).
     │   └── hooks.js          — shared React hooks (useDebounce)
     └── components/
         ├── Sidebar.jsx
