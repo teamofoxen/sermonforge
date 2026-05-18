@@ -3,16 +3,16 @@
 //
 // Covers flattenAnswerValue per sub-shape (canvas / paraphrase / synthesis
 // table, including cumulative-column extension), and confirms that
-// serializeStructuredField, parseStructuredField, answeredQuestions, and
-// applyFieldValueMap all tolerate structured-list values without breaking
-// text-prompt behavior. (hasAnyAnswer / flattenToText / hasMinimumSubstrate /
-// flattenExegesis were retired in the trail deletion sweep, Phase A — they
-// were the AI-context pipeline with zero live callers post-ARI.)
+// serializeStructuredField, parseStructuredField, and applyFieldValueMap all
+// tolerate structured-list values without breaking text-prompt behavior.
+// (hasAnyAnswer / flattenToText / hasMinimumSubstrate / flattenExegesis
+// were retired in the trail deletion sweep, Phase A — they were the AI-
+// context pipeline with zero live callers post-ARI. answeredQuestions was
+// retired in Phase F — its sole caller was the wall-layer evidence builder.)
 
 import { describe, it, expect } from "vitest";
 import {
   flattenAnswerValue,
-  answeredQuestions,
   applyFieldValueMap,
   serializeStructuredField,
   parseStructuredField,
@@ -192,48 +192,9 @@ describe("serializeStructuredField + parseStructuredField round-trip", () => {
   });
 });
 
-// ── answeredQuestions with list values ────────────────────────────────────
-
-describe("answeredQuestions with structured-list values", () => {
-  it("counts a non-empty canvas as answered", () => {
-    const data = setQuestionAnswer({}, "divisions", "sentence_layout", CANVAS);
-    expect(answeredQuestions(data)).toEqual([
-      {
-        fieldKey: "divisions",
-        questionKey: "sentence_layout",
-        value: flattenAnswerValue(CANVAS),
-      },
-    ]);
-  });
-
-  it("counts a non-empty synthesis table as answered", () => {
-    const data = setQuestionAnswer({}, "divisions", "thought_units", TABLE_PHASE1);
-    const answered = answeredQuestions(data);
-    expect(answered).toHaveLength(1);
-    expect(answered[0]).toMatchObject({ fieldKey: "divisions", questionKey: "thought_units" });
-    expect(answered[0].value).toContain("Spiritual death");
-  });
-
-  it("does not count an all-empty list as answered", () => {
-    const blank = [{ text: "", depth: 0, kind: "main" }];
-    const data = setQuestionAnswer({}, "divisions", "sentence_layout", blank);
-    expect(answeredQuestions(data)).toEqual([]);
-  });
-
-  it("skips list-valued questions marked N/A even when populated", () => {
-    let data = setQuestionAnswer({}, "divisions", "sentence_layout", CANVAS);
-    data = setQuestionNA(data, "divisions", "sentence_layout", true);
-    expect(answeredQuestions(data)).toEqual([]);
-  });
-
-  it("returns string `value` for both text-prompt and structured questions in one phase", () => {
-    let data = setPrimaryAnswer({}, "context", "Surrounding context note.");
-    data = setQuestionAnswer(data, "divisions", "sentence_layout", CANVAS);
-    const answered = answeredQuestions(data);
-    expect(answered).toHaveLength(2);
-    for (const a of answered) expect(typeof a.value).toBe("string");
-  });
-});
+// answeredQuestions test block deleted in Phase F (2026-05-17) alongside the
+// function itself. The function's sole production caller was the wall-layer
+// buildSubPhaseEvidence; both went together as an atomic chunk.
 
 // ── applyFieldValueMap with arrays ──────────────────────────────────────────
 

@@ -739,28 +739,14 @@ export function flattenAnswerValue(value) {
   }
 }
 
-// Iterate all answered (non-N/A, non-empty) questions across a phase's
-// fields. Returns a flat list of {fieldKey, questionKey, value} entries
-// where `value` is always a string — structured-list values are flattened
-// via flattenAnswerValue so consumers (evidence-building, flattening) can
-// treat all entries uniformly.
-export function answeredQuestions(fieldData) {
-  if (!fieldData || typeof fieldData !== "object") return [];
-  const out = [];
-  for (const [fieldKey, field] of Object.entries(fieldData)) {
-    if (RESERVED_TOP_KEYS.has(fieldKey)) continue;
-    if (!field || typeof field !== "object") continue;
-    for (const [questionKey, q] of Object.entries(field)) {
-      if (!q || typeof q !== "object") continue;
-      if (q.na) continue;
-      const flat = flattenAnswerValue(q.value);
-      if (flat) {
-        out.push({ fieldKey, questionKey, value: flat });
-      }
-    }
-  }
-  return out;
-}
+// answeredQuestions deleted in the trail deletion sweep (Phase F, 2026-05-17).
+// Its only caller was studyAdvancement.js's buildSubPhaseEvidence (the wall-
+// layer evidence builder), which went with F. The production map-state /
+// completeness surface uses hasContent against individual answer envelopes,
+// not a phase-wide iteration. If a future completeness audit needs phase-
+// wide iteration, it builds against the per-question-kind dispatch in
+// sermonState.js + the composites in studyAdvancement.js — not a string-
+// flattening iterator inherited from the wall layer.
 
 // Apply a flat {[fieldKey]: <string|list>} value map onto the new-shape data.
 // Each entry sets the primary question's value for the corresponding field.
