@@ -3382,8 +3382,12 @@ button {
 }
 
 /* Reference panel section formatting (Field 4's three rules + genre tips).
-   The panel layout primitive (PeripheralReferencePanel) renders the title
-   and aside chrome; these styles target the structured sections inside. */
+   The panel layout primitive (PeripheralReferencePanel) that rendered the
+   title and aside chrome around these sections was deleted in the post-
+   sweep audit Chunk 3 (2026-05-18) as an orphan with no production
+   consumers. The .ref-panel-section / .ref-panel-rules rules below are
+   currently orphan-styled; deletion is opportunistic per the broader
+   project-structure.md cleanup queued as Chunk 5. */
 .ref-panel-section + .ref-panel-section {
   margin-top: 12px;
 }

@@ -346,7 +346,7 @@ function readInitialPosition() {
 // to the sermon-start landing. Reading a non-null value means "returning
 // preacher"; route to that position without firing sermon-start.
 //
-// This is the NEW field; current_step stays in the delete pile.
+// last_touched_position is the v23 D1-added field that drives session re-entry routing. `current_step` was deleted in trail deletion sweep Phase B2 (2026-05-17); position is now (current_stage, current_sub_phase) at the column level + last_touched_position at the field level.
 function readInitialLastTouched() {
   if (typeof window === "undefined") return null;
   const params = new URLSearchParams(window.location.search);

@@ -263,8 +263,13 @@ export const INTERPRET_FIELDS = [
 //   - `jesus_hero`                              → `christ_connection_statement.legacy_notes`
 //
 //
-// Heavy-lifting fields with `FieldOverviewScreen` on first per-sermon entry
-// (B1.3 pattern):
+// Heavy-lifting `overview` blocks (B1.3 pattern) — formerly consumed by
+// `FieldOverviewScreen.jsx` on first per-sermon entry. The component was
+// deleted in the post-sweep audit Chunk 3 (2026-05-18) as an orphan with
+// no production consumers; the `overview` data blocks below are currently
+// uncalled (same category as the 8 composites in studyAdvancement.js per
+// CORE Process #2 — kept as the foundation for a future re-implementation
+// of the field-overview surface, not because anything reads them today).
 //   - Field 2 (How the Passage Points to Christ) — overview frames the four
 //     pointing-mechanisms (theme, promise, type, predictive) and the
 //     anti-allegory discipline.
@@ -408,8 +413,10 @@ export const REDEMPTIVE_FIELDS = [
 //     (Compiled list AI synthesis retired; Field 4 carries the synthesis
 //     in the pastor's own voice)
 //
-// Heavy-lifting fields with `FieldOverviewScreen` on first per-sermon entry
-// (B1.3 pattern):
+// Heavy-lifting `overview` blocks (B1.3 pattern) — formerly consumed by
+// `FieldOverviewScreen.jsx` (deleted in Chunk 3, 2026-05-18; see the
+// matching note above). Currently uncalled; kept as the foundation for a
+// future re-implementation.
 //   - Field 4 (Implications Synthesis) — overview frames the integration
 //     of the three voices and the Merida marinate moment. Per-unit
 //     cumulative-column extension (`implication`) + whole-passage Synthesis

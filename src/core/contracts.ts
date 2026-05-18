@@ -98,9 +98,11 @@ export const SUB_PHASE = {
   Frame: "Frame",
 } as const satisfies Record<SubPhase, SubPhase>;
 
-// Sub-phase sequence per stage. The spine uses these for monotonicity
-// validation; the renderer uses them to derive position from a 1-based
-// index in StudyTab / AssemblyTab.
+// Sub-phase sequence per stage. The spine uses these to map kind="sub_phase"
+// transitions; the renderer uses them via walkOrder.js to compose the
+// writing surface's field walk. (Pre-D2c, StudyTab + AssemblyTab consumed
+// these to derive position from a 1-based index; those tab files were
+// deleted in Phase E of the trail deletion sweep.)
 export const STUDY_SUB_PHASE_SEQUENCE: readonly SubPhase[] = Object.freeze([
   "Observe", "Interpret", "RedemptiveThread", "Implications",
 ]);

@@ -6,10 +6,18 @@
 // way" semantic is strict — the pastor must have run the moralism check
 // upstream against the Christ-Connection Statement; N/A is not "skip."
 //
-// Flat-column sync: writes to `mpt.tighten` / `mps.tighten` are mirrored into
-// the legacy `sermon.mpt` / `sermon.mps` flat columns by the renderer
-// (StudyTab.updateMPP) so downstream consumers (AI prompts, context builder,
-// exports) keep reading the flat columns without rewrites.
+// Flat-column sync (historical): pre-sweep, writes to `mpt.tighten` /
+// `mps.tighten` were mirrored into the legacy `sermon.mpt` / `sermon.mps`
+// flat columns by the renderer (`StudyTab.updateMPP`) so downstream
+// consumers (AI prompts, context builder, exports) kept reading the flat
+// columns without rewrites. `StudyTab.updateMPP` was deleted with StudyTab
+// in Phase E of the trail deletion sweep; AI prompts + context builder
+// were removed in ARI Phases 8-9 (so they are no longer consumers).
+// Whether the writing surface's MPP edit path has wired a replacement
+// flat-column sync for the remaining consumers (manuscript export, list
+// surfaces) is a follow-up question surfaced by the post-sweep audit
+// Chunk 4 (2026-05-18) but not resolved there — Chunk 4 was scoped to
+// comment fixes only. The flat columns above remain in `SERMON_COLUMNS`.
 
 export const MAIN_POINT_PAIR_FIELDS = [
   {

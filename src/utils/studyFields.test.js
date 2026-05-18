@@ -309,17 +309,20 @@ describe("parseStructuredField — defensive read-merge of legacy three-question
 
 // ── Cross-phase verification (Phase 4 Sprint 2 Session 3) ─────────────────
 //
-// Session 3's named goal: verify that canvas edits propagate through
-// `StudyTab.updateStructured` (parse → setDivisionsCanvas → serialize) so
+// Session 3's named goal: verify that canvas edits propagate through the
+// observations write path (parse → setDivisionsCanvas → serialize) so
 // Phase 2/3/4 cumulative-synthesis-tables read the right rows after every
 // canvas operation. This is the wire-level integration the helper-only
 // tests above don't exercise as a single flow.
 //
-// `updateObservations` mirrors `StudyTab.updateStructured`'s special case
-// for `divisions/canvas` writes — the same code path the workspace runs on
-// every keystroke. Every test in this block works against the
-// sermon-level JSON contract (the string that lives on the `observations`
-// column), so any drift in serialize/parse/materialize would surface here.
+// `updateObservations` mirrors the current writing-surface write path for
+// `divisions/canvas` edits — the same code path SermonWorkspace.handleUpdate
+// runs on every keystroke. (Pre-D2c, that path lived inside
+// `StudyTab.updateStructured`; StudyTab was deleted in Phase E of the trail
+// deletion sweep and the equivalent path now lives in the writing surface.)
+// Every test in this block works against the sermon-level JSON contract
+// (the string that lives on the `observations` column), so any drift in
+// serialize/parse/materialize would surface here.
 
 describe("cross-phase: canvas edits propagate through serialize/parse without losing Phase 2/3/4 cumulative columns", () => {
   const updateObservations = (observationsJson, canvas) => {
