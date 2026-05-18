@@ -330,8 +330,22 @@ the list (with their answer) so the rationale survives across sessions.
    region boundaries and the Study→Anchor handoff are intended to preserve this. If lived
    prep shows otherwise, something else may be needed. Watch for this; do not pre-build a
    solution.
-7. **Process Contract #3 surface — "movement is a visible event."** *(Open, surfaced during
-   D2e.)* The contract's old surface was the tab-change banner with `data-testid=
+7. **Process Contract #3 surface — "movement is a visible event."** *(Resolved, D2e, 2026-05-17.)*
+   Option B chosen and shipped. Process Contract #3 was rearticulated in
+   [`docs/CORE.md`](../CORE.md) from "movement is a visible event; 'Continue' is movement,
+   and movement is never silent" to "Movement is visible at thresholds, not narrated
+   continuously" — citing this spec's *Strategic orientation at thresholds* section and
+   the era-2 primacy charter's *Constraint without ceremony* clause. The contract-3 test
+   (`tests/contracts/process-3-movement-visible.test.tsx`) was rewritten to assert the new
+   vocabulary: sermon-start fires `.ssl-overlay` on null `last_touched_position`, the
+   Study→Anchor crossing fires `.sah-overlay`, and within-stage chevron-next + map-jump
+   produce no overlay and no `data-testid="movement-event"`. The meta-test was inverted:
+   no component under `src/components/` may carry `data-testid="movement-event"` — a
+   regression that re-adds always-on narration trips the test. The intent (movement gets
+   visibility) holds; its rendering shifted from an always-on banner to discrete threshold
+   surfaces. Original Open/A/B/C exposition preserved below so the rationale survives:
+
+   The contract's old surface was the tab-change banner with `data-testid=
    "movement-event"`, fired on every stage transition. The new design retires tab changes
    and makes within-stage movement silent per the calm-surface principle; movement is
    visible at thresholds (sermon-start, Study→Anchor handoff, in-question region frame).
@@ -395,7 +409,7 @@ phases.
 | **D2b** | `useEsvPassage` hook extracted to `src/utils/useEsvPassage.js`; PassagePopup refactored to consume it. One fetch path | ✅ Complete |
 | **D2c** | `SermonWorkspace.jsx` render rewrite — replaced tab/trail render with writing surface + map + threshold overlays. `SermonWorkspaceFixture.jsx` added with three scenarios (empty / populated / at-handoff) all verified through the real render path. `beforePositionChange` async hook added to `SermonWritingSurface` | ✅ Complete |
 | **D2d** | Notebook drawer — `WorkspaceNotebookDrawer.jsx` + CSS, mounted in `SermonWorkspace` as overlay, summon control in writing-surface chrome (quiet mono text link near save indicator per option i), stage→column dispatch (`notebook_study` / `notebook_blueprint` / `notebook_manuscript`) | ✅ Complete |
-| **D2e** | Contract test updates — `process-2-evidence-gated-ux.test.tsx` updated (selector swap `.tw-shell` → `.sws-shell`, test names refreshed). `process-3-movement-visible.test.tsx` is the open question 7 above (A/B/C decision pending). `trail-layer-integration.test.tsx` leaves intact; dies with E | ⚠️ Half-complete — process-3 awaits decision |
+| **D2e** | Contract test updates — `process-2-evidence-gated-ux.test.tsx` updated (selector swap `.tw-shell` → `.sws-shell`, test names refreshed). `process-3-movement-visible.test.tsx` rewritten against the threshold vocabulary (`.ssl-overlay`, `.sah-overlay`, no `movement-event` testid) with the meta-test inverted as the no-narration tripwire; Process Contract #3 rearticulated in `docs/CORE.md` per open question 7 option B. `trail-layer-integration.test.tsx` leaves intact; dies with E | ✅ Complete |
 | **E** | Delete trail UI files (`StudyTrailExegesis.jsx`, `AssemblyTrail.jsx`, `ManuscriptTrail.jsx`, `WorkspaceTrailMap.jsx`, `studyTrail.css`, `AdvanceGateChecklist.jsx` + test). Surgical extract `studyTrailShared.jsx` (keep ~4 era-2 helpers, delete the rest). Delete `trail-layer-integration.test.tsx`. Full tour cleanup | ⏸ Pending — destructive, requires explicit authorization |
 | **F** | Delete wall layer in `studyAdvancement.js` — `evaluateAdvance`, `formatAdvanceRejection`, `formatTabRejection`, the 5 `check*Threshold` wrappers, `buildSubPhaseEvidence`, `buildStageEvidence`. Per-caller-classify `answeredQuestions` (content-presence primitive — preserve if any non-wall caller exists). Keep the 9 composite gate functions | ⏸ Pending — gated by E |
 | **G** | Spine relaxation — delete Process #1 (forward-to-prior) and Process #2 (empty-evidence) rejections in `electron/main.js` `transitionState`. Renderer no longer sends evidence by F's end | ⏸ Pending — gated by F |
@@ -467,7 +481,9 @@ the era 3 walls or undoes the calm-surface work.
   association. Grep both. Verify each caller.
 - **Surface design questions, don't resolve silently.** If a phase surfaces something that
   needs a real decision (not a bug, a design call), stop and surface it. The Process
-  Contract #3 question in D2e is the standing example.
+  Contract #3 question in D2e was surfaced rather than silently resolved (open question 7
+  above), and was resolved by the preacher choosing option B — a worked example of the
+  discipline in action.
 - **Gravestone comments.** Every deletion site carries a one-line comment naming its phase
   (B1/B2/B3/C/D1/D2c/etc.) so future readers can grep by name and see what went where and
   why.
@@ -477,11 +493,9 @@ the era 3 walls or undoes the calm-surface work.
 When picking up the sweep in a new session:
 
 1. Read this section first (sweep state + commitments) before reading the rest of the spec.
-2. The active checkpoint is D2e's Process Contract #3 question (open question 7 above).
-   Resolve before closing D2.
-3. After D2 closes, E is the next phase. E is destructive trail-file deletion; require
-   explicit authorization. Once E is authorized, plan-first (per the discipline carried
-   through B/C/D).
-4. Memory file at `~/.claude/projects/C--Projects-SermonForge/memory/MEMORY.md` indexes
+2. D2 is complete (closed in D2e, 2026-05-17). E is the next authorized step pending
+   preacher go-ahead. E is destructive trail-file deletion; do not self-authorize.
+   Once E is authorized, plan-first (per the discipline carried through B/C/D).
+3. Memory file at `~/.claude/projects/C--Projects-SermonForge/memory/MEMORY.md` indexes
    project state; the entry pointing to this initiative should be updated when the sweep
    closes.
