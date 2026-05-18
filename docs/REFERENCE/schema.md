@@ -7,12 +7,13 @@ Current schema version: **22**
 | v14 | Schema-contract reconciliation (idempotent re-apply of v2–v12 ALTERs) |
 | v15 | Reserved version slot (library table content_hash; library feature later removed) |
 | v16 | Lifecycle collapse — sermon stage + series status to two-state (in-progress / complete) |
-| v17 | Spine prerequisites — `current_stage`, `current_step`, `current_sub_phase` + legacy evidence cutoff |
+| v17 | Spine prerequisites — `current_stage`, `current_step` (retired Phase B2), `current_sub_phase` + legacy evidence cutoff |
 | v18 | SPRD C3 — `sermon_frame` JSON column for Intro + Conclusion (SADI Step 5) |
 | v19 | SADI Step 2 — `main_point_pair` JSON column for MPT + MPS questions |
 | v20 | ARI Phase 3 — `notebook_study`, `notebook_blueprint`, `notebook_manuscript` |
 | v21 | Per-stage sub-phase memory — `last_study_subphase`, `last_assembly_subphase` |
 | v22 | Sermon full-content search — `sermon_search` table (flattened text per indexed column for LIKE-based search) |
+| v23 | Trail deletion sweep (Phase D1) — `last_touched_position` (session re-entry routing) + `thresholds_seen` (dismissed-thresholds JSON array, one mechanism for all threshold-orientation "seen" flags) |
 
 ---
 
@@ -92,7 +93,6 @@ Current schema version: **22**
 | `manuscript_delivery` | TEXT | AI-formatted delivery manuscript; added v9 migration |
 | `last_tune_up` | TEXT | JSON `{content, ts}` snapshot of the most recent Final Tune-Up response; added v12 migration |
 | `current_stage` | TEXT | Canonical process position — stage; spine layer; added v17 migration |
-| `current_step` | TEXT | **Legacy-tolerated post-workspace-restructure 2026-05-10.** Pre-restructure: canonical process position — Study step; spine layer; added v17 migration. Post-restructure: column retained on disk for legacy data; parsed but ignored on read. Position is now (stage, sub-phase) only. |
 | `current_sub_phase` | TEXT | Canonical process position — sub-phase; spine layer. Spans Study sub-phases (Observe / Interpret / RedemptiveThread / Implications) AND Assembly sub-phases (Anchor / Outline / Equip / Frame) post-workspace-restructure 2026-05-10. Added v17 migration. |
 | `sermon_frame` | TEXT | JSON envelope for Intro / Conclusion per SADI ratification; same per-question shape as the four Exegesis sub-phase columns; added v18 migration (originally SPRD C3 — STAGE.Frame elevation; post-workspace-restructure 2026-05-10 the data feeds Assembly's Frame sub-phase). |
 | `main_point_pair` | TEXT | JSON envelope for MPT (2 questions: `draft`, `tighten`) and MPS (3 questions: `translate`, `gospel_check`, `tighten`); SADI Step 2 plumbing; added v19 migration. The flat `mpt` / `mps` columns are kept defensively and auto-synced from the `tighten` answers on write. |
@@ -101,6 +101,8 @@ Current schema version: **22**
 | `notebook_manuscript` | TEXT | Per-stage free-form pastor notebook surfaced in the Manuscript writing room. Added v20 migration. |
 | `last_study_subphase` | TEXT | Pastor's last position within Study (one of `Observe \| Interpret \| RedemptiveThread \| Implications`). Restored on re-entry to Study so tabbing across stages preserves the within-stage cursor. Added v21 migration; replaces the per-sermon `sermonforge_*_subphase_*` localStorage scatter that broke for tour sermons. |
 | `last_assembly_subphase` | TEXT | Pastor's last position within Assembly (one of `Anchor \| Outline \| Equip \| Frame`). Same purpose as `last_study_subphase` for the Assembly stage. Added v21 migration. |
+| `last_touched_position` | TEXT | Pastor's last-touched field-level position, stored as canonical slash-composite `"<stage>/<subPhase>/<fieldKey>"`. NULL = first session (sermon-start landing fires); non-NULL = land on that field on re-open. Written by the writing surface on every arrival at a question. Added v23 migration (trail deletion sweep, Phase D1). Distinct from `current_step` (retired Phase B2) — same conceptual role, different field, different fate. |
+| `thresholds_seen` | TEXT | JSON array of dismissed threshold ids. One mechanism for "has this threshold been dismissed" across sermon-start, Study→Anchor handoff, and any future threshold — so the codebase doesn't accumulate one boolean per threshold. Defaults to `'[]'`. Added v23 migration (trail deletion sweep, Phase D1). |
 | `created_at` | TEXT | |
 | `updated_at` | TEXT | |
 

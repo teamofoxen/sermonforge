@@ -57,13 +57,20 @@ export const SERMON_COLUMNS = new Set([
   "observations", "interpretation", "redemptive_thread", "implications",
   "outline", "manuscript", "delivery_notes", "timing_notes", "post_sermon",
   "functional_elements", "checklist", "series_id", "section_id", "is_one_off",
-  "topic_theme", "audience_assumptions", "background_noise", "study_guide_note",
+  // topic_theme / audience_assumptions / background_noise removed in the
+  // trail deletion sweep (Phase B1) — mirrors SERMON_COLUMNS in contracts.
+  "study_guide_note",
   "preaching_blocks", "manuscript_delivery", "last_tune_up",
-  "current_stage", "current_step", "current_sub_phase",
+  // current_step removed in the trail deletion sweep (Phase B2) — mirrors
+  // SERMON_COLUMNS in contracts.
+  "current_stage", "current_sub_phase",
   // v18 — SPRD C3 Sermon Frame.
   "sermon_frame",
   // v19 — SADI Step 2 Main Point Pair.
   "main_point_pair",
+  // v23 — trail deletion sweep (Phase D1). last_touched_position drives
+  // session re-entry; thresholds_seen is the dismissed-thresholds JSON array.
+  "last_touched_position", "thresholds_seen",
 ]);
 
 export const SERIES_COLUMNS = new Set([
@@ -233,7 +240,7 @@ function validateAndCommit(op: string, payload: any) {
         stage: SERMON_STATUS.InProgress,
         mpt: "", mps: "", observations: "", interpretation: "", redemptive_thread: "",
         implications: "", outline: "[]", manuscript: "", functional_elements: "{}",
-        current_stage: STAGE.Study, current_step: null, current_sub_phase: SUB_PHASE.Observe,
+        current_stage: STAGE.Study, current_sub_phase: SUB_PHASE.Observe,
         created_at: new Date().toISOString(),
       });
       return success({ id });
@@ -346,7 +353,7 @@ function validateAndCommit(op: string, payload: any) {
       }
       if (kind === "stage") {
         row.current_stage = to;
-        row.current_step = null;
+        // current_step removed in the trail deletion sweep (Phase B2).
         row.current_sub_phase = to === STAGE.Study ? SUB_PHASE.Observe
           : to === STAGE.Assembly ? SUB_PHASE.Anchor
           : null;
@@ -434,7 +441,7 @@ function validateAndCommit(op: string, payload: any) {
       const id = "tour-test-sermon";
       sermons.set(id, {
         id, title: "Tour sermon", stage: SERMON_STATUS.InProgress,
-        current_stage: STAGE.Study, current_step: null, current_sub_phase: SUB_PHASE.Observe,
+        current_stage: STAGE.Study, current_sub_phase: SUB_PHASE.Observe,
         outline: "[]", functional_elements: "{}", observations: "", created_at: new Date().toISOString(),
       });
       return success({ sermonId: id, created: true });
@@ -581,7 +588,7 @@ export function insertSermonRow(row: Partial<Row>): string {
     id, title: row.title ?? "fixture",
     stage: row.stage ?? SERMON_STATUS.InProgress,
     current_stage: row.current_stage ?? STAGE.Study,
-    current_step: row.current_step ?? null,
+    // current_step removed in the trail deletion sweep (Phase B2).
     current_sub_phase: row.current_sub_phase ?? SUB_PHASE.Observe,
     outline: row.outline ?? "[]",
     functional_elements: row.functional_elements ?? "{}",

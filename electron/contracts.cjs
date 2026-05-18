@@ -93,9 +93,15 @@ const SERMON_COLUMNS = Object.freeze(new Set([
   "observations", "interpretation", "redemptive_thread", "implications",
   "outline", "manuscript", "delivery_notes", "timing_notes", "post_sermon",
   "functional_elements", "checklist", "series_id", "section_id", "is_one_off",
-  "topic_theme", "audience_assumptions", "background_noise", "study_guide_note",
+  // topic_theme / audience_assumptions / background_noise removed in the
+  // trail deletion sweep (Phase B1) — legacy PC columns, zero readers, zero
+  // writers; PC content lives in implications.pastoral_context now.
+  "study_guide_note",
   "preaching_blocks", "manuscript_delivery", "last_tune_up",
-  "current_stage", "current_step", "current_sub_phase",
+  // current_step removed in the trail deletion sweep (Phase B2) — position
+  // is now (stage, sub_phase) only; the field-level last-touched concept
+  // moves to last_touched_position (distinct field, lands in Phase D).
+  "current_stage", "current_sub_phase",
   // v21 — per-stage sub-phase memory; renderer derives initial sub-phase
   // from these so tabbing across stages restores per-stage position.
   "last_study_subphase", "last_assembly_subphase",
@@ -106,6 +112,12 @@ const SERMON_COLUMNS = Object.freeze(new Set([
   // v20 — ARI Phase 3 per-tab notebooks. Free-form pastor-typed notes,
   // sermon-scoped, one column per workspace tab where AI used to live.
   "notebook_study", "notebook_blueprint", "notebook_manuscript",
+  // v23 — trail deletion sweep (Phase D1). last_touched_position drives
+  // session re-entry (NULL = first session, sermon-start fires; non-NULL
+  // = land on that field). thresholds_seen is the JSON array of dismissed
+  // threshold ids (sermon-start, study-to-anchor-handoff, etc.) — one
+  // mechanism for "has this threshold been dismissed" across all of them.
+  "last_touched_position", "thresholds_seen",
 ]));
 /* eslint-enable sermonforge/canonical-stage-name */
 
@@ -113,7 +125,9 @@ const SERMON_COLUMNS = Object.freeze(new Set([
 // seed; never by user-edit saves (renderer's `pickSermonColumns` excludes
 // them). Mirrors `SPINE_ONLY_COLUMNS` in src/core/contracts.ts.
 const SPINE_ONLY_COLUMNS = Object.freeze(new Set([
-  "current_stage", "current_step", "current_sub_phase",
+  // current_step removed in the trail deletion sweep (Phase B2) — see
+  // SERMON_COLUMNS comment above.
+  "current_stage", "current_sub_phase",
   "last_study_subphase", "last_assembly_subphase",
 ]));
 

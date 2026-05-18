@@ -118,11 +118,10 @@ describe("SPRD Q3 hard-gate UX: trail mounts with the gate plumbing wired", () =
   // through the trail to hit the last-field/last-Q gate fires is too
   // brittle to maintain as a contract test.
 
-  it("renders the Study trail when SermonWorkspace mounts at sub-phase 1 with empty observations", async () => {
+  it("renders the writing surface when SermonWorkspace mounts at sub-phase 1 with empty observations", async () => {
     const sermonId = insertSermonRow({
       title: "Empty observe sermon",
       current_stage: STAGE.Study,
-      current_step: null,
       current_sub_phase: SUB_PHASE.Observe,
       observations: "",
     });
@@ -139,17 +138,16 @@ describe("SPRD Q3 hard-gate UX: trail mounts with the gate plumbing wired", () =
       ),
     ) as unknown as { container: HTMLElement };
 
-    // Trail shell mounts — the canonical signal that the trail is the
-    // active rendering. AdvanceGateChecklist's pastor-facing markup is
-    // unit-tested against `sufficiency` shapes directly.
-    expect(container.querySelector(".tw-shell")).toBeTruthy();
+    // Writing-surface shell mounts — the canonical signal that the new
+    // surface is the active rendering. Replaces `.tw-shell` assertion
+    // (trail-era) per the trail deletion sweep (Phase D2c).
+    expect(container.querySelector(".sws-shell")).toBeTruthy();
   });
 
-  it("renders the Study trail with content when observations are populated", async () => {
+  it("renders the writing surface with content when observations are populated", async () => {
     const sermonId = insertSermonRow({
       title: "Filled observe sermon",
       current_stage: STAGE.Study,
-      current_step: null,
       current_sub_phase: SUB_PHASE.Observe,
       observations: JSON.stringify({
         context: "Romans 8:1 sets the believers in Christ Jesus.",
@@ -174,9 +172,15 @@ describe("SPRD Q3 hard-gate UX: trail mounts with the gate plumbing wired", () =
       ),
     ) as unknown as { container: HTMLElement };
 
-    expect(container.querySelector(".tw-shell")).toBeTruthy();
+    expect(container.querySelector(".sws-shell")).toBeTruthy();
   });
 });
+
+// NOTE: the `evaluateAdvance unit test` describe block below tests the
+// wall-layer composite that Phase F will delete. It still passes today
+// because evaluateAdvance is still exported; it'll need rewriting against
+// the surviving completeness composites (checkField3Composite, etc.) when
+// F lands.
 
 describe("SPRD Q3 hard-gate UX: evaluateAdvance unit test", () => {
   it("returns ok=false with reason for empty Observe sermon at sub-phase 1", async () => {

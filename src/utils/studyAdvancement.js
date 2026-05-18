@@ -17,7 +17,6 @@ import {
   answeredQuestions,
   getQuestionAnswer,
   isQuestionNA,
-  flattenAnswerValue,
   DEFAULT_QUESTION_KEY,
 } from "./studyFields";
 
@@ -145,11 +144,37 @@ export function buildStageEvidence(sermon, stage) {
 // is a STEP transition (Exegesis → MPT/MPS); evidence is the entire Exegesis
 // step's content, not just Implications.
 
-// Per-question completeness check used by the trail's gate evaluation — a
-// question counts as "answered" when it has flat-text content OR is marked N/A.
+// hasContent — true content-presence check. Replaces the
+// !!flattenAnswerValue truthiness coercion that previously rode along on the
+// AI-context flattener for an answer that the completeness contract only
+// needs to know "has content or not." Recognizes the three answer shapes
+// the composites actually see:
+//   - text-prompt: string with non-whitespace content
+//   - cumulative-synthesis-table: array with at least one row carrying
+//     non-empty `thought_unit_text`
+//   - indented-canvas: array with at least one row carrying non-empty
+//     `text` (depth doesn't matter for presence)
+// Exported so the completeness contract and future map-state surfaces can
+// ask the same question through one canonical helper.
+export function hasContent(value) {
+  if (value == null) return false;
+  if (typeof value === "string") return value.trim() !== "";
+  if (Array.isArray(value)) {
+    return value.some((row) => {
+      if (!row || typeof row !== "object") return false;
+      if (typeof row.thought_unit_text === "string" && row.thought_unit_text.trim()) return true;
+      if (typeof row.text === "string" && row.text.trim()) return true;
+      return false;
+    });
+  }
+  return false;
+}
+
+// Per-question completeness check — a question counts as "answered" when it
+// has content OR is marked N/A.
 function isQuestionAnswered(data, fieldKey, questionKey) {
   if (isQuestionNA(data, fieldKey, questionKey)) return true;
-  return !!flattenAnswerValue(getQuestionAnswer(data, fieldKey, questionKey));
+  return hasContent(getQuestionAnswer(data, fieldKey, questionKey));
 }
 
 // Field 3 composite-gate helpers. Phase 4 Sprint 2 (2026-05-05) collapsed
@@ -180,67 +205,23 @@ function canvasHasMainWithModifier(canvas) {
   return false;
 }
 
-// True if every main row (depth=0, non-empty text) carries a non-empty
-// paraphrase string. Paraphrase lives inline on the canvas row in the
-// unified shape — no positional ms-N indirection.
-function everyMainHasParaphrase(canvas) {
-  if (!Array.isArray(canvas) || canvas.length === 0) return false;
-  let mainCount = 0;
-  for (const row of canvas) {
-    if (!row || typeof row !== "object") continue;
-    const depth = Number.isInteger(row.depth) && row.depth >= 0 ? row.depth : 0;
-    const text = typeof row.text === "string" ? row.text.trim() : "";
-    if (depth !== 0 || !text) continue;
-    mainCount++;
-    const para = typeof row.paraphrase === "string" ? row.paraphrase.trim() : "";
-    if (!para) return false;
-  }
-  return mainCount > 0;
-}
-
-// True if at least one canvas row carries a thought_unit_end with a non-empty
-// summary. The row's position is the implicit "after line" — no separate
-// after_line check needed in the new shape.
-function hasOneThoughtUnitEnd(canvas) {
-  if (!Array.isArray(canvas) || canvas.length === 0) return false;
-  for (const row of canvas) {
-    if (!row || typeof row !== "object") continue;
-    const tue = row.thought_unit_end;
-    if (!tue || typeof tue !== "object") continue;
-    const summary = typeof tue.summary === "string" ? tue.summary.trim() : "";
-    if (summary) return true;
-  }
-  return false;
-}
-
-// Field 3 composite gate. Returns null when satisfied or a pastor-facing
-// reason string when not. SFDI N/A escape valve: the unified canvas question
-// marked N/A counts as satisfied (the pastor may declare the field
-// inapplicable for this passage).
-function checkField3Composite(data) {
+// Field 3 composite check. Returns null when complete or a pastor-facing
+// reason string when not. Per ruling 8 the single check is canvas-has-main-
+// with-modifier — paraphrase + thought-unit-end markers are retired with the
+// unified canvas, so the structural shape (at least one indented modifier
+// under at least one main sentence) is what carries the completeness signal.
+// N/A short-circuits — the pastor may declare the field inapplicable.
+//
+// Exported so the gate is independently verifiable — the question "is
+// Divisions complete?" is a concept the map's state derivation and any
+// future completeness audit will legitimately ask.
+export function checkField3Composite(data) {
   const fieldKey = "divisions";
-
-  // N/A short-circuit.
   if (isQuestionNA(data, fieldKey, "canvas")) return null;
-
   const canvas = getQuestionAnswer(data, fieldKey, "canvas");
-
-  // Q1 — at least one main sentence (depth 0) with an indented modifier
-  // (depth > 0) under it.
   if (!canvasHasMainWithModifier(canvas)) {
-    return "Lay out the passage before advancing — at least one main sentence with an indented modifier under it.";
+    return "Lay out the passage — at least one main sentence with an indented modifier under it.";
   }
-
-  // Q2 — every main row carries a non-empty paraphrase.
-  if (!everyMainHasParaphrase(canvas)) {
-    return "Rewrite each main sentence in your own words before advancing.";
-  }
-
-  // Q3 — at least one row has a thought_unit_end with non-empty summary.
-  if (!hasOneThoughtUnitEnd(canvas)) {
-    return "Name at least one thought unit (with the line it ends after) before advancing.";
-  }
-
   return null;
 }
 
@@ -334,7 +315,7 @@ function checkConclusionComposite(frameData) {
   for (const qKey of required) {
     // Conclusion is no-N/A across the board — N/A doesn't satisfy these.
     const answered = !isQuestionNA(frameData, fieldKey, qKey)
-      && !!flattenAnswerValue(getQuestionAnswer(frameData, fieldKey, qKey));
+      && hasContent(getQuestionAnswer(frameData, fieldKey, qKey));
     if (!answered) {
       return `Write the Conclusion ${qKey.replace(/_/g, " ")} answer before advancing.`;
     }
@@ -381,7 +362,7 @@ function checkMPTComposite(mppData) {
   const fieldKey = "mpt";
   for (const qKey of ["draft", "tighten"]) {
     const answered = !isQuestionNA(mppData, fieldKey, qKey)
-      && !!flattenAnswerValue(getQuestionAnswer(mppData, fieldKey, qKey));
+      && hasContent(getQuestionAnswer(mppData, fieldKey, qKey));
     if (!answered) {
       return `Write the MPT ${qKey} answer before advancing.`;
     }
@@ -402,7 +383,7 @@ function checkMPSComposite(mppData) {
   // Q1 + Q3: load-bearing, no N/A.
   for (const qKey of ["translate", "tighten"]) {
     const answered = !isQuestionNA(mppData, fieldKey, qKey)
-      && !!flattenAnswerValue(getQuestionAnswer(mppData, fieldKey, qKey));
+      && hasContent(getQuestionAnswer(mppData, fieldKey, qKey));
     if (!answered) {
       return `Write the MPS ${qKey} answer before advancing.`;
     }

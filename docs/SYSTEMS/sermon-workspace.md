@@ -68,7 +68,7 @@ The always-on Pastoral Context card at the top of `SermonWorkspace.jsx` was
 | The Cost and Gift | `cost_and_gift` | `implications.pastoral_context.cost_and_gift.value` |
 
 The three legacy schema columns (`topic_theme`, `audience_assumptions`,
-`background_noise`) are retained defensively but are no longer written to or rendered.
+`background_noise`) were retired in the trail deletion sweep (Phase B1).
 
 ---
 
@@ -84,8 +84,8 @@ definitions live in `src/utils/studyFields.js`.
 
 The pre-restructure "Step 1 / Step 2 / Step 3 / Step 4" layer inside Study is
 gone. Steps 2-5 became sub-phases inside Assembly (Anchor / Outline / Equip /
-Frame). The `current_step` column is legacy-tolerated — parsed but ignored.
-Study's only sub-phase walk is the four Exegesis sub-phases below.
+Frame). The `current_step` column was retired in the trail deletion sweep
+(Phase B2). Study's only sub-phase walk is the four Exegesis sub-phases below.
 
 ### Exegesis sub-phases
 

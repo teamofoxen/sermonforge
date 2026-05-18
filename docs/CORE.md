@@ -70,7 +70,8 @@ these names. (See State Contract clause 5: *one name per concept*.)
   Implications. Within Assembly: Anchor, Outline, Equip, Frame. Tracked as
   `current_sub_phase`. (Workspace Restructure 2026-05-10: the within-Study
   Step layer — Exegesis / MPT_MPS / Outline / FunctionalElements — retired.
-  The `current_step` column is legacy-tolerated, parsed but ignored.)
+  The `current_step` column was retired in the trail deletion sweep
+  (Phase B2); field-level last-touched moves to `last_touched_position`.)
 - **Boundary** — the transition point between two adjacent values at the same
   level. *Stage boundary* (e.g., Study → Assembly, Assembly → Manuscript).
   *Sub-phase boundary* (e.g., Observe → Interpret inside Study, Anchor →

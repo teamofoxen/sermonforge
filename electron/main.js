@@ -17,15 +17,10 @@ const {
   ContractViolation,
 } = require("./contracts.cjs");
 
-// Legacy stage coercion. Databases written before the three-stage shell
-// may carry current_stage = "Blueprint" or "Frame"; both collapse into
-// "Assembly" at the read boundary so the canonical Stage enum stays clean.
-// Admitted at the data layer, never re-emitted by the spine (same shape
-// as the ARI Phase 7 "Delivery" tolerance).
-function coerceLegacyStage(stage) {
-  if (stage === "Blueprint" || stage === "Frame") return STAGE.Assembly;
-  return stage || STAGE.Study;
-}
+// coerceLegacyStage removed in the trail deletion sweep (Phase B3) —
+// pre-restructure "Blueprint" / "Frame" stage values are no longer admitted
+// or coerced. No production data carries them. Delivery's separate
+// defensive-tolerance (ARI Phase 7) is a different concern and stays.
 let _isQuitting = false;
 
 // Catch anything that slips through before app ready
@@ -252,10 +247,12 @@ async function initDatabase() {
       checklist TEXT DEFAULT '{}',
       section_id TEXT DEFAULT NULL,
       is_one_off INTEGER DEFAULT 0,
-      topic_theme TEXT DEFAULT '',
-      audience_assumptions TEXT DEFAULT '',
-      background_noise TEXT DEFAULT '',
+      -- topic_theme / audience_assumptions / background_noise removed in
+      -- the trail deletion sweep (Phase B1). Legacy PC columns, retired.
       study_guide_note TEXT DEFAULT '',
+      -- v23 (Phase D1): session re-entry routing.
+      last_touched_position TEXT DEFAULT NULL,
+      thresholds_seen TEXT NOT NULL DEFAULT '[]',
       created_at TEXT DEFAULT (datetime('now')),
       updated_at TEXT DEFAULT (datetime('now'))
     );
@@ -570,10 +567,11 @@ function runMigrations() {
   }
 
   if (version < 6) {
-    // v6: pastoral context fields — topic_theme, audience_assumptions, background_noise
-    safeAlter("ALTER TABLE sermons ADD COLUMN topic_theme TEXT DEFAULT ''");
-    safeAlter("ALTER TABLE sermons ADD COLUMN audience_assumptions TEXT DEFAULT ''");
-    safeAlter("ALTER TABLE sermons ADD COLUMN background_noise TEXT DEFAULT ''");
+    // v6 was the legacy PC columns (topic_theme, audience_assumptions,
+    // background_noise) — retired in the trail deletion sweep (Phase B1).
+    // The columns may still exist in older databases; SERMON_COLUMNS no
+    // longer admits writes to them, and they're not read anywhere. Version
+    // bump preserved so the migration loop progresses past v6 cleanly.
     db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '6')");
     version = 6;
   }
@@ -650,13 +648,18 @@ function runMigrations() {
     safeAlter("ALTER TABLE sermons ADD COLUMN checklist TEXT DEFAULT '{}'");
     safeAlter("ALTER TABLE sermons ADD COLUMN section_id TEXT DEFAULT NULL");
     safeAlter("ALTER TABLE sermons ADD COLUMN is_one_off INTEGER DEFAULT 0");
-    safeAlter("ALTER TABLE sermons ADD COLUMN topic_theme TEXT DEFAULT ''");
-    safeAlter("ALTER TABLE sermons ADD COLUMN audience_assumptions TEXT DEFAULT ''");
-    safeAlter("ALTER TABLE sermons ADD COLUMN background_noise TEXT DEFAULT ''");
+    // topic_theme / audience_assumptions / background_noise removed from the
+    // defensive backfill in the trail deletion sweep (Phase B1). Old
+    // databases with these columns keep them as orphans; new databases never
+    // get them.
     safeAlter("ALTER TABLE sermons ADD COLUMN study_guide_note TEXT DEFAULT ''");
     safeAlter("ALTER TABLE sermons ADD COLUMN preaching_blocks TEXT DEFAULT 'null'");
     safeAlter("ALTER TABLE sermons ADD COLUMN manuscript_delivery TEXT DEFAULT 'null'");
     safeAlter("ALTER TABLE sermons ADD COLUMN last_tune_up TEXT DEFAULT NULL");
+    // v23 columns folded into the defensive backfill — the same swallowed-
+    // catch pattern as the columns above. safeAlter is a no-op when present.
+    safeAlter("ALTER TABLE sermons ADD COLUMN last_touched_position TEXT DEFAULT NULL");
+    safeAlter("ALTER TABLE sermons ADD COLUMN thresholds_seen TEXT NOT NULL DEFAULT '[]'");
     safeAlter("ALTER TABLE series ADD COLUMN big_idea TEXT DEFAULT ''");
     safeAlter("ALTER TABLE series ADD COLUMN overview TEXT DEFAULT ''");
     safeAlter("ALTER TABLE series ADD COLUMN passage_range TEXT DEFAULT ''");
@@ -722,17 +725,17 @@ function runMigrations() {
     if (!have.has("current_stage")) {
       db.run(`ALTER TABLE sermons ADD COLUMN current_stage TEXT NOT NULL DEFAULT '${STAGE.Study}'`);
     }
-    if (!have.has("current_step")) {
-      db.run("ALTER TABLE sermons ADD COLUMN current_step TEXT");
-    }
+    // current_step column add removed in the trail deletion sweep (Phase B2).
+    // Position is now (stage, sub_phase) only; old databases that still
+    // carry the column keep it as an orphan — SERMON_COLUMNS no longer
+    // admits writes.
     if (!have.has("current_sub_phase")) {
       db.run("ALTER TABLE sermons ADD COLUMN current_sub_phase TEXT");
     }
     // Backfill: any sermon in_progress at Study stage (the schema default)
     // gets a starting SubPhase so getSermon's ProcessPosition is fully
-    // populated for new sermons too. `current_step` is not backfilled —
-    // it's kept on disk for legacy data only; canonical position is
-    // stage + sub_phase.
+    // populated for new sermons too. Canonical position is (stage,
+    // sub_phase) — current_step was retired in Phase B2.
     db.run(
       `UPDATE sermons
          SET current_sub_phase = ?
@@ -887,6 +890,23 @@ function runMigrations() {
     }
     db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '22')");
     version = 22;
+  }
+
+  if (version < 23) {
+    // v23: trail deletion sweep (Phase D1). Two columns drive the new
+    // workspace surfaces' session re-entry and threshold-orientation logic:
+    //   - last_touched_position: TEXT, NULL = first session (sermon-start
+    //     landing fires); non-NULL = land on that field on re-open. Stored
+    //     as the canonical slash-composite "<stage>/<subPhase>/<fieldKey>"
+    //     so it parses cleanly without a JSON round-trip.
+    //   - thresholds_seen: TEXT (JSON array of dismissed threshold ids).
+    //     One mechanism for "has this threshold been dismissed" across
+    //     sermon-start, Study→Anchor handoff, and any future threshold —
+    //     so we don't end up with one boolean per threshold over time.
+    safeAlter("ALTER TABLE sermons ADD COLUMN last_touched_position TEXT DEFAULT NULL");
+    safeAlter("ALTER TABLE sermons ADD COLUMN thresholds_seen TEXT NOT NULL DEFAULT '[]'");
+    db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '23')");
+    version = 23;
   }
 }
 
@@ -1353,9 +1373,9 @@ function success(value) {
 
 function shapeSermon(row, parentContext) {
   if (!row) return null;
-  // Coerce legacy Blueprint / Frame values into Assembly before the row
-  // crosses the IPC boundary; the renderer never sees the old enum.
-  const stage = coerceLegacyStage(row.current_stage);
+  // Legacy Blueprint / Frame coercion removed in the trail deletion sweep
+  // (Phase B3) — no production data carries those values.
+  const stage = row.current_stage;
   const out = {
     // Canonical shape (per src/core/contracts.ts `Sermon`).
     id: row.id,
@@ -1551,14 +1571,14 @@ function validateAndCommit(op, payload) {
         );
       }
       const id = randomUUID();
-      // `current_step` is initialized NULL — the column is retained for
-      // legacy data only; canonical position is stage + sub_phase.
+      // Canonical position is (current_stage, current_sub_phase). current_step
+      // was retired in the trail deletion sweep (Phase B2).
       db.run(
         `INSERT INTO sermons
            (id, series_id, section_id, is_one_off, title, passage, date, preacher,
             stage, mpt, mps, observations, outline, manuscript,
-            current_stage, current_step, current_sub_phase)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, '', '', '', '[]', '', ?, NULL, ?)`,
+            current_stage, current_sub_phase)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, '', '', '', '[]', '', ?, ?)`,
         [
           id,
           payload.series_id || null,
@@ -1740,13 +1760,8 @@ function validateAndCommit(op, payload) {
       if (!row) {
         return rejection("NOT_FOUND", "State #1", `Sermon ${sermonId} not found.`);
       }
-      // Coerce legacy stage values in the `to` payload — older renderer
-      // code calling `transitionState({ to: STAGE.Blueprint })` lands on
-      // Assembly without an extra round-trip. Same coercion as shapeSermon.
-      if (kind === "stage") {
-        to = coerceLegacyStage(to);
-      }
-      const currentStage = coerceLegacyStage(row.current_stage);
+      // Legacy stage coercion removed in the trail deletion sweep (Phase B3).
+      const currentStage = row.current_stage;
       // Process #2 (empty-evidence gate) only fires on forward movement.
       // The constraint is "the system does not advance unless evidence
       // exists" — backward navigation is retreat, not advancement, and
@@ -1802,7 +1817,7 @@ function validateAndCommit(op, payload) {
         else if (to === STAGE.Assembly) { subDefault = SUB_PHASE.Anchor; lastCol = "last_assembly_subphase"; }
         if (lastCol) {
           db.run(
-            `UPDATE sermons SET current_stage = ?, current_step = NULL,
+            `UPDATE sermons SET current_stage = ?,
                                 current_sub_phase = COALESCE(${lastCol}, ?),
                                 updated_at = datetime('now')
              WHERE id = ?`,
@@ -1810,7 +1825,7 @@ function validateAndCommit(op, payload) {
           );
         } else {
           db.run(
-            `UPDATE sermons SET current_stage = ?, current_step = NULL, current_sub_phase = ?, updated_at = datetime('now') WHERE id = ?`,
+            `UPDATE sermons SET current_stage = ?, current_sub_phase = ?, updated_at = datetime('now') WHERE id = ?`,
             [to, subDefault, sermonId],
           );
         }
@@ -1933,9 +1948,9 @@ function validateAndCommit(op, payload) {
             outline, functional_elements,
             manuscript, delivery_notes, timing_notes,
             study_guide_note, sermon_frame,
-            current_stage, current_step, current_sub_phase,
+            current_stage, current_sub_phase,
             last_study_subphase, last_assembly_subphase
-          ) VALUES (?,?,0,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+          ) VALUES (?,?,0,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
           [
             sermon.id, sermon.series_id, sermon.title, sermon.passage, sermon.date, sermon.stage,
             sermon.mpt, sermon.mps,
@@ -1943,7 +1958,8 @@ function validateAndCommit(op, payload) {
             sermon.outline, sermon.functional_elements,
             sermon.manuscript, sermon.delivery_notes, sermon.timing_notes,
             sermon.study_guide_note, sermon.sermon_frame,
-            STAGE.Study, null, SUB_PHASE.Observe,
+            // current_step removed in the trail deletion sweep (Phase B2).
+            STAGE.Study, SUB_PHASE.Observe,
             // Per-stage memory: tour sermons always reset to the first
             // sub-phase of each stage so re-opens land at the beginning,
             // regardless of where the pastor wandered last time.

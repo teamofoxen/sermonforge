@@ -5,90 +5,80 @@ import {
   getSermon, updateSermon, deleteSermon,
   getSeries, getSectionsBySeries, getSermonsBySeries,
   persistMutation, INITIAL_SAVE_STATE,
-  transitionState,
 } from "../core/spine";
-import { pickSermonColumns, STAGE, STAGE_SEQUENCE, STAGE_LABELS, ContractViolation } from "../core/contracts";
-import { buildStageEvidence, formatTabRejection } from "../utils/studyAdvancement";
-import { autoResize } from "../utils";
-import DeleteButton from "./DeleteButton";
-import StudyTab from "./StudyTab";
-import AssemblyTab from "./AssemblyTab";
-import ManuscriptTrail from "./ManuscriptTrail";
+import { pickSermonColumns, STAGE } from "../core/contracts";
+import {
+  deriveCurrentPositionFromSermon,
+  deriveQuestionStatesFromSermon,
+  deriveStudyOutcomesFromSermon,
+  deriveStudyUnfinishedFromSermon,
+  serializePosition,
+  hasSeenThreshold,
+  nextThresholdsSeen,
+  THRESHOLD_ID,
+} from "../utils/sermonState";
+import {
+  parseStructuredField,
+  setQuestionAnswer,
+  setQuestionNA,
+  setDivisionsCanvas,
+} from "../utils/studyFields";
+import SermonWritingSurface from "./SermonWritingSurface";
+import SermonMap from "./SermonMap";
+import SermonStartLanding from "./SermonStartLanding";
+import StudyAnchorHandoff from "./StudyAnchorHandoff";
+import WorkspaceNotebookDrawer from "./WorkspaceNotebookDrawer";
+import { useEsvPassage } from "../utils/useEsvPassage";
 import PassagePopup from "./PassagePopup";
+import DeleteButton from "./DeleteButton";
 import SecondaryButton from "./primitives/SecondaryButton";
 import IconButton from "./primitives/IconButton";
 import BackButton from "./primitives/BackButton";
-import TextButton from "./primitives/TextButton";
 
-const TABS = STAGE_SEQUENCE;
-const TAB_LABELS = STAGE_LABELS;
+// Stage + sub-phase → JSON column on the sermon record. Same mapping
+// sermonState.js uses; centralizes the write side here.
+const STAGE_SUBPHASE_TO_COLUMN = Object.freeze({
+  "Study/Observe":           "observations",
+  "Study/Interpret":         "interpretation",
+  "Study/RedemptiveThread":  "redemptive_thread",
+  "Study/Implications":      "implications",
+  "Assembly/Anchor":         "main_point_pair",
+  "Assembly/Frame":          "sermon_frame",
+});
 
-// Legacy tab-key aliases. "outline" + "Blueprint" + "Frame" all route to
-// STAGE.Assembly (which absorbed those former stages). "delivery" routes
-// to Manuscript per ARI Phase 7.
-const LEGACY_TAB_MAP = {
-  study: STAGE.Study,
-  outline: STAGE.Assembly,
-  Blueprint: STAGE.Assembly,
-  Frame: STAGE.Assembly,
-  manuscript: STAGE.Manuscript,
-  delivery: STAGE.Manuscript,
-};
-
-
-export default function SermonWorkspace({ sermonId, onClose, onOpenSermon, navHint }) {
-  const [sermon, setSermon] = useState(null);
-  const [activeTab, setActiveTab] = useState(STAGE.Study);
-  const [activeStep, setActiveStep] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [showHowItWorks, setShowHowItWorks] = useState(false);
+// _fixtureSermon — Phase D2 fixture seam. When set, SermonWorkspace skips
+// getSermon and uses the prop value directly. Used only by
+// SermonWorkspaceFixture for preview verification across multiple sermon
+// shapes (empty / populated / at-handoff). Never set in production; the
+// underscore prefix marks it fixture-only. Writes are also skipped in
+// fixture mode (no real disk to persist to).
+export default function SermonWorkspace({
+  sermonId,
+  onClose,
+  onOpenSermon,
+  navHint,
+  _fixtureSermon,
+}) {
+  const [sermon, setSermon] = useState(_fixtureSermon ?? null);
+  const [loading, setLoading] = useState(!_fixtureSermon);
   const [showPassage, setShowPassage] = useState(false);
-  // Save visibility — Mutation Contract #3 lives in spine.persistMutation.
-  // "Saving…" while in flight, "Saved" when at rest, "Save failed · Retry" on error.
   const [saveState, setSaveState] = useState(INITIAL_SAVE_STATE);
   const { saving, saveError, lastSavedAt } = saveState;
-  // Movement-event marker — Process Contract #3 ("movement is a visible event").
-  // Fires on stage transitions (handleTabChange) and on sub-phase / step
-  // transitions bubbled up from StudyTab via onMovement. Auto-clears on
-  // dismiss or next movement. The data-testid="movement-event" is the
-  // canonical marker the contract test (and future surfaces) locate.
-  const [lastMovement, setLastMovement] = useState(null);
-  // Q1 spine routing — stage-level rejections (Process #1/#2 from
-  // transitionState) surface here. Q3 will replace this with proper hard-gate UX.
-  const [tabError, setTabError] = useState(null);
-  // Position-in-series — State Contract #4: parent context is first-class.
-  // siblingIds is the ordered list of sermon IDs in the current sermon's
-  // series. Empty array when the sermon has no series.
   const [siblingIds, setSiblingIds] = useState([]);
-  // SPRD B4.2: PC card removed from workspace; PC substance now lives in
-  // Phase 4 Field 3 (Pastoral Context) per SFDI Phase 4 walk. The PC schema
-  // columns (background_noise, audience_assumptions, topic_theme) are
-  // preserved for legacy data; their content surfaces as Phase 4 Field 3
-  // legacy_notes on first open of a sermon under the new shape.
-  const { active: tourActive, desiredUi } = useTour();
+  const [mapOpen, setMapOpen] = useState(false);
+  const [notebookOpen, setNotebookOpen] = useState(false);
+  const sermonRef = useRef(_fixtureSermon ?? null);
 
-  // When the tour is active, align workspace state with the current stop's
-  // declared prerequisites. Only writes when there's a real change so we don't
-  // fight the user mid-step. Route the tab change through `handleTabChange`
-  // so Process Contract #3 (movement is a visible event) holds — a tour-
-  // driven advance must still emit the `data-testid="movement-event"`
-  // marker. `handleTabChange` writes that marker; raw `setActiveTab`
-  // would skip it.
+  // Tour wrapper preserved as no-op for now — tour stops have not been
+  // rewired to the writing surface. Full tour cleanup goes with Phase E.
+  useTour();
+
+  // Sermon load (skipped in fixture mode).
   useEffect(() => {
-    if (!tourActive || !desiredUi) return;
-    if (desiredUi.tab && desiredUi.tab !== activeTab) {
-      // handleTabChange is async + may reject via ContractViolation;
-      // tour advance should still attempt the spine transition so the
-      // movement marker fires. Errors are surfaced via tabError state.
-      handleTabChange(desiredUi.tab).catch(() => { /* surfaced via tabError */ });
+    if (_fixtureSermon) {
+      sermonRef.current = _fixtureSermon;
+      return;
     }
-    // handleTabChange intentionally excluded — it captures `activeTab` via
-    // closure; the dep array drives this effect on tour-state changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tourActive, desiredUi, activeTab]);
-  const sermonRef = useRef(null);
-
-  useEffect(() => {
     async function load() {
       try {
         const data = await getSermon(sermonId);
@@ -96,12 +86,6 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSermon, navHi
           setLoading(false);
           return;
         }
-
-        // Fetch series, sections, and sibling sermons in parallel — only what's needed.
-        // Sections are fetched only when both ids are present so we can
-        // pluck the matching section without an extra IPC call. Siblings
-        // are fetched whenever the sermon belongs to a series so the topbar
-        // can show position and prev/next navigation (State Contract #4).
         const [series, sections, siblings] = await Promise.all([
           data.series_id
             ? getSeries(data.series_id).catch((e) => { console.error("Series fetch failed:", e); return null; })
@@ -113,29 +97,11 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSermon, navHi
             ? getSermonsBySeries(data.series_id).catch((e) => { console.error("Siblings fetch failed:", e); return []; })
             : Promise.resolve([]),
         ]);
-
         data.series  = series ?? null;
-        data.section = data.section_id
-          ? (sections.find((s) => s.id === data.section_id) ?? null)
-          : null;
-
+        data.section = data.section_id ? (sections.find((s) => s.id === data.section_id) ?? null) : null;
         setSermon(data);
         sermonRef.current = data;
-        setSiblingIds(Array.isArray(siblings) ? siblings.map(s => s.id) : []);
-        // Active tab derives from `data.current_stage`, which the spine
-        // writes via transitionState on every tab change. Tour sermons
-        // reseed to STAGE.Study on every load (DELETE+INSERT), so they
-        // always land at the start of the trail. Regular sermons resume
-        // to wherever the pastor was last. A navHint from a search-
-        // result click overrides this — the pastor wants to land on the
-        // surface where the match was found.
-        const hintedStage = navHint?.stage && TABS.includes(navHint.stage) ? navHint.stage : null;
-        if (hintedStage) {
-          setActiveTab(hintedStage);
-        } else if (data?.current_stage) {
-          const seededTab = LEGACY_TAB_MAP[data.current_stage] || data.current_stage;
-          if (TABS.includes(seededTab)) setActiveTab(seededTab);
-        }
+        setSiblingIds(Array.isArray(siblings) ? siblings.map((s) => s.id) : []);
       } catch (e) {
         console.error("SermonWorkspace load error:", e);
       } finally {
@@ -143,74 +109,55 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSermon, navHi
       }
     }
     load();
-  }, [sermonId]);
+  }, [sermonId, _fixtureSermon]);
 
   const persistUpdate = useCallback(
     async () => {
-      // sermonRef.current carries JOIN fields, position fields, and
-      // attached series/section objects that are not in SERMON_COLUMNS.
-      // Filter to the writable allowlist before sending — buildUpdate
-      // throws in dev / drops in prod when an unknown column appears.
-      // The cleanup-effect at unmount fires this unconditionally, so
-      // skip when there's nothing to save (sermon never loaded, or the
-      // payload has no writable fields after the filter).
       const data = sermonRef.current;
       if (!data) return;
+      if (_fixtureSermon) return; // fixture mode — no writes
       const payload = pickSermonColumns(data);
       if (!payload || Object.keys(payload).length === 0) return;
       await persistMutation(setSaveState, async () => {
         await updateSermon(sermonId, payload);
       });
     },
-    [sermonId]
+    [sermonId, _fixtureSermon]
   );
 
   const debouncedSave = useDebounce(persistUpdate, 800);
 
-  // Flush any pending debounced save when navigating away.
+  // Flush pending debounced save on unmount.
   useEffect(() => {
     return () => { persistUpdate(); };
   }, [persistUpdate]);
 
-  function handleUpdate(fields) {
+  // handleUpdate — applies field changes to sermonRef + setSermon, then
+  // queues a debounced save. Used by every UI write path (writing-surface
+  // answer change, canvas change, per-unit column change, threshold
+  // dismissal, position write).
+  const handleUpdate = useCallback((fields) => {
     const merged = { ...sermonRef.current, ...fields };
     sermonRef.current = merged;
     setSermon(merged);
     debouncedSave();
-  }
+  }, [debouncedSave]);
 
-  async function handleTabChange(tab) {
-    const previousTab = activeTab;
-    if (tab === previousTab) return;
-    setTabError(null);
+  // beforePositionChange — async; flushes any pending debounced save
+  // BEFORE the position settles. The chain is: position-change trigger
+  // (chevron / map jump / unmet-state door / handoff jump / required-
+  // outcome go-write-it) → await beforePositionChange → write the new
+  // position → handleUpdate writes last_touched_position. The flush
+  // guarantees draft persistence on jump (spec open question 3).
+  const beforePositionChange = useCallback(async () => {
+    await persistUpdate();
+  }, [persistUpdate]);
 
-    // Q1 spine routing — stage transitions through transitionState.
-    const fromIdx = STAGE_SEQUENCE.indexOf(previousTab);
-    const toIdx = STAGE_SEQUENCE.indexOf(tab);
-    const direction = toIdx > fromIdx ? "forward" : "backward";
-    const evidence = buildStageEvidence(sermonRef.current, previousTab);
-    try {
-      await transitionState({
-        sermonId,
-        to: tab,
-        evidence,
-        direction,
-      });
-    } catch (e) {
-      if (e instanceof ContractViolation) {
-        setTabError(formatTabRejection(e));
-        return;
-      }
-      throw e;
-    }
-
-    setActiveTab(tab);
-    setActiveStep(null);
-    // Tab persistence lives in the DB via transitionState above (it writes
-    // current_stage). No localStorage write needed — initial mount reads
-    // current_stage on next load.
-    setLastMovement({ from: previousTab, to: tab, at: Date.now() });
-  }
+  // Passage text via the one-path ESV fetch + cache hook. Called above
+  // the loading / not-found early returns so the hook order stays stable
+  // across renders (rules-of-hooks). useEsvPassage handles null input.
+  const { data: passageData } = useEsvPassage(sermon?.passage);
+  const passageText = typeof passageData?.text === "string" ? passageData.text : "";
 
   async function handleDelete() {
     await deleteSermon(sermonId);
@@ -236,364 +183,262 @@ export default function SermonWorkspace({ sermonId, onClose, onOpenSermon, navHi
     );
   }
 
+  // Position derivation. navHint overrides if it targets a stage that
+  // matches the writing-surface walk; otherwise read last_touched_position.
+  const position = deriveCurrentPositionFromSermon(sermon);
+  const questionStates = deriveQuestionStatesFromSermon(sermon);
+  const studyOutcomes = deriveStudyOutcomesFromSermon(sermon);
+  const studyUnfinished = deriveStudyUnfinishedFromSermon(sermon);
+
+  // Field-level answer access for the writing surface — extract
+  // fieldAnswers for the current position's field from the sermon's
+  // JSON column.
+  const currentCol = STAGE_SUBPHASE_TO_COLUMN[`${position.stage}/${position.subPhase}`];
+  const currentFieldData = currentCol ? parseStructuredField(sermon[currentCol]) : {};
+  const fieldAnswers = currentFieldData[position.fieldKey] ?? {};
+
+  // Thought units for cumulative-synthesis-table consumption.
+  const observationsData = parseStructuredField(sermon.observations);
+  const thoughtUnits = observationsData?.divisions?.thought_units?.value ?? [];
+
+  // Threshold flags. Sermon-start fires when its id is NOT in
+  // thresholds_seen. Study→Anchor handoff fires when the preacher has
+  // landed on the first Anchor field, sermon-start has been seen, and
+  // the handoff itself has not been seen.
+  const showSermonStart = !hasSeenThreshold(sermon, THRESHOLD_ID.SermonStart);
+  const showHandoff =
+    !showSermonStart &&
+    position.stage === STAGE.Assembly &&
+    position.subPhase === "Anchor" &&
+    !hasSeenThreshold(sermon, THRESHOLD_ID.StudyToAnchorHandoff);
+
+  // Writing-surface save indicator string.
+  const surfaceSaveState =
+    saving ? "saving…" :
+    saveError ? "save failed" :
+    lastSavedAt ? "saved" :
+    null;
+
+  // ── Write paths ────────────────────────────────────────────────────
+  // Each handler routes through handleUpdate so save-state, debounce,
+  // and persistUpdate work uniformly across every write.
+
+  const writePositionAndThresholds = (next, extraFields = {}) => {
+    handleUpdate({
+      last_touched_position: serializePosition(next),
+      ...extraFields,
+    });
+  };
+
+  const handlePositionChange = async (next) => {
+    await beforePositionChange();
+    writePositionAndThresholds(next);
+  };
+
+  const handleAnswerChange = (fieldKey, questionKey, envelope) => {
+    const col = STAGE_SUBPHASE_TO_COLUMN[`${position.stage}/${position.subPhase}`];
+    if (!col) return;
+    const parsed = parseStructuredField(sermon[col]);
+    let next = setQuestionAnswer(parsed, fieldKey, questionKey, envelope?.value ?? "");
+    next = setQuestionNA(next, fieldKey, questionKey, !!envelope?.na);
+    handleUpdate({ [col]: JSON.stringify(next) });
+  };
+
+  const handleUnitColumnChange = (_questionKey, unitIdx, columnKey, value) => {
+    // Per-unit cumulative columns write into observations.divisions.
+    // thought_units — the canonical cross-phase array. The writing
+    // surface doesn't care which phase's column is being updated; the
+    // array IS the storage.
+    const parsed = parseStructuredField(sermon.observations);
+    const existing = parsed?.divisions?.thought_units?.value;
+    const units = Array.isArray(existing) ? existing.slice() : [];
+    if (unitIdx < 0 || unitIdx >= units.length) return;
+    units[unitIdx] = { ...units[unitIdx], [columnKey]: value };
+    const next = {
+      ...parsed,
+      divisions: {
+        ...(parsed?.divisions || {}),
+        thought_units: { value: units, na: parsed?.divisions?.thought_units?.na ?? false },
+      },
+    };
+    handleUpdate({ observations: JSON.stringify(next) });
+  };
+
+  const handleCanvasChange = (_fieldKey, _questionKey, rows) => {
+    // setDivisionsCanvas writes both canvas + the derived thought_units
+    // array atomically (single canonical write path per ruling 8).
+    const parsed = parseStructuredField(sermon.observations);
+    const next = setDivisionsCanvas(parsed, rows);
+    handleUpdate({ observations: JSON.stringify(next) });
+  };
+
+  const dismissThreshold = (id) => {
+    handleUpdate({ thresholds_seen: nextThresholdsSeen(sermon, id) });
+  };
+
+  // Notebook column dispatch by current stage. Pre-restructure column
+  // names preserved: notebook_blueprint serves the Assembly stage; the
+  // column was named before the workspace restructure but is the canonical
+  // store for Assembly notes.
+  const NOTEBOOK_COLUMN_BY_STAGE = {
+    Study: "notebook_study",
+    Assembly: "notebook_blueprint",
+    Manuscript: "notebook_manuscript",
+  };
+  const notebookColumn = NOTEBOOK_COLUMN_BY_STAGE[position.stage] ?? "notebook_study";
+  const notebookValue = typeof sermon[notebookColumn] === "string" ? sermon[notebookColumn] : "";
+  const handleNotebookChange = (value) => {
+    handleUpdate({ [notebookColumn]: value });
+  };
+
+  // Map jump and handoff jump both share the pattern: flush, write
+  // position, optionally mark a threshold seen, close any overlay.
+  const handleMapJump = async (next) => {
+    await beforePositionChange();
+    writePositionAndThresholds(next);
+    setMapOpen(false);
+  };
+
+  const handleHandoffJump = async (next) => {
+    await beforePositionChange();
+    writePositionAndThresholds(next, {
+      thresholds_seen: nextThresholdsSeen(sermon, THRESHOLD_ID.StudyToAnchorHandoff),
+    });
+  };
+
+  // Series position for the topbar.
+  const seriesIdx = sermon?.series_id && siblingIds.length > 0
+    ? siblingIds.indexOf(sermonId)
+    : -1;
+
   return (
     <>
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
-      {/* Movement-event marker — Process Contract #3.
-          Surfaces a transient "advanced from X to Y" banner when the
-          canonical position changes. data-testid is the marker contract
-          tests look for; future surfaces inherit this element. */}
-      {lastMovement && (
-        <div
-          data-testid="movement-event"
-          role="status"
-          aria-live="polite"
-          onClick={() => setLastMovement(null)}
-          style={{
-            background: "var(--parchment-warm)",
-            borderLeft: "3px solid var(--gold)",
-            padding: "8px 16px",
-            fontSize: "13px",
-            color: "var(--ink-mid)",
-            fontFamily: "var(--font-serif)",
-            cursor: "pointer",
-          }}
-          title="Click to dismiss"
-        >
-          Advanced from {TAB_LABELS[lastMovement.from] || lastMovement.from} to{" "}
-          {TAB_LABELS[lastMovement.to] || lastMovement.to}.
-        </div>
-      )}
-      {/* Top bar */}
-      <div className="topbar">
-        <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1, minWidth: 0 }}>
-          <BackButton
-            variant="icon"
-            onClick={onClose}
-            title="Back"
-            className="btn-icon"
-            style={{ flexShrink: 0 }}
-          />
-          <div className="topbar-left">
-            <div className="topbar-series">
-              {sermon.series_title && <span>{sermon.series_title}</span>}
-              {/* Position-in-series chip + prev/next chevrons. State Contract #4:
-                  parent context is first-class — the user can answer "which
-                  sermon of how many am I on" without leaving the workspace. */}
-              {(() => {
-                const idx = sermon.series_id && siblingIds.length > 0
-                  ? siblingIds.indexOf(sermonId)
-                  : -1;
-                if (idx < 0) return null;
-                const total = siblingIds.length;
-                const position = idx + 1;
-                const prevId = idx > 0 ? siblingIds[idx - 1] : null;
-                const nextId = idx < total - 1 ? siblingIds[idx + 1] : null;
-                const navStyle = {
-                  background: "transparent",
-                  border: "none",
-                  padding: "0 4px",
-                  cursor: "pointer",
-                  color: "var(--ink-ghost)",
-                  fontSize: "14px",
-                  lineHeight: 1,
-                };
-                const navStyleDisabled = { ...navStyle, cursor: "default", opacity: 0.3 };
-                return (
-                  <>
-                    {sermon.series_title && <span> · </span>}
-                    <span
-                      style={{ display: "inline-flex", alignItems: "center", gap: "2px" }}
-                      title={`Sermon ${position} of ${total} in this series`}
-                    >
-                      <IconButton
-                        style={prevId && onOpenSermon ? navStyle : navStyleDisabled}
-                        onClick={() => prevId && onOpenSermon && onOpenSermon(prevId)}
-                        disabled={!prevId || !onOpenSermon}
-                        aria-label="Previous sermon in series"
-                      >‹</IconButton>
-                      <span>Sermon {position} of {total}</span>
-                      <IconButton
-                        style={nextId && onOpenSermon ? navStyle : navStyleDisabled}
-                        onClick={() => nextId && onOpenSermon && onOpenSermon(nextId)}
-                        disabled={!nextId || !onOpenSermon}
-                        aria-label="Next sermon in series"
-                      >›</IconButton>
-                    </span>
-                  </>
-                );
-              })()}
-              {(sermon.series_title || (sermon.series_id && siblingIds.length > 0)) && sermon.passage && <span> · </span>}
-              {sermon.passage && (
-                <span
-                  className="passage-ref"
-                  onClick={() => setShowPassage(v => !v)}
-                  style={{ cursor: "pointer" }}
-                  title="Show ESV text"
-                >{sermon.passage}</span>
-              )}
+      <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+        {/* Top bar — back, series breadcrumb, passage ref, sermon title,
+            save indicator, delete. Stage tabs are gone. */}
+        <div className="topbar">
+          <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1, minWidth: 0 }}>
+            <BackButton
+              variant="icon"
+              onClick={onClose}
+              title="Back"
+              className="btn-icon"
+              style={{ flexShrink: 0 }}
+            />
+            <div className="topbar-left">
+              <div className="topbar-series">
+                {sermon.series_title && <span>{sermon.series_title}</span>}
+                {seriesIdx >= 0 && (() => {
+                  const total = siblingIds.length;
+                  const pos = seriesIdx + 1;
+                  const prevId = seriesIdx > 0 ? siblingIds[seriesIdx - 1] : null;
+                  const nextId = seriesIdx < total - 1 ? siblingIds[seriesIdx + 1] : null;
+                  const navStyle = { background: "transparent", border: "none", padding: "0 4px", cursor: "pointer", color: "var(--ink-ghost)", fontSize: "14px", lineHeight: 1 };
+                  const navStyleDisabled = { ...navStyle, cursor: "default", opacity: 0.3 };
+                  return (
+                    <>
+                      {sermon.series_title && <span> · </span>}
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: "2px" }} title={`Sermon ${pos} of ${total} in this series`}>
+                        <IconButton style={prevId && onOpenSermon ? navStyle : navStyleDisabled} onClick={() => prevId && onOpenSermon && onOpenSermon(prevId)} disabled={!prevId || !onOpenSermon} aria-label="Previous sermon in series">‹</IconButton>
+                        <span>Sermon {pos} of {total}</span>
+                        <IconButton style={nextId && onOpenSermon ? navStyle : navStyleDisabled} onClick={() => nextId && onOpenSermon && onOpenSermon(nextId)} disabled={!nextId || !onOpenSermon} aria-label="Next sermon in series">›</IconButton>
+                      </span>
+                    </>
+                  );
+                })()}
+                {(sermon.series_title || seriesIdx >= 0) && sermon.passage && <span> · </span>}
+                {sermon.passage && (
+                  <span
+                    className="passage-ref"
+                    onClick={() => setShowPassage((v) => !v)}
+                    style={{ cursor: "pointer" }}
+                    title="Show ESV text"
+                  >{sermon.passage}</span>
+                )}
+              </div>
+              <div className="topbar-title">{sermon.title}</div>
             </div>
-            <div className="topbar-title" data-tour-id="workspace-title">{sermon.title}</div>
+          </div>
+
+          <div className="topbar-right">
+            {saving && (
+              <span style={{ fontSize: "12px", color: "var(--ink-ghost)", fontStyle: "italic", padding: "0 6px" }}>
+                Saving…
+              </span>
+            )}
+            {!saving && saveError && (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "0 6px" }}>
+                <span style={{ fontSize: "12px", color: "var(--crimson-soft)" }}>Save failed</span>
+                <SecondaryButton size="sm" style={{ fontSize: "12px", padding: "2px 8px" }} onClick={persistUpdate}>
+                  Retry
+                </SecondaryButton>
+              </span>
+            )}
+            {!saving && !saveError && lastSavedAt && (
+              <span style={{ fontSize: "12px", color: "var(--ink-ghost)", padding: "0 6px" }} title={`Last saved ${new Date(lastSavedAt).toLocaleString()}`}>
+                Saved
+              </span>
+            )}
+            <DeleteButton onDelete={handleDelete} />
           </div>
         </div>
 
-        <div className="topbar-right">
-          {saving && (
-            <span
-              style={{ fontSize: "12px", color: "var(--ink-ghost)", fontStyle: "italic", padding: "0 6px" }}
-            >
-              Saving…
-            </span>
-          )}
-          {!saving && saveError && (
-            <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "0 6px" }}>
-              <span style={{ fontSize: "12px", color: "var(--crimson-soft)" }}>Save failed</span>
-              <SecondaryButton
-                size="sm"
-                style={{ fontSize: "12px", padding: "2px 8px" }}
-                onClick={persistUpdate}
-              >
-                Retry
-              </SecondaryButton>
-            </span>
-          )}
-          {!saving && !saveError && lastSavedAt && (
-            <span
-              style={{ fontSize: "12px", color: "var(--ink-ghost)", padding: "0 6px" }}
-              title={`Last saved ${new Date(lastSavedAt).toLocaleString()}`}
-            >
-              Saved
-            </span>
-          )}
-
-          <DeleteButton onDelete={handleDelete} />
-
-          <TextButton onClick={() => setShowHowItWorks(true)}>
-            How this works
-          </TextButton>
+        {/* Writing surface — fills the rest of the workspace. */}
+        <div style={{ flex: 1, minHeight: 0, position: "relative" }}>
+          <SermonWritingSurface
+            stage={position.stage}
+            subPhase={position.subPhase}
+            fieldKey={position.fieldKey}
+            fieldAnswers={fieldAnswers}
+            thoughtUnits={thoughtUnits}
+            passageRef={sermon.passage}
+            passageText={passageText}
+            saveState={surfaceSaveState}
+            onAnswerChange={handleAnswerChange}
+            onUnitColumnChange={handleUnitColumnChange}
+            onCanvasChange={handleCanvasChange}
+            onPositionChange={handlePositionChange}
+            beforePositionChange={beforePositionChange}
+            onOpenMap={() => setMapOpen(true)}
+            onOpenNotebook={() => setNotebookOpen(true)}
+          />
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="stage-tabs">
-        {TABS.map((tab) => (
-          <button
-            key={tab}
-            data-tour-id={`stage-tab-${tab}`}
-            className={`stage-tab ${activeTab === tab ? "active" : ""}`}
-            onClick={() => handleTabChange(tab)}
-          >
-            {TAB_LABELS[tab]}
-          </button>
-        ))}
-      </div>
-
-      {tabError && (
-        <div
-          data-testid="tab-error"
-          role="alert"
-          aria-live="polite"
-          onClick={() => setTabError(null)}
-          style={{
-            background: "var(--parchment-warm)",
-            borderLeft: "3px solid var(--gold)",
-            padding: "8px 16px",
-            margin: "0 20px 8px",
-            fontSize: "13px",
-            color: "var(--ink-mid)",
-            cursor: "pointer",
-          }}
-        >
-          {tabError}
-        </div>
+      {mapOpen && (
+        <SermonMap
+          questionStates={questionStates}
+          currentPosition={position}
+          onJump={handleMapJump}
+          onClose={() => setMapOpen(false)}
+        />
       )}
-
-      {/* Body */}
-      <div className="workspace-body">
-        <div className="workspace-main">
-
-          {/* Pastoral Context card removed in SPRD B4.2 — its three text
-              fields (background_noise, audience_assumptions, topic_theme)
-              now surface as Phase 4 Field 3 (Pastoral Context) in the
-              SFDI three-way conversation. The schema columns are preserved
-              defensively so legacy data can migrate into Field 3's
-              legacy_notes on first open. */}
-
-          {(() => {
-            // State Contract #4 — surface series parent context inside
-            // the trail topbar too. The workspace shell topbar already
-            // shows the series breadcrumb, but the trail's `.tw-shell`
-            // covers it during the walk. Compute position-in-series here
-            // once and forward to whichever trail-hosting tab mounts.
-            const idx = sermon?.series_id && siblingIds.length > 0
-              ? siblingIds.indexOf(sermonId)
-              : -1;
-            const seriesProps = idx >= 0
-              ? {
-                  seriesTitle: sermon.series_title || sermon.series?.title || "",
-                  seriesPosition: idx + 1,
-                  seriesTotal: siblingIds.length,
-                  onOpenPrev: idx > 0 && onOpenSermon ? () => onOpenSermon(siblingIds[idx - 1]) : undefined,
-                  onOpenNext: idx < siblingIds.length - 1 && onOpenSermon ? () => onOpenSermon(siblingIds[idx + 1]) : undefined,
-                }
-              : {};
-            // Forward the search-driven navHint to whichever tab matches
-            // its `stage` field. Each tab consumes the subPhase + openNotebook
-            // hints on its initial mount; subsequent navigation ignores them.
-            const tabHint = navHint?.stage === activeTab ? navHint : null;
-            if (activeTab === STAGE.Study) {
-              return (
-                <StudyTab
-                  sermon={sermon}
-                  onUpdate={handleUpdate}
-                  onTabChange={handleTabChange}
-                  onMovement={({ from, to }) => setLastMovement({ from, to, at: Date.now() })}
-                  onClose={onClose}
-                  navHint={tabHint}
-                  {...seriesProps}
-                />
-              );
-            }
-            if (activeTab === STAGE.Assembly) {
-              return (
-                <AssemblyTab
-                  sermon={sermon}
-                  onUpdate={handleUpdate}
-                  onTabChange={handleTabChange}
-                  onMovement={({ from, to }) => setLastMovement({ from, to, at: Date.now() })}
-                  onClose={onClose}
-                  navHint={tabHint}
-                  {...seriesProps}
-                />
-              );
-            }
-            if (activeTab === STAGE.Manuscript) {
-              return (
-                <ManuscriptTrail
-                  sermon={sermon}
-                  onUpdate={handleUpdate}
-                  onClose={onClose}
-                  navHint={tabHint}
-                  {...seriesProps}
-                />
-              );
-            }
-            return null;
-          })()}
-        </div>
-
-      </div>
-    </div>
-
-    {showHowItWorks && <SermonHowItWorksModal onClose={() => setShowHowItWorks(false)} />}
-    <PassagePopup
-      passage={sermon?.passage}
-      isOpen={showPassage}
-      onClose={() => setShowPassage(false)}
-    />
+      {showSermonStart && (
+        <SermonStartLanding
+          onBegin={() => dismissThreshold(THRESHOLD_ID.SermonStart)}
+        />
+      )}
+      {showHandoff && (
+        <StudyAnchorHandoff
+          outcomes={studyOutcomes}
+          unfinished={studyUnfinished}
+          onJump={handleHandoffJump}
+          onClose={() => dismissThreshold(THRESHOLD_ID.StudyToAnchorHandoff)}
+        />
+      )}
+      {notebookOpen && (
+        <WorkspaceNotebookDrawer
+          stage={position.stage}
+          value={notebookValue}
+          onChange={handleNotebookChange}
+          onClose={() => setNotebookOpen(false)}
+        />
+      )}
+      <PassagePopup
+        passage={sermon?.passage}
+        isOpen={showPassage}
+        onClose={() => setShowPassage(false)}
+      />
     </>
-  );
-}
-
-// ── Sermon Workspace "How this works" modal ────────────────────────────────────
-function SermonHowItWorksModal({ onClose }) {
-  return (
-    <div
-      onClick={onClose}
-      style={{
-        position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)",
-        display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000,
-      }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          background: "var(--white)", borderRadius: "var(--radius-lg)",
-          boxShadow: "var(--shadow-deep)", padding: "28px 32px",
-          maxWidth: "960px", width: "90vw", position: "relative",
-          maxHeight: "90vh", overflowY: "auto",
-        }}
-      >
-        <IconButton
-          aria-label="Close how-this-works modal"
-          onClick={onClose}
-          style={{
-            position: "absolute", top: "14px", right: "16px",
-            background: "none", border: "none", cursor: "pointer",
-            color: "var(--ink-ghost)", fontSize: "18px", lineHeight: 1,
-          }}
-        >✕</IconButton>
-        <h3 style={{
-          fontFamily: "var(--font-serif)", fontSize: "18px",
-          color: "var(--ink)", marginBottom: "6px",
-        }}>How the Sermon Workspace works</h3>
-        <p style={{
-          fontSize: "13px", color: "var(--ink-ghost)",
-          marginBottom: "24px", fontFamily: "var(--font-serif)",
-        }}>Each sermon moves through three stages from text to manuscript.</p>
-        <div style={{ overflowX: "auto" }}>
-          <svg viewBox="0 0 720 240" style={{ width: "100%", height: "auto", display: "block" }}>
-
-            {/* Three stage chips. */}
-            <rect x="20" y="16" width="200" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
-            <text x="120" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "var(--font-serif)", fontWeight: 600 }}>Study</text>
-
-            <rect x="260" y="16" width="200" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
-            <text x="360" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "var(--font-serif)", fontWeight: 600 }}>Assembly</text>
-
-            <rect x="500" y="16" width="200" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
-            <text x="600" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "var(--font-serif)", fontWeight: 600 }}>Manuscript</text>
-
-            <text x="240" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-ghost)", fontSize: "14px" }}>→</text>
-            <text x="480" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-ghost)", fontSize: "14px" }}>→</text>
-
-            {/* Sub-phase connectors. */}
-            <line x1="120" y1="56" x2="120" y2="76" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <line x1="360" y1="56" x2="360" y2="76" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <line x1="600" y1="56" x2="600" y2="76" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-
-            {/* Study sub-phases. */}
-            <rect x="20" y="76" width="200" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="120" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Observe</text>
-
-            <rect x="20" y="112" width="200" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="120" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Interpret</text>
-
-            <rect x="20" y="148" width="200" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="120" y="162" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Redemptive Thread</text>
-
-            <rect x="20" y="184" width="200" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="120" y="198" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Implications</text>
-
-            {/* Assembly sub-phases. */}
-            <rect x="260" y="76" width="200" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="360" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Anchor (MPT/MPS)</text>
-
-            <rect x="260" y="112" width="200" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="360" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Outline</text>
-
-            <rect x="260" y="148" width="200" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="360" y="162" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Equip (FE)</text>
-
-            <rect x="260" y="184" width="200" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="360" y="198" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Frame (Intro/Conclusion)</text>
-
-            {/* Manuscript surfaces. */}
-            <rect x="500" y="76" width="200" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="600" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Manuscript Editor</text>
-
-            <rect x="500" y="112" width="200" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="600" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Manuscript Notebook</text>
-
-            <rect x="500" y="148" width="200" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="600" y="162" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Review Checklists</text>
-
-            <rect x="500" y="184" width="200" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-            <text x="600" y="198" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Export to Word</text>
-
-          </svg>
-        </div>
-      </div>
-    </div>
   );
 }

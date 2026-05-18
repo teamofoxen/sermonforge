@@ -90,15 +90,8 @@ export const OBSERVE_FIELDS = [
   {
     key: "divisions",
     label: "Divisions / Thought Units",
-    hint: "How is the passage built? Lay out the main sentences, paraphrase them, and find the thought units that anchor it.",
+    hint: "How is the passage built? Lay out the main sentences and indent supporting clauses so the structure shows.",
     heavyLifting: true,
-    // When this field is the spotlit field, the workspace shell collapses the
-    // throughline rail + AI panel and reduces write-column padding so the
-    // canvas + paraphrase + table get the room. Pastor can restore the panels
-    // via the "Restore panels" button (resets on field change). Suppressed
-    // while the workspace tour is active — tour-wins, since stops anchor on
-    // the rail and worksheet container.
-    takeoverWhenActive: true,
     overview: {
       title: "Divisions / Thought Units",
       paragraphs: [
@@ -115,7 +108,7 @@ export const OBSERVE_FIELDS = [
     questions: [
       {
         key: "canvas",
-        kind: "unified-canvas",
+        kind: "indented-canvas",
         prompt: "Type the passage by hand. Push each main statement to the left margin. Indent supporting words and phrases beneath what they support. When two statements run in parallel, line them up at the same level so the structure shows.",
       },
     ],
@@ -206,7 +199,6 @@ export const INTERPRET_FIELDS = [
     label: "Interpretation Synthesis",
     hint: "Articulate what the passage MEANS — per thought unit and as a whole — in your own voice. The Interpretation Set lives here.",
     heavyLifting: true,
-    takeoverWhenActive: true,
     overview: {
       title: "Interpretation Synthesis",
       paragraphs: [
@@ -230,10 +222,8 @@ export const INTERPRET_FIELDS = [
           questionKey: "thought_units",
         },
         columns: [
-          { key: "thought_unit_summary", label: "Thought unit", kind: "textarea",    readOnly: true },
-          { key: "after_line",            label: "After line",  kind: "line-number", readOnly: true },
-          { key: "signal",                label: "Cue",      kind: "input",       readOnly: true },
-          { key: "meaning",               label: "Meaning",     kind: "textarea",    placeholder: "What is the author conveying through this thought unit?" },
+          { key: "thought_unit_text", label: "Thought unit", kind: "textarea", readOnly: true },
+          { key: "meaning",           label: "Meaning",      kind: "textarea", placeholder: "What is the author conveying through this thought unit?" },
         ],
       },
       {
@@ -272,12 +262,6 @@ export const INTERPRET_FIELDS = [
 //   - `need_for_christ` + `nature_of_god`       → `need_and_character.legacy_notes`
 //   - `jesus_hero`                              → `christ_connection_statement.legacy_notes`
 //
-// `REDEMPTIVE_SUMMARY_KEY` ("summary") is no longer written to from any UI
-// surface as of B3.2 (the legacy "Summary of Redemptive Features" Synthesize
-// block was removed when Field 5's 2-question sequence + composite gate
-// shipped). The export is retained so `flattenToText` continues to surface
-// any legacy summary data through the context pipeline (defensive — no
-// production sermons exist 2026-05-04, but the read path stays graceful).
 //
 // Heavy-lifting fields with `FieldOverviewScreen` on first per-sermon entry
 // (B1.3 pattern):
@@ -346,7 +330,6 @@ export const REDEMPTIVE_FIELDS = [
     label: "Christ-Connection Statement",
     hint: "How does the whole passage point to Christ — and how is Christ the hero of it? One paragraph, in your own voice.",
     heavyLifting: true,
-    takeoverWhenActive: true,
     overview: {
       title: "Christ-Connection Statement",
       paragraphs: [
@@ -371,11 +354,9 @@ export const REDEMPTIVE_FIELDS = [
           questionKey: "thought_units",
         },
         columns: [
-          { key: "thought_unit_summary", label: "Thought unit",       kind: "textarea",    readOnly: true },
-          { key: "after_line",            label: "After line",        kind: "line-number", readOnly: true },
-          { key: "signal",                label: "Cue",            kind: "input",       readOnly: true },
-          { key: "meaning",               label: "Meaning",           kind: "textarea",    readOnly: true },
-          { key: "christ_connection",     label: "Christ-Connection", kind: "textarea",    placeholder: "How does this thought unit point to, find its weight in, or get its answer from Christ?" },
+          { key: "thought_unit_text",  label: "Thought unit",       kind: "textarea", readOnly: true },
+          { key: "meaning",            label: "Meaning",            kind: "textarea", readOnly: true },
+          { key: "christ_connection",  label: "Christ-Connection",  kind: "textarea", placeholder: "How does this thought unit point to, find its weight in, or get its answer from Christ?" },
         ],
       },
       {
@@ -385,7 +366,8 @@ export const REDEMPTIVE_FIELDS = [
     ],
   },
 ];
-export const REDEMPTIVE_SUMMARY_KEY = "summary";
+// REDEMPTIVE_SUMMARY_KEY removed in the trail deletion sweep — see the
+// note above the flattenToText deletion site.
 
 // ── Phase 4: Implications ────────────────────────────────────────────────────
 //
@@ -432,11 +414,6 @@ export const REDEMPTIVE_SUMMARY_KEY = "summary";
 //     of the three voices and the Merida marinate moment. Per-unit
 //     cumulative-column extension (`implication`) + whole-passage Synthesis
 //     ship in B4.2 (single primary question at B4.0 + B4.1).
-//
-// `IMPLICATIONS_UNBELIEVER_KEY` and `IMPLICATIONS_COMPILED_KEY` are retained
-// as constants (not as iterated fields) so `flattenToText` can continue to
-// surface any legacy data through the context pipeline (defensive read path;
-// no production sermons exist).
 
 export const IMPLICATIONS_FIELDS = [
   {
@@ -485,7 +462,6 @@ export const IMPLICATIONS_FIELDS = [
     label: "Implications Synthesis",
     hint: "Integrate the three voices for the whole passage — what does the text teach, what does it ask, and how does it land for the people in this room. One paragraph in your own voice.",
     heavyLifting: true,
-    takeoverWhenActive: true,
     overview: {
       title: "Implications Synthesis",
       paragraphs: [
@@ -509,12 +485,10 @@ export const IMPLICATIONS_FIELDS = [
           questionKey: "thought_units",
         },
         columns: [
-          { key: "thought_unit_summary", label: "Thought unit",       kind: "textarea",    readOnly: true },
-          { key: "after_line",            label: "After line",        kind: "line-number", readOnly: true },
-          { key: "signal",                label: "Cue",            kind: "input",       readOnly: true },
-          { key: "meaning",               label: "Meaning",           kind: "textarea",    readOnly: true },
-          { key: "christ_connection",     label: "Christ-Connection", kind: "textarea",    readOnly: true },
-          { key: "implication",           label: "Implication",       kind: "textarea",    placeholder: "What does this thought unit ask of the hearer in THIS room?" },
+          { key: "thought_unit_text",   label: "Thought unit",       kind: "textarea", readOnly: true },
+          { key: "meaning",             label: "Meaning",            kind: "textarea", readOnly: true },
+          { key: "christ_connection",   label: "Christ-Connection",  kind: "textarea", readOnly: true },
+          { key: "implication",         label: "Implication",        kind: "textarea", placeholder: "What does this thought unit ask of the hearer in THIS room?" },
         ],
       },
       {
@@ -542,8 +516,8 @@ annotateOverviewSubtitles(INTERPRET_FIELDS, "Interpret");
 annotateOverviewSubtitles(REDEMPTIVE_FIELDS, "Redemptive Thread");
 annotateOverviewSubtitles(IMPLICATIONS_FIELDS, "Implications");
 
-export const IMPLICATIONS_UNBELIEVER_KEY = "unbeliever";
-export const IMPLICATIONS_COMPILED_KEY = "compiled";
+// IMPLICATIONS_UNBELIEVER_KEY and IMPLICATIONS_COMPILED_KEY removed in the
+// trail deletion sweep — see the note above the flattenToText deletion site.
 
 // Cumulative-column keys written into the canonical thought-unit array
 // (`observations.divisions.thought_units`) by Phase 2 (`meaning`), Phase 3
@@ -666,65 +640,46 @@ export function generateRowId() {
   return "row-" + Math.random().toString(36).slice(2) + "-" + Date.now().toString(36);
 }
 
-// Derive the thought_units array from a unified-canvas array. Each canvas
-// row whose thought_unit_end is populated produces a thought_units row;
-// `_canvas_row_id` back-points at the canvas row's id so subsequent canvas
-// edits can reattribute Phase 2/3/4 cumulative columns (meaning,
-// christ_connection, implication) by matching on it.
-//
-// Match strategy when merging cumulative columns from existingThoughtUnits:
-//   1. `_canvas_row_id` match (post-Sprint-2 default — every derived row
-//      carries the back-pointer).
-//   2. `after_line` fallback (defensive — only relevant for legacy
-//      thought_units rows surviving the migration without a back-pointer).
-//
-// Empty or undefined `thought_unit_end` rows are skipped — they're not
-// thought-unit seams.
+// Derive the thought_units array from an indented-canvas array. Per ruling 8:
+// every depth-0 row with non-empty text is a thought unit; childless mains
+// still count; empty-text mains are skipped (no phantom units). Cumulative
+// columns (`meaning`, `christ_connection`, `implication`) merge by
+// `_canvas_row_id` only — the legacy after_line positional fallback is
+// retired with the unified canvas. Output row shape:
+//   { thought_unit_text, _canvas_row_id, ...cumulative }
 export function deriveThoughtUnitsFromCanvas(canvas, existingThoughtUnits = []) {
   if (!Array.isArray(canvas) || canvas.length === 0) return [];
   const existing = Array.isArray(existingThoughtUnits) ? existingThoughtUnits : [];
+  const byRowId = new Map();
+  for (const e of existing) {
+    if (e && typeof e === "object" && typeof e._canvas_row_id === "string" && e._canvas_row_id) {
+      byRowId.set(e._canvas_row_id, e);
+    }
+  }
   const out = [];
-
-  for (let i = 0; i < canvas.length; i++) {
-    const row = canvas[i];
+  for (const row of canvas) {
     if (!row || typeof row !== "object") continue;
-    const tue = row.thought_unit_end;
-    if (!tue || typeof tue !== "object") continue;
-
-    const summary = typeof tue.summary === "string" ? tue.summary : "";
-    const signal = typeof tue.signal === "string" ? tue.signal : "";
-    const afterLine = i + 1; // 1-indexed canvas row position
+    const depth = Number.isInteger(row.depth) && row.depth >= 0 ? row.depth : 0;
+    if (depth !== 0) continue;
+    const text = typeof row.text === "string" ? row.text.trim() : "";
+    if (!text) continue;
     const rowId = typeof row.id === "string" ? row.id : "";
-
-    // Match by id first, then by after_line (legacy fallback).
-    let match = null;
-    if (rowId) {
-      match = existing.find((e) => e && e._canvas_row_id === rowId) || null;
-    }
-    if (!match) {
-      match = existing.find(
-        (e) => e && Number(e.after_line) === afterLine
-      ) || null;
-    }
-
+    const prior = rowId ? byRowId.get(rowId) : null;
     const derived = {
-      thought_unit_summary: summary,
-      after_line: afterLine,
-      signal,
+      thought_unit_text: text,
       _canvas_row_id: rowId,
     };
     for (const key of CUMULATIVE_COLUMN_KEYS) {
-      if (match && typeof match[key] === "string" && match[key].trim()) {
-        derived[key] = match[key];
+      if (prior && typeof prior[key] === "string" && prior[key].trim()) {
+        derived[key] = prior[key];
       }
     }
     out.push(derived);
   }
-
   return out;
 }
 
-// Write a unified-canvas value to the `divisions` field, materializing the
+// Write an indented-canvas value to the `divisions` field, materializing the
 // derived thought_units array alongside. Both paths are authoritative — canvas
 // for Field 3 UI, thought_units for Phase 2/3/4 cross-phase reads — so this
 // helper is the single sanctioned write path that keeps them in lockstep.
@@ -743,19 +698,11 @@ export function setDivisionsCanvas(fieldData, canvas) {
 // Flatten an answer value (string or structured list) to a single string.
 // Returns "" if the value is missing, empty, or otherwise has no content.
 //
-// Sub-shape detection inspects the first entry's keys:
-//   - synthesis table:   has `thought_unit_summary` (cumulative columns appended)
-//   - unified canvas:    has `id` + `text` (Phase 4 Sprint 2 — text + depth +
-//                        inline paraphrase + thought_unit_end)
-//   - paraphrase blocks: has `main_sentence_id` (legacy — tightened from
-//                        `paraphrase` because unified-canvas rows also carry
-//                        a `paraphrase` key)
-//   - indented canvas:   has `text` (legacy, depth-only — superseded by
-//                        unified canvas but kept for back-compat reads)
-//   - unknown:           JSON.stringify fallback
-//
-// Output formats are evidence-text-oriented (consumed by AI prompts and
-// empty-evidence gates) — not the rendered display.
+// Per ruling 8, the structured shapes are:
+//   - synthesis table:  has `thought_unit_text` (cumulative columns appended)
+//   - indented canvas:  has `id` + `text` + `depth` (paraphrase + TUE markers
+//                       retired with the unified canvas)
+//   - unknown:          JSON.stringify fallback
 export function flattenAnswerValue(value) {
   if (typeof value === "string") return value.trim();
   if (!Array.isArray(value) || value.length === 0) return "";
@@ -765,62 +712,18 @@ export function flattenAnswerValue(value) {
 
   const lines = [];
 
-  if ("thought_unit_summary" in first) {
+  if ("thought_unit_text" in first) {
     for (const row of value) {
       if (!row || typeof row !== "object") continue;
-      const summary = typeof row.thought_unit_summary === "string" ? row.thought_unit_summary.trim() : "";
-      if (!summary) continue;
-      const meta = [];
-      if (row.after_line !== undefined && row.after_line !== null && String(row.after_line).trim()) {
-        meta.push(`after line ${String(row.after_line).trim()}`);
-      }
-      if (typeof row.signal === "string" && row.signal.trim()) {
-        meta.push(`signal: ${row.signal.trim()}`);
-      }
+      const text = typeof row.thought_unit_text === "string" ? row.thought_unit_text.trim() : "";
+      if (!text) continue;
       const extras = [];
       for (const key of CUMULATIVE_COLUMN_KEYS) {
         if (typeof row[key] === "string" && row[key].trim()) {
           extras.push(`${key.replace(/_/g, " ")}: ${row[key].trim()}`);
         }
       }
-      const head = meta.length > 0 ? `${summary} (${meta.join(", ")})` : summary;
-      lines.push(extras.length > 0 ? `${head} — ${extras.join("; ")}` : head);
-    }
-    return lines.join("\n");
-  }
-
-  if ("id" in first && "text" in first) {
-    // Unified canvas: indented text with optional inline paraphrase and
-    // thought-unit-end annotations. Single pass — keeps the structural
-    // layout legible while folding pastor-voice content into the same line.
-    for (const row of value) {
-      if (!row || typeof row !== "object") continue;
-      const t = typeof row.text === "string" ? row.text.trim() : "";
-      if (!t) continue;
-      const depth = Number.isInteger(row.depth) && row.depth > 0 ? row.depth : 0;
-      let line = "  ".repeat(depth) + t;
-      const para = typeof row.paraphrase === "string" ? row.paraphrase.trim() : "";
-      if (para) line += ` — paraphrase: ${para}`;
-      const tue = row.thought_unit_end;
-      if (tue && typeof tue === "object") {
-        const summary = typeof tue.summary === "string" ? tue.summary.trim() : "";
-        const signal = typeof tue.signal === "string" ? tue.signal.trim() : "";
-        if (summary) {
-          line += signal
-            ? ` — thought unit "${summary}" ends here (signal: ${signal})`
-            : ` — thought unit "${summary}" ends here`;
-        }
-      }
-      lines.push(line);
-    }
-    return lines.join("\n");
-  }
-
-  if ("main_sentence_id" in first) {
-    for (const row of value) {
-      if (!row || typeof row !== "object") continue;
-      const p = typeof row.paraphrase === "string" ? row.paraphrase.trim() : "";
-      if (p) lines.push(p);
+      lines.push(extras.length > 0 ? `${text} — ${extras.join("; ")}` : text);
     }
     return lines.join("\n");
   }
@@ -836,9 +739,6 @@ export function flattenAnswerValue(value) {
     return lines.join("\n");
   }
 
-  // Unknown structured shape — defensive fallback so the data isn't silently
-  // dropped from evidence. Per-sub-shape branches above are added as new
-  // shapes are walked.
   try {
     const s = JSON.stringify(value);
     return s && s !== "[]" ? s : "";
@@ -868,11 +768,6 @@ export function answeredQuestions(fieldData) {
     }
   }
   return out;
-}
-
-// True if the field-data has at least one answered (non-N/A, non-empty) question.
-export function hasAnyAnswer(fieldData) {
-  return answeredQuestions(fieldData).length > 0;
 }
 
 // Apply a flat {[fieldKey]: <string|list>} value map onto the new-shape data.
@@ -906,14 +801,9 @@ export function applyFieldValueMap(fieldData, valueMap) {
  * Returns the new-shape object. Old-shape values are lifted to
  * `{primary: {value: <string>, na: false}}` per field.
  *
- * Defensive read-merge: when a `divisions` field carries the legacy three-
- * question shape (sentence_layout + paraphrases + thought_units) but no
- * `canvas` key, hydrate `canvas` from those keys so Field 3's unified-canvas
- * UI has data to render. The legacy `thought_units` array is preserved as-is
- * — Phase 2/3/4 cumulative columns survive even though the canvas rows have
- * fresh UUIDs (no _canvas_row_id back-pointer to legacy data; first post-
- * migration canvas edit falls through after_line attribution per
- * deriveThoughtUnitsFromCanvas).
+ * Per ruling 8, legacy unified-canvas / sentence_layout / paraphrases /
+ * thought_unit_end data is a clean cut — no production sermons carry it, and
+ * the migration shim that used to hydrate it has been removed.
  */
 export function parseStructuredField(raw) {
   if (!raw || typeof raw !== "string") return {};
@@ -924,102 +814,12 @@ export function parseStructuredField(raw) {
   if (trimmed.startsWith("{")) {
     const parsed = tryParse(trimmed, null);
     if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-      return migrateLegacyDivisionsShape(coerceToNewShape(parsed));
+      return coerceToNewShape(parsed);
     }
   }
 
   // Plain text — preserve as legacy_notes
   return { legacy_notes: trimmed };
-}
-
-// Hydrate `divisions.canvas` from legacy sentence_layout + paraphrases +
-// thought_units when canvas is absent. No-op for already-migrated data and
-// for parses where divisions is unset (e.g., interpretation column).
-function migrateLegacyDivisionsShape(data) {
-  const div = data?.divisions;
-  if (!div || typeof div !== "object") return data;
-  const hasLegacyKeys =
-    "sentence_layout" in div || "paraphrases" in div || "thought_units" in div;
-  const hasCanvas = "canvas" in div;
-  if (!hasLegacyKeys || hasCanvas) return data;
-
-  const layoutRows = Array.isArray(div.sentence_layout?.value)
-    ? div.sentence_layout.value
-    : [];
-  const paraRows = Array.isArray(div.paraphrases?.value)
-    ? div.paraphrases.value
-    : [];
-  const tuRows = Array.isArray(div.thought_units?.value)
-    ? div.thought_units.value
-    : [];
-
-  const canvas = [];
-  let mainOrdinal = 0;
-  for (let i = 0; i < layoutRows.length; i++) {
-    const r = layoutRows[i];
-    if (!r || typeof r !== "object") continue;
-    const text = typeof r.text === "string" ? r.text : "";
-    const depth = Number.isInteger(r.depth) && r.depth >= 0 ? r.depth : 0;
-    const kind =
-      r.kind === "main" || r.kind === "modifier"
-        ? r.kind
-        : depth === 0
-          ? "main"
-          : "modifier";
-
-    const newRow = {
-      id: generateRowId(),
-      text,
-      depth,
-      kind,
-      paraphrase: "",
-    };
-
-    if (depth === 0 && kind === "main") {
-      const paraId = `ms-${mainOrdinal}`;
-      const paraEntry = paraRows.find((p) => p && p.main_sentence_id === paraId);
-      if (paraEntry && typeof paraEntry.paraphrase === "string") {
-        newRow.paraphrase = paraEntry.paraphrase;
-      }
-      mainOrdinal++;
-    }
-
-    const afterLine = i + 1;
-    const tuEntry = tuRows.find(
-      (t) => t && Number(t.after_line) === afterLine
-    );
-    if (tuEntry) {
-      const summary =
-        typeof tuEntry.thought_unit_summary === "string"
-          ? tuEntry.thought_unit_summary
-          : "";
-      const signal = typeof tuEntry.signal === "string" ? tuEntry.signal : "";
-      newRow.thought_unit_end = { summary, signal };
-    }
-
-    canvas.push(newRow);
-  }
-
-  // N/A translation: per-question N/A on the legacy three keys is dropped in
-  // the unified shape, but a fully-N/A field maps cleanly to canvas N/A —
-  // preserves the field-level escape valve. Partial-N/A doesn't translate
-  // (the pastor will need to re-evaluate against the unified canvas) and
-  // surfaces as canvas.na=false.
-  const allLegacyNA =
-    div.sentence_layout?.na === true &&
-    div.paraphrases?.na === true &&
-    div.thought_units?.na === true;
-
-  // Spec: preserve existing thought_units array as-is so Phase 2-4 cumulative
-  // columns aren't lost. sentence_layout / paraphrases stay in JSON via the
-  // generic preservation path; flattenToText surfaces them as undeclared keys.
-  return {
-    ...data,
-    divisions: {
-      ...div,
-      canvas: { value: canvas, na: allLegacyNA },
-    },
-  };
 }
 
 // Lift any old-shape (string) field values to new-shape envelopes. Preserves
@@ -1085,135 +885,10 @@ export function serializeStructuredField(data) {
   return Object.keys(cleaned).length > 0 ? JSON.stringify(cleaned) : "";
 }
 
-/**
- * Flatten a structured field to plain text for the context pipeline.
- * For each field def, joins all answered (non-N/A, non-empty) questions
- * with labels derived from the field def + question key. Single-primary-
- * question fields render as `Label: value` (back-compat). Multi-question
- * fields render as a labeled block:
- *
- *   Field Label:
- *     question_key_a: value
- *     question_key_b: value
- *
- * Continuation lines from structured-list values are indented for
- * readability. Falls back to legacy_notes if present.
- *
- * Closes the B1.5-era gap where multi-question fields (Phase 1's
- * context / surface_questions / divisions / applications and Phase 2's
- * deeper_context / genre) produced empty flattened output because the
- * earlier implementation only read the `primary` question key per field.
- *
- * Phase 4 Sprint 2 addendum: also surfaces undeclared keys present in the
- * JSON data (e.g., the materialized `thought_units` array under `divisions`
- * after the unified-canvas refactor; legacy keys preserved by
- * parseStructuredField on retired fields). Without this fallback, derived
- * data and historical entries would silently drop out of AI context the
- * moment a field def stops listing them as questions.
- */
-export function flattenToText(data, fieldDefs) {
-  if (!data || typeof data !== "object") return "";
-
-  const parts = [];
-
-  // Legacy notes first
-  if (data.legacy_notes && typeof data.legacy_notes === "string" && data.legacy_notes.trim()) {
-    parts.push(data.legacy_notes.trim());
-  }
-
-  // Defined fields in order. Single-primary-question fields render as the
-  // legacy `Label: value` shape when there's no extra data; multi-question
-  // (or mixed declared/undeclared) fields render as a labeled block.
-  for (const def of fieldDefs) {
-    const questions = fieldQuestions(def);
-    const isLegacySingle =
-      questions.length === 1 && questions[0].key === DEFAULT_QUESTION_KEY;
-    const declaredKeys = new Set(questions.map((q) => q.key));
-
-    // Declared questions in field-def order.
-    const declared = [];
-    for (const q of questions) {
-      if (isQuestionNA(data, def.key, q.key)) continue;
-      const text = flattenAnswerValue(getQuestionAnswer(data, def.key, q.key));
-      if (!text) continue;
-      declared.push({ key: q.key, text });
-    }
-
-    // Undeclared keys present in the JSON (materialized derivations, retired
-    // legacy keys preserved on read). Iterated after declared so the field
-    // def's intentional ordering wins, with fallback content trailing.
-    const undeclared = [];
-    const fieldDataObj = data?.[def.key];
-    if (fieldDataObj && typeof fieldDataObj === "object") {
-      for (const [qKey, q] of Object.entries(fieldDataObj)) {
-        if (declaredKeys.has(qKey)) continue;
-        if (!q || typeof q !== "object" || q.na) continue;
-        const text = flattenAnswerValue(q.value);
-        if (!text) continue;
-        undeclared.push({ key: qKey, text });
-      }
-    }
-
-    if (declared.length === 0 && undeclared.length === 0) continue;
-
-    // Single-primary back-compat: only when the field has exactly one
-    // declared answer on `primary` and no undeclared sibling content.
-    if (isLegacySingle && declared.length === 1 && undeclared.length === 0) {
-      parts.push(`${def.label}: ${declared[0].text}`);
-      continue;
-    }
-
-    const lines = [];
-    for (const { key, text } of [...declared, ...undeclared]) {
-      const formatted = text.replace(/\n/g, "\n    ");
-      lines.push(`  ${key}: ${formatted}`);
-    }
-    parts.push(`${def.label}:\n${lines.join("\n")}`);
-  }
-
-  // Phase 3 / Phase 4 special fields (legacy keys retained as fields with a
-  // `primary` question; values surface via getPrimaryAnswer).
-  const summary = flattenAnswerValue(getPrimaryAnswer(data, REDEMPTIVE_SUMMARY_KEY));
-  if (summary) parts.push(`Summary: ${summary}`);
-  const compiled = flattenAnswerValue(getPrimaryAnswer(data, IMPLICATIONS_COMPILED_KEY));
-  if (compiled) parts.push(`Compiled implications: ${compiled}`);
-  const unbeliever = flattenAnswerValue(getPrimaryAnswer(data, IMPLICATIONS_UNBELIEVER_KEY));
-  if (unbeliever) parts.push(`Implications for unbelievers: ${unbeliever}`);
-
-  return parts.join("\n");
-}
-
-// Minimum content length for a sub-phase to count as "genuinely engaged."
-// Intuition, not math — 20 chars catches "typed nothing" / "typed one word"
-// but passes any sentence-shaped answer.
-export const LOOK_AGAIN_MIN_CHARS = 20;
-
-/**
- * Whether a sub-phase has at least `minChars` of pastor-typed content across
- * its questions. Used to gate the Look Again button so AI is only invoked
- * once the pastor has genuinely engaged the work. N/A questions don't
- * contribute (they're excluded by flattenToText).
- */
-export function hasMinimumSubstrate(data, fieldDefs, minChars = LOOK_AGAIN_MIN_CHARS) {
-  return flattenToText(data, fieldDefs).trim().length >= minChars;
-}
-
-/**
- * Flatten all 4 exegesis columns from structured JSON to plain text.
- * Drop-in replacement for summarizeExegesis when columns contain JSON.
- */
-export function flattenExegesis(sermon) {
-  const obs  = flattenToText(parseStructuredField(sermon?.observations),      OBSERVE_FIELDS);
-  const int  = flattenToText(parseStructuredField(sermon?.interpretation),    INTERPRET_FIELDS);
-  const red  = flattenToText(parseStructuredField(sermon?.redemptive_thread), [...REDEMPTIVE_FIELDS]);
-  const imp  = flattenToText(parseStructuredField(sermon?.implications),      IMPLICATIONS_FIELDS);
-
-  const parts = [
-    obs && `Observations: ${obs}`,
-    int && `Interpretation: ${int}`,
-    red && `Redemptive thread: ${red}`,
-    imp && `Implications: ${imp}`,
-  ].filter(Boolean);
-
-  return parts.join(" | ");
-}
+// flattenToText / hasMinimumSubstrate / flattenExegesis / LOOK_AGAIN_MIN_CHARS
+// removed in the trail deletion sweep (Phase A). They were the AI-context
+// pipeline; ARI retired the AI consumer (2026-05-09) and the Step 1 audit
+// confirmed zero live callers. The three retired-key constants
+// (REDEMPTIVE_SUMMARY_KEY, IMPLICATIONS_UNBELIEVER_KEY,
+// IMPLICATIONS_COMPILED_KEY) were retained only to surface legacy data
+// through flattenToText and went with it.

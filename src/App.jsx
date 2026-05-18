@@ -16,6 +16,8 @@ const SermonList = lazy(() => import("./components/SermonList"));
 const Calendar = lazy(() => import("./components/Calendar"));
 const CompletedSermons = lazy(() => import("./components/CompletedSermons"));
 const SermonWorkspace = lazy(() => import("./components/SermonWorkspace"));
+const SermonWritingSurfaceFixture = lazy(() => import("./components/SermonWritingSurfaceFixture"));
+const SermonWorkspaceFixture = lazy(() => import("./components/SermonWorkspaceFixture"));
 
 function SeriesPlannerComingSoon() {
   return (
@@ -176,6 +178,37 @@ export default function App() {
       setRetrying(false);
     }
   }, []);
+
+  // Invisible-system writing-surface preview. ?surface=writing bypasses the
+  // dashboard, sidebar, and DB so the surface can be iterated in a browser
+  // preview against fixture data without the real workspace shell.
+  const isWritingPreview =
+    typeof window !== "undefined" &&
+    // eslint-disable-next-line sermonforge/canonical-stage-name -- URL route name, not a stage status
+    new URLSearchParams(window.location.search).get("surface") === "writing";
+  if (isWritingPreview) {
+    return (
+      <Suspense fallback={null}>
+        <SermonWritingSurfaceFixture />
+      </Suspense>
+    );
+  }
+
+  // Workspace integration preview — mounts the real SermonWorkspace
+  // component against mock sermon data so D2c's writing-surface +
+  // map + threshold-orientation wiring can be verified across the
+  // three scenarios the user flagged (empty / populated / at-handoff).
+  // ?workspace=empty | populated | at-handoff
+  const isWorkspaceFixture =
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).has("workspace");
+  if (isWorkspaceFixture) {
+    return (
+      <Suspense fallback={null}>
+        <SermonWorkspaceFixture />
+      </Suspense>
+    );
+  }
 
   if (keyReady === null) return null; // brief loading — avoids flash of setup screen
   if (keyReady === false) return <SetupScreen onComplete={() => setKeyReady(true)} />;

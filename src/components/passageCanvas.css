@@ -1,0 +1,78 @@
+.pc-canvas {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 8px;
+  padding: 12px 0;
+  background: var(--white);
+  border: 1px solid var(--parchment-deep);
+  border-radius: var(--radius);
+  max-width: 920px;
+}
+
+.pc-row {
+  display: flex;
+  align-items: flex-start;
+  padding-right: 18px;
+  transition: padding-left 120ms ease;
+}
+
+.pc-row--main {
+  padding-top: 6px;
+}
+
+.pc-row--modifier {
+  padding-top: 2px;
+}
+
+.pc-input {
+  flex: 1;
+  font-family: var(--font-serif);
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--ink);
+  background: transparent;
+  border: none;
+  padding: 6px 10px;
+  resize: none;
+  overflow: hidden;
+  box-sizing: border-box;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.pc-input:focus {
+  outline: none;
+  background: var(--parchment-warm);
+  border-radius: 3px;
+}
+
+.pc-row--main .pc-input {
+  font-weight: 500;
+}
+
+.pc-row--modifier .pc-input {
+  color: var(--ink-mid);
+  font-size: 15px;
+}
+
+.pc-paste-hint {
+  position: sticky;
+  bottom: 12px;
+  align-self: center;
+  margin: 12px auto 4px;
+  padding: 8px 14px;
+  background: var(--ink);
+  color: var(--parchment);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-med);
+  animation: pc-hint-fade 200ms ease-out;
+}
+
+@keyframes pc-hint-fade {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

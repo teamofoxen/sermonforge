@@ -1,0 +1,90 @@
+.ssl-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--parchment);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  overflow-y: auto;
+  z-index: 200;
+  padding: 80px 32px 120px;
+}
+
+.ssl-card {
+  max-width: 680px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.ssl-opener {
+  font-family: var(--font-serif);
+  font-size: 18px;
+  line-height: 1.55;
+  color: var(--ink-mid);
+  margin: 0 0 48px;
+  font-style: italic;
+}
+
+.ssl-stage {
+  margin-bottom: 36px;
+}
+
+.ssl-stage:last-of-type {
+  margin-bottom: 56px;
+}
+
+.ssl-stage-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  font-weight: 500;
+  margin: 0 0 14px;
+}
+
+.ssl-region-list {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ssl-region {
+  font-family: var(--font-serif);
+  font-size: 16px;
+  color: var(--ink);
+  padding-left: 14px;
+}
+
+.ssl-outcomes {
+  font-family: var(--font-serif);
+  font-size: 14px;
+  line-height: 1.6;
+  font-style: italic;
+  color: var(--ink-soft);
+  margin: 4px 0 0;
+  padding-left: 14px;
+  max-width: 540px;
+}
+
+.ssl-dismiss {
+  align-self: flex-end;
+  font-family: var(--font-serif);
+  font-size: 14px;
+  color: var(--ink-soft);
+  background: none;
+  border: none;
+  padding: 4px 0;
+  cursor: pointer;
+  transition: color 120ms ease;
+  letter-spacing: 0.01em;
+}
+
+.ssl-dismiss:hover {
+  color: var(--ink);
+}

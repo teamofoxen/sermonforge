@@ -102,17 +102,21 @@ function browserPreviewMock(op: string, payload?: unknown): unknown {
       series_id: null,
       section_id: null,
       is_one_off: 1,
-      topic_theme: "",
-      audience_assumptions: "",
-      background_noise: "",
+      // topic_theme / audience_assumptions / background_noise removed in the
+      // trail deletion sweep (Phase B1) — see SERMON_COLUMNS comment.
       study_guide_note: "",
       preaching_blocks: "",
       manuscript_delivery: "",
       last_tune_up: "",
       sermon_frame: "",
       current_stage: STAGE.Study,
-      current_step: null,
+      // current_step removed in the trail deletion sweep (Phase B2).
       current_sub_phase: "Observe",
+      // v23 — trail deletion sweep (Phase D1). last_touched_position is NULL
+      // on a brand-new sermon — the sermon-start landing reads this and
+      // fires. thresholds_seen starts as an empty JSON array.
+      last_touched_position: null,
+      thresholds_seen: "[]",
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
       position: { stage: STAGE.Study, sub_phase: "Observe" },
@@ -277,9 +281,10 @@ export interface TransitionInput {
 
 const STAGE_VALUES: ReadonlySet<string> = new Set([
   ...STAGE_SEQUENCE as readonly string[],
-  // Legacy stage values still admitted at the boundary (spine main-side
-  // coerces them) so a transition payload from older code doesn't fast-fail.
-  "Blueprint", "Frame", "Delivery",
+  // "Blueprint" / "Frame" removed in the trail deletion sweep (Phase B3).
+  // "Delivery" stays — separate ARI Phase 7 defensive-tolerance for legacy
+  // data; not in scope for this sweep.
+  "Delivery",
 ]);
 const SUB_PHASE_VALUES: ReadonlySet<string> = new Set(SUB_PHASE_CANONICAL_SEQUENCE as readonly string[]);
 

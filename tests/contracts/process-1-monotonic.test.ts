@@ -27,7 +27,6 @@ describe("Process Contract #1: movement is monotonic by default", () => {
     const sermonId = insertSermonRow({
       title: "Test",
       current_stage: STAGE.Assembly,
-      current_step: null,
       current_sub_phase: null,
     });
     const bridge = (globalThis as any).electronAPI.spine;

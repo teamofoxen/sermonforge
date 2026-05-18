@@ -38,12 +38,11 @@ describe("Process Contract #4: PC follows the text (text speaks first)", () => {
       title: "Brand new sermon",
       passage: "Romans 8:1",
       current_stage: STAGE.Study,
-      current_step: null,
       current_sub_phase: SUB_PHASE.Observe,
-      // PC fields are explicitly empty — text-first invariant.
-      topic_theme: "",
-      audience_assumptions: "",
-      background_noise: "",
+      // Legacy PC columns (topic_theme / audience_assumptions /
+      // background_noise) retired in the trail deletion sweep (Phase B1).
+      // The test's invariant — workspace renders without forcing PC —
+      // still holds; PC content now lives in implications.pastoral_context.
       observations: "",
     });
 

@@ -3,19 +3,19 @@
 //
 // Covers flattenAnswerValue per sub-shape (canvas / paraphrase / synthesis
 // table, including cumulative-column extension), and confirms that
-// serializeStructuredField, parseStructuredField, answeredQuestions,
-// hasAnyAnswer, flattenToText, and applyFieldValueMap all tolerate
-// structured-list values without breaking text-prompt behavior.
+// serializeStructuredField, parseStructuredField, answeredQuestions, and
+// applyFieldValueMap all tolerate structured-list values without breaking
+// text-prompt behavior. (hasAnyAnswer / flattenToText / hasMinimumSubstrate /
+// flattenExegesis were retired in the trail deletion sweep, Phase A — they
+// were the AI-context pipeline with zero live callers post-ARI.)
 
 import { describe, it, expect } from "vitest";
 import {
   flattenAnswerValue,
   answeredQuestions,
-  hasAnyAnswer,
   applyFieldValueMap,
   serializeStructuredField,
   parseStructuredField,
-  flattenToText,
   setPrimaryAnswer,
   setQuestionAnswer,
   setQuestionNA,
@@ -192,7 +192,7 @@ describe("serializeStructuredField + parseStructuredField round-trip", () => {
   });
 });
 
-// ── answeredQuestions / hasAnyAnswer with list values ──────────────────────
+// ── answeredQuestions with list values ────────────────────────────────────
 
 describe("answeredQuestions with structured-list values", () => {
   it("counts a non-empty canvas as answered", () => {
@@ -204,7 +204,6 @@ describe("answeredQuestions with structured-list values", () => {
         value: flattenAnswerValue(CANVAS),
       },
     ]);
-    expect(hasAnyAnswer(data)).toBe(true);
   });
 
   it("counts a non-empty synthesis table as answered", () => {
@@ -219,14 +218,12 @@ describe("answeredQuestions with structured-list values", () => {
     const blank = [{ text: "", depth: 0, kind: "main" }];
     const data = setQuestionAnswer({}, "divisions", "sentence_layout", blank);
     expect(answeredQuestions(data)).toEqual([]);
-    expect(hasAnyAnswer(data)).toBe(false);
   });
 
   it("skips list-valued questions marked N/A even when populated", () => {
     let data = setQuestionAnswer({}, "divisions", "sentence_layout", CANVAS);
     data = setQuestionNA(data, "divisions", "sentence_layout", true);
     expect(answeredQuestions(data)).toEqual([]);
-    expect(hasAnyAnswer(data)).toBe(false);
   });
 
   it("returns string `value` for both text-prompt and structured questions in one phase", () => {
@@ -235,89 +232,6 @@ describe("answeredQuestions with structured-list values", () => {
     const answered = answeredQuestions(data);
     expect(answered).toHaveLength(2);
     for (const a of answered) expect(typeof a.value).toBe("string");
-  });
-});
-
-// ── flattenToText with list values ─────────────────────────────────────────
-
-describe("flattenToText with structured-list values", () => {
-  it("labels a list-valued multi-question answer with the field label and question key", () => {
-    // Field 4 (`divisions`) is multi-question after B1.5 — write to the
-    // `sentence_layout` (canvas-kind) question, not `primary`.
-    const data = setQuestionAnswer({}, "divisions", "sentence_layout", CANVAS);
-    const out = flattenToText(data, OBSERVE_FIELDS);
-    expect(out).toContain("Divisions / Thought Units:");
-    expect(out).toContain("sentence_layout:");
-    expect(out).toContain("And you were dead");
-    expect(out).toContain("in your trespasses and sins");
-  });
-
-  it("emits text-prompt and structured-list fields side by side", () => {
-    // `context` is multi-question (B1.2): use a real question key.
-    let data = setQuestionAnswer({}, "context", "before", "Sets up the new humanity argument.");
-    data = setQuestionAnswer(data, "divisions", "sentence_layout", CANVAS);
-    const out = flattenToText(data, OBSERVE_FIELDS);
-    expect(out).toContain("Context:");
-    expect(out).toContain("Sets up the new humanity argument.");
-    expect(out).toContain("Divisions / Thought Units:");
-  });
-
-  it("preserves legacy_notes ahead of structured fields", () => {
-    let data = { legacy_notes: "Old free-text observations from a 2025 sermon." };
-    data = setQuestionAnswer(data, "divisions", "sentence_layout", CANVAS);
-    const out = flattenToText(data, OBSERVE_FIELDS);
-    expect(out.startsWith("Old free-text observations from a 2025 sermon.")).toBe(true);
-    expect(out).toContain("Divisions / Thought Units:");
-  });
-});
-
-// ── flattenToText multi-question support (B1.7) ────────────────────────────
-
-describe("flattenToText surfaces multi-question fields under their field label", () => {
-  it("renders each answered question on its own line under the field label", () => {
-    let data = setQuestionAnswer({}, "surface_questions", "where", "Galilee");
-    data = setQuestionAnswer(data, "surface_questions", "when", "After the Sabbath");
-    data = setQuestionAnswer(data, "surface_questions", "how", "On a mountain, in front of disciples");
-    const out = flattenToText(data, OBSERVE_FIELDS);
-    expect(out).toContain("Surface Questions:");
-    expect(out).toContain("where: Galilee");
-    expect(out).toContain("when: After the Sabbath");
-    expect(out).toContain("how: On a mountain, in front of disciples");
-  });
-
-  it("skips N/A questions in multi-question flattening", () => {
-    let data = setQuestionAnswer({}, "surface_questions", "where", "Galilee");
-    data = setQuestionNA(data, "surface_questions", "when", true);
-    data = setQuestionAnswer(data, "surface_questions", "how", "On a mountain");
-    const out = flattenToText(data, OBSERVE_FIELDS);
-    expect(out).toContain("where: Galilee");
-    expect(out).toContain("how: On a mountain");
-    expect(out).not.toContain("when:");
-  });
-
-  it("skips a multi-question field entirely when no questions are answered", () => {
-    const data = setQuestionAnswer({}, "context", "before", "");
-    const out = flattenToText(data, OBSERVE_FIELDS);
-    // No `Context:` block since no question carries content.
-    expect(out).not.toContain("Context:");
-  });
-
-  it("preserves single-primary-question back-compat for fields without a `questions` array", () => {
-    // Phase 1 Field 7 (`big_ideas`) is still single-primary in B1.0.
-    const data = setPrimaryAnswer({}, "big_ideas", "Death and life; mercy and wrath.");
-    const out = flattenToText(data, OBSERVE_FIELDS);
-    expect(out).toContain("Big Ideas: Death and life; mercy and wrath.");
-    // No multi-question block format for this field.
-    expect(out).not.toMatch(/Big Ideas:\n\s+primary:/);
-  });
-
-  it("multi-question Phase 2 deeper_context surfaces both questions", () => {
-    let data = setQuestionAnswer({}, "deeper_context", "unresolved", "Word usage of σάρξ in v. 3.");
-    data = setQuestionAnswer(data, "deeper_context", "book_argument", "The new humanity Paul is constructing.");
-    const out = flattenToText(data, INTERPRET_FIELDS);
-    expect(out).toContain("Deeper Context:");
-    expect(out).toContain("unresolved: Word usage of σάρξ in v. 3.");
-    expect(out).toContain("book_argument: The new humanity Paul is constructing.");
   });
 });
 
@@ -357,8 +271,6 @@ describe("applyFieldValueMap accepts both strings and arrays", () => {
 //     a canvas reorder via _canvas_row_id matching.
 //   - parseStructuredField: legacy three-question shape hydrates `canvas`,
 //     preserves existing `thought_units` array intact.
-//   - flattenToText surfaces undeclared (materialized) keys under the field
-//     label so AI context still sees thought_units after the field def change.
 
 const UNIFIED_CANVAS_FIXTURE = [
   { id: "row-1", text: "And you were dead",                  depth: 0, kind: "main",     paraphrase: "We were dead in our sins." },
@@ -683,30 +595,6 @@ describe("parseStructuredField — defensive read-merge of legacy three-question
     const out = parseStructuredField(JSON.stringify(interpretation));
     expect(out.divisions).toBeUndefined();
     expect(out.deeper_context.unresolved.value).toBe("Some question.");
-  });
-});
-
-describe("flattenToText — undeclared-key fallback (Concern 2 option B)", () => {
-  it("surfaces materialized thought_units under Divisions / Thought Units alongside canvas", () => {
-    // setDivisionsCanvas writes both canvas (declared) + thought_units (undeclared).
-    const data = setDivisionsCanvas({}, UNIFIED_CANVAS_FIXTURE);
-    // Add a Phase 2 meaning so we can assert it surfaces in the flattened text.
-    const tus = getQuestionAnswer(data, "divisions", "thought_units");
-    const enriched = tus.map((r) => ({ ...r, meaning: "Phase 2 work." }));
-    const next = setQuestionAnswer(data, "divisions", "thought_units", enriched);
-
-    const out = flattenToText(next, OBSERVE_FIELDS);
-    expect(out).toContain("Divisions / Thought Units:");
-    expect(out).toContain("canvas:");
-    expect(out).toContain("thought_units:");
-    expect(out).toContain("Phase 2 work.");
-  });
-
-  it("preserves single-primary back-compat when no undeclared content exists", () => {
-    const data = setPrimaryAnswer({}, "big_ideas", "Death and life; mercy and wrath.");
-    const out = flattenToText(data, OBSERVE_FIELDS);
-    expect(out).toContain("Big Ideas: Death and life; mercy and wrath.");
-    expect(out).not.toMatch(/Big Ideas:\n\s+primary:/);
   });
 });
 

@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import ReactDOM from "react-dom";
-import { fetchPassage } from "../db/database";
+import { useEsvPassage } from "../utils/useEsvPassage";
 import IconButton from "./primitives/IconButton";
 
 /**
@@ -18,19 +18,13 @@ import IconButton from "./primitives/IconButton";
  * inside it.
  */
 export default function PassagePopup({ passage, isOpen, onClose }) {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(false);
+  // The fetch + cache logic lives in useEsvPassage (extracted in Phase D2
+  // so the writing surface's passage column can consume the same one-path
+  // fetch). The hook is keyed on the reference; when the popup closes we
+  // pass an empty reference so the hook resets its in-flight state.
+  const { data, loading } = useEsvPassage(isOpen ? passage : "");
   const closeRef = useRef(null);
   const triggerRef = useRef(null);
-
-  useEffect(() => {
-    if (!isOpen || !passage) return;
-    setLoading(true);
-    setData(null);
-    fetchPassage(passage)
-      .then((res) => { setData(res); setLoading(false); })
-      .catch((e) => { setData({ fetchError: e.message }); setLoading(false); });
-  }, [isOpen, passage]);
 
   // Focus management — capture the active element on open, focus the
   // close button, restore focus on close.

@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-17 — Invisible-system rebuild: trail deletion sweep A–C + D1 + D2a–d shipped
+
+- Phase A (dead AI flattening pipeline) + B1 (legacy PC columns) + B2 (`current_step` retired) + B3 (Blueprint/Frame stage aliases retired; Delivery stays) + C (`hasContent` helper replaces 4 `!!flattenAnswerValue` truthiness sites in composites) closed atomically with in-chunk test + doc updates.
+- D1 added v23 migration for `last_touched_position` + `thresholds_seen` columns — both renderer-written via `persistUpdate`, NOT in `SPINE_ONLY_COLUMNS`; distinct from `current_step`'s retirement (same conceptual role, opposite fates).
+- D2a–c shipped the production wiring: new `sermonState.js` derivation helpers, `useEsvPassage` hook extracted from `PassagePopup`, and `SermonWorkspace.jsx` rewritten to mount writing surface + map + threshold overlays in place of the tab-trail render. `SermonWorkspaceFixture.jsx` verifies three scenarios (empty / populated / at-handoff) through the real render path.
+- D2d wired `WorkspaceNotebookDrawer.jsx` + CSS with stage→column dispatch; summon control sits as a quiet mono link near the save indicator.
+- D2e half-complete: `process-2-evidence-gated-ux.test.tsx` selector swap landed; `process-3-movement-visible.test.tsx` rewrite pending Process Contract #3 surface decision (spec open Q7).
+
+---
+
 ## 2026-05-11 — Walking on from a sub-phase pause lands at the first field of the next sub-phase
 
 - `advance()` in `StudyTrailExegesis` now sets `currentActiveFieldKey` to the first field of the next sub-phase before clearing the pause point, when `pausePoint.nextKey` is a numeric sub-phase (2 / 3 / 4).
