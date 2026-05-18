@@ -706,20 +706,20 @@ function runMigrations() {
   }
 
   if (version < 17) {
-    // v17: spine prerequisites — canonical process-position columns + legacy
-    // evidence cutoff. State Contract #2 ("every sermon has a canonical
-    // position in the process … queryable from any surface that touches the
-    // sermon") cannot be enforced while position lives only in component
-    // state and localStorage. These columns become the canonical position
-    // store; the spine writes them via transitionState and reads them via
-    // getSermon.
+    // v17: spine prerequisites — canonical process-position columns. State
+    // Contract #2 ("every sermon has a canonical position in the process …
+    // queryable from any surface that touches the sermon") cannot be
+    // enforced while position lives only in component state and localStorage.
+    // These columns become the canonical position store; the spine writes
+    // them via transitionState and reads them via getSermon.
     //
-    // legacy_evidence_cutoff carves out sermons created before this enforcement
-    // pass — Process Contract #2 ("movement is gated by user evidence") can't
-    // retroactively demand evidence trails for pre-existing sermons. Sermons
-    // with created_at before the cutoff are treated as `evidence: 'legacy'`
-    // when transitionState would otherwise reject for empty evidence. See
-    // src/core/spine.ts header for the carve-out logic.
+    // Phase G (2026-05-18) gravestone: this migration also used to insert
+    // a `legacy_evidence_cutoff` meta row to carve out sermons created
+    // before the Process Contract #2 enforcement pass. The empty-evidence
+    // gate was deleted in Phase G; the cutoff insertion no longer runs.
+    // Deployed databases that ran the original v17 retain the meta row as
+    // orphaned residue — no runtime code reads it anymore. A fresh v17
+    // does not write the row.
     const sermonInfo = queryAll("PRAGMA table_info(sermons)");
     const have = new Set(sermonInfo.map(r => r.name));
     if (!have.has("current_stage")) {
@@ -742,16 +742,6 @@ function runMigrations() {
        WHERE current_stage = ? AND current_sub_phase IS NULL`,
       [SUB_PHASE.Observe, STAGE.Study]
     );
-    // Record the cutoff once. queryOne ensures we don't overwrite if v17
-    // re-runs (idempotency for partially-applied migrations).
-    const existingCutoff = queryOne("SELECT value FROM meta WHERE key = 'legacy_evidence_cutoff'");
-    if (!existingCutoff) {
-      const cutoff = new Date().toISOString();
-      db.run(
-        "INSERT INTO meta (key, value) VALUES ('legacy_evidence_cutoff', ?)",
-        [cutoff]
-      );
-    }
     db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '17')");
     version = 17;
   }
@@ -1348,19 +1338,16 @@ function searchSermonsFts(rawQuery, limit = 50) {
 // carries the same citation. Reads are routed through the same channel for
 // uniformity but bypass the validation switch.
 
-let _legacyEvidenceCutoffCache = null;
-function getLegacyEvidenceCutoff() {
-  if (_legacyEvidenceCutoffCache !== null) return _legacyEvidenceCutoffCache;
-  const row = queryOne("SELECT value FROM meta WHERE key = 'legacy_evidence_cutoff'");
-  _legacyEvidenceCutoffCache = row ? row.value : "";
-  return _legacyEvidenceCutoffCache;
-}
-
-function isLegacySermon(sermonRow) {
-  const cutoff = getLegacyEvidenceCutoff();
-  if (!cutoff) return false;
-  return (sermonRow.created_at || "") < cutoff;
-}
+// _legacyEvidenceCutoffCache + getLegacyEvidenceCutoff + isLegacySermon
+// deleted in the trail deletion sweep (Phase G, 2026-05-18). These existed
+// only to feed the Process #2 empty-evidence rejection in transitionState's
+// wall layer — when that rejection went, every consumer of the cutoff
+// machinery went with it (shapeSermon's `legacy:` field deleted; Sermon
+// interface's `legacy: boolean` field deleted from src/core/contracts.ts).
+// The v17 `legacy_evidence_cutoff` meta-table row remains in deployed
+// databases as orphaned residue — the migration step that inserted it has
+// been gravestoned at its insertion site (~line 745). No runtime code
+// reads the row anymore; it is harmless data.
 
 function rejection(code, clause, message) {
   return { ok: false, code, clause, message };
@@ -1389,7 +1376,9 @@ function shapeSermon(row, parentContext) {
     passage: row.passage || "",
     date: row.date || "",
     preacher: row.preacher || "",
-    legacy: isLegacySermon(row),
+    // `legacy: isLegacySermon(row)` deleted in Phase G (2026-05-18) — the
+    // field had no readers in src/; it existed only to mirror the wall-side
+    // Process #2 carve-out, which itself died with G.
     // Backward-compat raw row fields. Existing components read these directly;
     // migration to the canonical shape (Sermon.name, Sermon.position) is gradual.
     ...row,
@@ -1754,7 +1743,24 @@ function validateAndCommit(op, payload) {
       return success();
 
     case "transition-state": {
-      const { sermonId, evidence, direction, kind } = payload || {};
+      // Phase G (2026-05-18) gravestone — the wall layer was deleted here.
+      // What used to live in this handler:
+      //   - Process #2 empty-evidence rejection (forward-only) — gated
+      //     movement on the presence of an evidence string. Removed: the
+      //     invisible-system rebuild replaced advancement gating with the
+      //     completeness contract; the renderer no longer sends evidence
+      //     (the `evidence` + `direction` fields are gone from
+      //     `TransitionInput` in src/core/spine.ts).
+      //   - Process #1 stage forward-to-prior rejection — gated forward
+      //     stage moves against monotonic order. Removed: the new surface
+      //     has free navigation; the preacher can revisit any field/stage
+      //     freely.
+      //   - Process #1 sub-phase forward-to-prior rejection — same logic
+      //     at the sub-phase resolution. Removed for the same reason.
+      // What remains is a clean position-writer: existence guard, type-
+      // canonicality guard, the per-kind UPDATE blocks. CORE Process
+      // Contracts #1 and #2 are rearticulated alongside this deletion.
+      const { sermonId, kind } = payload || {};
       let { to } = payload || {};
       const row = fetchSermonRow(sermonId);
       if (!row) {
@@ -1762,47 +1768,6 @@ function validateAndCommit(op, payload) {
       }
       // Legacy stage coercion removed in the trail deletion sweep (Phase B3).
       const currentStage = row.current_stage;
-      // Process #2 (empty-evidence gate) only fires on forward movement.
-      // The constraint is "the system does not advance unless evidence
-      // exists" — backward navigation is retreat, not advancement, and
-      // must always be allowed so the pastor can return to fill in work.
-      const evidenceTrimmed = (evidence || "").trim();
-      if (direction === "forward" && !evidenceTrimmed && !isLegacySermon(row)) {
-        return rejection(
-          "PROCESS_2_EMPTY_EVIDENCE",
-          "Process #2",
-          "Process Contract #2 violation: movement is gated by user evidence — the constraint is the gate.",
-        );
-      }
-      if (kind === "stage" && direction === "forward") {
-        const fromIdx = STAGE_SEQUENCE.indexOf(currentStage);
-        const toIdx = STAGE_SEQUENCE.indexOf(to);
-        if (fromIdx >= 0 && toIdx >= 0 && toIdx <= fromIdx) {
-          return rejection(
-            "PROCESS_1_FORWARD_TO_PRIOR",
-            "Process #1",
-            "Process Contract #1 violation: forward direction cannot move to a prior stage (movement is monotonic by default).",
-          );
-        }
-      }
-      if (kind === "sub_phase" && direction === "forward") {
-        // Sub-phase monotonicity uses the combined canonical sequence
-        // (Study sub-phases followed by Assembly sub-phases), so forward
-        // motion from Implications (Study) to Anchor (Assembly) reads as a
-        // forward step across the combined sequence — but cross-stage
-        // sub-phase transitions are rare (typically routed as stage
-        // transitions); the index comparison still catches the in-stage
-        // case.
-        const fromIdx = SUB_PHASE_CANONICAL_SEQUENCE.indexOf(row.current_sub_phase);
-        const toIdx = SUB_PHASE_CANONICAL_SEQUENCE.indexOf(to);
-        if (fromIdx >= 0 && toIdx >= 0 && toIdx <= fromIdx) {
-          return rejection(
-            "PROCESS_1_FORWARD_TO_PRIOR",
-            "Process #1",
-            "Process Contract #1 violation: forward direction cannot move to a prior sub-phase.",
-          );
-        }
-      }
       if (kind === "stage") {
         // Stage entry restores the pastor's last position WITHIN the
         // destination stage (per-stage memory), so tabbing across stages

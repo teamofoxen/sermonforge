@@ -251,7 +251,9 @@ export interface Sermon {
   passage: string;
   date: string;
   preacher: string;
-  legacy: boolean;                    // true if created before legacy_evidence_cutoff
+  // `legacy: boolean` field deleted in Phase G (2026-05-18) alongside the
+  // wall layer in `transitionState` that consumed it. It had zero readers
+  // in src/; existed only to feed the Process #2 empty-evidence carve-out.
 }
 
 export interface Series {

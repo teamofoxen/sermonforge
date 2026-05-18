@@ -26,11 +26,12 @@
 //   return enriched rows. Migration of consumers to the strict shape is a
 //   later phase.
 //
-// • The legacy carve-out for transitionState evidence (Process Contract #2)
-//   lives main-side. Renderer fast-fails on empty evidence regardless; the
-//   main-side gate is the canonical place where the carve-out applies, since
-//   only main has the sermon record's `created_at` to compare against the
-//   v17 `legacy_evidence_cutoff`.
+// • Phase G (2026-05-18) gravestone — the legacy carve-out for transitionState
+//   evidence (the original Process Contract #2 enforcement) was deleted with
+//   the wall layer in this sweep. The renderer no longer sends evidence; the
+//   main-side rejection is gone; the cutoff machinery is gone. CORE Process
+//   Contracts #1 + #2 are rearticulated against the new free-navigation +
+//   completeness-contract surface.
 //
 // Authority: docs/CORE.md → "The Framework."
 
@@ -121,7 +122,8 @@ function browserPreviewMock(op: string, payload?: unknown): unknown {
       updated_at: new Date().toISOString(),
       position: { stage: STAGE.Study, sub_phase: "Observe" },
       parentContext: null,
-      legacy: false,
+      // `legacy: false` field removed in Phase G (2026-05-18) alongside the
+      // wall layer that consumed it.
     };
   }
   return null;
@@ -266,13 +268,18 @@ export function loadSampleSermon(): Promise<{ sermonId: string }> {
   return call("load-sample-sermon");
 }
 
-// ── transitionState — Process Contract #1, #2 ────────────────────────────────
+// ── transitionState — position-writer (post-Phase-G) ─────────────────────────
+//
+// Phase G (2026-05-18) gravestone — `evidence` + `direction` were dropped
+// from `TransitionInput`; `PROCESS_1_INVALID_DIRECTION` throw was deleted;
+// the empty-evidence no-op comment block was deleted. The wrapper is now a
+// plain position-writer: classify `to` as a Stage or SubPhase, then dispatch
+// to the IPC handler. CORE Process #1 + #2 rearticulated against the new
+// completeness-contract surface (see docs/CORE.md).
 
 export interface TransitionInput {
   sermonId: string;
   to: Stage | SubPhase;
-  evidence: string;
-  direction: "forward" | "backward";
 }
 
 const STAGE_VALUES: ReadonlySet<string> = new Set([
@@ -298,20 +305,6 @@ export function transitionState(input: TransitionInput): Promise<void> {
       "State #5",
       "STATE_5_NONCANONICAL_TO",
     );
-  }
-  if (input.direction !== "forward" && input.direction !== "backward") {
-    throw new ContractViolation(
-      "Process Contract #1 violation: direction must be 'forward' or 'backward'.",
-      "Process #1",
-      "PROCESS_1_INVALID_DIRECTION",
-    );
-  }
-  // Renderer-side fast-fail for empty evidence. Main re-checks with the
-  // sermon record so the legacy carve-out (Process #2) is enforced canonically.
-  if (!input.evidence || !String(input.evidence).trim()) {
-    // Don't reject here — main has the sermon record and applies the legacy
-    // carve-out. Empty evidence on a non-legacy sermon will reject main-side
-    // with clause "Process #2".
   }
   return call("transition-state", { ...input, kind });
 }

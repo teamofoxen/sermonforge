@@ -14,9 +14,10 @@
 //     so the renderer-side spine (src/core/spine.ts) calls into it
 //     transparently.
 //   • Exposes resetTestSpine() so each test starts with empty stores.
-//   • Exposes test-only getters/setters (insertSermonRow, insertSeriesRow,
-//     setLegacyEvidenceCutoff) for fixture setup that needs to bypass the
-//     spine (e.g. inserting a "legacy" sermon with created_at < cutoff).
+//   • Exposes test-only getters/setters (insertSermonRow, insertSeriesRow)
+//     for fixture setup that needs to bypass the spine. (The prior
+//     `setLegacyEvidenceCutoff` helper was deleted in Phase G alongside
+//     the wall-layer Process #2 carve-out it supported.)
 //
 // IMPORTANT: this is a TEST FIXTURE. It is not the spine. The renderer-side
 // spine in src/core/spine.ts is unchanged and is what production code uses.
@@ -111,14 +112,14 @@ const sermons = new Map<string, Row>();
 const series = new Map<string, Row>();
 const sections = new Map<string, Row>();
 const proposals = new Map<string, { sermonId: string; field: string; value: any; isStructured: boolean }>();
-let legacyEvidenceCutoff: string | null = null;
+// `legacyEvidenceCutoff` mirror deleted in Phase G (2026-05-18) — see
+// shapeSermon below for the matching `legacy:` field removal.
 
 function reset() {
   sermons.clear();
   series.clear();
   sections.clear();
   proposals.clear();
-  legacyEvidenceCutoff = null;
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -129,10 +130,8 @@ function rejection(code: string, clause: string, message: string) {
 function success(value?: unknown) {
   return { ok: true as const, value: value === undefined ? null : value };
 }
-function isLegacy(row: Row): boolean {
-  if (!legacyEvidenceCutoff) return false;
-  return (row.created_at || "") < legacyEvidenceCutoff;
-}
+// `isLegacy` mirror deleted in Phase G (2026-05-18) alongside the wall-
+// layer Process #2 empty-evidence rejection it supported.
 
 function shapeSermon(row: Row | undefined, parentContext: any) {
   if (!row) return null;
@@ -151,7 +150,9 @@ function shapeSermon(row: Row | undefined, parentContext: any) {
     passage: row.passage || "",
     date: row.date || "",
     preacher: row.preacher || "",
-    legacy: isLegacy(row),
+    // `legacy: isLegacy(row)` field deleted in Phase G (2026-05-18) — see
+    // src/core/contracts.ts Sermon interface for the matching field
+    // removal in the main-side shape.
     ...row,
     current_stage: stage,
   };
@@ -321,7 +322,16 @@ function validateAndCommit(op: string, payload: any) {
       return success();
     }
     case "transition-state": {
-      const { sermonId, evidence, direction, kind } = payload || {};
+      // Phase G (2026-05-18) gravestone — the rejection-mirror blocks were
+      // deleted here in lockstep with the main.js wall-layer deletion (see
+      // electron/main.js transition-state case). What used to mirror:
+      //   - Process #2 empty-evidence rejection (forward-only) + `isLegacy`
+      //     carve-out
+      //   - Process #1 stage forward-to-prior rejection
+      //   - Process #1 sub-phase forward-to-prior rejection
+      // What remains is the position-write mirror itself + the existence
+      // guard + the noncanonical-`to` guard.
+      const { sermonId, kind } = payload || {};
       let { to } = payload || {};
       const row = sermons.get(sermonId);
       if (!row) return rejection("NOT_FOUND", "State #1", `Sermon ${sermonId} not found.`);
@@ -330,27 +340,6 @@ function validateAndCommit(op: string, payload: any) {
       // resolve cleanly to STAGE.Assembly.
       if (kind === "stage") to = coerceLegacyStage(to);
       const currentStage = coerceLegacyStage(row.current_stage);
-      const evidenceTrimmed = (evidence || "").trim();
-      if (direction === "forward" && !evidenceTrimmed && !isLegacy(row)) {
-        return rejection("PROCESS_2_EMPTY_EVIDENCE", "Process #2",
-          "Process Contract #2 violation: movement is gated by user evidence — the constraint is the gate.");
-      }
-      if (kind === "stage" && direction === "forward") {
-        const fromIdx = STAGE_SEQUENCE.indexOf(currentStage as any);
-        const toIdx = STAGE_SEQUENCE.indexOf(to);
-        if (fromIdx >= 0 && toIdx >= 0 && toIdx <= fromIdx) {
-          return rejection("PROCESS_1_FORWARD_TO_PRIOR", "Process #1",
-            "Process Contract #1 violation: forward direction cannot move to a prior stage (movement is monotonic by default).");
-        }
-      }
-      if (kind === "sub_phase" && direction === "forward") {
-        const fromIdx = SUB_PHASE_CANONICAL_SEQUENCE.indexOf(row.current_sub_phase);
-        const toIdx = SUB_PHASE_CANONICAL_SEQUENCE.indexOf(to);
-        if (fromIdx >= 0 && toIdx >= 0 && toIdx <= fromIdx) {
-          return rejection("PROCESS_1_FORWARD_TO_PRIOR", "Process #1",
-            "Process Contract #1 violation: forward direction cannot move to a prior sub-phase.");
-        }
-      }
       if (kind === "stage") {
         row.current_stage = to;
         // current_step removed in the trail deletion sweep (Phase B2).
@@ -574,9 +563,9 @@ export function resetTestSpine(): void {
   reset();
 }
 
-export function setLegacyEvidenceCutoff(iso: string): void {
-  legacyEvidenceCutoff = iso;
-}
+// `setLegacyEvidenceCutoff` export deleted in Phase G (2026-05-18) — the
+// fixture-side legacy-cutoff state went with the wall-layer Process #2
+// carve-out it supported.
 
 export function insertSermonRow(row: Partial<Row>): string {
   const id = row.id || randomUUID();
