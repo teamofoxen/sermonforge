@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-18 — Invisible-system rebuild: Phases F + G closed the sweep; post-sweep audit Chunks 1–5 + L2 shipped
+
+- Phase F deleted the wall layer from `studyAdvancement.js` (`evaluateAdvance`, 2 formatters, 7 `check*Threshold` wrappers, 2 evidence builders, `canonicalSubPhase`/`subPhaseToIndex`) + `answeredQuestions` from `studyFields.js`; the 8 composite gate functions kept as the surviving completeness contract per CORE Process #2.
+- Phase G closed the sweep — 3 rejection blocks deleted from `electron/main.js transitionState`; `isLegacySermon` + cutoff machinery retired; `Sermon.legacy` removed from contracts; CORE Process Contracts #1 + #2 rearticulated for the free-navigation + completeness architecture.
+- Post-sweep audit Chunks 1–5 + L2: 26 stale tests removed (Chunk 1); `sermon-workspace.md` + `project-structure.md` rewritten end-to-end (Chunks 2 + 5, the latter against a fresh `ls`); 6 orphan components + `Collapsible.jsx` + `src/constants/steps.js` deleted (Chunk 3); 9 stale active-voice comments rewritten as past-tense gravestones (Chunk 4); gap-position fallback message humanized (L2).
+- Discipline changes adopted on record: full-suite verification (`npm test -- --run`, not contracts-scoped per Chunk 1's H1 finding) and reference-doc reconciliation via real `ls` not grep-memory (per Chunk 5's 7 reconciliation findings including a silent `transport.js`→`config.js` rename).
+- Closeout investigation: MPT/MPS flat-column sync confirmed broken post-D2c — live readers exist (Word export via `CompletedSermons` re-export, `assembleManuscriptText`) but the StudyTab.updateMPP-equivalent sync was never re-wired in D2c; filed as `bug_mpt_mps_flat_column_sync_broken_post_d2c.md`, fix decision pending.
+
+---
+
 ## 2026-05-17 — Invisible-system rebuild: tour cleanup — tour engine deleted, sample-sermon decoupled
 
 - Tour engine deleted: `TourContext`, `TourOverlay`, `workspaceTourStops` removed (3 files); `App.jsx` `TourProvider`/`TourOverlay`/`leaveTour` callback all dropped; `SermonWorkspace.jsx` no-op `useTour()` call retired (closing the D2c debt).
