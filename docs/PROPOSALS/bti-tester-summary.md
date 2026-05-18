@@ -108,7 +108,7 @@ Some things I want to take off your plate explicitly:
 
 When you're ready:
 
-1. Read the short "what we capture" doc I'll send alongside this one.
+1. Read the short ["what we capture" doc](../REFERENCE/privacy.md) I'll send alongside this one.
 2. Tell me you're in (or not — both fine).
 3. If you opted in for the writing exercises, I'll send you the first short passage to draft against, *before* you install the app.
 4. Install the app, set it up, take a look around. There'll be a short tour.

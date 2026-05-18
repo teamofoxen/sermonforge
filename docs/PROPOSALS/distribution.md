@@ -22,7 +22,7 @@
 - Mac App Store or Windows Store distribution. Direct download only.
 - Telemetry or usage analytics.
 - Any form of backend, server, or cloud sync. Still local-first.
-- theology.db bundled in v1. Ships separately once corpus is clean (see `theology-corpus.md`).
+- theology.db bundled in v1. Ships separately once corpus is clean (see [`docs/ARCHIVE/theology-corpus.md`](../ARCHIVE/theology-corpus.md) — proposal orphaned post-ARI; corpus retained on disk per ARI D5).
 
 ---
 
@@ -127,7 +127,7 @@ No cost. No third-party distribution service needed.
 **Plan:**
 - Ship v1 without the theology corpus. App works fully without it (corpus search is
   an enhancement, not a core feature).
-- Once the corpus cleanup is complete (Phase 0/1 of `theology-corpus.md`), attach a
+- Once the corpus cleanup is complete (Phase 0/1 of [`docs/ARCHIVE/theology-corpus.md`](../ARCHIVE/theology-corpus.md)), attach a
   versioned `theology.db` as a GitHub Release asset.
 - On first launch (or when a new corpus version exists), app downloads it in the
   background with a progress indicator. User does nothing on subsequent updates.
@@ -189,7 +189,7 @@ These don't require code — just a shift in how to think when building:
 | 4 | Mac build config + icons + entitlements | Apple Developer account confirmed |
 | 5 | GitHub Actions build workflow | Phases 3 + 4 complete |
 | 6 | First public release on GitHub Releases | Phase 5 complete |
-| 7 | theology.db as separate download | theology-corpus.md Phase 1 complete |
+| 7 | theology.db as separate download | [theology-corpus.md](../ARCHIVE/theology-corpus.md) Phase 1 complete |
 
 ---
 

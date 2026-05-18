@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-18 — Graph-view orphan cleanup: ANCHORS + BTI cross-links, theology corpus → ARCHIVE
+
+- Graph-view audit found 22 orphan markdown files; 5 surprising (anchor + BTI cluster + privacy + dashboard brief) and 1 dead — fixed across 7 files plus a move.
+- `CLAUDE.md` got rows linking `docs/ANCHORS.md` (registry) and `docs/PROPOSALS/dashboard-design-brief.md` (active handoff).
+- `docs/ANCHORS.md` bare paths converted to markdown links; the 6 listed anchor charters now appear connected in graph view.
+- BTI cluster cross-linked: charter ↔ build-mvp / setup-note / tester-summary, plus setup-note ↔ privacy and tester-summary → privacy.
+- `docs/PROPOSALS/theology-corpus.md` → `docs/ARCHIVE/theology-corpus.md` (ORPHANED post-ARI); 3 `distribution.md` references updated to new path; memory pointer refreshed.
+
+---
+
 ## 2026-05-18 — Re-mount FeedbackFlag on unified writing surface + fixture-pollution guard
 
 - Hygiene scan (4 parallel agents across src/electron/docs/tests) found 7 post-rebuild issues; FeedbackFlag was the only HIGH severity — broken wiring after Phase E deleted ManuscriptTab. The other 6 (2 orphans, 2 schema-version doc-drift markers, 2 duplication observations) tracked in `project_hygiene_scan_deferred.md`.

@@ -1,6 +1,6 @@
 # SermonForge Beta — Setup Note
 
-A short walkthrough for installing the app and giving feedback. Pair this with the longer letter (`docs/PROPOSALS/bti-tester-summary.md`) and the privacy reference (`docs/REFERENCE/privacy.md`).
+A short walkthrough for installing the app and giving feedback. Pair this with the longer letter ([`docs/PROPOSALS/bti-tester-summary.md`](bti-tester-summary.md)) and the privacy reference ([`docs/REFERENCE/privacy.md`](../REFERENCE/privacy.md)).
 
 ---
 
@@ -8,8 +8,8 @@ A short walkthrough for installing the app and giving feedback. Pair this with t
 
 Two things to read first:
 
-1. The cohort letter (`bti-tester-summary.md`). What you're signing up for, in plain terms.
-2. The privacy doc (`privacy.md`). What the app sends, what it doesn't, and the toggle that controls it.
+1. The [cohort letter](bti-tester-summary.md). What you're signing up for, in plain terms.
+2. The [privacy doc](../REFERENCE/privacy.md). What the app sends, what it doesn't, and the toggle that controls it.
 
 If anything in those documents doesn't sit right, please tell me before you install.
 

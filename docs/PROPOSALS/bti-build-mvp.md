@@ -1,6 +1,6 @@
 # BTI Phase 1 Build — Historical Record
 
-> **Status:** Phase 1 build infrastructure shipped 2026-05-08; ARI rewrite of mount points + tester-facing docs landed 2026-05-09. This document was originally a forward implementation proposal; it is now retained as a historical record of what was decided and what actually shipped. For active BTI work, the charter (`docs/PROPOSALS/beta-testing-initiative.md`) is the source of truth — this document does not drive new work.
+> **Status:** Phase 1 build infrastructure shipped 2026-05-08; ARI rewrite of mount points + tester-facing docs landed 2026-05-09. This document was originally a forward implementation proposal; it is now retained as a historical record of what was decided and what actually shipped. For active BTI work, the charter ([`docs/PROPOSALS/beta-testing-initiative.md`](beta-testing-initiative.md)) is the source of truth — this document does not drive new work.
 
 ---
 

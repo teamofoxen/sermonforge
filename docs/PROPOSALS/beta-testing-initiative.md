@@ -93,7 +93,7 @@ The right answer depends on what the developer can sustain alongside ongoing mai
 Four deliverables, walked roughly in parallel:
 
 1. **The production app, with feedback UI baked in.** There is no separate beta installer and no feature-flagged variant. The in-app feedback surfaces and telemetry described below live in the production app for every user. The cohort runs the same build as anyone else who downloads SermonForge — what makes them the cohort is recruitment, the privacy disclosure they consent to at first-run, and the Tier 3 cadence on top, not a different build.
-2. **A tester-facing summary document** (`docs/PROPOSALS/bti-tester-summary.md`). Short, plain-language, written for the pastor — what they're signing up for, what's being captured, how to give feedback, and what the program asks of them. **The summary explicitly inverts the tester's job: it asks them to tell the developer when the tool is in their way, when they didn't reach for it, when the questions felt like they were shaping the answer — not to tell the developer the tool is promising or that it's coming along.** This inversion is the primary mitigation for friend-cohort pulled punches.
+2. **A tester-facing summary document** ([`docs/PROPOSALS/bti-tester-summary.md`](bti-tester-summary.md), with installation walkthrough at [`docs/PROPOSALS/bti-setup-note.md`](bti-setup-note.md)). Short, plain-language, written for the pastor — what they're signing up for, what's being captured, how to give feedback, and what the program asks of them. **The summary explicitly inverts the tester's job: it asks them to tell the developer when the tool is in their way, when they didn't reach for it, when the questions felt like they were shaping the answer — not to tell the developer the tool is promising or that it's coming along.** This inversion is the primary mitigation for friend-cohort pulled punches.
 3. **A feedback intake and review system.** A capture path for every feedback tier, a review cadence the developer can sustain alongside other work, a routing decision for every finding, and a path from feedback into the development backlog (new tickets, sharpening of in-flight work, or explicit ratification of recently-shipped work).
 4. **A living BTI document.** This charter starts the document. As the program runs, the document accumulates the dimensions tested, the patterns observed, the routing decisions made, the rulings made, and the production-side outcomes — including which telemetry events survive into production and which retire when the cohort closes.
 
@@ -127,7 +127,7 @@ This tier is also where the *workflow-integration* dimension surfaces — the on
 
 ### Layer 0 — Automated signals (continuous)
 
-Running underneath all three tiers. The cohort is high-trust, so beta telemetry can be fairly rich. Signals captured (full list disclosed in `docs/REFERENCE/privacy.md`):
+Running underneath all three tiers. The cohort is high-trust, so beta telemetry can be fairly rich. Signals captured (full list disclosed in [`docs/REFERENCE/privacy.md`](../REFERENCE/privacy.md)):
 
 - **`app-open`** — when the app launches.
 - **`panel-time`** / **`field-time`** — how long a panel or field has focus, recorded in summary form (no keystrokes).
@@ -304,7 +304,7 @@ The program runs in four phases.
 
 **Phase 0 — Charter ratification and scoping.** *Closed.* Q1, Q2, Q5, Q9 settled. Charter rewritten 2026-05-09 for post-ARI product.
 
-**Phase 1 — Production-app feedback surfaces, tester-facing summary.** *Built infrastructure shipped 2026-05-08; ARI-driven rewrite of tester-facing docs in progress 2026-05-09.* Flag button at workspace authorship surfaces (Study, Blueprint), pop-out form on sidebar, telemetry event capture, transport endpoint, token-gated inbox, first-run privacy disclosure all live. The tester-facing summary, setup note, and privacy doc are being rewritten for the post-ARI shape (this charter's revision is part of that pass).
+**Phase 1 — Production-app feedback surfaces, tester-facing summary.** *Built infrastructure shipped 2026-05-08; ARI-driven rewrite of tester-facing docs in progress 2026-05-09. Historical record of what shipped at [`docs/PROPOSALS/bti-build-mvp.md`](bti-build-mvp.md).* Flag button at workspace authorship surfaces (Study, Blueprint), pop-out form on sidebar, telemetry event capture, transport endpoint, token-gated inbox, first-run privacy disclosure all live. The [tester-facing summary](bti-tester-summary.md), [setup note](bti-setup-note.md), and [privacy doc](../REFERENCE/privacy.md) are being rewritten for the post-ARI shape (this charter's revision is part of that pass).
 
 **Phase 1.5 — Pre-onboarding cleanup.** *Closed 2026-05-09.* `ai-press` / `ai-proposal` event constants removed from `electron/telemetry/events.js`; `FeedbackForm.jsx` dimensions updated to match the post-ARI section above; `FeedbackFlag` added to the Manuscript tab (three mounts settled). Optional Q3 telemetry additions (`structured-field-write` / `notebook-write` / `step-progression`) deferred to Phase 2 if early cohort signal demands them.
 
