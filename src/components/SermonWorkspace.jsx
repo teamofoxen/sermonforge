@@ -28,6 +28,7 @@ import SermonMap from "./SermonMap";
 import SermonStartLanding from "./SermonStartLanding";
 import StudyAnchorHandoff from "./StudyAnchorHandoff";
 import WorkspaceNotebookDrawer from "./WorkspaceNotebookDrawer";
+import FeedbackFlag from "./FeedbackFlag";
 import { useEsvPassage } from "../utils/useEsvPassage";
 import PassagePopup from "./PassagePopup";
 import DeleteButton from "./DeleteButton";
@@ -418,6 +419,19 @@ export default function SermonWorkspace({
             onOpenMap={() => setMapOpen(true)}
             onOpenNotebook={() => setNotebookOpen(true)}
           />
+          {/* FeedbackFlag — gated on !_fixtureSermon for the same reason
+              persistUpdate is: fixture interactions must not pollute real
+              BTI telemetry. Same hygiene principle as "no writes in
+              fixture mode" above. */}
+          {!_fixtureSermon && (
+            <div className="sws-feedback-flag-wrap">
+              <FeedbackFlag
+                surface={`writing-surface-${position.stage.toLowerCase()}`}
+                sermonId={sermon?.id ?? null}
+                step={`${position.stage}/${position.subPhase}/${position.fieldKey}`}
+              />
+            </div>
+          )}
         </div>
       </div>
 

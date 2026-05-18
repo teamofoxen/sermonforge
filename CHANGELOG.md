@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-18 — Re-mount FeedbackFlag on unified writing surface + fixture-pollution guard
+
+- Hygiene scan (4 parallel agents across src/electron/docs/tests) found 7 post-rebuild issues; FeedbackFlag was the only HIGH severity — broken wiring after Phase E deleted ManuscriptTab. The other 6 (2 orphans, 2 schema-version doc-drift markers, 2 duplication observations) tracked in `project_hygiene_scan_deferred.md`.
+- Re-mounted from `SermonWorkspace.jsx` in the top-right chrome cluster alongside the notebook button: `surface={writing-surface-${stage}}`, `step={stage/subPhase/fieldKey}`, sermonId from parent.
+- BTI docs claim three FeedbackFlag mounts (Study/Blueprint/Manuscript); commit history shows only the Manuscript mount ever shipped (`08ca64e` closure was docs-only). The unified-surface mount is genuinely first-time per-stage coverage, not restored — both BTI docs need `/anchor-update` next session.
+- Gated on `!_fixtureSermon` (same Phase D2 fixture seam as `persistUpdate`'s write-skip); both `?surface=writing` and `?workspace=...` preview routes verified flag-free, so fixture clicks cannot pollute real BTI telemetry.
+- Renderer-to-IPC contract verified via stubbed `btiSubmit` (payload shape exactly as designed); IPC-to-worker network POST not exercised in Vite-only preview, data path unchanged from prior working Manuscript-tab mount (`08ca64e`).
+
+---
+
 ## 2026-05-18 — Invisible-system rebuild: Phases F + G closed the sweep; post-sweep audit Chunks 1–5 + L2 shipped
 
 - Phase F deleted the wall layer from `studyAdvancement.js` (`evaluateAdvance`, 2 formatters, 7 `check*Threshold` wrappers, 2 evidence builders, `canonicalSubPhase`/`subPhaseToIndex`) + `answeredQuestions` from `studyFields.js`; the 8 composite gate functions kept as the surviving completeness contract per CORE Process #2.

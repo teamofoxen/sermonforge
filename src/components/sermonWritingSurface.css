@@ -298,6 +298,13 @@
   background: var(--parchment-warm);
 }
 
+.sws-feedback-flag-wrap {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 2;
+}
+
 .sws-forward {
   position: fixed;
   bottom: 36px;
