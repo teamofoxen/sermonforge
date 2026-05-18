@@ -137,12 +137,52 @@ these names. (See State Contract clause 5: *one name per concept*.)
 
 ### 2. Process Contract — what counts as movement
 
-1. **Movement is monotonic by default.** Forward through stages is the natural
-   direction. Backward movement is allowed but explicit — the user knows they
-   went back.
-2. **Movement is gated by user evidence.** The system does not advance a sermon
-   to the next stage unless the user has produced the artifact that stage
-   requires. The constraint *is* the gate.
+1. **Movement is monotonic in expectation, not enforcement.** The preacher knows
+   the shape of the whole work from day one — the map shows the full arc
+   (Observe through Manuscript) on first entry, with what's done shown by
+   visual weight. Forward through stages is the natural direction; the work
+   was designed to flow that way. Revisiting earlier work is fully supported
+   — the preacher clicks any question on the map and lands there. The system
+   does not refuse navigation; the expectation lives in the writing surface's
+   flow and the map's weighting, not in a wall. (Pre-invisible-system framing
+   — "movement is monotonic by default; backward movement is allowed but
+   explicit — the user knows they went back" — retired 2026-05-18 in the
+   trail deletion sweep, Phase G. The earlier framing was paired with a
+   spine-side forward-to-prior rejection that refused navigation; that
+   rejection was deleted in G alongside Process #2's. The contract's intent
+   — there is a natural direction the work moves — holds; its enforcement
+   shifted from a refusing wall to a calm surface plus the map.)
+2. **A sermon is complete when its load-bearing artifacts exist.** The four
+   Study named outcomes (Observation Set, Interpretation Set, Christ-
+   Connection Statement, Implications Synthesis), the Main Point Pair (MPT
+   + MPS), the Sermon Frame (Intro + Conclusion), and the Manuscript are
+   the artifacts the work produces. A sermon is not done until they exist;
+   that is the contract. Completeness per load-bearing field is checked by
+   the composite gate functions in `src/utils/studyAdvancement.js`
+   (`checkField3Composite`, `checkField8Composite`,
+   `checkPhase4Field4Composite`, `checkField5Composite`,
+   `checkIntroComposite`, `checkConclusionComposite`, `checkMPTComposite`,
+   `checkMPSComposite`) — these are the foundation of the completeness
+   contract. The surface that makes completeness *visible to the preacher* —
+   the map's per-question weighting (answered / partial / unanswered, with
+   answer previews), the Study → Anchor handoff's active surfacing of
+   missing required outcomes — is partially built today. The map-weight
+   derivation exists in `src/utils/sermonState.js`
+   (`deriveQuestionStatesFromSermon`, `deriveStudyOutcomesFromSermon`,
+   `deriveStudyUnfinishedFromSermon`) and powers the Study → Anchor
+   handoff; the composites themselves currently have no callers because
+   the workspace-wide "is the sermon done" answer that would consume them
+   is not yet wired. The contract is real and its foundation is in place;
+   its full surfacing is in progress. (Pre-invisible-system framing —
+   "movement is gated by user evidence; the system does not advance a
+   sermon to the next stage unless the user has produced the artifact
+   that stage requires; the constraint *is* the gate" — retired 2026-05-18
+   in the trail deletion sweep, Phase G. The advancement-wall it described
+   was deleted across F + G; the deeper commitment — sermon completeness
+   depends on load-bearing artifacts — survives in the completeness
+   contract above. The composites the trail deletion sweep deliberately
+   kept across F as "the surviving completeness contract" become CORE-
+   canonical here.)
 3. **Movement is visible at thresholds, not narrated continuously.** Major
    transitions — sermon start and the Study → Anchor handoff — surface as
    discrete landing screens (`.ssl-overlay`, `.sah-overlay`) the pastor reads

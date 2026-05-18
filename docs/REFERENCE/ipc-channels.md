@@ -43,7 +43,7 @@ Single channel for all sermon, series, and section state. Operations dispatch to
 | `create-section` | `{ series_id, title, sort_order? }` | — |
 | `update-section` | `{ id, ...fields }` | — |
 | `delete-section` | sectionId string | — |
-| `transition-state` | `{ sermonId, to, evidence, direction, kind }` where `to` is a `Stage` or `SubPhase` enum value and `kind` is `"stage" \| "sub_phase"` | Process #1 + #2 enforcement. (Workspace Restructure 2026-05-10: legacy `kind: "step"` retired; legacy `to: "Blueprint" \| "Frame"` coerced to `Assembly` server-side.) |
+| `transition-state` | `{ sermonId, to, kind }` where `to` is a `Stage` or `SubPhase` enum value and `kind` is `"stage" \| "sub_phase"` | Position writer. (Phase G 2026-05-18: `evidence` + `direction` payload fields retired alongside the wall-layer rejections — Process #1 forward-to-prior + Process #2 empty-evidence — that consumed them. Process #1 + #2 rearticulated in CORE 2026-05-18: monotonic-in-expectation + completeness contract. Workspace Restructure 2026-05-10: legacy `kind: "step"` retired; legacy `to: "Blueprint" \| "Frame"` coerced to `Assembly` server-side.) |
 | `apply-mutation` | `{ sermonId, field, value, proposalId? }` | Mutation #1 + #2 enforcement |
 | `load-sample-sermon` | — | Seeds or refreshes the sample-sermon record (delete-then-insert; consumed by Dashboard's "Open a sample sermon" button) |
 

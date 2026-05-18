@@ -419,8 +419,56 @@ rule — its under-met state is named, not silently overridden.
 
 ## Trail deletion sweep — state and commitments
 
-The era 3 deletion is being done as a phased sweep with per-phase authorization. The sweep is
-the preacher's call to sequence — phases are not self-authorized. Each phase is atomic, with
+**Sweep status (2026-05-18): CLOSED.** All phases A through G shipped between
+2026-05-17 and 2026-05-18. Era 3 is gone — trail UI, advancement-wall layer
+in `studyAdvancement.js`, spine-side advancement rejections in
+`transitionState`, the cutoff-carve-out machinery, and all wall-shaped
+fragments across the renderer-side spine wrapper. Era 2 (the constraint
+system: thought-unit array, cumulative cross-phase table, named outcomes,
+composite gates) survives intact and is now invisible — the writing surface
++ map + threshold orientation carry it. Era 1 (Merida's curriculum: the
+field prompts, question text, hint copy) survives intact as the content
+the spine carries. The result is the "invisible system" the spec named on
+day one: the structure does all its work behind a calm surface that shows
+the preacher only their own thinking.
+
+**Known open work carried out of the sweep** (each tracked as its own
+initiative, preacher-prioritized — none gated by the sweep):
+
+- **Completeness-contract surfacing.** CORE Process #2 was rearticulated
+  in G to "a sermon is complete when its load-bearing artifacts exist."
+  The 8 composite gate functions in `studyAdvancement.js` are the
+  foundation. The map's weighting (answered / partial / unanswered) uses
+  the same per-question-kind dispatch and powers the Study → Anchor
+  handoff. The remaining surface — a workspace-wide "is the sermon done"
+  answer that consumes the composites; broader completeness reporting on
+  the map; the preacher-facing read of the eight composite gates — is in
+  progress, not finished. The composites are currently uncalled because
+  their full consumer is not yet wired.
+- **Field-def extraction (Path A).** Assembly/Outline, Assembly/Equip,
+  and Manuscript have zero registered field defs in `walkOrder.js`;
+  position landing in those stages renders "No field found." Pre-existing
+  since D2c (the writing surface stopped mounting the tab-routed trails
+  then); not caused by E or anything later.
+- **D2c/D2d lint debt.** 23 `sermonforge/no-raw-button` violations across
+  9 files in the post-D2c writing-surface + notebook-drawer stack —
+  scheduled Surface #2 catch-up pass.
+- **BTI tour-step impact.** `TOUR_STEP` telemetry constant deleted in tour
+  cleanup; BTI charter + privacy doc still commit to tracking the event.
+- **Sample-sermon landing UX.** Dashboard's "Open a sample sermon" lands
+  the curious pastor on the sermon-start `.ssl-overlay` because the seed
+  lacks `last_touched_position` + `thresholds_seen`.
+- **SAMPLE_ID_PREFIX extraction.** `'sample-'` / `'sample-%'` literal
+  repeats across electron/main.js + sampleData.js + tests; self-contained
+  micro-refactor.
+
+These items are the legitimate residue of opportunistic execution; the
+sweep was the cut, these are what didn't fit cleanly inside it.
+
+---
+
+The era 3 deletion was done as a phased sweep with per-phase authorization. The sweep was
+the preacher's call to sequence — phases were not self-authorized. Each phase was atomic, with
 in-chunk test updates and verification before close. No knowingly-broken state between
 phases.
 
@@ -442,7 +490,7 @@ phases.
 | **E** | Delete trail UI files (`StudyTrailExegesis.jsx`, `AssemblyTrail.jsx`, `ManuscriptTrail.jsx`, `WorkspaceTrailMap.jsx`, `studyTrail.css`, `AdvanceGateChecklist.jsx` + test). Shipped 2026-05-17 as an atomic 12-file delete: the listed 6 trail UI files + `studyTrailShared.jsx` (full-deleted, no extract — grep proved zero external callers for the 3 candidate era-2 helpers) + 3 tab orphans (`StudyTab.jsx`, `AssemblyTab.jsx`, `ManuscriptTab.jsx` — unmounted since D2c) + `trail-layer-integration.test.tsx`. **Tour cleanup was pulled out of E as its own separate phase** (touches IPC + spine + allowlists; entangled with E only because the trail was the tour's caller) — now shipped, see the Tour-cleanup row below. **Known open gap (Path A):** Assembly/Outline, Assembly/Equip, Manuscript stages have no registered field defs in the writing surface; field-def extraction tracked as a separate initiative | ✅ Complete |
 | **Tour cleanup** (post-E rider) | Atomic chunk shipped 2026-05-17. Deleted the tour engine — `TourContext.jsx`, `TourOverlay.jsx`, `workspaceTourStops.js` — and renamed `electron/tourData.js` → `electron/sampleData.js` with record-ID prefix rename `tour-*` → `sample-*` (5 list-query SQL filters + 3 in-handler filters all aligned with the new prefix). IPC `load-tour-sermon` → `load-sample-sermon` (handler + spine export `loadSampleSermon` + Dashboard caller + test-spine fixture + 2 allowlists in `scripts/spine-integrity.js` and `eslint-plugin-sermonforge/lib/rules/no-direct-database.js` all aligned). `remove-tour-sermon` IPC + `removeTourSermon` spine export retired (per-caller classification: purely tour-teardown — `App.jsx`'s `leaveTour` callback was the only caller; sample-sermon path is self-cleaning via delete-then-insert inside `load-sample-sermon`). `TOUR_STEP` telemetry constant retired (no source emitter). `fieldKeyToTourId` retired (no callers post-trail-deletion). `SermonWorkspace.jsx` no-op `useTour()` call deleted, closing the D2c debt. Dashboard's "Take the guided tour" ExploreRow removed; **"Open a sample sermon" Dashboard feature survives end-to-end** via the renamed plumbing. Two tracked follow-ups recorded as separate initiatives: BTI `tour-step` impact (`beta-testing-initiative.md` + `privacy.md` carry commitments to the deleted event), sample-sermon-landing UX (seed currently lands the curious pastor on `.ssl-overlay` because it has no `thresholds_seen`) | ✅ Complete |
 | **F** | Wall layer deleted from `studyAdvancement.js` — `evaluateAdvance`, `formatAdvanceRejection`, `formatTabRejection`, the **7** `check*Threshold` wrappers (spec originally said 5; grep confirmed 7 — corrected here), `buildSubPhaseEvidence`, `buildStageEvidence`, plus orphans `canonicalSubPhase` + `subPhaseToIndex`. `answeredQuestions` in `studyFields.js` deleted alongside (zero non-wall callers — see resumption note below). **Kept:** the **8** composite gate functions (spec originally said 9; live count is 8 — corrected here) as the surviving completeness contract per the spec's deliberate decision. **Atomic test changes:** `process-2-evidence-gated-ux.test.tsx` dropped its `evaluateAdvance` unit-test blocks (kept the writing-surface render tests at the top); `sprd-c3-sermon-frame.test.tsx` deleted entirely. **Verification:** lint baseline holds at 23 `no-raw-button` (D2c/D2d debt unchanged); 41/41 contract test files pass / 262/262 tests pass; preview clean on `/`, `?workspace=populated`, `?workspace=empty`; grep `src/` for deleted symbols → zero callsites | ✅ Complete |
-| **G** | Spine relaxation — delete Process #1 (forward-to-prior) and Process #2 (empty-evidence) rejections in `electron/main.js` `transitionState`. Renderer no longer sends evidence as of F's close | ⏸ Pending — requires explicit authorization (F shipped; G is no longer gated by F's execution but is still gated by F's authorization scope) |
+| **G** | Spine relaxation closed — `electron/main.js transitionState` had its three rejection blocks deleted (Process #2 empty-evidence; Process #1 stage forward-to-prior; Process #1 sub-phase forward-to-prior). The `isLegacySermon` + `getLegacyEvidenceCutoff` + `_legacyEvidenceCutoffCache` machinery deleted with them (sole consumer was the deleted rejection plus a `legacy:` field on sermon responses with zero readers). The renderer-side spine.ts wall fragments deleted in lockstep: `PROCESS_1_INVALID_DIRECTION` throw, dead no-op empty-evidence block, `evidence` + `direction` fields on `TransitionInput`. `Sermon.legacy: boolean` field removed from `src/core/contracts.ts` (zero readers). v17 migration's `legacy_evidence_cutoff` meta-insertion gravestoned — deployed databases retain the meta row as orphaned residue (no runtime code reads it). Test-spine fixture stripped of the rejection-mirror blocks + `setLegacyEvidenceCutoff` + `isLegacy` + the `legacy:` field. Two contract test files deleted entirely (`process-1-monotonic.test.ts`, `process-2-evidence-gated.test.ts`) atomically with their source. CORE Process Contracts #1 + #2 rearticulated in the docs anchor-update: #1 to "monotonic in expectation, not enforcement"; #2 to "a sermon is complete when its load-bearing artifacts exist" — the composites kept across F become CORE-canonical here. Honest acknowledgment in CORE: completeness *surfacing* is in progress, not finished — composites are uncalled today because the workspace-wide "is the sermon done" surface is opportunistic future work. Verification: lint baseline holds at 23 raw-button violations (D2c/D2d debt unchanged); 39/39 contract test files pass / 247/247 tests pass; preview clean on `?workspace=populated` (writing surface unaffected — it never called transitionState); grep src/ + tests/ + electron/ for deleted symbols → zero live callsites | ✅ Complete |
 
 ### Hard commitments locked through D2 (must survive into E/F/G)
 
@@ -523,17 +571,21 @@ the era 3 walls or undoes the calm-surface work.
 
 ### Resumption notes
 
-When picking up the sweep in a new session:
+**The sweep is closed (2026-05-18).** When future sessions look back at this
+document:
 
-1. Read this section first (sweep state + commitments) before reading the rest of the spec.
-2. D2 + E + tour-cleanup + F all complete (F shipped 2026-05-17, commit `f7da591`).
-   The next authorized step is **G** (spine relaxation — delete the Process #1 forward-
-   to-prior + Process #2 empty-evidence rejections in `electron/main.js` `transitionState`).
-   G requires its own explicit preacher authorization; do not start it without one.
-   The renderer no longer sends evidence as of F's close — Process #2's spine-side
-   gate is now firing against a renderer that doesn't send the inputs that would trip
-   it. **Known E open gap (carried forward):** Manuscript / Assembly Outline / Assembly
-   Equip have no field defs in the writing surface; field-def extraction tracked as a
-   separate initiative, preacher-prioritized.
-3. Memory file at `~/.claude/projects/C--Projects-SermonForge/memory/MEMORY.md` indexes
-   project state; the entry pointing to this initiative was updated when F closed.
+1. Read the "Sweep status" + closed-state block above before reading the
+   phase table — the table is now historical record, not a tracker.
+2. F shipped 2026-05-17 (`f7da591`); G shipped 2026-05-18 (`6dc605b`).
+   The trail is gone, the wall layer is gone, the spine-side advancement
+   gates are gone. The eight composites kept across F are the surviving
+   completeness contract per CORE Process #2 (rearticulated 2026-05-18).
+3. No phase is "next." If new invisible-system work surfaces, it gets its
+   own charter — this sweep does not extend.
+4. Open work that came out of the sweep — completeness-contract surfacing,
+   field-def extraction, lint debt, BTI tour-step impact, sample-sermon
+   landing UX, SAMPLE_ID_PREFIX extraction — is tracked in memory under
+   its own initiative entries. None of it is gated by the sweep.
+5. Memory file at `~/.claude/projects/C--Projects-SermonForge/memory/MEMORY.md`
+   indexes project state; the entry pointing to this initiative was
+   updated when G closed.
