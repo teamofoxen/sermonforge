@@ -18,14 +18,16 @@
 // wrapper. Only the surviving composites (`checkField3Composite`) and
 // `hasContent` from studyAdvancement.js are touched.
 
+import { STAGE } from "../core/contracts";
 import { QUESTION_WALK_ORDER, WALK_ORDER, questionId } from "./walkOrder";
 import { parseStructuredField, getQuestionAnswer } from "./studyFields";
 import { hasContent } from "./studyAdvancement";
 
 // Stage + sub-phase → the sermon-record JSON column that holds that
 // region's field data. The single source of stage→column mapping for the
-// whole writing-surface stack.
-const STAGE_SUBPHASE_TO_COLUMN = Object.freeze({
+// whole writing-surface stack — exported so SermonWorkspace's write path
+// and the fixtures use the same mapping (no second source of truth).
+export const STAGE_SUBPHASE_TO_COLUMN = Object.freeze({
   "Study/Observe":           "observations",
   "Study/Interpret":         "interpretation",
   "Study/RedemptiveThread":  "redemptive_thread",
@@ -139,10 +141,10 @@ export function deriveQuestionStatesFromSermon(sermon) {
 // to dedupe these out of the "Left behind" list (the outcomes section
 // surfaces them once, with their own go-write-it affordance).
 export const STUDY_NAMED_OUTCOMES = Object.freeze([
-  { label: "Observation Set",             stage: "Study", subPhase: "Observe",          fieldKey: "obvious_point",               questionKey: "primary" },
-  { label: "Interpretation Set",          stage: "Study", subPhase: "Interpret",        fieldKey: "interpretation_synthesis",    questionKey: "meaning_whole" },
-  { label: "Christ-Connection Statement", stage: "Study", subPhase: "RedemptiveThread", fieldKey: "christ_connection_statement", questionKey: "statement" },
-  { label: "Implications Synthesis",      stage: "Study", subPhase: "Implications",     fieldKey: "implications_synthesis",      questionKey: "synthesis" },
+  { label: "Observation Set",             stage: STAGE.Study, subPhase: "Observe",          fieldKey: "obvious_point",               questionKey: "primary" },
+  { label: "Interpretation Set",          stage: STAGE.Study, subPhase: "Interpret",        fieldKey: "interpretation_synthesis",    questionKey: "meaning_whole" },
+  { label: "Christ-Connection Statement", stage: STAGE.Study, subPhase: "RedemptiveThread", fieldKey: "christ_connection_statement", questionKey: "statement" },
+  { label: "Implications Synthesis",      stage: STAGE.Study, subPhase: "Implications",     fieldKey: "implications_synthesis",      questionKey: "synthesis" },
 ]);
 
 const REQUIRED_OUTCOME_POSITIONS = new Set(
@@ -159,7 +161,7 @@ export function deriveStudyOutcomesFromSermon(sermon) {
 
 export function deriveStudyUnfinishedFromSermon(sermon) {
   const thoughtUnits = readThoughtUnits(sermon);
-  return QUESTION_WALK_ORDER.filter((q) => q.stage === "Study")
+  return QUESTION_WALK_ORDER.filter((q) => q.stage === STAGE.Study)
     .filter((q) => !REQUIRED_OUTCOME_POSITIONS.has(`${q.fieldKey}/${q.questionKey}`))
     .filter((q) => {
       if (q.kind === "cumulative-synthesis-table") {

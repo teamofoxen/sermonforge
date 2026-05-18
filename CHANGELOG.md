@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-17 — Invisible-system rebuild: D2e closes D2 — Process Contract #3 → threshold surface
+
+- Process Contract #3 rearticulated in `docs/CORE.md` from "movement is a visible event" to "movement is visible at thresholds, not narrated continuously," citing the build spec's *Strategic orientation at thresholds* line and the era-2 charter's *Constraint without ceremony* clause.
+- `tests/contracts/process-3-movement-visible.test.tsx` rewritten against the new vocabulary: sermon-start fires `.ssl-overlay` on null `last_touched_position`; Study→Anchor crossing fires `.sah-overlay`; within-stage chevron-next + map-jump produce no overlay and no `data-testid="movement-event"`. Meta-test inverted as the no-narration tripwire — no component under `src/components/` may carry that testid.
+- `src/components/SermonWorkspace.jsx`: useMemo on the three sermon-derivations (above the early returns for hook-order stability); all 8 handlers + `writePositionAndThresholds` wrapped in useCallback; `NOTEBOOK_COLUMN_BY_STAGE` promoted to module scope. Verified at populated fixture: 5.4 ms/keystroke at CCS, 4.2 ms at canvas — no lag.
+- Dedup: `STAGE_SUBPHASE_TO_COLUMN` exported from `sermonState.js` (was duplicated); `SermonWritingSurfaceFixture.jsx` now consumes `deriveStudyOutcomesFromSermon` + `deriveStudyUnfinishedFromSermon` via a shape adapter, replacing 4 local mirrors. Hardcoded `"Study"` strings in `sermonState.js` replaced with `STAGE.Study`.
+- Phases E/F/G remain pending explicit authorization.
+
+---
+
 ## 2026-05-17 — Invisible-system rebuild: trail deletion sweep A–C + D1 + D2a–d shipped
 
 - Phase A (dead AI flattening pipeline) + B1 (legacy PC columns) + B2 (`current_step` retired) + B3 (Blueprint/Frame stage aliases retired; Delivery stays) + C (`hasContent` helper replaces 4 `!!flattenAnswerValue` truthiness sites in composites) closed atomically with in-chunk test + doc updates.

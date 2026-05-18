@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useDebounce } from "../utils/hooks";
 import { useTour } from "../contexts/TourContext";
 import {
@@ -16,6 +16,7 @@ import {
   hasSeenThreshold,
   nextThresholdsSeen,
   THRESHOLD_ID,
+  STAGE_SUBPHASE_TO_COLUMN,
 } from "../utils/sermonState";
 import {
   parseStructuredField,
@@ -35,15 +36,14 @@ import SecondaryButton from "./primitives/SecondaryButton";
 import IconButton from "./primitives/IconButton";
 import BackButton from "./primitives/BackButton";
 
-// Stage + sub-phase → JSON column on the sermon record. Same mapping
-// sermonState.js uses; centralizes the write side here.
-const STAGE_SUBPHASE_TO_COLUMN = Object.freeze({
-  "Study/Observe":           "observations",
-  "Study/Interpret":         "interpretation",
-  "Study/RedemptiveThread":  "redemptive_thread",
-  "Study/Implications":      "implications",
-  "Assembly/Anchor":         "main_point_pair",
-  "Assembly/Frame":          "sermon_frame",
+// Stage → notebook JSON column. Pre-restructure column names preserved:
+// notebook_blueprint serves the Assembly stage; the column was named
+// before the workspace restructure but is the canonical store for
+// Assembly notes.
+const NOTEBOOK_COLUMN_BY_STAGE = Object.freeze({
+  Study: "notebook_study",
+  Assembly: "notebook_blueprint",
+  Manuscript: "notebook_manuscript",
 });
 
 // _fixtureSermon — Phase D2 fixture seam. When set, SermonWorkspace skips
@@ -159,6 +159,111 @@ export default function SermonWorkspace({
   const { data: passageData } = useEsvPassage(sermon?.passage);
   const passageText = typeof passageData?.text === "string" ? passageData.text : "";
 
+  // The three walk-spanning derivations parse every JSON column on every
+  // call (~205 JSON.parse calls per render at the populated fixture).
+  // useMemo keyed on [sermon] keeps them off the hot path for re-renders
+  // driven by non-sermon state (saveState transitions, map open/close,
+  // notebook open/close, passage popup toggle). Keystrokes still
+  // re-derive because handleUpdate writes a new sermon ref each keystroke.
+  // Declared above the loading / not-found early returns so the hook
+  // order stays stable across renders (rules-of-hooks). Each helper
+  // tolerates a null sermon (returns {}, [], [] respectively) so the
+  // pre-load render is safe.
+  const questionStates = useMemo(() => deriveQuestionStatesFromSermon(sermon), [sermon]);
+  const studyOutcomes = useMemo(() => deriveStudyOutcomesFromSermon(sermon), [sermon]);
+  const studyUnfinished = useMemo(() => deriveStudyUnfinishedFromSermon(sermon), [sermon]);
+
+  // ── Write paths ────────────────────────────────────────────────────
+  // Each handler routes through handleUpdate so save-state, debounce,
+  // and persistUpdate work uniformly across every write. Wrapped in
+  // useCallback above the loading / not-found early returns so the
+  // hook order stays stable AND children receive a stable reference
+  // across renders that don't change the handler's deps. Each handler
+  // is null-safe — the UI mounting them only renders once sermon loads,
+  // so a sermon-null invocation is not a real call path, but guards
+  // keep the contract honest.
+
+  const writePositionAndThresholds = useCallback((next, extraFields = {}) => {
+    handleUpdate({
+      last_touched_position: serializePosition(next),
+      ...extraFields,
+    });
+  }, [handleUpdate]);
+
+  const handlePositionChange = useCallback(async (next) => {
+    await beforePositionChange();
+    writePositionAndThresholds(next);
+  }, [beforePositionChange, writePositionAndThresholds]);
+
+  const handleAnswerChange = useCallback((fieldKey, questionKey, envelope) => {
+    if (!sermon) return;
+    const pos = deriveCurrentPositionFromSermon(sermon);
+    const col = STAGE_SUBPHASE_TO_COLUMN[`${pos.stage}/${pos.subPhase}`];
+    if (!col) return;
+    const parsed = parseStructuredField(sermon[col]);
+    let next = setQuestionAnswer(parsed, fieldKey, questionKey, envelope?.value ?? "");
+    next = setQuestionNA(next, fieldKey, questionKey, !!envelope?.na);
+    handleUpdate({ [col]: JSON.stringify(next) });
+  }, [sermon, handleUpdate]);
+
+  const handleUnitColumnChange = useCallback((_questionKey, unitIdx, columnKey, value) => {
+    // Per-unit cumulative columns write into observations.divisions.
+    // thought_units — the canonical cross-phase array. The writing
+    // surface doesn't care which phase's column is being updated; the
+    // array IS the storage.
+    if (!sermon) return;
+    const parsed = parseStructuredField(sermon.observations);
+    const existing = parsed?.divisions?.thought_units?.value;
+    const units = Array.isArray(existing) ? existing.slice() : [];
+    if (unitIdx < 0 || unitIdx >= units.length) return;
+    units[unitIdx] = { ...units[unitIdx], [columnKey]: value };
+    const next = {
+      ...parsed,
+      divisions: {
+        ...(parsed?.divisions || {}),
+        thought_units: { value: units, na: parsed?.divisions?.thought_units?.na ?? false },
+      },
+    };
+    handleUpdate({ observations: JSON.stringify(next) });
+  }, [sermon, handleUpdate]);
+
+  const handleCanvasChange = useCallback((_fieldKey, _questionKey, rows) => {
+    // setDivisionsCanvas writes both canvas + the derived thought_units
+    // array atomically (single canonical write path per ruling 8).
+    if (!sermon) return;
+    const parsed = parseStructuredField(sermon.observations);
+    const next = setDivisionsCanvas(parsed, rows);
+    handleUpdate({ observations: JSON.stringify(next) });
+  }, [sermon, handleUpdate]);
+
+  const dismissThreshold = useCallback((id) => {
+    if (!sermon) return;
+    handleUpdate({ thresholds_seen: nextThresholdsSeen(sermon, id) });
+  }, [sermon, handleUpdate]);
+
+  const handleNotebookChange = useCallback((value) => {
+    if (!sermon) return;
+    const pos = deriveCurrentPositionFromSermon(sermon);
+    const col = NOTEBOOK_COLUMN_BY_STAGE[pos.stage] ?? "notebook_study";
+    handleUpdate({ [col]: value });
+  }, [sermon, handleUpdate]);
+
+  // Map jump and handoff jump both share the pattern: flush, write
+  // position, optionally mark a threshold seen, close any overlay.
+  const handleMapJump = useCallback(async (next) => {
+    await beforePositionChange();
+    writePositionAndThresholds(next);
+    setMapOpen(false);
+  }, [beforePositionChange, writePositionAndThresholds]);
+
+  const handleHandoffJump = useCallback(async (next) => {
+    if (!sermon) return;
+    await beforePositionChange();
+    writePositionAndThresholds(next, {
+      thresholds_seen: nextThresholdsSeen(sermon, THRESHOLD_ID.StudyToAnchorHandoff),
+    });
+  }, [sermon, beforePositionChange, writePositionAndThresholds]);
+
   async function handleDelete() {
     await deleteSermon(sermonId);
     onClose();
@@ -186,9 +291,6 @@ export default function SermonWorkspace({
   // Position derivation. navHint overrides if it targets a stage that
   // matches the writing-surface walk; otherwise read last_touched_position.
   const position = deriveCurrentPositionFromSermon(sermon);
-  const questionStates = deriveQuestionStatesFromSermon(sermon);
-  const studyOutcomes = deriveStudyOutcomesFromSermon(sermon);
-  const studyUnfinished = deriveStudyUnfinishedFromSermon(sermon);
 
   // Field-level answer access for the writing surface — extract
   // fieldAnswers for the current position's field from the sermon's
@@ -219,92 +321,11 @@ export default function SermonWorkspace({
     lastSavedAt ? "saved" :
     null;
 
-  // ── Write paths ────────────────────────────────────────────────────
-  // Each handler routes through handleUpdate so save-state, debounce,
-  // and persistUpdate work uniformly across every write.
-
-  const writePositionAndThresholds = (next, extraFields = {}) => {
-    handleUpdate({
-      last_touched_position: serializePosition(next),
-      ...extraFields,
-    });
-  };
-
-  const handlePositionChange = async (next) => {
-    await beforePositionChange();
-    writePositionAndThresholds(next);
-  };
-
-  const handleAnswerChange = (fieldKey, questionKey, envelope) => {
-    const col = STAGE_SUBPHASE_TO_COLUMN[`${position.stage}/${position.subPhase}`];
-    if (!col) return;
-    const parsed = parseStructuredField(sermon[col]);
-    let next = setQuestionAnswer(parsed, fieldKey, questionKey, envelope?.value ?? "");
-    next = setQuestionNA(next, fieldKey, questionKey, !!envelope?.na);
-    handleUpdate({ [col]: JSON.stringify(next) });
-  };
-
-  const handleUnitColumnChange = (_questionKey, unitIdx, columnKey, value) => {
-    // Per-unit cumulative columns write into observations.divisions.
-    // thought_units — the canonical cross-phase array. The writing
-    // surface doesn't care which phase's column is being updated; the
-    // array IS the storage.
-    const parsed = parseStructuredField(sermon.observations);
-    const existing = parsed?.divisions?.thought_units?.value;
-    const units = Array.isArray(existing) ? existing.slice() : [];
-    if (unitIdx < 0 || unitIdx >= units.length) return;
-    units[unitIdx] = { ...units[unitIdx], [columnKey]: value };
-    const next = {
-      ...parsed,
-      divisions: {
-        ...(parsed?.divisions || {}),
-        thought_units: { value: units, na: parsed?.divisions?.thought_units?.na ?? false },
-      },
-    };
-    handleUpdate({ observations: JSON.stringify(next) });
-  };
-
-  const handleCanvasChange = (_fieldKey, _questionKey, rows) => {
-    // setDivisionsCanvas writes both canvas + the derived thought_units
-    // array atomically (single canonical write path per ruling 8).
-    const parsed = parseStructuredField(sermon.observations);
-    const next = setDivisionsCanvas(parsed, rows);
-    handleUpdate({ observations: JSON.stringify(next) });
-  };
-
-  const dismissThreshold = (id) => {
-    handleUpdate({ thresholds_seen: nextThresholdsSeen(sermon, id) });
-  };
-
-  // Notebook column dispatch by current stage. Pre-restructure column
-  // names preserved: notebook_blueprint serves the Assembly stage; the
-  // column was named before the workspace restructure but is the canonical
-  // store for Assembly notes.
-  const NOTEBOOK_COLUMN_BY_STAGE = {
-    Study: "notebook_study",
-    Assembly: "notebook_blueprint",
-    Manuscript: "notebook_manuscript",
-  };
+  // Notebook column + value derived from the current stage. The handler
+  // (handleNotebookChange) lives above with the other useCallbacks and
+  // re-derives the column inside its body; here we just read for render.
   const notebookColumn = NOTEBOOK_COLUMN_BY_STAGE[position.stage] ?? "notebook_study";
   const notebookValue = typeof sermon[notebookColumn] === "string" ? sermon[notebookColumn] : "";
-  const handleNotebookChange = (value) => {
-    handleUpdate({ [notebookColumn]: value });
-  };
-
-  // Map jump and handoff jump both share the pattern: flush, write
-  // position, optionally mark a threshold seen, close any overlay.
-  const handleMapJump = async (next) => {
-    await beforePositionChange();
-    writePositionAndThresholds(next);
-    setMapOpen(false);
-  };
-
-  const handleHandoffJump = async (next) => {
-    await beforePositionChange();
-    writePositionAndThresholds(next, {
-      thresholds_seen: nextThresholdsSeen(sermon, THRESHOLD_ID.StudyToAnchorHandoff),
-    });
-  };
 
   // Series position for the topbar.
   const seriesIdx = sermon?.series_id && siblingIds.length > 0

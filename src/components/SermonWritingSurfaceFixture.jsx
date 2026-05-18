@@ -5,54 +5,41 @@ import SermonStartLanding from "./SermonStartLanding";
 import StudyAnchorHandoff from "./StudyAnchorHandoff";
 import { FIRST_FIELD, QUESTION_WALK_ORDER, questionId } from "../utils/walkOrder";
 import { deriveThoughtUnitsFromCanvas } from "../utils/studyFields";
+import {
+  STAGE_SUBPHASE_TO_COLUMN,
+  deriveStudyOutcomesFromSermon,
+  deriveStudyUnfinishedFromSermon,
+} from "../utils/sermonState";
 
-// Study named-outcome paragraphs — the canonical four. The handoff screen
-// reads from these positions to surface what Study produced. stage/subPhase
-// are carried so the inline "go write it" affordance can jump to the field.
-const STUDY_NAMED_OUTCOMES = [
-  { label: "Observation Set",             stage: "Study", subPhase: "Observe",           fieldKey: "obvious_point",               questionKey: "primary" },
-  { label: "Interpretation Set",          stage: "Study", subPhase: "Interpret",         fieldKey: "interpretation_synthesis",    questionKey: "meaning_whole" },
-  { label: "Christ-Connection Statement", stage: "Study", subPhase: "RedemptiveThread",  fieldKey: "christ_connection_statement", questionKey: "statement" },
-  { label: "Implications Synthesis",      stage: "Study", subPhase: "Implications",      fieldKey: "implications_synthesis",      questionKey: "synthesis" },
-];
-
-// Positions surfaced by the outcomes section. The "Left behind" list filters
-// these out so a missing required outcome is surfaced once (in its named-
-// outcome card with its own "go write it" affordance), not duplicated.
-const REQUIRED_OUTCOME_POSITIONS = new Set(
-  STUDY_NAMED_OUTCOMES.map((o) => `${o.fieldKey}/${o.questionKey}`)
-);
-
-function deriveStudyOutcomes(answers) {
-  return STUDY_NAMED_OUTCOMES.map((o) => ({
-    ...o,
-    text: String(answers?.[o.fieldKey]?.[o.questionKey]?.value ?? "").trim(),
-  }));
-}
-
-function deriveStudyUnfinished(answers, thoughtUnits) {
-  return QUESTION_WALK_ORDER.filter((q) => q.stage === "Study").filter((q) => {
-    if (REQUIRED_OUTCOME_POSITIONS.has(`${q.fieldKey}/${q.questionKey}`)) {
-      return false;
+// Adapter: convert the fixture's flat {answers, thoughtUnits} into the
+// sermon-record shape the production derivation helpers read. Production
+// stores each region's field data as a JSON-string column on the sermon
+// row; the fixture stores it as a flat in-memory object. Building a
+// sermon-shaped object here lets the fixture call the same helpers
+// SermonWorkspace uses — no mirror logic, no drift.
+function buildSermonShapeFromFixture(answers, thoughtUnits) {
+  const cols = {};
+  for (const q of QUESTION_WALK_ORDER) {
+    const col = STAGE_SUBPHASE_TO_COLUMN[`${q.stage}/${q.subPhase}`];
+    if (!col) continue;
+    if (!cols[col]) cols[col] = {};
+    if (answers[q.fieldKey] && !cols[col][q.fieldKey]) {
+      cols[col][q.fieldKey] = answers[q.fieldKey];
     }
-    if (q.kind === "cumulative-synthesis-table") {
-      const editable = q.columns?.find((c) => !c.readOnly)?.key;
-      if (!editable) return false;
-      const units = Array.isArray(thoughtUnits) ? thoughtUnits : [];
-      if (units.length === 0) return true;
-      return units.some((u) => !String(u?.[editable] ?? "").trim());
-    }
-    if (q.kind === "indented-canvas") {
-      const v = answers?.[q.fieldKey]?.[q.questionKey]?.value;
-      if (!Array.isArray(v) || v.length === 0) return true;
-      return !v.some(
-        (row) => row?.depth === 0 && String(row?.text ?? "").trim() !== ""
-      );
-    }
-    const a = answers?.[q.fieldKey]?.[q.questionKey];
-    if (a?.na) return false;
-    return !a?.value || !String(a.value).trim();
-  });
+  }
+  // The thought-unit array lives at observations.divisions.thought_units —
+  // the canonical cross-phase path. Inject the fixture's thoughtUnits there
+  // so the production helpers find it without a second source.
+  if (!cols.observations) cols.observations = {};
+  cols.observations.divisions = {
+    ...(cols.observations.divisions || {}),
+    thought_units: { value: thoughtUnits, na: false },
+  };
+  const sermon = {};
+  for (const [k, v] of Object.entries(cols)) {
+    sermon[k] = JSON.stringify(v);
+  }
+  return sermon;
 }
 
 const PASSAGE_REF = "Romans 8:1–4";
@@ -539,10 +526,17 @@ export default function SermonWritingSurfaceFixture() {
     setHandoffOpen(false);
   }, []);
 
-  const studyOutcomes = useMemo(() => deriveStudyOutcomes(answers), [answers]);
-  const studyUnfinished = useMemo(
-    () => deriveStudyUnfinished(answers, thoughtUnits),
+  const sermonShape = useMemo(
+    () => buildSermonShapeFromFixture(answers, thoughtUnits),
     [answers, thoughtUnits]
+  );
+  const studyOutcomes = useMemo(
+    () => deriveStudyOutcomesFromSermon(sermonShape),
+    [sermonShape]
+  );
+  const studyUnfinished = useMemo(
+    () => deriveStudyUnfinishedFromSermon(sermonShape),
+    [sermonShape]
   );
 
   return (

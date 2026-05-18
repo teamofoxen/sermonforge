@@ -143,9 +143,23 @@ these names. (See State Contract clause 5: *one name per concept*.)
 2. **Movement is gated by user evidence.** The system does not advance a sermon
    to the next stage unless the user has produced the artifact that stage
    requires. The constraint *is* the gate.
-3. **Movement is a visible event.** "Continue" is movement, and movement is
-   never silent. If movement triggers an AI summary, the user sees both the
-   movement and the summary as discrete events.
+3. **Movement is visible at thresholds, not narrated continuously.** Major
+   transitions — sermon start and the Study → Anchor handoff — surface as
+   discrete landing screens (`.ssl-overlay`, `.sah-overlay`) the pastor reads
+   and dismisses. Within-stage step movement (chevron-next, map-jump) is
+   silent by design. The line between orientation (helpful, at boundaries)
+   and narration (clunky, always-on) is load-bearing per the
+   invisible-system build spec's *Strategic orientation at thresholds*
+   section ("*Orientation is discrete and lives at thresholds. It is never
+   continuous and never present during the work.*") and the era-2 primacy
+   charter's *Constraint without ceremony* clause ("*It is not the system's
+   job to announce that work happened, mark that a boundary was
+   crossed...*"). (Pre-invisible-system framing — "movement is a visible
+   event; 'Continue' is movement, and movement is never silent" — retired
+   2026-05-17 in the trail deletion sweep, Phase D2e. The contract's
+   intent — movement gets visibility — holds; its rendering shifted from
+   an always-on tab-change banner to discrete threshold surfaces. The AI
+   clause came out separately in ARI Phase 9, 2026-05-09.)
 4. **Pastoral Context is driven by the text, not the other way around.** The
    text speaks first. Pastoral Context is a canonical artifact of every sermon,
    but it does not precede engagement with the text and is not a prerequisite
