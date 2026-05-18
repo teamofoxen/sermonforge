@@ -1453,19 +1453,19 @@ function spineRead(op, payload) {
       return queryAll(
         `SELECT s.*, sr.title as series_title, sr.color as series_color
          FROM sermons s LEFT JOIN series sr ON s.series_id = sr.id
-         WHERE s.id NOT LIKE 'tour-%'
+         WHERE s.id NOT LIKE 'sample-%'
          ORDER BY s.date DESC, s.created_at DESC`,
       ).map((r) => shapeSermon(r, computeParentContext(r)));
     case "get-all-series":
       return queryAll(
-        "SELECT * FROM series WHERE id NOT LIKE 'tour-%' ORDER BY year DESC, title ASC",
+        "SELECT * FROM series WHERE id NOT LIKE 'sample-%' ORDER BY year DESC, title ASC",
       ).map(shapeSeries);
     case "get-recent-sermons":
       return queryAll(
         `SELECT s.*, sr.title as series_title, sr.color as series_color
          FROM sermons s LEFT JOIN series sr ON s.series_id = sr.id
          WHERE s.stage != ?
-           AND s.id NOT LIKE 'tour-%'
+           AND s.id NOT LIKE 'sample-%'
          ORDER BY s.updated_at DESC, s.created_at DESC
          LIMIT ?`,
         [SERMON_STATUS.Complete, payload?.limit ?? 3],
@@ -1473,7 +1473,7 @@ function spineRead(op, payload) {
     case "get-recent-series":
       return queryAll(
         `SELECT * FROM series
-         WHERE id NOT LIKE 'tour-%'
+         WHERE id NOT LIKE 'sample-%'
          ORDER BY COALESCE(updated_at, created_at) DESC
          LIMIT ?`,
         [payload?.limit ?? 3],
@@ -1484,7 +1484,7 @@ function spineRead(op, payload) {
         `SELECT s.*, sr.title as series_title, sr.color as series_color
          FROM sermons s LEFT JOIN series sr ON s.series_id = sr.id
          WHERE s.stage = ?
-           AND s.id NOT LIKE 'tour-%'
+           AND s.id NOT LIKE 'sample-%'
          ORDER BY s.updated_at DESC, s.created_at DESC`,
         [SERMON_STATUS.InProgress],
       ).map((r) => shapeSermon(r, computeParentContext(r)));
@@ -1914,16 +1914,15 @@ function validateAndCommit(op, payload) {
       return rejection("BAD_KIND", "Mutation", `Unknown mutation kind: ${kind}`);
     }
 
-    case "load-tour-sermon": {
-      const { SERMON_ID, series, sermon } = require("./tourData");
-      // Sample sermon is regenerated on every load. The mock is for
-      // exploration, not work the pastor builds on; resetting on each
-      // click ensures schema/content updates take effect immediately
-      // and sweeps any stale `tour-*` rows from a prior mock version.
+    case "load-sample-sermon": {
+      const { SERMON_ID, series, sermon } = require("./sampleData");
+      // Delete-then-insert on every click — the seed is for exploration,
+      // not persistent work, and resetting picks up schema/content
+      // changes immediately.
       db.run("BEGIN");
       try {
-        db.run("DELETE FROM sermons WHERE id LIKE 'tour-%'");
-        db.run("DELETE FROM series  WHERE id LIKE 'tour-%'");
+        db.run("DELETE FROM sermons WHERE id LIKE 'sample-%'");
+        db.run("DELETE FROM series  WHERE id LIKE 'sample-%'");
         db.run(
           `INSERT INTO series (
             id, title, color, description, year,
@@ -1960,7 +1959,7 @@ function validateAndCommit(op, payload) {
             sermon.study_guide_note, sermon.sermon_frame,
             // current_step removed in the trail deletion sweep (Phase B2).
             STAGE.Study, SUB_PHASE.Observe,
-            // Per-stage memory: tour sermons always reset to the first
+            // Per-stage memory: sample sermon always resets to the first
             // sub-phase of each stage so re-opens land at the beginning,
             // regardless of where the pastor wandered last time.
             SUB_PHASE.Observe, SUB_PHASE.Anchor,
@@ -1971,30 +1970,16 @@ function validateAndCommit(op, payload) {
         db.run("ROLLBACK");
         throw e;
       }
-      // Search index: drop any stale tour rows + re-index the freshly-
+      // Search index: drop any stale sample rows + re-index the freshly-
       // inserted one. The DELETE above runs against `sermons`;
       // `sermon_search` is a separate table and needs its own cleanup.
-      // Index the freshly-inserted sermon so search finds the tour
+      // Index the freshly-inserted sermon so search finds the sample
       // content immediately.
-      db.run("DELETE FROM sermon_search WHERE sermon_id LIKE 'tour-%'");
+      db.run("DELETE FROM sermon_search WHERE sermon_id LIKE 'sample-%'");
       indexSermonFts(SERMON_ID);
       saveDb();
       return success({ sermonId: SERMON_ID, created: true });
     }
-
-    case "remove-tour-sermon":
-      db.run("BEGIN");
-      try {
-        db.run("DELETE FROM sermons WHERE id LIKE 'tour-%'");
-        db.run("DELETE FROM series  WHERE id LIKE 'tour-%'");
-        db.run("COMMIT");
-      } catch (e) {
-        db.run("ROLLBACK");
-        throw e;
-      }
-      db.run("DELETE FROM sermon_search WHERE sermon_id LIKE 'tour-%'");
-      saveDb();
-      return success();
 
     default:
       return rejection("UNKNOWN_OP", "Spine", `Unknown spine mutation op: ${op}`);
@@ -2062,8 +2047,7 @@ ipcMain.handle("db-deleteCalendarNote", (_, id) => {
   saveDb();
 });
 
-// (db-getRecentSermons / db-loadTourSermon / db-removeTourSermon — moved into
-//  the spine handler above. Sermon/series state has exactly one IPC surface.)
+// (Sermon/series IPC moved into the spine handler above — one channel.)
 
 // ── Settings IPC ─────────────────────────────────────────────────────────────
 ipcMain.handle("db-getSetting", (_, key) => getSetting(key));

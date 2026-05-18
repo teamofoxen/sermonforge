@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-17 — Invisible-system rebuild: tour cleanup — tour engine deleted, sample-sermon decoupled
+
+- Tour engine deleted: `TourContext`, `TourOverlay`, `workspaceTourStops` removed (3 files); `App.jsx` `TourProvider`/`TourOverlay`/`leaveTour` callback all dropped; `SermonWorkspace.jsx` no-op `useTour()` call retired (closing the D2c debt).
+- Sample-sermon feature survives end-to-end via renamed plumbing: `electron/tourData.js` → `sampleData.js` with record-ID prefix rename `tour-*` → `sample-*` (sample-romans-2026, sample-romans-sermon-01, sample-rom5-row-N); IPC `load-tour-sermon` → `load-sample-sermon`; spine export `loadTourSermon` → `loadSampleSermon`; test-spine fixture handler matched; both allowlists updated; 5 list-query SQL filters + 3 in-handler filters all renamed to `sample-%`.
+- `remove-tour-sermon` IPC + `removeTourSermon` spine export deleted (per-caller classification: purely tour-teardown — `leaveTour` was the only caller; sample-sermon path is self-cleaning via delete-then-insert in `load-sample-sermon`).
+- `TOUR_STEP` telemetry constant removed (no source emitter); `fieldKeyToTourId` function removed (no callers); Dashboard's "Take the guided tour" ExploreRow removed, "Open a sample sermon" row kept and decoupled from tour vocabulary; `loadingAction` tri-state collapsed to `loadingSample` boolean.
+- Reference docs refreshed (`ipc-channels.md`, `project-structure.md`, `schema.md`, `contracts.cjs` comment); `sermon-workspace-tour.md` retired-banner prepended.
+
+---
+
 ## 2026-05-17 — Invisible-system rebuild: Phase E — trail UI deleted
 
 - Atomic 12-file deletion: 6 trail UI files (`StudyTrailExegesis`, `AssemblyTrail`, `ManuscriptTrail`, `WorkspaceTrailMap`, `AdvanceGateChecklist` + test, `studyTrailShared`, `studyTrail.css`), 3 tab orphans (`StudyTab`, `AssemblyTab`, `ManuscriptTab` — unmounted since D2c), `tests/contracts/trail-layer-integration.test.tsx`. `studyTrailShared.jsx` full-deleted (spec anticipated 4 era-2 helpers to extract; grep proved zero external callers).

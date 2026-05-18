@@ -1,10 +1,7 @@
 import { useState, useCallback, useEffect, Component, lazy, Suspense } from "react";
 import { getApiKeyStatus, onDbWriteError, onDbWriteOk, flushDb, getSermonColumns } from "./db/database";
-import { removeTourSermon } from "./core/spine";
 import { SERMON_COLUMNS } from "./constants/sermonColumns";
 import { VIEW } from "./core/contracts";
-import { TourProvider } from "./contexts/TourContext";
-import TourOverlay from "./components/TourOverlay";
 import SetupScreen from "./components/SetupScreen";
 import Sidebar from "./components/Sidebar";
 import Dashboard from "./components/Dashboard";
@@ -147,13 +144,6 @@ export default function App() {
     }
   }, []);
 
-  const leaveTour = useCallback(async () => {
-    try { await removeTourSermon(); } catch (e) { console.error("[leaveTour]", e); }
-    setOpenSermonId(null);
-    setRefreshKey(k => k + 1);
-    setCurrentView(VIEW.Dashboard);
-  }, []);
-
   // Persistent disk-write banner. main emits "db-write-error" only after two
   // consecutive flushDb failures, so a single transient OneDrive/AV lock that
   // self-recovers on the next debounced write does not pop a banner.
@@ -215,7 +205,6 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-    <TourProvider>
     <OneDriveWarning />
     {writeError && (
       <div className="write-error-banner" role="alert">
@@ -261,7 +250,6 @@ export default function App() {
           <Dashboard
             key={refreshKey}
             onOpenSermon={openSermon}
-            onLeaveTour={leaveTour}
           />
         )}
         {currentView === VIEW.Sermons && (
@@ -290,8 +278,6 @@ export default function App() {
       </div>
 
     </div>
-    <TourOverlay />
-    </TourProvider>
     </ErrorBoundary>
   );
 }

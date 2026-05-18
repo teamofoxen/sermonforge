@@ -262,12 +262,8 @@ export function deleteSection(id: string): Promise<void> {
   return call("delete-section", id);
 }
 
-export function loadTourSermon(): Promise<{ sermonId: string }> {
-  return call("load-tour-sermon");
-}
-
-export function removeTourSermon(): Promise<void> {
-  return call("remove-tour-sermon");
+export function loadSampleSermon(): Promise<{ sermonId: string }> {
+  return call("load-sample-sermon");
 }
 
 // ── transitionState — Process Contract #1, #2 ────────────────────────────────

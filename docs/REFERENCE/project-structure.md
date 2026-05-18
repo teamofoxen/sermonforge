@@ -90,7 +90,7 @@ SermonForge/
 │   ├── keystore.js        — safeStorage wrapper for the ESV API key
 │   ├── logger.js          — app.log writer; captures uncaughtException
 │   ├── updater.js         — electron-updater wiring (auto-update from GitHub Releases)
-│   ├── tourData.js        — tour-only sample sermon seed
+│   ├── sampleData.js      — sample-sermon seed for the Dashboard "Open a sample sermon" button (renamed from tourData.js in the tour-cleanup phase, 2026-05-17)
 │   ├── contracts.cjs      — main-process mirror of src/core/contracts.ts (SERMON_COLUMNS etc.)
 │   ├── dbMigration.js     — runMigrations() helpers
 │   ├── embedder/          — local MiniLM-L6-v2 embedder worker (theology semantic search)
@@ -160,7 +160,6 @@ SermonForge/
         ├── FeedbackFlag.jsx         — BTI Tier 1 flag button (Study/Assembly/Manuscript)
         ├── FeedbackForm.jsx         — BTI Tier 2 form (sidebar entry → modal)
         ├── FeedbackModal.jsx        — Legacy feedback modal
-        ├── TourOverlay.jsx
         └── primitives/
             ├── PrimaryButton.tsx
             ├── SecondaryButton.tsx

@@ -1,9 +1,6 @@
-// tourData.js — content for the Sermon Workspace guided tour and the
-// Dashboard's "open a sample sermon" entry point.
-//
-// Loaded by the `load-tour-sermon` spine handler in main.js. All IDs use a
-// fixed `tour-` prefix so list queries can filter them out and the
-// `remove-tour-sermon` handler can sweep them in one DELETE.
+// sampleData.js — seed for the Dashboard's "Open a sample sermon" button.
+// All IDs use a fixed `sample-` prefix so list queries filter them out
+// (keeps the sample sermon out of Dashboard's Resume Work tile).
 //
 // Shape of the four exegesis JSON columns mirrors the per-question envelope
 // defined in src/utils/studyFields.js:
@@ -30,8 +27,8 @@ const { SERMON_STATUS, SERIES_STATUS } = require("./contracts.cjs");
 
 // ── Fixed IDs ─────────────────────────────────────────────────────────────────
 
-const SERIES_ID = "tour-romans-2026";
-const SERMON_ID = "tour-romans-sermon-01";
+const SERIES_ID = "sample-romans-2026";
+const SERMON_ID = "sample-romans-sermon-01";
 
 // Outline point UUIDs — fixed so functional_elements can key off them correctly.
 const OP = {
@@ -51,7 +48,7 @@ const OP = {
 // deterministically — random UUIDs are fine in production where the canvas
 // is hand-typed, but a fixture wants reproducibility.
 
-const ROW_ID = (n) => `tour-rom5-row-${n}`;
+const ROW_ID = (n) => `sample-rom5-row-${n}`;
 
 // ── Series ─────────────────────────────────────────────────────────────────────
 

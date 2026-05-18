@@ -527,14 +527,6 @@ annotateOverviewSubtitles(IMPLICATIONS_FIELDS, "Implications");
 // cross-phase work before allowing a destructive delete.
 export const CUMULATIVE_COLUMN_KEYS = Object.freeze(["meaning", "christ_connection", "implication"]);
 
-// Convert a snake_case field key to the kebab-case form used as a tour
-// anchor (`data-tour-id`) on rendered field blocks. Mirrored by
-// `workspaceTourStops.js` `anchorId`s at the field level — keeping the
-// convention here means tour anchoring stays honest across surfaces.
-export function fieldKeyToTourId(fieldKey) {
-  return typeof fieldKey === "string" ? fieldKey.replace(/_/g, "-") : "";
-}
-
 // Default question key used until a field's SFDI question sequence lands.
 export const DEFAULT_QUESTION_KEY = "primary";
 

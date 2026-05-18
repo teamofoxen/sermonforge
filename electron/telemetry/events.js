@@ -9,7 +9,6 @@ const EVENT_TYPES = Object.freeze({
   FIELD_TIME: "field-time",             // payload: { field, durationMs }
   SERMON_CREATE: "sermon-create",       // payload: { sermonId }
   SERMON_FINISH: "sermon-finish",       // payload: { sermonId }
-  TOUR_STEP: "tour-step",               // payload: { tour, stepId }
   CRASH: "crash",                       // payload: { error: string }
 });
 

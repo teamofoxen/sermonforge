@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useDebounce } from "../utils/hooks";
-import { useTour } from "../contexts/TourContext";
 import {
   getSermon, updateSermon, deleteSermon,
   getSeries, getSectionsBySeries, getSermonsBySeries,
@@ -68,10 +67,6 @@ export default function SermonWorkspace({
   const [mapOpen, setMapOpen] = useState(false);
   const [notebookOpen, setNotebookOpen] = useState(false);
   const sermonRef = useRef(_fixtureSermon ?? null);
-
-  // Tour wrapper preserved as no-op for now — tour stops have not been
-  // rewired to the writing surface. Full tour cleanup goes with Phase E.
-  useTour();
 
   // Sermon load (skipped in fixture mode).
   useEffect(() => {

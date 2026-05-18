@@ -1,5 +1,17 @@
 # Sermon Workspace Tour — Implementation Spec
 
+> **RETIRED 2026-05-17 — tour cleanup phase of the invisible-system rebuild.**
+> The workspace tour described below was deleted: TourContext + TourOverlay +
+> workspaceTourStops removed; `data-tour-id` emitters retired with the trail
+> files in Phase E; engine + Dashboard launch + `remove-tour-sermon` IPC all
+> gone. The "Open a sample sermon" Dashboard feature SURVIVES as its own
+> entry point — the seed it loads is now in `electron/sampleData.js` (renamed
+> from `tourData.js`), plumbed via the renamed `load-sample-sermon` IPC. This
+> document is preserved as historical design record only. Anchors, IDs, and
+> IPC channels referenced below no longer exist except where explicitly
+> noted as renamed (`load-tour-sermon` → `load-sample-sermon`, `tour-*`
+> record-id prefix → `sample-*`).
+
 > **WTC sequel re-anchor (2026-05-11):** Tour now anchors on trail surfaces.
 > Stop 1 sits on the trail topbar's title; Stop 2 introduces the new Trail
 > Map (DW11) instead of the retired throughline rail; Stops 3-6 share the

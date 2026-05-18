@@ -437,20 +437,16 @@ function validateAndCommit(op: string, payload: any) {
       }
       return rejection("BAD_KIND", "Mutation", `Unknown mutation kind: ${kind}`);
     }
-    case "load-tour-sermon": {
-      const id = "tour-test-sermon";
+    case "load-sample-sermon": {
+      const id = "sample-test-sermon";
       sermons.set(id, {
-        id, title: "Tour sermon", stage: SERMON_STATUS.InProgress,
+        id, title: "Sample sermon", stage: SERMON_STATUS.InProgress,
         current_stage: STAGE.Study, current_sub_phase: SUB_PHASE.Observe,
         outline: "[]", functional_elements: "{}", observations: "", created_at: new Date().toISOString(),
       });
       return success({ sermonId: id, created: true });
     }
-    case "remove-tour-sermon": {
-      for (const id of [...sermons.keys()]) if (id.startsWith("tour-")) sermons.delete(id);
-      for (const id of [...series.keys()]) if (id.startsWith("tour-")) series.delete(id);
-      return success();
-    }
+    // remove-tour-sermon retired in the tour-cleanup phase (2026-05-17).
     default:
       return rejection("UNKNOWN_OP", "Spine", `Unknown spine mutation op: ${op}`);
   }

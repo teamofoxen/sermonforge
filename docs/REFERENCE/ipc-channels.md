@@ -7,7 +7,7 @@ See `docs/SYSTEMS/ipc.md` for architecture and boundary rules.
 
 ## Database Operations
 
-All sermon and series state routes through the `"spine"` channel. Named per-operation `db-get*` channels for sermons/series (`db-getRecentSermons`, `db-getRecentSeries`, `db-loadTourSermon`, `db-removeTourSermon`) no longer exist — they are spine ops now. Settings, calendar notes, memory, and schema queries remain as named channels. No raw SQL is accepted from the renderer.
+All sermon and series state routes through the `"spine"` channel. Named per-operation `db-get*` channels for sermons/series (`db-getRecentSermons`, `db-getRecentSeries`, `db-loadSampleSermon`) no longer exist — they are spine ops now. (`db-loadTourSermon` was renamed to `db-loadSampleSermon` in the tour-cleanup phase, 2026-05-17; `db-removeTourSermon` retired in the same phase — the sample-sermon path is self-cleaning via delete-then-insert.) Settings, calendar notes, memory, and schema queries remain as named channels. No raw SQL is accepted from the renderer.
 
 ### `"spine"`
 ```
@@ -22,8 +22,8 @@ Single channel for all sermon, series, and section state. Operations dispatch to
 |---|---|---|
 | `get-sermon` | sermonId string | shaped sermon row |
 | `get-series` | seriesId string | shaped series row |
-| `get-all-sermons` | — | all non-tour sermons, date DESC |
-| `get-all-series` | — | all non-tour series |
+| `get-all-sermons` | — | all sermons, date DESC (excludes sample-prefixed seed) |
+| `get-all-series` | — | all series (excludes sample-prefixed seed) |
 | `get-recent-sermons` | `{ limit? }` (default 3) | recent non-complete sermons |
 | `get-recent-series` | `{ limit? }` (default 3) | recent series |
 | `get-in-progress-sermons` | — | in-progress sermons (State #6) |
@@ -45,8 +45,7 @@ Single channel for all sermon, series, and section state. Operations dispatch to
 | `delete-section` | sectionId string | — |
 | `transition-state` | `{ sermonId, to, evidence, direction, kind }` where `to` is a `Stage` or `SubPhase` enum value and `kind` is `"stage" \| "sub_phase"` | Process #1 + #2 enforcement. (Workspace Restructure 2026-05-10: legacy `kind: "step"` retired; legacy `to: "Blueprint" \| "Frame"` coerced to `Assembly` server-side.) |
 | `apply-mutation` | `{ sermonId, field, value, proposalId? }` | Mutation #1 + #2 enforcement |
-| `load-tour-sermon` | — | Seeds or reuses tour record |
-| `remove-tour-sermon` | — | Deletes tour record; idempotent |
+| `load-sample-sermon` | — | Seeds or refreshes the sample-sermon record (delete-then-insert; consumed by Dashboard's "Open a sample sermon" button) |
 
 ---
 

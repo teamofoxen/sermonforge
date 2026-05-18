@@ -121,7 +121,7 @@ const SERMON_COLUMNS = Object.freeze(new Set([
 ]));
 /* eslint-enable sermonforge/canonical-stage-name */
 
-// Spine-controlled columns. Written by `transitionState` and the tour-sermon
+// Spine-controlled columns. Written by `transitionState` and the sample-sermon
 // seed; never by user-edit saves (renderer's `pickSermonColumns` excludes
 // them). Mirrors `SPINE_ONLY_COLUMNS` in src/core/contracts.ts.
 const SPINE_ONLY_COLUMNS = Object.freeze(new Set([

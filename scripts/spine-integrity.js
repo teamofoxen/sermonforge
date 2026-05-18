@@ -95,7 +95,7 @@ const SPINE_ONLY_NAMES = [
   'createSeries', 'updateSeries', 'deleteSeries',
   'getSermonsBySeries',
   'getSectionsBySeries', 'createSection', 'updateSection', 'deleteSection',
-  'loadTourSermon', 'removeTourSermon',
+  'loadSampleSermon',
   'transitionState', 'applyMutation', 'persistMutation',
 ];
 

@@ -1,7 +1,5 @@
 import { useState, useEffect } from "react";
-import { loadTourSermon, getInProgressSermons, deleteSermon } from "../core/spine";
-import { useTour } from "../contexts/TourContext";
-import { WORKSPACE_TOUR_STOPS } from "../tour/workspaceTourStops";
+import { loadSampleSermon, getInProgressSermons, deleteSermon } from "../core/spine";
 import NewSermonModal from "./NewSermonModal";
 import DashboardVerseCarousel from "./DashboardVerseCarousel";
 import DashboardPreacherQuote from "./DashboardPreacherQuote";
@@ -18,10 +16,9 @@ function ArrowRightIcon() {
   );
 }
 
-export default function Dashboard({ onOpenSermon, onLeaveTour }) {
-  const { start: startTour } = useTour();
+export default function Dashboard({ onOpenSermon }) {
   const [showNewModal, setShowNewModal] = useState(false);
-  const [loadingAction, setLoadingAction] = useState(null); // null | 'tour' | 'sample'
+  const [loadingSample, setLoadingSample] = useState(false);
   const [inProgress, setInProgress] = useState([]);
 
   // State Contract #6: in-progress work is queryable from the front door.
@@ -49,24 +46,18 @@ export default function Dashboard({ onOpenSermon, onLeaveTour }) {
     );
   }
 
-  async function openSampleSermon({ launchTour }) {
-    if (loadingAction) return;
-    setLoadingAction(launchTour ? "tour" : "sample");
+  async function openSampleSermon() {
+    if (loadingSample) return;
+    setLoadingSample(true);
     try {
-      const result = await loadTourSermon();
+      const result = await loadSampleSermon();
       if (result?.sermonId && onOpenSermon) {
         onOpenSermon(result.sermonId);
-        if (launchTour) {
-          setTimeout(() => startTour(WORKSPACE_TOUR_STOPS, {
-            onLeave: onLeaveTour,
-            seenKey: "sf_tour_workspace_seen",
-          }), 250);
-        }
       }
     } catch (e) {
-      console.error(launchTour ? "Failed to start workspace tour:" : "Failed to open sample sermon:", e);
+      console.error("Failed to open sample sermon:", e);
     } finally {
-      setLoadingAction(null);
+      setLoadingSample(false);
     }
   }
 
@@ -124,18 +115,11 @@ export default function Dashboard({ onOpenSermon, onLeaveTour }) {
               <h3 className="tile-title">Explore SermonForge.</h3>
               <div className="dash-rows">
                 <ExploreRow
-                  label="Take the guided tour"
-                  meta="Five minutes · Walk-through"
-                  loading={loadingAction === "tour"}
-                  disabled={!!loadingAction}
-                  onClick={() => openSampleSermon({ launchTour: true })}
-                />
-                <ExploreRow
                   label="Open a sample sermon"
                   meta="Romans 5:1-5 · Worked example"
-                  loading={loadingAction === "sample"}
-                  disabled={!!loadingAction}
-                  onClick={() => openSampleSermon({ launchTour: false })}
+                  loading={loadingSample}
+                  disabled={loadingSample}
+                  onClick={() => openSampleSermon()}
                 />
               </div>
             </div>
