@@ -112,7 +112,6 @@ SermonForge/
     ├── db/
     │   └── database.js    — IPC-backed wrapper functions for non-spine channels
     ├── constants/
-    │   ├── steps.js       — STEPS, PHASES, STEP_SEQUENCE, PHASE_SEQUENCE
     │   └── sermonColumns.js — re-export of SERMON_COLUMNS from core/contracts.ts
     ├── contexts/          — React context providers
     ├── data/              — static data (verse rotations, preacher quotes)
@@ -139,7 +138,6 @@ SermonForge/
         ├── AssemblyTab.jsx          — Assembly tab (4 sub-phases: Anchor / Outline / Equip / Frame). Hosts MPT/MPS, Outline, FE, Intro/Conclusion. Post-workspace-restructure 2026-05-10.
         ├── ManuscriptTab.jsx        — Manuscript editor body (terminal sermon-prep stage post-ARI). Mounts inside `ManuscriptTrail` writing-room shell.
         ├── ManuscriptTrail.jsx      — Writing-room shell wrapping ManuscriptTab (WTC DW5).
-        ├── ManuscriptReview.jsx     — Flow Check / Ear Check / Final Tune-Up structured prompts (read-only)
         ├── StudyTrailExegesis.jsx   — Switchback-trail rendering for Study (4 sub-phases × 25 fields + 4 pauses)
         ├── AssemblyTrail.jsx        — Switchback-trail rendering for Assembly (4 sub-phases — Anchor / Outline / Equip / Frame)
         ├── studyTrailShared.jsx     — Shared trail primitives: TrailTopBar, NotebookDrawer, StageBoundaryPause, useTrailKeyboard, useViewportSize, TrailLiveRegion, etc.
@@ -147,10 +145,7 @@ SermonForge/
         ├── WorkspaceTrailMap.jsx    — Three-row switchback overview modal (WTC DW11)
         ├── IndentedSentenceCanvas.jsx — Phase 1 Field 3 unified-canvas
         ├── SynthesisTable.jsx       — Cumulative thought-unit table (Phases 2/3/4)
-        ├── PeripheralReferencePanel.jsx — Cross-field reference cards
-        ├── ScripturePanel.jsx       — In-workspace passage display
         ├── PassagePopup.jsx         — Floating ESV scripture viewer (portal to document.body)
-        ├── OutlineBuilder.jsx
         ├── NewSermonModal.jsx
         ├── SetupScreen.jsx          — First-run setup (ESV key + telemetry preference)
         ├── OneDriveWarning.jsx
@@ -159,7 +154,6 @@ SermonForge/
         ├── Logo.jsx
         ├── FeedbackFlag.jsx         — BTI Tier 1 flag button (Study/Assembly/Manuscript)
         ├── FeedbackForm.jsx         — BTI Tier 2 form (sidebar entry → modal)
-        ├── FeedbackModal.jsx        — Legacy feedback modal
         └── primitives/
             ├── PrimaryButton.tsx
             ├── SecondaryButton.tsx
@@ -168,6 +162,5 @@ SermonForge/
             ├── BackButton.tsx
             ├── EmptyState.tsx
             ├── LoadingState.tsx
-            ├── Collapsible.jsx
             └── DeleteButton.jsx
 ```

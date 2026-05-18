@@ -9,10 +9,11 @@
 //
 // Decision history
 // ────────────────
-// Phase 1 chose to re-export `STEPS / PHASES / STEP_SEQUENCE / PHASE_SEQUENCE`
-// from `src/constants/steps.js` rather than subsume them, because the slug
-// values ("step-1" etc.) are still load-bearing for tour prerequisites and
-// AIPanel routing — wholesale rename would balloon Phase 1 scope.
+// (Phase 1's `STEPS / PHASES / STEP_SEQUENCE / PHASE_SEQUENCE` re-export
+// decision retired in post-sweep audit Chunk 3, 2026-05-18 — see the
+// gravestone block below for context. The Step layer was retired in the
+// Workspace Restructure; tour prerequisites + AIPanel routing all went
+// with ARI + the trail deletion sweep.)
 //
 // Phase 1 cleanup chose to **subsume** `SERMON_COLUMNS / pickSermonColumns`
 // (Option A in the prompt). The former renderer-side mirror at
@@ -33,14 +34,13 @@
 // violates State Contract #5 because the renderer and main process would be
 // naming the same concept differently.
 
-// ── Re-exports — single canonical import path ────────────────────────────────
-
-export {
-  STEPS,
-  PHASES,
-  STEP_SEQUENCE,
-  PHASE_SEQUENCE,
-} from "../constants/steps";
+// Post-sweep audit Chunk 3 (2026-05-18) gravestone — the re-export block
+// for `STEPS`, `PHASES`, `STEP_SEQUENCE`, `PHASE_SEQUENCE` from
+// `../constants/steps` was deleted here alongside `src/constants/steps.js`
+// itself. The Step layer was retired in the Workspace Restructure
+// (2026-05-10); a full-tree grep at execution found zero non-archive
+// consumers of the re-exported values. The ergonomic-re-export decision
+// from Phase 1 served no caller post-restructure.
 
 // ── State Contract #2 — Stage (within-process position) ──────────────────────
 // The sermon-prep arc is three stages: Study (deepen into the text),
