@@ -62,6 +62,8 @@ export default function SermonWorkspace({
   const [sermon, setSermon] = useState(_fixtureSermon ?? null);
   const [loading, setLoading] = useState(!_fixtureSermon);
   const [showPassage, setShowPassage] = useState(false);
+  const [editingPassage, setEditingPassage] = useState(false);
+  const [passageDraft, setPassageDraft] = useState("");
   const [saveState, setSaveState] = useState(INITIAL_SAVE_STATE);
   const { saving, saveError, lastSavedAt } = saveState;
   const [siblingIds, setSiblingIds] = useState([]);
@@ -139,6 +141,26 @@ export default function SermonWorkspace({
     debouncedSave();
   }, [debouncedSave]);
 
+  // Passage edit — small inline editor next to the topbar passage ref.
+  // Commits via handleUpdate so the existing autosave path persists the
+  // new reference; useEsvPassage re-fetches when sermon.passage changes,
+  // so the writing-surface passage column + PassagePopup refresh on save.
+  // Empty/whitespace input is treated as cancel so a user can't accidentally
+  // clear the affordance by hitting Enter on an empty field.
+  const startEditPassage = useCallback(() => {
+    setPassageDraft(sermonRef.current?.passage || "");
+    setEditingPassage(true);
+  }, []);
+  const commitPassageEdit = useCallback(() => {
+    const next = passageDraft.trim();
+    const current = sermonRef.current?.passage || "";
+    if (next && next !== current) handleUpdate({ passage: next });
+    setEditingPassage(false);
+  }, [passageDraft, handleUpdate]);
+  const cancelPassageEdit = useCallback(() => {
+    setEditingPassage(false);
+  }, []);
+
   // beforePositionChange — async; flushes any pending debounced save
   // BEFORE the position settles. The chain is: position-change trigger
   // (chevron / map jump / unmet-state door / handoff jump / required-
@@ -152,8 +174,10 @@ export default function SermonWorkspace({
   // Passage text via the one-path ESV fetch + cache hook. Called above
   // the loading / not-found early returns so the hook order stays stable
   // across renders (rules-of-hooks). useEsvPassage handles null input.
+  // The fetchPassage resolved shape carries the ESV text on `esv` (see the
+  // passage-fetch IPC handler) — same key PassagePopup reads.
   const { data: passageData } = useEsvPassage(sermon?.passage);
-  const passageText = typeof passageData?.text === "string" ? passageData.text : "";
+  const passageText = typeof passageData?.esv === "string" ? passageData.esv : "";
 
   // The three walk-spanning derivations parse every JSON column on every
   // call (~205 JSON.parse calls per render at the populated fixture).
@@ -364,13 +388,38 @@ export default function SermonWorkspace({
                   );
                 })()}
                 {(sermon.series_title || seriesIdx >= 0) && sermon.passage && <span> · </span>}
-                {sermon.passage && (
-                  <span
-                    className="passage-ref"
-                    onClick={() => setShowPassage((v) => !v)}
-                    style={{ cursor: "pointer" }}
-                    title="Show ESV text"
-                  >{sermon.passage}</span>
+                {editingPassage ? (
+                  <input
+                    className="passage-ref-edit"
+                    type="text"
+                    value={passageDraft}
+                    onChange={(e) => setPassageDraft(e.target.value)}
+                    onBlur={commitPassageEdit}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") { e.preventDefault(); commitPassageEdit(); }
+                      else if (e.key === "Escape") { e.preventDefault(); cancelPassageEdit(); }
+                    }}
+                    placeholder="e.g. Romans 8:1-17"
+                    aria-label="Edit passage"
+                    autoFocus
+                  />
+                ) : sermon.passage && (
+                  <>
+                    <span
+                      className="passage-ref"
+                      onClick={() => setShowPassage((v) => !v)}
+                      style={{ cursor: "pointer" }}
+                      title="Show ESV text"
+                    >{sermon.passage}</span>
+                    <IconButton
+                      className="passage-ref-edit-toggle"
+                      aria-label="Edit passage"
+                      title="Edit passage"
+                      onClick={startEditPassage}
+                    >
+                      ✎
+                    </IconButton>
+                  </>
                 )}
               </div>
               <div className="topbar-title">{sermon.title}</div>

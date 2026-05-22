@@ -1,5 +1,5 @@
 .sws-shell {
-  position: fixed;
+  position: absolute;
   inset: 0;
   display: flex;
   background: var(--parchment);
@@ -266,7 +266,7 @@
 }
 
 .sws-save-state {
-  position: fixed;
+  position: absolute;
   top: 18px;
   right: 28px;
   font-family: var(--font-mono);
@@ -277,7 +277,7 @@
 }
 
 .sws-notebook-summon {
-  position: fixed;
+  position: absolute;
   top: 16px;
   right: 96px;
   font-family: var(--font-mono);
@@ -299,14 +299,14 @@
 }
 
 .sws-feedback-flag-wrap {
-  position: fixed;
+  position: absolute;
   top: 16px;
   right: 16px;
   z-index: 2;
 }
 
 .sws-forward {
-  position: fixed;
+  position: absolute;
   bottom: 36px;
   right: 108px;
   font-family: var(--font-mono);
@@ -334,7 +334,7 @@
 }
 
 .sws-map-summon {
-  position: fixed;
+  position: absolute;
   bottom: 32px;
   right: 32px;
   width: 52px;

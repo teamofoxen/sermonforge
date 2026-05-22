@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-05-22 — Restore workspace topbar + passage column text; add inline passage edit
+
+- `.sws-shell` + corner chrome were `position: fixed; inset: 0` covering the workspace topbar entirely → changed to `position: absolute` so the topbar (Back, title, Delete, save) is reachable again; standalone `?surface=writing` fixture unaffected.
+- `SermonWorkspace` read `passageData?.text` but the `passage-fetch` IPC carries verses on `.esv` → field-name fix restored ESV text in the writing-surface passage column (`PassagePopup` already read `.esv` correctly).
+- Inline passage edit in the topbar — pencil next to the ref opens an input pre-filled with the current value; Enter/blur commits via the autosave path, Esc cancels, empty treated as cancel, so a typo'd passage no longer requires deleting the sermon to fix.
+- Verified via preview (`?workspace=populated`): topbar reachable, Enter commits, Esc cancels; `?surface=writing` standalone fixture regression-checked.
+
+---
+
 ## 2026-05-18 — Graph-view orphan cleanup: ANCHORS + BTI cross-links, theology corpus → ARCHIVE
 
 - Graph-view audit found 22 orphan markdown files; 5 surprising (anchor + BTI cluster + privacy + dashboard brief) and 1 dead — fixed across 7 files plus a move.
