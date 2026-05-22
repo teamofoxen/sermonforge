@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { findField, nextField, regionFrameFor } from "../utils/walkOrder";
 import PassageCanvas from "./PassageCanvas";
 import "./sermonWritingSurface.css";
@@ -129,8 +129,6 @@ export default function SermonWritingSurface({
   fieldKey,
   fieldAnswers,
   thoughtUnits,
-  passageRef,
-  passageText,
   saveState,
   onAnswerChange,
   onUnitColumnChange,
@@ -141,16 +139,6 @@ export default function SermonWritingSurface({
   onOpenNotebook,
 }) {
   const field = findField(stage, subPhase, fieldKey);
-  const [passageCollapsed, setPassageCollapsed] = useState(false);
-
-  // Auto-tuck the passage when entering a heavy-lifting field — those are
-  // the fields that genuinely need the writing column's full width. Per
-  // ruling 6 the older takeoverWhenActive flag is retired; heavyLifting is
-  // the surviving signal. The preacher can re-expand at will; leaving the
-  // field doesn't auto-uncollapse so manual preferences stick.
-  useEffect(() => {
-    if (field?.heavyLifting) setPassageCollapsed(true);
-  }, [field?.key, field?.heavyLifting]);
 
   // Wrap onPositionChange so every internal position-change site (chevron,
   // unmet-state door) awaits beforePositionChange first. Production wires
@@ -202,39 +190,6 @@ export default function SermonWritingSurface({
 
   return (
     <div className="sws-shell">
-      <aside
-        className={"sws-passage" + (passageCollapsed ? " is-collapsed" : "")}
-        aria-label="Passage"
-      >
-        {passageCollapsed ? (
-          <button
-            type="button"
-            className="sws-passage-expand"
-            onClick={() => setPassageCollapsed(false)}
-            aria-label="Show passage"
-            title="Show passage"
-          >
-            ‹
-          </button>
-        ) : (
-          <>
-            <div className="sws-passage-header">
-              <div className="sws-passage-ref">{passageRef}</div>
-              <button
-                type="button"
-                className="sws-passage-collapse"
-                onClick={() => setPassageCollapsed(true)}
-                aria-label="Hide passage"
-                title="Hide passage"
-              >
-                ›
-              </button>
-            </div>
-            <div className="sws-passage-body">{passageText}</div>
-          </>
-        )}
-      </aside>
-
       <main className="sws-writing">
         <div className="sws-field">
           {(() => {

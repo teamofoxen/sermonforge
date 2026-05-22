@@ -307,44 +307,107 @@ body {
   color: var(--topbar-fg-muted);
 }
 
-.topbar-series .passage-ref {
+/* Workspace passage bar — sits just below the topbar; replaces the deleted
+   .sws-passage drawer. Holds the passage box (click to open popup, pencil
+   to edit) + a hint label + the lookup search bar. */
+.workspace-passage-bar {
+  flex-shrink: 0;
+  padding: 12px 28px;
+  background: var(--parchment-warm);
+  border-bottom: 1px solid var(--parchment-deep);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.workspace-passage-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.workspace-passage-row .passage-ref {
   font-family: 'JetBrains Mono', monospace;
   font-size: 11px;
-  color: var(--topbar-accent);
-  transition: opacity 0.15s;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold);
+  cursor: pointer;
+  padding: 5px 12px;
+  background: var(--white);
+  border: 1px solid var(--gold-pale);
+  border-radius: var(--radius);
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
-.topbar-series .passage-ref:hover {
-  opacity: 0.75;
+.workspace-passage-row .passage-ref:hover {
+  background: var(--gold-pale);
+  color: var(--ink);
 }
-
-.topbar-series .passage-ref-edit-toggle {
+.workspace-passage-row .passage-ref.is-empty {
+  font-family: 'IBM Plex Serif', serif;
+  font-style: italic;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 13px;
+  color: var(--ink-ghost);
+  background: var(--white);
+  border-style: dashed;
+}
+.workspace-passage-row .passage-ref-edit-toggle {
   background: transparent;
   border: none;
-  color: var(--topbar-fg-muted);
-  font-size: 12px;
+  color: var(--ink-ghost);
+  font-size: 14px;
   line-height: 1;
-  padding: 2px 4px;
-  margin-left: 4px;
+  padding: 4px 6px;
   cursor: pointer;
   transition: color 0.15s;
 }
-.topbar-series .passage-ref-edit-toggle:hover {
-  color: var(--topbar-fg);
+.workspace-passage-row .passage-ref-edit-toggle:hover {
+  color: var(--ink-mid);
 }
-
-.topbar-series .passage-ref-edit {
+.workspace-passage-row .passage-ref-edit {
   font-family: 'JetBrains Mono', monospace;
   font-size: 11px;
-  color: var(--topbar-accent);
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: var(--gold);
+  background: var(--white);
+  border: 1px solid var(--gold-pale);
   border-radius: var(--radius);
-  padding: 3px 8px;
-  width: 180px;
+  padding: 5px 12px;
+  width: 220px;
 }
-.topbar-series .passage-ref-edit:focus {
+.workspace-passage-row .passage-ref-edit:focus {
   outline: none;
-  border-color: var(--topbar-accent);
+  border-color: var(--gold);
+}
+.passage-bar-hint {
+  font-family: 'IBM Plex Serif', serif;
+  font-style: italic;
+  font-size: 13px;
+  color: var(--ink-ghost);
+}
+.workspace-passage-lookup {
+  display: flex;
+  align-items: center;
+}
+.passage-lookup-input {
+  width: 320px;
+  max-width: 100%;
+  font-family: 'IBM Plex Serif', serif;
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--white);
+  border: 1px solid var(--parchment-deep);
+  border-radius: var(--radius);
+  padding: 6px 12px;
+  transition: border-color 0.15s;
+}
+.passage-lookup-input:focus {
+  outline: none;
+  border-color: var(--gold);
+}
+.passage-lookup-input::placeholder {
+  color: var(--ink-ghost);
+  font-style: italic;
 }
 
 .topbar-title {
@@ -1800,6 +1863,7 @@ button {
   background: var(--dark-header-bg);
   border-bottom: 1px solid rgba(184,134,11,0.3);
   flex-shrink: 0;
+  user-select: none;
 }
 
 .passage-popup-ref {

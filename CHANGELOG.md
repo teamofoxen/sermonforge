@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-05-22 — Workspace passage bar replaces drawer; draggable anchored popups; passage lookup
+
+- Removed the `.sws-passage` inline drawer; replaced with a `.workspace-passage-bar` under the topbar — passage box + pencil + "click to see passage" hint + search input (Enter) for arbitrary-passage lookup. Writing surface expands to full width.
+- `PassagePopup` rewritten — `initialPosition` prop, drag-from-header (window mousemove/mouseup), open-edge reset to anchor, per-popup Esc scope via `onKeyDown` so two popups don't both close on one keystroke.
+- `SermonWorkspace` captures the passage box's bounding rect at click for the main popup anchor; the lookup popup stacks 488px further down by design — predictable spots regardless of main-popup state.
+- Verified in preview: anchored popup at trigger.bottom+8, drag moved by exact delta, second popup at stacked anchor, Esc closed only the focused popup, pencil edit works at new location.
+
+---
+
 ## 2026-05-22 — Restore workspace topbar + passage column text; add inline passage edit
 
 - `.sws-shell` + corner chrome were `position: fixed; inset: 0` covering the workspace topbar entirely → changed to `position: absolute` so the topbar (Back, title, Delete, save) is reachable again; standalone `?surface=writing` fixture unaffected.

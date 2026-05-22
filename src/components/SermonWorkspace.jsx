@@ -29,7 +29,6 @@ import SermonStartLanding from "./SermonStartLanding";
 import StudyAnchorHandoff from "./StudyAnchorHandoff";
 import WorkspaceNotebookDrawer from "./WorkspaceNotebookDrawer";
 import FeedbackFlag from "./FeedbackFlag";
-import { useEsvPassage } from "../utils/useEsvPassage";
 import PassagePopup from "./PassagePopup";
 import DeleteButton from "./DeleteButton";
 import SecondaryButton from "./primitives/SecondaryButton";
@@ -69,7 +68,18 @@ export default function SermonWorkspace({
   const [siblingIds, setSiblingIds] = useState([]);
   const [mapOpen, setMapOpen] = useState(false);
   const [notebookOpen, setNotebookOpen] = useState(false);
+  // Passage lookup (search bar) — query is the live input, lookupRef the
+  // committed reference fed to the second PassagePopup instance. Anchors are
+  // captured at click/submit time so each popup opens directly below the
+  // workspace passage box (lookup stacks below where the main popup would be,
+  // independent of whether the main popup is currently open).
+  const [lookupQuery, setLookupQuery] = useState("");
+  const [lookupRef, setLookupRef] = useState("");
+  const [showLookup, setShowLookup] = useState(false);
+  const [popupAnchor, setPopupAnchor] = useState(null);
+  const [lookupAnchor, setLookupAnchor] = useState(null);
   const sermonRef = useRef(_fixtureSermon ?? null);
+  const passageBoxRef = useRef(null);
 
   // Sermon load (skipped in fixture mode).
   useEffect(() => {
@@ -161,6 +171,37 @@ export default function SermonWorkspace({
     setEditingPassage(false);
   }, []);
 
+  // Popup anchoring — both PassagePopups (main + lookup) open at positions
+  // computed from the passage box's bounding rect at click/submit time.
+  // The lookup popup uses a fixed nominal main-popup height (480 px) as its
+  // vertical offset so it stacks below the main popup regardless of whether
+  // the main popup is currently open (user choice: predictable stacking
+  // beats anchor-only-when-open). Both popups stay draggable from there.
+  const NOMINAL_POPUP_HEIGHT = 480;
+  const openMainPassagePopup = useCallback(() => {
+    const el = passageBoxRef.current;
+    if (el) {
+      const r = el.getBoundingClientRect();
+      setPopupAnchor({ left: Math.round(r.left), top: Math.round(r.bottom + 8) });
+    }
+    setShowPassage(true);
+  }, []);
+  const submitLookup = useCallback(() => {
+    const next = lookupQuery.trim();
+    if (!next) return;
+    const el = passageBoxRef.current;
+    if (el) {
+      const r = el.getBoundingClientRect();
+      setLookupAnchor({
+        left: Math.round(r.left),
+        top: Math.round(r.bottom + 8 + NOMINAL_POPUP_HEIGHT + 8),
+      });
+    }
+    setLookupRef(next);
+    setShowLookup(true);
+  }, [lookupQuery]);
+  const closeLookup = useCallback(() => setShowLookup(false), []);
+
   // beforePositionChange — async; flushes any pending debounced save
   // BEFORE the position settles. The chain is: position-change trigger
   // (chevron / map jump / unmet-state door / handoff jump / required-
@@ -170,14 +211,6 @@ export default function SermonWorkspace({
   const beforePositionChange = useCallback(async () => {
     await persistUpdate();
   }, [persistUpdate]);
-
-  // Passage text via the one-path ESV fetch + cache hook. Called above
-  // the loading / not-found early returns so the hook order stays stable
-  // across renders (rules-of-hooks). useEsvPassage handles null input.
-  // The fetchPassage resolved shape carries the ESV text on `esv` (see the
-  // passage-fetch IPC handler) — same key PassagePopup reads.
-  const { data: passageData } = useEsvPassage(sermon?.passage);
-  const passageText = typeof passageData?.esv === "string" ? passageData.esv : "";
 
   // The three walk-spanning derivations parse every JSON column on every
   // call (~205 JSON.parse calls per render at the populated fixture).
@@ -387,40 +420,6 @@ export default function SermonWorkspace({
                     </>
                   );
                 })()}
-                {(sermon.series_title || seriesIdx >= 0) && sermon.passage && <span> · </span>}
-                {editingPassage ? (
-                  <input
-                    className="passage-ref-edit"
-                    type="text"
-                    value={passageDraft}
-                    onChange={(e) => setPassageDraft(e.target.value)}
-                    onBlur={commitPassageEdit}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") { e.preventDefault(); commitPassageEdit(); }
-                      else if (e.key === "Escape") { e.preventDefault(); cancelPassageEdit(); }
-                    }}
-                    placeholder="e.g. Romans 8:1-17"
-                    aria-label="Edit passage"
-                    autoFocus
-                  />
-                ) : sermon.passage && (
-                  <>
-                    <span
-                      className="passage-ref"
-                      onClick={() => setShowPassage((v) => !v)}
-                      style={{ cursor: "pointer" }}
-                      title="Show ESV text"
-                    >{sermon.passage}</span>
-                    <IconButton
-                      className="passage-ref-edit-toggle"
-                      aria-label="Edit passage"
-                      title="Edit passage"
-                      onClick={startEditPassage}
-                    >
-                      ✎
-                    </IconButton>
-                  </>
-                )}
               </div>
               <div className="topbar-title">{sermon.title}</div>
             </div>
@@ -449,6 +448,72 @@ export default function SermonWorkspace({
           </div>
         </div>
 
+        {/* Workspace passage bar — replaces the deleted .sws-passage drawer.
+            Row 1: passage box (click to popup, pencil to edit) + hint label.
+            Row 2: search input for an arbitrary passage lookup. */}
+        <div className="workspace-passage-bar">
+          <div className="workspace-passage-row">
+            {editingPassage ? (
+              <input
+                className="passage-ref-edit"
+                type="text"
+                value={passageDraft}
+                onChange={(e) => setPassageDraft(e.target.value)}
+                onBlur={commitPassageEdit}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") { e.preventDefault(); commitPassageEdit(); }
+                  else if (e.key === "Escape") { e.preventDefault(); cancelPassageEdit(); }
+                }}
+                placeholder="e.g. Romans 8:1-17"
+                aria-label="Edit passage"
+                autoFocus
+              />
+            ) : (
+              <>
+                {sermon.passage ? (
+                  <span
+                    ref={passageBoxRef}
+                    className="passage-ref"
+                    onClick={openMainPassagePopup}
+                    title="Show ESV text"
+                  >{sermon.passage}</span>
+                ) : (
+                  <span
+                    ref={passageBoxRef}
+                    className="passage-ref is-empty"
+                    onClick={startEditPassage}
+                    title="Set passage"
+                  >Set passage</span>
+                )}
+                <IconButton
+                  className="passage-ref-edit-toggle"
+                  aria-label="Edit passage"
+                  title="Edit passage"
+                  onClick={startEditPassage}
+                >
+                  ✎
+                </IconButton>
+              </>
+            )}
+            {sermon.passage && !editingPassage && (
+              <span className="passage-bar-hint">← click to see passage</span>
+            )}
+          </div>
+          <div className="workspace-passage-lookup">
+            <input
+              type="text"
+              className="passage-lookup-input"
+              placeholder="Look up another passage… (press Enter)"
+              value={lookupQuery}
+              onChange={(e) => setLookupQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") { e.preventDefault(); submitLookup(); }
+              }}
+              aria-label="Look up another passage"
+            />
+          </div>
+        </div>
+
         {/* Writing surface — fills the rest of the workspace. */}
         <div style={{ flex: 1, minHeight: 0, position: "relative" }}>
           <SermonWritingSurface
@@ -457,8 +522,6 @@ export default function SermonWorkspace({
             fieldKey={position.fieldKey}
             fieldAnswers={fieldAnswers}
             thoughtUnits={thoughtUnits}
-            passageRef={sermon.passage}
-            passageText={passageText}
             saveState={surfaceSaveState}
             onAnswerChange={handleAnswerChange}
             onUnitColumnChange={handleUnitColumnChange}
@@ -517,6 +580,13 @@ export default function SermonWorkspace({
         passage={sermon?.passage}
         isOpen={showPassage}
         onClose={() => setShowPassage(false)}
+        initialPosition={popupAnchor}
+      />
+      <PassagePopup
+        passage={lookupRef}
+        isOpen={showLookup}
+        onClose={closeLookup}
+        initialPosition={lookupAnchor}
       />
     </>
   );

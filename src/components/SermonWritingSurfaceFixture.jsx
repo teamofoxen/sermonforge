@@ -42,15 +42,6 @@ function buildSermonShapeFromFixture(answers, thoughtUnits) {
   return sermon;
 }
 
-const PASSAGE_REF = "Romans 8:1–4";
-const PASSAGE_TEXT = `1 There is therefore now no condemnation for those who are in Christ Jesus.
-
-2 For the law of the Spirit of life has set you free in Christ Jesus from the law of sin and death.
-
-3 For God has done what the law, weakened by the flesh, could not do. By sending his own Son in the likeness of sinful flesh and for sin, he condemned sin in the flesh,
-
-4 in order that the righteous requirement of the law might be fulfilled in us, who walk not according to the flesh but according to the Spirit.`;
-
 // Canvas seed — Romans 8:1–4 laid out with depth-marked indentation. Each
 // depth-0 row's id matches a seed thought-unit's _canvas_row_id, so editing
 // other rows in the canvas preserves the cumulative columns below.
@@ -547,8 +538,6 @@ export default function SermonWritingSurfaceFixture() {
         fieldKey={position.fieldKey}
         fieldAnswers={fieldAnswers}
         thoughtUnits={thoughtUnits}
-        passageRef={PASSAGE_REF}
-        passageText={PASSAGE_TEXT}
         saveState={saveState}
         onAnswerChange={handleAnswerChange}
         onUnitColumnChange={handleUnitColumnChange}
