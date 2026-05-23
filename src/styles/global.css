@@ -1815,8 +1815,17 @@ button {
   position: fixed;
   right: 20px;
   top: 56px;
-  width: 360px;
-  max-height: calc(100vh - 76px);
+  /* Width fits the empty space left of the centered 720px writing field
+     (field left edge = 50vw - 360px; popup left = 28px from JS anchor;
+     gap = 20px before the field). Capped at 360px on wide screens,
+     floored at 280px on narrow screens (slight overlap acceptable). */
+  width: calc(50vw - 408px);
+  max-width: 360px;
+  min-width: 280px;
+  /* Top is set inline from the passage-button anchor (~128px). The 148
+     reserves that top + 20px bottom margin so the bottom-right resize
+     handle stays inside the viewport at default position. */
+  max-height: calc(100vh - 148px);
   z-index: 1050;
   background: var(--white);
   border: 1px solid var(--parchment-deep);
@@ -1826,7 +1835,6 @@ button {
   display: flex;
   flex-direction: column;
   resize: both;
-  min-width: 260px;
   min-height: 160px;
 }
 

@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-22 — Passage popup fits the empty left space; writing field nudged right for breathing room
+
+- `.passage-popup` width changed from a fixed `360px` to `calc(50vw - 408px)` with `max-width: 360px` / `min-width: 280px` so the popup fills the empty space to the left of the centered 720px writing field without overlapping it.
+- Popup `max-height` tightened from `calc(100vh - 76px)` to `calc(100vh - 148px)` so the bottom-right resize handle stays inside the viewport when the popup is at its default anchor (~128px top); resize works without first dragging the popup up.
+- Briefly tried locking the popup bottom at `50vh` with `resize: horizontal` — reverted on pastor feedback (the lock made the resize feel broken).
+- `.sws-writing` left padding bumped from `72px` to `96px` so the centered field sits ~12px right of dead-center; the popup-to-field gap grows from ~12px to ~24px.
+- Verified in preview at 1440x900: popup right edge at 340, field left edge at 364, gap 24px, popup bottom at max stays 36px above viewport bottom.
+
+---
+
 ## 2026-05-22 — Remove passage lookup search bar (deferred) and inline writing-surface "saved" indicator
 
 - Removed the `.workspace-passage-lookup` search input + the second `<PassagePopup>` instance from `SermonWorkspace`; dropped the `lookupQuery`/`lookupRef`/`showLookup`/`lookupAnchor` state, `submitLookup`/`closeLookup` handlers, and the `NOMINAL_POPUP_HEIGHT` constant. Search is deferred — user will reintroduce later.

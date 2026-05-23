@@ -10,7 +10,10 @@
 .sws-writing {
   flex: 1 1 auto;
   overflow-y: auto;
-  padding: 64px 72px 160px;
+  /* Left padding is 24px wider than the right so the centered .sws-field
+     shifts ~12px right of dead-center, giving the passage popup on the
+     left more breathing room before the field's text begins. */
+  padding: 64px 72px 160px 96px;
   position: relative;
 }
 
