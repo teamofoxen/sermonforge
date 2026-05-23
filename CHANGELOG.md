@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-05-22 — Remove passage lookup search bar (deferred) and inline writing-surface "saved" indicator
+
+- Removed the `.workspace-passage-lookup` search input + the second `<PassagePopup>` instance from `SermonWorkspace`; dropped the `lookupQuery`/`lookupRef`/`showLookup`/`lookupAnchor` state, `submitLookup`/`closeLookup` handlers, and the `NOMINAL_POPUP_HEIGHT` constant. Search is deferred — user will reintroduce later.
+- Removed the inline `.sws-save-state` indicator from the writing surface — the topbar's `Saved` / `Saving…` / `Save failed` indicator already conveys the same status, so the inline mono "saved" tag was pure duplication.
+- Dropped the `saveState` prop from `SermonWritingSurface`, the `surfaceSaveState` derivation in `SermonWorkspace`, and the fixture's `saveState`/`markSaving` simulation (all three `markSaving()` call sites trimmed from the fixture handlers).
+- Kept `PassagePopup`'s anchoring + drag + scoped-Esc infrastructure so the eventual search re-add only needs a fresh state slice + second instance render.
+- Verified in preview: search bar gone, inline save indicator gone, main popup still opens anchored under the trigger (28, 129) on click.
+
+---
+
 ## 2026-05-22 — Workspace passage bar replaces drawer; draggable anchored popups; passage lookup
 
 - Removed the `.sws-passage` inline drawer; replaced with a `.workspace-passage-bar` under the topbar — passage box + pencil + "click to see passage" hint + search input (Enter) for arbitrary-passage lookup. Writing surface expands to full width.

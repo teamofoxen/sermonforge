@@ -68,16 +68,9 @@ export default function SermonWorkspace({
   const [siblingIds, setSiblingIds] = useState([]);
   const [mapOpen, setMapOpen] = useState(false);
   const [notebookOpen, setNotebookOpen] = useState(false);
-  // Passage lookup (search bar) — query is the live input, lookupRef the
-  // committed reference fed to the second PassagePopup instance. Anchors are
-  // captured at click/submit time so each popup opens directly below the
-  // workspace passage box (lookup stacks below where the main popup would be,
-  // independent of whether the main popup is currently open).
-  const [lookupQuery, setLookupQuery] = useState("");
-  const [lookupRef, setLookupRef] = useState("");
-  const [showLookup, setShowLookup] = useState(false);
+  // Anchor captured at click time so the main PassagePopup opens directly
+  // below the workspace passage box rather than at the CSS-default top-right.
   const [popupAnchor, setPopupAnchor] = useState(null);
-  const [lookupAnchor, setLookupAnchor] = useState(null);
   const sermonRef = useRef(_fixtureSermon ?? null);
   const passageBoxRef = useRef(null);
 
@@ -171,13 +164,10 @@ export default function SermonWorkspace({
     setEditingPassage(false);
   }, []);
 
-  // Popup anchoring — both PassagePopups (main + lookup) open at positions
-  // computed from the passage box's bounding rect at click/submit time.
-  // The lookup popup uses a fixed nominal main-popup height (480 px) as its
-  // vertical offset so it stacks below the main popup regardless of whether
-  // the main popup is currently open (user choice: predictable stacking
-  // beats anchor-only-when-open). Both popups stay draggable from there.
-  const NOMINAL_POPUP_HEIGHT = 480;
+  // Popup anchoring — the PassagePopup opens at the position captured from
+  // the passage box's bounding rect at click time, so it lands directly
+  // below the trigger rather than at the CSS-default top-right. The popup
+  // is then draggable from there.
   const openMainPassagePopup = useCallback(() => {
     const el = passageBoxRef.current;
     if (el) {
@@ -186,21 +176,6 @@ export default function SermonWorkspace({
     }
     setShowPassage(true);
   }, []);
-  const submitLookup = useCallback(() => {
-    const next = lookupQuery.trim();
-    if (!next) return;
-    const el = passageBoxRef.current;
-    if (el) {
-      const r = el.getBoundingClientRect();
-      setLookupAnchor({
-        left: Math.round(r.left),
-        top: Math.round(r.bottom + 8 + NOMINAL_POPUP_HEIGHT + 8),
-      });
-    }
-    setLookupRef(next);
-    setShowLookup(true);
-  }, [lookupQuery]);
-  const closeLookup = useCallback(() => setShowLookup(false), []);
 
   // beforePositionChange — async; flushes any pending debounced save
   // BEFORE the position settles. The chain is: position-change trigger
@@ -367,13 +342,6 @@ export default function SermonWorkspace({
     position.subPhase === "Anchor" &&
     !hasSeenThreshold(sermon, THRESHOLD_ID.StudyToAnchorHandoff);
 
-  // Writing-surface save indicator string.
-  const surfaceSaveState =
-    saving ? "saving…" :
-    saveError ? "save failed" :
-    lastSavedAt ? "saved" :
-    null;
-
   // Notebook column + value derived from the current stage. The handler
   // (handleNotebookChange) lives above with the other useCallbacks and
   // re-derives the column inside its body; here we just read for render.
@@ -499,19 +467,6 @@ export default function SermonWorkspace({
               <span className="passage-bar-hint">← click to see passage</span>
             )}
           </div>
-          <div className="workspace-passage-lookup">
-            <input
-              type="text"
-              className="passage-lookup-input"
-              placeholder="Look up another passage… (press Enter)"
-              value={lookupQuery}
-              onChange={(e) => setLookupQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") { e.preventDefault(); submitLookup(); }
-              }}
-              aria-label="Look up another passage"
-            />
-          </div>
         </div>
 
         {/* Writing surface — fills the rest of the workspace. */}
@@ -522,7 +477,6 @@ export default function SermonWorkspace({
             fieldKey={position.fieldKey}
             fieldAnswers={fieldAnswers}
             thoughtUnits={thoughtUnits}
-            saveState={surfaceSaveState}
             onAnswerChange={handleAnswerChange}
             onUnitColumnChange={handleUnitColumnChange}
             onCanvasChange={handleCanvasChange}
@@ -581,12 +535,6 @@ export default function SermonWorkspace({
         isOpen={showPassage}
         onClose={() => setShowPassage(false)}
         initialPosition={popupAnchor}
-      />
-      <PassagePopup
-        passage={lookupRef}
-        isOpen={showLookup}
-        onClose={closeLookup}
-        initialPosition={lookupAnchor}
       />
     </>
   );

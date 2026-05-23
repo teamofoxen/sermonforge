@@ -434,7 +434,6 @@ export default function SermonWritingSurfaceFixture() {
   const [position, setPosition] = useState(readInitialPosition);
   const [answers, setAnswers] = useState(readInitialAnswers);
   const [thoughtUnits, setThoughtUnits] = useState(readInitialThoughtUnits);
-  const [saveState, setSaveState] = useState(null);
   const [mapOpen, setMapOpen] = useState(false);
   const [startLandingOpen, setStartLandingOpen] = useState(readShowStartLanding);
   const [handoffOpen, setHandoffOpen] = useState(() => {
@@ -452,14 +451,8 @@ export default function SermonWritingSurfaceFixture() {
     setLastTouchedPosition(position);
   }, [position.stage, position.subPhase, position.fieldKey]);
 
-  const markSaving = useCallback(() => {
-    setSaveState("saving…");
-    setTimeout(() => setSaveState("saved"), 200);
-  }, []);
-
   const handleAnswerChange = useCallback(
     (fieldKey, questionKey, envelope) => {
-      markSaving();
       setAnswers((prev) => ({
         ...prev,
         [fieldKey]: {
@@ -468,19 +461,18 @@ export default function SermonWritingSurfaceFixture() {
         },
       }));
     },
-    [markSaving]
+    []
   );
 
   const handleUnitColumnChange = useCallback(
     (_questionKey, unitIdx, columnKey, value) => {
-      markSaving();
       setThoughtUnits((prev) => {
         const next = prev.slice();
         next[unitIdx] = { ...next[unitIdx], [columnKey]: value };
         return next;
       });
     },
-    [markSaving]
+    []
   );
 
   // The canvas is stored under the field's question answer like any other
@@ -488,7 +480,6 @@ export default function SermonWritingSurfaceFixture() {
   // helper — same shape as setDivisionsCanvas uses; one derivation, not two.
   const handleCanvasChange = useCallback(
     (fieldKey, questionKey, rows) => {
-      markSaving();
       setAnswers((prev) => ({
         ...prev,
         [fieldKey]: {
@@ -498,7 +489,7 @@ export default function SermonWritingSurfaceFixture() {
       }));
       setThoughtUnits((prev) => deriveThoughtUnitsFromCanvas(rows, prev));
     },
-    [markSaving]
+    []
   );
 
   const fieldAnswers = useMemo(
@@ -538,7 +529,6 @@ export default function SermonWritingSurfaceFixture() {
         fieldKey={position.fieldKey}
         fieldAnswers={fieldAnswers}
         thoughtUnits={thoughtUnits}
-        saveState={saveState}
         onAnswerChange={handleAnswerChange}
         onUnitColumnChange={handleUnitColumnChange}
         onCanvasChange={handleCanvasChange}

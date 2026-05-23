@@ -129,7 +129,6 @@ export default function SermonWritingSurface({
   fieldKey,
   fieldAnswers,
   thoughtUnits,
-  saveState,
   onAnswerChange,
   onUnitColumnChange,
   onCanvasChange,
@@ -242,12 +241,6 @@ export default function SermonWritingSurface({
           })}
         </div>
       </main>
-
-      {saveState && (
-        <div className="sws-save-state" aria-live="polite">
-          {saveState}
-        </div>
-      )}
 
       {onOpenNotebook && (
         <button
