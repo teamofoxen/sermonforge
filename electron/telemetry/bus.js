@@ -25,7 +25,6 @@ const { paths } = require("../config");
 const { logError } = require("../logger");
 const {
   WORKER_URL,
-  INGEST_TOKEN,
   FLUSH_INTERVAL_MS,
   FLUSH_TIMEOUT_MS,
   MAX_BATCH_SIZE,
@@ -87,7 +86,7 @@ function getTesterId() {
 
 async function flush() {
   if (!_initialized || !_enabled) return;
-  if (!INGEST_TOKEN || !WORKER_URL) return; // local-only mode
+  if (!WORKER_URL) return; // local-only mode
 
   const pendingFile = _ndjsonFile + ".pending";
 
@@ -153,10 +152,7 @@ async function ship(file) {
     const t = setTimeout(() => controller.abort(), FLUSH_TIMEOUT_MS);
     const res = await fetch(`${WORKER_URL}/ingest`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${INGEST_TOKEN}`,
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ kind: "events", testerId: _testerId, items: batch }),
       signal: controller.signal,
     });
@@ -204,7 +200,7 @@ async function sendImmediate(kind, payload) {
   if (!kind || typeof kind !== "string") return { ok: false, reason: "bad-kind" };
   const item = { kind, payload: payload && typeof payload === "object" ? payload : {} };
 
-  if (!INGEST_TOKEN || !WORKER_URL) {
+  if (!WORKER_URL) {
     // local-only mode — persist for later (in case transport is configured later)
     queueImmediate(item);
     return { ok: false, reason: "no-transport" };
@@ -221,10 +217,7 @@ async function postOne({ kind, payload }) {
     const t = setTimeout(() => controller.abort(), FLUSH_TIMEOUT_MS);
     const res = await fetch(`${WORKER_URL}/ingest`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${INGEST_TOKEN}`,
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ kind, testerId: _testerId, ...payload }),
       signal: controller.signal,
     });
@@ -246,7 +239,7 @@ function queueImmediate(item) {
 
 async function drainImmediateQueue() {
   if (!_initialized || !_enabled) return;
-  if (!INGEST_TOKEN || !WORKER_URL) return;
+  if (!WORKER_URL) return;
   if (!_immediateFile || !fs.existsSync(_immediateFile)) return;
 
   let content;

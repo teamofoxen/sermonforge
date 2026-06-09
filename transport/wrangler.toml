@@ -10,5 +10,11 @@ database_name = "sermonforge-bti"
 database_id = "7cd9f545-3d00-451c-8e6f-19eadba81173"
 
 # Secrets (set via `wrangler secret put`, not in this file):
-#   INGEST_TOKEN — Bearer token the SermonForge app uses to POST /ingest
 #   ADMIN_TOKEN  — query token the inbox UI uses for GET /inbox
+#
+# /ingest is intentionally unauthenticated (see worker.js): a bearer token
+# shipped in every desktop client is readable by every user and provided no real
+# security. The old INGEST_TOKEN secret is no longer read; abuse is bounded by
+# payload-shape validation, size caps, and a Cloudflare edge rate-limit rule on
+# the /ingest route (configure in the Cloudflare dashboard: Security → WAF →
+# Rate limiting rules).

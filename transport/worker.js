@@ -6,6 +6,16 @@
 
 const JSON_HEADERS = { 'Content-Type': 'application/json; charset=utf-8' };
 
+// /ingest is intentionally token-free. A bearer token shipped inside every
+// desktop client is readable by every user, so it never provided real security.
+// Instead we validate payload shape, cap body size, and cap batch size; abuse
+// volume is handled by Cloudflare edge rate-limiting on the route. Nothing
+// secret ships in the app. (/inbox keeps its ADMIN_TOKEN — that secret lives
+// only in the Worker, never in the client.)
+const MAX_BODY_BYTES = 256 * 1024; // generous for a telemetry batch; rejects abuse
+const MAX_EVENTS_PER_BATCH = 1000;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 // CORS headers — only used on /inbox so the developer can open
 // transport/inbox.html locally (file://) and fetch this Worker.
 // /ingest deliberately omits CORS: SermonForge clients are same-origin
@@ -37,10 +47,10 @@ export default {
 };
 
 async function handleIngest(request, env) {
-  const auth = request.headers.get('Authorization') || '';
-  if (!env.INGEST_TOKEN || auth !== `Bearer ${env.INGEST_TOKEN}`) {
-    return new Response(JSON.stringify({ error: 'unauthorized' }), {
-      status: 401,
+  const contentLength = Number(request.headers.get('Content-Length') || 0);
+  if (contentLength > MAX_BODY_BYTES) {
+    return new Response(JSON.stringify({ error: 'payload_too_large' }), {
+      status: 413,
       headers: JSON_HEADERS,
     });
   }
@@ -55,8 +65,10 @@ async function handleIngest(request, env) {
     });
   }
 
+  // testerId must be a real client UUID — cheap shape gate against junk writes
+  // now that the endpoint is unauthenticated.
   const tester = body.testerId;
-  if (!tester || typeof tester !== 'string') {
+  if (!tester || typeof tester !== 'string' || !UUID_RE.test(tester)) {
     return new Response(JSON.stringify({ error: 'missing_tester_id' }), {
       status: 400,
       headers: JSON_HEADERS,
@@ -100,7 +112,9 @@ async function handleIngest(request, env) {
     }
 
     if (body.kind === 'events') {
-      const items = Array.isArray(body.items) ? body.items : [];
+      const items = Array.isArray(body.items)
+        ? body.items.slice(0, MAX_EVENTS_PER_BATCH)
+        : [];
       if (items.length === 0) {
         return new Response(JSON.stringify({ ok: true, kind: 'events', count: 0 }), {
           headers: JSON_HEADERS,

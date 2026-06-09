@@ -15,7 +15,9 @@ export default function OneDriveWarning() {
         if (cancelled || !payload) return;
         const known = payload.kind === "onedrive"
           || payload.kind === "onedrive-first-run"
-          || payload.kind === "db_migrated";
+          || payload.kind === "db_migrated"
+          || payload.kind === "db_recovered_backup"
+          || payload.kind === "db_corrupt_quarantined";
         if (!known) return;
         if (payload.kind === "onedrive" && localStorage.getItem(BANNER_DISMISS_KEY) === "1") return;
         setWarning(payload);
@@ -40,6 +42,42 @@ export default function OneDriveWarning() {
         </div>
         <div className="write-error-banner-actions">
           <SecondaryButton size="sm" onClick={dismiss}>Got it</SecondaryButton>
+        </div>
+      </div>
+    );
+  }
+
+  // Loaded from the .bak after the primary was damaged or missing. Informational
+  // banner (gold tint) — the user can keep working; the damaged file is kept aside.
+  if (warning.kind === "db_recovered_backup") {
+    return (
+      <div className="write-error-banner" role="status" style={{ background: "rgba(184,134,11,0.10)", borderColor: "rgba(184,134,11,0.30)" }}>
+        <div className="write-error-banner-text">
+          <strong>Library recovered from backup.</strong>
+          <span className="write-error-banner-detail">{warning.message}</span>
+        </div>
+        <div className="write-error-banner-actions">
+          <PrimaryButton size="sm" onClick={() => openDataFolder()}>Open folder</PrimaryButton>
+          <SecondaryButton size="sm" onClick={dismiss}>Got it</SecondaryButton>
+        </div>
+      </div>
+    );
+  }
+
+  // Neither the primary nor the backup could be read — a fresh library was
+  // started and the original was kept aside. Serious + rare: surface as a
+  // blocking modal so the user sees it before doing more work.
+  if (warning.kind === "db_corrupt_quarantined") {
+    return (
+      <div style={backdrop} role="dialog" aria-modal="true" aria-labelledby="db-corrupt-title">
+        <div style={modal}>
+          <h2 id="db-corrupt-title" style={modalTitle}>We couldn't open your library</h2>
+          <p style={modalBody}>{warning.message}</p>
+          {warning.path ? <p style={modalPath}>{warning.path}</p> : null}
+          <div style={modalActions}>
+            <PrimaryButton onClick={() => openDataFolder()}>Open data folder</PrimaryButton>
+            <SecondaryButton onClick={dismiss}>Continue with a fresh library</SecondaryButton>
+          </div>
         </div>
       </div>
     );

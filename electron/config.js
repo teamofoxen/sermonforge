@@ -59,8 +59,15 @@ const paths = {
 //
 // Order is informational only — the resolver picks by mtime/size, not order.
 const legacyDbPaths = [
-  // Pre-Apr-13 2026 — bare userData root, before the OneDrive removal commit
-  // (5c54664) introduced a fixed Windows location.
+  // Pre-Apr-13 2026 — when a ~/OneDrive/SermonForge folder existed, the build
+  // PREFERRED it over the userData root (initial commit 3a67ba8, removed in
+  // 5c54664). This entry was missing for a long time, silently orphaning any
+  // library written during that era; added in the public-launch hardening pass.
+  // Append-only per CORE.md "The userData path is permanent."
+  path.join(app.getPath("home"), "OneDrive", "SermonForge", "sermonforge.db"),
+  // Pre-Apr-13 2026 — bare userData root (the fallback when no OneDrive folder
+  // existed), before the OneDrive removal commit (5c54664) introduced a fixed
+  // Windows location.
   path.join(app.getPath("userData"), "sermonforge.db"),
   // Apr 13 – Apr 27 2026 — fixed `C:\SermonForge\data` location used between
   // commit 5c54664 (OneDrive removal) and 7ff2c25 (unify DB path).

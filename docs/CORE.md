@@ -302,8 +302,13 @@ either reshapes to pass, or it does not ship.
 
 - **No backend.** Local-first only. No web API, no server process, no remote storage.
 - **No AI.** SermonForge contains no AI surfaces (ARI, 2026-05-09). The Anthropic SDK,
-  IPC `"ai-message"` channel, system prompts, and context pipeline have been removed. ESV
-  passage fetching (Crossway API) is the only outbound network call from the app.
+  IPC `"ai-message"` channel, system prompts, and context pipeline have been removed.
+  ESV passage fetching (Crossway API) is the only outbound call that carries
+  sermon-derived input. Two other outbound calls exist and carry no sermon content:
+  the auto-updater's launch-time GitHub Releases version check, and (unless the pastor
+  opts out) BTI interaction *metadata* to a developer-run Cloudflare endpoint. The
+  local-first guarantee is about sermon *content* — that never leaves the machine. See
+  `docs/REFERENCE/privacy.md`.
 - **No raw SQL in the renderer.** All database operations go through named IPC channels handled
   in `electron/main.js`. No SQL is accepted from the renderer.
 - **No direct `window.electronAPI` outside wrapper modules.** Components use `src/db/database.js`

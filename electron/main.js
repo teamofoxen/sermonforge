@@ -4,7 +4,7 @@ const fs = require("fs");
 const os = require("os");
 const { randomUUID } = require("crypto");
 const { isDev, paths, legacyDbPaths, devServerUrl } = require("./config");
-const { logInfo, logError, readRecent } = require("./logger");
+const { logInfo, logError } = require("./logger");
 const {
   STAGE, STAGE_SEQUENCE,
   SUB_PHASE, SUB_PHASE_CANONICAL_SEQUENCE,
@@ -50,6 +50,23 @@ let _pendingWrite = false; // true between saveDb() and the debounce flush; used
 let _flushFailureCount = 0; // consecutive flushDb failures; banner fires at >= 2 to avoid noise on a single transient lock
 let _firstLaunch = false;  // true when sermonforge.db did not exist at initDatabase entry; drives the first-run OneDrive modal
 let _pendingStartupWarning = null; // set in maybeWarnOneDrive; renderer fetches via app-get-startup-warning on mount
+let _appOpenEmitted = false; // app-open telemetry emits exactly once per session, and only after consent
+let _initError = null; // set when initDatabase aborts to protect data (locked file / failed migration); whenReady shows it and quits
+let _rendererReloads = 0; // bounded auto-reloads after a renderer crash before giving up
+
+// Emit the session's single app-open event. On first run we defer this until
+// the user has seen the BTI disclosure on the SetupScreen and made a choice
+// (telemetry-set-enabled), so nothing leaves the device pre-consent. Returning
+// users emit it at boot. Idempotent — safe to call from both paths.
+function emitAppOpenOnce() {
+  if (_appOpenEmitted) return;
+  _appOpenEmitted = true;
+  try {
+    telemetryBus.emit("app-open", { version: app.getVersion(), platform: process.platform });
+  } catch (err) {
+    logError("[telemetry] app-open emit failed", err);
+  }
+}
 
 const { migrateLegacyDb } = require("./dbMigration");
 
@@ -75,13 +92,76 @@ async function initDatabase() {
   // up front. Without it, a corrupt primary appears to load, queries fail at
   // runtime, the app limps along with broken state, and the next saveDb writes
   // serialized garbage on top of the previously-good `.bak` rotation chain.
+  // Classify a file-read failure. Lock / permission / IO errors are TRANSIENT —
+  // the file is healthy, something else is holding it (antivirus scan, OneDrive
+  // sync, backup tool). These must NEVER be treated as corruption: quarantining
+  // or starting fresh on a transient lock is exactly how a healthy library gets
+  // destroyed. A parse or quick_check failure, by contrast, is real corruption.
+  function classifyReadError(err) {
+    const transient = new Set(["EBUSY", "EPERM", "EACCES", "EMFILE", "ENFILE", "EIO", "EAGAIN", "ETXTBSY"]);
+    return transient.has(err?.code) ? "transient" : "corrupt";
+  }
+
   function tryLoad(p) {
-    const buf = fs.readFileSync(p);
-    const candidate = new SQL.Database(buf);
-    // Read sqlite_master — works on fresh empty DBs (no rows) and any healthy
-    // SQLite. Throws on page-level corruption that `new SQL.Database` misses.
-    candidate.exec("SELECT name FROM sqlite_master LIMIT 1");
+    let buf;
+    try {
+      buf = fs.readFileSync(p);
+    } catch (readErr) {
+      readErr._sfClass = classifyReadError(readErr);
+      throw readErr; // tagged so the caller can tell a lock from corruption
+    }
+    const candidate = new SQL.Database(buf); // a parse failure here = corruption
+    // PRAGMA quick_check forces a structural scan: it catches page-level damage
+    // that `new SQL.Database` accepts and that a shallow `sqlite_master` read
+    // would pass — exactly the torn-write / sync-conflict shape. Cheap on
+    // pastor-sized DBs (well under ~500 sermons).
+    let verdict;
+    try {
+      const res = candidate.exec("PRAGMA quick_check");
+      verdict = res?.[0]?.values?.[0]?.[0];
+    } catch (probeErr) {
+      try { candidate.close(); } catch { /* ignore */ }
+      probeErr._sfClass = "corrupt";
+      throw probeErr;
+    }
+    if (verdict !== "ok") {
+      try { candidate.close(); } catch { /* ignore */ }
+      const e = new Error(`quick_check failed: ${verdict}`);
+      e._sfClass = "corrupt";
+      throw e;
+    }
     return candidate;
+  }
+
+  const _sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  // Retry a load only for transient (lock) errors — give a scanner / sync agent
+  // a moment to release the file. Corruption is never retried (it won't change).
+  async function loadWithRetry(p, attempts = 3, delayMs = 300) {
+    let lastErr;
+    for (let i = 0; i < attempts; i++) {
+      try {
+        return tryLoad(p);
+      } catch (e) {
+        lastErr = e;
+        if (e._sfClass !== "transient" || i === attempts - 1) throw e;
+        await _sleep(delayMs);
+      }
+    }
+    throw lastErr;
+  }
+
+  function quarantineCorrupt(p) {
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const q = `${p}.corrupt-${stamp}`;
+    try {
+      fs.renameSync(p, q);
+      logError(`[DB] quarantined unreadable DB to ${q}`);
+      return q;
+    } catch (e) {
+      logError(`[DB] failed to quarantine unreadable DB at ${p}`, e);
+      return null;
+    }
   }
 
   // Counts content rows (sermons + series). Drives the legacy-migration
@@ -92,14 +172,24 @@ async function initDatabase() {
   function countContentRows(handle) {
     if (!handle) return 0;
     let total = 0;
-    try {
-      const r = handle.exec("SELECT COUNT(*) FROM sermons");
-      total += Number(r[0]?.values?.[0]?.[0] ?? 0);
-    } catch { /* table missing — treat as 0 */ }
-    try {
-      const r = handle.exec("SELECT COUNT(*) FROM series");
-      total += Number(r[0]?.values?.[0]?.[0] ?? 0);
-    } catch { /* table missing — treat as 0 */ }
+    const countOf = (sql) => {
+      try {
+        const r = handle.exec(sql);
+        return Number(r[0]?.values?.[0]?.[0] ?? 0);
+      } catch { return 0; } // table missing — treat as 0
+    };
+    // Sample-sermon rows (id LIKE 'sample-%') are NOT real content: every
+    // user-facing query excludes them, so the user sees an empty library.
+    // Counting them here would (a) suppress legacy recovery after a single
+    // "Open a sample sermon" click and (b) let a sample-only legacy DB outrank a
+    // real one-sermon DB in the resolver's row-count ranking.
+    total += countOf("SELECT COUNT(*) FROM sermons WHERE id NOT LIKE 'sample-%'");
+    total += countOf("SELECT COUNT(*) FROM series WHERE id NOT LIKE 'sample-%'");
+    // Calendar planning is real user content too — a pastor who planned a
+    // preaching calendar before drafting any sermon must not read as "empty"
+    // (which would let a legacy DB overwrite their plan, or strand it as a
+    // skipped candidate).
+    total += countOf("SELECT COUNT(*) FROM calendar_notes");
     return total;
   }
 
@@ -108,44 +198,92 @@ async function initDatabase() {
   // primary, fall back to a `.bak`, quarantine a corrupt file, or bootstrap
   // an empty in-memory DB. Migration runs in Phase 2 against whatever
   // emerges, so the corrupt-then-empty path also gets a recovery shot.
+  // Reused by every "the file is healthy but held by another process" abort.
+  const LOCK_MESSAGE =
+    "SermonForge couldn't open your library because another program is using the " +
+    "file — usually antivirus, a backup tool, or OneDrive syncing. Close those or " +
+    "wait a moment, then reopen SermonForge. Your sermons are safe and untouched.";
+
+  let recoveredFromBak = false;
+
   if (fs.existsSync(dbPath)) {
     try {
-      db = tryLoad(dbPath);
+      db = await loadWithRetry(dbPath);
     } catch (primaryErr) {
-      logError(`[DB] primary DB unreadable at ${dbPath}; trying .bak`, primaryErr);
+      if (primaryErr._sfClass === "transient") {
+        // Healthy-but-locked. Do NOT quarantine or start fresh — that destroys a
+        // good library. Abort the boot; whenReady shows the message and quits,
+        // leaving every file untouched so a relaunch (once the lock clears) works.
+        logError(`[DB] primary DB temporarily unreadable (locked) at ${dbPath}; aborting boot to protect data`, primaryErr);
+        _initError = { kind: "db_locked", message: LOCK_MESSAGE };
+        return;
+      }
+      // Genuine corruption — fall back to the .bak from the last good flush.
+      logError(`[DB] primary DB corrupt at ${dbPath}; trying .bak`, primaryErr);
       if (fs.existsSync(bakPath)) {
         try {
-          db = tryLoad(bakPath);
+          db = await loadWithRetry(bakPath);
+          recoveredFromBak = true;
           logInfo(`[DB] loaded backup from ${bakPath} after primary corruption`);
         } catch (bakErr) {
-          logError(`[DB] .bak also unreadable; preserving corrupt original`, bakErr);
+          if (bakErr._sfClass === "transient") {
+            logError(`[DB] .bak temporarily unreadable (locked); aborting boot to protect data`, bakErr);
+            _initError = { kind: "db_locked", message: LOCK_MESSAGE };
+            return;
+          }
+          logError(`[DB] .bak also corrupt; will quarantine primary and start fresh`, bakErr);
           db = null;
         }
       }
-      if (!db) {
-        // Quarantine the corrupt original so the next flushDb does not overwrite it.
-        const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-        const quarantine = `${dbPath}.corrupt-${stamp}`;
-        try {
-          fs.renameSync(dbPath, quarantine);
-          logError(`[DB] quarantined corrupt DB to ${quarantine}`, primaryErr);
-        } catch (renameErr) {
-          logError(`[DB] failed to quarantine corrupt DB`, renameErr);
-        }
+      if (recoveredFromBak) {
+        // Quarantine the corrupt primary so the first flush can't rotate it into
+        // the .bak slot and destroy the good backup we just recovered from.
+        quarantineCorrupt(dbPath);
+        _pendingStartupWarning = {
+          kind: "db_recovered_backup",
+          message: "SermonForge restored your library from its automatic backup after the main file was damaged. Your most recent one or two edits may be missing. The damaged file was kept aside for recovery — contact support if you need it.",
+        };
+      } else if (!db) {
+        // Both primary and .bak are corrupt. Quarantine the primary (kept on
+        // disk for manual recovery) and start fresh.
+        const q = quarantineCorrupt(dbPath);
         db = new SQL.Database();
+        _pendingStartupWarning = {
+          kind: "db_corrupt_quarantined",
+          message:
+            "SermonForge couldn't read your library or its backup, so it started a fresh one. Your original file was NOT deleted — it was kept aside" +
+            (q ? ` as ${path.basename(q)}` : "") +
+            " in your data folder. Please contact support before doing more work so we can try to recover it.",
+          path: q,
+        };
       }
     }
   } else if (fs.existsSync(bakPath)) {
-    // Edge case: primary missing but backup present (a crash between rename steps).
+    // Primary missing but backup present (a crash between rename steps, or the
+    // primary deleted by AV / disk cleanup).
     try {
-      db = tryLoad(bakPath);
+      db = await loadWithRetry(bakPath);
+      recoveredFromBak = true;
       logInfo(`[DB] loaded backup; primary missing`);
+      _pendingStartupWarning = {
+        kind: "db_recovered_backup",
+        message: "SermonForge restored your library from its automatic backup after the main file went missing. Your most recent one or two edits may be missing.",
+      };
     } catch (e) {
+      if (e._sfClass === "transient") {
+        logError(`[DB] .bak temporarily unreadable (locked); aborting boot to protect data`, e);
+        _initError = { kind: "db_locked", message: LOCK_MESSAGE };
+        return;
+      }
       logError(`[DB] backup unreadable, starting fresh`, e);
       db = new SQL.Database();
+      _pendingStartupWarning = {
+        kind: "db_corrupt_quarantined",
+        message: "SermonForge couldn't read your library backup, so it started a fresh one. If you had sermons before, contact support before doing more work so we can try to recover them.",
+      };
     }
   } else {
-    db = new SQL.Database();
+    db = new SQL.Database(); // genuine fresh install
   }
 
   // ── Phase 2 — content-aware legacy migration ─────────────────────────────
@@ -164,7 +302,14 @@ async function initDatabase() {
   //
   // Forbidding this layer is a CORE.md violation; see "The userData path is
   // permanent."
-  if (countContentRows(db) === 0) {
+  // Phase 2 runs at most once per active-path lifetime. The marker records "we
+  // already resolved legacy data for this location." Without it, a user who
+  // deliberately empties their library re-triggers the resolver on EVERY boot —
+  // resurrecting deleted sermons, rolling settings/calendar back to the legacy
+  // file's state, and accumulating .precovery-empty-* files without bound.
+  const legacyMarkerPath = path.join(dataDir, ".sf-legacy-checked");
+  let legacyMigrated = false;
+  if (countContentRows(db) === 0 && !fs.existsSync(legacyMarkerPath)) {
     const stamp = new Date().toISOString().replace(/[:.]/g, "-");
     if (fs.existsSync(dbPath)) {
       try {
@@ -191,10 +336,18 @@ async function initDatabase() {
     if (migrated) {
       try { db.close(); } catch { /* ignore */ }
       db = migrated.db;
+      legacyMigrated = true;
       _pendingStartupWarning = {
         kind: "db_migrated",
         message: `Restored your library from a previous install location (${migrated.source}). The original file is preserved there as a backup.`,
       };
+    }
+    // Mark this active path resolved whether or not a winner was found — we
+    // looked once; we don't keep overwriting the active DB on later boots.
+    try {
+      fs.writeFileSync(legacyMarkerPath, new Date().toISOString());
+    } catch (e) {
+      logError(`[DB] failed to write legacy-checked marker`, e);
     }
   }
 
@@ -279,13 +432,39 @@ async function initDatabase() {
 
   `);
 
-  runMigrations();
+  let migrationsRan = false;
+  try {
+    migrationsRan = runMigrations();
+  } catch (e) {
+    // A migration threw (a shipped migration bug, or a deviant restored DB). The
+    // on-disk DB has NOT been written yet — bail before any flush so it stays
+    // pristine for a fixed build, and surface a clear message rather than hanging
+    // on the splash or quietly persisting a half-migrated image.
+    logError("[DB] runMigrations threw — leaving on-disk DB untouched", e);
+    _initError = {
+      kind: "migration_failed",
+      message: "SermonForge couldn't finish updating your library to this version. Your sermons are safe and were not changed. Please reopen the app; if this keeps happening, contact support so we can fix the update.",
+    };
+    try { db.close(); } catch { /* ignore */ }
+    db = null; // ensure no later flush (quit handler included) persists a partial image
+    return;
+  }
 
   // Schema contract guard — runs after migrations + FTS setup. Logs only.
   // See assertSchemaContract() below for rationale.
   try { assertSchemaContract(); } catch (e) { logError("[DB] assertSchemaContract threw", e); }
 
-  saveDb();
+  // Boot-time flush ONLY when something actually changed. A clean boot of an
+  // up-to-date library writes nothing — so a healthy DB is never re-serialized
+  // and rotated over its own backup (the path that turned a transient hiccup or
+  // an undetected corruption into permanent loss). Reasons to persist now:
+  //   - _firstLaunch:     a brand-new DB was bootstrapped and must be saved.
+  //   - recoveredFromBak: write the recovered data back to the primary path.
+  //   - legacyMigrated:   persist the migrated-in library.
+  //   - migrationsRan:    persist a schema upgrade.
+  if (_firstLaunch || recoveredFromBak || legacyMigrated || migrationsRan) {
+    saveDb();
+  }
 }
 
 // flushDb is serialized via _flushQueue. The previous implementation could
@@ -317,9 +496,11 @@ async function _flushDbImpl() {
   }
   // Atomic write with backup preservation:
   //   1. Serialize sql.js to an in-memory buffer.
-  //   2. Write to <dbPath>.tmp.
+  //   2. Write to <dbPath>.tmp AND fsync it — the bytes must be durably on disk
+  //      before we rotate, or a power loss can leave BOTH the new primary and
+  //      the rotated .bak as cache-resident zero/garbage pages.
   //   3. Rename existing <dbPath> -> <dbPath>.bak (only if it exists and is non-empty).
-  //   4. Rename <dbPath>.tmp -> <dbPath>.
+  //   4. Rename <dbPath>.tmp -> <dbPath>, then fsync the directory (best-effort).
   // A crash mid-step never produces a truncated <dbPath>: either the rename has
   // not happened yet (real DB intact) or it has (.tmp is the new real DB).
   // .bak survives one bad write — initDatabase falls back to it on next launch.
@@ -327,7 +508,16 @@ async function _flushDbImpl() {
   const bakPath = dbPath + ".bak";
   try {
     const data = db.export();
-    await fs.promises.writeFile(tmpPath, Buffer.from(data));
+    // Write + fsync the tmp file before it is rotated into place. fh.sync()
+    // maps to FlushFileBuffers on Windows / fsync on POSIX — the actual
+    // durability guarantee that survives a hard power cut.
+    const fh = await fs.promises.open(tmpPath, "w");
+    try {
+      await fh.writeFile(Buffer.from(data));
+      await fh.sync();
+    } finally {
+      await fh.close();
+    }
 
     // Promote old DB to .bak (best-effort; missing original on first save is OK).
     try {
@@ -340,6 +530,14 @@ async function _flushDbImpl() {
     }
 
     await fs.promises.rename(tmpPath, dbPath);
+
+    // Best-effort: fsync the directory so the rename itself is durable. Not
+    // supported on Windows (opening a directory handle throws) — ignored there,
+    // where the file-level fh.sync() above is the durability guarantee.
+    try {
+      const dirHandle = await fs.promises.open(path.dirname(dbPath), "r");
+      try { await dirHandle.sync(); } finally { await dirHandle.close(); }
+    } catch (_) { /* directory fsync unsupported on this platform/fs */ }
 
     _pendingWrite = false;
     if (_flushFailureCount > 0) {
@@ -459,6 +657,16 @@ function runMigrations() {
 
   const row = queryOne("SELECT value FROM meta WHERE key = 'schema_version'");
   let version = row ? parseInt(row.value, 10) : 0;
+  // Guard against a non-numeric schema_version (corruption of just this value, or
+  // hand-tampering). Left as NaN, every `version < N` guard is false and ALL
+  // migrations silently skip forever — a degraded install that never heals. The
+  // migration blocks are idempotent (safeAlter no-ops, CREATE IF NOT EXISTS,
+  // WHERE-guarded backfills), so resetting to 0 re-runs them safely.
+  if (!Number.isInteger(version)) {
+    logError(`[DB] meta.schema_version is non-numeric ("${row?.value}"); resetting to 0 and re-running idempotent migrations`);
+    version = 0;
+  }
+  const initialVersion = version;
 
   // IMPORTANT: each block updates `version` after running so subsequent blocks
   // see the correct current version, not the original value. Blocks must stay
@@ -898,6 +1106,11 @@ function runMigrations() {
     db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '23')");
     version = 23;
   }
+
+  // True when at least one block actually ran. Lets initDatabase skip the
+  // boot-time flush on a clean boot of an up-to-date DB — so a healthy library
+  // is never re-serialized and rotated over its own backup for no reason.
+  return version !== initialVersion;
 }
 
 // Verify the live schema matches the SERMON_COLUMNS / SERIES_COLUMNS allowlists
@@ -1017,6 +1230,31 @@ function createWindow() {
 
   mainWindow.loadFile(path.join(__dirname, "loading.html"));
 
+  // Renderer crash recovery: the sermon DB lives in the main process, so a
+  // renderer crash loses at most a few unsynced keystrokes. Reload the app a
+  // bounded number of times (avoiding a crash loop) instead of leaving the user
+  // on a frozen/blank window with no way back.
+  mainWindow.webContents.on("render-process-gone", (_e, details) => {
+    logError(`[renderer] process gone: ${details?.reason || "unknown"} (exit ${details?.exitCode})`);
+    if (!mainWindow || mainWindow.isDestroyed()) return;
+    if (_rendererReloads < 3) {
+      _rendererReloads += 1;
+      loadAppContent();
+    } else {
+      try {
+        dialog.showErrorBox("SermonForge", "SermonForge's display kept crashing and couldn't recover. Your sermons are saved. Please reopen the app; if it keeps happening, contact support.");
+      } catch (_) {}
+      app.quit();
+    }
+  });
+
+  // Surface a failed page load (damaged app.asar, AV blocking reads) instead of
+  // sitting on a dead splash. -3 is ERR_ABORTED — normal during navigation.
+  mainWindow.webContents.on("did-fail-load", (_e, code, desc, url) => {
+    if (code === -3) return;
+    logError(`[renderer] did-fail-load ${code} ${desc} ${url}`);
+  });
+
   mainWindow.once("ready-to-show", () => {
     mainWindow.show();
   });
@@ -1062,6 +1300,20 @@ ipcMain.handle("telemetry-emit", (_, { eventType, payload } = {}) => {
 });
 ipcMain.handle("telemetry-set-enabled", (_, enabled) => {
   telemetryBus.setEnabled(!!enabled);
+  // First-run consent: when the user opts in on the SetupScreen, emit the
+  // app-open that boot deliberately deferred until a choice was made.
+  if (enabled) emitAppOpenOnce();
+  return { ok: true };
+});
+
+// Renderer errors (global window hooks + React ErrorBoundary) report here so
+// they land in app.log and, if telemetry is on, emit the `crash` event that
+// privacy.md documents. Metadata only — no sermon content, capped length.
+ipcMain.handle("report-renderer-error", (_, { label, detail } = {}) => {
+  try {
+    logError(`[renderer] ${label || "error"}`, new Error(String(detail || "unknown").slice(0, 2000)));
+    telemetryBus.emit("crash", { error: `${label || "error"}: ${String(detail || "").slice(0, 500)}` });
+  } catch (_) { /* never throw from error reporting */ }
   return { ok: true };
 });
 
@@ -2804,160 +3056,14 @@ ipcMain.handle("app-save-api-key", async (_, keys) => {
   }
 });
 
-const CATEGORY_LABELS = {
-  bug:     "Bug",
-  ux:      "UI/UX",
-  ai:      "AI Quality",
-  feature: "Missing Feature",
-  copy:    "Content/Copy",
-};
-
-ipcMain.handle("feedback-submit", async (_, payload) => {
-  try {
-    const {
-      category, currentView, schemaVersion, appVersion, submittedAt,
-      // bug
-      whatHappened, whatExpected,
-      // ux
-      whichPart, whatWrong,
-      // ai
-      whichStep, whatWrongAI, aiNotes,
-      // feature
-      whereInWorkflow, describeFeature,
-      // copy
-      whereIsText, whatItShouldSay,
-    } = payload;
-
-    const categoryLabel = CATEGORY_LABELS[category] || category;
-
-    const lines = [];
-    lines.push("---");
-    lines.push(`Date: ${submittedAt}`);
-    lines.push(`Type: ${categoryLabel}`);
-    lines.push(`View: ${currentView || "unknown"}`);
-    lines.push(`Schema: ${schemaVersion || "unknown"}`);
-    lines.push(`App: ${appVersion || "unknown"}`);
-    lines.push("---");
-    lines.push("");
-
-    if (category === "bug") {
-      if (whatHappened?.trim()) {
-        lines.push("## What were you doing?");
-        lines.push(whatHappened.trim());
-        lines.push("");
-      }
-      if (whatExpected?.trim()) {
-        lines.push("## What did you expect?");
-        lines.push(whatExpected.trim());
-        lines.push("");
-      }
-    } else if (category === "ux") {
-      if (whichPart?.trim()) {
-        lines.push("## Which part of the app?");
-        lines.push(whichPart.trim());
-        lines.push("");
-      }
-      if (whatWrong?.trim()) {
-        lines.push("## What felt wrong or confusing?");
-        lines.push(whatWrong.trim());
-        lines.push("");
-      }
-    } else if (category === "ai") {
-      if (whichStep?.trim()) {
-        lines.push("## Which step?");
-        lines.push(whichStep.trim());
-        lines.push("");
-      }
-      if (whatWrongAI?.trim()) {
-        lines.push("## What was wrong with the response?");
-        lines.push(whatWrongAI.trim());
-        lines.push("");
-      }
-      if (aiNotes?.trim()) {
-        lines.push("## Additional notes");
-        lines.push(aiNotes.trim());
-        lines.push("");
-      }
-    } else if (category === "feature") {
-      if (whereInWorkflow?.trim()) {
-        lines.push("## Where in the workflow?");
-        lines.push(whereInWorkflow.trim());
-        lines.push("");
-      }
-      if (describeFeature?.trim()) {
-        lines.push("## What do you need?");
-        lines.push(describeFeature.trim());
-        lines.push("");
-      }
-    } else if (category === "copy") {
-      if (whereIsText?.trim()) {
-        lines.push("## Where is the text?");
-        lines.push(whereIsText.trim());
-        lines.push("");
-      }
-      if (whatItShouldSay?.trim()) {
-        lines.push("## What should it say instead?");
-        lines.push(whatItShouldSay.trim());
-        lines.push("");
-      }
-    }
-
-    if (category === "bug") {
-      const recentLogs = readRecent(50);
-      if (recentLogs) {
-        // Redact obvious credential shapes before posting to a public-ish issue tracker.
-        // sk-ant-... = Anthropic key; ghp_ / github_pat_ = GitHub PATs; "Token X" = ESV
-        // Authorization header style. None of these should ever appear in app.log under
-        // normal flow, but a future careless console.error on a payload would surface them.
-        const redacted = recentLogs
-          .replace(/sk-ant-[A-Za-z0-9_\-]+/g, "[REDACTED:anthropic]")
-          .replace(/github_pat_[A-Za-z0-9_]+/g, "[REDACTED:github_pat]")
-          .replace(/\bghp_[A-Za-z0-9]+/g, "[REDACTED:github_classic]")
-          .replace(/Token\s+[A-Za-z0-9_\-]{16,}/g, "Token [REDACTED]");
-        lines.push("## Error Log (last 50 lines)");
-        lines.push("<details><summary>expand</summary>\n");
-        lines.push("```");
-        lines.push(redacted);
-        lines.push("```");
-        lines.push("\n</details>");
-        lines.push("");
-      }
-    }
-
-    const token = process.env.GITHUB_FEEDBACK_TOKEN;
-    if (!token) {
-      console.error("[feedback-submit] GITHUB_FEEDBACK_TOKEN not set in .env");
-      return { success: false, error: "Feedback token not configured." };
-    }
-
-    const title = `[${categoryLabel}] ${currentView || "unknown"} — ${submittedAt.slice(0, 10)}`;
-    const body = lines.join("\n");
-
-    const response = await fetch("https://api.github.com/repos/teamofoxen/sermonforge/issues", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${token}`,
-        "Accept": "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2022-11-28",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ title, body, labels: [category] }),
-    });
-
-    if (!response.ok) {
-      const text = await response.text();
-      console.error("[feedback-submit] GitHub API error:", response.status, text);
-      return { success: false, error: `GitHub returned ${response.status}.` };
-    }
-
-    const issue = await response.json();
-    console.log("[feedback-submit] Issue created:", issue.html_url);
-    return { success: true, url: issue.html_url };
-  } catch (e) {
-    console.error("[feedback-submit]", e);
-    return { success: false, error: e.message };
-  }
-});
+// The legacy "feedback-submit" IPC handler was removed in the public-launch
+// hardening pass. It posted user-typed feedback + a redacted app.log tail
+// directly to the PUBLIC teamofoxen/sermonforge issue tracker using a shipped
+// GitHub PAT (GITHUB_FEEDBACK_TOKEN). It had no caller anywhere in the renderer
+// (the live feedback surfaces — FeedbackForm + FeedbackFlag — route through the
+// Cloudflare Worker via bti-feedback-submit), so removing it drops the last
+// consumer of the GitHub token and closes a latent "publish user content to a
+// public repo" path. No replacement is needed.
 
 // ── Bible passage fetch ───────────────────────────────────────────────────────
 // In-memory caches — keyed by `esv|${passage}`
@@ -3066,26 +3172,84 @@ ipcMain.handle('passage-fetch', async (_, passage) => {
 });
 
 // ── App lifecycle ────────────────────────────────────────────────────────────
-app.whenReady().then(async () => {
-  logInfo(`SermonForge ${app.getVersion()} starting`);
-  createWindow();              // splash visible immediately
-  await initDatabase();
-  // Telemetry initialized AFTER the DB so we can honor the BTI opt-out before
-  // any event leaves the device. Q9 default = on; explicit "false" disables.
-  telemetryBus.init();
-  try {
-    const pref = getSetting("bti_telemetry_enabled");
-    if (pref === "false") telemetryBus.setEnabled(false);
-  } catch (_) {}
-  telemetryBus.emit("app-open", { version: app.getVersion(), platform: process.platform });
-  maybeWarnOneDrive();         // populates the startup-warning slot before renderer mounts
-  loadAppContent();            // swap splash → real app
-  initUpdater();
+
+// Single-instance lock. Two instances each load the whole sql.js DB into memory
+// with no OS file lock, so the one that quits last silently overwrites the
+// other's work (and the next boot's flush rotates the survivor's .bak away).
+// The most common trigger is double-clicking the launcher during the multi-second
+// splash. Redirect any second launch to focus the existing window instead.
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+} else {
+  app.on("second-instance", () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+  });
+
+  app.whenReady().then(async () => {
+    try {
+      logInfo(`SermonForge ${app.getVersion()} starting`);
+      createWindow();              // splash visible immediately
+      await initDatabase();
+
+      // initDatabase sets _initError instead of throwing when it deliberately
+      // aborts to protect data (a locked DB file, or a migration that failed).
+      // Surface it plainly and quit — never leave the user on an endless splash,
+      // and never run the app against a half-initialized DB. Nothing was written.
+      if (_initError) {
+        logError(`[boot] init aborted: ${_initError.kind}`);
+        try { dialog.showErrorBox("SermonForge", _initError.message); } catch (_) {}
+        app.quit();
+        return;
+      }
+
+      // Telemetry initialized AFTER the DB so we can honor the BTI opt-out before
+      // any event leaves the device. Q9 default = on; explicit "false" disables.
+      telemetryBus.init();
+      // Consent ordering. On first run the BTI disclosure has not been shown yet —
+      // it lives on the SetupScreen — so hold telemetry silent (no enable, no
+      // app-open) until the user makes a choice there (telemetry-set-enabled emits
+      // the deferred app-open). For returning users, honor the stored preference
+      // and emit app-open now.
+      let _telemetryPref = null;
+      try { _telemetryPref = getSetting("bti_telemetry_enabled"); } catch (_) {}
+      if (_telemetryPref == null) {
+        telemetryBus.setEnabled(false); // first run — wait for SetupScreen consent
+      } else {
+        if (_telemetryPref === "false") telemetryBus.setEnabled(false);
+        emitAppOpenOnce();
+      }
+      maybeWarnOneDrive();         // populates the startup-warning slot before renderer mounts
+      loadAppContent();            // swap splash → real app
+      initUpdater();
+    } catch (err) {
+      // Any unexpected boot failure (sql.js wasm unreadable, userData not
+      // writable, etc.) — show a clear message and quit instead of hanging on
+      // the splash forever with the error swallowed into app.log.
+      logError("[boot] fatal error during startup", err);
+      try {
+        dialog.showErrorBox(
+          "SermonForge",
+          "SermonForge ran into a problem starting up and couldn't open. Your sermons are safe and were not changed. Please reopen the app; if this keeps happening, contact support.\n\nDetails: " + (err?.message || String(err))
+        );
+      } catch (_) {}
+      app.quit();
+    }
+  });
 
   app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    // macOS: closing the window keeps the app alive. On reopen, the window must
+    // swap straight to the real app — the previous code recreated only the
+    // splash (loadAppContent never re-ran), stranding the user on an endless
+    // "Loading library…" spinner. The DB is already initialized at this point.
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+      loadAppContent();
+    }
   });
-});
+}
 
 // Quit sequence:
 //   1. before-quit fires (covers menu Quit, Cmd-Q, Alt-F4, taskbar Close).
@@ -3099,8 +3263,34 @@ app.on("before-quit", async (e) => {
   if (_isQuitting) return; // re-entry guard; second pass falls through to default quit
   _isQuitting = true;
   e.preventDefault();
-  if (db) {
-    try { await flushDb(); } catch (err) { logError("[quit] flushDb threw", err); }
+  // Never flush when init aborted (_initError): db may hold a half-migrated or
+  // empty image, and flushing it would overwrite the pristine on-disk DB the
+  // abort was protecting.
+  if (db && !_initError) {
+    let result;
+    try { result = await flushDb(); }
+    catch (err) { logError("[quit] flushDb threw", err); result = { ok: false, error: err?.message }; }
+    // _flushDbImpl resolves { ok: false } on write failure (it never rejects), so
+    // the old bare try/catch was dead — a failed final save exited silently and
+    // dropped the session's last edits. Give the user one clear chance to retry.
+    if (result && result.ok === false) {
+      let choice = 1;
+      try {
+        choice = dialog.showMessageBoxSync({
+          type: "warning",
+          buttons: ["Try again", "Quit anyway"],
+          defaultId: 0,
+          cancelId: 1,
+          noLink: true,
+          title: "SermonForge",
+          message: "Your last changes couldn't be saved.",
+          detail: "Another program may be using the file (antivirus, a backup tool, or OneDrive). Close it and try again, or quit and risk losing your most recent edits.",
+        });
+      } catch (_) { choice = 1; }
+      if (choice === 0) {
+        try { await flushDb(); } catch (err) { logError("[quit] retry flushDb threw", err); }
+      }
+    }
   }
   if (theologyDb) { try { theologyDb.close(); } catch (_) {} }
   theologyDb = null;

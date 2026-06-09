@@ -30,7 +30,15 @@
    Output goes to `C:\Projects\SermonForgeBuilds\`. Do not wait to be asked —
    build is part of finishing a task.
    - `base: "./"` in `vite.config.mjs` is required (Electron loads from `file://`, not `http://`).
-   - electron-builder: `sql-wasm.wasm` must be in `asarUnpack`; `.env` must be in `extraResources`.
+   - electron-builder: `sql-wasm.wasm` must be in `asarUnpack`.
+   - **`.env` must NEVER be in `extraResources`.** Bundling it ships the developer's
+     secrets (Anthropic key, GitHub PAT, telemetry/ESV/Bible keys) in plaintext to
+     every user — the public-launch hardening pass (2026-06-09) removed it after the
+     audit found exactly this leak. The app needs no bundled secrets at runtime: the
+     ESV key comes from the per-user OS keystore (`electron/keystore.js`), and the
+     telemetry endpoint is a public URL hardcoded in `electron/telemetry/config.js`
+     hitting a token-free `/ingest`. Any value the app needs in production must come
+     from the keystore or source — never a shipped `.env`.
 7. Update `CHANGELOG.md` after every change — what changed and why.
 
 ---

@@ -43,6 +43,14 @@ class ErrorBoundary extends Component {
 
   componentDidCatch(error, errorInfo) {
     console.error("SermonForge error:", error, errorInfo);
+    // Forward to the main-process log (app.log) so field crashes are
+    // diagnosable — the console alone is closed DevTools on a user machine.
+    try {
+      window.electronAPI?.reportRendererError?.(
+        "react-error-boundary",
+        `${error?.message}\n${error?.stack || ""}\n${errorInfo?.componentStack || ""}`
+      );
+    } catch (_) { /* never throw from error reporting */ }
   }
 
   render() {
@@ -69,7 +77,20 @@ class ErrorBoundary extends Component {
   }
 }
 
+// Wrap the whole app — including the loading state, SetupScreen, and the dev
+// fixtures — in the ErrorBoundary. Previously the boundary only wrapped the
+// post-setup tree, so a render throw on the FIRST screen a new user sees would
+// unmount React to a blank window with no message. Now every path has the
+// "Something went wrong / Reload App" fallback.
 export default function App() {
+  return (
+    <ErrorBoundary>
+      <AppInner />
+    </ErrorBoundary>
+  );
+}
+
+function AppInner() {
   const [keyReady, setKeyReady] = useState(null); // null=loading, false=needs setup, true=ready
 
   useEffect(() => {

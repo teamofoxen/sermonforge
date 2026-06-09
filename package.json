@@ -81,10 +81,6 @@
     ],
     "extraResources": [
       {
-        "from": ".env",
-        "to": ".env"
-      },
-      {
         "from": "resources/models",
         "to": "models"
       }

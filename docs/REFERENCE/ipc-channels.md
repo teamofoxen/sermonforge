@@ -201,19 +201,6 @@ Saves to `Documents/SermonForge/exports/Manuscripts/[title] — Manuscript.docx`
 
 ---
 
-## Feedback
-
-### `"feedback-submit"`
-```
-receives: { category, currentView, schemaVersion, appVersion, submittedAt, ...category fields }
-returns:  { success: true, filepath: string }
-        | { success: false, error: string }
-```
-Writes a markdown feedback file to `~/OneDrive/SermonForge/Feedback/YYYY-MM-DD-HH-MM-category.md`.
-Creates the `Feedback` directory if absent.
-
----
-
 ## App
 
 ### `"app-get-version"`

@@ -73,7 +73,6 @@ export const saveApiKeys     = (keys) => api.saveApiKeys(keys);
 // ── Feedback ──────────────────────────────────────────────────────────────────
 export const getSchemaVersion = () => api.getSchemaVersion();
 export const getAppVersion    = () => api.getAppVersion();
-export const submitFeedback   = (payload) => api.submitFeedback(payload);
 
 // ── Disk-write health ─────────────────────────────────────────────────────────
 export const onDbWriteError = (callback) => api.onDbWriteError(callback);

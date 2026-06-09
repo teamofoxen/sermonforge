@@ -38,7 +38,12 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // ── Feedback ──────────────────────────────────────────────────────────────
   getSchemaVersion: () => ipcRenderer.invoke("db-getSchemaVersion"),
   getAppVersion:    () => ipcRenderer.invoke("app-get-version"),
-  submitFeedback:   (payload) => ipcRenderer.invoke("feedback-submit", payload),
+
+  // ── Renderer error reporting ──────────────────────────────────────────────
+  // Global error hooks + the React ErrorBoundary forward crashes here so they
+  // reach app.log (and a `crash` telemetry event) instead of vanishing into a
+  // closed DevTools console on a user machine. Fire-and-forget.
+  reportRendererError: (label, detail) => ipcRenderer.invoke("report-renderer-error", { label, detail }),
 
   // ── Schema contract guard ─────────────────────────────────────────────────
   // Renderer-side SERMON_COLUMNS mirror is asserted against this on App mount.

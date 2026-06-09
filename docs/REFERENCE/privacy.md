@@ -4,11 +4,15 @@
 
 ## At a glance
 
-SermonForge is single-user software that runs on your machine. Your sermons live in a SQLite database on your computer. The Crossway ESV API is the one external service the app talks to as a normal part of its work — and only when you load a passage. No other third party receives any data from this app as part of its normal operation.
+SermonForge is single-user software that runs on your machine. Your sermons live in a SQLite database on your computer, and **your sermon content never leaves it.**
 
-There is **one** developer-controlled telemetry channel — for shaping the tool over time — and it is opt-out. Sermon content is never part of it.
+Three things talk to the network, and only these three:
 
-This document covers everything else.
+- **Crossway ESV API** — when you load a passage, to fetch its text. Only the reference is sent (e.g. `John 3:16`), never your writing.
+- **GitHub Releases** — a quiet version check on launch so the app can keep itself up to date. No personal data and no sermon data — just "is there a newer version." This runs regardless of the telemetry toggle below.
+- **BTI telemetry** — one developer-controlled channel of interaction *metadata* (never sermon content), opt-out, covered in detail below.
+
+This document covers all three.
 
 ---
 
@@ -34,6 +38,12 @@ Crossway returns the passage text. SermonForge does not log the body of those re
 
 ---
 
+## What the app checks with GitHub (auto-update)
+
+On launch, the app asks GitHub Releases whether a newer version of SermonForge exists, so it can download and offer to install updates. This is a standard version check: it sends no personal data and no sermon data — only the kind of request any auto-updating app makes. It runs on every launch and is **not** governed by the telemetry toggle (an app that can't check for updates can't ship you fixes).
+
+---
+
 ## What the app sends to its developer (BTI telemetry)
 
 This is the part the toggle in the setup screen controls. Default-on; one click to disable; nothing leaves the device when off.
@@ -45,8 +55,7 @@ This is the part the toggle in the setup screen controls. Default-on; one click 
 - `app-open` — when you launch the app, with the version and platform.
 - `panel-time` / `field-time` — how long a panel or field has focus, recorded in summary form (no keystrokes).
 - `sermon-create` / `sermon-finish` — sermon-level lifecycle markers, with the sermon's database ID.
-- `tour-step` — which tour step you reached (which tour, which step ID).
-- `crash` — when the app errors, with the error message and the last 50 lines of `app.log`.
+- `crash` — when the app hits an unexpected error, with a short error message (no sermon content, no log file attached).
 
 These are **metadata about your interactions, not the content of your work.** None of them carry sermon text, study text, notebook text, or your typing.
 
@@ -81,7 +90,7 @@ Until the structured beta cohort program closes. After that, the data set is tri
 
 ### Toggle off semantics
 
-If you turn the toggle off in the setup screen, **nothing leaves your device.** The local `app.log` still exists on your machine for debugging purposes; that is not affected by the toggle.
+If you turn the toggle off in the setup screen, **no BTI telemetry leaves your device.** The two other network calls are not governed by this toggle: the Crossway passage fetch still runs when you load a passage, and the launch-time GitHub version check still runs — neither carries sermon content. The local `app.log` also still exists on your machine for debugging purposes; that is not affected by the toggle.
 
 If you want to turn it back on later, the same toggle will live in a Settings panel in a later version of the app. Until then, contact the developer to flip it via the database.
 
