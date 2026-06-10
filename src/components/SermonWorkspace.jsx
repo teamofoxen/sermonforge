@@ -22,6 +22,7 @@ import {
   setQuestionAnswer,
   setQuestionNA,
   setDivisionsCanvas,
+  getQuestionAnswer,
 } from "../utils/studyFields";
 import SermonWritingSurface from "./SermonWritingSurface";
 import SermonMap from "./SermonMap";
@@ -231,7 +232,19 @@ export default function SermonWorkspace({
     const parsed = parseStructuredField(sermon[col]);
     let next = setQuestionAnswer(parsed, fieldKey, questionKey, envelope?.value ?? "");
     next = setQuestionNA(next, fieldKey, questionKey, !!envelope?.na);
-    handleUpdate({ [col]: JSON.stringify(next) });
+    const fields = { [col]: JSON.stringify(next) };
+    // Keep the legacy flat mpt/mps columns in sync with the v19 main_point_pair
+    // envelope. The Word manuscript export reads sermon.mpt / sermon.mps (the
+    // tightened single sentences); without this mirror those columns stay ''
+    // forever, so a completed sermon exports with stale or missing Main Points.
+    // This replaces StudyTab.updateMPP, deleted in the trail-deletion sweep
+    // (Phase E) and never re-wired. The tightened answer is the canonical flat
+    // value (the named outcome); a not-yet-tightened MPT/MPS stays '').
+    if (col === "main_point_pair") {
+      fields.mpt = String(getQuestionAnswer(next, "mpt", "tighten") ?? "");
+      fields.mps = String(getQuestionAnswer(next, "mps", "tighten") ?? "");
+    }
+    handleUpdate(fields);
   }, [sermon, handleUpdate]);
 
   const handleUnitColumnChange = useCallback((_questionKey, unitIdx, columnKey, value) => {
