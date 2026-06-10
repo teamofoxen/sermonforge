@@ -66,8 +66,5 @@ export const SERMON_EQUIP_FIELDS = [
   },
 ];
 
-SERMON_EQUIP_FIELDS.forEach((field, i) => {
-  if (field.overview) {
-    field.overview.subtitle = `Field ${i + 1} of ${SERMON_EQUIP_FIELDS.length} · Step 4 (Functional Elements)`;
-  }
-});
+// Overview subtitles removed 2026-06-10 — internal Step-number scaffolding;
+// the teaching layer renders the overview body only.

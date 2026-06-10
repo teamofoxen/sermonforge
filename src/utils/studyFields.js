@@ -174,7 +174,7 @@ export const INTERPRET_FIELDS = [
   {
     key: "deeper_context",
     label: "Deeper Context",
-    hint: "Phase 1 Context placed the passage in its book. Now go deeper — what unresolved questions does the passage still raise, and how does it fit the book's larger argument?",
+    hint: "Observe's Context field placed the passage in its book. Now go deeper — what unresolved questions does the passage still raise, and how does it fit the book's larger argument?",
     questions: [
       { key: "unresolved",     prompt: "What questions about this passage are still unresolved after Observe — and what can you answer about them now?" },
       { key: "book_argument",  prompt: "How does this passage fit the book's overall argument? What does the author intend across the whole that bears on this passage?" },
@@ -204,7 +204,7 @@ export const INTERPRET_FIELDS = [
       paragraphs: [
         "You've widened the lens, named what recurs, traced character motives, surfaced contrasts, opened the wider canon, and checked against the commentaries last. The Interpret work is mostly done.",
         "One more move closes Interpret. For each thought unit — what does it MEAN? Not what it says (Observe). Not what it sounds like in your own words (also Observe). What the author is conveying through it. Then the whole passage in one paragraph, in your own voice.",
-        "What you produce here is the Interpretation Set. Phase 3 (Redemptive Thread) opens against it.",
+        "What you produce here is the Interpretation Set. Redemptive Thread opens against it.",
       ],
     },
     questions: [
@@ -228,7 +228,7 @@ export const INTERPRET_FIELDS = [
       },
       {
         key: "meaning_whole",
-        prompt: "One paragraph. The whole passage's meaning, in your own voice. What is the author saying through this passage about reality? This is the Interpretation Set. Phase 3 opens against it.",
+        prompt: "One paragraph. The whole passage's meaning, in your own voice. What is the author saying through this passage about reality? This is the Interpretation Set. Redemptive Thread opens against it.",
       },
     ],
   },
@@ -264,12 +264,10 @@ export const INTERPRET_FIELDS = [
 //
 //
 // Heavy-lifting `overview` blocks (B1.3 pattern) — formerly consumed by
-// `FieldOverviewScreen.jsx` on first per-sermon entry. The component was
-// deleted in the post-sweep audit Chunk 3 (2026-05-18) as an orphan with
-// no production consumers; the `overview` data blocks below are currently
-// uncalled (same category as the 8 composites in studyAdvancement.js per
-// CORE Process #2 — kept as the foundation for a future re-implementation
-// of the field-overview surface, not because anything reads them today).
+// `FieldOverviewScreen.jsx` on first per-sermon entry; that component was
+// deleted in the post-sweep audit Chunk 3 (2026-05-18) as an orphan. Since
+// 2026-06-10 (UX overhaul T18) the blocks are LIVE again: FieldTeaching.jsx
+// renders title + paragraphs on the pastor's first visit to each field.
 //   - Field 2 (How the Passage Points to Christ) — overview frames the four
 //     pointing-mechanisms (theme, promise, type, predictive) and the
 //     anti-allegory discipline.
@@ -286,7 +284,7 @@ export const REDEMPTIVE_FIELDS = [
     overview: {
       title: "This Passage and Christ",
       paragraphs: [
-        "Phase 3 — Redemptive Thread — opens with positioning. Before tracing how the passage points to Christ, locate where it stands in relation to him.",
+        "Redemptive Thread opens with positioning. Before tracing how the passage points to Christ, locate where it stands in relation to him.",
         "Two questions. First: where does the text sit relative to Christ — before, after, or transitional? For Old Testament passages, where does the New Testament pick this up? Second: does the text speak about Christ directly — and if so, how?",
         "Both questions can be 'no' for some passages, and that's fine. Mark what's there. The work of tracing how the passage points to Christ comes in the next field.",
       ],
@@ -341,14 +339,14 @@ export const REDEMPTIVE_FIELDS = [
         "You've positioned the text against Christ, traced how it points, grounded the gospel's enabling power, and named human need with God's character. The redemptive work is done.",
         "One more move closes Redemptive Thread. Take what you've worked out and say it. For each thought unit — how does it point to Christ? Find its weight in him? Get its answer from him?",
         "Then, the whole passage. One paragraph. The Christ-Connection Statement. How does the whole passage point to Christ — and how is Christ the hero of it?",
-        "Goldsworthy's evaluation question lives here: did this sermon testify to Christ? The Statement is what makes that answer yes. Phase 4 (Implications) opens against it. The Christological substance you articulate here gives Implications its weight.",
+        "Goldsworthy's evaluation question lives here: did this sermon testify to Christ? The Statement is what makes that answer yes. Implications opens against it. The Christological substance you articulate here gives Implications its weight.",
       ],
     },
     questions: [
       {
         key: "christ_per_unit",
         kind: "cumulative-synthesis-table",
-        prompt: "Beside each thought unit (with its Meaning from Phase 2), write the Christ-connection. How does this thought unit point to Christ, find its weight in him, or get its answer from him?",
+        prompt: "Beside each thought unit (with its Meaning from Interpret), write the Christ-connection. How does this thought unit point to Christ, find its weight in him, or get its answer from him?",
         // Phase 3 extends the same canonical thought-unit array in
         // observations.divisions.thought_units with a third writable column
         // (christ_connection). Phase 1 + Phase 2 columns render read-only;
@@ -366,7 +364,7 @@ export const REDEMPTIVE_FIELDS = [
       },
       {
         key: "statement",
-        prompt: "One paragraph. How does the whole passage point to Christ — and how is Christ the hero of it? This is the Christ-Connection Statement. Phase 4 opens against it.",
+        prompt: "One paragraph. How does the whole passage point to Christ — and how is Christ the hero of it? This is the Christ-Connection Statement. Implications opens against it.",
       },
     ],
   },
@@ -415,8 +413,8 @@ export const REDEMPTIVE_FIELDS = [
 //
 // Heavy-lifting `overview` blocks (B1.3 pattern) — formerly consumed by
 // `FieldOverviewScreen.jsx` (deleted in Chunk 3, 2026-05-18; see the
-// matching note above). Currently uncalled; kept as the foundation for a
-// future re-implementation.
+// matching note above). Live again since 2026-06-10 (T18): rendered by
+// FieldTeaching.jsx on first field visit.
 //   - Field 4 (Implications Synthesis) — overview frames the integration
 //     of the three voices and the Merida marinate moment. Per-unit
 //     cumulative-column extension (`implication`) + whole-passage Synthesis
@@ -475,14 +473,14 @@ export const IMPLICATIONS_FIELDS = [
         "You've named what the text teaches (Theological Significance), what it asks (Personal Implications), and the specific room it's landing in (Pastoral Context). Three voices.",
         "One more move closes Implications — and closes the Study work. Take what you've worked out and integrate it. For each thought unit — what does it ask of THIS hearer in THIS room? Drawing on the three voices.",
         "Then, the whole passage. One paragraph. The Implications Synthesis. What does the text teach, what does it ask, and how does it land for the people in this room — all in one voice. Not three sections. One synthesis.",
-        "This is the marinate-output. Step back after Implications and sit with what you've named before moving to MPT and MPS. What you write here is what you carry forward. MPT and MPS open against this synthesis (with the prior three named outcomes alongside) — no AI re-summary, no reaching back into raw worksheet content. The foundation has been earned.",
+        "This is the marinate-output. Step back after Implications and sit with what you've named before moving to MPT and MPS. What you write here is what you carry forward — when you open the MPT, this synthesis sits in the reference pane beside you, with the other three named outcomes. The foundation has been earned.",
       ],
     },
     questions: [
       {
         key: "implication_per_unit",
         kind: "cumulative-synthesis-table",
-        prompt: "Beside each thought unit (with its Meaning from Phase 2 and Christ-Connection from Phase 3), write the integrated implication. Drawing on Theological Significance + Personal Implications + Pastoral Context — what does this thought unit ask of the hearer in THIS room?",
+        prompt: "Beside each thought unit (with its Meaning from Interpret and Christ-Connection from Redemptive Thread), write the integrated implication. Drawing on Theological Significance + Personal Implications + Pastoral Context — what does this thought unit ask of the hearer in THIS room?",
         // Phase 4 extends the same canonical thought-unit array in
         // observations.divisions.thought_units with the final writable column
         // (implication). Phase 1/2/3 columns render read-only.
@@ -500,28 +498,14 @@ export const IMPLICATIONS_FIELDS = [
       },
       {
         key: "synthesis",
-        prompt: "One paragraph. Integrate the three voices for the whole passage. What does the text teach, what does it ask, and how does it land for the people in this room — all in one voice. Not three sections. One synthesis. This is the Implications Synthesis. MPT/MPS opens against it.",
+        prompt: "One paragraph. Integrate the three voices for the whole passage. What does the text teach, what does it ask, and how does it land for the people in this room — all in one voice. Not three sections. One synthesis. This is the Implications Synthesis. Anchor — where you forge the Main Point of the Text and Main Point of the Sermon (MPT/MPS) — opens against it.",
       },
     ],
   },
 ];
 
-// Auto-compute heavy-lifting overview subtitles from each field's position
-// in its phase array. Hand-maintained "Field N of M · Phase" literals drifted
-// each time a field was added or removed; deriving them keeps them honest.
-function annotateOverviewSubtitles(fields, phaseLabel) {
-  const total = fields.length;
-  fields.forEach((field, i) => {
-    if (field.overview) {
-      field.overview.subtitle = `Field ${i + 1} of ${total} · ${phaseLabel}`;
-    }
-  });
-}
-
-annotateOverviewSubtitles(OBSERVE_FIELDS, "Observe");
-annotateOverviewSubtitles(INTERPRET_FIELDS, "Interpret");
-annotateOverviewSubtitles(REDEMPTIVE_FIELDS, "Redemptive Thread");
-annotateOverviewSubtitles(IMPLICATIONS_FIELDS, "Implications");
+// Overview subtitles removed 2026-06-10 — internal "Field N of M" scaffolding;
+// the teaching layer renders the overview body only.
 
 // IMPLICATIONS_UNBELIEVER_KEY and IMPLICATIONS_COMPILED_KEY removed in the
 // trail deletion sweep — see the note above the flattenToText deletion site.

@@ -1766,7 +1766,11 @@ button {
   /* Width fits the empty space left of the centered 720px writing field
      (field left edge = 50vw - 360px; popup left = 28px from JS anchor;
      gap = 20px before the field). Capped at 360px on wide screens,
-     floored at 280px on narrow screens (slight overlap acceptable). */
+     floored at 280px on narrow screens (slight overlap acceptable).
+     NOTE (T18, 2026-06-10): this formula predates the reference pane,
+     which now occupies the shell's left edge and shifts the field right —
+     the popup floats above the pane (draggable/closable). Popup-vs-pane
+     geometry is queued for the post-BTI popup revisit. */
   width: calc(50vw - 408px);
   max-width: 360px;
   min-width: 280px;

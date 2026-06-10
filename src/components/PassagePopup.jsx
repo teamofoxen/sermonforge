@@ -233,8 +233,9 @@ export default function PassagePopup({ passage, isOpen, onClose, initialPosition
 
 // Per-state plain English + one action. The structured esvState codes from
 // passage-fetch render here — raw "ESV API HTTP 401" / "fetch failed"
-// strings never reach the pastor.
-const RECOVERY = {
+// strings never reach the pastor. Exported: the ReferencePane's passage
+// view shares the same states and copy (one voice, two surfaces).
+export const RECOVERY = {
   "no-key": {
     copy: "Seeing the Bible text here takes a free ESV key from Crossway — add it once and every passage will load.",
     action: "Add ESV key",
@@ -267,7 +268,7 @@ const RECOVERY = {
   },
 };
 
-function PassageRecovery({ copy, actionLabel, onAction }) {
+export function PassageRecovery({ copy, actionLabel, onAction }) {
   return (
     <div className="passage-popup-recovery">
       <p className="passage-popup-recovery-copy">{copy}</p>

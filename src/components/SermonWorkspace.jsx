@@ -19,6 +19,7 @@ import {
   hasSeenThreshold,
   nextThresholdsSeen,
   THRESHOLD_ID,
+  fieldOverviewThresholdId,
   STAGE_SUBPHASE_TO_COLUMN,
 } from "../utils/sermonState";
 import { firstFieldFor, findField } from "../utils/walkOrder";
@@ -115,7 +116,10 @@ export default function SermonWorkspace({
   // sermonId change must not let a stale load commit over the new one.
   useEffect(() => {
     if (_fixtureSermon) {
-      sermonRef.current = _fixtureSermon;
+      // sermonRef was already initialized to the fixture in useRef. Do NOT
+      // reassign it here: child effects run before this parent effect, so a
+      // mount-time child write through handleUpdate would be silently
+      // clobbered back to the pristine fixture, desyncing ref from state.
       return undefined;
     }
     let cancelled = false;
@@ -332,11 +336,37 @@ export default function SermonWorkspace({
   // so a sermon-null invocation is not a real call path, but guards
   // keep the contract honest.
 
-  const writePositionAndThresholds = useCallback((next, extraFields = {}) => {
-    handleUpdate({
+  const writePositionAndThresholds = useCallback((next, extraFields = {}, { suppressTeachingSeen = false } = {}) => {
+    const fields = {
       last_touched_position: serializePosition(next),
       ...extraFields,
-    });
+    };
+    // Leaving a field whose teaching block is still auto-open ends the
+    // first visit — mark it seen in the same write. Parent-side on purpose:
+    // a child unmount-cleanup would also fire on StrictMode's simulated
+    // remount (dev) and on workspace close, and the ratified semantics say
+    // quitting mid-read does NOT count as seen — only collapse (the child's
+    // trigger) or moving to another field (this one). Same-field jumps
+    // (map click on the current field) are not "leaving," and callers whose
+    // jump leaves a field the pastor never actually saw (the handoff overlay
+    // covers the surface from arrival) suppress the mark. Everything reads
+    // from sermonRef at call time so no closure can go stale.
+    const cur = sermonRef.current;
+    if (cur && !suppressTeachingSeen) {
+      const pos = deriveCurrentPositionFromSermon(cur);
+      const overview = findField(pos.stage, pos.subPhase, pos.fieldKey)?.overview;
+      const hasTeaching = !!(overview && Array.isArray(overview.paragraphs) && overview.paragraphs.length > 0);
+      const curId = fieldOverviewThresholdId(pos.stage, pos.subPhase, pos.fieldKey);
+      const nextId = fieldOverviewThresholdId(next.stage, next.subPhase, next.fieldKey);
+      if (hasTeaching && nextId !== curId && !hasSeenThreshold(cur, curId)) {
+        // Fold the mark into any caller-supplied thresholds_seen instead of
+        // replacing it — a latent lost-update otherwise (no caller passes
+        // one today, but the extraFields signature invites it).
+        const base = "thresholds_seen" in fields ? { thresholds_seen: fields.thresholds_seen } : cur;
+        fields.thresholds_seen = nextThresholdsSeen(base, curId);
+      }
+    }
+    handleUpdate(fields);
   }, [handleUpdate]);
 
   const handlePositionChange = useCallback(async (next) => {
@@ -473,12 +503,20 @@ export default function SermonWorkspace({
   // the handoff returns on their next Anchor entry. Only the explicit Close
   // marks it seen. (T9, 2026-06-10 — previously a jump consumed it and the
   // screen could never be read through.)
+  //
+  // The REAL handoff (not re-read) covers the writing surface from the
+  // moment the position lands, so a field teaching that auto-opened under
+  // it was never visible — jumping away must not consume the first-visit
+  // auto-open (same spirit as quit-mid-read). Re-read mode had a visible
+  // surface underneath; normal marking applies.
   const handleHandoffJump = useCallback(async (next) => {
     if (!sermon) return;
     await beforePositionChange();
-    writePositionAndThresholds(next);
+    writePositionAndThresholds(next, {}, {
+      suppressTeachingSeen: rereadThreshold !== THRESHOLD_ID.StudyToAnchorHandoff,
+    });
     setRereadThreshold(null);
-  }, [sermon, beforePositionChange, writePositionAndThresholds]);
+  }, [sermon, beforePositionChange, writePositionAndThresholds, rereadThreshold]);
 
   // Export to Word — shared by the topbar button and the finish screen.
   // Flushes the debounce first so the document carries the last keystrokes,
@@ -551,6 +589,26 @@ export default function SermonWorkspace({
   // last_touched_position on the loaded object before setSermon), so by
   // the time this runs there is exactly one position mechanism.
   const position = deriveCurrentPositionFromSermon(sermon);
+
+  // Field-teaching first visit: the authored overview auto-opens once per
+  // field per sermon, then collapses behind "About this field" forever
+  // after. Seen-marking rides the canonical thresholds mechanism, fed from
+  // two ends: the surface fires onTeachingSeen when the pastor collapses
+  // the auto-opened block; writePositionAndThresholds marks it when he
+  // moves to another field. Quitting the workspace mid-read marks nothing.
+  const teachingId = fieldOverviewThresholdId(position.stage, position.subPhase, position.fieldKey);
+  const teachingAutoOpen = !hasSeenThreshold(sermon, teachingId);
+
+  // Reference-pane substrate. MPT/MPS read from the v19 envelope's tighten
+  // answers (the live write target), never the flat columns. Outcomes are
+  // the same derivation the handoff overlay renders.
+  const mainPointPair = parseStructuredField(sermon.main_point_pair);
+  const reference = {
+    passage: sermon.passage || "",
+    outcomes: studyOutcomes,
+    mpt: String(getQuestionAnswer(mainPointPair, "mpt", "tighten") ?? "").trim(),
+    mps: String(getQuestionAnswer(mainPointPair, "mps", "tighten") ?? "").trim(),
+  };
 
   // Field-level answer access for the writing surface — extract
   // fieldAnswers for the current position's field from the sermon's
@@ -783,6 +841,9 @@ export default function SermonWorkspace({
             onOpenFinish={() => setFinishOpen(true)}
             highlightQuestion={jumpHighlight}
             onHighlightDone={clearJumpHighlight}
+            reference={reference}
+            teachingAutoOpen={teachingAutoOpen}
+            onTeachingSeen={() => dismissThreshold(teachingId)}
           />
           {/* FeedbackFlag — gated on !_fixtureSermon for the same reason
               persistUpdate is: fixture interactions must not pollute real

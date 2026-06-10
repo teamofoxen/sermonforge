@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef } from "react";
 import { findField, nextField, prevField, regionFrameFor, REGION_DISPLAY } from "../utils/walkOrder";
 import { createOutlinePoint } from "../utils";
 import PassageCanvas from "./PassageCanvas";
+import ReferencePane from "./ReferencePane";
+import FieldTeaching from "./FieldTeaching";
 import "./sermonWritingSurface.css";
 
 // The Assembly/Outline writing position. "outline" is the canonical sub-phase
@@ -331,6 +333,9 @@ export default function SermonWritingSurface({
   onOpenFinish,
   highlightQuestion,
   onHighlightDone,
+  reference,
+  teachingAutoOpen,
+  onTeachingSeen,
 }) {
   const field = findField(stage, subPhase, fieldKey);
   const questionRefs = useRef({});
@@ -509,6 +514,19 @@ export default function SermonWritingSurface({
 
   return (
     <div className="sws-shell">
+      {reference && (
+        <ReferencePane
+          stage={stage}
+          subPhase={subPhase}
+          fieldKey={fieldKey}
+          passage={reference.passage}
+          outcomes={reference.outcomes}
+          mpt={reference.mpt}
+          mps={reference.mps}
+          outlinePoints={outlinePoints}
+          onJump={handleInternalPositionChange}
+        />
+      )}
       <main className="sws-writing">
         <div className="sws-field">
           <div className="sws-place">{placeLine}</div>
@@ -517,6 +535,14 @@ export default function SermonWritingSurface({
             return frame ? <div className="sws-region-frame">{frame}</div> : null;
           })()}
           {field.label && <div className="sws-field-name">{field.label}</div>}
+          {field.overview && (
+            <FieldTeaching
+              key={`teach:${stage}/${subPhase}/${fieldKey}`}
+              overview={field.overview}
+              autoOpen={teachingAutoOpen}
+              onAutoOpenEnd={onTeachingSeen}
+            />
+          )}
           {field.hint && <div className="sws-field-hint">{field.hint}</div>}
           {field.questions.map((q) => (
             <div

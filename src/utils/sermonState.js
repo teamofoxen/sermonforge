@@ -401,3 +401,11 @@ export const THRESHOLD_ID = Object.freeze({
   SermonStart: "sermon-start",
   StudyToAnchorHandoff: "study-to-anchor-handoff",
 });
+
+// Field-teaching first-visit ids ride the same thresholds_seen mechanism
+// (one mechanism, per the comment above) but are position-derived rather
+// than enum members — up to one per field per sermon. This helper is the
+// single namespace authority so the format can't drift across call sites.
+export function fieldOverviewThresholdId(stage, subPhase, fieldKey) {
+  return `field-overview:${stage}/${subPhase}/${fieldKey}`;
+}

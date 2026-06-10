@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-06-10 — T18: the reference pane, the teaching layer, and copy that tells the truth
+
+- A collapsible reference pane now sits on the left of the writing surface — "a Bible open beside the notepad." Study shows the ESV passage by default; from Anchor onward it shows the work the current field builds against (the ratified per-region table: MPT forges against the four Study outcomes, MPS against MPT + the Christ-Connection Statement, Outline/Frame against MPT+MPS, Equip/Manuscript add the outline). Anything not yet written says so, with a "go write it" jump.
+- The authored field overviews (SFDI/SADI walks + OEM drafts — dead data since FieldOverviewScreen's deletion) are live again: each auto-opens on the pastor's FIRST visit to its field per sermon, then collapses behind a quiet "About this field" link, always re-expandable. First-visit tracking rides thresholds_seen (**Process #3 interpretation, flagged:** first arrival at a new kind of work read as a per-field threshold). Collapse or moving to another field ends the visit; quitting mid-read doesn't count as seen.
+- Debugging the seen-marking surfaced two structural bugs: an unmount-cleanup approach would have marked "seen" on StrictMode's simulated remount and on workspace close (against the ratified semantics) — marking moved into the parent's position write; and the fixture seam's load effect silently reset sermonRef after child writes, desyncing ref from state (fixed).
+- Fossil copy de-fossiled across six field-def files: "Phase 1/2/3/4" coordinates, "Q1/Q2/Intro Q3" numbers, "worksheet"/"AI re-summary" references, and the dead subtitle producers are gone from rendered prose; cross-field prompts now point at the real reference pane ("Your MPT is in the reference pane beside you").
+- A 64-agent adversarial review (6 lenses → 2 refuters per finding) confirmed 6 findings, all fixed: a handoff-overlay jump could consume an unseen teaching auto-open (now suppressed), two missed fossils, a Frame overview promising pane contents the ratified table doesn't hold, plus split-verdict cleanups (label→fieldKey outcome lookup, render-time mode reset, pure setState updaters, CSS hover/border polish). 706 tests; lint clean.
+
+---
+
 ## 2026-06-10 — Findability: search results land where they promised, the calendar starts sermons, titles rename, N/A tells the truth
 
 - Search-result navigation finally works end to end (the audit's "built in three files, dropped in the fourth"): clicking a hit lands on the matched region's first field (new `firstFieldFor`), notebook hits open the right notebook drawer without touching the writing position, and the landing persists so reopen returns there. The 36-agent adversarial review caught and fixed two real races first: a StrictMode double-load that silently dropped the hint in dev (cancellation flag), and a cross-sermon write race armed by the new zero-input save (workspace now remounts per sermon, clearing pending debounce timers).

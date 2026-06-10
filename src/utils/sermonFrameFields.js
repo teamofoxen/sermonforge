@@ -49,7 +49,7 @@ export const SERMON_FRAME_FIELDS = [
     overview: {
       title: "Intro",
       paragraphs: [
-        "The body is built — your outline, your functional elements, your MPT and MPS right beside you. Intro is how the listener walks into the body. Not a summary, not a preview of the points — the listener's posture as they enter.",
+        "The body is built — outline, functional elements, all of it — and your MPT and MPS sit in the reference pane beside you. Intro is how the listener walks into the body. Not a summary, not a preview of the points — the listener's posture as they enter.",
         "Four moves: hook (grab attention from where the listener actually is); bridge (get from the hook into the text + MPT and MPS); expectations (name what the body will ask of them, so they're not blindsided); redemptive note (gospel-power that turns the call from burden into invitation).",
         "The redemptive note is the gospel anchor at the front door of the sermon. Expectations comes before it on purpose — name the call first, then ground it in what Christ has done. Same pattern MPS just walked.",
       ],
@@ -96,7 +96,7 @@ export const SERMON_FRAME_FIELDS = [
       },
       {
         key: "land_call",
-        prompt: "Land the call. Drawing from the MPS — what is this sermon asking the listener to do, see, believe, or become? Make it concrete. The body opened with expectations (Intro Q3); the conclusion delivers the call those expectations led toward.",
+        prompt: "Land the call. Drawing from the MPS — what is this sermon asking the listener to do, see, believe, or become? Make it concrete. Your intro set expectations; the conclusion delivers the call those expectations led toward.",
       },
       {
         key: "gospel_empower",
@@ -110,14 +110,9 @@ export const SERMON_FRAME_FIELDS = [
   },
 ];
 
-// Auto-compute heavy-lifting overview subtitles. The Frame phase has its own
-// label shape ("Step 5 (Intro / Conclusion)") because Frame is one workspace
-// step, not a four-phase walk; the helper takes the full label verbatim.
-SERMON_FRAME_FIELDS.forEach((field, i) => {
-  if (field.overview) {
-    field.overview.subtitle = `Field ${i + 1} of ${SERMON_FRAME_FIELDS.length} · Step 5 (Intro / Conclusion)`;
-  }
-});
+// Overview subtitles ("Field N of M · Step 5 …") removed 2026-06-10 —
+// internal scaffolding vocabulary (Step numbers were retired with the
+// workspace restructure); the teaching layer renders the overview body only.
 
 // Per-question N/A semantics: only `intro.redemptive_note` may be marked N/A
 // by the pastor (with the strict "satisfied another way" semantic per SADI).

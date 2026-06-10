@@ -11,8 +11,10 @@
   flex: 1 1 auto;
   overflow-y: auto;
   /* Left padding is 24px wider than the right so the centered .sws-field
-     shifts ~12px right of dead-center, giving the passage popup on the
-     left more breathing room before the field's text begins. */
+     shifts ~12px right of dead-center. Originally breathing room for the
+     passage popup; since T18 the reference pane occupies the shell's left
+     edge and the popup floats above it (popup-vs-pane geometry queued for
+     the post-BTI popup revisit, 2026-06-10). */
   padding: 64px 72px 160px 96px;
   position: relative;
 }
@@ -58,6 +60,58 @@
   line-height: 1.45;
   color: var(--ink-mid);
   margin-bottom: 56px;
+}
+
+/* Field teaching — the authored overview block, auto-open on first visit,
+   then a quiet disclosure. Reads in the hint's serif register, quieter. */
+.sws-teaching {
+  margin-bottom: 18px;
+}
+
+.sws-teaching .sws-teaching-toggle {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-ghost);
+  padding: 0;
+  text-decoration: none;
+}
+
+/* .btn-text's global :hover underline outranks the base rule's
+   text-decoration — re-assert none at the same hover specificity. */
+.sws-teaching .sws-teaching-toggle:hover {
+  color: var(--ink-soft);
+  text-decoration: none;
+}
+
+.sws-teaching-body {
+  margin-top: 10px;
+  padding: 14px 18px;
+  background: var(--parchment-warm);
+  border-left: 3px solid var(--parchment-deep);
+  border-radius: var(--radius);
+}
+
+.sws-teaching-title {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-bottom: 8px;
+}
+
+.sws-teaching-para {
+  margin: 0 0 10px;
+  font-family: var(--font-serif);
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--ink-mid);
+}
+
+.sws-teaching-para:last-child {
+  margin-bottom: 0;
 }
 
 .sws-per-unit {

@@ -108,8 +108,5 @@ export const SERMON_MANUSCRIPT_FIELDS = [
   },
 ];
 
-SERMON_MANUSCRIPT_FIELDS.forEach((field, i) => {
-  if (field.overview) {
-    field.overview.subtitle = `Field ${i + 1} of ${SERMON_MANUSCRIPT_FIELDS.length} · Manuscript`;
-  }
-});
+// Overview subtitles removed 2026-06-10 — internal scaffolding; the
+// teaching layer renders the overview body only.
