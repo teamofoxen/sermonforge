@@ -314,6 +314,7 @@ export default function SermonWritingSurface({
   beforePositionChange,
   onOpenMap,
   onOpenNotebook,
+  onOpenFinish,
 }) {
   const field = findField(stage, subPhase, fieldKey);
 
@@ -478,15 +479,28 @@ export default function SermonWritingSurface({
         </button>
       )}
 
-      <button
-        type="button"
-        className="sws-forward"
-        onClick={advance}
-        disabled={!hasNext}
-        aria-label="Next field"
-      >
-        Next →
-      </button>
+      {/* End of the walk: the forward control becomes the door to the
+          completion threshold instead of silently greying out (the audit's
+          worst dead end). SermonFinish is re-openable, never one-shot. */}
+      {hasNext ? (
+        <button
+          type="button"
+          className="sws-forward"
+          onClick={advance}
+          aria-label="Next field"
+        >
+          Next →
+        </button>
+      ) : (
+        <button
+          type="button"
+          className="sws-forward is-finish"
+          onClick={onOpenFinish}
+          aria-label="Finish sermon"
+        >
+          Finish sermon →
+        </button>
+      )}
 
       <button
         type="button"

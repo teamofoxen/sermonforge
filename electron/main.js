@@ -2820,7 +2820,11 @@ ipcMain.handle("series-export-study-guide", async (_, seriesId) => {
     return { success: true, filepath };
   } catch (e) {
     console.error("[series-export-study-guide]", e);
-    return { success: false, error: e.message };
+    logError("[series-export-study-guide] failed", e);
+    const friendly = /\b(EBUSY|EPERM|EACCES)\b/.test(e?.message || "")
+      ? "That Word document is open in another program. Close it there and export again."
+      : "Could not save the Word document. Try again.";
+    return { success: false, error: friendly };
   }
 });
 
@@ -2968,12 +2972,30 @@ ipcMain.handle("sermon-export-manuscript", async (_, payload) => {
 
     const buffer = await Packer.toBuffer(doc);
     await fs.promises.writeFile(filepath, buffer);
-    shell.openPath(filepath);
 
-    return { success: true, filepath };
+    // openPath resolves with a non-empty error string when nothing handles
+    // .docx (no Word installed, broken association). Don't let "the file was
+    // written but nothing opened" read as a silent no-op — fall back to
+    // revealing the file in Explorer/Finder, and tell the renderer whether
+    // the document actually opened so it can show the location.
+    let opened = true;
+    const openErr = await shell.openPath(filepath);
+    if (openErr) {
+      opened = false;
+      logError(`[sermon-export-manuscript] openPath failed: ${openErr}`);
+      try { shell.showItemInFolder(filepath); } catch (_) { /* best-effort */ }
+    }
+
+    return { success: true, filepath, opened };
   } catch (e) {
     console.error("[sermon-export-manuscript]", e);
-    return { success: false, error: e.message };
+    logError("[sermon-export-manuscript] failed", e);
+    // Authored plain English — this string renders verbatim on the card
+    // (Mutation #5: one error voice). The raw detail stays in app.log.
+    const friendly = /\b(EBUSY|EPERM|EACCES)\b/.test(e?.message || "")
+      ? "That Word document is open in another program. Close it there and export again."
+      : "Could not save the Word document. Try again.";
+    return { success: false, error: friendly };
   }
 });
 

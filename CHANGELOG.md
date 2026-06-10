@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-06-10 — The ending exists: finish moment, anywhere-export, completeness wired, one error voice
+
+- The last field's dead grey Next is now a gold "Finish sermon →" opening SermonFinish — a re-openable completion threshold listing every load-bearing artifact (written / still open, with "go write it" jumps), plus Export to Word and Mark as preached.
+- Wired CORE Process #2's completeness contract: `deriveSermonCompleteness` consumes all eight composites (+ lenient Outline/Body/Manuscript presence checks); composites' reason strings rewritten in pastor vocabulary.
+- "Export to Word" now lives in the workspace topbar too (flushes the debounce first, shared payload builder); the export handler checks `shell.openPath`, falls back to revealing the file, and reports the saved location.
+- New `mapError` translation layer: raw EBUSY/HTTP/IPC strings never reach the screen (crash fallback, write banner, create/setup/key/export errors all speak plain English).
+- CORE Process #2 + #3 amended (completion threshold canonical); 706 tests pass; finish → export → Word-opens verified live.
+
+---
+
 ## 2026-06-10 — sermonforge.db moves to better-sqlite3: writes commit at the handler, the 500ms crash window is gone
 
 - Ported the main DB from sql.js to better-sqlite3 (WAL mode): every spine write is a durable SQLite commit when its IPC handler returns; deleted the saveDb/flushDb serialize-and-rotate pipeline (`flushDb` survives as a WAL checkpoint, `db-flush` contract unchanged).

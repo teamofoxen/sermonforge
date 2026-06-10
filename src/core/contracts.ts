@@ -207,12 +207,14 @@ export const VIEW = {
 } as const satisfies Record<View, View>;
 
 // ── Surface Contract #3 — loading vocabulary ─────────────────────────────────
-export type LoadingVerb = "Loading…" | "Saving…" | "Thinking…";
+export type LoadingVerb = "Loading…" | "Saving…" | "Thinking…" | "Exporting…";
 
 export const LOADING_VERB = {
   Loading: "Loading…",
   Saving: "Saving…",
   Thinking: "Thinking…",
+  // Word export in flight — generating a document, not saving app state.
+  Exporting: "Exporting…",
 } as const satisfies Record<string, LoadingVerb>;
 
 // ── Surface Contract #2 — CTA shapes ─────────────────────────────────────────

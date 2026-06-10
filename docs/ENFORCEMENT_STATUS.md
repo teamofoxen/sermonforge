@@ -1,6 +1,6 @@
 # Enforcement Status
 
-**Last verified:** 2026-06-10 — better-sqlite3 driver swap for `sermonforge.db` shipped: the CORE absolute invariant changed from "500ms `saveDb()` debounce is deliberate" to "writes commit at the IPC handler; no main-process save debounce may be reintroduced." Spine-integrity gate, contract tests (693), and a live SIGKILL durability test all pass against the new driver.
+**Last verified:** 2026-06-10 — Process #2's completeness contract is now fully wired: all eight composites feed `deriveSermonCompleteness`, rendered by the SermonFinish completion threshold (added to Process #3's canonical threshold list). Mutation #5 gained the `mapError` translation layer at every error surface; `canonical-loading-verb` lint extended with 'Exporting…' in lockstep with the LoadingVerb union. 706 tests pass; finish→export→Word verified live.
 **Verified against:** [`docs/CORE.md`](CORE.md).
 **History:** see `git log docs/ENFORCEMENT_STATUS.md` and [`CHANGELOG.md`](../CHANGELOG.md). Per-event narrative is intentionally not duplicated here.
 

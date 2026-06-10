@@ -21,7 +21,17 @@
 import { STAGE } from "../core/contracts";
 import { QUESTION_WALK_ORDER, WALK_ORDER, questionId } from "./walkOrder";
 import { parseStructuredField, getQuestionAnswer } from "./studyFields";
-import { hasContent } from "./studyAdvancement";
+import {
+  hasContent,
+  checkField3Composite,
+  checkField8Composite,
+  checkPhase4Field4Composite,
+  checkField5Composite,
+  checkIntroComposite,
+  checkConclusionComposite,
+  checkMPTComposite,
+  checkMPSComposite,
+} from "./studyAdvancement";
 import { getOutline, getFunctionalElements, parseManuscript } from "../utils";
 
 // Stage + sub-phase → the sermon-record JSON column that holds that
@@ -266,6 +276,73 @@ export function deriveStudyUnfinishedFromSermon(sermon) {
       const v = getQuestionAnswer(fieldData, q.fieldKey, q.questionKey);
       return !hasContent(v);
     });
+}
+
+// ── Sermon completeness — the workspace-wide "is this sermon done" answer ──
+//
+// CORE Process Contract #2 names the eight composite gates in
+// studyAdvancement.js as the completeness contract; this derivation is their
+// designed consumer (wired 2026-06-10). It returns one entry per load-bearing
+// artifact, in walk order, each with a pastor-facing reason when incomplete
+// and a jump position so the finish screen can offer "go write it".
+//
+// Outline / Sermon Body / Manuscript have no SADI-ratified composites — they
+// use LENIENT presence checks by explicit ruling (2026-06-10 decision batch:
+// honest without nagging; tighten later if the OEM content walk decides to).
+// This list is consumed by SermonFinish; it never blocks anything
+// (Process #1: no walls — the answer informs, navigation stays free).
+export function deriveSermonCompleteness(sermon) {
+  const obsData = parseStructuredField(sermon?.observations);
+  const mppData = parseStructuredField(sermon?.main_point_pair);
+  const frameData = parseStructuredField(sermon?.sermon_frame);
+  const outlinePoints = getOutline(sermon);
+  const functionalElements = getFunctionalElements(sermon);
+  const manuscriptData = parseManuscript(sermon?.manuscript);
+
+  // Lenient: at least one outline point with text.
+  const outlineReason = outlinePoints.some((p) => String(p?.text ?? "").trim())
+    ? null
+    : "Lay out at least one outline point.";
+
+  // Lenient: at least one functional element written under any point.
+  const bodyHasAny = outlinePoints.some((p) => {
+    const fe = functionalElements?.[p.id] || {};
+    return ["scripture", "explanation", "application", "illustration"].some(
+      (k) => String(fe[k] ?? "").trim()
+    );
+  });
+  const bodyReason = outlineReason
+    ? "Build the outline first — the Sermon Body grows under its points."
+    : bodyHasAny
+      ? null
+      : "Give at least one outline point its substance in Equip.";
+
+  // Lenient: at least one Introduction answer + the Conclusion response.
+  const msIntro = manuscriptData?.introduction || {};
+  const msIntroAny = ["opener", "scripture_reading", "expectation"].some((k) =>
+    String(msIntro[k] ?? "").trim()
+  );
+  const msConclusion = String(manuscriptData?.conclusion?.response ?? "").trim();
+  const manuscriptReason = msIntroAny && msConclusion
+    ? null
+    : "Write the manuscript — at least the opening and the closing response.";
+
+  const artifacts = [
+    { key: "observation_set",        label: "Observation Set",             reason: checkField3Composite(obsData),        jump: { stage: STAGE.Study, subPhase: "Observe", fieldKey: "divisions" } },
+    { key: "interpretation_set",     label: "Interpretation Set",          reason: checkField8Composite(sermon),         jump: { stage: STAGE.Study, subPhase: "Interpret", fieldKey: "interpretation_synthesis" } },
+    { key: "christ_connection",      label: "Christ-Connection Statement", reason: checkField5Composite(sermon),         jump: { stage: STAGE.Study, subPhase: "RedemptiveThread", fieldKey: "christ_connection_statement" } },
+    { key: "implications_synthesis", label: "Implications Synthesis",      reason: checkPhase4Field4Composite(sermon),   jump: { stage: STAGE.Study, subPhase: "Implications", fieldKey: "implications_synthesis" } },
+    { key: "mpt",                    label: "Main Point of the Text",      reason: checkMPTComposite(mppData),           jump: { stage: STAGE.Assembly, subPhase: "Anchor", fieldKey: "mpt" } },
+    { key: "mps",                    label: "Main Point of the Sermon",    reason: checkMPSComposite(mppData),           jump: { stage: STAGE.Assembly, subPhase: "Anchor", fieldKey: "mps" } },
+    // eslint-disable-next-line sermonforge/canonical-stage-name -- field key, not a stage status
+    { key: "outline",                label: "Sermon Outline",              reason: outlineReason,                        jump: { stage: STAGE.Assembly, subPhase: "Outline", fieldKey: "outline" } },
+    { key: "body",                   label: "Sermon Body",                 reason: bodyReason,                           jump: { stage: STAGE.Assembly, subPhase: "Equip", fieldKey: "equip" } },
+    { key: "intro",                  label: "Sermon Frame — Introduction", reason: checkIntroComposite(frameData),       jump: { stage: STAGE.Assembly, subPhase: "Frame", fieldKey: "intro" } },
+    { key: "conclusion",             label: "Sermon Frame — Conclusion",   reason: checkConclusionComposite(frameData),  jump: { stage: STAGE.Assembly, subPhase: "Frame", fieldKey: "conclusion" } },
+    { key: "manuscript",             label: "Manuscript",                  reason: manuscriptReason,                     jump: { stage: STAGE.Manuscript, subPhase: STAGE.Manuscript, fieldKey: "introduction" } },
+  ].map((a) => ({ ...a, complete: a.reason == null }));
+
+  return { artifacts, allComplete: artifacts.every((a) => a.complete) };
 }
 
 // Read the canonical writing-surface position. last_touched_position is

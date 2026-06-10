@@ -163,17 +163,18 @@ these names. (See State Contract clause 5: *one name per concept*.)
    `checkPhase4Field4Composite`, `checkField5Composite`,
    `checkIntroComposite`, `checkConclusionComposite`, `checkMPTComposite`,
    `checkMPSComposite`) — these are the foundation of the completeness
-   contract. The surface that makes completeness *visible to the preacher* —
-   the map's per-question weighting (answered / partial / unanswered, with
-   answer previews), the Study → Anchor handoff's active surfacing of
-   missing required outcomes — is partially built today. The map-weight
-   derivation exists in `src/utils/sermonState.js`
-   (`deriveQuestionStatesFromSermon`, `deriveStudyOutcomesFromSermon`,
-   `deriveStudyUnfinishedFromSermon`) and powers the Study → Anchor
-   handoff; the composites themselves currently have no callers because
-   the workspace-wide "is the sermon done" answer that would consume them
-   is not yet wired. The contract is real and its foundation is in place;
-   its full surfacing is in progress. (Pre-invisible-system framing —
+   contract. The workspace-wide "is the sermon done" answer is wired
+   (2026-06-10): `deriveSermonCompleteness` in `src/utils/sermonState.js`
+   consumes all eight composites — plus deliberately LENIENT presence
+   checks for the Sermon Outline, Sermon Body, and Manuscript, which have
+   no SADI-ratified composites yet (the OEM content walk may tighten them)
+   — and the SermonFinish screen renders the result at the end of the walk
+   with per-artifact "go write it" jumps, Export to Word, and Mark as
+   preached. The answer informs; it never blocks (Process #1 holds — no
+   walls). Completeness is also visible continuously at lower weight via
+   the map's per-question shading (`deriveQuestionStatesFromSermon`) and at
+   the Study → Anchor handoff (`deriveStudyOutcomesFromSermon`,
+   `deriveStudyUnfinishedFromSermon`). (Pre-invisible-system framing —
    "movement is gated by user evidence; the system does not advance a
    sermon to the next stage unless the user has produced the artifact
    that stage requires; the constraint *is* the gate" — retired 2026-05-18
@@ -184,10 +185,16 @@ these names. (See State Contract clause 5: *one name per concept*.)
    kept across F as "the surviving completeness contract" become CORE-
    canonical here.)
 3. **Movement is visible at thresholds, not narrated continuously.** Major
-   transitions — sermon start and the Study → Anchor handoff — surface as
-   discrete landing screens (`.ssl-overlay`, `.sah-overlay`) the pastor reads
-   and dismisses. Within-stage step movement (chevron-next, map-jump) is
-   silent by design. The line between orientation (helpful, at boundaries)
+   transitions — sermon start, the Study → Anchor handoff, and sermon
+   completion — surface as discrete landing screens (`.ssl-overlay`,
+   `.sah-overlay`, `.sfin-overlay`) the pastor reads and dismisses. The
+   completion threshold (added 2026-06-10) is the end of the walk made
+   visible: the "Finish sermon →" control replaces a silently disabled
+   forward chevron, and its screen carries the artifact review plus the
+   Export and Mark-as-preached actions — the moment the deliverable leaves
+   the app is by this clause's own logic the largest threshold there is.
+   It is summoned, never automatic, and re-openable forever. Within-stage
+   step movement (chevron-next, map-jump) is silent by design. The line between orientation (helpful, at boundaries)
    and narration (clunky, always-on) is load-bearing per the
    invisible-system build spec's *Strategic orientation at thresholds*
    section ("*Orientation is discrete and lives at thresholds. It is never

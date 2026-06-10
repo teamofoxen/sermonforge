@@ -159,6 +159,26 @@ export function parseManuscript(raw) {
   return { introduction: { opener: "", scripture_reading: "", expectation: "" }, transitions: {}, conclusion: { response: "" } };
 }
 
+// Build the payload `sermon-export-manuscript` expects from a sermon record.
+// One assembly point shared by every export trigger (workspace topbar, the
+// finish screen, Completed/Preached Sermons) so the Word document is the same
+// no matter where the pastor asks for it.
+export function buildManuscriptExportPayload(sermon) {
+  const ms = parseManuscript(sermon?.manuscript);
+  return {
+    title: sermon?.title || "",
+    passage: sermon?.passage || "",
+    date: sermon?.date || "",
+    mpt: sermon?.mpt || "",
+    mps: sermon?.mps || "",
+    introduction: ms.introduction || {},
+    transitions: ms.transitions || {},
+    conclusion: ms.conclusion || {},
+    outline: getOutline(sermon),
+    functionalElements: getFunctionalElements(sermon),
+  };
+}
+
 /**
  * Reassemble manuscript sections into a single readable text string for AI prompts and exports.
  */

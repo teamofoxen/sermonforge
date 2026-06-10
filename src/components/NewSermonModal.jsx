@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { createSermon, getAllSeries } from "../core/spine";
+import mapError from "../utils/mapError";
 import InlineError from "./InlineError";
 import { SERIES_STATUS } from "../core/contracts";
 import PrimaryButton from "./primitives/PrimaryButton";
@@ -34,7 +35,9 @@ export default function NewSermonModal({ onClose, onCreated }) {
       onCreated(result.id);
     } catch (e) {
       console.error(e);
-      setError(e?.message || "Could not create the sermon.");
+      // Raw spine/IPC strings ("UNIQUE constraint failed", "Error invoking
+      // remote method…") never reach the pastor — mapError speaks instead.
+      setError(mapError(e, "create"));
     } finally {
       setSaving(false);
     }

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { getAllSermons, deleteSermon } from "../core/spine";
 import { exportManuscript, searchSermons } from "../db/database";
+import mapError from "../utils/mapError";
 import { formatDate, parseManuscript, getOutline, getFunctionalElements } from "../utils";
 import { hintFromMatchedColumn } from "../utils/searchHints";
 import DeleteButton from "./DeleteButton";
@@ -92,10 +93,11 @@ export default function CompletedSermons({ onOpenSermon }) {
         functionalElements: getFunctionalElements(sermon),
       });
       if (!result?.success) {
-        setExportError(result?.error || "Export failed.");
+        // result.error is authored plain English in the export handler.
+        setExportError(result?.error || mapError("", "export"));
       }
     } catch (err) {
-      setExportError(err?.message || "Export failed.");
+      setExportError(mapError(err, "export"));
     } finally {
       setExportingId(null);
     }

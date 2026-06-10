@@ -25,10 +25,12 @@
 // bearing field complete?" against the per-question-kind dispatch. Per the
 // invisible-system spec's "The contract that survives" + Phase F entry,
 // these gates are the surviving completeness contract — they stop blocking
-// movement and instead feed map state and the "is the sermon done" check.
-// That completeness surface is being built incrementally; the composites
-// are currently uncalled outside this file. They are kept anyway because
-// the spec assigns them a future role, not because anything reads them yet.
+// movement and instead feed the workspace-wide "is the sermon done" answer.
+// Since 2026-06-10 that answer is wired: `deriveSermonCompleteness` in
+// sermonState.js consumes all eight and the SermonFinish screen renders the
+// result. The reason strings below are pastor-facing copy on that screen —
+// keep them in plain vocabulary (no internal field numbers, no wall-era
+// "before advancing" phrasing).
 //
 // `hasContent` is exported because `sermonState.js` consumes it for map
 // state derivation (text-prompt per-question completeness check).
@@ -118,23 +120,23 @@ export function checkField3Composite(data) {
 // thought-unit array is the canonical cross-phase artifact; per SFDI Phase
 // 2 Field 8 the Interpretation Synthesis cannot be N/A — it's the named
 // outcome — so no escape valve at the field level.
-function checkField8Composite(sermon) {
+export function checkField8Composite(sermon) {
   const obsData = parseStructuredField(sermon?.observations);
   const intData = parseStructuredField(sermon?.interpretation);
 
   const thoughtUnits = obsData?.divisions?.thought_units?.value;
   if (!Array.isArray(thoughtUnits) || thoughtUnits.length === 0) {
-    return "Name at least one thought unit in Observe Field 3 before advancing.";
+    return "Name at least one thought unit on the Divisions canvas in Observe.";
   }
   const allHaveMeaning = thoughtUnits.every(
     (row) => row && typeof row.meaning === "string" && row.meaning.trim()
   );
   if (!allHaveMeaning) {
-    return "Write a Meaning entry beside every thought unit before advancing.";
+    return "Write a Meaning entry beside every thought unit.";
   }
 
   if (!isQuestionAnswered(intData, "interpretation_synthesis", "meaning_whole")) {
-    return "Write the whole-passage meaning paragraph before advancing.";
+    return "Write the whole-passage meaning paragraph.";
   }
 
   return null;
@@ -145,23 +147,23 @@ function checkField8Composite(sermon) {
 // `implication` column. Q2 satisfied when
 // `implications.implications_synthesis.synthesis` is non-empty. Per SFDI
 // Phase 4 the Implications Synthesis is the named outcome — no N/A.
-function checkPhase4Field4Composite(sermon) {
+export function checkPhase4Field4Composite(sermon) {
   const obsData = parseStructuredField(sermon?.observations);
   const impData = parseStructuredField(sermon?.implications);
 
   const thoughtUnits = obsData?.divisions?.thought_units?.value;
   if (!Array.isArray(thoughtUnits) || thoughtUnits.length === 0) {
-    return "Name at least one thought unit in Observe Field 3 before advancing.";
+    return "Name at least one thought unit on the Divisions canvas in Observe.";
   }
   const allHaveImplication = thoughtUnits.every(
     (row) => row && typeof row.implication === "string" && row.implication.trim()
   );
   if (!allHaveImplication) {
-    return "Write an Implication entry beside every thought unit before advancing.";
+    return "Write an Implication entry beside every thought unit.";
   }
 
   if (!isQuestionAnswered(impData, "implications_synthesis", "synthesis")) {
-    return "Write the Implications Synthesis paragraph before advancing.";
+    return "Write the Implications Synthesis paragraph.";
   }
 
   return null;
@@ -173,24 +175,24 @@ function checkPhase4Field4Composite(sermon) {
 // `redemptive_thread.christ_connection_statement.statement` is non-empty.
 // Per SFDI Phase 3 the Christ-Connection Statement is the named outcome and
 // cannot be N/A.
-function checkField5Composite(sermon) {
+export function checkField5Composite(sermon) {
   const obsData = parseStructuredField(sermon?.observations);
   const redData = parseStructuredField(sermon?.redemptive_thread);
 
   const thoughtUnits = obsData?.divisions?.thought_units?.value;
   if (!Array.isArray(thoughtUnits) || thoughtUnits.length === 0) {
-    return "Name at least one thought unit in Observe Field 3 before advancing.";
+    return "Name at least one thought unit on the Divisions canvas in Observe.";
   }
   const allHaveChristConnection = thoughtUnits.every(
     (row) =>
       row && typeof row.christ_connection === "string" && row.christ_connection.trim()
   );
   if (!allHaveChristConnection) {
-    return "Write a Christ-Connection entry beside every thought unit before advancing.";
+    return "Write a Christ-Connection entry beside every thought unit.";
   }
 
   if (!isQuestionAnswered(redData, "christ_connection_statement", "statement")) {
-    return "Write the Christ-Connection Statement paragraph before advancing.";
+    return "Write the Christ-Connection Statement paragraph.";
   }
 
   return null;
@@ -199,28 +201,28 @@ function checkField5Composite(sermon) {
 // Sermon Frame Intro composite. Per SADI Step 5 ratification: Intro requires
 // Q1+Q2+Q3 non-empty (no N/A) and Q4 (redemptive_note) non-empty or N/A
 // (the "satisfied another way" carve-out for redemptive hooks).
-function checkIntroComposite(frameData) {
+export function checkIntroComposite(frameData) {
   if (!frameData || typeof frameData !== "object") {
-    return "Write the Intro fields before advancing.";
+    return "Write the Introduction answers in Frame.";
   }
   const fieldKey = "intro";
   const required = ["hook", "bridge_to_text", "expectations"];
   for (const qKey of required) {
     if (!isQuestionAnswered(frameData, fieldKey, qKey)) {
-      return `Write the Intro ${qKey.replace(/_/g, " ")} answer before advancing.`;
+      return `Write the Intro ${qKey.replace(/_/g, " ")} answer.`;
     }
   }
   if (!isQuestionAnswered(frameData, fieldKey, "redemptive_note")) {
-    return "Write the Intro redemptive note (or mark it N/A if the hook itself was redemptive) before advancing.";
+    return "Write the Intro redemptive note (or mark it not applicable if the hook itself was redemptive).";
   }
   return null;
 }
 
 // Sermon Frame Conclusion composite. Per SADI Step 5 ratification:
 // Conclusion requires Q1+Q2+Q3+Q4 all non-empty (no N/A path).
-function checkConclusionComposite(frameData) {
+export function checkConclusionComposite(frameData) {
   if (!frameData || typeof frameData !== "object") {
-    return "Write the Conclusion fields before advancing.";
+    return "Write the Conclusion answers in Frame.";
   }
   const fieldKey = "conclusion";
   const required = ["summate", "land_call", "gospel_empower", "closing_posture"];
@@ -229,7 +231,7 @@ function checkConclusionComposite(frameData) {
     const answered = !isQuestionNA(frameData, fieldKey, qKey)
       && hasContent(getQuestionAnswer(frameData, fieldKey, qKey));
     if (!answered) {
-      return `Write the Conclusion ${qKey.replace(/_/g, " ")} answer before advancing.`;
+      return `Write the Conclusion ${qKey.replace(/_/g, " ")} answer.`;
     }
   }
   return null;
@@ -237,16 +239,16 @@ function checkConclusionComposite(frameData) {
 
 // MPT composite. Per SADI ratification: MPT Q1 (draft) and Q2 (tighten) both
 // non-empty, neither N/A-able.
-function checkMPTComposite(mppData) {
+export function checkMPTComposite(mppData) {
   if (!mppData || typeof mppData !== "object") {
-    return "Write the MPT (draft and tighten) before advancing.";
+    return "Write the Main Point of the Text (draft, then tighten).";
   }
   const fieldKey = "mpt";
   for (const qKey of ["draft", "tighten"]) {
     const answered = !isQuestionNA(mppData, fieldKey, qKey)
       && hasContent(getQuestionAnswer(mppData, fieldKey, qKey));
     if (!answered) {
-      return `Write the MPT ${qKey} answer before advancing.`;
+      return `Write the MPT ${qKey} answer.`;
     }
   }
   return null;
@@ -256,9 +258,9 @@ function checkMPTComposite(mppData) {
 // both non-empty, no N/A. Q2 (gospel_check) non-empty OR explicit N/A (the
 // "satisfied another way" carve-out for passages where the moralism check
 // was completed upstream and surfaced nothing).
-function checkMPSComposite(mppData) {
+export function checkMPSComposite(mppData) {
   if (!mppData || typeof mppData !== "object") {
-    return "Write the MPS (translate, gospel-check, tighten) before advancing.";
+    return "Write the Main Point of the Sermon (translate, gospel-check, tighten).";
   }
   const fieldKey = "mps";
   // Q1 + Q3: load-bearing, no N/A.
@@ -266,12 +268,12 @@ function checkMPSComposite(mppData) {
     const answered = !isQuestionNA(mppData, fieldKey, qKey)
       && hasContent(getQuestionAnswer(mppData, fieldKey, qKey));
     if (!answered) {
-      return `Write the MPS ${qKey} answer before advancing.`;
+      return `Write the MPS ${qKey} answer.`;
     }
   }
   // Q2: non-empty OR explicit N/A.
   if (!isQuestionAnswered(mppData, fieldKey, "gospel_check")) {
-    return "Complete the MPS gospel-check (or mark it N/A if checked upstream) before advancing.";
+    return "Complete the MPS gospel-check (or mark it not applicable if checked upstream).";
   }
   return null;
 }

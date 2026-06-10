@@ -17,7 +17,10 @@
  * with eslint-disable; the failure count is the deferred-Phase work's
  * visible reminder.
  */
-const CANONICAL = new Set(['Loading…', 'Saving…', 'Thinking…']);
+// Mirrors the LoadingVerb union in src/core/contracts.ts (and the
+// electron/contracts.cjs mirror) — extend all three together.
+// 'Exporting…' added 2026-06-10 with the workspace Word-export.
+const CANONICAL = new Set(['Loading…', 'Saving…', 'Thinking…', 'Exporting…']);
 const RE_LOADING = /^[A-Z][\w/ ]{1,30}(?:\.\.\.|…)$/;
 
 module.exports = {

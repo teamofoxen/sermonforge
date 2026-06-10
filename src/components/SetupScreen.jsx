@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { saveApiKeys, setSetting } from "../db/database";
+import mapError from "../utils/mapError";
 import InlineError from "./InlineError";
 import PrimaryButton from "./primitives/PrimaryButton";
 import IconButton from "./primitives/IconButton";
@@ -95,7 +96,9 @@ export default function SetupScreen({ onComplete }) {
         setSaving(false);
       }
     } catch (e) {
-      setError(e?.message || "An unexpected error occurred.");
+      // result?.error above carries main-authored plain English and renders
+      // as-is; only transport-layer throws land here — translate those.
+      setError(mapError(e, "key"));
       setSaving(false);
     }
   }

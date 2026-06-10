@@ -263,6 +263,21 @@
   cursor: not-allowed;
 }
 
+/* End of the walk — the forward control opens the completion threshold.
+   It carries the weight the moment deserves (Surface #2: the finish moment
+   was one of the wrong places to be quiet). */
+.sws-forward.is-finish {
+  color: var(--white);
+  background: var(--gold);
+  border-color: var(--gold);
+}
+
+.sws-forward.is-finish:hover:not(:disabled) {
+  background: var(--gold-bright);
+  border-color: var(--gold-bright);
+  color: var(--white);
+}
+
 .sws-map-summon {
   position: absolute;
   bottom: 32px;

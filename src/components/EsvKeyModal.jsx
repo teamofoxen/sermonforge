@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { saveApiKeys } from "../db/database";
+import mapError from "../utils/mapError";
 import PrimaryButton from "./primitives/PrimaryButton";
 import SecondaryButton from "./primitives/SecondaryButton";
 import IconButton from "./primitives/IconButton";
@@ -76,7 +77,9 @@ export default function EsvKeyModal({ onClose }) {
         setSaving(false);
       }
     } catch (e) {
-      setError(e?.message || "An unexpected error occurred.");
+      // result?.error above carries main-authored plain English and renders
+      // as-is; only transport-layer throws land here — translate those.
+      setError(mapError(e, "key"));
       setSaving(false);
     }
   }

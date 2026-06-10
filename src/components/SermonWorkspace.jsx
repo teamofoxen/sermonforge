@@ -6,12 +6,15 @@ import {
   getSeries, getSectionsBySeries, getSermonsBySeries,
   persistMutation, INITIAL_SAVE_STATE,
 } from "../core/spine";
-import { pickSermonColumns, STAGE } from "../core/contracts";
+import { exportManuscript } from "../db/database";
+import mapError from "../utils/mapError";
+import { pickSermonColumns, STAGE, SERMON_STATUS, LOADING_VERB } from "../core/contracts";
 import {
   deriveCurrentPositionFromSermon,
   deriveQuestionStatesFromSermon,
   deriveStudyOutcomesFromSermon,
   deriveStudyUnfinishedFromSermon,
+  deriveSermonCompleteness,
   serializePosition,
   hasSeenThreshold,
   nextThresholdsSeen,
@@ -31,8 +34,10 @@ import {
   getFunctionalElements,
   serializeFunctionalElements,
   parseManuscript,
+  buildManuscriptExportPayload,
 } from "../utils";
 import SermonWritingSurface from "./SermonWritingSurface";
+import SermonFinish from "./SermonFinish";
 import SermonMap from "./SermonMap";
 import SermonStartLanding from "./SermonStartLanding";
 import StudyAnchorHandoff from "./StudyAnchorHandoff";
@@ -77,6 +82,12 @@ export default function SermonWorkspace({
   const [siblingIds, setSiblingIds] = useState([]);
   const [mapOpen, setMapOpen] = useState(false);
   const [notebookOpen, setNotebookOpen] = useState(false);
+  // Finish threshold — plain React state, deliberately NOT thresholds_seen:
+  // the completion screen is re-openable forever (Process #3: dismissal ends
+  // the interruption, not the access).
+  const [finishOpen, setFinishOpen] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [exportNote, setExportNote] = useState(null);
   // Anchor captured at click time so the main PassagePopup opens directly
   // below the workspace passage box rather than at the CSS-default top-right.
   const [popupAnchor, setPopupAnchor] = useState(null);
@@ -217,6 +228,14 @@ export default function SermonWorkspace({
   const questionStates = useMemo(() => deriveQuestionStatesFromSermon(sermon), [sermon]);
   const studyOutcomes = useMemo(() => deriveStudyOutcomesFromSermon(sermon), [sermon]);
   const studyUnfinished = useMemo(() => deriveStudyUnfinishedFromSermon(sermon), [sermon]);
+  // Gated on finishOpen: this derivation parses ~6 JSON columns and the
+  // finish screen is closed during normal typing — no reason to pay that on
+  // every keystroke. SermonFinish only renders while finishOpen, so the null
+  // never reaches it.
+  const completeness = useMemo(
+    () => (finishOpen ? deriveSermonCompleteness(sermon) : null),
+    [finishOpen, sermon]
+  );
 
   // ── Write paths ────────────────────────────────────────────────────
   // Each handler routes through handleUpdate so save-state, debounce,
@@ -344,6 +363,48 @@ export default function SermonWorkspace({
     });
   }, [sermon, beforePositionChange, writePositionAndThresholds]);
 
+  // Export to Word — shared by the topbar button and the finish screen.
+  // Flushes the debounce first so the document carries the last keystrokes,
+  // then builds the payload from sermonRef (always the freshest state).
+  const handleExport = useCallback(async () => {
+    if (exporting || _fixtureSermon) return;
+    setExporting(true);
+    setExportNote(null);
+    try {
+      await persistUpdate();
+      const result = await exportManuscript(buildManuscriptExportPayload(sermonRef.current));
+      if (result?.success) {
+        setExportNote(
+          result.opened === false
+            ? "Saved to Documents › SermonForge › exports › Manuscripts."
+            : "Opened in Word — saved to Documents › SermonForge › exports › Manuscripts."
+        );
+      } else {
+        // result.error is authored plain English in the export handler.
+        setExportNote(result?.error || mapError("", "export"));
+      }
+    } catch (e) {
+      setExportNote(mapError(e, "export"));
+    } finally {
+      setExporting(false);
+    }
+  }, [exporting, _fixtureSermon, persistUpdate]);
+
+  // Mark as preached — the sermon's lifecycle event, offered where the work
+  // actually ends (the finish screen) instead of only on a faraway list.
+  const handleMarkPreached = useCallback(() => {
+    if (!sermon) return;
+    handleUpdate({ stage: SERMON_STATUS.Complete });
+  }, [sermon, handleUpdate]);
+
+  // Finish-screen jump — same flush-then-move shape as the map jump; closes
+  // the finish screen so the pastor lands on the field they chose.
+  const handleFinishJump = useCallback(async (next) => {
+    await beforePositionChange();
+    writePositionAndThresholds(next);
+    setFinishOpen(false);
+  }, [beforePositionChange, writePositionAndThresholds]);
+
   async function handleDelete() {
     await deleteSermon(sermonId);
     onClose();
@@ -452,6 +513,20 @@ export default function SermonWorkspace({
           </div>
 
           <div className="topbar-right">
+            {exportNote && !finishOpen && (
+              <span style={{ fontSize: "12px", color: "var(--ink-ghost)", padding: "0 6px", maxWidth: "320px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={exportNote}>
+                {exportNote}
+              </span>
+            )}
+            <SecondaryButton
+              size="sm"
+              onClick={handleExport}
+              disabled={exporting}
+              title="Save this sermon as a Word document"
+              style={{ fontSize: "12px" }}
+            >
+              {exporting ? LOADING_VERB.Exporting : "Export to Word"}
+            </SecondaryButton>
             {saving && (
               <span style={{ fontSize: "12px", color: "var(--ink-ghost)", fontStyle: "italic", padding: "0 6px" }}>
                 Saving…
@@ -548,6 +623,7 @@ export default function SermonWorkspace({
             beforePositionChange={beforePositionChange}
             onOpenMap={() => setMapOpen(true)}
             onOpenNotebook={() => setNotebookOpen(true)}
+            onOpenFinish={() => setFinishOpen(true)}
           />
           {/* FeedbackFlag — gated on !_fixtureSermon for the same reason
               persistUpdate is: fixture interactions must not pollute real
@@ -571,6 +647,18 @@ export default function SermonWorkspace({
           currentPosition={position}
           onJump={handleMapJump}
           onClose={() => setMapOpen(false)}
+        />
+      )}
+      {finishOpen && (
+        <SermonFinish
+          completeness={completeness}
+          status={sermon.stage}
+          onJump={handleFinishJump}
+          onExport={handleExport}
+          exporting={exporting}
+          exportNote={exportNote}
+          onMarkPreached={handleMarkPreached}
+          onClose={() => setFinishOpen(false)}
         />
       )}
       {showSermonStart && (

@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, Component, lazy, Suspense } from "react";
 import { getApiKeyStatus, onDbWriteError, onDbWriteOk, flushDb, getSermonColumns, onFlushEdits, flushEditsDone } from "./db/database";
 import { runRegisteredFlushes } from "./utils/closeFlush";
+import mapError from "./utils/mapError";
 import { SERMON_COLUMNS } from "./constants/sermonColumns";
 import { VIEW } from "./core/contracts";
 import SetupScreen from "./components/SetupScreen";
@@ -65,8 +66,13 @@ class ErrorBoundary extends Component {
           <h2 style={{ fontFamily: "var(--font-serif)", color: "var(--ink)", fontSize: "24px" }}>
             Something went wrong
           </h2>
+          {/* Never the raw JS error — it reads as alarming nonsense to a
+              pastor, and the full detail already went to app.log via
+              reportRendererError above. Answer the only question that matters
+              in this moment: is my work safe? */}
           <p style={{ color: "var(--ink-ghost)", fontSize: "14px", maxWidth: "400px", textAlign: "center" }}>
-            {this.state.error?.message || "An unexpected error occurred."}
+            Your sermons are saved on this computer — nothing is lost. Reload to
+            pick up where you left off.
           </p>
           <PrimaryButton onClick={() => window.location.reload()}>
             Reload App
@@ -192,7 +198,9 @@ function AppInner() {
   const [retrying, setRetrying] = useState(false);
 
   useEffect(() => {
-    const unsubError = onDbWriteError((msg) => setWriteError(msg || "Unknown error"));
+    // The event payload is the raw fs/SQLite message from main — translate it
+    // before it reaches the banner (Mutation #5: errors speak in one voice).
+    const unsubError = onDbWriteError((msg) => setWriteError(mapError(msg || "", "save")));
     const unsubOk = onDbWriteOk(() => setWriteError(null));
     return () => { unsubError?.(); unsubOk?.(); };
   }, []);
@@ -202,9 +210,9 @@ function AppInner() {
     try {
       const result = await flushDb();
       if (result?.ok) setWriteError(null);
-      else if (result?.error) setWriteError(result.error);
+      else if (result?.error) setWriteError(mapError(result.error, "save"));
     } catch (e) {
-      setWriteError(e?.message || "Retry failed");
+      setWriteError(mapError(e, "save"));
     } finally {
       setRetrying(false);
     }

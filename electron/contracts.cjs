@@ -80,6 +80,8 @@ const LOADING_VERB = Object.freeze({
   Loading: "Loading…",
   Saving: "Saving…",
   Thinking: "Thinking…",
+  // Word export in flight — generating a document, not saving app state.
+  Exporting: "Exporting…",
 });
 
 // Schema column allowlists — canonical, mirrored from contracts.ts.
