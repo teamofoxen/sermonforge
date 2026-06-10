@@ -70,6 +70,10 @@ export const exportManuscript = (data) => api.exportManuscript(data);
 export const getApiKeyStatus = () => api.getApiKeyStatus();
 export const saveApiKeys     = (keys) => api.saveApiKeys(keys);
 
+// ── External links ────────────────────────────────────────────────────────────
+// Main process enforces a hard allowlist — only known URLs ever open.
+export const openExternal = (url) => api.openExternal(url);
+
 // ── Feedback ──────────────────────────────────────────────────────────────────
 export const getSchemaVersion = () => api.getSchemaVersion();
 export const getAppVersion    = () => api.getAppVersion();

@@ -3060,7 +3060,12 @@ ipcMain.handle("app-get-key-status", () => {
 
 ipcMain.handle("app-save-api-key", async (_, keys) => {
   const { esv } = keys || {};
-  if (esv && esv.trim()) {
+  // Pastors paste what the ESV site shows them, which often includes the
+  // literal word "Token" — that's the HTTP header prefix, not the key.
+  // Stripping it here prevents "Token Token abc" in the Authorization header.
+  const cleaned = typeof esv === "string" ? esv.trim().replace(/^token\s+/i, "") : "";
+  let unverified = false;
+  if (cleaned) {
     try {
       const res = await fetch(
         "https://api.esv.org/v3/passage/text/?q=John+3:16" +
@@ -3068,7 +3073,7 @@ ipcMain.handle("app-save-api-key", async (_, keys) => {
         "&include-verse-numbers=false&include-short-copyright=false" +
         "&include-passage-references=false",
         {
-          headers: { Authorization: `Token ${esv.trim()}` },
+          headers: { Authorization: `Token ${cleaned}` },
           signal: AbortSignal.timeout(8000),
         }
       );
@@ -3076,16 +3081,41 @@ ipcMain.handle("app-save-api-key", async (_, keys) => {
         return { success: false, error: "That key wasn't accepted by the ESV API — check it and try again." };
       }
     } catch (_) {
-      // Network unreachable — save the key anyway; user can fix it later
+      // Network unreachable — save the key anyway, but tell the renderer
+      // honestly so the pastor isn't surprised when passages don't load.
+      unverified = true;
     }
   }
   try {
-    saveKeys({ esv });
-    return { success: true };
+    saveKeys({ esv: cleaned });
+    return unverified ? { success: true, unverified: true } : { success: true };
   } catch (e) {
+    // Keystore failure (safeStorage unavailable). Raw OS-crypto wording
+    // never reaches the screen — author the plain version here.
     console.error("[app-save-api-key]", e.message);
-    return { success: false, error: e.message };
+    return {
+      success: false,
+      error:
+        "Windows couldn't store the key securely on this computer, so it wasn't saved. " +
+        "You can still use SermonForge — Bible passages just won't load automatically.",
+    };
   }
+});
+
+// app-open-external — open a URL in the system browser. The hard allowlist
+// is the whole defense: the renderer can request only these exact URLs,
+// never arbitrary ones. Extend the set deliberately, one URL at a time.
+const OPEN_EXTERNAL_ALLOWLIST = new Set([
+  "https://api.esv.org/",
+]);
+
+ipcMain.handle("app-open-external", async (_, url) => {
+  if (!OPEN_EXTERNAL_ALLOWLIST.has(url)) {
+    console.error("[app-open-external] blocked non-allowlisted URL:", String(url).slice(0, 200));
+    return { success: false };
+  }
+  await shell.openExternal(url);
+  return { success: true };
 });
 
 // The legacy "feedback-submit" IPC handler was removed in the public-launch

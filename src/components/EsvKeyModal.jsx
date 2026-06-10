@@ -1,55 +1,17 @@
 import { useState, useEffect } from "react";
-import { saveApiKeys } from "../db/database";
+import { saveApiKeys, openExternal } from "../db/database";
 import mapError from "../utils/mapError";
 import PrimaryButton from "./primitives/PrimaryButton";
 import SecondaryButton from "./primitives/SecondaryButton";
-import IconButton from "./primitives/IconButton";
-
-function KeyInput({ value, onChange, disabled }) {
-  const [show, setShow] = useState(false);
-  return (
-    <div style={{ position: "relative" }}>
-      <input
-        type={show ? "text" : "password"}
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        placeholder="Token ..."
-        disabled={disabled}
-        spellCheck={false}
-        style={{
-          width: "100%",
-          boxSizing: "border-box",
-          padding: "10px 48px 10px 12px",
-          fontSize: "13px",
-          fontFamily: "'JetBrains Mono', monospace",
-          border: "1px solid var(--parchment-deep)",
-          borderRadius: "4px",
-          background: "var(--parchment)",
-          color: "var(--ink)",
-          outline: "none",
-        }}
-      />
-      <IconButton
-        aria-label={show ? "Hide key" : "Show key"}
-        onClick={() => setShow(v => !v)}
-        disabled={disabled}
-        style={{
-          position: "absolute", right: "10px", top: "50%",
-          transform: "translateY(-50%)",
-          background: "none", border: "none",
-          color: "var(--ink-ghost)", fontSize: "12px", padding: "2px 4px",
-        }}
-      >
-        {show ? "hide" : "show"}
-      </IconButton>
-    </div>
-  );
-}
+import TextButton from "./primitives/TextButton";
+import KeyInput from "./primitives/KeyInput";
 
 export default function EsvKeyModal({ onClose }) {
   const [key, setKey] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  // false | "ok" | "unverified" — ok auto-closes; unverified waits for an
+  // explicit Close so the pastor actually reads the note.
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
@@ -59,7 +21,7 @@ export default function EsvKeyModal({ onClose }) {
   }, [onClose]);
 
   useEffect(() => {
-    if (!saved) return;
+    if (saved !== "ok") return;
     const t = setTimeout(() => onClose?.(), 1200);
     return () => clearTimeout(t);
   }, [saved, onClose]);
@@ -71,7 +33,7 @@ export default function EsvKeyModal({ onClose }) {
     try {
       const result = await saveApiKeys({ esv: key.trim() });
       if (result?.success) {
-        setSaved(true);
+        setSaved(result.unverified ? "unverified" : "ok");
       } else {
         setError(result?.error || "Failed to save.");
         setSaving(false);
@@ -104,22 +66,40 @@ export default function EsvKeyModal({ onClose }) {
         boxShadow: "0 4px 24px rgba(26,20,16,0.12)",
         fontFamily: "var(--font-serif)",
       }}>
-        {saved ? (
+        {saved === "ok" ? (
           <p style={{ textAlign: "center", color: "var(--ink)", fontSize: "15px", margin: 0 }}>
             ESV key saved.
           </p>
+        ) : saved === "unverified" ? (
+          <>
+            <p style={{ color: "var(--ink-mid)", fontSize: "14px", margin: "0 0 16px", lineHeight: 1.55 }}>
+              Saved — but we couldn't check the key just now (no internet, or
+              the ESV site didn't answer). If Bible passages don't load later,
+              open this window again and re-enter it.
+            </p>
+            <SecondaryButton onClick={onClose} style={{ width: "100%" }}>
+              Close
+            </SecondaryButton>
+          </>
         ) : (
           <>
             <h2 style={{ fontSize: "18px", fontWeight: 700, color: "var(--ink)", margin: "0 0 8px" }}>
               Update ESV API key
             </h2>
             <p style={{ fontSize: "13px", color: "var(--ink-mid)", margin: "0 0 16px", lineHeight: 1.55 }}>
-              Get a free key at <strong style={{ color: "var(--ink)" }}>api.esv.org</strong>.
-              Paste it below and save — the old key will be replaced.
+              Get a free key at{" "}
+              <TextButton
+                size="sm"
+                onClick={() => openExternal("https://api.esv.org/")}
+                style={{ fontSize: "13px", padding: 0, verticalAlign: "baseline" }}
+              >
+                api.esv.org
+              </TextButton>
+              . Paste it below and save — the old key will be replaced.
             </p>
             <KeyInput value={key} onChange={setKey} disabled={saving} />
             {error && (
-              <p style={{ fontSize: "13px", color: "#c0392b", margin: "10px 0 0", lineHeight: 1.5 }}>
+              <p style={{ fontSize: "13px", color: "var(--crimson-soft)", margin: "10px 0 0", lineHeight: 1.5 }}>
                 {error}
               </p>
             )}

@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-06-10 — First-run honesty: real ESV link, honest key saves, plain setup copy, New Sermon modal answers back
+
+- New `app-open-external` IPC with a hard exact-match allowlist (only `https://api.esv.org/`) — api.esv.org is now a real clickable link in SetupScreen and EsvKeyModal instead of bold text to retype.
+- Key saves are honest: a pasted "Token " prefix is stripped before validation; an offline save returns `unverified: true` and both screens say so plainly instead of pretending the key was checked; keystore failures speak plain English (raw OS-crypto wording goes to the log only).
+- Setup copy pass: "Create an API Application" steps match the real ESV site flow; "Usage reports and feedback" replaces "Telemetry"; the dead privacy.md pointer and the false "nothing leaves your device" claim are gone (self-contained disclosure); softer OneDrive caution; "Paste your key here" placeholders.
+- New Sermon modal: clicking Forge with an empty title now answers (inline message + focus) instead of a silently dead button; Escape closes; the Date field explains the dashboard nudge it drives; the silent series preselect got a visible caption.
+- KeyInput extracted to a shared primitive (was duplicated in both key screens). Sweep PASS; 706 tests.
+
+---
+
 ## 2026-06-10 — Sample sermon is a sandbox that lands on writing; ESV passages carry the Crossway line
 
 - "Open a sample sermon" no longer wipes the pastor's exploration on every click — an existing sample is returned as-is; a new "Start the sample fresh" text action under the row does the explicit reset (`{ fresh: true }` through spine → handler).

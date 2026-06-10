@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { saveApiKeys, setSetting } from "../db/database";
+import { saveApiKeys, setSetting, openExternal } from "../db/database";
 import mapError from "../utils/mapError";
 import InlineError from "./InlineError";
 import PrimaryButton from "./primitives/PrimaryButton";
-import IconButton from "./primitives/IconButton";
+import TextButton from "./primitives/TextButton";
+import KeyInput from "./primitives/KeyInput";
 
 const LABEL = {
   display: "block",
@@ -34,50 +35,23 @@ const SECTION = {
   marginTop: "24px",
 };
 
-function KeyInput({ value, onChange, placeholder }) {
-  const [show, setShow] = useState(false);
-  return (
-    <div style={{ position: "relative" }}>
-      <input
-        type={show ? "text" : "password"}
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        placeholder={placeholder}
-        spellCheck={false}
-        style={{
-          width: "100%",
-          boxSizing: "border-box",
-          padding: "10px 48px 10px 12px",
-          fontSize: "13px",
-          fontFamily: "'JetBrains Mono', monospace",
-          border: "1px solid var(--parchment-deep)",
-          borderRadius: "4px",
-          background: "var(--parchment)",
-          color: "var(--ink)",
-          outline: "none",
-        }}
-      />
-      <IconButton
-        aria-label={show ? "Hide API key" : "Show API key"}
-        onClick={() => setShow(v => !v)}
-        style={{
-          position: "absolute", right: "10px", top: "50%",
-          transform: "translateY(-50%)",
-          background: "none", border: "none",
-          color: "var(--ink-ghost)", fontSize: "12px", padding: "2px 4px",
-        }}
-      >
-        {show ? "hide" : "show"}
-      </IconButton>
-    </div>
-  );
-}
-
 export default function SetupScreen({ onComplete }) {
   const [esv, setEsv] = useState("");
   const [telemetryOn, setTelemetryOn] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  // Set when the key saved but couldn't be checked (no internet / ESV site
+  // didn't answer) — the screen pauses on an honest note + Continue instead
+  // of silently proceeding.
+  const [unverifiedNote, setUnverifiedNote] = useState(false);
+
+  async function finishSetup() {
+    try {
+      await setSetting("bti_telemetry_enabled", telemetryOn ? "true" : "false");
+      await window.electronAPI?.telemetrySetEnabled?.(telemetryOn);
+    } catch (_) {}
+    onComplete();
+  }
 
   async function handleSave() {
     if (saving) return;
@@ -86,11 +60,12 @@ export default function SetupScreen({ onComplete }) {
     try {
       const result = await saveApiKeys({ esv: esv.trim() });
       if (result?.success) {
-        try {
-          await setSetting("bti_telemetry_enabled", telemetryOn ? "true" : "false");
-          await window.electronAPI?.telemetrySetEnabled?.(telemetryOn);
-        } catch (_) {}
-        onComplete();
+        if (result.unverified && esv.trim()) {
+          setSaving(false);
+          setUnverifiedNote(true);
+          return;
+        }
+        await finishSetup();
       } else {
         setError(result?.error || "Failed to save.");
         setSaving(false);
@@ -146,15 +121,25 @@ export default function SetupScreen({ onComplete }) {
             the passage column stays empty.
           </p>
           <ol style={STEPS}>
-            <li>Go to <strong style={{ color: "var(--ink)" }}>api.esv.org</strong>, sign in or create an account</li>
-            <li>Get your ESV API key</li>
+            <li>
+              Go to{" "}
+              <TextButton
+                size="sm"
+                onClick={() => openExternal("https://api.esv.org/")}
+                style={{ fontSize: "14px", padding: 0, verticalAlign: "baseline" }}
+              >
+                api.esv.org
+              </TextButton>{" "}
+              and sign in or create an account
+            </li>
+            <li>On their site choose <strong style={{ color: "var(--ink)" }}>Create an API Application</strong> — your key appears on the next page</li>
             <li>Copy the key and paste it below</li>
           </ol>
           <label style={LABEL}>Your ESV API key <span style={{ color: "var(--ink-ghost)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(leave blank to skip)</span></label>
           <KeyInput
             value={esv}
             onChange={setEsv}
-            placeholder="Token ..."
+            placeholder="Paste your key here"
           />
         </div>
 
@@ -164,13 +149,36 @@ export default function SetupScreen({ onComplete }) {
           </div>
         )}
 
-        <PrimaryButton
-          onClick={handleSave}
-          disabled={saving}
-          style={{ width: "100%", marginTop: "24px" }}
-        >
-          {saving ? "Saving…" : esv.trim() ? "Save and Open SermonForge" : "Skip and Open SermonForge"}
-        </PrimaryButton>
+        {unverifiedNote ? (
+          <>
+            <p style={{
+              marginTop: "20px", marginBottom: 0,
+              padding: "12px 14px",
+              background: "var(--parchment-warm)",
+              border: "1px solid var(--parchment-deep)",
+              borderRadius: "4px",
+              color: "var(--ink-mid)", fontSize: "13px", lineHeight: 1.55,
+            }}>
+              Saved — but we couldn't check the key just now (no internet, or
+              the ESV site didn't answer). If Bible passages don't load later,
+              use the ESV key link at the bottom of the left sidebar.
+            </p>
+            <PrimaryButton
+              onClick={finishSetup}
+              style={{ width: "100%", marginTop: "16px" }}
+            >
+              Continue
+            </PrimaryButton>
+          </>
+        ) : (
+          <PrimaryButton
+            onClick={handleSave}
+            disabled={saving}
+            style={{ width: "100%", marginTop: "24px" }}
+          >
+            {saving ? "Saving…" : esv.trim() ? "Save and Open SermonForge" : "Skip and Open SermonForge"}
+          </PrimaryButton>
+        )}
 
         <p style={FINE_PRINT}>
           The ESV key is stored securely on this machine and only sent to Crossway when you load passages.
@@ -181,17 +189,17 @@ export default function SetupScreen({ onComplete }) {
             fontFamily: "var(--font-serif)",
             fontSize: "14px", color: "var(--ink)", margin: "0 0 8px",
           }}>
-            Telemetry and feedback
+            Usage reports and feedback
           </h2>
           <p style={{ color: "var(--ink-mid)", fontSize: "13px", lineHeight: "1.55", margin: "0 0 10px" }}>
-            SermonForge sends a small amount of usage data to its developer — things like which buttons
-            you press, when something crashes, and any flags or feedback you choose to send.
-            <strong> Sermon content is never captured.</strong>
+            SermonForge sends small usage reports to its developer — which buttons get
+            pressed, when something crashes, and any feedback you choose to send.
+            <strong> Sermon content is never included.</strong>
           </p>
           <p style={{ color: "var(--ink-mid)", fontSize: "13px", lineHeight: "1.55", margin: "0 0 10px" }}>
-            Data goes to a developer-controlled endpoint — no third-party analytics. Full details in the
-            privacy doc shipped with the app (<code style={{ fontFamily: "monospace" }}>docs/REFERENCE/privacy.md</code>).
-            You can turn this off below; if you do, nothing leaves your device.
+            Reports go only to the developer, never to advertisers or analytics companies.
+            Turn this off below and SermonForge stops sending them — loading Bible passages
+            and checking for updates still use the internet.
           </p>
           <label style={{
             display: "flex",
@@ -216,8 +224,8 @@ export default function SetupScreen({ onComplete }) {
         </div>
 
         <p style={FINE_PRINT}>
-          <strong style={{ color: "var(--ink-soft)" }}>Note:</strong> avoid running SermonForge from a
-          OneDrive-synced folder. Cloud sync can corrupt the local database.
+          <strong style={{ color: "var(--ink-soft)" }}>One caution:</strong> install SermonForge on the
+          computer itself, not inside a OneDrive or Dropbox folder — synced folders can damage its files.
         </p>
       </div>
     </div>

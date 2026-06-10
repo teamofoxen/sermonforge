@@ -224,12 +224,28 @@ to resolve. No API key value ever crosses the IPC boundary.
 ### `"app-save-api-key"`
 ```
 receives: { esv?: string }
-returns:  { success: true } | { success: false, error: string }
+returns:  { success: true, unverified?: true } | { success: false, error: string }
 ```
 Stores the user-provided ESV key via Electron `safeStorage` (packaged
 builds) or `process.env` (dev). Channel name preserved for renderer-side
 compatibility; ESV is the only key the app accepts (ARI Phase 8,
 2026-05-09 — Anthropic key handling removed alongside the AI subsystem).
+A leading `Token ` prefix is stripped before validation and save (pastors
+paste it from the ESV site's examples). When the verification request
+can't reach the ESV API (offline), the key is still saved and the result
+carries `unverified: true` so the renderer can say so honestly. Keystore
+failures return plain-English `error` copy; the raw message goes to the
+log only.
+
+### `"app-open-external"`
+```
+receives: url: string
+returns:  { success: bool }
+```
+Opens a URL in the system browser via `shell.openExternal`. The main
+process enforces a hard exact-match allowlist (currently only
+`https://api.esv.org/`) — non-allowlisted URLs are refused and logged,
+never opened. Extend the allowlist deliberately, one URL at a time.
 
 ### `"app-get-startup-warning"`
 ```

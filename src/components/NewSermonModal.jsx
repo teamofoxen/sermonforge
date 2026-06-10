@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { createSermon, getAllSeries } from "../core/spine";
 import mapError from "../utils/mapError";
 import InlineError from "./InlineError";
@@ -15,19 +15,38 @@ export default function NewSermonModal({ onClose, onCreated }) {
   const [seriesList, setSeriesList] = useState([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  // Id of the series we auto-selected (exactly one in progress) — the
+  // convenience stays, but it gets a visible caption instead of silence.
+  const [autoSelectedId, setAutoSelectedId] = useState(null);
+  const titleRef = useRef(null);
 
   useEffect(() => {
     getAllSeries()
       .then((list) => {
         setSeriesList(list);
         const inProgress = list.filter((s) => s.status === SERIES_STATUS.InProgress);
-        if (inProgress.length === 1) setSeriesId(inProgress[0].id);
+        if (inProgress.length === 1) {
+          setSeriesId(inProgress[0].id);
+          setAutoSelectedId(inProgress[0].id);
+        }
       })
       .catch(console.error);
   }, []);
 
+  // Escape closes — same pattern as every sibling overlay.
+  useEffect(() => {
+    function onKey(e) { if (e.key === "Escape") onClose?.(); }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
   async function handleCreate() {
-    if (!title.trim() || saving) return;
+    if (saving) return;
+    if (!title.trim()) {
+      setError("Give the sermon a title first — everything else can wait.");
+      titleRef.current?.focus();
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -55,6 +74,7 @@ export default function NewSermonModal({ onClose, onCreated }) {
           <div className="field-group">
             <label className="field-label">Title *</label>
             <input
+              ref={titleRef}
               className="field-input"
               placeholder="Sermon title…"
               value={title}
@@ -81,6 +101,10 @@ export default function NewSermonModal({ onClose, onCreated }) {
               value={date}
               onChange={(e) => setDate(e.target.value)}
             />
+            <p className="field-caption">
+              The Sunday you plan to preach it. SermonForge uses this to sort
+              your sermons and nudge you on the dashboard once the date passes.
+            </p>
           </div>
 
           <div className="field-group">
@@ -95,6 +119,12 @@ export default function NewSermonModal({ onClose, onCreated }) {
                 <option key={s.id} value={s.id}>{s.title}</option>
               ))}
             </select>
+            {autoSelectedId && seriesId === autoSelectedId && (
+              <p className="field-caption">
+                Filed under your current series. Choose "— No series —" if this
+                one stands alone.
+              </p>
+            )}
           </div>
 
           {error && <InlineError onDismiss={() => setError(null)}>{error}</InlineError>}
@@ -102,9 +132,11 @@ export default function NewSermonModal({ onClose, onCreated }) {
 
         <div className="modal-footer">
           <SecondaryButton onClick={onClose}>Cancel</SecondaryButton>
+          {/* Not disabled on empty title — a click always answers (inline
+              message + focus) instead of a silently dead button. */}
           <PrimaryButton
             onClick={handleCreate}
-            disabled={!title.trim() || saving}
+            disabled={saving}
           >
             {saving ? "Saving…" : "Forge Sermon"}
           </PrimaryButton>

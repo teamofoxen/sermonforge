@@ -823,6 +823,13 @@ button {
   font-weight: 500;
 }
 
+.field-caption {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink-ghost);
+}
+
 .field-input, .field-textarea {
   width: 100%;
   font-family: 'IBM Plex Serif', serif;

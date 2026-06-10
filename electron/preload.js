@@ -35,6 +35,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getApiKeyStatus: () => ipcRenderer.invoke("app-get-key-status"),
   saveApiKeys:     (keys) => ipcRenderer.invoke("app-save-api-key", keys),
 
+  // ── External links (hard-allowlisted in main) ─────────────────────────────
+  openExternal: (url) => ipcRenderer.invoke("app-open-external", url),
+
   // ── Feedback ──────────────────────────────────────────────────────────────
   getSchemaVersion: () => ipcRenderer.invoke("db-getSchemaVersion"),
   getAppVersion:    () => ipcRenderer.invoke("app-get-version"),
