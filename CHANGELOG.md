@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-06-09 — Public-launch hardening: secrets, data survival, crash recovery, Outline/Equip/Manuscript
+
+- Removed the bundled `.env` from the installer (it shipped developer secrets); telemetry now uses a hardcoded public Worker URL with a token-free, payload-validated `/ingest`, and the dead GitHub feedback path was deleted.
+- Hardened the DB boot/save path: single-instance lock, fsync-before-rotate, transient-lock-vs-corruption detection, `PRAGMA quick_check`, conditional boot-flush, legacy-resolver fixes, and user-visible recovery warnings.
+- Ended eternal-splash and silent crashes: boot + macOS-reopen + renderer-crash handlers, a packaged bridge-failure screen, ErrorBoundary over first-run, and a quit-time save retry.
+- Drafted Outline/Equip/Manuscript field-defs (Merida-grounded) with new writing-surface editors that author the native columns the Word export reads; synced flat `mpt`/`mps` from the v19 envelope.
+
+---
+
 ## 2026-05-22 — Passage popup fits the empty left space; writing field nudged right for breathing room
 
 - `.passage-popup` width changed from a fixed `360px` to `calc(50vw - 408px)` with `max-width: 360px` / `min-width: 280px` so the popup fills the empty space to the left of the centered 720px writing field without overlapping it.
