@@ -132,8 +132,12 @@ Running underneath all three tiers. The cohort is high-trust, so beta telemetry 
 - **`app-open`** — when the app launches.
 - **`panel-time`** / **`field-time`** — how long a panel or field has focus, recorded in summary form (no keystrokes).
 - **`sermon-create`** / **`sermon-finish`** — sermon-level lifecycle markers, with sermon ID.
-- **`tour-step`** — which tour step the tester reached.
 - **`crash`** — when the app errors.
+
+> Amended 2026-06-10: the `tour-step` event was removed from this list. The
+> tour engine (and with it the `TOUR_STEP` emitter) was deleted in the
+> 2026-05-17 tour cleanup; no source emits the event, so the charter no
+> longer commits to tracking it.
 
 Two separate decisions sit on top of this list: which signals to capture (Q3) and how to interpret each one once captured (Q3b). Q3b is not optional and not downstream of Q3 — short time-on-field could equally mean "the question landed and the pastor knew the answer immediately" or "the pastor wrote the obvious answer and moved on." Each retained signal needs both rulings, separately, before it tells the developer anything about a failure mode.
 

@@ -40,12 +40,29 @@
   border-bottom: 1px solid var(--parchment-deep);
 }
 
-.wnd-stage-label {
+.wnd-tabs {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.wnd-tabs .wnd-tab {
   font-family: var(--font-mono);
   font-size: 11px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
+  color: var(--ink-ghost);
+  padding: 2px 0;
+  text-decoration: none;
+}
+
+.wnd-tabs .wnd-tab:hover {
   color: var(--ink-soft);
+}
+
+.wnd-tabs .wnd-tab.is-active {
+  color: var(--ink);
+  border-bottom: 2px solid var(--gold-bright);
 }
 
 .wnd-close {

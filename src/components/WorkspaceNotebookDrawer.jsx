@@ -1,14 +1,17 @@
 import { useEffect, useRef } from "react";
+import TextButton from "./primitives/TextButton";
 import "./workspaceNotebookDrawer.css";
 
-// WorkspaceNotebookDrawer — bottom-slide overlay that hosts the current
-// stage's notebook column. Decision 2 (Phase D2): the production app does
-// not ship without a notebook surface the preacher has today; the drawer
+// WorkspaceNotebookDrawer — bottom-slide overlay that hosts a per-stage
+// notebook column. Decision 2 (Phase D2): the production app does not
+// ship without a notebook surface the preacher has today; the drawer
 // preserves it across the writing-surface rewrite.
 //
 // Per-stage column dispatch happens in the parent (SermonWorkspace);
-// this component just renders the value and emits changes. Same controlled-
-// component pattern as the other writing-surface overlays.
+// this component renders the value, emits changes, and lets the pastor
+// switch notebooks via the header tabs — the three notebooks used to
+// switch silently with the stage, which read as "my Study notes
+// vanished" the first time someone entered Assembly.
 
 const STAGE_LABEL = {
   Study: "Study notebook",
@@ -16,7 +19,7 @@ const STAGE_LABEL = {
   Manuscript: "Manuscript notebook",
 };
 
-export default function WorkspaceNotebookDrawer({ stage, value, onChange, onClose }) {
+export default function WorkspaceNotebookDrawer({ stage, value, onChange, onStageChange, onClose }) {
   const textareaRef = useRef(null);
 
   useEffect(() => {
@@ -43,7 +46,19 @@ export default function WorkspaceNotebookDrawer({ stage, value, onChange, onClos
         aria-label={STAGE_LABEL[stage] ?? "Notebook"}
       >
         <div className="wnd-header">
-          <span className="wnd-stage-label">{STAGE_LABEL[stage] ?? "Notebook"}</span>
+          <div className="wnd-tabs" aria-label="Notebooks">
+            {Object.keys(STAGE_LABEL).map((s) => (
+              <TextButton
+                key={s}
+                size="sm"
+                className={"wnd-tab" + (s === stage ? " is-active" : "")}
+                aria-pressed={s === stage}
+                onClick={() => onStageChange?.(s)}
+              >
+                {STAGE_LABEL[s]}
+              </TextButton>
+            ))}
+          </div>
           <button
             type="button"
             className="wnd-close"

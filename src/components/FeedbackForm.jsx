@@ -10,20 +10,22 @@ import SecondaryButton from "./primitives/SecondaryButton";
 import IconButton from "./primitives/IconButton";
 import "./feedbackForm.css";
 
-// Dimension order matches the charter's Feedback Dimensions section
-// (docs/PROPOSALS/beta-testing-initiative.md, post-ARI rewrite 2026-05-09).
-// Default selection is "What surprised you" — the open-ended catch-all.
+// Stored values stay the charter's dimension ids (telemetry keys on them;
+// docs/PROPOSALS/beta-testing-initiative.md, post-ARI rewrite 2026-05-09).
+// The LABELS speak pastor, not charter — "Structural overreach" was the
+// analysis team's vocabulary leaking into the cohort's primary feedback
+// channel. Default selection is the open-ended catch-all.
 const DIMENSIONS = [
-  { value: "structural-overreach", label: "Structural overreach" },
-  { value: "workflow-fit", label: "Workflow-fit" },
-  { value: "question-quality", label: "Question quality" },
-  { value: "trust", label: "Trust" },
-  { value: "friction-and-surprise", label: "Friction and surprise" },
-  { value: "onboarding-and-first-run", label: "Onboarding and first-run" },
-  { value: "reliability-and-weirdness", label: "Reliability and weirdness" },
-  { value: "performance-and-feel", label: "Performance and feel" },
-  { value: "voice-and-frame", label: "Voice and frame" },
-  { value: "what-surprised-you", label: "What surprised you" },
+  { value: "structural-overreach", label: "The structure got in my way" },
+  { value: "workflow-fit", label: "Doesn't fit how I actually prepare" },
+  { value: "question-quality", label: "A question that didn't land" },
+  { value: "trust", label: "Something I didn't trust" },
+  { value: "friction-and-surprise", label: "Something slowed me down" },
+  { value: "onboarding-and-first-run", label: "Getting started" },
+  { value: "reliability-and-weirdness", label: "Something broke or acted strange" },
+  { value: "performance-and-feel", label: "Slow or clunky" },
+  { value: "voice-and-frame", label: "The wording or tone" },
+  { value: "what-surprised-you", label: "Something else I noticed" },
 ];
 
 const DEFAULT_DIMENSION = "what-surprised-you";
@@ -95,12 +97,12 @@ export default function FeedbackForm({ onClose, sermonId = null, step = null }) 
           <>
             <div className="feedback-form-body">
               <div className="feedback-form-intro">
-                One dimension at a time. Tell me what's in the way, what's missing,
-                what surprised you. The honest version, not the polite version.
+                Tell me what's in the way, what's missing, what surprised you.
+                The honest version, not the polite version.
               </div>
 
               <div>
-                <div className="feedback-form-label" style={{ marginBottom: 4 }}>Dimension</div>
+                <div className="feedback-form-label" style={{ marginBottom: 4 }}>What's it about</div>
                 <select
                   className="feedback-form-select"
                   value={dimension}

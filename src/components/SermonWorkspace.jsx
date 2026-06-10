@@ -347,12 +347,17 @@ export default function SermonWorkspace({
     handleUpdate({ thresholds_seen: nextThresholdsSeen(sermon, id) });
   }, [sermon, handleUpdate]);
 
+  // Which notebook the drawer is viewing. null = follow the current
+  // position's stage (the default on open); a value means the pastor
+  // switched tabs inside the drawer.
+  const [notebookStage, setNotebookStage] = useState(null);
+
   const handleNotebookChange = useCallback((value) => {
     if (!sermon) return;
-    const pos = deriveCurrentPositionFromSermon(sermon);
-    const col = NOTEBOOK_COLUMN_BY_STAGE[pos.stage] ?? "notebook_study";
+    const stage = notebookStage ?? deriveCurrentPositionFromSermon(sermon).stage;
+    const col = NOTEBOOK_COLUMN_BY_STAGE[stage] ?? "notebook_study";
     handleUpdate({ [col]: value });
-  }, [sermon, handleUpdate]);
+  }, [sermon, notebookStage, handleUpdate]);
 
   // Map jump and handoff jump both share the pattern: flush, write
   // position, optionally mark a threshold seen, close any overlay.
@@ -486,7 +491,8 @@ export default function SermonWorkspace({
   // Notebook column + value derived from the current stage. The handler
   // (handleNotebookChange) lives above with the other useCallbacks and
   // re-derives the column inside its body; here we just read for render.
-  const notebookColumn = NOTEBOOK_COLUMN_BY_STAGE[position.stage] ?? "notebook_study";
+  const viewedNotebookStage = notebookStage ?? position.stage;
+  const notebookColumn = NOTEBOOK_COLUMN_BY_STAGE[viewedNotebookStage] ?? "notebook_study";
   const notebookValue = typeof sermon[notebookColumn] === "string" ? sermon[notebookColumn] : "";
 
   // Series position for the topbar.
@@ -644,7 +650,10 @@ export default function SermonWorkspace({
             onPositionChange={handlePositionChange}
             beforePositionChange={beforePositionChange}
             onOpenMap={() => setMapOpen(true)}
-            onOpenNotebook={() => setNotebookOpen(true)}
+            onOpenNotebook={() => {
+              setNotebookStage(null); // open on the current stage's notebook
+              setNotebookOpen(true);
+            }}
             onOpenFinish={() => setFinishOpen(true)}
             highlightQuestion={jumpHighlight}
             onHighlightDone={clearJumpHighlight}
@@ -712,9 +721,10 @@ export default function SermonWorkspace({
       )}
       {notebookOpen && (
         <WorkspaceNotebookDrawer
-          stage={position.stage}
+          stage={viewedNotebookStage}
           value={notebookValue}
           onChange={handleNotebookChange}
+          onStageChange={setNotebookStage}
           onClose={() => setNotebookOpen(false)}
         />
       )}

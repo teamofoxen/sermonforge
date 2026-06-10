@@ -44,7 +44,7 @@ Tester ID: opaque UUID generated at first-run, stored in user prefs. Survives re
 
 In-process bus (`electron/telemetry/bus.js`) with `emit(eventType, payload)`. Local buffer at `userData/telemetry/<session-id>.ndjson`, flushed every 30s and on `before-quit`. Transport (`electron/telemetry/transport.js`) reads NDJSON, batches to the Worker, retries on offline / 5xx with exponential backoff. Renderer events flow through `window.electronAPI.telemetryEmit(eventType, payload)` → `telemetry-emit` IPC → `bus.emit`.
 
-Event constants registered in `electron/telemetry/events.js`: `app-open`, `ai-press`, `ai-proposal`, `panel-time`, `field-time`, `sermon-create`, `sermon-finish`, `tour-step`, `crash`. Mirrors the existing audit-log infrastructure (ACC E1).
+Event constants registered in `electron/telemetry/events.js`: `app-open`, `ai-press`, `ai-proposal`, `panel-time`, `field-time`, `sermon-create`, `sermon-finish`, `crash`. Mirrors the existing audit-log infrastructure (ACC E1). (Amended 2026-06-10: `tour-step` removed from this list — the tour engine and its `TOUR_STEP` emitter were deleted in the 2026-05-17 tour cleanup, so the constant no longer exists.)
 
 ### Chunk 3 — Flag button at AI surfaces *(shipped 2026-05-08, commit `5512a51`)*
 

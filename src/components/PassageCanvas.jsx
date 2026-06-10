@@ -57,21 +57,27 @@ export default function PassageCanvas({ rows, onChange }) {
   const safeRows = ensureSeed(rows);
   const refs = useRef(new Map());
   const focusNextRef = useRef(null);
-  const [pasteHint, setPasteHint] = useState(false);
-  const pasteHintTimer = useRef(null);
+  // One transient hint slot — any silent refusal (blocked paste, indent
+  // at the depth limit) explains itself here instead of doing nothing.
+  const [hint, setHint] = useState(null);
+  const hintTimer = useRef(null);
 
   useEffect(() => () => {
-    if (pasteHintTimer.current) clearTimeout(pasteHintTimer.current);
+    if (hintTimer.current) clearTimeout(hintTimer.current);
+  }, []);
+
+  const showHint = useCallback((text) => {
+    setHint(text);
+    if (hintTimer.current) clearTimeout(hintTimer.current);
+    hintTimer.current = setTimeout(() => setHint(null), PASTE_HINT_MS);
   }, []);
 
   // Paste is blocked — typing by hand IS the discipline (ruling 8 lists this
   // under "what stays," not optional). Cut/copy stay; only paste is refused.
   const handlePaste = useCallback((e) => {
     e.preventDefault();
-    setPasteHint(true);
-    if (pasteHintTimer.current) clearTimeout(pasteHintTimer.current);
-    pasteHintTimer.current = setTimeout(() => setPasteHint(false), PASTE_HINT_MS);
-  }, []);
+    showHint("Type the passage by hand — paste is blocked here.");
+  }, [showHint]);
 
   useEffect(() => {
     if (!focusNextRef.current) return;
@@ -120,7 +126,11 @@ export default function PassageCanvas({ rows, onChange }) {
         e.preventDefault();
         const delta = e.shiftKey ? -1 : 1;
         const nextDepth = Math.max(0, Math.min(MAX_DEPTH, row.depth + delta));
-        if (nextDepth === row.depth) return;
+        if (nextDepth === row.depth) {
+          // Refusing silently reads as "broken" — say why nothing moved.
+          if (delta > 0) showHint("That's as deep as the indent goes.");
+          return;
+        }
         const next = safeRows.map((r) =>
           r.id === id ? { ...r, depth: nextDepth } : r
         );
@@ -221,11 +231,16 @@ export default function PassageCanvas({ rows, onChange }) {
           registerRef={registerRef}
         />
       ))}
-      {pasteHint && (
+      {hint && (
         <div className="pc-paste-hint" role="status" aria-live="polite">
-          Type the passage by hand — paste is blocked here.
+          {hint}
         </div>
       )}
+      {/* The canvas's core gesture is invisible without this — Tab is the
+          only way to indent and nothing else on screen says so. */}
+      <div className="pc-legend" aria-hidden="true">
+        Tab to indent · Shift+Tab to outdent · Enter for a new line
+      </div>
     </div>
   );
 }

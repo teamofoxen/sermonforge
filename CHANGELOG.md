@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-06-10 — Riders: feedback speaks pastor, notebooks stop vanishing, the canvas explains itself
+
+- FeedbackForm: "Dimension" and the charter's category names ("Structural overreach"…) replaced with plain labels ("The structure got in my way", "Something broke or acted strange"…) — stored telemetry values unchanged, so analysis keys still match.
+- The notebook drawer gained header tabs for all three per-stage notebooks — switching stages no longer silently swaps notebooks ("my Study notes vanished"); the drawer opens on the current stage and switches freely.
+- PassageCanvas: a standing legend ("Tab to indent · Shift+Tab to outdent · Enter for a new line") makes the field's core gesture visible; the indent-at-limit refusal now explains itself through the same hint slot paste uses. The audited Backspace no-op no longer exists — the unified-canvas refactor made Backspace outdent or merge.
+- BTI charter docs amended (dated notes): the dead `tour-step` telemetry commitment is dropped from beta-testing-initiative.md and bti-build-mvp.md (emitter deleted in the 2026-05-17 tour cleanup); privacy.md was already clean.
+
+---
+
 ## 2026-06-10 — The frame stops speaking developer: real menu, quiet updates, a support address that exists
 
 - New pastor-shaped application menu (File/Edit/View/Help) replaces Electron's stock one — Reload/DevTools/Electron-website links are gone from packaged builds (the stock Ctrl+R edit-destroyer dies with them); Edit keeps full clipboard roles; View offers plain-named text zoom; Help carries Check for Updates, Email Support, Website, Open Data Folder, and an About dialog hosting the real version + the full Crossway ESV notice.
