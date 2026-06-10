@@ -1901,6 +1901,14 @@ button {
   text-align: center;
 }
 
+.passage-popup-copyright {
+  padding: 8px 20px 14px;
+  font-family: 'IBM Plex Serif', serif;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--ink-ghost);
+}
+
 .passage-popup-columns {
   display: flex;
   flex-direction: column;
@@ -2529,6 +2537,11 @@ button {
   transition: transform 0.18s ease, opacity 0.15s ease, color 0.15s ease;
   flex-shrink: 0;
 }
+.dash-row-aux {
+  padding: 2px 2px 0;
+  align-self: flex-start;
+}
+
 .dash-rows-section-label {
   font-family: 'JetBrains Mono', monospace;
   font-size: 10px;

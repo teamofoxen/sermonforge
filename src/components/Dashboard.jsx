@@ -6,6 +6,7 @@ import DashboardVerseCarousel from "./DashboardVerseCarousel";
 import DashboardPreacherQuote from "./DashboardPreacherQuote";
 import PrimaryButton from "./primitives/PrimaryButton";
 import SecondaryButton from "./primitives/SecondaryButton";
+import TextButton from "./primitives/TextButton";
 import DeleteButton from "./primitives/DeleteButton";
 import { formatDate } from "../utils";
 
@@ -57,11 +58,11 @@ export default function Dashboard({ onOpenSermon }) {
     setPreachedIds((prev) => new Set(prev).add(id));
   }
 
-  async function openSampleSermon() {
+  async function openSampleSermon(fresh = false) {
     if (loadingSample) return;
     setLoadingSample(true);
     try {
-      const result = await loadSampleSermon();
+      const result = await loadSampleSermon({ fresh });
       if (result?.sermonId && onOpenSermon) {
         onOpenSermon(result.sermonId);
       }
@@ -134,6 +135,17 @@ export default function Dashboard({ onOpenSermon }) {
                   disabled={loadingSample}
                   onClick={() => openSampleSermon()}
                 />
+                {/* The sample is a sandbox — opening it again returns it as
+                    the pastor left it. This is the explicit reset. */}
+                <div className="dash-row-aux">
+                  <TextButton
+                    size="sm"
+                    disabled={loadingSample}
+                    onClick={() => openSampleSermon(true)}
+                  >
+                    Start the sample fresh
+                  </TextButton>
+                </div>
               </div>
             </div>
           </div>

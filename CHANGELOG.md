@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-06-10 — Sample sermon is a sandbox that lands on writing; ESV passages carry the Crossway line
+
+- "Open a sample sermon" no longer wipes the pastor's exploration on every click — an existing sample is returned as-is; a new "Start the sample fresh" text action under the row does the explicit reset (`{ fresh: true }` through spine → handler).
+- The seed now lands inside the finished work: `last_touched_position` points at the first Manuscript field and both entry thresholds are pre-seen, so the curious pastor opens on writing instead of the sermon-start overlay. Landing state authored in sampleData.js with the rest of the seed.
+- PassagePopup shows the short Crossway attribution under displayed ESV text (wording verified against api.esv.org conditions; the full notice lands on the About screen in the shell-trust batch).
+- Test-spine stub mirrors the new sandbox semantics. Sweep PASS; 706 tests.
+
+---
+
 ## 2026-06-10 — Thresholds are re-readable: map "Read again" doors, handoff returns until closed, start overlay teaches the controls
 
 - The map header gained a "Read again" row — the sermon-start screen ("the walk ahead") and the Study → Anchor handoff re-open view-only from anywhere, without touching thresholds_seen.

@@ -264,8 +264,11 @@ export function deleteSection(id: string): Promise<void> {
   return call("delete-section", id);
 }
 
-export function loadSampleSermon(): Promise<{ sermonId: string }> {
-  return call("load-sample-sermon");
+// Sandbox semantics: without `fresh`, an existing sample is returned as-is
+// (the pastor's exploration survives re-entry); `fresh: true` deletes and
+// reseeds — the dashboard's explicit "Start the sample fresh".
+export function loadSampleSermon(opts?: { fresh?: boolean }): Promise<{ sermonId: string; created: boolean }> {
+  return call("load-sample-sermon", opts?.fresh ? { fresh: true } : undefined);
 }
 
 // ── transitionState — position-writer (post-Phase-G) ─────────────────────────

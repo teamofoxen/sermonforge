@@ -2137,9 +2137,14 @@ function validateAndCommit(op, payload) {
 
     case "load-sample-sermon": {
       const { SERMON_ID, series, sermon } = require("./sampleData");
-      // Delete-then-insert on every click — the seed is for exploration,
-      // not persistent work, and resetting picks up schema/content
-      // changes immediately.
+      // Sandbox semantics: an existing sample is returned as-is, so the
+      // pastor's poking-around survives re-entry. Passing { fresh: true }
+      // (the dashboard's "Start the sample fresh") deletes and reseeds —
+      // which is also how schema/content changes to the seed get picked up.
+      const fresh = payload?.fresh === true;
+      if (!fresh && queryOne("SELECT id FROM sermons WHERE id = ?", [SERMON_ID])) {
+        return success({ sermonId: SERMON_ID, created: false });
+      }
       dbRun("BEGIN");
       try {
         dbRun("DELETE FROM sermons WHERE id LIKE 'sample-%'");
@@ -2169,8 +2174,9 @@ function validateAndCommit(op, payload) {
             manuscript, delivery_notes, timing_notes,
             study_guide_note, sermon_frame,
             current_stage, current_sub_phase,
-            last_study_subphase, last_assembly_subphase
-          ) VALUES (?,?,0,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+            last_study_subphase, last_assembly_subphase,
+            last_touched_position, thresholds_seen
+          ) VALUES (?,?,0,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
           [
             sermon.id, sermon.series_id, sermon.title, sermon.passage, sermon.date, sermon.stage,
             sermon.mpt, sermon.mps,
@@ -2184,6 +2190,9 @@ function validateAndCommit(op, payload) {
             // sub-phase of each stage so re-opens land at the beginning,
             // regardless of where the pastor wandered last time.
             SUB_PHASE.Observe, SUB_PHASE.Anchor,
+            // Landing state (first Manuscript field, thresholds pre-seen)
+            // is seed content — authored in sampleData.js with the rest.
+            sermon.last_touched_position, sermon.thresholds_seen,
           ],
         );
         dbRun("COMMIT");

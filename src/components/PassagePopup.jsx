@@ -169,6 +169,16 @@ export default function PassagePopup({ passage, isOpen, onClose, initialPosition
           />
         </div>
       )}
+
+      {/* Crossway attribution — required with displayed ESV text (short
+          form per api.esv.org conditions; the full notice lives on the
+          About screen). */}
+      {!loading && !data?.fetchError && data?.esv && (
+        <div className="passage-popup-copyright">
+          ESV® Bible © 2001 by Crossway, a publishing ministry of Good News
+          Publishers. Used by permission.
+        </div>
+      )}
     </div>,
     document.body
   );

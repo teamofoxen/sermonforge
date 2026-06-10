@@ -428,10 +428,19 @@ function validateAndCommit(op: string, payload: any) {
     }
     case "load-sample-sermon": {
       const id = "sample-test-sermon";
+      // Mirrors production sandbox semantics (T10, 2026-06-10): an existing
+      // sample is returned as-is; only { fresh: true } reseeds.
+      if (sermons.has(id) && payload?.fresh !== true) {
+        return success({ sermonId: id, created: false });
+      }
       sermons.set(id, {
         id, title: "Sample sermon", stage: SERMON_STATUS.InProgress,
         current_stage: STAGE.Study, current_sub_phase: SUB_PHASE.Observe,
         outline: "[]", functional_elements: "{}", observations: "", created_at: new Date().toISOString(),
+        // Production seeds the sample to land on the first Manuscript field
+        // with both entry thresholds pre-seen.
+        last_touched_position: "Manuscript/Manuscript/introduction",
+        thresholds_seen: JSON.stringify(["sermon-start", "study-to-anchor-handoff"]),
       });
       return success({ sermonId: id, created: true });
     }

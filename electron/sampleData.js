@@ -23,7 +23,7 @@
 
 "use strict";
 
-const { SERMON_STATUS, SERIES_STATUS } = require("./contracts.cjs");
+const { SERMON_STATUS, SERIES_STATUS, STAGE } = require("./contracts.cjs");
 
 // ── Fixed IDs ─────────────────────────────────────────────────────────────────
 
@@ -87,6 +87,14 @@ const sermon = {
   passage: "Romans 5:1-5",
   date: "2026-09-13",
   stage: SERMON_STATUS.InProgress,
+
+  // Landing state — the sample opens inside the finished work (the first
+  // Manuscript field) with both entry thresholds pre-seen, so the curious
+  // pastor lands on writing, not the sermon-start overlay. Threshold ids
+  // mirror THRESHOLD_ID in src/utils/sermonState.js; the position string is
+  // the canonical slash-composite (Manuscript doubles as its own sub-phase).
+  last_touched_position: `${STAGE.Manuscript}/${STAGE.Manuscript}/introduction`,
+  thresholds_seen: JSON.stringify(["sermon-start", "study-to-anchor-handoff"]),
   mpt: "Paul taught that those justified by faith already stand in unshakeable peace with God, and therefore can endure suffering as a chain that produces a hope which does not put them to shame — because that hope rests on God's love already poured into their hearts by the Spirit.",
   mps: "The hope that holds in suffering is not something you build — it is anchored in a love that has already been poured into you.",
 
