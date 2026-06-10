@@ -5,6 +5,8 @@
 }
 
 :root {
+  color-scheme: light;
+  --scrim: rgba(26, 20, 16, 0.45);
   --ink: #1a1410;
   --ink-mid: #3d3229;
   --ink-soft: #6b5c4e;
@@ -37,10 +39,16 @@
 }
 
 [data-theme="dark"] {
+  color-scheme: dark;
+  --scrim: rgba(0, 0, 0, 0.6);
   --ink: #d8cfc5;
   --ink-mid: #b8a898;
-  --ink-soft: #8a7a6c;
-  --ink-ghost: #bfb0a0;
+  /* Ink ramp ordered by brightness — soft sits between mid and ghost so
+     emphasis reads the same direction as light mode (the previous values
+     had ghost BRIGHTER than soft, scrambling done/not-done shading in the
+     map and every placeholder/fine-print pairing). */
+  --ink-soft: #a09080;
+  --ink-ghost: #8a7a6c;
   --parchment: #1a1614;
   --parchment-warm: #201c18;
   --parchment-deep: #2a2420;
@@ -48,9 +56,16 @@
   --dark-header-bg: #1e1a16;
   --gold: #c8960f;
   --gold-bright: #e0ae1a;
-  --gold-pale: #f0e4b8;
+  /* Dark amber SURFACE (not a light fill) — search-hit <mark>, passage-chip
+     hover, and .scripture-ref pills keep the gold identity with readable
+     ink on top instead of light-on-light. */
+  --gold-pale: #3d3217;
   --crimson: #c0392b;
   --crimson-soft: #e74c3c;
+  /* Sage as TEXT must clear the dark card — the light-theme value was
+     ~2.3:1 here. (Light mode's --sage-soft.) */
+  --sage: #6b9c60;
+  --slate: #8fa3b8;
   --shadow-soft: 0 2px 12px rgba(0,0,0,0.35);
   --shadow-med: 0 4px 24px rgba(0,0,0,0.45);
   --shadow-deep: 0 8px 40px rgba(0,0,0,0.55);
@@ -286,6 +301,8 @@ body {
   --topbar-fg-muted:  rgba(247, 243, 236, 0.55);
   --topbar-accent:    var(--gold-bright);
   --topbar-divider:   rgba(212, 160, 23, 0.20);
+  /* Danger on the always-dark bar — var(--crimson-soft) was ~3.2:1 here. */
+  --topbar-danger:    #e8604c;
 
   color: var(--topbar-fg-muted);
 }
@@ -599,25 +616,9 @@ button {
 
 
 
-/* ── Stage dropdown ──────────────────────────────────────────────────────── */
-.stage-select {
-  font-family: 'IBM Plex Serif', serif;
-  font-size: 13px;
-  padding: 5px 10px;
-  border-radius: 20px;
-  border: 1px solid currentColor;
-  cursor: pointer;
-  background: transparent;
-  font-weight: 500;
-  outline: none;
-  appearance: none;
-  -webkit-appearance: none;
-  padding-right: 24px;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 6px center;
-  background-size: 12px;
-}
+/* .stage-select deleted 2026-06-10 — its dropdown was replaced by the
+   display-only .stage-pill + "Mark preached" button; no JSX consumer
+   remained, and its data-URI chevron couldn't follow the theme anyway. */
 
 .stage-badge {
   display: inline-flex;
@@ -1587,7 +1588,7 @@ button {
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(26,20,16,0.6);
+  background: var(--scrim);
   z-index: 500;
   display: flex;
   align-items: center;
@@ -2548,6 +2549,21 @@ button {
   border-color: var(--parchment-deep);
 }
 .dash-row:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+/* Keyboard reachability (UX overhaul T15) — same ring as the dash tiles.
+   The sidebar ring uses gold-bright so it clears the dark sidebar. */
+.nav-item:focus-visible {
+  outline: 2px solid var(--gold-bright);
+  outline-offset: -2px;
+}
+.sermon-card:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+.calendar-event:focus-visible {
   outline: 2px solid var(--gold);
   outline-offset: 2px;
 }

@@ -50,7 +50,7 @@ export default function EsvKeyModal({ onClose }) {
     <div
       style={{
         position: "fixed", inset: 0,
-        background: "rgba(26,20,16,0.45)",
+        background: "var(--scrim)",
         display: "flex", alignItems: "center", justifyContent: "center",
         zIndex: 2000, padding: "20px",
       }}

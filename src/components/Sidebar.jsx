@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { getRecentSermons } from "../core/spine";
 import { getAppVersion, getUpdaterStatus, onUpdaterStatus, updaterRestart } from "../db/database";
+import { buttonKeydown } from "../utils/buttonKeydown";
 import { VIEW } from "../core/contracts";
 import NewSermonModal from "./NewSermonModal.jsx";
 import FeedbackForm from "./FeedbackForm.jsx";
@@ -115,6 +116,9 @@ export default function Sidebar({ currentView, onNavigate, onOpenSermon, theme, 
         <div
           className={`nav-item ${currentView === VIEW.Dashboard ? "active" : ""}`}
           onClick={() => handleNavigate(VIEW.Dashboard)}
+          role="button"
+          tabIndex={0}
+          onKeyDown={buttonKeydown(() => handleNavigate(VIEW.Dashboard))}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
             <rect x="3" y="3" width="7" height="7" rx="1" />
@@ -129,6 +133,10 @@ export default function Sidebar({ currentView, onNavigate, onOpenSermon, theme, 
         <div
           className={`nav-item ${currentView === VIEW.Workspace || currentView === VIEW.Sermons ? "active" : ""}`}
           onClick={() => setDropdownOpen((o) => !o)}
+          role="button"
+          tabIndex={0}
+          aria-expanded={dropdownOpen}
+          onKeyDown={buttonKeydown(() => setDropdownOpen((o) => !o))}
         >
           {WORKSPACE_ICON}
           Sermon Prep
@@ -140,13 +148,19 @@ export default function Sidebar({ currentView, onNavigate, onOpenSermon, theme, 
             <div
               className="nav-item"
               onClick={handleNewSermon}
-              style={{ paddingLeft: 36, fontSize: 13, color: "var(--gold-pale)" }}
+              role="button"
+              tabIndex={0}
+              onKeyDown={buttonKeydown(handleNewSermon)}
+              style={{ paddingLeft: 36, fontSize: 13, color: "var(--gold-bright)" }}
             >
               + New Sermon
             </div>
             <div
               className="nav-item"
               onClick={() => handleNavigate(VIEW.Sermons)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={buttonKeydown(() => handleNavigate(VIEW.Sermons))}
               style={{ paddingLeft: 36, fontSize: 13 }}
             >
               All Sermons
@@ -154,6 +168,9 @@ export default function Sidebar({ currentView, onNavigate, onOpenSermon, theme, 
             <div
               className="nav-item"
               onClick={() => handleNavigate(VIEW.CompletedSermons)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={buttonKeydown(() => handleNavigate(VIEW.CompletedSermons))}
               style={{ paddingLeft: 36, fontSize: 13 }}
             >
               Preached Sermons
@@ -166,6 +183,9 @@ export default function Sidebar({ currentView, onNavigate, onOpenSermon, theme, 
                 key={s.id}
                 className="nav-item"
                 onClick={() => handleRecentSermon(s.id)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={buttonKeydown(() => handleRecentSermon(s.id))}
                 style={{ paddingLeft: 36, fontSize: 12, overflow: "hidden" }}
                 title={s.title || "Untitled"}
               >
@@ -183,6 +203,9 @@ export default function Sidebar({ currentView, onNavigate, onOpenSermon, theme, 
             key={item.id}
             className={`nav-item ${currentView === item.id ? "active" : ""}`}
             onClick={() => handleNavigate(item.id)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={buttonKeydown(() => handleNavigate(item.id))}
           >
             {item.icon}
             {item.label}

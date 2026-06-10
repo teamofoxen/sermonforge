@@ -3,6 +3,7 @@ import { getAllSermons, deleteSermon, updateSermon } from "../core/spine";
 import { searchSermons } from "../db/database";
 import { formatDate } from "../utils";
 import { hintFromMatchedColumn } from "../utils/searchHints";
+import { buttonKeydown } from "../utils/buttonKeydown";
 import NewSermonModal from "./NewSermonModal";
 import DeleteButton from "./DeleteButton";
 import SearchResultSnippet from "./SearchResultSnippet";
@@ -133,6 +134,9 @@ export default function SermonList({ onOpenSermon }) {
                 key={sermon.id}
                 className="sermon-card"
                 onClick={() => onOpenSermon(sermon.id, hintFromMatchedColumn(sermon.matchedColumn))}
+                role="button"
+                tabIndex={0}
+                onKeyDown={buttonKeydown(() => onOpenSermon(sermon.id, hintFromMatchedColumn(sermon.matchedColumn)))}
               >
                 <div className="sermon-card-header">
                   <div className="sermon-card-title">{sermon.title}</div>

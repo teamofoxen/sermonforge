@@ -61,7 +61,8 @@
   font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--ink-ghost);
+  /* --ink-ghost was ~2.6:1 at this size on light parchment. */
+  color: var(--ink-soft);
   font-weight: 600;
   margin-bottom: 8px;
 }

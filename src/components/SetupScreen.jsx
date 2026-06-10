@@ -217,7 +217,7 @@ export default function SetupScreen({ onComplete }) {
               type="checkbox"
               checked={telemetryOn}
               onChange={(e) => setTelemetryOn(e.target.checked)}
-              style={{ cursor: "pointer" }}
+              style={{ cursor: "pointer", accentColor: "var(--gold)", width: "16px", height: "16px" }}
             />
             <span>Send anonymous usage and feedback to the developer (recommended)</span>
           </label>

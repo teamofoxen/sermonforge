@@ -1,7 +1,7 @@
 .wnd-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(26, 20, 16, 0.35);
+  background: var(--scrim);
   z-index: 88;
   animation: wnd-fade 140ms ease-out;
 }
@@ -15,7 +15,7 @@
   min-height: 280px;
   background: var(--parchment);
   border-top: 1px solid var(--parchment-deep);
-  box-shadow: 0 -8px 32px rgba(26, 20, 16, 0.16);
+  box-shadow: var(--shadow-deep);
   z-index: 89;
   display: flex;
   flex-direction: column;

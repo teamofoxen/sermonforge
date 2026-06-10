@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { getAllSermons } from "../core/spine";
 import { SERMON_STATUS } from "../core/contracts";
 import SecondaryButton from "./primitives/SecondaryButton";
+import { buttonKeydown } from "../utils/buttonKeydown";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTHS = [
@@ -101,6 +102,9 @@ export default function Calendar({ onOpenSermon }) {
                         className="calendar-event"
                         style={{ background: STAGE_COLORS[s.stage] || "var(--gold)" }}
                         onClick={() => onOpenSermon(s.id)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={buttonKeydown(() => onOpenSermon(s.id))}
                         title={s.title}
                       >
                         {s.title}

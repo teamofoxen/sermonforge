@@ -159,7 +159,7 @@ export default function OneDriveWarning() {
 }
 
 const backdrop = {
-  position: "fixed", inset: 0, background: "rgba(26,20,16,0.55)",
+  position: "fixed", inset: 0, background: "var(--scrim)",
   display: "flex", alignItems: "center", justifyContent: "center",
   zIndex: 1000,
 };

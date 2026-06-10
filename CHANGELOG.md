@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-06-10 — Dark mode actually reads: corrected ink ramp, themed natives, keyboard reach
+
+- The dark token palette is complete and ordered: the ink ramp's ghost/soft inversion is fixed (faint text is now actually the faintest — the map's answered/started/not-yet shading reads the right direction again, verified 208>170>124 luminance); `--gold-pale` becomes a dark amber surface (search hits and passage chips keep the gold identity with readable ink); `--sage` and `--slate` finally get dark values. The sidebar's "+ New Sermon" moved off gold-pale before the flip.
+- `color-scheme` now follows the theme, so dropdown lists, date pickers, checkboxes, and scrollbars stop rendering light-mode UA chrome in dark mode; the setup checkbox checks gold instead of Windows blue.
+- Contrast stragglers fixed: "Save failed"/"Saving…"/"Saved" use the topbar's own tokens (new `--topbar-danger`) instead of theme ink on the always-dark bar; all six overlay scrims share a themed `--scrim` token; the FeedbackFlag title is readable; the orphaned `.stage-select` CSS (dead since the pill replaced it) is deleted.
+- Keyboard reachability: sidebar nav items (with `aria-expanded` on the dropdown), sermon cards, and calendar chips are now focusable with Enter/Space activation (shared `buttonKeydown` helper, nested-control guard) and visible gold focus rings.
+- FLAGGED: before/after screenshots for the pastor's palette sign-off still owed — the preview screenshot tool is timing out; capture from the live app or just toggle dark mode and look.
+
+---
+
 ## 2026-06-10 — Riders: feedback speaks pastor, notebooks stop vanishing, the canvas explains itself
 
 - FeedbackForm: "Dimension" and the charter's category names ("Structural overreach"…) replaced with plain labels ("The structure got in my way", "Something broke or acted strange"…) — stored telemetry values unchanged, so analysis keys still match.

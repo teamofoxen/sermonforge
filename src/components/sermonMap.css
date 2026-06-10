@@ -1,7 +1,7 @@
 .sm-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(26, 20, 16, 0.42);
+  background: var(--scrim);
   z-index: 90;
   animation: sm-fade 140ms ease-out;
 }

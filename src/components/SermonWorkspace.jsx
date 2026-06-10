@@ -555,21 +555,24 @@ export default function SermonWorkspace({
             >
               {exporting ? LOADING_VERB.Exporting : "Export to Word"}
             </SecondaryButton>
+            {/* These sit on the always-dark topbar — its locally-scoped
+                --topbar-* tokens, never the theme ink ramp (var(--ink-ghost)
+                was near-invisible here in light mode). */}
             {saving && (
-              <span style={{ fontSize: "12px", color: "var(--ink-ghost)", fontStyle: "italic", padding: "0 6px" }}>
+              <span style={{ fontSize: "12px", color: "var(--topbar-fg-muted)", fontStyle: "italic", padding: "0 6px" }}>
                 Saving…
               </span>
             )}
             {!saving && saveError && (
               <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "0 6px" }}>
-                <span style={{ fontSize: "12px", color: "var(--crimson-soft)" }}>Save failed</span>
+                <span style={{ fontSize: "12px", color: "var(--topbar-danger)" }}>Save failed</span>
                 <SecondaryButton size="sm" style={{ fontSize: "12px", padding: "2px 8px" }} onClick={persistUpdate}>
                   Retry
                 </SecondaryButton>
               </span>
             )}
             {!saving && !saveError && lastSavedAt && (
-              <span style={{ fontSize: "12px", color: "var(--ink-ghost)", padding: "0 6px" }} title={`Last saved ${new Date(lastSavedAt).toLocaleString()}`}>
+              <span style={{ fontSize: "12px", color: "var(--topbar-fg-muted)", padding: "0 6px" }} title={`Last saved ${new Date(lastSavedAt).toLocaleString()}`}>
                 Saved
               </span>
             )}
