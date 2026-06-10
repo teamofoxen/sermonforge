@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
-import { loadSampleSermon, getInProgressSermons, deleteSermon } from "../core/spine";
+import { loadSampleSermon, getInProgressSermons, deleteSermon, updateSermon } from "../core/spine";
+import { SERMON_STATUS } from "../core/contracts";
 import NewSermonModal from "./NewSermonModal";
 import DashboardVerseCarousel from "./DashboardVerseCarousel";
 import DashboardPreacherQuote from "./DashboardPreacherQuote";
 import PrimaryButton from "./primitives/PrimaryButton";
+import SecondaryButton from "./primitives/SecondaryButton";
 import DeleteButton from "./primitives/DeleteButton";
 import { formatDate } from "../utils";
 
@@ -44,6 +46,15 @@ export default function Dashboard({ onOpenSermon }) {
     setInProgress((prev) =>
       prev.some((s) => s.id === id) ? prev.filter((s) => s.id !== id) : prev,
     );
+  }
+
+  // Return-day reminders resolve in ONE click, right here. The row swaps to a
+  // settled note instead of vanishing, so the act is visible (Mutation #3
+  // spirit: lifecycle events are events, not silent disappearances).
+  const [preachedIds, setPreachedIds] = useState(() => new Set());
+  async function handleMarkPreached(id) {
+    await updateSermon(id, { stage: SERMON_STATUS.Complete });
+    setPreachedIds((prev) => new Set(prev).add(id));
   }
 
   async function openSampleSermon() {
@@ -107,6 +118,8 @@ export default function Dashboard({ onOpenSermon }) {
               upcoming={upcoming}
               onOpenSermon={onOpenSermon}
               onDeleteSermon={handleDeleteSermon}
+              onMarkPreached={handleMarkPreached}
+              preachedIds={preachedIds}
             />
 
             {/* EXPLORE — orientation paths for new pastors. */}
@@ -147,17 +160,19 @@ export default function Dashboard({ onOpenSermon }) {
 // State Contract #6 surface: the Dashboard's answer to "what am I currently
 // working on." Two sections:
 //
-//   1. Return-day reminder — sermons whose delivery date has passed but
-//      stage is still in_progress. Highlighted with a crimson left-border
-//      so the preacher sees them first; clicking opens the workspace where
-//      the Mark Complete button lives.
-//   2. Resume — up to 5 in-progress sermons with future or no delivery
-//      date, ordered as the spine returned them.
+//   1. Return-day reminder — sermons whose date has passed but stage is
+//      still in_progress. Highlighted with a crimson left-border, and
+//      resolvable RIGHT HERE with an inline "Mark preached" button (the
+//      workspace's finish screen carries the same action; the old comment
+//      claiming a workspace "Mark Complete button" described a control
+//      that never existed — the audit's dead-end #2).
+//   2. Resume — in-progress sermons with future or no date, ordered as the
+//      spine returned them.
 //
 // When the preacher has nothing in flight, the tile renders an empty-state
 // pointing back to the hero "Build a sermon" tile.
 
-function ResumeWorkTile({ overdue, upcoming, onOpenSermon, onDeleteSermon }) {
+function ResumeWorkTile({ overdue, upcoming, onOpenSermon, onDeleteSermon, onMarkPreached, preachedIds }) {
   const isEmpty = overdue.length === 0 && upcoming.length === 0;
 
   return (
@@ -172,7 +187,15 @@ function ResumeWorkTile({ overdue, upcoming, onOpenSermon, onDeleteSermon }) {
       ) : (
         <div className="dash-rows">
           {overdue.map((s) => (
-            <ResumeRow key={s.id} sermon={s} onOpen={onOpenSermon} onDelete={onDeleteSermon} flagged />
+            <ResumeRow
+              key={s.id}
+              sermon={s}
+              onOpen={onOpenSermon}
+              onDelete={onDeleteSermon}
+              onMarkPreached={onMarkPreached}
+              settled={preachedIds?.has(s.id)}
+              flagged
+            />
           ))}
           {upcoming.map((s) => (
             <ResumeRow key={s.id} sermon={s} onOpen={onOpenSermon} onDelete={onDeleteSermon} />
@@ -183,7 +206,17 @@ function ResumeWorkTile({ overdue, upcoming, onOpenSermon, onDeleteSermon }) {
   );
 }
 
-function ResumeRow({ sermon, onOpen, onDelete, flagged }) {
+function ResumeRow({ sermon, onOpen, onDelete, onMarkPreached, settled, flagged }) {
+  if (settled) {
+    return (
+      <div className="dash-row">
+        <div className="dash-row-body">
+          <div className="dash-row-title">{sermon.title || "Untitled"}</div>
+          <div className="dash-row-meta">Preached — find it under Preached Sermons.</div>
+        </div>
+      </div>
+    );
+  }
   return (
     <div
       className={`dash-row${flagged ? " is-overdue" : ""}`}
@@ -202,7 +235,7 @@ function ResumeRow({ sermon, onOpen, onDelete, flagged }) {
         <div className="dash-row-meta">
           {flagged ? (
             <>
-              <span className="flag">Delivered — mark complete</span>
+              <span className="flag">Past its date — preached?</span>
               {sermon.date && <><span className="sep">·</span>{formatDate(sermon.date)}</>}
             </>
           ) : (
@@ -214,6 +247,19 @@ function ResumeRow({ sermon, onOpen, onDelete, flagged }) {
           )}
         </div>
       </div>
+      {flagged && onMarkPreached && (
+        <SecondaryButton
+          size="sm"
+          style={{ fontSize: "11px", flexShrink: 0 }}
+          title="Move this sermon to Preached Sermons"
+          onClick={(e) => {
+            e.stopPropagation();
+            onMarkPreached(sermon.id);
+          }}
+        >
+          Mark preached
+        </SecondaryButton>
+      )}
       <span className="dash-row-arr" aria-hidden="true">→</span>
       {onDelete && (
         <DeleteButton small onDelete={() => onDelete(sermon.id)} />

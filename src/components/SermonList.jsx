@@ -8,10 +8,10 @@ import DeleteButton from "./DeleteButton";
 import SearchResultSnippet from "./SearchResultSnippet";
 import { SERMON_STATUS, SERMON_STATUS_LABELS } from "../core/contracts";
 import PrimaryButton from "./primitives/PrimaryButton";
+import SecondaryButton from "./primitives/SecondaryButton";
+import { TextButton } from "./primitives/TextButton";
 import EmptyState from "./primitives/EmptyState";
 import LoadingState from "./primitives/LoadingState";
-
-const SERMON_STATUS_VALUES = [SERMON_STATUS.InProgress, SERMON_STATUS.Complete];
 
 export default function SermonList({ onOpenSermon }) {
   const [sermons, setSermons] = useState([]);
@@ -20,6 +20,27 @@ export default function SermonList({ onOpenSermon }) {
   const [searching, setSearching] = useState(false);
   const [showNewModal, setShowNewModal] = useState(false);
   const [loading, setLoading] = useState(true);
+  // Sermons marked preached THIS visit. Their cards don't vanish — they swap
+  // to a confirmation stub with Undo, so the act is visible and reversible
+  // instead of reading as deletion (the old select filtered the card out
+  // instantly with no message).
+  const [justPreached, setJustPreached] = useState(() => new Set());
+
+  async function markPreached(sermon) {
+    await updateSermon(sermon.id, { stage: SERMON_STATUS.Complete });
+    setSermons((prev) => prev.map((s) => (s.id === sermon.id ? { ...s, stage: SERMON_STATUS.Complete } : s)));
+    setJustPreached((prev) => new Set(prev).add(sermon.id));
+  }
+
+  async function undoPreached(sermon) {
+    await updateSermon(sermon.id, { stage: SERMON_STATUS.InProgress });
+    setSermons((prev) => prev.map((s) => (s.id === sermon.id ? { ...s, stage: SERMON_STATUS.InProgress } : s)));
+    setJustPreached((prev) => {
+      const next = new Set(prev);
+      next.delete(sermon.id);
+      return next;
+    });
+  }
 
   useEffect(() => {
     getAllSermons()
@@ -65,7 +86,12 @@ export default function SermonList({ onOpenSermon }) {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
             <h1 className="page-title">All Sermons</h1>
-            <p className="page-subtitle">{sermons.length} active sermon{sermons.length !== 1 ? "s" : ""}</p>
+            <p className="page-subtitle">
+              {(() => {
+                const n = sermons.filter((s) => s.stage !== SERMON_STATUS.Complete).length;
+                return `${n} active sermon${n !== 1 ? "s" : ""}`;
+              })()}
+            </p>
           </div>
           <PrimaryButton onClick={() => setShowNewModal(true)}>
             + New Sermon
@@ -93,6 +119,16 @@ export default function SermonList({ onOpenSermon }) {
         ) : (
           <div className="sermon-grid">
             {filtered.map((sermon) => (
+              justPreached.has(sermon.id) ? (
+                <div key={sermon.id} className="sermon-card">
+                  <p className="sermon-card-preached-stub">
+                    “{sermon.title}” moved to Preached Sermons.
+                  </p>
+                  <TextButton size="sm" onClick={() => undoPreached(sermon)}>
+                    Undo
+                  </TextButton>
+                </div>
+              ) : (
               <div
                 key={sermon.id}
                 className="sermon-card"
@@ -118,26 +154,20 @@ export default function SermonList({ onOpenSermon }) {
                 <div className="sermon-card-footer">
                   <span>{formatDate(sermon.date)}</span>
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <select
-                      className={`stage-select stage-${sermon.stage}`}
-                      value={sermon.stage}
-                      onClick={(e) => e.stopPropagation()}
-                      onChange={async (e) => {
+                    <span className={`stage-pill stage-${sermon.stage}`}>
+                      {SERMON_STATUS_LABELS[sermon.stage]}
+                    </span>
+                    <SecondaryButton
+                      size="sm"
+                      style={{ fontSize: "11px" }}
+                      title="Move this sermon to Preached Sermons"
+                      onClick={(e) => {
                         e.stopPropagation();
-                        const newStage = e.target.value;
-                        await updateSermon(sermon.id, { stage: newStage });
-                        if (newStage === SERMON_STATUS.Complete) {
-                          setSermons((prev) => prev.filter((s) => s.id !== sermon.id));
-                        } else {
-                          setSermons((prev) => prev.map((s) => s.id === sermon.id ? { ...s, stage: newStage } : s));
-                        }
+                        markPreached(sermon);
                       }}
-                      style={{ fontSize: "11px", padding: "2px 6px" }}
                     >
-                      {SERMON_STATUS_VALUES.map((st) => (
-                        <option key={st} value={st}>{SERMON_STATUS_LABELS[st]}</option>
-                      ))}
-                    </select>
+                      Mark preached
+                    </SecondaryButton>
                     <DeleteButton
                       small
                       onDelete={async () => {
@@ -148,6 +178,7 @@ export default function SermonList({ onOpenSermon }) {
                   </div>
                 </div>
               </div>
+              )
             ))}
           </div>
         )}

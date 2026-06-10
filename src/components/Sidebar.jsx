@@ -128,7 +128,7 @@ export default function Sidebar({ currentView, onNavigate, onOpenSermon, theme, 
               onClick={() => handleNavigate(VIEW.CompletedSermons)}
               style={{ paddingLeft: 36, fontSize: 13 }}
             >
-              Completed Sermons
+              Preached Sermons
             </div>
             {visibleRecents.length > 0 && (
               <div style={{ borderTop: "1px solid rgba(212,160,23,0.15)", margin: "2px 0" }} />

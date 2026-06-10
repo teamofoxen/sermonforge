@@ -150,9 +150,13 @@ export const SERMON_STATUS = {
   Complete: "complete",
 } as const satisfies Record<string, SermonStatus>;
 
+// User-facing lifecycle vocabulary. The stored enum value stays `complete`
+// (data identity); the word a pastor reads is "Preached" — how he actually
+// talks about a finished sermon (ratified 2026-06-10). One name per concept
+// (State #5): every surface renders these labels, never its own alias.
 export const SERMON_STATUS_LABELS: Readonly<Record<SermonStatus, string>> = Object.freeze({
-  in_progress: "In Progress",
-  complete: "Complete",
+  in_progress: "In progress",
+  complete: "Preached",
 });
 
 export type SeriesStatus = "in_progress" | "complete";

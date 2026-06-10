@@ -1,29 +1,28 @@
 import { useState, useEffect, useRef } from "react";
-import { getAllSermons, deleteSermon } from "../core/spine";
+import { getAllSermons, deleteSermon, updateSermon } from "../core/spine";
 import { exportManuscript, searchSermons } from "../db/database";
 import mapError from "../utils/mapError";
-import { formatDate, parseManuscript, getOutline, getFunctionalElements } from "../utils";
+import { formatDate, buildManuscriptExportPayload } from "../utils";
 import { hintFromMatchedColumn } from "../utils/searchHints";
 import DeleteButton from "./DeleteButton";
 import InlineError from "./InlineError";
 import SearchResultSnippet from "./SearchResultSnippet";
-import { SERMON_STATUS } from "../core/contracts";
+import { SERMON_STATUS, LOADING_VERB } from "../core/contracts";
 import EmptyState from "./primitives/EmptyState";
 import LoadingState from "./primitives/LoadingState";
 import SecondaryButton from "./primitives/SecondaryButton";
 
-// CompletedSermons — the canonical name for sermons whose lifecycle has
-// reached `SERMON_STATUS.Complete`. Pilot B.2 of the audit triage renamed
-// "Archive" to "Completed Sermons" because:
+// Preached Sermons (component name CompletedSermons; the stored enum value
+// stays `complete`) — the body of work whose lifecycle has reached
+// `SERMON_STATUS.Complete`. The user-facing word is "Preached" everywhere
+// (SERMON_STATUS_LABELS, ratified 2026-06-10): it's how a pastor actually
+// talks about a finished sermon, and it makes "Mark preached" self-evident.
+// History: "Archive" → "Completed Sermons" (Pilot B.2) → "Preached Sermons".
 //
-//   1. State Contract #5 (one name per concept) — "Archive" was a stale alias
-//      for the post-v16-migration `complete` state value. The rename collapses
-//      vocabulary and removes a Surface #4 EXPECTED_DEEP exception.
-//   2. Surface Contract #4 (you-are-here always answerable) — this surface
-//      now has a canonical sidebar entry under Sermon Prep.
-//   3. Per-sermon re-export — completed sermons stay as a body of work; the
-//      preacher can regenerate the Word doc at any time without re-walking
-//      the lifecycle. Reuses the existing `sermon-export-manuscript` IPC.
+//   1. Export to Word regenerates the manuscript document any time without
+//      re-walking the lifecycle (shared payload via buildManuscriptExportPayload).
+//   2. Reopen sends a sermon back to In progress — marking preached is not a
+//      one-way door (Mutation #4: reversal stays cheap).
 
 export default function CompletedSermons({ onOpenSermon }) {
   const [sermons, setSermons] = useState([]);
@@ -34,6 +33,7 @@ export default function CompletedSermons({ onOpenSermon }) {
   const [loadError, setLoadError] = useState(false);
   const [exportingId, setExportingId] = useState(null);
   const [exportError, setExportError] = useState(null);
+  const [exportNote, setExportNote] = useState(null); // { id, text } per-card success note
 
   useEffect(() => {
     getAllSermons()
@@ -73,26 +73,23 @@ export default function CompletedSermons({ onOpenSermon }) {
 
   const filtered = searchResults != null ? searchResults : sermons;
 
-  async function handleReexport(sermon, e) {
+  async function handleExport(sermon, e) {
     e.stopPropagation();
     if (exportingId) return;
     setExportingId(sermon.id);
     setExportError(null);
+    setExportNote(null);
     try {
-      const ms = parseManuscript(sermon.manuscript);
-      const result = await exportManuscript({
-        title: sermon.title || "",
-        passage: sermon.passage || "",
-        date: sermon.date || "",
-        mpt: sermon.mpt || "",
-        mps: sermon.mps || "",
-        introduction: ms.introduction || {},
-        transitions: ms.transitions || {},
-        conclusion: ms.conclusion || {},
-        outline: getOutline(sermon),
-        functionalElements: getFunctionalElements(sermon),
-      });
-      if (!result?.success) {
+      const result = await exportManuscript(buildManuscriptExportPayload(sermon));
+      if (result?.success) {
+        setExportNote({
+          id: sermon.id,
+          text:
+            result.opened === false
+              ? "Saved to Documents › SermonForge › exports › Manuscripts."
+              : "Opened in Word — saved to Documents › SermonForge › exports › Manuscripts.",
+        });
+      } else {
         // result.error is authored plain English in the export handler.
         setExportError(result?.error || mapError("", "export"));
       }
@@ -103,11 +100,19 @@ export default function CompletedSermons({ onOpenSermon }) {
     }
   }
 
+  // Reopen — back to In progress. Marking preached is not a one-way door;
+  // the sermon reappears under All Sermons and the dashboard's Resume Work.
+  async function handleReopen(sermon, e) {
+    e.stopPropagation();
+    await updateSermon(sermon.id, { stage: SERMON_STATUS.InProgress });
+    setSermons((prev) => prev.filter((s) => s.id !== sermon.id));
+  }
+
   return (
     <>
       <div className="page-header">
-        <h1 className="page-title">Completed Sermons</h1>
-        <p className="page-subtitle">{sermons.length} completed sermon{sermons.length !== 1 ? "s" : ""}</p>
+        <h1 className="page-title">Preached Sermons</h1>
+        <p className="page-subtitle">{sermons.length} preached sermon{sermons.length !== 1 ? "s" : ""}</p>
       </div>
 
       <div className="page-body">
@@ -117,7 +122,7 @@ export default function CompletedSermons({ onOpenSermon }) {
           </svg>
           <input
             className="search-input"
-            placeholder="Search anywhere in your completed sermons — title, passage, study notes, manuscript, notebooks…"
+            placeholder="Search anywhere in your preached sermons — title, passage, study notes, manuscript, notebooks…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -133,11 +138,11 @@ export default function CompletedSermons({ onOpenSermon }) {
           <LoadingState />
         ) : loadError ? (
           <div style={{ padding: "40px 0", display: "flex", justifyContent: "center" }}>
-            <InlineError>Could not load completed sermons.</InlineError>
+            <InlineError>Could not load preached sermons.</InlineError>
           </div>
         ) : filtered.length === 0 ? (
           <EmptyState
-            title={search ? "No completed sermons match your search." : "No completed sermons yet."}
+            title={search ? "No preached sermons match your search." : "No preached sermons yet."}
           />
         ) : (
           <div className="sermon-grid">
@@ -169,12 +174,20 @@ export default function CompletedSermons({ onOpenSermon }) {
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                     <SecondaryButton
                       size="sm"
-                      onClick={(e) => handleReexport(sermon, e)}
+                      onClick={(e) => handleExport(sermon, e)}
                       disabled={exportingId !== null}
-                      title="Re-export the manuscript as a Word document"
+                      title="Save this sermon as a Word document"
                       style={{ fontSize: "11px" }}
                     >
-                      {exportingId === sermon.id ? "Saving…" : "Re-export"}
+                      {exportingId === sermon.id ? LOADING_VERB.Exporting : "Export to Word"}
+                    </SecondaryButton>
+                    <SecondaryButton
+                      size="sm"
+                      onClick={(e) => handleReopen(sermon, e)}
+                      title="Send this sermon back to In progress"
+                      style={{ fontSize: "11px" }}
+                    >
+                      Reopen
                     </SecondaryButton>
                     <DeleteButton
                       small
@@ -185,6 +198,11 @@ export default function CompletedSermons({ onOpenSermon }) {
                     />
                   </div>
                 </div>
+                {exportNote?.id === sermon.id && (
+                  <p style={{ fontSize: "12px", color: "var(--ink-soft)", margin: "8px 0 0", fontFamily: "var(--font-serif)" }}>
+                    {exportNote.text}
+                  </p>
+                )}
               </div>
             ))}
           </div>

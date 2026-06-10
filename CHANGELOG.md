@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-06-10 — "Preached" is the word: labeled lifecycle, undo, reopen, resolvable reminders
+
+- The user-facing lifecycle word is now "Preached" everywhere (SERMON_STATUS_LABELS; stored enum value unchanged): sidebar "Preached Sermons", view title, empty states, search placeholder.
+- All Sermons cards: the unlabeled native status dropdown is gone — a display-only pill plus a labeled "Mark preached" button; the card swaps to a "moved to Preached Sermons · Undo" stub instead of vanishing.
+- Preached Sermons cards gain "Reopen" (back to In progress — not a one-way door) and the export button is honestly labeled "Export to Word" with "Exporting…" in flight and a saved-location note on success (shared payload builder).
+- Dashboard return-day reminders are resolvable in one click: "Past its date — preached?" with an inline "Mark preached" that settles the row in place; the stale comment pointing at a nonexistent workspace control is fixed.
+- Verified live: mark → stub → Undo cycle and the renamed Preached view; 706 tests pass.
+
+---
+
 ## 2026-06-10 — The ending exists: finish moment, anywhere-export, completeness wired, one error voice
 
 - The last field's dead grey Next is now a gold "Finish sermon →" opening SermonFinish — a re-openable completion threshold listing every load-bearing artifact (written / still open, with "go write it" jumps), plus Export to Word and Mark as preached.
