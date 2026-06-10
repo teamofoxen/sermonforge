@@ -72,19 +72,50 @@
   max-width: 540px;
 }
 
-.ssl-dismiss {
-  align-self: flex-end;
-  font-family: var(--font-serif);
-  font-size: 14px;
-  color: var(--ink-soft);
-  background: none;
-  border: none;
-  padding: 4px 0;
-  cursor: pointer;
-  transition: color 120ms ease;
-  letter-spacing: 0.01em;
+.ssl-nav-note {
+  margin-bottom: 40px;
+  padding: 20px 22px;
+  background: var(--parchment-warm);
+  border: 1px solid var(--parchment-deep);
+  border-radius: var(--radius);
 }
 
-.ssl-dismiss:hover {
+.ssl-nav-note-intro {
+  font-family: var(--font-serif);
+  font-size: 14px;
+  color: var(--ink-mid);
+  margin: 0 0 10px;
+}
+
+.ssl-nav-note-list {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-family: var(--font-serif);
+  font-size: 14px;
+  line-height: 1.5;
   color: var(--ink);
+}
+
+.ssl-nav-note-list strong {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+.ssl-nav-note-reread {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin: 0;
+}
+
+.ssl-begin {
+  align-self: flex-end;
 }

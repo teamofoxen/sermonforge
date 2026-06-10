@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { QUESTION_WALK_ORDER, questionId, findField, REGION_DISPLAY } from "../utils/walkOrder";
+import { THRESHOLD_ID } from "../utils/sermonState";
+import TextButton from "./primitives/TextButton";
 import "./sermonMap.css";
 
 function regionLabelFor(entry) {
@@ -77,6 +79,7 @@ export default function SermonMap({
   questionStates = {},
   currentPosition,
   onJump,
+  onReread,
   onClose,
 }) {
   const groups = useMemo(() => buildGroups(questions), [questions]);
@@ -157,6 +160,28 @@ export default function SermonMap({
             <span className="sm-legend-sep">·</span>
             <span className="sm-legend-unanswered">not yet</span>
           </p>
+          {/* Re-read doors — threshold screens are re-readable forever
+              (Process #3: dismissal ends the interruption, not the access). */}
+          {onReread && (
+            <p className="sm-reread">
+              <span className="sm-reread-label">Read again</span>
+              <TextButton
+                size="sm"
+                className="sm-reread-link"
+                onClick={() => onReread(THRESHOLD_ID.SermonStart)}
+              >
+                the walk ahead
+              </TextButton>
+              <span className="sm-legend-sep">·</span>
+              <TextButton
+                size="sm"
+                className="sm-reread-link"
+                onClick={() => onReread(THRESHOLD_ID.StudyToAnchorHandoff)}
+              >
+                the Study → Anchor handoff
+              </TextButton>
+            </p>
+          )}
         </header>
         <div className="sm-scroll">
           <div className="sm-list">

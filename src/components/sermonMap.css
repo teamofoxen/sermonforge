@@ -78,6 +78,26 @@
   margin: 0 8px;
 }
 
+.sm-reread {
+  margin: 10px 0 0;
+  font-family: var(--font-serif);
+  font-size: 12px;
+  color: var(--ink-ghost);
+}
+
+.sm-reread-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-right: 8px;
+}
+
+.sm-reread .sm-reread-link {
+  font-size: 12px;
+  padding: 0;
+}
+
 .sm-scroll {
   flex: 1;
   overflow-y: auto;

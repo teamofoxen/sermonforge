@@ -84,6 +84,10 @@ export default function SermonWorkspace({
   // Question the last map jump targeted — the writing surface scrolls to it
   // and flashes it once, then clears this via onHighlightDone.
   const [jumpHighlight, setJumpHighlight] = useState(null);
+  // Threshold screen re-summoned from the map's "Read again" row. Plain
+  // local state, never thresholds_seen — re-reading is view-only (Process
+  // #3: dismissal ends the interruption, not the access).
+  const [rereadThreshold, setRereadThreshold] = useState(null);
   const [notebookOpen, setNotebookOpen] = useState(false);
   // Finish threshold — plain React state, deliberately NOT thresholds_seen:
   // the completion screen is re-openable forever (Process #3: dismissal ends
@@ -365,12 +369,16 @@ export default function SermonWorkspace({
   // an inline closure would restart the flash on every workspace render.
   const clearJumpHighlight = useCallback(() => setJumpHighlight(null), []);
 
+  // Handoff "go write it" jumps deliberately do NOT consume the threshold:
+  // the pastor left to fix a Study outcome, not to dismiss the screen, so
+  // the handoff returns on their next Anchor entry. Only the explicit Close
+  // marks it seen. (T9, 2026-06-10 — previously a jump consumed it and the
+  // screen could never be read through.)
   const handleHandoffJump = useCallback(async (next) => {
     if (!sermon) return;
     await beforePositionChange();
-    writePositionAndThresholds(next, {
-      thresholds_seen: nextThresholdsSeen(sermon, THRESHOLD_ID.StudyToAnchorHandoff),
-    });
+    writePositionAndThresholds(next);
+    setRereadThreshold(null);
   }, [sermon, beforePositionChange, writePositionAndThresholds]);
 
   // Export to Word — shared by the topbar button and the finish screen.
@@ -470,6 +478,10 @@ export default function SermonWorkspace({
     position.stage === STAGE.Assembly &&
     position.subPhase === "Anchor" &&
     !hasSeenThreshold(sermon, THRESHOLD_ID.StudyToAnchorHandoff);
+  // Re-read mode — summoned from the map header, closes back to the work
+  // without touching thresholds_seen.
+  const rereadingStart = rereadThreshold === THRESHOLD_ID.SermonStart;
+  const rereadingHandoff = rereadThreshold === THRESHOLD_ID.StudyToAnchorHandoff;
 
   // Notebook column + value derived from the current stage. The handler
   // (handleNotebookChange) lives above with the other useCallbacks and
@@ -658,6 +670,10 @@ export default function SermonWorkspace({
           questionStates={questionStates}
           currentPosition={position}
           onJump={handleMapJump}
+          onReread={(id) => {
+            setMapOpen(false);
+            setRereadThreshold(id);
+          }}
           onClose={() => setMapOpen(false)}
         />
       )}
@@ -673,17 +689,25 @@ export default function SermonWorkspace({
           onClose={() => setFinishOpen(false)}
         />
       )}
-      {showSermonStart && (
+      {(showSermonStart || rereadingStart) && (
         <SermonStartLanding
-          onBegin={() => dismissThreshold(THRESHOLD_ID.SermonStart)}
+          onBegin={() =>
+            rereadingStart
+              ? setRereadThreshold(null)
+              : dismissThreshold(THRESHOLD_ID.SermonStart)
+          }
         />
       )}
-      {showHandoff && (
+      {(showHandoff || rereadingHandoff) && (
         <StudyAnchorHandoff
           outcomes={studyOutcomes}
           unfinished={studyUnfinished}
           onJump={handleHandoffJump}
-          onClose={() => dismissThreshold(THRESHOLD_ID.StudyToAnchorHandoff)}
+          onClose={() =>
+            rereadingHandoff
+              ? setRereadThreshold(null)
+              : dismissThreshold(THRESHOLD_ID.StudyToAnchorHandoff)
+          }
         />
       )}
       {notebookOpen && (

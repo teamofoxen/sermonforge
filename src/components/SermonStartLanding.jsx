@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { arcSummary } from "../utils/walkOrder";
+import PrimaryButton from "./primitives/PrimaryButton";
 import "./sermonStartLanding.css";
 
 // Format a list of named outcomes into a single line attached to the stage.
@@ -16,6 +17,10 @@ function joinOutcomes(outcomes) {
   return `the ${head}, and ${tail}`;
 }
 
+// FLAGGED FOR PASTOR VOICE (UX overhaul T9, 2026-06-10): the body copy below
+// — the opener, the three-controls block, and the read-again line — is a
+// working draft. The pastor rewrites it in his own voice before the beta
+// cohort reads it; the structure (arc → controls → Begin) is settled.
 export default function SermonStartLanding({ onBegin }) {
   const arc = arcSummary();
 
@@ -53,14 +58,21 @@ export default function SermonStartLanding({ onBegin }) {
             </section>
           );
         })}
-        <button
-          type="button"
-          className="ssl-dismiss"
-          onClick={onBegin}
-          aria-label="Close"
-        >
-          Close
-        </button>
+        <div className="ssl-nav-note">
+          <p className="ssl-nav-note-intro">Three controls carry you the whole way:</p>
+          <ul className="ssl-nav-note-list">
+            <li><strong>Next</strong> — one question at a time, in order.</li>
+            <li><strong>Back</strong> — return to what you just wrote.</li>
+            <li><strong>Map</strong> — every question at once. Click any of them to go there.</li>
+          </ul>
+          <p className="ssl-nav-note-reread">
+            You can read this page again whenever you want — open the Map and
+            look at the top.
+          </p>
+        </div>
+        <PrimaryButton className="ssl-begin" onClick={onBegin}>
+          Begin →
+        </PrimaryButton>
       </article>
     </div>
   );

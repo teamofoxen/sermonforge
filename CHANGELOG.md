@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-06-10 — Thresholds are re-readable: map "Read again" doors, handoff returns until closed, start overlay teaches the controls
+
+- The map header gained a "Read again" row — the sermon-start screen ("the walk ahead") and the Study → Anchor handoff re-open view-only from anywhere, without touching thresholds_seen.
+- A "go write it" jump off the handoff no longer consumes the threshold: the pastor left to fix a Study outcome, not to dismiss the screen, so it returns on the next Anchor entry until explicitly closed.
+- Sermon-start overlay rewritten: gold "Begin →" PrimaryButton replaces the quiet "Close" text link; a three-controls block names Next / Back / Map; a closing line points at the map's re-read door. Body copy flagged for the pastor's own voice.
+- CORE Process #3 amended: every threshold screen is re-readable after dismissal — dismissal ends the interruption, never the access.
+
+---
+
 ## 2026-06-10 — Orientation: you-are-here eyebrow, Back button, map header with counts, jump lands on the question
 
 - The writing surface carries a static place line ("Study · Interpret") above the field name — states where, never narrates movement; CORE Process #3 amended to permit static place explicitly.

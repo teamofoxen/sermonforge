@@ -193,7 +193,12 @@ these names. (See State Contract clause 5: *one name per concept*.)
    forward chevron, and its screen carries the artifact review plus the
    Export and Mark-as-preached actions — the moment the deliverable leaves
    the app is by this clause's own logic the largest threshold there is.
-   It is summoned, never automatic, and re-openable forever. Within-stage
+   It is summoned, never automatic, and re-openable forever. Every threshold
+   screen is re-readable after dismissal (amended 2026-06-10): the map header
+   carries standing "Read again" doors for the sermon-start and handoff
+   screens, and a "go write it" jump off the handoff does not consume it —
+   the screen returns on the next Anchor entry until explicitly closed.
+   Dismissal ends the interruption, never the access. Within-stage
    step movement (chevron-next, map-jump) is silent by design. A static
    statement of place is permitted (amended 2026-06-10): the writing surface
    may carry a standing "Study · Interpret"-shaped place line, and the map a
