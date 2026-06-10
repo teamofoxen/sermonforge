@@ -306,7 +306,7 @@ export const REDEMPTIVE_FIELDS = [
       paragraphs: [
         "You've positioned the text against Christ. Now look for how it points to him. Four distinct ways: biblical theme, promise, type, and predictive prophecy.",
         "A biblical theme is a recurring motif in Scripture that finds its weight in Christ (kingdom, presence, sacrifice, covenant, Word). A promise is an explicit word from God that finds its yes-and-amen in Christ. A type is a pattern or person that prefigures Christ — Adam, Melchizedek, Moses, David — with thematic correspondence and escalation (Christ is the better one). Predictive prophecy explicitly foretells Christ's coming, death, or return.",
-        "Some passages carry all four. Some carry one. Some carry none of these directly — and that's fine. Mark N/A where the text genuinely doesn't carry that kind of pointing. Don't insert Christ where he isn't. The text leads.",
+        "Some passages carry all four. Some carry one. Some carry none of these directly — and that's fine. Where the text genuinely doesn't carry that kind of pointing, say so in the answer and move on. Don't insert Christ where he isn't. The text leads.",
       ],
     },
     questions: [

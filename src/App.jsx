@@ -303,6 +303,7 @@ function AppInner() {
           <Dashboard
             key={refreshKey}
             onOpenSermon={openSermon}
+            onNavigate={navigate}
           />
         )}
         {currentView === VIEW.Sermons && (
@@ -320,7 +321,13 @@ function AppInner() {
         {currentView === VIEW.Planning && <SeriesPlannerComingSoon />}
         {currentView === VIEW.SeriesPlanner && <SeriesPlannerComingSoon />}
         {currentView === VIEW.Workspace && openSermonId && (
+          // key forces a REMOUNT per sermon: the old instance's unmount
+          // flush persists its own sermon and useDebounce's cleanup clears
+          // any pending save timer — without it, series prev/next within
+          // the 800ms debounce window could fire the old timer against the
+          // newly loaded sermonRef and overwrite sermon A with B's content.
           <SermonWorkspace
+            key={openSermonId}
             sermonId={openSermonId}
             onClose={closeWorkspace}
             onOpenSermon={openSermon}

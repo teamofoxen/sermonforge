@@ -70,6 +70,9 @@ export const SERMON_FRAME_FIELDS = [
       {
         key: "redemptive_note",
         prompt: "Name the gospel-shape that makes the expectation good news. What does Christ offer that turns the call from burden into invitation? This is the redemptive promise — the listener should hear, before the body begins, that the call is gospel-empowered.",
+        // SADI: N/A-able with the strict "satisfied another way" semantic —
+        // only when the hook itself was redemptive.
+        naAllowed: true,
       },
     ],
   },
@@ -118,7 +121,9 @@ SERMON_FRAME_FIELDS.forEach((field, i) => {
 
 // Per-question N/A semantics: only `intro.redemptive_note` may be marked N/A
 // by the pastor (with the strict "satisfied another way" semantic per SADI).
-// All other questions are not N/A-able. Today this rule is enforced at the
-// composite gate (`checkConclusionComposite` rejects N/A on any Conclusion
-// question). UI-side suppression of the N/A toggle on no-N/A questions is
-// the deferred UX polish; once that lands, an allowlist export can return.
+// All other questions are not N/A-able. Enforced three deep (UX overhaul
+// T19, 2026-06-10): the composite gate (`checkConclusionComposite` rejects
+// N/A on any Conclusion question), the UI (PromptBlock renders the toggle
+// only on `naAllowed: true` questions — the per-question flag above IS the
+// allowlist), and the write path (SermonWorkspace.handleAnswerChange drops
+// na:true for non-allowlisted questions).

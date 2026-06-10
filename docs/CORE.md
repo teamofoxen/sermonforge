@@ -26,11 +26,14 @@ All tooling decisions must prioritize simplicity.
 **The sermon is the primary unit of the shipped product; the series is carried
 context.** (Rearticulated 2026-06-10 — the previous paragraph described a
 series planning room, a Calendar that assigns sermons to Sundays, and
-reference features, none of which exist at HEAD, and it contradicted the
-ratified "dashboard is re-entry" principle. Series-first planning remains a
-named roadmap direction, not the shipped identity: a sermon may belong to a
-series, carries that membership as first-class state, and the Series Planner
-remains a stub until that work gets its own charter.)
+reference features that did not exist at HEAD, and it contradicted the
+ratified "dashboard is re-entry" principle. Later the same day, T19 shipped
+the smallest honest form of the calendar sentence: clicking a day opens New
+Sermon with that date pre-filled. The rest — the planning room, reference
+features — remains a named roadmap direction, not the shipped identity: a
+sermon may belong to a series, carries that membership as first-class
+state, and the Series Planner remains a stub until that work gets its own
+charter.)
 
 *One-sentence identity: SermonForge starts where sermon prep actually starts — with the text.
 The system forces clarity through a structured throughline, end to end pastor-authored.

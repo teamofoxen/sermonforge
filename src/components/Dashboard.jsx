@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { loadSampleSermon, getInProgressSermons, deleteSermon, restoreSermon, updateSermon } from "../core/spine";
-import { SERMON_STATUS } from "../core/contracts";
+import { loadSampleSermon, getInProgressSermons, getAllSermons, deleteSermon, restoreSermon, updateSermon } from "../core/spine";
+import { buttonKeydown } from "../utils/buttonKeydown";
+import { SERMON_STATUS, VIEW } from "../core/contracts";
 import NewSermonModal from "./NewSermonModal";
 import DashboardVerseCarousel from "./DashboardVerseCarousel";
 import DashboardPreacherQuote from "./DashboardPreacherQuote";
@@ -19,10 +20,14 @@ function ArrowRightIcon() {
   );
 }
 
-export default function Dashboard({ onOpenSermon }) {
+export default function Dashboard({ onOpenSermon, onNavigate }) {
   const [showNewModal, setShowNewModal] = useState(false);
   const [loadingSample, setLoadingSample] = useState(false);
   const [inProgress, setInProgress] = useState([]);
+  // Preached count — finished work must stay findable from the front door
+  // (State #6 in spirit): one quiet row, not a stats surface (the locked
+  // dashboard principle is re-entry, not aggregates).
+  const [preachedCount, setPreachedCount] = useState(0);
 
   // State Contract #6: in-progress work is queryable from the front door.
   // Pilot B.3 closes the surface gap by reading spine.getInProgressSermons()
@@ -35,6 +40,13 @@ export default function Dashboard({ onOpenSermon }) {
     getInProgressSermons()
       .then((rows) => { if (!cancelled) setInProgress(rows || []); })
       .catch((e) => console.error("[Dashboard] getInProgressSermons failed:", e));
+    getAllSermons()
+      .then((rows) => {
+        if (!cancelled) {
+          setPreachedCount((rows || []).filter((s) => s.stage === SERMON_STATUS.Complete).length);
+        }
+      })
+      .catch((e) => console.error("[Dashboard] getAllSermons failed:", e));
     return () => { cancelled = true; };
   }, []);
 
@@ -65,6 +77,8 @@ export default function Dashboard({ onOpenSermon }) {
   async function handleMarkPreached(id) {
     await updateSermon(id, { stage: SERMON_STATUS.Complete });
     setPreachedIds((prev) => new Set(prev).add(id));
+    // Keep the "N preached sermons" row honest without a refetch.
+    setPreachedCount((c) => c + 1);
   }
 
   async function openSampleSermon(fresh = false) {
@@ -132,6 +146,8 @@ export default function Dashboard({ onOpenSermon }) {
               onMarkPreached={handleMarkPreached}
               preachedIds={preachedIds}
               deletedIds={deletedIds}
+              preachedCount={preachedCount}
+              onOpenPreached={onNavigate ? () => onNavigate(VIEW.CompletedSermons) : undefined}
             />
 
             {/* EXPLORE — orientation paths for new pastors. */}
@@ -195,8 +211,28 @@ export default function Dashboard({ onOpenSermon }) {
 // When the preacher has nothing in flight, the tile renders an empty-state
 // pointing back to the hero "Build a sermon" tile.
 
-function ResumeWorkTile({ overdue, upcoming, onOpenSermon, onDeleteSermon, onUndoDelete, onMarkPreached, preachedIds, deletedIds }) {
+function ResumeWorkTile({ overdue, upcoming, onOpenSermon, onDeleteSermon, onUndoDelete, onMarkPreached, preachedIds, deletedIds, preachedCount, onOpenPreached }) {
   const isEmpty = overdue.length === 0 && upcoming.length === 0;
+
+  // One quiet row — finished work stays findable from the front door
+  // without turning the tile into a stats surface. Matters most when the
+  // tile is otherwise empty (everything preached = nothing "in flight").
+  const preachedRow = preachedCount > 0 && onOpenPreached ? (
+    <div
+      className="dash-row"
+      role="button"
+      tabIndex={0}
+      onClick={onOpenPreached}
+      onKeyDown={buttonKeydown(onOpenPreached)}
+    >
+      <div className="dash-row-body">
+        <div className="dash-row-title">
+          {preachedCount} preached {preachedCount === 1 ? "sermon" : "sermons"}
+        </div>
+      </div>
+      <span className="dash-row-arr" aria-hidden="true">→</span>
+    </div>
+  ) : null;
 
   return (
     <div className="dash-tile tile-secondary">
@@ -204,9 +240,12 @@ function ResumeWorkTile({ overdue, upcoming, onOpenSermon, onDeleteSermon, onUnd
       <h3 className="tile-title">Where you left off.</h3>
 
       {isEmpty ? (
-        <p className="tile-blurb" style={{ marginTop: "8px" }}>
-          Nothing in flight. Start a sermon when you're ready.
-        </p>
+        <>
+          <p className="tile-blurb" style={{ marginTop: "8px" }}>
+            Nothing in flight. Start a sermon when you're ready.
+          </p>
+          {preachedRow && <div className="dash-rows">{preachedRow}</div>}
+        </>
       ) : (
         <div className="dash-rows">
           {overdue.map((s) => (
@@ -232,6 +271,7 @@ function ResumeWorkTile({ overdue, upcoming, onOpenSermon, onDeleteSermon, onUnd
               deleted={deletedIds?.has(s.id)}
             />
           ))}
+          {preachedRow}
         </div>
       )}
     </div>

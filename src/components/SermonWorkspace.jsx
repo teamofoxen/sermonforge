@@ -21,6 +21,7 @@ import {
   THRESHOLD_ID,
   STAGE_SUBPHASE_TO_COLUMN,
 } from "../utils/sermonState";
+import { firstFieldFor, findField } from "../utils/walkOrder";
 import {
   parseStructuredField,
   setQuestionAnswer,
@@ -77,6 +78,8 @@ export default function SermonWorkspace({
   const [showPassage, setShowPassage] = useState(false);
   const [editingPassage, setEditingPassage] = useState(false);
   const [passageDraft, setPassageDraft] = useState("");
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState("");
   const [saveState, setSaveState] = useState(INITIAL_SAVE_STATE);
   const { saving, saveError, lastSavedAt } = saveState;
   const [siblingIds, setSiblingIds] = useState([]);
@@ -100,16 +103,26 @@ export default function SermonWorkspace({
   const [popupAnchor, setPopupAnchor] = useState(null);
   const sermonRef = useRef(_fixtureSermon ?? null);
   const passageBoxRef = useRef(null);
+  // Search-result navigation hint, captured once at mount (App clears the
+  // source state on open and on close; the ref guards against re-applying
+  // on a re-run of the load effect).
+  const navHintRef = useRef(navHint);
 
-  // Sermon load (skipped in fixture mode).
+  // Sermon load (skipped in fixture mode). The cancelled flag matters
+  // twice: StrictMode double-invokes this effect in dev (two racing
+  // load() chains — without the flag, whichever resolves second clobbers
+  // the hint-rewritten position with the raw DB row), and a fast
+  // sermonId change must not let a stale load commit over the new one.
   useEffect(() => {
     if (_fixtureSermon) {
       sermonRef.current = _fixtureSermon;
-      return;
+      return undefined;
     }
+    let cancelled = false;
     async function load() {
       try {
         const data = await getSermon(sermonId);
+        if (cancelled) return;
         if (!data) {
           setLoading(false);
           return;
@@ -125,18 +138,54 @@ export default function SermonWorkspace({
             ? getSermonsBySeries(data.series_id).catch((e) => { console.error("Siblings fetch failed:", e); return []; })
             : Promise.resolve([]),
         ]);
+        if (cancelled) return;
         data.series  = series ?? null;
         data.section = data.section_id ? (sections.find((s) => s.id === data.section_id) ?? null) : null;
+        // Search-result landing: a navHint (built by searchHints.js from
+        // the matched column) overrides the landing position once, so the
+        // pastor lands where the snippet promised instead of wherever he
+        // last edited. Applied to the loaded object BEFORE setSermon so
+        // the surface mounts directly at the hinted field with no flash.
+        //
+        // Notebook hints deliberately DON'T touch the position: the
+        // matched content is the notebook, and the drawer opens on the
+        // hinted stage regardless — rewriting last_touched_position would
+        // trade the pastor's real resume point for a stage's first field
+        // he never touched.
+        const hint = navHintRef.current;
+        let hintLanded = false;
+        if (hint) {
+          navHintRef.current = null; // one application per mount
+          if (hint.openNotebook) {
+            setNotebookStage(hint.stage ?? null);
+            setNotebookOpen(true);
+          } else if (hint.stage) {
+            const target = firstFieldFor(hint.stage, hint.subPhase);
+            if (target) {
+              data.last_touched_position = serializePosition({
+                stage: target.stage,
+                subPhase: target.subPhase,
+                fieldKey: target.key,
+              });
+              hintLanded = true;
+            }
+          }
+        }
         setSermon(data);
         sermonRef.current = data;
+        // Persist the hinted position so a plain close-and-reopen lands in
+        // the same place the search sent him. Only when a target actually
+        // resolved — an unresolved hint must not echo-write the whole row.
+        if (hintLanded) debouncedSave();
         setSiblingIds(Array.isArray(siblings) ? siblings.map((s) => s.id) : []);
       } catch (e) {
         console.error("SermonWorkspace load error:", e);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
     load();
+    return () => { cancelled = true; };
   }, [sermonId, _fixtureSermon]);
 
   const persistUpdate = useCallback(
@@ -197,6 +246,35 @@ export default function SermonWorkspace({
   }, [passageDraft, handleUpdate]);
   const cancelPassageEdit = useCallback(() => {
     setEditingPassage(false);
+  }, []);
+
+  // Title edit — mirrors the passage pattern. The title was previously
+  // writable only at creation and then frozen while the passage beside it
+  // was editable. State #3 (as amended): a sermon can never become
+  // nameless from the UI, and the refusal is SPOKEN — an explicit
+  // Enter-with-empty keeps the editor open and says so (titleRefused
+  // drives the placeholder); blur-with-empty reverts to the existing
+  // title, which is itself visible feedback. Persistence rides
+  // handleUpdate → update-sermon, which re-indexes search on every write.
+  const [titleRefused, setTitleRefused] = useState(false);
+  const startEditTitle = useCallback(() => {
+    setTitleDraft(sermonRef.current?.title || "");
+    setTitleRefused(false);
+    setEditingTitle(true);
+  }, []);
+  const commitTitleEdit = useCallback((explicit = false) => {
+    const next = titleDraft.trim();
+    const current = sermonRef.current?.title || "";
+    if (!next && explicit) {
+      // Spoken refusal: stay in the editor, name what's missing.
+      setTitleRefused(true);
+      return;
+    }
+    if (next && next !== current) handleUpdate({ title: next });
+    setEditingTitle(false);
+  }, [titleDraft, handleUpdate]);
+  const cancelTitleEdit = useCallback(() => {
+    setEditingTitle(false);
   }, []);
 
   // Popup anchoring — the PassagePopup opens at the position captured from
@@ -273,7 +351,23 @@ export default function SermonWorkspace({
     if (!col) return;
     const parsed = parseStructuredField(sermon[col]);
     let next = setQuestionAnswer(parsed, fieldKey, questionKey, envelope?.value ?? "");
-    next = setQuestionNA(next, fieldKey, questionKey, !!envelope?.na);
+    // N/A allowlist (UX-overhaul Gate-0 ruling, 2026-06-10): only questions
+    // that declare naAllowed may carry na:true — exactly
+    // intro.redemptive_note and mps.gospel_check. The two-question scope
+    // matches SADI for the anchor fields; for Study it CONFLICTS with
+    // SFDI's broader N/A escape valve — that conflict is surfaced in the
+    // SFDI doc's pending-ruling banner (2026-06-10), not silently resolved
+    // here. The UI hides the toggle everywhere else; this write-path guard
+    // means no future caller can set a forbidden flag either (an N/A'd
+    // mpt/mps tighten would silently blank the flat columns the Word
+    // export reads). Clearing na is always allowed.
+    let na = envelope?.na === true;
+    if (na) {
+      const fieldDef = findField(pos.stage, pos.subPhase, fieldKey);
+      const question = fieldDef?.questions?.find((q) => q.key === questionKey);
+      if (!question?.naAllowed) na = false;
+    }
+    next = setQuestionNA(next, fieldKey, questionKey, na);
     const fields = { [col]: JSON.stringify(next) };
     // Keep the legacy flat mpt/mps columns in sync with the v19 main_point_pair
     // envelope. The Word manuscript export reads sermon.mpt / sermon.mps (the
@@ -452,8 +546,10 @@ export default function SermonWorkspace({
     );
   }
 
-  // Position derivation. navHint overrides if it targets a stage that
-  // matches the writing-surface walk; otherwise read last_touched_position.
+  // Position derivation — reads last_touched_position. A search-result
+  // navHint was already applied in the load effect (it rewrites
+  // last_touched_position on the loaded object before setSermon), so by
+  // the time this runs there is exactly one position mechanism.
   const position = deriveCurrentPositionFromSermon(sermon);
 
   // Field-level answer access for the writing surface — extract
@@ -536,7 +632,34 @@ export default function SermonWorkspace({
                   );
                 })()}
               </div>
-              <div className="topbar-title">{sermon.title}</div>
+              {editingTitle ? (
+                <input
+                  className="topbar-title-input"
+                  type="text"
+                  value={titleDraft}
+                  onChange={(e) => setTitleDraft(e.target.value)}
+                  onBlur={() => commitTitleEdit(false)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") { e.preventDefault(); commitTitleEdit(true); }
+                    else if (e.key === "Escape") { e.preventDefault(); cancelTitleEdit(); }
+                  }}
+                  placeholder={titleRefused ? "A sermon needs a name" : "Sermon title"}
+                  aria-label="Rename sermon"
+                  autoFocus
+                />
+              ) : (
+                <div className="topbar-title-row">
+                  <div className="topbar-title">{sermon.title}</div>
+                  <IconButton
+                    className="topbar-title-edit-toggle"
+                    aria-label="Rename sermon"
+                    title="Rename sermon"
+                    onClick={startEditTitle}
+                  >
+                    ✎
+                  </IconButton>
+                </div>
+              )}
             </div>
           </div>
 

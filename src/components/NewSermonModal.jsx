@@ -7,10 +7,13 @@ import PrimaryButton from "./primitives/PrimaryButton";
 import SecondaryButton from "./primitives/SecondaryButton";
 import IconButton from "./primitives/IconButton";
 
-export default function NewSermonModal({ onClose, onCreated }) {
+// initialDate (optional, "YYYY-MM-DD") pre-fills the Date field — the
+// Calendar's day-click passes the clicked day so "next Sunday needs a
+// sermon" is one click + a title.
+export default function NewSermonModal({ onClose, onCreated, initialDate = "" }) {
   const [title, setTitle] = useState("");
   const [passage, setPassage] = useState("");
-  const [date, setDate] = useState("");
+  const [date, setDate] = useState(initialDate);
   const [seriesId, setSeriesId] = useState("");
   const [seriesList, setSeriesList] = useState([]);
   const [saving, setSaving] = useState(false);

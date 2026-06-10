@@ -33,25 +33,39 @@ function AutoGrowTextarea({ value, onChange, disabled, ariaLabel, placeholder })
   );
 }
 
-function PromptBlock({ prompt, answer, onValueChange, onToggleNA }) {
+// N/A semantics (SADI, ratified): the toggle renders only on questions that
+// declare `naAllowed: true` — exactly intro.redemptive_note and
+// mps.gospel_check, where "not applicable" means "satisfied another way
+// upstream," never "skip." When a question IS marked N/A, the pastor's
+// words stay visible (dimmed, struck through) — blanking the textarea read
+// as data loss even though the envelope kept the text. The `na && !naAllowed`
+// branch keeps the undo reachable for any legacy flag on a now-suppressed
+// question.
+function PromptBlock({ prompt, answer, naAllowed, onValueChange, onToggleNA }) {
   const value = answer?.value ?? "";
   const na = answer?.na === true;
   return (
     <div className="sws-prompt-block">
       <div className="sws-prompt">{prompt}</div>
       <AutoGrowTextarea
-        value={na ? "" : value}
+        value={value}
         onChange={onValueChange}
         disabled={na}
         ariaLabel={prompt}
       />
-      <button
-        type="button"
-        className={"sws-na-toggle" + (na ? " is-on" : "")}
-        onClick={onToggleNA}
-      >
-        {na ? "not applicable · undo" : "not applicable"}
-      </button>
+      {(naAllowed || na) && (
+        <button
+          type="button"
+          className={"sws-na-toggle" + (na ? " is-on" : "")}
+          onClick={onToggleNA}
+        >
+          {na
+            ? value.trim()
+              ? "not applicable · undo — your words are kept"
+              : "not applicable · undo"
+            : "not applicable"}
+        </button>
+      )}
     </div>
   );
 }
@@ -477,6 +491,7 @@ export default function SermonWritingSurface({
     return (
       <PromptBlock
         prompt={q.prompt}
+        naAllowed={q.naAllowed === true}
         answer={answers[q.key]}
         onValueChange={(v) =>
           onAnswerChange?.(field.key, q.key, { value: v, na: false })

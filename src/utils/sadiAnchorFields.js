@@ -61,6 +61,10 @@ export const MAIN_POINT_PAIR_FIELDS = [
         key: "gospel_check",
         prompt:
           "Your Q1 draft is right above you. The Christ-Connection Statement sits to the right. Read them side by side. Does the call in your draft rest on what Christ has done, or has it slipped into 'try harder' or 'be better'? If it has, name the drift and rewrite until the gospel-power is visible.",
+        // SADI: the only N/A-able MPS question — strict "satisfied another
+        // way" semantic (the moralism check was run upstream against the
+        // Christ-Connection Statement); N/A is not "skip."
+        naAllowed: true,
       },
       {
         key: "tighten",

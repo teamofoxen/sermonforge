@@ -116,6 +116,19 @@ export function findField(stage, subPhase, fieldKey) {
   return i < 0 ? null : WALK_ORDER[i];
 }
 
+// First field of a stage (or of a region when subPhase is given). Search
+// navigation lands here: a hint built from a matched search column names a
+// stage/region, not a field, and the walk's first field of that region is
+// the honest landing. Manuscript hints carry no subPhase and resolve to
+// the first Manuscript field (walkOrder tags it Manuscript/Manuscript).
+export function firstFieldFor(stage, subPhase) {
+  return (
+    WALK_ORDER.find(
+      (f) => f.stage === stage && (subPhase == null || f.subPhase === subPhase)
+    ) ?? null
+  );
+}
+
 export function nextField({ stage, subPhase, fieldKey }) {
   const i = indexOfField(stage, subPhase, fieldKey);
   if (i < 0 || i === WALK_ORDER.length - 1) return null;

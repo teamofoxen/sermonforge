@@ -215,6 +215,9 @@
   background: var(--parchment-warm);
   color: var(--ink-ghost);
   cursor: not-allowed;
+  /* N/A keeps the pastor's words on screen — struck through, never
+     vanished. Blanking the box read as data loss. */
+  text-decoration: line-through;
 }
 
 .sws-na-toggle {

@@ -2,6 +2,17 @@
 
 ---
 
+## 2026-06-10 — Findability: search results land where they promised, the calendar starts sermons, titles rename, N/A tells the truth
+
+- Search-result navigation finally works end to end (the audit's "built in three files, dropped in the fourth"): clicking a hit lands on the matched region's first field (new `firstFieldFor`), notebook hits open the right notebook drawer without touching the writing position, and the landing persists so reopen returns there. The 36-agent adversarial review caught and fixed two real races first: a StrictMode double-load that silently dropped the hint in dev (cancellation flag), and a cross-sermon write race armed by the new zero-input save (workspace now remounts per sermon, clearing pending debounce timers).
+- The Calendar earns its name: clicking a day opens New Sermon with that date pre-filled; preached Sundays stay on the grid as gold chips (with a named legend and per-chip status for screen readers); Today button; honest load failure with Retry; the "sermons with a date appear here" explainer now shows for the pastor whose sermons exist but carry no date.
+- The dashboard's Resume tile gains one quiet "N preached sermons →" row (live count, navigates to Preached Sermons); preached sermons stop being invisible from the front door.
+- Sermon titles rename inline from the topbar (pencil, mirroring the passage pattern); an explicit empty-title Enter keeps the editor open and says "A sermon needs a name" (State #3's spoken-refusal clause, honored the day it was written).
+- N/A tells the truth: the toggle renders only on the two ratified questions (intro.redemptive_note, mps.gospel_check) with a write-path guard — closing the silent path that could blank the Word export's main points — and marking N/A keeps the pastor's words visible, struck through, with "your words are kept."
+- **FLAGGED FOR PASTOR RULING:** the two-question allowlist conflicts with SFDI's broader Study-side N/A escape valve (RT ways-questions, Genre, Cross-References, Implications 1–2). Surfaced as a pending-ruling banner in the SFDI doc per Test Q4 — extend the allowlist or amend SFDI. 706 tests; review fleet PASS after fixes.
+
+---
+
 ## 2026-06-10 — Governance batch: the constitution catches up with the app
 
 - The Test gains a fifth question — "Where does the pastor SEE this, and what does it orphan?" — encoding the two failure modes the audit kept finding (built-but-never-rendered, deleted-but-still-consumed); the sweep skill asks it too, with its stale saveDb/debounce lines fixed.

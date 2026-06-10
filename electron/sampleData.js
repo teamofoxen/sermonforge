@@ -284,8 +284,15 @@ const sermon = {
     passage_points_to_christ: {
       biblical_theme: { value: "Peace with God — the great covenant promise, fulfilled in Christ. The Old Testament word for peace pointed at the wholeness of relationship with God restored, not just the absence of conflict; this passage names that restored wholeness as the believer's settled state. Also: glory (v.2) — the divine presence Israel longed to see and lost — now the eschatological inheritance of those in Christ. Also: love poured out — God's covenant love, now indwelling by the Spirit.", na: false },
       promise: { value: "Implicit: the Abrahamic promise (Rom 4) finds its fulfilment in the believer's standing in grace (v.2). The promise of God's presence with his people, woven through the covenants, is fulfilled in the Spirit's pouring love into hearts (v.5). The eschatological hope of glory (v.2) is the promise of the new creation, anchored in Christ's resurrection.", na: false },
-      predictive: { value: "Not directly predictive — Paul is not foretelling Christ here; he is unpacking what Christ has already accomplished. Mark this N/A in the strict typological sense; the passage is post-cross, not pre-cross.", na: true },
-      type: { value: "No direct typology — Paul is in didactic mode, not figural. The passage's Christological weight is in mediation, not pattern. Mark N/A.", na: true },
+      // na flags removed in the T19 N/A-allowlist (ratified: only
+      // intro.redemptive_note + mps.gospel_check are N/A-able). The prose
+      // answers themselves carry the "this passage isn't predictive /
+      // typological" pedagogy. NOTE: SFDI's RT field entry says all four
+      // ways-questions allow N/A — that conflict is flagged for the
+      // pastor's ruling; if he extends the allowlist, these flags can
+      // return alongside naAllowed on the question defs.
+      predictive: { value: "Not directly predictive — Paul is not foretelling Christ here; he is unpacking what Christ has already accomplished. The passage is post-cross, not pre-cross.", na: false },
+      type: { value: "No direct typology — Paul is in didactic mode, not figural. The passage's Christological weight is in mediation, not pattern.", na: false },
     },
     gospel_makes_possible: {
       primary: { value: "If the passage calls believers to rejoice in suffering and endure the productive chain, the gospel makes that possible in three ways: (1) Justification — they don't have to perform their way back into God's favour during suffering; their standing is settled. (2) Indwelling Spirit — the love is already poured in; they don't need to manufacture endurance from their own resources. (3) Christ's mediatorial presence — every gift comes 'through him,' so the call to endure is never a call to face suffering alone.", na: false },

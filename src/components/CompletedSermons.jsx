@@ -5,6 +5,7 @@ import { exportManuscript, searchSermons } from "../db/database";
 import mapError from "../utils/mapError";
 import { formatDate, buildManuscriptExportPayload } from "../utils";
 import { hintFromMatchedColumn } from "../utils/searchHints";
+import { buttonKeydown } from "../utils/buttonKeydown";
 import DeleteButton from "./DeleteButton";
 import InlineError from "./InlineError";
 import SearchResultSnippet from "./SearchResultSnippet";
@@ -159,6 +160,9 @@ export default function CompletedSermons({ onOpenSermon }) {
                 key={sermon.id}
                 className="sermon-card"
                 onClick={() => onOpenSermon(sermon.id, hintFromMatchedColumn(sermon.matchedColumn))}
+                role="button"
+                tabIndex={0}
+                onKeyDown={buttonKeydown(() => onOpenSermon(sermon.id, hintFromMatchedColumn(sermon.matchedColumn)))}
               >
                 <div className="sermon-card-header">
                   <div className="sermon-card-title">{sermon.title}</div>

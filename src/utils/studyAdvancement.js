@@ -101,8 +101,11 @@ function canvasHasMainWithModifier(canvas) {
 // is canvas-has-main-with-modifier — paraphrase + thought-unit-end markers
 // are retired with the unified canvas, so the structural shape (at least
 // one indented modifier under at least one main sentence) is what carries
-// the completeness signal. N/A short-circuits — the pastor may declare the
-// field inapplicable.
+// the completeness signal. The N/A short-circuit below honors LEGACY data
+// only: since the T19 N/A allowlist (2026-06-10) no UI or write path can
+// set na on the canvas question. Whether Study-side N/A returns is the
+// pending SFDI ruling (see the SFDI doc's 2026-06-10 banner); the
+// short-circuit stays so any stored flag remains honest either way.
 export function checkField3Composite(data) {
   const fieldKey = "divisions";
   if (isQuestionNA(data, fieldKey, "canvas")) return null;
