@@ -76,6 +76,12 @@ function readDivisionsCanvas(sermon) {
 export function deriveQuestionStatesFromSermon(sermon) {
   const out = {};
   const thoughtUnits = readThoughtUnits(sermon);
+  // Parse the native Outline / Equip / Manuscript columns ONCE. The new-kind
+  // branches below read them; parsing inside the loop re-parsed the same
+  // columns several times per call, and this runs via useMemo on every keystroke.
+  const outlinePoints = getOutline(sermon);
+  const functionalElements = getFunctionalElements(sermon);
+  const manuscriptData = parseManuscript(sermon?.manuscript);
   for (const entry of QUESTION_WALK_ORDER) {
     const id = questionId(entry);
     if (entry.kind === "cumulative-synthesis-table") {
@@ -124,7 +130,7 @@ export function deriveQuestionStatesFromSermon(sermon) {
       continue;
     }
     if (entry.kind === "outline-builder") {
-      const points = getOutline(sermon);
+      const points = outlinePoints;
       const filled = points.filter((p) => String(p?.text ?? "").trim() !== "");
       if (points.length === 0 || filled.length === 0) {
         out[id] = { state: "unanswered" };
@@ -144,8 +150,8 @@ export function deriveQuestionStatesFromSermon(sermon) {
       continue;
     }
     if (entry.kind === "functional-elements") {
-      const points = getOutline(sermon);
-      const fes = getFunctionalElements(sermon);
+      const points = outlinePoints;
+      const fes = functionalElements;
       const elementKeys = (entry.elements || []).map((e) => e.key);
       if (points.length === 0 || elementKeys.length === 0) {
         out[id] = { state: "unanswered" };
@@ -170,7 +176,7 @@ export function deriveQuestionStatesFromSermon(sermon) {
       continue;
     }
     if (entry.kind === "manuscript-prose") {
-      const ms = parseManuscript(sermon?.manuscript);
+      const ms = manuscriptData;
       const v = String(ms?.[entry.section]?.[entry.questionKey] ?? "").trim();
       out[id] = v
         ? { state: "answered", preview: v, fullValue: v }
@@ -178,8 +184,8 @@ export function deriveQuestionStatesFromSermon(sermon) {
       continue;
     }
     if (entry.kind === "manuscript-transitions") {
-      const points = getOutline(sermon);
-      const ms = parseManuscript(sermon?.manuscript);
+      const points = outlinePoints;
+      const ms = manuscriptData;
       const trans = ms?.transitions || {};
       const slots = [...points.map((p) => p.id), "conclusion"];
       const filled = slots.filter((s) => String(trans?.[s] ?? "").trim() !== "");
