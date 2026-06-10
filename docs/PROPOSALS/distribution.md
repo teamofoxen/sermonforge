@@ -195,15 +195,11 @@ These don't require code — just a shift in how to think when building:
 
 ## 12. Release Smoke Test
 
-Run before tagging any release. Auto-updater ships this build to every user in the background — treat each tag as a production deploy.
-
-1. **Setup screen** — fresh install (or delete `userData/sf-esv.enc` + clear the `bti_telemetry_enabled` setting): screen appears, ESV save / skip both work, telemetry preference persists.
-2. **Tour load** — Dashboard → "Take the tour": tour sermon seeds, opens, spotlight runs end-to-end.
-3. **Notebook persistence** — open any sermon, type into the per-tab Notebook, switch tabs, return: content survives. Quit + relaunch confirms disk write.
-4. **Export** — export a sermon to docx (Manuscript tab → Export to Word): file lands in `Documents/SermonForge/exports/Manuscripts/`.
-5. **Quit + relaunch** — confirm DB persisted, no migration errors, no crash log entries from the session.
-
-If any step fails, do not tag.
+**Moved 2026-06-10:** the canonical checklist now lives at
+[`docs/REFERENCE/release-smoke.md`](../REFERENCE/release-smoke.md) — the
+previous version of this section described surfaces deleted in the
+invisible-system rebuild (tour, per-tab notebook, Manuscript tab).
+`/release` Step 4 reads that file verbatim. If any step fails, do not tag.
 
 ---
 
@@ -234,7 +230,7 @@ Run `/release`. The skill enforces hard gates in order:
 2. `npm test` exits 0.
 3. Version proposal from `git log <last-tag>..HEAD` heuristics — user confirms or overrides.
 4. `/security-review` over `git diff <last-tag>..HEAD` — HIGH = hard stop, MEDIUM = require ack.
-5. Smoke test (Section 12 above) — every item must be confirmed yes.
+5. Smoke test ([`docs/REFERENCE/release-smoke.md`](../REFERENCE/release-smoke.md)) — every item must be confirmed yes.
 6. `git tag vX.Y.Z` (lightweight) + `git push origin vX.Y.Z`.
 
 **Note:** `package.json` `version` is **not** bumped manually — CI rewrites it from the tag name.

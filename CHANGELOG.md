@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-06-10 — The release smoke test describes the app that exists
+
+- Canonical checklist moved to docs/REFERENCE/release-smoke.md — the old distribution.md §12 walked surfaces deleted in the invisible-system rebuild (tour, per-tab notebook, Manuscript tab).
+- 14 items covering the current surface: first-run setup + key lifecycle, sample sandbox, walk/Back/Map/jump-flash, close-flush, notebook tabs, finish + export + preached cycle, soft-delete undo, sermon-body search, the packaged menu (with the macOS clipboard-roles check), the quiet updater line + Restart now, dark prepaint, v24 migration over an old library, in-popup key recovery, clean relaunch.
+- /release Step 4 and distribution.md both point at the new file.
+
+---
+
 ## 2026-06-10 — v24: deleting is undoable, search finds the sermon body, "Delivery" leaves the vocabulary
 
 - Deleting a sermon is now a soft delete (`deleted_at` tombstone, written only by main — deliberately outside the renderer-writable allowlist) and every delete surface shows an Undo instead of vanishing the card (shared DeletedSermonStub; Dashboard rows settle to "Deleted · Undo"). The two-step confirm stays; no Trash UI yet.

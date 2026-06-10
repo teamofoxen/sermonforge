@@ -46,9 +46,9 @@ Never bypass this step.
 
 ## STEP 4 — SMOKE-TEST CHECKLIST
 
-The smoke test lives at `docs/PROPOSALS/distribution.md` Section 12 — that is the source of truth. Read it fresh each run; if the doc adds or changes items, the skill picks them up automatically.
+The smoke test lives at `docs/REFERENCE/release-smoke.md` — that is the source of truth (moved 2026-06-10 from distribution.md §12, which described deleted surfaces). Read it fresh each run; if the doc adds or changes items, the skill picks them up automatically.
 
-For each numbered item in Section 12, ask the user a single yes/no question. Record answers.
+For each numbered item in the doc, ask the user a single yes/no question. Record answers.
 
 - Any "no" or skipped item → STOP. Refuse to tag. User must complete the smoke test and re-run.
 - All "yes" → continue.
