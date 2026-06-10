@@ -6,16 +6,20 @@
 // of this hook; the writing surface's passage column does the same. One
 // fetch, one cache, one place to debug.
 //
-// Returns { data, loading }. `data` shape mirrors the fetchPassage
-// resolved shape (with a `fetchError` field on failure). `loading` is
-// true while a fetch is in flight.
+// Returns { data, loading, refresh }. `data` shape mirrors the
+// fetchPassage resolved shape (with a `fetchError` field on transport
+// failure). `loading` is true while a fetch is in flight. `refresh()`
+// re-runs the fetch in place — the main-process cache only stores
+// successes, so a refresh after fixing the key (or the network) actually
+// re-attempts.
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { fetchPassage } from "../db/database";
 
 export function useEsvPassage(reference) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     if (!reference) {
@@ -40,7 +44,9 @@ export function useEsvPassage(reference) {
     return () => {
       cancelled = true;
     };
-  }, [reference]);
+  }, [reference, refreshKey]);
 
-  return { data, loading };
+  const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
+
+  return { data, loading, refresh };
 }

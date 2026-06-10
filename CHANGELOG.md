@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-06-10 — Passage popup recovers in place: structured states, plain copy, the key modal opens where the pain is
+
+- passage-fetch now returns structured `esvState` codes (no-key / key-unreadable / bad-key / rate-limited / offline / error); raw "ESV API HTTP 401" and "fetch failed" strings never reach the screen again — every state renders authored copy plus exactly one action.
+- The popup itself offers "Add ESV key" / "Update ESV key" (opens EsvKeyModal above the popup; saving re-fetches in place) and "Try again" for network states — no more dead end pointing nowhere; the sidebar link is honestly renamed "Add or update ESV key…".
+- The keystore now distinguishes "key file exists but can't be decrypted" from "no key saved" — two different problems that used to wear the same "not configured" message.
+- Popup dragging is clamped (the header can never leave the screen) and the false `aria-modal` claim is dropped from a non-modal floating panel; cache check now runs before the per-call key decrypt.
+- 706 tests; sweep PASS; verified in the workspace fixture (empty-reference copy, Escape layering, no aria-modal).
+
+---
+
 ## 2026-06-10 — First-run honesty: real ESV link, honest key saves, plain setup copy, New Sermon modal answers back
 
 - New `app-open-external` IPC with a hard exact-match allowlist (only `https://api.esv.org/`) — api.esv.org is now a real clickable link in SetupScreen and EsvKeyModal instead of bold text to retype.

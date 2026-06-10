@@ -107,13 +107,21 @@ Upserts a value in the `settings` table. Triggers a debounced `saveDb()`.
 ### `"passage-fetch"`
 ```
 receives: passage string (e.g. "Galatians 1:1-10")
-returns:  { esv, esvPending, esvError }
+returns:  { esv, esvPending, esvState, esvError? }
 ```
-Fetches passage text in ESV:
-- ESV via Crossway ESV API (`ESV_API_KEY`); `esvPending=true` when key not set
+Fetches passage text via the Crossway ESV API. `esvState` is the
+structured code the popup renders plain English from:
+`"ok"` (text in `esv` — possibly empty for an unrecognized reference) ·
+`"no-key"` (never saved) · `"key-unreadable"` (key file exists but
+decrypt failed — re-entering fixes it) · `"bad-key"` (401/403) ·
+`"rate-limited"` (429) · `"offline"` (fetch itself failed) · `"error"`
+(other non-OK status). `esvPending` keeps its legacy meaning (true when
+no usable key) and `esvError` keeps the raw message — both retained for
+stale consumers; no surface renders `esvError` verbatim anymore.
 
-Results are cached in-memory per session. OSIS passage ID parser handles single verse,
-range, cross-chapter range, and whole chapter formats.
+Only successes are cached (in-memory, per session) so error states always
+re-attempt. OSIS passage ID parser handles single verse, range,
+cross-chapter range, and whole chapter formats.
 
 ---
 

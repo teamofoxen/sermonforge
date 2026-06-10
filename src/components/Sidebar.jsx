@@ -193,7 +193,7 @@ export default function Sidebar({ currentView, onNavigate, onOpenSermon, theme, 
           onClick={() => setShowEsvModal(true)}
           style={{ padding: "2px 0 0" }}
         >
-          Update ESV key…
+          Add or update ESV key…
         </TextButton>
       </div>
 

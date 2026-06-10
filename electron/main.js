@@ -3203,33 +3203,76 @@ function passageToOsisId(passage) {
   return null;
 }
 
-async function fetchEsvText(passage) {
-  const esvKey = loadEsvKey();
-  if (!esvKey) return null; // null = key not configured
+// passage-fetch — returns { esv, esvPending, esvState, esvError? }.
+//
+// esvState is the structured code the popup renders plain English from:
+//   "ok"             — esv carries the text (possibly empty for a reference
+//                      the API didn't recognize — the popup words that case)
+//   "no-key"         — no ESV key has ever been saved
+//   "key-unreadable" — a key file exists but couldn't be decrypted
+//                      (re-entering the key once fixes it)
+//   "bad-key"        — the API rejected the saved key (401/403)
+//   "rate-limited"   — 429
+//   "offline"        — the fetch itself failed (no network / DNS / timeout)
+//   "error"          — any other non-OK HTTP status
+//
+// Raw messages (esvError) are kept for the log and as a legacy field, but
+// no renderer surface shows them verbatim anymore. esvPending stays
+// populated with its legacy meaning (true when no usable key) so any
+// stale consumer keeps working.
+ipcMain.handle('passage-fetch', async (_, passage) => {
+  const result = { esv: null, esvPending: false, esvState: "ok" };
+
+  // Cache first — a hit skips the per-call key load (fs read + decrypt in
+  // packaged builds) and keeps already-fetched passages rendering even
+  // through a keystore hiccup.
   const cacheKey = `esv|${passage}`;
-  if (_passageCache.has(cacheKey)) return _passageCache.get(cacheKey);
+  if (_passageCache.has(cacheKey)) {
+    result.esv = _passageCache.get(cacheKey);
+    return result;
+  }
+
+  const { key, unreadable } = loadEsvKey();
+  if (!key) {
+    result.esvPending = true;
+    result.esvState = unreadable ? "key-unreadable" : "no-key";
+    return result;
+  }
+
   const url = `https://api.esv.org/v3/passage/text/?q=${encodeURIComponent(passage)}` +
     `&include-headings=false&include-footnotes=false&include-verse-numbers=true` +
     `&include-short-copyright=false&include-passage-references=false`;
-  const res = await fetch(url, { headers: { 'Authorization': `Token ${esvKey}` } });
-  if (!res.ok) throw new Error(`ESV API HTTP ${res.status}`);
-  const json = await res.json();
-  const text = (json.passages || []).join('\n\n').trim();
-  _passageCache.set(cacheKey, text);
-  return text;
-}
-
-ipcMain.handle('passage-fetch', async (_, passage) => {
-  const result = { esv: null, esvPending: false };
-
+  let res;
   try {
-    const t = await fetchEsvText(passage);
-    if (t === null) result.esvPending = true;
-    else result.esv = t;
+    res = await fetch(url, { headers: { 'Authorization': `Token ${key}` } });
   } catch (e) {
+    result.esvState = "offline";
+    result.esvError = e.message;
+    return result;
+  }
+  if (res.status === 401 || res.status === 403) {
+    result.esvState = "bad-key";
+    return result;
+  }
+  if (res.status === 429) {
+    result.esvState = "rate-limited";
+    return result;
+  }
+  if (!res.ok) {
+    result.esvState = "error";
+    result.esvError = `ESV API HTTP ${res.status}`;
+    return result;
+  }
+  try {
+    const json = await res.json();
+    const text = (json.passages || []).join('\n\n').trim();
+    // Only successes are cached — error states always re-attempt.
+    _passageCache.set(cacheKey, text);
+    result.esv = text;
+  } catch (e) {
+    result.esvState = "error";
     result.esvError = e.message;
   }
-
   return result;
 });
 

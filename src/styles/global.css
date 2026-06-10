@@ -1916,6 +1916,24 @@ button {
   color: var(--ink-ghost);
 }
 
+/* Recovery state — plain-English explanation + one action, rendered in
+   place of the passage text when the fetch can't deliver it. */
+.passage-popup-recovery {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.passage-popup-recovery-copy {
+  margin: 0;
+  font-family: 'IBM Plex Serif', serif;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink-mid);
+}
+
 .passage-popup-columns {
   display: flex;
   flex-direction: column;

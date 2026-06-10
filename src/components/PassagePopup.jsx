@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import ReactDOM from "react-dom";
 import { useEsvPassage } from "../utils/useEsvPassage";
 import IconButton from "./primitives/IconButton";
+import SecondaryButton from "./primitives/SecondaryButton";
+import EsvKeyModal from "./EsvKeyModal";
 
 /**
  * PassagePopup — floating ESV scripture panel.
@@ -22,17 +24,21 @@ import IconButton from "./primitives/IconButton";
  *   - Esc closes the popup when focus is inside it (scoped per-instance so
  *     two popups don't both close on a single Esc keystroke).
  *
- * Accessibility: rendered as a modal dialog (role="dialog", aria-modal=
- * "true"). Focus moves to the close button on open and is restored to the
- * triggering element on close.
+ * Accessibility: a floating non-modal panel (role="dialog" without
+ * aria-modal — the rest of the app stays interactive while it's open, so
+ * claiming modality would misinform screen readers). Focus moves to the
+ * close button on open and is restored to the triggering element on close.
  */
 export default function PassagePopup({ passage, isOpen, onClose, initialPosition }) {
   // The fetch + cache logic lives in useEsvPassage. Empty reference parks
   // the hook; closing the popup releases the in-flight state.
-  const { data, loading } = useEsvPassage(isOpen ? passage : "");
+  const { data, loading, refresh } = useEsvPassage(isOpen ? passage : "");
   const closeRef = useRef(null);
   const triggerRef = useRef(null);
   const popupRef = useRef(null);
+  // Key recovery happens where the pain is: the modal opens from inside
+  // the popup, and a save re-runs the fetch without closing anything.
+  const [keyModalOpen, setKeyModalOpen] = useState(false);
 
   // position === null means "use initialPosition (or CSS default)."
   // The user dragging the popup writes into position; reopening snaps back
@@ -75,9 +81,21 @@ export default function PassagePopup({ passage, isOpen, onClose, initialPosition
       if (!dragStartRef.current) return;
       const dx = e.clientX - dragStartRef.current.mouseX;
       const dy = e.clientY - dragStartRef.current.mouseY;
+      // Clamp so the header can never leave reach: the top edge stays on
+      // screen and at least a 48px sliver stays inside every other edge —
+      // a popup dragged "off" the screen is otherwise unrecoverable
+      // without closing and reopening. Width was captured at drag start
+      // (the popup can't resize mid-drag).
+      const width = dragStartRef.current.width ?? 320;
       setPosition({
-        left: dragStartRef.current.popupX + dx,
-        top: dragStartRef.current.popupY + dy,
+        left: Math.min(
+          Math.max(dragStartRef.current.popupX + dx, 48 - width),
+          window.innerWidth - 48
+        ),
+        top: Math.min(
+          Math.max(dragStartRef.current.popupY + dy, 0),
+          window.innerHeight - 40
+        ),
       });
     };
     const onUp = () => {
@@ -102,12 +120,19 @@ export default function PassagePopup({ passage, isOpen, onClose, initialPosition
       mouseY: e.clientY,
       popupX: r.left,
       popupY: r.top,
+      width: r.width,
     };
     setDragging(true);
     e.preventDefault();
   }, []);
 
   if (!isOpen) return null;
+
+  // Structured state from passage-fetch; legacy-field fallback keeps the
+  // popup sane against a stale/stubbed main process.
+  const rawState = data?.esvState
+    ?? (data?.esvPending ? "no-key" : data?.esvError ? "error" : "ok");
+  const esvState = rawState === "ok" || RECOVERY[rawState] ? rawState : "error";
 
   // Inline style precedence: dragged position > initialPosition > CSS default.
   // `right: auto` is required so our left+top override the CSS-default
@@ -124,11 +149,13 @@ export default function PassagePopup({ passage, isOpen, onClose, initialPosition
       ref={popupRef}
       className="passage-popup"
       role="dialog"
-      aria-modal="true"
       aria-label={passage ? `Scripture passage: ${passage}` : "Scripture passage"}
       style={positionStyle}
       onKeyDown={(e) => {
-        if (e.key === "Escape") {
+        // When the key modal is nested open, Escape belongs to the modal
+        // (its own document listener closes it) — one press must not
+        // close both layers.
+        if (e.key === "Escape" && !keyModalOpen) {
           e.preventDefault();
           onClose?.();
         }
@@ -153,21 +180,29 @@ export default function PassagePopup({ passage, isOpen, onClose, initialPosition
       )}
 
       {!loading && data?.fetchError && (
-        <div className="passage-popup-loading" style={{ color: "var(--crimson-soft)" }}>
-          Could not load passage: {data.fetchError}
-        </div>
+        <PassageRecovery
+          copy="Something went wrong loading the passage. Try again — if it keeps happening, close and reopen SermonForge."
+          actionLabel="Try again"
+          onAction={refresh}
+        />
       )}
 
       {!loading && !data?.fetchError && (
-        <div className="passage-popup-columns">
-          <PassageColumn
-            label="ESV"
-            text={data?.esv}
-            pending={data?.esvPending}
-            error={data?.esvError}
-            pendingNote="ESV scripture lookup is unavailable — an ESV API key has not been configured for this install."
+        esvState === "ok" ? (
+          <div className="passage-popup-columns">
+            <PassageColumn label="ESV" text={data?.esv} />
+          </div>
+        ) : (
+          <PassageRecovery
+            copy={RECOVERY[esvState].copy}
+            actionLabel={RECOVERY[esvState].action}
+            onAction={
+              RECOVERY[esvState].kind === "key"
+                ? () => setKeyModalOpen(true)
+                : refresh
+            }
           />
-        </div>
+        )
       )}
 
       {/* Crossway attribution — required with displayed ESV text (short
@@ -179,26 +214,82 @@ export default function PassagePopup({ passage, isOpen, onClose, initialPosition
           Publishers. Used by permission.
         </div>
       )}
+
+      {/* Nested key recovery — EsvKeyModal renders position:fixed at a
+          higher z-index than the popup; closing it (saved or cancelled)
+          re-runs the fetch so a fixed key loads in place. */}
+      {keyModalOpen && (
+        <EsvKeyModal
+          onClose={() => {
+            setKeyModalOpen(false);
+            refresh();
+          }}
+        />
+      )}
     </div>,
     document.body
   );
 }
 
-function PassageColumn({ label, text, pending, error, pendingNote }) {
+// Per-state plain English + one action. The structured esvState codes from
+// passage-fetch render here — raw "ESV API HTTP 401" / "fetch failed"
+// strings never reach the pastor.
+const RECOVERY = {
+  "no-key": {
+    copy: "Seeing the Bible text here takes a free ESV key from Crossway — add it once and every passage will load.",
+    action: "Add ESV key",
+    kind: "key",
+  },
+  "key-unreadable": {
+    copy: "Your saved ESV key couldn't be read back from Windows. Re-entering it once will fix this.",
+    action: "Update ESV key",
+    kind: "key",
+  },
+  "bad-key": {
+    copy: "The ESV key saved on this computer wasn't accepted — it may have been mistyped or expired. Re-enter it and the passage will load.",
+    action: "Update ESV key",
+    kind: "key",
+  },
+  "offline": {
+    copy: "Couldn't reach the ESV servers. Check your internet connection.",
+    action: "Try again",
+    kind: "retry",
+  },
+  "rate-limited": {
+    copy: "The ESV servers are busy right now. Try again in a minute.",
+    action: "Try again",
+    kind: "retry",
+  },
+  "error": {
+    copy: "The ESV servers are busy right now. Try again in a minute.",
+    action: "Try again",
+    kind: "retry",
+  },
+};
+
+function PassageRecovery({ copy, actionLabel, onAction }) {
+  return (
+    <div className="passage-popup-recovery">
+      <p className="passage-popup-recovery-copy">{copy}</p>
+      <SecondaryButton size="sm" onClick={onAction}>
+        {actionLabel}
+      </SecondaryButton>
+    </div>
+  );
+}
+
+function PassageColumn({ label, text }) {
   return (
     <div className="passage-column">
       <div className="passage-column-label">{label}</div>
       <div className="passage-column-body">
-        {pending ? (
-          <span className="passage-column-note">{pendingNote || "Not yet available."}</span>
-        ) : error ? (
-          <span className="passage-column-note" style={{ color: "var(--crimson-soft)" }}>
-            Could not load: {error}
-          </span>
-        ) : text ? (
+        {text ? (
           <p className="passage-column-text">{text}</p>
         ) : (
-          <span className="passage-column-note">Not available for this passage.</span>
+          <span className="passage-column-note">
+            The ESV didn't return anything for this reference — check the book
+            name and verse numbers.
+          </span>
         )}
       </div>
     </div>
