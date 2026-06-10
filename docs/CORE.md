@@ -313,11 +313,13 @@ either reshapes to pass, or it does not ship.
   in `electron/main.js`. No SQL is accepted from the renderer.
 - **No direct `window.electronAPI` outside wrapper modules.** Components use `src/db/database.js`
   exports; they never call `window.electronAPI` directly.
-- **sql.js for sermonforge.db; better-sqlite3 + sqlite-vec for theology.db.** The main database
-  uses sql.js (WASM). Theology uses better-sqlite3 (native) with the sqlite-vec extension for
-  vector semantic search. Native modules must be rebuilt for Electron's ABI after install:
-  `npx @electron/rebuild -m node_modules/better-sqlite3`. Both native packages are in
-  `asarUnpack` in `package.json`.
+- **better-sqlite3 for both databases; sqlite-vec loads only on theology.db.** (Amended
+  2026-06-10: sermonforge.db moved from sql.js to better-sqlite3 — writes are durable
+  journaled commits, WAL mode, no serialize-per-write pipeline.) The two connections stay
+  separate: theology.db loads the sqlite-vec extension for vector semantic search; the
+  main DB never loads extensions. Native modules must be rebuilt for Electron's ABI after
+  install: `npx @electron/rebuild -m node_modules/better-sqlite3`. Both native packages
+  are in `asarUnpack` in `package.json`.
 - **ESM/CJS boundary.** `src/utils/churchCalendar.js` is ESM and cannot be imported from
   `electron/main.js` (CommonJS). Any main-process feature needing liturgical season logic
   must inline it.
@@ -342,9 +344,12 @@ either reshapes to pass, or it does not ship.
   `src/utils.js`. It assigns the stable UUID that `functional_elements` keys depend on.
   Never construct `{id, text}` objects inline anywhere else.
 
-- **The 500ms debounce on `saveDb()`** is a deliberate trade-off. sql.js serializes the
-  entire DB on every write; reducing this debounce would cause UI sluggishness on every
-  keystroke. Do not reduce it or add synchronous writes.
+- **Database writes commit at the IPC handler.** (Amended 2026-06-10; the prior invariant —
+  the 500ms `saveDb()` debounce protecting sql.js's whole-DB serialization — retired with
+  the driver swap.) Every spine write is a durable SQLite commit the moment its handler
+  returns; there is no main-process save debounce to protect, and none may be reintroduced.
+  The renderer-side 800ms autosave debounce in `SermonWorkspace` remains deliberate
+  (keystroke batching), and is flushed on close/quit/reload via `src/utils/closeFlush.js`.
 
 - **The design system lives entirely in `src/styles/global.css`** as CSS variables. Never
   hardcode colors, font names, or layout dimensions outside that file. Never change the
@@ -354,7 +359,7 @@ either reshapes to pass, or it does not ship.
 
 ## Tech Stack (summary)
 
-Electron 31 · React 18 · Vite 5 (config: `vite.config.mjs`) · sql.js (WASM SQLite) ·
-dotenv · Node 24 · Windows 11 / OneDrive storage.
+Electron 31 · React 18 · Vite 5 (config: `vite.config.mjs`) · better-sqlite3 (native
+SQLite, WAL) · dotenv · Node 24 · Windows 11 / OneDrive storage.
 
 Full details: `docs/REFERENCE/project-structure.md`.

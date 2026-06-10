@@ -128,12 +128,13 @@ describe("migrateLegacyDb — userData path permanence (CORE.md)", () => {
       fsImpl: fs,
       logger: { info: () => {}, error: () => {} },
     });
-    expect(result).toEqual({ db: fixedDb, source: LEGACY_FIXED });
+    expect(result).toEqual({ source: LEGACY_FIXED });
     expect(copies).toEqual([{ from: LEGACY_FIXED, to: ACTIVE }]);
     // Loser db was closed.
     expect(devDb.closed).toBe(true);
-    // Winner db is returned open.
-    expect(fixedDb.closed).toBe(false);
+    // Winner db is ALSO closed before the copy (file-backed connections are
+    // path-bound — the caller reopens at the active path).
+    expect(fixedDb.closed).toBe(true);
   });
 
   it("breaks ties by mtime when two candidates have the same row count", () => {
@@ -156,7 +157,7 @@ describe("migrateLegacyDb — userData path permanence (CORE.md)", () => {
       fsImpl: fs,
       logger: { info: () => {}, error: () => {} },
     });
-    expect(result).toEqual({ db: fixedDb, source: LEGACY_FIXED });
+    expect(result).toEqual({ source: LEGACY_FIXED });
     expect(copies).toEqual([{ from: LEGACY_FIXED, to: ACTIVE }]);
   });
 
@@ -179,7 +180,7 @@ describe("migrateLegacyDb — userData path permanence (CORE.md)", () => {
       fsImpl: fs,
       logger: { info: () => {}, error: () => {} },
     });
-    expect(result).toEqual({ db: fixedDb, source: LEGACY_FIXED });
+    expect(result).toEqual({ source: LEGACY_FIXED });
     expect(copies).toEqual([{ from: LEGACY_FIXED, to: ACTIVE }]);
   });
 

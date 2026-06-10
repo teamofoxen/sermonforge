@@ -40,14 +40,10 @@ const telemetryBus = require("./telemetry/bus");
 const BetterSqlite3 = require("better-sqlite3");
 const sqliteVec = require("sqlite-vec");
 
-let db = null;
+let db = null;           // better-sqlite3 instance for sermonforge.db (file-backed, WAL)
 let dbPath = null;
-let SQL = null;          // sql.js constructor — used for main sermonforge.db
 let theologyDb = null;   // better-sqlite3 instance for theology.db (+ sqlite-vec)
 let mainWindow;
-let saveTimer = null;
-let _pendingWrite = false; // true between saveDb() and the debounce flush; used for crash-window warn
-let _flushFailureCount = 0; // consecutive flushDb failures; banner fires at >= 2 to avoid noise on a single transient lock
 let _firstLaunch = false;  // true when sermonforge.db did not exist at initDatabase entry; drives the first-run OneDrive modal
 let _pendingStartupWarning = null; // set in maybeWarnOneDrive; renderer fetches via app-get-startup-warning on mount
 let _appOpenEmitted = false; // app-open telemetry emits exactly once per session, and only after consent
@@ -71,57 +67,60 @@ function emitAppOpenOnce() {
 const { migrateLegacyDb } = require("./dbMigration");
 
 // ── Database setup ──────────────────────────────────────────────────────────
+// sermonforge.db runs on better-sqlite3 (the same native driver theology.db
+// has shipped on since launch). Writes are real journaled SQLite commits —
+// durable the moment each IPC write handler returns. The previous sql.js
+// architecture (whole-DB serialize per write behind a 500ms debounce, with a
+// tmp+fsync+rotate flush pipeline) is gone; WAL journaling plus a boot-time
+// .bak copy replaces it. The quick_check probe, lock-vs-corruption
+// classification, quarantine, and legacy-path resolver all survive unchanged
+// in intent.
 async function initDatabase() {
-  const initSqlJs = require("sql.js");
-  SQL = await initSqlJs({ locateFile: paths.sqlWasm });
-
   const dataDir = paths.userData;
   if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
   dbPath = path.join(dataDir, "sermonforge.db");
   const bakPath = dbPath + ".bak";
   _firstLaunch = !fs.existsSync(dbPath);
 
-  // Try the main DB first. If it's corrupt, fall back to the .bak written by
-  // the previous successful flushDb. If .bak is also bad, rename the corrupt
+  // Try the main DB first. If it's corrupt, fall back to the .bak written at
+  // the previous successful boot. If .bak is also bad, rename the corrupt
   // original to <dbPath>.corrupt-<ts> (so manual recovery is possible) and
   // start fresh — never silently overwrite a damaged DB.
   //
-  // IMPORTANT: `new SQL.Database(buf)` does NOT throw on a structurally-corrupt
-  // page-level damaged file — it accepts the buffer and only throws when a
-  // query touches the bad pages. The exec() probe below forces that detection
-  // up front. Without it, a corrupt primary appears to load, queries fail at
-  // runtime, the app limps along with broken state, and the next saveDb writes
-  // serialized garbage on top of the previously-good `.bak` rotation chain.
-  // Classify a file-read failure. Lock / permission / IO errors are TRANSIENT —
+  // Classify an open/probe failure. Lock / permission / IO errors are TRANSIENT —
   // the file is healthy, something else is holding it (antivirus scan, OneDrive
   // sync, backup tool). These must NEVER be treated as corruption: quarantining
   // or starting fresh on a transient lock is exactly how a healthy library gets
-  // destroyed. A parse or quick_check failure, by contrast, is real corruption.
+  // destroyed. A quick_check failure, by contrast, is real corruption.
   function classifyReadError(err) {
-    const transient = new Set(["EBUSY", "EPERM", "EACCES", "EMFILE", "ENFILE", "EIO", "EAGAIN", "ETXTBSY"]);
+    const transient = new Set([
+      // fs-level lock/IO codes
+      "EBUSY", "EPERM", "EACCES", "EMFILE", "ENFILE", "EIO", "EAGAIN", "ETXTBSY",
+      // SQLite-level lock codes (better-sqlite3 sets err.code to the constant name)
+      "SQLITE_BUSY", "SQLITE_LOCKED", "SQLITE_PROTOCOL",
+    ]);
     return transient.has(err?.code) ? "transient" : "corrupt";
   }
 
   function tryLoad(p) {
-    let buf;
+    let candidate;
     try {
-      buf = fs.readFileSync(p);
-    } catch (readErr) {
-      readErr._sfClass = classifyReadError(readErr);
-      throw readErr; // tagged so the caller can tell a lock from corruption
+      candidate = new BetterSqlite3(p, { fileMustExist: true });
+    } catch (openErr) {
+      openErr._sfClass = classifyReadError(openErr);
+      throw openErr; // tagged so the caller can tell a lock from corruption
     }
-    const candidate = new SQL.Database(buf); // a parse failure here = corruption
     // PRAGMA quick_check forces a structural scan: it catches page-level damage
-    // that `new SQL.Database` accepts and that a shallow `sqlite_master` read
-    // would pass — exactly the torn-write / sync-conflict shape. Cheap on
+    // that a plain open accepts and that a shallow `sqlite_master` read would
+    // pass — exactly the torn-write / sync-conflict shape. Cheap on
     // pastor-sized DBs (well under ~500 sermons).
     let verdict;
     try {
-      const res = candidate.exec("PRAGMA quick_check");
-      verdict = res?.[0]?.values?.[0]?.[0];
+      const rows = candidate.pragma("quick_check");
+      verdict = rows?.[0]?.quick_check;
     } catch (probeErr) {
       try { candidate.close(); } catch { /* ignore */ }
-      probeErr._sfClass = "corrupt";
+      probeErr._sfClass = classifyReadError(probeErr);
       throw probeErr;
     }
     if (verdict !== "ok") {
@@ -131,6 +130,15 @@ async function initDatabase() {
       throw e;
     }
     return candidate;
+  }
+
+  // Pragmas for the ACTIVE connection only. tryLoad stays pure (read-probe) so
+  // legacy candidates are never converted; the active DB gets WAL journaling
+  // (crash safety: a hard kill mid-write replays cleanly on next open) and
+  // NORMAL synchronous (the safe WAL pairing).
+  function applyConnectionPragmas(conn) {
+    conn.pragma("journal_mode = WAL");
+    conn.pragma("synchronous = NORMAL");
   }
 
   const _sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -174,8 +182,7 @@ async function initDatabase() {
     let total = 0;
     const countOf = (sql) => {
       try {
-        const r = handle.exec(sql);
-        return Number(r[0]?.values?.[0]?.[0] ?? 0);
+        return Number(handle.prepare(sql).pluck().get() ?? 0);
       } catch { return 0; } // table missing — treat as 0
     };
     // Sample-sermon rows (id LIKE 'sample-%') are NOT real content: every
@@ -218,36 +225,45 @@ async function initDatabase() {
         _initError = { kind: "db_locked", message: LOCK_MESSAGE };
         return;
       }
-      // Genuine corruption — fall back to the .bak from the last good flush.
-      logError(`[DB] primary DB corrupt at ${dbPath}; trying .bak`, primaryErr);
+      // Genuine corruption. Quarantine the primary FIRST — the connection is
+      // file-backed, so a .bak restore is a file copy INTO dbPath and the
+      // damaged original must be out of the way before the copy lands.
+      logError(`[DB] primary DB corrupt at ${dbPath}; quarantining and trying .bak`, primaryErr);
+      const q = quarantineCorrupt(dbPath);
+      if (!q && fs.existsSync(dbPath)) {
+        // Rename refused (typically a lock). Don't copy over the original —
+        // abort and protect every file, same as the transient path.
+        logError(`[DB] could not quarantine corrupt primary (likely locked); aborting boot to protect data`);
+        _initError = { kind: "db_locked", message: LOCK_MESSAGE };
+        return;
+      }
       if (fs.existsSync(bakPath)) {
         try {
-          db = await loadWithRetry(bakPath);
+          fs.copyFileSync(bakPath, dbPath); // .bak itself stays in place as the second copy
+          db = await loadWithRetry(dbPath);
           recoveredFromBak = true;
-          logInfo(`[DB] loaded backup from ${bakPath} after primary corruption`);
+          logInfo(`[DB] restored backup from ${bakPath} after primary corruption`);
         } catch (bakErr) {
           if (bakErr._sfClass === "transient") {
             logError(`[DB] .bak temporarily unreadable (locked); aborting boot to protect data`, bakErr);
             _initError = { kind: "db_locked", message: LOCK_MESSAGE };
             return;
           }
-          logError(`[DB] .bak also corrupt; will quarantine primary and start fresh`, bakErr);
+          logError(`[DB] .bak also corrupt; starting fresh`, bakErr);
+          // Remove the bad restore copy (the original .bak is preserved on disk).
+          try { fs.unlinkSync(dbPath); } catch { /* ignore */ }
           db = null;
         }
       }
       if (recoveredFromBak) {
-        // Quarantine the corrupt primary so the first flush can't rotate it into
-        // the .bak slot and destroy the good backup we just recovered from.
-        quarantineCorrupt(dbPath);
         _pendingStartupWarning = {
           kind: "db_recovered_backup",
           message: "SermonForge restored your library from its automatic backup after the main file was damaged. Your most recent one or two edits may be missing. The damaged file was kept aside for recovery — contact support if you need it.",
         };
       } else if (!db) {
-        // Both primary and .bak are corrupt. Quarantine the primary (kept on
-        // disk for manual recovery) and start fresh.
-        const q = quarantineCorrupt(dbPath);
-        db = new SQL.Database();
+        // Both primary and .bak are corrupt. The primary is quarantined (kept
+        // on disk for manual recovery); start fresh at the active path.
+        db = new BetterSqlite3(dbPath);
         _pendingStartupWarning = {
           kind: "db_corrupt_quarantined",
           message:
@@ -259,39 +275,42 @@ async function initDatabase() {
       }
     }
   } else if (fs.existsSync(bakPath)) {
-    // Primary missing but backup present (a crash between rename steps, or the
-    // primary deleted by AV / disk cleanup).
+    // Primary missing but backup present (a crash between steps, or the
+    // primary deleted by AV / disk cleanup). Restore by copy, then open.
     try {
-      db = await loadWithRetry(bakPath);
+      fs.copyFileSync(bakPath, dbPath);
+      db = await loadWithRetry(dbPath);
       recoveredFromBak = true;
-      logInfo(`[DB] loaded backup; primary missing`);
+      logInfo(`[DB] restored backup; primary missing`);
       _pendingStartupWarning = {
         kind: "db_recovered_backup",
         message: "SermonForge restored your library from its automatic backup after the main file went missing. Your most recent one or two edits may be missing.",
       };
     } catch (e) {
-      if (e._sfClass === "transient") {
+      if (e._sfClass === "transient" || classifyReadError(e) === "transient") {
         logError(`[DB] .bak temporarily unreadable (locked); aborting boot to protect data`, e);
         _initError = { kind: "db_locked", message: LOCK_MESSAGE };
         return;
       }
       logError(`[DB] backup unreadable, starting fresh`, e);
-      db = new SQL.Database();
+      try { fs.unlinkSync(dbPath); } catch { /* ignore */ }
+      db = new BetterSqlite3(dbPath);
       _pendingStartupWarning = {
         kind: "db_corrupt_quarantined",
         message: "SermonForge couldn't read your library backup, so it started a fresh one. If you had sermons before, contact support before doing more work so we can try to recover them.",
       };
     }
   } else {
-    db = new SQL.Database(); // genuine fresh install
+    db = new BetterSqlite3(dbPath); // genuine fresh install — creates the file
   }
+  applyConnectionPragmas(db);
 
   // ── Phase 2 — content-aware legacy migration ─────────────────────────────
   // The Phase-1 db has 0 content rows iff: the active path is missing
   // (fresh-install at a new userData location), OR exists but is just an
   // empty schema (a prior empty initialization at the new path — exactly the
   // 2026-05-02 incident), OR fell through corrupt-fallback to a fresh
-  // `new SQL.Database()`. In all three cases, the user's real library may
+  // empty file. In all three cases, the user's real library may
   // be sitting at a prior install location; walk `legacyDbPaths` and pick
   // the candidate with the most content rows (mtime breaks ties).
   //
@@ -311,7 +330,15 @@ async function initDatabase() {
   let legacyMigrated = false;
   if (countContentRows(db) === 0 && !fs.existsSync(legacyMarkerPath)) {
     const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-    if (fs.existsSync(dbPath)) {
+    // The resolver copies a winner over the active path, and the active
+    // connection is file-backed — close it before any copy lands (Windows
+    // will not tolerate overwriting an open database file). close() also
+    // checkpoints WAL, so the file copies below are complete.
+    try { db.close(); } catch { /* ignore */ }
+    db = null;
+    // A fresh install just created an empty shell at dbPath — nothing worth a
+    // precovery copy. Existing-but-empty files keep the backup as before.
+    if (!_firstLaunch && fs.existsSync(dbPath)) {
       try {
         fs.copyFileSync(dbPath, `${dbPath}.precovery-empty-${stamp}`);
         logInfo(`[DB] backed up row-empty active DB to ${dbPath}.precovery-empty-${stamp}`);
@@ -326,6 +353,9 @@ async function initDatabase() {
         logError(`[DB] failed to back up empty active .bak before migration`, e);
       }
     }
+    // migrateLegacyDb closes every candidate handle (including the winner)
+    // and returns { source } — file-backed connections are path-bound, so the
+    // active DB is reopened at dbPath below either way.
     const migrated = migrateLegacyDb({
       activePath: dbPath,
       candidatePaths: legacyDbPaths,
@@ -333,9 +363,17 @@ async function initDatabase() {
       countRows: countContentRows,
       logger: { info: logInfo, error: logError },
     });
+    try {
+      db = await loadWithRetry(dbPath);
+    } catch (e) {
+      // The file at the active path failed to reopen after the resolver pass —
+      // abort to protect data rather than improvising a fresh DB on top of it.
+      logError(`[DB] could not reopen active DB after legacy resolution; aborting boot`, e);
+      _initError = { kind: "db_locked", message: LOCK_MESSAGE };
+      return;
+    }
+    applyConnectionPragmas(db);
     if (migrated) {
-      try { db.close(); } catch { /* ignore */ }
-      db = migrated.db;
       legacyMigrated = true;
       _pendingStartupWarning = {
         kind: "db_migrated",
@@ -351,9 +389,24 @@ async function initDatabase() {
     }
   }
 
+  // Boot-time backup: one good copy per launch. The open above passed
+  // quick_check; the checkpoint folds any replayed WAL into the main file, and
+  // the copy lands BEFORE bootstrap/migrations write anything — so .bak is
+  // also the pre-migration recovery point for a shipped migration bug.
+  // Skipped on a true first launch (an empty shell isn't worth backing up),
+  // but a legacy-migrated-in library on a first launch at a new path is.
+  if (!_firstLaunch || legacyMigrated) {
+    try {
+      db.pragma("wal_checkpoint(TRUNCATE)");
+      fs.copyFileSync(dbPath, bakPath);
+    } catch (e) {
+      logError(`[DB] boot-time .bak copy failed (continuing — writes are still journaled)`, e);
+    }
+  }
+
   // Bootstrap-only schema. All subsequent schema changes MUST go through
   // runMigrations() below — do not add or alter tables in this block.
-  db.run(`
+  dbRun(`
     CREATE TABLE IF NOT EXISTS series (
       id TEXT PRIMARY KEY,
       title TEXT NOT NULL,
@@ -434,13 +487,17 @@ async function initDatabase() {
 
   let migrationsRan = false;
   try {
-    migrationsRan = runMigrations();
+    // The whole migration pass runs inside ONE transaction: a thrown migration
+    // rolls every statement back, so the on-disk DB stays pristine for a fixed
+    // build. (SQLite DDL is transactional; sql.js got the same guarantee by
+    // discarding the in-memory image — this is the file-backed equivalent.)
+    migrationsRan = db.transaction(runMigrations)();
   } catch (e) {
-    // A migration threw (a shipped migration bug, or a deviant restored DB). The
-    // on-disk DB has NOT been written yet — bail before any flush so it stays
-    // pristine for a fixed build, and surface a clear message rather than hanging
-    // on the splash or quietly persisting a half-migrated image.
-    logError("[DB] runMigrations threw — leaving on-disk DB untouched", e);
+    // A migration threw (a shipped migration bug, or a deviant restored DB).
+    // The transaction rolled back — the on-disk DB is untouched. Surface a
+    // clear message rather than hanging on the splash or quietly persisting a
+    // half-migrated image.
+    logError("[DB] runMigrations threw — transaction rolled back, on-disk DB untouched", e);
     _initError = {
       kind: "migration_failed",
       message: "SermonForge couldn't finish updating your library to this version. Your sermons are safe and were not changed. Please reopen the app; if this keeps happening, contact support so we can fix the update.",
@@ -454,128 +511,28 @@ async function initDatabase() {
   // See assertSchemaContract() below for rationale.
   try { assertSchemaContract(); } catch (e) { logError("[DB] assertSchemaContract threw", e); }
 
-  // Boot-time flush ONLY when something actually changed. A clean boot of an
-  // up-to-date library writes nothing — so a healthy DB is never re-serialized
-  // and rotated over its own backup (the path that turned a transient hiccup or
-  // an undetected corruption into permanent loss). Reasons to persist now:
-  //   - _firstLaunch:     a brand-new DB was bootstrapped and must be saved.
-  //   - recoveredFromBak: write the recovered data back to the primary path.
-  //   - legacyMigrated:   persist the migrated-in library.
-  //   - migrationsRan:    persist a schema upgrade.
-  if (_firstLaunch || recoveredFromBak || legacyMigrated || migrationsRan) {
-    saveDb();
-  }
 }
 
-// flushDb is serialized via _flushQueue. The previous implementation could
-// re-enter when saveDb's setTimeout fired again before the in-flight flush had
-// finished writing — both calls would race on `<dbPath>.tmp` (truncate-then-
-// write under both), interleaving bytes and producing a malformed file that
-// the rotation then promoted into `dbPath`. Chaining each call onto the queue
-// guarantees a single in-flight writer and atomic rotation per call.
-let _flushQueue = Promise.resolve({ ok: true });
+// With better-sqlite3 every write commits durably as it happens — there is no
+// serialize-and-rotate pipeline and no debounce window. flushDb survives as a
+// WAL checkpoint so its callers (the banner's Retry button via "db-flush", and
+// any belt-and-braces flush sites) keep a meaningful, honest contract: after
+// it resolves ok, everything committed is folded into the main DB file.
 function flushDb() {
-  const next = _flushQueue.then(() => _flushDbImpl());
-  // Swallow errors on the chain so one failed flush does not poison every
-  // subsequent flush with a rejected predecessor. Each call still gets its
-  // own resolved/rejected promise back via `next`.
-  _flushQueue = next.then(() => undefined, () => undefined);
-  return next;
-}
-
-async function _flushDbImpl() {
   if (!db || !dbPath) return { ok: true, skipped: true };
-  // If _pendingWrite is still true here, flushDb was called externally (e.g. quit handler)
-  // while a debounced write was still queued. The 500ms crash window was open.
-  if (isDev && _pendingWrite) {
-    console.warn("[DB] flushDb: called with a pending write still queued — the 500ms crash window was open. This is expected on app quit; unexpected mid-session.");
-  }
-  if (saveTimer) {
-    clearTimeout(saveTimer);
-    saveTimer = null;
-  }
-  // Atomic write with backup preservation:
-  //   1. Serialize sql.js to an in-memory buffer.
-  //   2. Write to <dbPath>.tmp AND fsync it — the bytes must be durably on disk
-  //      before we rotate, or a power loss can leave BOTH the new primary and
-  //      the rotated .bak as cache-resident zero/garbage pages.
-  //   3. Rename existing <dbPath> -> <dbPath>.bak (only if it exists and is non-empty).
-  //   4. Rename <dbPath>.tmp -> <dbPath>, then fsync the directory (best-effort).
-  // A crash mid-step never produces a truncated <dbPath>: either the rename has
-  // not happened yet (real DB intact) or it has (.tmp is the new real DB).
-  // .bak survives one bad write — initDatabase falls back to it on next launch.
-  const tmpPath = dbPath + ".tmp";
-  const bakPath = dbPath + ".bak";
   try {
-    const data = db.export();
-    // Write + fsync the tmp file before it is rotated into place. fh.sync()
-    // maps to FlushFileBuffers on Windows / fsync on POSIX — the actual
-    // durability guarantee that survives a hard power cut.
-    const fh = await fs.promises.open(tmpPath, "w");
-    try {
-      await fh.writeFile(Buffer.from(data));
-      await fh.sync();
-    } finally {
-      await fh.close();
-    }
-
-    // Promote old DB to .bak (best-effort; missing original on first save is OK).
-    try {
-      const stat = await fs.promises.stat(dbPath);
-      if (stat.size > 0) {
-        await fs.promises.rename(dbPath, bakPath);
-      }
-    } catch (e) {
-      if (e.code !== "ENOENT") throw e; // a missing original is fine; anything else is real
-    }
-
-    await fs.promises.rename(tmpPath, dbPath);
-
-    // Best-effort: fsync the directory so the rename itself is durable. Not
-    // supported on Windows (opening a directory handle throws) — ignored there,
-    // where the file-level fh.sync() above is the durability guarantee.
-    try {
-      const dirHandle = await fs.promises.open(path.dirname(dbPath), "r");
-      try { await dirHandle.sync(); } finally { await dirHandle.close(); }
-    } catch (_) { /* directory fsync unsupported on this platform/fs */ }
-
-    _pendingWrite = false;
-    if (_flushFailureCount > 0) {
-      _flushFailureCount = 0;
-      mainWindow?.webContents?.send("db-write-ok");
-    }
+    db.pragma("wal_checkpoint(TRUNCATE)");
     return { ok: true };
   } catch (e) {
-    _flushFailureCount += 1;
-    console.error("Failed to save DB:", e.message);
-    logError("[DB] flush failed", e);
-    // Best-effort cleanup of orphan .tmp so it doesn't shadow future writes.
-    try { await fs.promises.unlink(tmpPath); } catch (_) {}
-    // Only emit the user-visible signal after two consecutive failures so a single
-    // transient OneDrive/AV lock doesn't pop a banner that auto-recovers on the next
-    // debounced write. The first failure still appears in app.log via logError above.
-    if (_flushFailureCount >= 2) {
-      mainWindow?.webContents?.send("db-write-error", e.message);
-    }
+    logError("[DB] wal_checkpoint failed", e);
     return { ok: false, error: e.message };
   }
 }
 
-function saveDb() {
-  // ACCEPTED RISK: 500ms crash window. Any mutation between saveDb() and the
-  // debounce firing could be lost if the process terminates in this window.
-  // Acceptable for a single-user desktop app with local storage.
-  _pendingWrite = true;
-  if (saveTimer) clearTimeout(saveTimer);
-  saveTimer = setTimeout(async () => {
-    _pendingWrite = false; // cleared before flush so flushDb's external-call check is correct
-    await flushDb();
-  }, 500);
-}
-
 // ── Lazy theology loader (better-sqlite3 + sqlite-vec) ──────────────────────
-// theology.db is managed exclusively by better-sqlite3 due to sqlite-vec dependency.
-// DO NOT access via sql.js.
+// theology.db is managed by better-sqlite3 with the sqlite-vec extension
+// loaded; sermonforge.db (also better-sqlite3 since the 2026-06-10 driver
+// swap) never loads extensions. Keep the two connections separate.
 let theologyVecAvailable = false;  // true when theology_vec table has embeddings
 const embedderHost = require("./embedder/host"); // worker_thread-backed; see electron/embedder/host.js
 
@@ -640,7 +597,7 @@ async function embedText(text) {
 // errors so the version bump at the end of the block is never reached.
 function safeAlter(sql) {
   try {
-    db.run(sql);
+    dbRun(sql);
     return true;
   } catch (e) {
     const msg = String(e?.message || e).toLowerCase();
@@ -650,7 +607,7 @@ function safeAlter(sql) {
 }
 
 function runMigrations() {
-  db.run(`CREATE TABLE IF NOT EXISTS meta (
+  dbRun(`CREATE TABLE IF NOT EXISTS meta (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
   )`);
@@ -676,7 +633,7 @@ function runMigrations() {
     // v2: add functional_elements and checklist to sermons (no-op on fresh installs)
     safeAlter("ALTER TABLE sermons ADD COLUMN functional_elements TEXT DEFAULT '{}'");
     safeAlter("ALTER TABLE sermons ADD COLUMN checklist TEXT DEFAULT '{}'");
-    db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '2')");
+    dbRun("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '2')");
     version = 2;
   }
 
@@ -684,7 +641,7 @@ function runMigrations() {
     // v3: previously created the sermon library table + FTS index. The library
     // feature has been removed; the migration body is empty but the version
     // bump is preserved so the migration sequence stays intact.
-    db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '3')");
+    dbRun("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '3')");
     version = 3;
   }
 
@@ -700,7 +657,7 @@ function runMigrations() {
     safeAlter("ALTER TABLE series ADD COLUMN canon_category TEXT DEFAULT ''");
     safeAlter("ALTER TABLE sermons ADD COLUMN section_id TEXT DEFAULT NULL");
     safeAlter("ALTER TABLE sermons ADD COLUMN is_one_off INTEGER DEFAULT 0");
-    db.run(`CREATE TABLE IF NOT EXISTS series_sections (
+    dbRun(`CREATE TABLE IF NOT EXISTS series_sections (
       id TEXT PRIMARY KEY,
       series_id TEXT NOT NULL,
       title TEXT DEFAULT '',
@@ -710,7 +667,7 @@ function runMigrations() {
       sort_order INTEGER DEFAULT 0,
       created_at TEXT DEFAULT (datetime('now'))
     )`);
-    db.run(`CREATE TABLE IF NOT EXISTS calendar_notes (
+    dbRun(`CREATE TABLE IF NOT EXISTS calendar_notes (
       id TEXT PRIMARY KEY,
       date TEXT NOT NULL,
       type TEXT DEFAULT 'special',
@@ -718,7 +675,7 @@ function runMigrations() {
       notes TEXT DEFAULT '',
       created_at TEXT DEFAULT (datetime('now'))
     )`);
-    db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '4')");
+    dbRun("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '4')");
     version = 4;
   }
 
@@ -764,13 +721,13 @@ function runMigrations() {
         };
       }
 
-      db.run(
+      dbRun(
         "UPDATE sermons SET outline = ?, functional_elements = ? WHERE id = ?",
         [JSON.stringify(newOutline), JSON.stringify(newFE), sermon.id]
       );
     }
 
-    db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '5')");
+    dbRun("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '5')");
     version = 5;
   }
 
@@ -780,7 +737,7 @@ function runMigrations() {
     // The columns may still exist in older databases; SERMON_COLUMNS no
     // longer admits writes to them, and they're not read anywhere. Version
     // bump preserved so the migration loop progresses past v6 cleanly.
-    db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '6')");
+    dbRun("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '6')");
     version = 6;
   }
 
@@ -793,36 +750,36 @@ function runMigrations() {
     safeAlter("ALTER TABLE series ADD COLUMN series_motivation TEXT DEFAULT ''");
     safeAlter("ALTER TABLE series ADD COLUMN emerging_big_idea TEXT DEFAULT ''");
     safeAlter("ALTER TABLE sermons ADD COLUMN study_guide_note TEXT DEFAULT ''");
-    db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '7')");
+    dbRun("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '7')");
     version = 7;
   }
 
   if (version < 8) {
     // v8: preaching_blocks — CMC (Contour-Mapped Compression) without-notes output
     safeAlter("ALTER TABLE sermons ADD COLUMN preaching_blocks TEXT DEFAULT 'null'");
-    db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '8')");
+    dbRun("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '8')");
     version = 8;
   }
 
   if (version < 9) {
     // v9: manuscript_delivery — AI-formatted delivery manuscript
     safeAlter("ALTER TABLE sermons ADD COLUMN manuscript_delivery TEXT DEFAULT 'null'");
-    db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '9')");
+    dbRun("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '9')");
     version = 9;
   }
 
   if (version < 10) {
     // v10: clean up rows seeded by the removed "See Demo" feature.
-    db.run("DELETE FROM sermons WHERE id LIKE 'demo-%'");
-    db.run("DELETE FROM series  WHERE id LIKE 'demo-%'");
-    db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '10')");
+    dbRun("DELETE FROM sermons WHERE id LIKE 'demo-%'");
+    dbRun("DELETE FROM series  WHERE id LIKE 'demo-%'");
+    dbRun("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '10')");
     version = 10;
   }
 
   if (version < 11) {
     // v11: drop sermons.big_idea — superseded by mpt/mps, never populated.
-    try { db.run("ALTER TABLE sermons DROP COLUMN big_idea"); } catch (_) {}
-    db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '11')");
+    try { dbRun("ALTER TABLE sermons DROP COLUMN big_idea"); } catch (_) {}
+    dbRun("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '11')");
     version = 11;
   }
 
@@ -830,18 +787,18 @@ function runMigrations() {
     // v12: last_tune_up — JSON wrapper {content, ts} for the most recent Tune-Up response.
     // Persisted only after a successful Final Tune-Up run on the Manuscript tab.
     safeAlter("ALTER TABLE sermons ADD COLUMN last_tune_up TEXT DEFAULT NULL");
-    db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '12')");
+    dbRun("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '12')");
     version = 12;
   }
 
   if (version < 13) {
     // v13: settings table — user preferences as key/value strings.
     // Distinct from `meta` (which is for system-managed schema state).
-    db.run(`CREATE TABLE IF NOT EXISTS settings (
+    dbRun(`CREATE TABLE IF NOT EXISTS settings (
       key TEXT PRIMARY KEY,
       value TEXT
     )`);
-    db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '13')");
+    dbRun("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '13')");
     version = 13;
   }
 
@@ -882,7 +839,7 @@ function runMigrations() {
     safeAlter("ALTER TABLE series ADD COLUMN book_structure TEXT DEFAULT ''");
     safeAlter("ALTER TABLE series ADD COLUMN series_motivation TEXT DEFAULT ''");
     safeAlter("ALTER TABLE series ADD COLUMN emerging_big_idea TEXT DEFAULT ''");
-    db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '14')");
+    dbRun("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '14')");
     version = 14;
   }
 
@@ -890,7 +847,7 @@ function runMigrations() {
     // v15: previously added content_hash to the library table. The library
     // feature has been removed; the migration body is empty but the version
     // bump is preserved so the migration sequence stays intact.
-    db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '15')");
+    dbRun("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '15')");
     version = 15;
   }
 
@@ -900,16 +857,16 @@ function runMigrations() {
     // and 2 intermediate series statuses (planning/active) duplicated the
     // workspace tab's in-progress position; "archived" was the only true
     // lifecycle terminus. See docs/CORE.md State Contract clauses 5 + 6.
-    db.run(
+    dbRun(
       `UPDATE sermons SET stage = '${SERMON_STATUS.InProgress}'
          WHERE stage IN ('planning','study','outline','writing','ready')`
     );
-    db.run(`UPDATE sermons SET stage = '${SERMON_STATUS.Complete}' WHERE stage = 'archived'`);
-    db.run(
+    dbRun(`UPDATE sermons SET stage = '${SERMON_STATUS.Complete}' WHERE stage = 'archived'`);
+    dbRun(
       `UPDATE series SET status = '${SERIES_STATUS.InProgress}'
          WHERE status IN ('planning','active')`
     );
-    db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '16')");
+    dbRun("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '16')");
     version = 16;
   }
 
@@ -931,26 +888,26 @@ function runMigrations() {
     const sermonInfo = queryAll("PRAGMA table_info(sermons)");
     const have = new Set(sermonInfo.map(r => r.name));
     if (!have.has("current_stage")) {
-      db.run(`ALTER TABLE sermons ADD COLUMN current_stage TEXT NOT NULL DEFAULT '${STAGE.Study}'`);
+      dbRun(`ALTER TABLE sermons ADD COLUMN current_stage TEXT NOT NULL DEFAULT '${STAGE.Study}'`);
     }
     // current_step column add removed in the trail deletion sweep (Phase B2).
     // Position is now (stage, sub_phase) only; old databases that still
     // carry the column keep it as an orphan — SERMON_COLUMNS no longer
     // admits writes.
     if (!have.has("current_sub_phase")) {
-      db.run("ALTER TABLE sermons ADD COLUMN current_sub_phase TEXT");
+      dbRun("ALTER TABLE sermons ADD COLUMN current_sub_phase TEXT");
     }
     // Backfill: any sermon in_progress at Study stage (the schema default)
     // gets a starting SubPhase so getSermon's ProcessPosition is fully
     // populated for new sermons too. Canonical position is (stage,
     // sub_phase) — current_step was retired in Phase B2.
-    db.run(
+    dbRun(
       `UPDATE sermons
          SET current_sub_phase = ?
        WHERE current_stage = ? AND current_sub_phase IS NULL`,
       [SUB_PHASE.Observe, STAGE.Study]
     );
-    db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '17')");
+    dbRun("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '17')");
     version = 17;
   }
 
@@ -966,9 +923,9 @@ function runMigrations() {
     const sermonInfo = queryAll("PRAGMA table_info(sermons)");
     const have = new Set(sermonInfo.map(r => r.name));
     if (!have.has("sermon_frame")) {
-      db.run("ALTER TABLE sermons ADD COLUMN sermon_frame TEXT DEFAULT NULL");
+      dbRun("ALTER TABLE sermons ADD COLUMN sermon_frame TEXT DEFAULT NULL");
     }
-    db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '18')");
+    dbRun("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '18')");
     version = 18;
   }
 
@@ -984,9 +941,9 @@ function runMigrations() {
     const sermonInfo = queryAll("PRAGMA table_info(sermons)");
     const have = new Set(sermonInfo.map(r => r.name));
     if (!have.has("main_point_pair")) {
-      db.run("ALTER TABLE sermons ADD COLUMN main_point_pair TEXT DEFAULT NULL");
+      dbRun("ALTER TABLE sermons ADD COLUMN main_point_pair TEXT DEFAULT NULL");
     }
-    db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '19')");
+    dbRun("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '19')");
     version = 19;
   }
 
@@ -997,15 +954,15 @@ function runMigrations() {
     const sermonInfo = queryAll("PRAGMA table_info(sermons)");
     const have = new Set(sermonInfo.map(r => r.name));
     if (!have.has("notebook_study")) {
-      db.run("ALTER TABLE sermons ADD COLUMN notebook_study TEXT DEFAULT NULL");
+      dbRun("ALTER TABLE sermons ADD COLUMN notebook_study TEXT DEFAULT NULL");
     }
     if (!have.has("notebook_blueprint")) {
-      db.run("ALTER TABLE sermons ADD COLUMN notebook_blueprint TEXT DEFAULT NULL");
+      dbRun("ALTER TABLE sermons ADD COLUMN notebook_blueprint TEXT DEFAULT NULL");
     }
     if (!have.has("notebook_manuscript")) {
-      db.run("ALTER TABLE sermons ADD COLUMN notebook_manuscript TEXT DEFAULT NULL");
+      dbRun("ALTER TABLE sermons ADD COLUMN notebook_manuscript TEXT DEFAULT NULL");
     }
-    db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '20')");
+    dbRun("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '20')");
     version = 20;
   }
 
@@ -1019,23 +976,23 @@ function runMigrations() {
     const sermonInfo = queryAll("PRAGMA table_info(sermons)");
     const have = new Set(sermonInfo.map(r => r.name));
     if (!have.has("last_study_subphase")) {
-      db.run("ALTER TABLE sermons ADD COLUMN last_study_subphase TEXT");
+      dbRun("ALTER TABLE sermons ADD COLUMN last_study_subphase TEXT");
     }
     if (!have.has("last_assembly_subphase")) {
-      db.run("ALTER TABLE sermons ADD COLUMN last_assembly_subphase TEXT");
+      dbRun("ALTER TABLE sermons ADD COLUMN last_assembly_subphase TEXT");
     }
     // Backfill from current_sub_phase where it belongs to the matching stage.
-    db.run(
+    dbRun(
       `UPDATE sermons SET last_study_subphase = current_sub_phase
          WHERE last_study_subphase IS NULL
            AND current_sub_phase IN ('Observe', 'Interpret', 'RedemptiveThread', 'Implications')`
     );
-    db.run(
+    dbRun(
       `UPDATE sermons SET last_assembly_subphase = current_sub_phase
          WHERE last_assembly_subphase IS NULL
            AND current_sub_phase IN ('Anchor', 'Outline', 'Equip', 'Frame')`
     );
-    db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '21')");
+    dbRun("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '21')");
     version = 21;
   }
 
@@ -1049,13 +1006,13 @@ function runMigrations() {
     // be findable across the whole library.
     //
     // Implementation: a regular SQLite table holding flattened plain text
-    // for each searchable column on each sermon. sql.js (the main DB's
-    // engine) doesn't compile FTS5 by default, so we use LIKE-based
-    // matching against the flattened text. Library sizes stay in the
+    // for each searchable column on each sermon, with LIKE-based matching
+    // (built when the main DB ran on sql.js, which lacked FTS5; better-
+    // sqlite3 has FTS5 if search is ever rebuilt). Library sizes stay in the
     // low hundreds; LIKE is plenty fast at that scale. The indexer keeps
     // this table in sync via validateAndCommit hooks; the first-launch
     // backfill below handles existing sermons.
-    db.run(`
+    dbRun(`
       CREATE TABLE IF NOT EXISTS sermon_search (
         sermon_id TEXT PRIMARY KEY,
         title TEXT NOT NULL DEFAULT '',
@@ -1086,7 +1043,7 @@ function runMigrations() {
     for (const row of rows) {
       indexSermonFtsFromRow(row);
     }
-    db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '22')");
+    dbRun("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '22')");
     version = 22;
   }
 
@@ -1103,7 +1060,7 @@ function runMigrations() {
     //     so we don't end up with one boolean per threshold over time.
     safeAlter("ALTER TABLE sermons ADD COLUMN last_touched_position TEXT DEFAULT NULL");
     safeAlter("ALTER TABLE sermons ADD COLUMN thresholds_seen TEXT NOT NULL DEFAULT '[]'");
-    db.run("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '23')");
+    dbRun("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '23')");
     version = 23;
   }
 
@@ -1145,40 +1102,45 @@ function getSetting(key) {
 }
 
 function setSetting(key, value) {
-  db.run(
+  dbRun(
     "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
     [key, value]
   );
-  saveDb();
 }
 
 // ── Query helpers ────────────────────────────────────────────────────────────
+// better-sqlite3 rejects undefined/boolean bind values that sql.js coerced —
+// normalize so existing call sites keep working byte-for-byte.
+function bindable(params) {
+  return params.map((p) =>
+    p === undefined ? null : typeof p === "boolean" ? (p ? 1 : 0) : p
+  );
+}
+
 function queryAll(sql, params = []) {
-  const stmt = db.prepare(sql);
-  stmt.bind(params);
-  const rows = [];
-  while (stmt.step()) {
-    rows.push(stmt.getAsObject());
-  }
-  stmt.free();
-  return rows;
+  return db.prepare(sql).all(...bindable(params));
 }
 
 function queryOne(sql, params = []) {
-  const rows = queryAll(sql, params);
-  return rows[0] || null;
+  return db.prepare(sql).get(...bindable(params)) ?? null;
 }
 
 function runSql(sql, params = []) {
-  db.run(sql, params);
-  saveDb();
+  db.prepare(sql).run(...bindable(params));
+}
+
+// Drop-in replacement for sql.js's `db.run(sql, params?)`: with params it is a
+// single prepared statement; without, it executes a (possibly multi-statement)
+// script — exactly the two shapes the old call sites used.
+function dbRun(sql, params = []) {
+  if (params.length) db.prepare(sql).run(...bindable(params));
+  else db.exec(sql);
 }
 
 // ── Theology query helper (better-sqlite3) ──────────────────────────────────
-// theology.db uses better-sqlite3 + sqlite-vec.
-// sermonforge.db uses sql.js.
-// These systems are intentionally separate.
-// DO NOT mix query patterns or connections.
+// theology.db and sermonforge.db are both better-sqlite3, but they are
+// separate connections with separate helpers — theology loads sqlite-vec,
+// the main DB never loads extensions. DO NOT mix connections.
 function queryTheology(sql, params = []) {
   return theologyDb.prepare(sql).all(...params);
 }
@@ -1260,7 +1222,7 @@ function createWindow() {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false,       // required: sql.js and other Node APIs used in preload
+      sandbox: false,       // required: Node APIs used in preload
     },
     show: false,
   });
@@ -1416,9 +1378,9 @@ function buildUpdate(fields, allowedColumns) {
 // concatenated text so search hits read as natural prose instead of
 // tokenizing on `{`, `}`, and `"`.
 //
-// Why not FTS5: sql.js (the main DB's engine) doesn't compile the FTS5
-// extension by default. Rather than swap WASM builds, the search table is
-// a regular SQLite table with the flattened text stored column-by-column;
+// Why not FTS5: the search table predates the better-sqlite3 driver swap —
+// sql.js didn't compile FTS5, so the search table is a regular SQLite table
+// with the flattened text stored column-by-column;
 // search runs as LIKE matching across the indexed columns + JS-side
 // snippet generation. Fast enough at typical pastor library sizes
 // (under ~500 sermons).
@@ -1476,7 +1438,7 @@ const SERMON_SEARCH_COLUMNS = [
 // Caller passes a row object that already has the JOIN result populated.
 function indexSermonFtsFromRow(row) {
   if (!row || !row.id) return;
-  db.run("DELETE FROM sermon_search WHERE sermon_id = ?", [row.id]);
+  dbRun("DELETE FROM sermon_search WHERE sermon_id = ?", [row.id]);
   const values = [row.id];
   for (const col of SERMON_SEARCH_COLUMNS) {
     const raw = row[col.source];
@@ -1484,7 +1446,7 @@ function indexSermonFtsFromRow(row) {
   }
   const colNames = SERMON_SEARCH_COLUMNS.map((c) => c.key).join(", ");
   const placeholders = SERMON_SEARCH_COLUMNS.map(() => "?").join(", ");
-  db.run(
+  dbRun(
     `INSERT INTO sermon_search (sermon_id, ${colNames}) VALUES (?, ${placeholders})`,
     values,
   );
@@ -1507,7 +1469,7 @@ function indexSermonFts(sermonId) {
 // Drop the sermon's search row. Used by delete-sermon.
 function dropSermonFts(sermonId) {
   if (!sermonId) return;
-  db.run("DELETE FROM sermon_search WHERE sermon_id = ?", [sermonId]);
+  dbRun("DELETE FROM sermon_search WHERE sermon_id = ?", [sermonId]);
 }
 
 // Build a single-snippet string for a matched search row. Scans every
@@ -1867,7 +1829,7 @@ function validateAndCommit(op, payload) {
       const id = randomUUID();
       // Canonical position is (current_stage, current_sub_phase). current_step
       // was retired in the trail deletion sweep (Phase B2).
-      db.run(
+      dbRun(
         `INSERT INTO sermons
            (id, series_id, section_id, is_one_off, title, passage, date, preacher,
             stage, mpt, mps, observations, outline, manuscript,
@@ -1888,7 +1850,6 @@ function validateAndCommit(op, payload) {
         ],
       );
       indexSermonFts(id);
-      saveDb();
       return success({ id });
     }
 
@@ -1902,7 +1863,7 @@ function validateAndCommit(op, payload) {
         );
       }
       const id = randomUUID();
-      db.run(
+      dbRun(
         `INSERT INTO series
            (id, title, color, description, year, big_idea, overview,
             passage_range, start_date, end_date, structural_outline, status, canon_category)
@@ -1923,7 +1884,6 @@ function validateAndCommit(op, payload) {
           payload.canon_category || "",
         ],
       );
-      saveDb();
       return success({ id });
     }
 
@@ -1938,12 +1898,11 @@ function validateAndCommit(op, payload) {
       if (!update) {
         return rejection("UPDATE_NO_FIELDS", "State #5", "No valid fields to update.");
       }
-      db.run(
+      dbRun(
         `UPDATE sermons SET ${update.setClauses}, updated_at = datetime('now') WHERE id = ?`,
         [...update.values, id],
       );
       indexSermonFts(id);
-      saveDb();
       return success();
     }
 
@@ -1963,21 +1922,19 @@ function validateAndCommit(op, payload) {
       if (!update) {
         return rejection("UPDATE_NO_FIELDS", "State #5", "No valid fields to update.");
       }
-      db.run(`UPDATE series SET ${update.setClauses} WHERE id = ?`, [...update.values, id]);
+      dbRun(`UPDATE series SET ${update.setClauses} WHERE id = ?`, [...update.values, id]);
       // Series title is part of every sermon-FTS row; if it changed,
       // re-index every sermon attached to this series.
       if (Object.prototype.hasOwnProperty.call(fields || {}, "title")) {
         const sermonRows = queryAll("SELECT id FROM sermons WHERE series_id = ?", [id]);
         for (const r of sermonRows) indexSermonFts(r.id);
       }
-      saveDb();
       return success();
     }
 
     case "delete-sermon":
-      db.run("DELETE FROM sermons WHERE id = ?", [payload]);
+      dbRun("DELETE FROM sermons WHERE id = ?", [payload]);
       dropSermonFts(payload);
-      saveDb();
       return success();
 
     case "delete-series": {
@@ -1988,24 +1945,23 @@ function validateAndCommit(op, payload) {
         "SELECT id FROM sermons WHERE series_id = ?",
         [payload],
       );
-      db.run("BEGIN");
+      dbRun("BEGIN");
       try {
-        db.run("DELETE FROM series_sections WHERE series_id = ?", [payload]);
-        db.run("UPDATE sermons SET series_id = NULL, section_id = NULL WHERE series_id = ?", [payload]);
-        db.run("DELETE FROM series WHERE id = ?", [payload]);
-        db.run("COMMIT");
+        dbRun("DELETE FROM series_sections WHERE series_id = ?", [payload]);
+        dbRun("UPDATE sermons SET series_id = NULL, section_id = NULL WHERE series_id = ?", [payload]);
+        dbRun("DELETE FROM series WHERE id = ?", [payload]);
+        dbRun("COMMIT");
       } catch (e) {
-        db.run("ROLLBACK");
+        dbRun("ROLLBACK");
         throw e;
       }
       for (const r of affectedSermonRows) indexSermonFts(r.id);
-      saveDb();
       return success();
     }
 
     case "create-section": {
       const id = randomUUID();
-      db.run(
+      dbRun(
         `INSERT INTO series_sections
            (id, series_id, title, passage_range, big_idea, overview, sort_order)
          VALUES (?, ?, ?, ?, ?, ?, ?)`,
@@ -2019,7 +1975,6 @@ function validateAndCommit(op, payload) {
           payload.sort_order ?? 0,
         ],
       );
-      saveDb();
       return success({ id });
     }
 
@@ -2029,22 +1984,20 @@ function validateAndCommit(op, payload) {
       if (!update) {
         return rejection("UPDATE_NO_FIELDS", "State #5", "No valid fields to update.");
       }
-      db.run(`UPDATE series_sections SET ${update.setClauses} WHERE id = ?`, [...update.values, id]);
-      saveDb();
+      dbRun(`UPDATE series_sections SET ${update.setClauses} WHERE id = ?`, [...update.values, id]);
       return success();
     }
 
     case "delete-section":
-      db.run("BEGIN");
+      dbRun("BEGIN");
       try {
-        db.run("UPDATE sermons SET section_id = NULL WHERE section_id = ?", [payload]);
-        db.run("DELETE FROM series_sections WHERE id = ?", [payload]);
-        db.run("COMMIT");
+        dbRun("UPDATE sermons SET section_id = NULL WHERE section_id = ?", [payload]);
+        dbRun("DELETE FROM series_sections WHERE id = ?", [payload]);
+        dbRun("COMMIT");
       } catch (e) {
-        db.run("ROLLBACK");
+        dbRun("ROLLBACK");
         throw e;
       }
-      saveDb();
       return success();
 
     case "transition-state": {
@@ -2086,7 +2039,7 @@ function validateAndCommit(op, payload) {
         if (to === STAGE.Study) { subDefault = SUB_PHASE.Observe; lastCol = "last_study_subphase"; }
         else if (to === STAGE.Assembly) { subDefault = SUB_PHASE.Anchor; lastCol = "last_assembly_subphase"; }
         if (lastCol) {
-          db.run(
+          dbRun(
             `UPDATE sermons SET current_stage = ?,
                                 current_sub_phase = COALESCE(${lastCol}, ?),
                                 updated_at = datetime('now')
@@ -2094,7 +2047,7 @@ function validateAndCommit(op, payload) {
             [to, subDefault, sermonId],
           );
         } else {
-          db.run(
+          dbRun(
             `UPDATE sermons SET current_stage = ?, current_sub_phase = ?, updated_at = datetime('now') WHERE id = ?`,
             [to, subDefault, sermonId],
           );
@@ -2111,22 +2064,22 @@ function validateAndCommit(op, payload) {
         else if (targetStage === STAGE.Assembly) lastCol = "last_assembly_subphase";
         const crossStage = targetStage && targetStage !== currentStage;
         if (crossStage && lastCol) {
-          db.run(
+          dbRun(
             `UPDATE sermons SET current_stage = ?, current_sub_phase = ?, ${lastCol} = ?, updated_at = datetime('now') WHERE id = ?`,
             [targetStage, to, to, sermonId],
           );
         } else if (crossStage) {
-          db.run(
+          dbRun(
             `UPDATE sermons SET current_stage = ?, current_sub_phase = ?, updated_at = datetime('now') WHERE id = ?`,
             [targetStage, to, sermonId],
           );
         } else if (lastCol) {
-          db.run(
+          dbRun(
             `UPDATE sermons SET current_sub_phase = ?, ${lastCol} = ?, updated_at = datetime('now') WHERE id = ?`,
             [to, to, sermonId],
           );
         } else {
-          db.run(
+          dbRun(
             `UPDATE sermons SET current_sub_phase = ?, updated_at = datetime('now') WHERE id = ?`,
             [to, sermonId],
           );
@@ -2138,7 +2091,6 @@ function validateAndCommit(op, payload) {
           `'to' must be a canonical Stage or SubPhase value (got '${to}').`,
         );
       }
-      saveDb();
       return success();
     }
 
@@ -2172,12 +2124,11 @@ function validateAndCommit(op, payload) {
           }
           serialized = payload.value;
         }
-        db.run(
+        dbRun(
           `UPDATE sermons SET ${field} = ?, updated_at = datetime('now') WHERE id = ?`,
           [serialized, sermonId],
         );
         indexSermonFts(sermonId);
-        saveDb();
         return success();
       }
 
@@ -2189,11 +2140,11 @@ function validateAndCommit(op, payload) {
       // Delete-then-insert on every click — the seed is for exploration,
       // not persistent work, and resetting picks up schema/content
       // changes immediately.
-      db.run("BEGIN");
+      dbRun("BEGIN");
       try {
-        db.run("DELETE FROM sermons WHERE id LIKE 'sample-%'");
-        db.run("DELETE FROM series  WHERE id LIKE 'sample-%'");
-        db.run(
+        dbRun("DELETE FROM sermons WHERE id LIKE 'sample-%'");
+        dbRun("DELETE FROM series  WHERE id LIKE 'sample-%'");
+        dbRun(
           `INSERT INTO series (
             id, title, color, description, year,
             big_idea, overview, passage_range, start_date, end_date,
@@ -2209,7 +2160,7 @@ function validateAndCommit(op, payload) {
             series.book_structure, series.series_motivation, series.emerging_big_idea,
           ],
         );
-        db.run(
+        dbRun(
           `INSERT INTO sermons (
             id, series_id, is_one_off, title, passage, date, stage,
             mpt, mps,
@@ -2235,9 +2186,9 @@ function validateAndCommit(op, payload) {
             SUB_PHASE.Observe, SUB_PHASE.Anchor,
           ],
         );
-        db.run("COMMIT");
+        dbRun("COMMIT");
       } catch (e) {
-        db.run("ROLLBACK");
+        dbRun("ROLLBACK");
         throw e;
       }
       // Search index: drop any stale sample rows + re-index the freshly-
@@ -2245,9 +2196,8 @@ function validateAndCommit(op, payload) {
       // `sermon_search` is a separate table and needs its own cleanup.
       // Index the freshly-inserted sermon so search finds the sample
       // content immediately.
-      db.run("DELETE FROM sermon_search WHERE sermon_id LIKE 'sample-%'");
+      dbRun("DELETE FROM sermon_search WHERE sermon_id LIKE 'sample-%'");
       indexSermonFts(SERMON_ID);
-      saveDb();
       return success({ sermonId: SERMON_ID, created: true });
     }
 
@@ -2304,17 +2254,15 @@ ipcMain.handle("db-getCalendarNotes", () =>
 
 ipcMain.handle("db-createCalendarNote", (_, data) => {
   const id = randomUUID();
-  db.run(
+  dbRun(
     "INSERT INTO calendar_notes (id, date, type, label, notes) VALUES (?, ?, ?, ?, ?)",
     [id, data.date, data.type || "special", data.label || "", data.notes || ""]
   );
-  saveDb();
   return id;
 });
 
 ipcMain.handle("db-deleteCalendarNote", (_, id) => {
-  db.run("DELETE FROM calendar_notes WHERE id = ?", [id]);
-  saveDb();
+  dbRun("DELETE FROM calendar_notes WHERE id = ?", [id]);
 });
 
 // (Sermon/series IPC moved into the spine handler above — one channel.)
@@ -3226,9 +3174,8 @@ ipcMain.handle('passage-fetch', async (_, passage) => {
 
 // ── App lifecycle ────────────────────────────────────────────────────────────
 
-// Single-instance lock. Two instances each load the whole sql.js DB into memory
-// with no OS file lock, so the one that quits last silently overwrites the
-// other's work (and the next boot's flush rotates the survivor's .bak away).
+// Single-instance lock. better-sqlite3 holds real SQLite file locks, but two
+// instances would still fight over WAL checkpoints and the boot-time .bak copy.
 // The most common trigger is double-clicking the launcher during the multi-second
 // splash. Redirect any second launch to focus the existing window instead.
 if (!app.requestSingleInstanceLock()) {
@@ -3278,7 +3225,7 @@ if (!app.requestSingleInstanceLock()) {
       loadAppContent();            // swap splash → real app
       initUpdater();
     } catch (err) {
-      // Any unexpected boot failure (sql.js wasm unreadable, userData not
+      // Any unexpected boot failure (native module unloadable, userData not
       // writable, etc.) — show a clear message and quit instead of hanging on
       // the splash forever with the error swallowed into app.log.
       logError("[boot] fatal error during startup", err);
@@ -3327,30 +3274,14 @@ app.on("before-quit", async (e) => {
   // empty image, and flushing it would overwrite the pristine on-disk DB the
   // abort was protecting.
   if (db && !_initError) {
-    let result;
-    try { result = await flushDb(); }
-    catch (err) { logError("[quit] flushDb threw", err); result = { ok: false, error: err?.message }; }
-    // _flushDbImpl resolves { ok: false } on write failure (it never rejects), so
-    // the old bare try/catch was dead — a failed final save exited silently and
-    // dropped the session's last edits. Give the user one clear chance to retry.
-    if (result && result.ok === false) {
-      let choice = 1;
-      try {
-        choice = dialog.showMessageBoxSync({
-          type: "warning",
-          buttons: ["Try again", "Quit anyway"],
-          defaultId: 0,
-          cancelId: 1,
-          noLink: true,
-          title: "SermonForge",
-          message: "Your last changes couldn't be saved.",
-          detail: "Another program may be using the file (antivirus, a backup tool, or OneDrive). Close it and try again, or quit and risk losing your most recent edits.",
-        });
-      } catch (_) { choice = 1; }
-      if (choice === 0) {
-        try { await flushDb(); } catch (err) { logError("[quit] retry flushDb threw", err); }
-      }
-    }
+    // Every edit already committed durably at write time (better-sqlite3).
+    // The old quit-time save dialog is gone with the serialize-and-rotate
+    // pipeline it guarded: a failed checkpoint here is NOT data loss — the
+    // WAL file persists on disk and replays on the next open. close() runs
+    // its own final checkpoint as well.
+    try { flushDb(); } catch (err) { logError("[quit] wal checkpoint threw", err); }
+    try { db.close(); } catch (err) { logError("[quit] db close threw", err); }
+    db = null;
   }
   if (theologyDb) { try { theologyDb.close(); } catch (_) {} }
   theologyDb = null;

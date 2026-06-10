@@ -3,7 +3,10 @@
 // Walks `legacyDbPaths` (from electron/config.js), evaluates every candidate
 // by loading it and counting content rows (sermons + series), picks the
 // candidate with the most rows (mtime breaks ties), copies it into the
-// active path, and returns the loaded SQL.Database + the legacy source path.
+// active path, and returns the legacy source path. Every candidate handle —
+// including the winner's — is closed before returning: connections are
+// file-backed (better-sqlite3), so the caller must reopen at the active path
+// rather than adopt a handle bound to the legacy location.
 // 0-row candidates (schema-only DBs from prior empty initialization) are
 // skipped — they have nothing useful to restore. The legacy file is preserved
 // (copy, not move) as a backup.
@@ -28,8 +31,8 @@ const LEGACY_DB_MIN_BYTES = 32 * 1024;
 
 /**
  * Find and migrate the most-content-rich recoverable legacy DB into
- * `activePath`. Returns `{ db, source }` on success, `null` when nothing
- * recoverable was found.
+ * `activePath`. Returns `{ source }` on success (all candidate handles
+ * closed), `null` when nothing recoverable was found.
  *
  * Dependencies are injected so callers can swap them in tests without mocking
  * global modules. In production, callers wire `fs`, the project logger, the
@@ -99,16 +102,20 @@ function migrateLegacyDb({ activePath, candidatePaths, tryLoad, countRows, fsImp
     closeQuietly(evaluated[i].db);
   }
 
+  // Close the winner BEFORE the copy: the handle is file-backed, and copying
+  // a file that another connection holds open invites a torn read. The caller
+  // reopens at `activePath` after this returns.
+  closeQuietly(winner.db);
+
   try {
     fsImpl.copyFileSync(winner.path, activePath);
   } catch (copyErr) {
     logger.error?.(`[DB] failed to copy ${winner.path} → ${activePath}`, copyErr);
-    closeQuietly(winner.db);
     return null;
   }
 
   logger.info?.(`[DB] migrated user data from legacy path ${winner.path} (${winner.rows} content rows, ${winner.stat.size} bytes, mtime ${new Date(winner.stat.mtimeMs).toISOString()}) → ${activePath}; legacy file preserved as backup`);
-  return { db: winner.db, source: winner.path };
+  return { source: winner.path };
 }
 
 function closeQuietly(db) {

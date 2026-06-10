@@ -22,10 +22,8 @@ const paths = {
     ? path.join(process.resourcesPath, ".env")
     : path.join(__dirname, "../.env"),
 
-  // sql.js WASM — passed as locateFile() callback to initSqlJs()
-  sqlWasm: (file) => isPackaged
-    ? path.join(process.resourcesPath, "app.asar.unpacked", "node_modules", "sql.js", "dist", file)
-    : path.join(__dirname, "../node_modules/sql.js/dist/", file),
+  // (sql.js WASM locator removed 2026-06-10 — sermonforge.db now runs on
+  // better-sqlite3, the same native driver as theology.db.)
 
   // Embedding models for @xenova/transformers
   models: isPackaged

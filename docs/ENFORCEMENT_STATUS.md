@@ -1,6 +1,6 @@
 # Enforcement Status
 
-**Last verified:** 2026-05-17 — Tour-cleanup phase shipped. Tour engine (`TourContext`, `TourOverlay`, `workspaceTourStops`) deleted; `electron/tourData.js` renamed to `electron/sampleData.js` with record-ID prefix rename `tour-*` → `sample-*` (5 list-query SQL filters + 3 in-handler filters updated); IPC `load-tour-sermon` renamed to `load-sample-sermon`; `remove-tour-sermon` deleted (purely tour-teardown — `leaveTour` callback was the only caller); `loadSampleSermon` export + allowlist entries renamed in both `scripts/spine-integrity.js` and `eslint-plugin-sermonforge`. `TOUR_STEP` telemetry constant removed (no source emitter; BTI commitment tracked as separate initiative). "Open a sample sermon" Dashboard feature survives end-to-end. Phases F/G remain pending explicit authorization.
+**Last verified:** 2026-06-10 — better-sqlite3 driver swap for `sermonforge.db` shipped: the CORE absolute invariant changed from "500ms `saveDb()` debounce is deliberate" to "writes commit at the IPC handler; no main-process save debounce may be reintroduced." Spine-integrity gate, contract tests (693), and a live SIGKILL durability test all pass against the new driver.
 **Verified against:** [`docs/CORE.md`](CORE.md).
 **History:** see `git log docs/ENFORCEMENT_STATUS.md` and [`CHANGELOG.md`](../CHANGELOG.md). Per-event narrative is intentionally not duplicated here.
 

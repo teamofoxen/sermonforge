@@ -26,25 +26,21 @@ const legacyPaths = [
 ];
 
 async function main() {
-  const initSqlJs = require("sql.js");
-  const SQL = await initSqlJs({
-    locateFile: (file) => path.join(__dirname, "..", "node_modules", "sql.js", "dist", file),
-  });
+  const BetterSqlite3 = require("better-sqlite3");
 
   function inspect(p) {
     if (!fs.existsSync(p)) return { path: p, exists: false };
     const stat = fs.statSync(p);
     let summary = { path: p, exists: true, size: stat.size, mtime: stat.mtime, sermons: 0, series: 0, error: null };
     try {
-      const buf = fs.readFileSync(p);
-      const db = new SQL.Database(buf);
+      // readonly: an inspection pass must never create WAL sidecars or touch
+      // the candidate file in any way.
+      const db = new BetterSqlite3(p, { readonly: true, fileMustExist: true });
       try {
-        const sermonRes = db.exec("SELECT COUNT(*) FROM sermons");
-        summary.sermons = sermonRes[0]?.values?.[0]?.[0] ?? 0;
+        summary.sermons = Number(db.prepare("SELECT COUNT(*) FROM sermons").pluck().get() ?? 0);
       } catch { summary.sermons = 0; }
       try {
-        const seriesRes = db.exec("SELECT COUNT(*) FROM series");
-        summary.series = seriesRes[0]?.values?.[0]?.[0] ?? 0;
+        summary.series = Number(db.prepare("SELECT COUNT(*) FROM series").pluck().get() ?? 0);
       } catch { summary.series = 0; }
       db.close();
     } catch (e) {

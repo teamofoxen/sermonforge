@@ -6,7 +6,7 @@
 //
 // What it enforces (cited to docs/CORE.md "The Framework"):
 //
-//   1. `db.run` / `db.prepare` / `db.exec` (sql.js wrappers on the main sermon
+//   1. `db.run` / `db.prepare` / `db.exec` (driver calls on the main sermon
 //      database) appear only in `electron/main.js`. Anywhere else and the
 //      spine's mutation gate is bypassable.
 //      → Undermines: Mutation Contract #1 (user typing wins; ai_apply
@@ -188,7 +188,7 @@ console.error(`${findings.length} violation(s). Spine integrity invalid. Fix bef
 process.exit(1);
 
 function describe(kind) {
-  if (kind === 'db_wrapper') return 'Direct sql.js wrapper call (db.run / db.prepare / db.exec) outside electron/main.js. Mutations must route through validateAndCommit.';
+  if (kind === 'db_wrapper') return 'Direct database call (db.run / db.prepare / db.exec) outside electron/main.js. Mutations must route through validateAndCommit.';
   if (kind === 'raw_sermon_sql') return 'Raw SQL on sermons / series / series_sections outside electron/main.js. The spine is the only mutation gate.';
   if (kind === 'spine_bridge_bypass') return 'Direct call to window.electronAPI.spine(...) outside src/core/spine.ts. The spine wraps the bridge and unwraps IpcResult — no caller should bypass it.';
   if (kind.startsWith('database_js_import:')) {

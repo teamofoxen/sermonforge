@@ -52,9 +52,9 @@ export const getTheologyChunks      = (ids, maxChars = 600) => api.getTheologyCh
 // series_id, series_title, stage, date, current_stage, current_sub_phase,
 // matchedColumn, snippet } sorted by sermon recency.
 //
-// Implementation note: sql.js doesn't ship FTS5 by default, so the search
-// table is a regular SQLite table with flattened text per column and
-// LIKE-based matching. JS-side snippet generation marks matched ranges
+// Implementation note: the search table predates the better-sqlite3 driver
+// swap (sql.js lacked FTS5), so it is a regular SQLite table with flattened
+// text per column and LIKE-based matching. JS-side snippet generation marks matched ranges
 // with `‹mark›…‹/mark›` (single guillemets, not HTML brackets) so the
 // renderer can split on them without HTML escaping concerns.
 export const searchSermons = (query, limit = 50) => api.searchSermons(query, limit);

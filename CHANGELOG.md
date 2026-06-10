@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-06-10 — sermonforge.db moves to better-sqlite3: writes commit at the handler, the 500ms crash window is gone
+
+- Ported the main DB from sql.js to better-sqlite3 (WAL mode): every spine write is a durable SQLite commit when its IPC handler returns; deleted the saveDb/flushDb serialize-and-rotate pipeline (`flushDb` survives as a WAL checkpoint, `db-flush` contract unchanged).
+- `runMigrations()` now runs inside one transaction (a thrown migration rolls back to a pristine file); `.bak` is written once per launch after quick_check, before any write — also the pre-migration recovery point.
+- `migrateLegacyDb` closes every candidate handle and returns `{ source }` only; the caller reopens at the active path (file-backed connections are path-bound); quit-time save-retry dialog removed (nothing pending at quit anymore).
+- Removed the sql.js dependency, its wasm asarUnpack entry, and `paths.sqlWasm`; ported `scripts/recover-db.cjs`; amended CORE.md (driver boundary, the 500ms-debounce invariant → writes-commit-at-handler, stack line), RULES.md, and docs/SYSTEMS/database.md.
+- Verified: 693 tests + spine gate pass; live boot on the real dev library; SIGKILL with 20KB un-checkpointed WAL replayed cleanly on relaunch.
+
+---
+
 ## 2026-06-09 — Close-time edit flush: window close, quit, and reload no longer drop the last keystrokes
 
 - Added a renderer flush registry (`src/utils/closeFlush.js`); SermonWorkspace registers its `persistUpdate` so every exit path can flush the 800ms autosave debounce.

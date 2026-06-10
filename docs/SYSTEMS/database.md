@@ -7,22 +7,45 @@
 
 ## Runtime
 
-SermonForge uses a **dual-driver** architecture:
+Both databases run on **better-sqlite3** (native SQLite). The 2026-06-10 driver
+swap retired sql.js for `sermonforge.db` — its whole-DB-serialize-per-write
+model was the root cause of the 500ms crash window, the flush-queue machinery,
+and most of the hand-rolled durability code that previously lived in
+`electron/main.js`.
 
-- **`sermonforge.db` → sql.js (WASM).** The main application database (sermons,
-  series, sections, calendar notes) runs on sql.js.
-  Historical reason: native module compilation was blocked by the Node 24 + VS2026
-  environment when this driver was chosen. sql.js serializes the entire database
-  to disk on each write, which is why the `saveDb()` debounce is 500ms and must
-  not be reduced. See `docs/CORE.md`.
-- **`theology.db` → better-sqlite3 + sqlite-vec.** The theology corpus runs on
-  the native driver because it depends on the `sqlite-vec` extension for vector
-  semantic search. Native modules must be rebuilt for Electron's ABI after
-  install: `npx @electron/rebuild -m node_modules/better-sqlite3`. Both native
-  packages are listed in `asarUnpack` in `package.json`.
+- **`sermonforge.db` → better-sqlite3, WAL journal mode.** Every spine write is
+  a durable SQLite commit the moment its IPC handler returns. A hard kill
+  mid-session loses nothing committed — the WAL replays on the next open
+  (verified live with SIGKILL on 2026-06-10). `flushDb()` survives as a WAL
+  checkpoint (`wal_checkpoint(TRUNCATE)`); the `db-flush` IPC contract is
+  unchanged. The main DB never loads extensions.
+- **`theology.db` → better-sqlite3 + sqlite-vec.** The theology corpus loads
+  the `sqlite-vec` extension for vector semantic search. Native modules must be
+  rebuilt for Electron's ABI after install:
+  `npx @electron/rebuild -m node_modules/better-sqlite3`. Both native packages
+  are listed in `asarUnpack` in `package.json`.
 
-The two drivers are intentionally isolated — sermonforge.db is never touched by
-better-sqlite3, and theology.db is never touched by sql.js.
+The two connections stay isolated — separate handles, separate query helpers,
+no shared statements.
+
+### Boot sequence (initDatabase)
+
+1. Open the primary at the active path; `PRAGMA quick_check` probes for
+   page-level corruption. Lock/IO errors are classified **transient** (boot
+   aborts, every file untouched); quick_check failures are **corrupt**.
+2. On corruption: quarantine the primary (`<dbPath>.corrupt-<ts>`), copy
+   `.bak` → primary, reopen. If `.bak` is also bad, start fresh — the
+   quarantined original is never deleted.
+3. Legacy resolver (Phase 2) runs once per active path when the library is
+   row-empty: the active connection is **closed** before the resolver copies a
+   winner over the active path, then reopened (file-backed connections are
+   path-bound; `migrateLegacyDb` closes every candidate handle and returns
+   `{ source }` only).
+4. Boot-time backup: `wal_checkpoint(TRUNCATE)` then copy primary → `.bak` —
+   one good copy per launch, taken BEFORE bootstrap/migrations write anything,
+   so `.bak` is also the pre-migration recovery point.
+5. `runMigrations()` executes inside **one transaction** — a thrown migration
+   rolls back completely and the on-disk DB stays pristine for a fixed build.
 
 ---
 
@@ -103,9 +126,13 @@ reject with a tagged error and the next call respawns.
 | Debounce | Duration | Location | Reason |
 |----------|----------|----------|--------|
 | Field save (`debouncedSave`) | 800ms | `SermonWorkspace.jsx` | Avoids IPC call on every keystroke |
-| DB disk write (`saveDb`) | 500ms | `electron/main.js` | sql.js full-file serialization cost |
 
-Both debounces are deliberate trade-offs, not bugs. Do not reduce them.
+The renderer debounce is a deliberate trade-off, and it is **flushed on window
+close, app quit, and reload** via `src/utils/closeFlush.js` + the
+`app-flush-edits` ask/ack (see `docs/REFERENCE/ipc-channels.md`). The former
+500ms main-process `saveDb()` debounce was retired with the sql.js driver
+(2026-06-10): writes now commit at the IPC handler, and no main-process save
+debounce may be reintroduced (see `docs/CORE.md`).
 
 ---
 
@@ -118,10 +145,12 @@ Resolved by `electron/config.js` via `app.getPath("userData")` plus a `data` /
   `C:\Users\<user>\AppData\Roaming\sermonforge\data\sermonforge.db`)
 - Dev (`ELECTRON_DEV=1`): `%APPDATA%\sermonforge\data-dev\sermonforge.db`
 - `theology.db` lives alongside `sermonforge.db` in the same dir.
-- Atomic flush writes via `<dbPath>.tmp` and rotates the prior good blob to
-  `<dbPath>.bak`. On startup, a corrupt primary falls back to `.bak`; if both
-  fail the corrupt original is renamed to `<dbPath>.corrupt-<ts>` and a fresh
-  DB is created — pastor data is never silently overwritten.
+- WAL mode means `sermonforge.db-wal` / `-shm` sidecars exist while the app
+  runs; a clean close checkpoints and removes them. `.bak` is written once per
+  launch (post-quick_check, pre-migration). On startup, a corrupt primary
+  falls back to `.bak`; if both fail the corrupt original is renamed to
+  `<dbPath>.corrupt-<ts>` and a fresh DB is created — pastor data is never
+  silently overwritten.
 - `ai-log.jsonl` (audit log), `app.log` (crash log), and `sf-anthropic.enc` /
   `sf-esv.enc` (safeStorage keys) live at the **userData root**, not under
   `data/`, so they persist across the dev/prod data-folder split.

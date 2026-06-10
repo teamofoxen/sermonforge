@@ -64,7 +64,8 @@
 - Make minimal, surgical changes.
 - Do not introduce new patterns unnecessarily.
 - Do not add features, error handling, or abstractions beyond what the task requires.
-- The 500ms debounce on `saveDb()` is deliberate — see `docs/CORE.md`.
+- Database writes commit at the IPC handler (better-sqlite3) — never add a main-process
+  save debounce or queue in front of them. See `docs/CORE.md`.
 
 ### Pre-Completion Check
 Before finishing any change verify:
