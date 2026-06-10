@@ -1,9 +1,26 @@
 # Era-2 Primacy Initiative — Charter
 
-**Status:** Ratified, 2026-05-12.
+**Status:** Ratified, 2026-05-12. Historical record — amendments via banner only.
 **Scope:** Whole workspace (Study + Assembly + Manuscript).
 **Supersedes (selectively):** SFDI and SADI rulings named explicitly below. All other rulings in those docs stand.
 **Related:** [`CORE.md`](../CORE.md), [`sermon-workspace.md`](../SYSTEMS/sermon-workspace.md), [`study-field-definition-initiative.md`](./study-field-definition-initiative.md), [`sermon-anchor-definition-initiative.md`](./sermon-anchor-definition-initiative.md), [`workspace-restructure-charter.md`](./workspace-restructure-charter.md).
+
+> **Post-invisible-system banner (2026-06-10, UX overhaul governance batch).**
+> Read this charter through the invisible-system rebuild (closed 2026-05-18)
+> and the UX overhaul (2026-06-10): (1) Every "gates that refuse advancement"
+> formulation is superseded — the refusing wall was deleted in trail-deletion
+> Phase G; CORE Process #1/#2 now carry the binding form (monotonic in
+> expectation; completeness as the eight composite gates feeding the
+> completion screen, not a wall). (2) Rulings whose surfaces were deleted in
+> the rebuild (trail clearings, pause-clearings, tab-change narration) are
+> superseded as mechanisms; their intent lives in CORE's rearticulated
+> Process clauses. (3) The "constraint without ceremony" doctrine is scoped
+> to within-the-work narration — threshold and completion orientation
+> (sermon-start, handoff, SermonFinish, the static place line, the map
+> header) is explicitly OUTSIDE it per CORE Process #3 as amended. (4) The
+> CORE amendment this charter ratified but never executed is superseded by
+> the Phase G rearticulations. Quote CORE, not this charter, when the two
+> differ.
 
 ---
 

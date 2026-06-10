@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-06-10 — Governance batch: the constitution catches up with the app
+
+- The Test gains a fifth question — "Where does the pastor SEE this, and what does it orphan?" — encoding the two failure modes the audit kept finding (built-but-never-rendered, deleted-but-still-consumed); the sweep skill asks it too, with its stale saveDb/debounce lines fixed.
+- CORE amendments: Project Identity rearticulated (built by a pastor, shipped to pastors; low software confidence is a binding design constraint; sermon-first now, series-planning as named roadmap); State #3 spoken-refusal + correctable names; Process #1 clarifies a Back control was never forbidden; Mutation #4 scales friction with loss (satisfied by the v24 undo); Surface #4 "you are here" now binds the workspace (place line + map); Process #6 honestly marks Outline/Equip/Manuscript pedagogy as draft pending the OEM walk.
+- RULES fossils cleaned: the six-value stage-badge vocabulary and "Big Idea box" deleted; Rule 6 rewritten (installers come from /release; local builds only for packaging-surface changes) keeping the .env-never-in-extraResources block verbatim.
+- Anchor debt paid: era-2 charter gets its post-invisible-system banner (refuse-advancement formulations superseded; threshold orientation scoped outside "constraint without ceremony"); the SFDI/SADI banners the era-2 charter ratified but never executed are in, with invisible-system supersessions; ANCHORS.md registers sadi-charter, era-2, and workspace-restructure.
+
+---
+
 ## 2026-06-10 — The release smoke test describes the app that exists
 
 - Canonical checklist moved to docs/REFERENCE/release-smoke.md — the old distribution.md §12 walked surfaces deleted in the invisible-system rebuild (tour, per-tab notebook, Manuscript tab).

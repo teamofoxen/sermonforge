@@ -26,11 +26,15 @@
 3. Always verify `npm start` works after changes.
 4. Never mark an issue as fixed without verifying it actually works.
 5. This is a Windows app on OneDrive — always use `path.join()`, never hardcode path separators.
-6. After completing any set of changes, run `npm run build` to produce an updated installer.
-   Output goes to `C:\Projects\SermonForgeBuilds\`. Do not wait to be asked —
-   build is part of finishing a task.
+6. Installers are built by `/release` (rewritten 2026-06-10 — the old rule
+   demanded `npm run build` after every change set, a pre-distribution-era
+   habit). A local `npm run build` is required only when the change touches
+   packaging surface (electron-builder config, `asarUnpack`,
+   `extraResources`, preload wiring) — then verify the packaged app boots
+   before commit. Output goes to `C:\Projects\SermonForgeBuilds\`.
    - `base: "./"` in `vite.config.mjs` is required (Electron loads from `file://`, not `http://`).
-   - electron-builder: `sql-wasm.wasm` must be in `asarUnpack`.
+   - (The `sql-wasm.wasm` asarUnpack requirement died with the sql.js
+     driver, removed in the better-sqlite3 swap 2026-06-10.)
    - **`.env` must NEVER be in `extraResources`.** Bundling it ships the developer's
      secrets (Anthropic key, GitHub PAT, telemetry/ESV/Bible keys) in plaintext to
      every user — the public-launch hardening pass (2026-06-09) removed it after the
@@ -104,8 +108,12 @@ variables. Never hardcode these values anywhere else.
 - `btn-primary`: `var(--gold)` background, white text
 - `btn-ghost`: transparent, `parchment-deep` border
 - Cards: white background, `parchment-deep` border, `shadow-soft`
-- Stage badges: planning=sage, study=orange, outline=slate, writing=crimson, ready=green, archived=ghost
-- Big Idea box: ink background, gold quote watermark, IBM Plex Serif italic
+- Status pills: `stage-in_progress` (sage) and `stage-complete` (gold) — the
+  only two lifecycle values (user-facing word for complete is "Preached").
+  (Fossil six-value badge list — planning/study/outline/writing/ready/
+  archived — and the "Big Idea box" deleted 2026-06-10; neither concept
+  exists in the contracts. MPT/MPS is the canonical vocabulary, not
+  "Big Idea".)
 
 ---
 

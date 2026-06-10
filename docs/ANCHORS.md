@@ -9,3 +9,6 @@ Load-bearing strategic documents that span multiple sessions and anchor downstre
 - [`docs/PROPOSALS/beta-testing-initiative.md`](PROPOSALS/beta-testing-initiative.md) — BTI charter; closed-cohort beta program governing invasiveness/workflow-fit testing
 - [`docs/PROPOSALS/bti-tester-summary.md`](PROPOSALS/bti-tester-summary.md) — BTI tester-facing letter; what the cohort actually reads at onboarding (must stay in sync with the charter)
 - [`docs/PROPOSALS/invisible-system-build-spec.md`](PROPOSALS/invisible-system-build-spec.md) — Invisible-system rebuild spec; target system + what survives + what gets deleted; trail deletion sweep phase plan lives here
+- [`docs/PROPOSALS/sadi-charter.md`](PROPOSALS/sadi-charter.md) — SADI charter; the why and boundaries behind the working doc above (registered 2026-06-10 — SFDI had both listed, SADI only its working doc)
+- [`docs/PROPOSALS/era-2-primacy-initiative.md`](PROPOSALS/era-2-primacy-initiative.md) — era-2 primacy charter; cited by name inside CORE Process #3. Historical record — amendments via banner only (registered 2026-06-10)
+- [`docs/PROPOSALS/workspace-restructure-charter.md`](PROPOSALS/workspace-restructure-charter.md) — source of the three-stage / sub-phase model CORE's vocabulary encodes. Historical record — amendments via banner only (registered 2026-06-10)

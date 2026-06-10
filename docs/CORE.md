@@ -9,19 +9,28 @@
 
 ## Project Identity
 
-SermonForge is a **local-first Electron desktop app** for a pastor who preaches ~42 weeks/year.
+SermonForge is a **local-first Electron desktop app** built by a pastor who
+preaches ~42 weeks/year and shipped to pastors. The end user is a pastor, not
+a developer — often older, often low in software confidence, always under
+weekly time pressure. **Low software confidence is a binding design
+constraint:** when a labeled control and a minimal one are otherwise tied,
+the labeled one wins. (Persona sentence rearticulated 2026-06-10 in the UX
+overhaul governance batch; the wording is the pastor's to refine.)
 All application data lives locally on the user's machine under
 `app.getPath("userData")` (typically `%APPDATA%\sermonforge\data\` on Windows;
 resolved via `electron/config.js`). Sermon library files may reside in OneDrive
 for backup, but application databases are stored locally and the app runs
 correctly without OneDrive. There is no backend, no server, no web deployment.
-The user is not a developer; all tooling decisions must prioritize simplicity.
+All tooling decisions must prioritize simplicity.
 
-**The series is the primary unit of pastoral work. The sermon is an instance within it.** The
-Dashboard is a series planning room. The Sermon Workspace exists within the context of a series.
-Every UX decision must reflect this hierarchy — the Calendar assigns sermons to Sundays, not just
-displays a schedule; reference features (Illustrations, Library, Archive) are resources within
-the workflow, not top-level destinations.
+**The sermon is the primary unit of the shipped product; the series is carried
+context.** (Rearticulated 2026-06-10 — the previous paragraph described a
+series planning room, a Calendar that assigns sermons to Sundays, and
+reference features, none of which exist at HEAD, and it contradicted the
+ratified "dashboard is re-entry" principle. Series-first planning remains a
+named roadmap direction, not the shipped identity: a sermon may belong to a
+series, carries that membership as first-class state, and the Series Planner
+remains a stub until that work gets its own charter.)
 
 *One-sentence identity: SermonForge starts where sermon prep actually starts — with the text.
 The system forces clarity through a structured throughline, end to end pastor-authored.
@@ -125,6 +134,10 @@ these names. (See State Contract clause 5: *one name per concept*.)
    queryable from any surface that touches the sermon.
 3. **No anonymous atoms.** A sermon must have a name. A series must have a
    name. The system refuses to admit a nameless atom into canonical state.
+   A refusal is spoken, not silent — the surface names what is missing
+   (amended 2026-06-10; the empty-title "Forge Sermon" click used to do
+   literally nothing). A name is required at creation and correctable
+   afterward; requiring a name is not the same as freezing it.
 4. **Parent context is first-class.** A sermon that belongs to a series carries
    that membership as canonical state, including its position-in-series
    ("Sermon 3 of 7"). It is a property of the sermon, not a join surfaced only
@@ -146,7 +159,12 @@ these names. (See State Contract clause 5: *one name per concept*.)
    was designed to flow that way. Revisiting earlier work is fully supported
    — the preacher clicks any question on the map and lands there. The system
    does not refuse navigation; the expectation lives in the writing surface's
-   flow and the map's weighting, not in a wall. (Pre-invisible-system framing
+   flow and the map's weighting, not in a wall. This clause has never
+   forbidden a Back control — "revisiting earlier work is fully supported"
+   includes a labeled Back beside Next (clarified 2026-06-10; the
+   forward-only chrome came from the invisible-system build spec's
+   one-control line, which the shipped surface had already deviated from,
+   not from this contract). (Pre-invisible-system framing
    — "movement is monotonic by default; backward movement is allowed but
    explicit — the user knows they went back" — retired 2026-05-18 in the
    trail deletion sweep, Phase G. The earlier framing was paired with a
@@ -262,6 +280,12 @@ these names. (See State Contract clause 5: *one name per concept*.)
    so the anchors are sub-phases inside Assembly.) This clause is
    therefore binding in full — the throughline's structural integrity is
    testable against the SFDI document AND the SADI document together.
+   (Honesty parenthetical, 2026-06-10: Assembly's Outline and Equip
+   sub-phases and the Manuscript stage carry DRAFT field definitions —
+   drafted 2026-06-09 from the Merida source, not yet preacher-walked;
+   their canonical articulation is pending an OEM content walk. Until
+   then this contract is testable in full only for Study and
+   Anchor/Frame.)
 
 ### 3. Mutation Contract — what happens when something changes
 
@@ -281,7 +305,15 @@ these names. (See State Contract clause 5: *one name per concept*.)
    and retryable. Silent saves are not allowed in either direction.
 4. **Destruction requires evidence of intent proportional to reversal cost.**
    Single-click destruction is forbidden for anything irreversible or
-   input-wiping. The DeleteButton's two-step inline confirm is the canonical model.
+   input-wiping. The friction scales with the loss: a generic two-step
+   confirm is the floor for row-level destruction, not the model for
+   everything — whole-sermon destruction requires a named confirm or an
+   undo window (amended 2026-06-10; satisfied by the v24 soft delete,
+   whose tombstone + visible Undo makes the reversal cost near zero).
+   Destruction that arrives without a Delete button — reload, restart,
+   re-seed, field-clearing toggles — is governed by this clause too.
+   The DeleteButton's two-step inline confirm remains the canonical
+   confirm shape.
 5. **Errors speak in one voice.** A persistent retryable failure is a banner.
    A field-level failure is inline. The system never uses a raw browser alert.
    There is one error vocabulary across the app.
@@ -295,14 +327,19 @@ these names. (See State Contract clause 5: *one name per concept*.)
 3. **One empty-state pattern, one loading vocabulary.** A small canonical set
    of loading verbs ("Loading…", "Saving…", "Thinking…") covers everything.
    Empty states share a layout and tone.
-4. **"You are here" is always answerable.** Every top-level destination has a
-   canonical sidebar entry and a canonical active-state. No nameless wandering.
+4. **"You are here" is always answerable — on every surface, including the
+   workspace.** Top-level destinations answer it with a canonical sidebar
+   entry and active-state. The workspace answers it with a persistent locus
+   (the static "Stage · Region" place line) and an on-demand map (amended
+   2026-06-10 — the clause's promise was bigger than its sidebar mechanism,
+   and the sidebar doesn't exist on the screen the pastor lives in). No
+   nameless wandering.
 5. **One re-entry convention.** Back is back. Labeled, consistent, predictable
    from any surface.
 
 ### The Test
 
-Every proposed feature, fix, refactor, or audit response must answer four
+Every proposed feature, fix, refactor, or audit response must answer five
 questions before it ships:
 
 1. **Which contracts does it touch?** Name them.
@@ -313,8 +350,15 @@ questions before it ships:
 4. **If it conflicts with an existing clause, which is wrong?** A genuine
    conflict resolves at the contract layer, not in code. The contract changes,
    or the proposal changes. Code never decides on its own.
+5. **Where does the pastor SEE this — and what does it orphan?** Name the
+   surface that renders the change; if no surface renders it, it has not
+   shipped. If it deletes anything, name what consumed the deleted thing —
+   orphans are handled in the same change or explicitly tombstoned. (Added
+   2026-06-10: the navHint chain built across three files and dropped in
+   the fourth, and the dead composite gates with no caller, are the two
+   failure modes this question exists to catch.)
 
-A change that passes all four ships. A change that fails any one of them
+A change that passes all five ships. A change that fails any one of them
 either reshapes to pass, or it does not ship.
 
 ---

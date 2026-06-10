@@ -24,8 +24,8 @@ Deeper diff audit for SermonForge. Controlled scope.
 ### 2. DATABASE SAFETY
 - No raw SQL in renderer
 - No new write paths outside electron/main.js
-- saveDb() 500ms debounce untouched
-- New sermons table columns reflected in SERMON_COLUMNS allowlist in electron/main.js
+- Writes commit at the IPC handler (better-sqlite3, 2026-06-10 — the old saveDb()/500ms-debounce pipeline is deleted; no main-process save debounce may be reintroduced)
+- New renderer-writable sermons columns reflected in SERMON_COLUMNS (ts + cjs + test-spine mirrors together); main-only columns (e.g. deleted_at) stay OUT of the allowlist deliberately
 
 ### 3. IPC INTEGRITY
 - All AI calls route through "ai-message" via sendAIMessage()
@@ -44,20 +44,21 @@ Deeper diff audit for SermonForge. Controlled scope.
 ## RED FLAGS (HIGH SEVERITY)
 
 - Modifying contextBuilder.js tier logic without safeguards
-- Touching saveDb() or debounce timing
-- Adding sermon fields without updating SERMON_COLUMNS
+- Reintroducing any main-process save debounce or serialize-and-rotate pipeline (amended CORE invariant, 2026-06-10)
+- Adding renderer-writable sermon fields without updating SERMON_COLUMNS
 - Breaking createOutlinePoint() as the sole outline point constructor
 - Routing AI-sourced patterns to phrasePatterns instead of aiPhrasePatterns
 - Weakening any clause in The Framework (`docs/CORE.md` → "The Framework")
 
 ## CONTRACT TEST (binding — `docs/CORE.md` → "The Framework")
 
-Every diff must pass The Test. Run these four questions against the diff:
+Every diff must pass The Test. Run these five questions against the diff:
 
 1. **Which contracts does it touch?** Name them by clause number (e.g. State #3, Mutation #1, Surface #4).
 2. **Does it strengthen or weaken each one?** A change that weakens a contract clause to ship a feature is a HIGH-severity finding and a `FAIL`.
 3. **Does it preserve the Principle (Clarity through Constraint)?** Any change that lets the system substitute for the user's clarity work is a Principle violation — HIGH severity, `FAIL`.
 4. **If it conflicts with an existing clause, which is wrong?** Surface the conflict in findings; do not silently resolve in code.
+5. **Where does the pastor SEE this — and what does it orphan?** Name the surface that renders the change (unrendered = not shipped); if the diff deletes anything, name what consumed the deleted thing — unhandled orphans are a MEDIUM finding.
 
 Add a `CONTRACTS:` block to the output enumerating touched clauses with verdict (strengthens / weakens / neutral). Empty block when the diff doesn't touch contract surfaces.
 
