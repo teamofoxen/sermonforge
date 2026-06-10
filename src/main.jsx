@@ -21,14 +21,17 @@ window.addEventListener("unhandledrejection", (e) => {
 
 const root = ReactDOM.createRoot(document.getElementById("root"));
 
-// If we're inside Electron but the preload bridge never loaded, the app CANNOT
-// persist anything. Show a hard error instead of letting the browser-preview
-// stub fake a working workspace (it answers getApiKeyStatus → {configured:true}
-// and resolves writes to nothing) — that path silently drops every edit on
-// restart. In a plain browser (Vite dev / preview) there is no bridge by design,
-// and the stub in src/db/database.js is the correct behavior.
+// If a PACKAGED build runs inside Electron but the preload bridge never loaded,
+// the app CANNOT persist anything. Show a hard error instead of letting the
+// browser-preview stub fake a working workspace (it answers getApiKeyStatus →
+// {configured:true} and resolves writes to nothing) — that path silently drops
+// every edit on restart. Gated on import.meta.env.PROD so it fires ONLY for the
+// built renderer: in dev / the browser preview (Vite dev server) there is no
+// bridge by design, and the stub in src/db/database.js is the correct behavior.
+// (Some preview/webview environments put "Electron" in the userAgent, so the UA
+// check alone is not enough to tell a real packaged renderer from a preview.)
 const inElectron = typeof navigator !== "undefined" && /\bElectron\//i.test(navigator.userAgent);
-if (inElectron && !window.electronAPI) {
+if (import.meta.env.PROD && inElectron && !window.electronAPI) {
   reportRendererError("bridge-missing", "window.electronAPI is undefined in an Electron renderer — preload failed to load");
   root.render(<BridgeError />);
 } else {

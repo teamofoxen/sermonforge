@@ -1,7 +1,15 @@
 import { useCallback, useEffect, useRef } from "react";
 import { findField, nextField, regionFrameFor } from "../utils/walkOrder";
+import { createOutlinePoint } from "../utils";
 import PassageCanvas from "./PassageCanvas";
 import "./sermonWritingSurface.css";
+
+// The Assembly/Outline writing position. "outline" is the canonical sub-phase
+// + DB column key here (not the pre-Pilot-B stage-status alias the lint rule
+// guards against), so the rule is disabled with that justification. Shared by
+// the Equip + Manuscript "build the outline first" doors.
+// eslint-disable-next-line sermonforge/canonical-stage-name -- canonical sub-phase + column key, not a stage status
+const OUTLINE_POSITION = { stage: "Assembly", subPhase: "Outline", fieldKey: "outline" };
 
 function AutoGrowTextarea({ value, onChange, disabled, ariaLabel, placeholder }) {
   const ref = useRef(null);
@@ -123,15 +131,185 @@ function CumulativeSynthesisTable({
   );
 }
 
+// Assembly/Outline — a reorderable list of {id,text} points written to the
+// native `outline` column the Word export reads. New points are created via
+// createOutlinePoint so the stable UUID that functional_elements + manuscript
+// transitions key off is assigned in the one canonical place (src/utils.js).
+function OutlineBuilder({ question, points, onChange }) {
+  const list = Array.isArray(points) ? points : [];
+  const apply = (next) => onChange?.(next);
+  const editText = (id, text) => apply(list.map((p) => (p.id === id ? { ...p, text } : p)));
+  const removePoint = (id) => apply(list.filter((p) => p.id !== id));
+  const movePoint = (idx, dir) => {
+    const j = idx + dir;
+    if (j < 0 || j >= list.length) return;
+    const next = list.slice();
+    [next[idx], next[j]] = [next[j], next[idx]];
+    apply(next);
+  };
+  const addPoint = () => apply([...list, createOutlinePoint("")]);
+
+  return (
+    <div className="sws-prompt-block">
+      <div className="sws-prompt">{question.prompt}</div>
+      {list.length > 0 && (
+        <div className="sws-outline-list">
+          {list.map((pt, idx) => (
+            <article key={pt.id} className="sws-outline-point">
+              <div className="sws-outline-point-num">{idx + 1}</div>
+              <div className="sws-outline-point-body">
+                <AutoGrowTextarea
+                  value={pt.text ?? ""}
+                  onChange={(v) => editText(pt.id, v)}
+                  ariaLabel={`Outline point ${idx + 1}`}
+                  placeholder="What does this movement of the text say to us?"
+                />
+                <div className="sws-outline-point-actions">
+                  <button type="button" className="sws-na-toggle" onClick={() => movePoint(idx, -1)} disabled={idx === 0} aria-label="Move point up">↑ up</button>
+                  <button type="button" className="sws-na-toggle" onClick={() => movePoint(idx, 1)} disabled={idx === list.length - 1} aria-label="Move point down">↓ down</button>
+                  <button type="button" className="sws-na-toggle" onClick={() => removePoint(pt.id)} aria-label="Remove point">remove</button>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+      <button type="button" className="sws-unmet-door sws-outline-add" onClick={addPoint}>
+        + Add point
+      </button>
+    </div>
+  );
+}
+
+// Assembly/Equip — iterates the outline points (built in Outline) and renders
+// the four functional elements under each, written to the native
+// `functional_elements` column keyed by point id. Mirrors the
+// CumulativeSynthesisTable's "upstream not built yet" door.
+function FunctionalElementsEditor({ question, points, functionalElements, onChange, onPositionChange }) {
+  const list = Array.isArray(points) ? points : [];
+  const elements = question.elements || [];
+
+  if (list.length === 0) {
+    return (
+      <div className="sws-prompt-block">
+        <div className="sws-prompt">{question.prompt}</div>
+        <div className="sws-unmet">
+          <p className="sws-unmet-message">
+            Each section here is one of your outline points — but you haven't built
+            the outline yet. Start there, and the points will be ready to equip when
+            you come back.
+          </p>
+          <button
+            type="button"
+            className="sws-unmet-door"
+            onClick={() => onPositionChange?.(OUTLINE_POSITION)}
+          >
+            Build the outline →
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="sws-prompt-block">
+      <div className="sws-prompt">{question.prompt}</div>
+      <div className="sws-equip-list">
+        {list.map((pt, idx) => (
+          <article key={pt.id} className="sws-equip-point">
+            <div className="sws-equip-point-head">
+              <span className="sws-equip-point-num">Point {idx + 1}</span>
+              <span className="sws-equip-point-text">{pt.text?.trim() || "(untitled point)"}</span>
+            </div>
+            {elements.map((el) => (
+              <div key={el.key} className="sws-equip-element">
+                <div className="sws-unit-label is-active">{el.label}</div>
+                {el.hint && <div className="sws-equip-hint">{el.hint}</div>}
+                <AutoGrowTextarea
+                  value={functionalElements?.[pt.id]?.[el.key] ?? ""}
+                  onChange={(v) => onChange?.(pt.id, el.key, v)}
+                  ariaLabel={`Point ${idx + 1} ${el.label}`}
+                />
+              </div>
+            ))}
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Manuscript/transitions — one bridge into each outline point, plus the bridge
+// into the conclusion, written to manuscript.transitions keyed by point id.
+function ManuscriptTransitions({ question, points, manuscript, onChange, onPositionChange }) {
+  const list = Array.isArray(points) ? points : [];
+  const trans = manuscript?.transitions || {};
+
+  if (list.length === 0) {
+    return (
+      <div className="sws-prompt-block">
+        <div className="sws-prompt">{question.prompt}</div>
+        <div className="sws-unmet">
+          <p className="sws-unmet-message">
+            Transitions bridge your outline points — but there's no outline yet.
+            Build it first, then come back to write the bridges between movements.
+          </p>
+          <button
+            type="button"
+            className="sws-unmet-door"
+            onClick={() => onPositionChange?.(OUTLINE_POSITION)}
+          >
+            Build the outline →
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="sws-prompt-block">
+      <div className="sws-prompt">{question.prompt}</div>
+      <div className="sws-transitions-list">
+        {list.map((pt, idx) => (
+          <div key={pt.id} className="sws-transition-row">
+            <div className="sws-unit-label">
+              Into Point {idx + 1}{pt.text?.trim() ? ` — ${pt.text.trim()}` : ""}
+            </div>
+            <AutoGrowTextarea
+              value={trans[pt.id] ?? ""}
+              onChange={(v) => onChange?.("transitions", pt.id, v)}
+              ariaLabel={`Transition into point ${idx + 1}`}
+            />
+          </div>
+        ))}
+        <div className="sws-transition-row">
+          <div className="sws-unit-label">Into the Conclusion</div>
+          <AutoGrowTextarea
+            value={trans.conclusion ?? ""}
+            onChange={(v) => onChange?.("transitions", "conclusion", v)}
+            ariaLabel="Transition into the conclusion"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function SermonWritingSurface({
   stage,
   subPhase,
   fieldKey,
   fieldAnswers,
   thoughtUnits,
+  outlinePoints,
+  functionalElements,
+  manuscript,
   onAnswerChange,
   onUnitColumnChange,
   onCanvasChange,
+  onOutlineChange,
+  onFunctionalElementChange,
+  onManuscriptChange,
   onPositionChange,
   beforePositionChange,
   onOpenMap,
@@ -217,6 +395,53 @@ export default function SermonWritingSurface({
                   <PassageCanvas
                     rows={Array.isArray(rows) ? rows : []}
                     onChange={(next) => onCanvasChange?.(field.key, q.key, next)}
+                  />
+                </div>
+              );
+            }
+            if (q.kind === "outline-builder") {
+              return (
+                <OutlineBuilder
+                  key={q.key}
+                  question={q}
+                  points={outlinePoints}
+                  onChange={onOutlineChange}
+                />
+              );
+            }
+            if (q.kind === "functional-elements") {
+              return (
+                <FunctionalElementsEditor
+                  key={q.key}
+                  question={q}
+                  points={outlinePoints}
+                  functionalElements={functionalElements}
+                  onChange={onFunctionalElementChange}
+                  onPositionChange={handleInternalPositionChange}
+                />
+              );
+            }
+            if (q.kind === "manuscript-transitions") {
+              return (
+                <ManuscriptTransitions
+                  key={q.key}
+                  question={q}
+                  points={outlinePoints}
+                  manuscript={manuscript}
+                  onChange={onManuscriptChange}
+                  onPositionChange={handleInternalPositionChange}
+                />
+              );
+            }
+            if (q.kind === "manuscript-prose") {
+              const v = manuscript?.[q.section]?.[q.key] ?? "";
+              return (
+                <div key={q.key} className="sws-prompt-block">
+                  <div className="sws-prompt">{q.prompt}</div>
+                  <AutoGrowTextarea
+                    value={v}
+                    onChange={(val) => onManuscriptChange?.(q.section, q.key, val)}
+                    ariaLabel={q.prompt}
                   />
                 </div>
               );

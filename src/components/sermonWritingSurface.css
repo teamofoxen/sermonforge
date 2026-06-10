@@ -288,6 +288,111 @@
   box-shadow: var(--shadow-deep);
 }
 
+/* ── Outline builder (Assembly/Outline) ─────────────────────────────────── */
+.sws-outline-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-bottom: 20px;
+}
+
+.sws-outline-point {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.sws-outline-point-num {
+  flex: 0 0 auto;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--ink-ghost);
+  line-height: 2.6;
+  min-width: 18px;
+  text-align: right;
+}
+
+.sws-outline-point-body {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sws-outline-point-actions {
+  display: flex;
+  gap: 16px;
+}
+
+.sws-outline-add {
+  margin-top: 4px;
+}
+
+/* ── Equip / functional elements (Assembly/Equip) ───────────────────────── */
+.sws-equip-list {
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+  margin-top: 8px;
+}
+
+.sws-equip-point {
+  border-left: 2px solid var(--parchment-deep);
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.sws-equip-point-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sws-equip-point-num {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-ghost);
+}
+
+.sws-equip-point-text {
+  font-family: var(--font-serif);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.sws-equip-element {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sws-equip-hint {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+/* ── Manuscript transitions ─────────────────────────────────────────────── */
+.sws-transitions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-top: 8px;
+}
+
+.sws-transition-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 @media (max-width: 900px) {
   .sws-writing {
     padding: 40px 36px 140px;

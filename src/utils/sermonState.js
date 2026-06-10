@@ -22,6 +22,7 @@ import { STAGE } from "../core/contracts";
 import { QUESTION_WALK_ORDER, WALK_ORDER, questionId } from "./walkOrder";
 import { parseStructuredField, getQuestionAnswer } from "./studyFields";
 import { hasContent } from "./studyAdvancement";
+import { getOutline, getFunctionalElements, parseManuscript } from "../utils";
 
 // Stage + sub-phase → the sermon-record JSON column that holds that
 // region's field data. The single source of stage→column mapping for the
@@ -33,9 +34,13 @@ export const STAGE_SUBPHASE_TO_COLUMN = Object.freeze({
   "Study/RedemptiveThread":  "redemptive_thread",
   "Study/Implications":      "implications",
   "Assembly/Anchor":         "main_point_pair",
+  // eslint-disable-next-line sermonforge/canonical-stage-name -- DB column name, not a stage status
+  "Assembly/Outline":        "outline",
+  "Assembly/Equip":          "functional_elements",
   "Assembly/Frame":          "sermon_frame",
-  // Assembly/Outline, Assembly/Equip, Manuscript join here as their
-  // field defs are extracted (matching the TODO in walkOrder.js).
+  // Manuscript stage has no sub-phase; walkOrder tags it with the stage name
+  // as the sub-phase slot, so the composite key is "Manuscript/Manuscript".
+  "Manuscript/Manuscript":   "manuscript",
 });
 
 function columnFor(stage, subPhase) {
@@ -115,6 +120,76 @@ export function deriveQuestionStatesFromSermon(sermon) {
         out[id] = { state: "answered", preview: sample, fullValue: sample };
       } else {
         out[id] = { state: "unanswered" };
+      }
+      continue;
+    }
+    if (entry.kind === "outline-builder") {
+      const points = getOutline(sermon);
+      const filled = points.filter((p) => String(p?.text ?? "").trim() !== "");
+      if (points.length === 0 || filled.length === 0) {
+        out[id] = { state: "unanswered" };
+      } else if (filled.length === points.length) {
+        out[id] = {
+          state: "answered",
+          preview: filled[0].text,
+          fullValue: points.map((p, i) => `${i + 1}. ${p.text}`).join("\n"),
+        };
+      } else {
+        out[id] = {
+          state: "partial",
+          preview: filled[0].text,
+          fullValue: points.map((p, i) => `${i + 1}. ${p.text || "—"}`).join("\n"),
+        };
+      }
+      continue;
+    }
+    if (entry.kind === "functional-elements") {
+      const points = getOutline(sermon);
+      const fes = getFunctionalElements(sermon);
+      const elementKeys = (entry.elements || []).map((e) => e.key);
+      if (points.length === 0 || elementKeys.length === 0) {
+        out[id] = { state: "unanswered" };
+        continue;
+      }
+      let filledCells = 0;
+      let firstPreview = "";
+      for (const pt of points) {
+        const fe = fes[pt.id] || {};
+        for (const k of elementKeys) {
+          const v = String(fe[k] ?? "").trim();
+          if (v) {
+            filledCells += 1;
+            if (!firstPreview) firstPreview = v;
+          }
+        }
+      }
+      const totalCells = points.length * elementKeys.length;
+      if (filledCells === 0) out[id] = { state: "unanswered" };
+      else if (filledCells === totalCells) out[id] = { state: "answered", preview: firstPreview };
+      else out[id] = { state: "partial", preview: firstPreview };
+      continue;
+    }
+    if (entry.kind === "manuscript-prose") {
+      const ms = parseManuscript(sermon?.manuscript);
+      const v = String(ms?.[entry.section]?.[entry.questionKey] ?? "").trim();
+      out[id] = v
+        ? { state: "answered", preview: v, fullValue: v }
+        : { state: "unanswered" };
+      continue;
+    }
+    if (entry.kind === "manuscript-transitions") {
+      const points = getOutline(sermon);
+      const ms = parseManuscript(sermon?.manuscript);
+      const trans = ms?.transitions || {};
+      const slots = [...points.map((p) => p.id), "conclusion"];
+      const filled = slots.filter((s) => String(trans?.[s] ?? "").trim() !== "");
+      if (points.length === 0 || filled.length === 0) {
+        out[id] = { state: "unanswered" };
+      } else if (filled.length === slots.length) {
+        const first = String(trans[filled[0]] ?? "");
+        out[id] = { state: "answered", preview: first, fullValue: first };
+      } else {
+        out[id] = { state: "partial", preview: String(trans[filled[0]] ?? "") };
       }
       continue;
     }

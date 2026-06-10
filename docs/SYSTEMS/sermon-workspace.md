@@ -115,13 +115,14 @@ awaits `beforePositionChange` (which flushes the renderer's pending debounced
 save via `persistUpdate`) before the position settles. Draft is on disk
 before the surface re-renders.
 
-**Gap-position fallback.** When the position's stage/sub-phase has no field
-def in `walkOrder.js` (the OEM gap for Assembly/Outline + Assembly/Equip +
-Manuscript — see [Stage data sections](#study-stage-data) below), the surface
-returns a self-contained `.sws-shell` div with the text "No field found for
-X · Y · Z." Workspace-level Back-to-dashboard chrome still functions; the
-within-surface chrome (chevron, map button, notebook button) is not rendered
-in this fallback. Soft "not built yet" state, not a crash.
+**Gap-position fallback.** Every stage/sub-phase now has a field def in
+`walkOrder.js` (Outline/Equip/Manuscript landed 2026-06-09 as draft pedagogy —
+see [Stage data sections](#study-stage-data) below), so this branch is
+defensive-only. If a position ever resolves to a stage/sub-phase with no field
+def (a corrupted `last_touched_position`, or a future regression), the surface
+returns a self-contained `.sws-shell` div with a humane "this part isn't
+available yet" message. Workspace-level Back-to-dashboard chrome still
+functions. Soft state, not a crash.
 
 ---
 
@@ -132,8 +133,8 @@ Component: [`src/components/SermonMap.jsx`](../../src/components/SermonMap.jsx).
 Summoned via the writing-surface chrome's `.sws-map-summon` button. Renders a
 vertical list of every question in `QUESTION_WALK_ORDER` (derived from
 `WALK_ORDER`), grouped by region in walk order: Observe → Interpret →
-Redemptive Thread → Implications → Anchor → Frame → (Outline + Equip +
-Manuscript join here when their field defs are extracted — see OEM gap below).
+Redemptive Thread → Implications → Anchor → Outline → Equip → Frame →
+Manuscript.
 
 Per-question state by visual weight:
 
@@ -408,33 +409,41 @@ survived Phase F.
 
 ### Outline → `sermons.outline` (JSON)
 
-- **Currently has no field-def in `walkOrder.js`** (OEM gap, Path A — see
-  [`memory/project_oem_field_defs.md`](../../../../Users/rossa/.claude/projects/C--Projects-SermonForge/memory/project_oem_field_defs.md)
-  and the sweep-close inventory in the
-  [invisible-system build spec](../PROPOSALS/invisible-system-build-spec.md)).
-  Position landing in Assembly/Outline renders the writing surface's "No
-  field found" fallback.
-- The outline data column still holds the array of points the future
-  field-def extraction will read. `createOutlinePoint(text)` in
-  [`src/utils.js`](../../src/utils.js) is the canonical point-creator — the
-  stable UUID it stamps is the key `functional_elements` depends on.
+`SERMON_OUTLINE_FIELDS` in
+[`src/utils/sermonOutlineFields.js`](../../src/utils/sermonOutlineFields.js) —
+DRAFT pedagogy (2026-06-09, Merida Step 3; not yet preacher-walked like
+SFDI/SADI). One field (`outline`) carrying a single `outline-builder` question:
+the writing surface renders a reorderable point list (add / edit / remove /
+move). Writes the native `outline` JSON column the Word export reads, via
+`serializeOutline`. `createOutlinePoint(text)` in
+[`src/utils.js`](../../src/utils.js) is the canonical point-creator — the
+stable UUID it stamps is the key `functional_elements` + the manuscript
+transitions depend on.
+
+Named outcome: Sermon Outline.
+
 - **No completeness composite survives this boundary.** The Outline → Equip
-  advancement gate's "every outline point has non-empty text" check was
-  inline in the deleted `checkOutlineToEquipThreshold` wrapper and was
-  removed entirely in Phase F. If the future field-def extraction needs an
-  "all outline points named" completeness check, it adds one then; the spec
-  does not assume one inherited from F.
+  advancement gate's "every outline point has non-empty text" check was removed
+  with the deleted `checkOutlineToEquipThreshold` wrapper in Phase F; the draft
+  field def does not re-add one. If a future walk needs an "all outline points
+  named" check, it adds one then.
 
 ### Equip → `sermons.functional_elements` (JSON)
 
-- **Currently has no field-def in `walkOrder.js`** (OEM gap, Path A).
-  Position landing in Assembly/Equip renders "No field found".
-- The `functional_elements` data column still holds the per-point Scripture
-  / Explanation / Application / Illustration content the future field-def
-  extraction will read.
+`SERMON_EQUIP_FIELDS` in
+[`src/utils/sermonEquipFields.js`](../../src/utils/sermonEquipFields.js) —
+DRAFT pedagogy (2026-06-09, Merida Step 4). One field (`equip`) carrying a
+single `functional-elements` question: the writing surface iterates the outline
+points and renders the four elements (Scripture / Explanation / Application /
+Illustration) under each, writing the native `functional_elements` column keyed
+by point id, via `serializeFunctionalElements`. When no outline points exist
+yet, the editor shows a door back to Outline.
+
+Named outcome: Sermon Body.
+
 - **No completeness composite survives this boundary.** The Equip → Frame
-  transition never had more than an empty-evidence baseline pre-F; nothing
-  survives.
+  transition never had more than an empty-evidence baseline pre-F; the draft
+  field def does not add one.
 
 ### Frame (Intro + Conclusion) → `sermons.sermon_frame` (JSON v18 envelope)
 
@@ -461,14 +470,27 @@ both survived Phase F.
 
 ## Manuscript stage data
 
-- **Currently has no field-def in `walkOrder.js`** (OEM gap, Path A).
-  Position landing in Manuscript renders "No field found". The data column
-  (`sermons.manuscript`, JSON) historically held Introduction + per-point
-  Transitions + Conclusion as free-form textareas — that shape is the
-  future field-def extraction's target.
-- **Export to Word** — dispatches `sermon-export-manuscript` IPC. Main
-  builds a `.docx` to `Documents/SermonForge/exports/Manuscripts/` and opens
-  it. Still wired; Manuscript is the terminal prep stage; no Delivery tab.
+`SERMON_MANUSCRIPT_FIELDS` in
+[`src/utils/sermonManuscriptFields.js`](../../src/utils/sermonManuscriptFields.js)
+— DRAFT pedagogy (2026-06-09, Merida Step 5 + "writing the message"). The
+Manuscript stage has no sub-phase; walkOrder tags its fields with the stage name
+as the sub-phase slot (`Manuscript/Manuscript/<field>`). Three fields:
+
+- **Introduction** — 3 `manuscript-prose` questions (`opener`,
+  `scripture_reading`, `expectation`) → `manuscript.introduction`.
+- **Transitions** — one `manuscript-transitions` question: a bridge into each
+  outline point plus the bridge into the conclusion → `manuscript.transitions`
+  keyed by point id. Shows a door to Outline when no points exist.
+- **Conclusion** — 1 `manuscript-prose` question (`response`) →
+  `manuscript.conclusion`.
+
+These write the native `manuscript` JSON column the Word export reads via
+`parseManuscript` (`{introduction, transitions, conclusion}`) — one source of
+truth, no envelope/flat-column desync. Named outcome: Manuscript.
+
+- **Export to Word** — dispatches `sermon-export-manuscript` IPC. Main builds a
+  `.docx` to `Documents/SermonForge/exports/Manuscripts/` and opens it.
+  Manuscript is the terminal prep stage; no Delivery tab.
 - The Manuscript stage never had an advancement gate pre-F.
 
 ---

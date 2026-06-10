@@ -24,6 +24,13 @@ import {
   setDivisionsCanvas,
   getQuestionAnswer,
 } from "../utils/studyFields";
+import {
+  getOutline,
+  serializeOutline,
+  getFunctionalElements,
+  serializeFunctionalElements,
+  parseManuscript,
+} from "../utils";
 import SermonWritingSurface from "./SermonWritingSurface";
 import SermonMap from "./SermonMap";
 import SermonStartLanding from "./SermonStartLanding";
@@ -277,6 +284,29 @@ export default function SermonWorkspace({
     handleUpdate({ observations: JSON.stringify(next) });
   }, [sermon, handleUpdate]);
 
+  // ── Assembly/Outline, Assembly/Equip, Manuscript write paths ──────────
+  // These three stages don't use the question-envelope shape. They write the
+  // native `outline` / `functional_elements` / `manuscript` JSON columns the
+  // Word export already reads — one source of truth, no MPT/MPS-style desync.
+  const handleOutlineChange = useCallback((nextPoints) => {
+    if (!sermon) return;
+    handleUpdate({ outline: serializeOutline(nextPoints) });
+  }, [sermon, handleUpdate]);
+
+  const handleFunctionalElementChange = useCallback((pointId, key, value) => {
+    if (!sermon) return;
+    const fes = getFunctionalElements(sermon);
+    const next = { ...fes, [pointId]: { ...(fes[pointId] || {}), [key]: value } };
+    handleUpdate({ functional_elements: serializeFunctionalElements(next) });
+  }, [sermon, handleUpdate]);
+
+  const handleManuscriptChange = useCallback((section, key, value) => {
+    if (!sermon) return;
+    const ms = parseManuscript(sermon.manuscript);
+    const next = { ...ms, [section]: { ...(ms[section] || {}), [key]: value } };
+    handleUpdate({ manuscript: JSON.stringify(next) });
+  }, [sermon, handleUpdate]);
+
   const dismissThreshold = useCallback((id) => {
     if (!sermon) return;
     handleUpdate({ thresholds_seen: nextThresholdsSeen(sermon, id) });
@@ -343,6 +373,12 @@ export default function SermonWorkspace({
   // Thought units for cumulative-synthesis-table consumption.
   const observationsData = parseStructuredField(sermon.observations);
   const thoughtUnits = observationsData?.divisions?.thought_units?.value ?? [];
+
+  // Native-column data for the Outline / Equip / Manuscript editors. Cheap to
+  // parse (these columns are small); only consumed when on those stages.
+  const outlinePoints = getOutline(sermon);
+  const functionalElements = getFunctionalElements(sermon);
+  const manuscript = parseManuscript(sermon.manuscript);
 
   // Threshold flags. Sermon-start fires when its id is NOT in
   // thresholds_seen. Study→Anchor handoff fires when the preacher has
@@ -490,9 +526,15 @@ export default function SermonWorkspace({
             fieldKey={position.fieldKey}
             fieldAnswers={fieldAnswers}
             thoughtUnits={thoughtUnits}
+            outlinePoints={outlinePoints}
+            functionalElements={functionalElements}
+            manuscript={manuscript}
             onAnswerChange={handleAnswerChange}
             onUnitColumnChange={handleUnitColumnChange}
             onCanvasChange={handleCanvasChange}
+            onOutlineChange={handleOutlineChange}
+            onFunctionalElementChange={handleFunctionalElementChange}
+            onManuscriptChange={handleManuscriptChange}
             onPositionChange={handlePositionChange}
             beforePositionChange={beforePositionChange}
             onOpenMap={() => setMapOpen(true)}

@@ -26,9 +26,11 @@
 // question as unanswered even after the preacher has filled every row.
 // Per-question-kind dispatch is load-bearing for correct map state.
 //
-// Stages with field defs already extracted: Study (4 sub-phases), Assembly
-// Anchor (MPT/MPS), Assembly Frame (Intro/Conclusion). Outline, Equip, and
-// Manuscript join here as their field definitions are extracted.
+// Field defs now exist for every stage: Study (4 sub-phases), Assembly Anchor
+// (MPT/MPS), Assembly Outline, Assembly Equip, Assembly Frame (Intro/Conclusion),
+// and the Manuscript stage. Outline/Equip/Manuscript carry DRAFT pedagogy
+// (2026-06-09) — authorable and Merida-grounded, but not yet preacher-walked
+// like SFDI (Study) / SADI (Anchor + Frame).
 
 import { STAGE, SUB_PHASE } from "../core/contracts";
 import {
@@ -38,7 +40,10 @@ import {
   IMPLICATIONS_FIELDS,
 } from "./studyFields";
 import { MAIN_POINT_PAIR_FIELDS } from "./sadiAnchorFields";
+import { SERMON_OUTLINE_FIELDS } from "./sermonOutlineFields";
+import { SERMON_EQUIP_FIELDS } from "./sermonEquipFields";
 import { SERMON_FRAME_FIELDS } from "./sermonFrameFields";
+import { SERMON_MANUSCRIPT_FIELDS } from "./sermonManuscriptFields";
 
 // TRACKED DEBT — legacy single-prompt field shape.
 //
@@ -69,10 +74,13 @@ export const WALK_ORDER = Object.freeze([
   ...tag(STAGE.Study, SUB_PHASE.RedemptiveThread, REDEMPTIVE_FIELDS),
   ...tag(STAGE.Study, SUB_PHASE.Implications, IMPLICATIONS_FIELDS),
   ...tag(STAGE.Assembly, SUB_PHASE.Anchor, MAIN_POINT_PAIR_FIELDS),
-  // Assembly Outline and Equip field defs are not yet extracted into a
-  // shared source — they join here when they are.
+  ...tag(STAGE.Assembly, SUB_PHASE.Outline, SERMON_OUTLINE_FIELDS),
+  ...tag(STAGE.Assembly, SUB_PHASE.Equip, SERMON_EQUIP_FIELDS),
   ...tag(STAGE.Assembly, SUB_PHASE.Frame, SERMON_FRAME_FIELDS),
-  // Manuscript stage joins here when its field defs land.
+  // Manuscript stage has no sub-phase; tag with the stage name as the
+  // sub-phase slot so position serialization ("Manuscript/Manuscript/<field>")
+  // round-trips through the same three-part composite as every other field.
+  ...tag(STAGE.Manuscript, STAGE.Manuscript, SERMON_MANUSCRIPT_FIELDS),
 ]);
 
 export const QUESTION_WALK_ORDER = Object.freeze(
@@ -87,6 +95,8 @@ export const QUESTION_WALK_ORDER = Object.freeze(
       kind: q.kind,
       columns: q.columns,
       crossPhaseSource: q.crossPhaseSource,
+      section: q.section,
+      elements: q.elements,
     }))
   )
 );
@@ -139,8 +149,9 @@ const REGION_NAMED_OUTCOME = {
   Implications: "Implications Synthesis",
   Anchor: "Main Point Pair",
   Outline: "Sermon Outline",
-  Equip: "Functional Elements",
+  Equip: "Sermon Body",
   Frame: "Sermon Frame",
+  Manuscript: "Manuscript",
 };
 
 const REGION_DISPLAY = {
@@ -152,6 +163,7 @@ const REGION_DISPLAY = {
   Outline: "Outline",
   Equip: "Equip",
   Frame: "Frame",
+  Manuscript: "Manuscript",
 };
 
 // Region boundaries that get a separate landing screen instead of an
