@@ -311,3 +311,14 @@ top-of-window banner with a "Retry" button (calls `db-flush`) on receipt.
 ### `"db-write-ok"`
 Payload: none. Emitted by `flushDb` after a successful write that follows at
 least one failure. Renderer dismisses the banner on receipt.
+
+### `"app-flush-edits"`
+Payload: `string` (nonce). Sent by `flushRendererEdits` in `electron/main.js`
+before window close / app quit. The renderer runs every registered flusher
+(`src/utils/closeFlush.js`) and acks on `"app-flush-edits-done"` with the same
+nonce. Subscribed via `onFlushEdits` (returns an unsubscribe function).
+
+### `"app-flush-edits-done"` (renderer → main, `ipcRenderer.send`)
+Payload: `string` (the nonce from `"app-flush-edits"`). Ack that all registered
+flushers settled. main matches the nonce to the pending request; a 2s hard
+timeout in `flushRendererEdits` means a missing ack can never block close.

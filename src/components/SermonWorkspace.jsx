@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useDebounce } from "../utils/hooks";
+import { registerFlush } from "../utils/closeFlush";
 import {
   getSermon, updateSermon, deleteSermon,
   getSeries, getSectionsBySeries, getSermonsBySeries,
@@ -140,6 +141,14 @@ export default function SermonWorkspace({
   useEffect(() => {
     return () => { persistUpdate(); };
   }, [persistUpdate]);
+
+  // Register with the close-flush registry while mounted, so window close /
+  // app quit / reload flush the 800ms debounce window instead of dropping it
+  // (src/utils/closeFlush.js; asked by main via "app-flush-edits").
+  // persistUpdate reads sermonRef.current, so one call persists everything
+  // pending regardless of debounce timer state. registerFlush returns the
+  // unregister function — used directly as the effect cleanup.
+  useEffect(() => registerFlush(persistUpdate), [persistUpdate]);
 
   // handleUpdate — applies field changes to sermonRef + setSermon, then
   // queues a debounced save. Used by every UI write path (writing-surface

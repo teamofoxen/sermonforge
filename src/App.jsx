@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, Component, lazy, Suspense } from "react";
-import { getApiKeyStatus, onDbWriteError, onDbWriteOk, flushDb, getSermonColumns } from "./db/database";
+import { getApiKeyStatus, onDbWriteError, onDbWriteOk, flushDb, getSermonColumns, onFlushEdits, flushEditsDone } from "./db/database";
+import { runRegisteredFlushes } from "./utils/closeFlush";
 import { SERMON_COLUMNS } from "./constants/sermonColumns";
 import { VIEW } from "./core/contracts";
 import SetupScreen from "./components/SetupScreen";
@@ -97,6 +98,25 @@ function AppInner() {
     getApiKeyStatus()
       .then(r => setKeyReady(r?.configured === true))
       .catch(() => setKeyReady(false));
+  }, []);
+
+  // Close-time flush. main intercepts window close / app quit and asks the
+  // renderer to flush debounced edits before proceeding (flushRendererEdits
+  // in electron/main.js); ack with the nonce when every registered flusher
+  // settles. The beforeunload listener covers reload (Ctrl+R / View > Reload):
+  // fire-and-forget — the queued IPC write still reaches main even though the
+  // promise never resolves before navigation. It must NOT set returnValue
+  // (Electron treats that as cancel-the-close).
+  useEffect(() => {
+    const unsubscribe = onFlushEdits(async (nonce) => {
+      try { await runRegisteredFlushes(); } finally { flushEditsDone(nonce); }
+    });
+    const onBeforeUnload = () => { runRegisteredFlushes(); };
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => {
+      unsubscribe?.();
+      window.removeEventListener("beforeunload", onBeforeUnload);
+    };
   }, []);
 
   // Schema-contract guard: assert the renderer SERMON_COLUMNS mirror still

@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-06-09 — Close-time edit flush: window close, quit, and reload no longer drop the last keystrokes
+
+- Added a renderer flush registry (`src/utils/closeFlush.js`); SermonWorkspace registers its `persistUpdate` so every exit path can flush the 800ms autosave debounce.
+- main intercepts window close, asks the renderer to flush over `app-flush-edits` (nonce ask/ack, 2s hard timeout), then re-closes — a hung renderer can never make the window unclosable.
+- `before-quit` flushes the renderer before flushing the DB image, covering menu quit / Cmd-Q where no window close event fires.
+- A `beforeunload` listener runs the same registry fire-and-forget so Ctrl+R / View > Reload no longer destroys in-flight edits.
+- Verified live: typed text followed by an instant window close survived relaunch; 693 tests pass.
+
+---
+
 ## 2026-06-09 — Public-launch hardening: secrets, data survival, crash recovery, Outline/Equip/Manuscript
 
 - Removed the bundled `.env` from the installer (it shipped developer secrets); telemetry now uses a hardcoded public Worker URL with a token-free, payload-validated `/ingest`, and the dead GitHub feedback path was deleted.

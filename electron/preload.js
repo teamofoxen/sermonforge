@@ -71,6 +71,18 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // Manual flush — banner's "Retry" button.
   flushDb: () => ipcRenderer.invoke("db-flush"),
 
+  // ── Close-time edit flush ─────────────────────────────────────────────────
+  // main asks the renderer to flush debounced edits before the window closes
+  // or the app quits (flushRendererEdits in electron/main.js). The renderer
+  // runs its registered flushers (src/utils/closeFlush.js) and acks with the
+  // same nonce so main can match request to response.
+  onFlushEdits: (callback) => {
+    const handler = (_event, nonce) => callback(nonce);
+    ipcRenderer.on("app-flush-edits", handler);
+    return () => ipcRenderer.removeListener("app-flush-edits", handler);
+  },
+  flushEditsDone: (nonce) => ipcRenderer.send("app-flush-edits-done", nonce),
+
   // ── BTI telemetry ─────────────────────────────────────────────────────────
   // Fire-and-forget event emission from renderer to the main-process bus
   // (electron/telemetry/bus.js). Returns { ok: bool } but callers can ignore.

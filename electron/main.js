@@ -1205,6 +1205,43 @@ function buildFtsQuery(userQuery) {
 
 // seedDatabase() removed — no longer needed (real data in place)
 
+// ── Close-time renderer flush ───────────────────────────────────────────────
+// The renderer holds edits behind an 800ms debounce (SermonWorkspace autosave).
+// Before the window closes or the app quits, ask the renderer to flush and
+// await its ack — bounded by a hard timeout so a hung renderer can never make
+// the window unclosable. Ask/ack over "app-flush-edits"(nonce) /
+// "app-flush-edits-done"(nonce); the renderer side lives in src/App.jsx +
+// src/utils/closeFlush.js. Resolves true when the renderer acked, false on
+// timeout / dead window — callers proceed either way.
+let _flushNonce = 0;
+function flushRendererEdits(win, timeoutMs = 2000) {
+  return new Promise((resolve) => {
+    if (!win || win.isDestroyed() || win.webContents.isDestroyed()) return resolve(false);
+    const nonce = String(++_flushNonce);
+    let settled = false;
+    let timer = null;
+    const onDone = (_e, ackNonce) => { if (ackNonce === nonce) finish(true); };
+    const finish = (ok) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      ipcMain.removeListener("app-flush-edits-done", onDone);
+      resolve(ok);
+    };
+    timer = setTimeout(() => {
+      logError(`[close-flush] renderer ack timed out after ${timeoutMs}ms`);
+      finish(false);
+    }, timeoutMs);
+    ipcMain.on("app-flush-edits-done", onDone);
+    try {
+      win.webContents.send("app-flush-edits", nonce);
+    } catch (err) {
+      logError("[close-flush] send failed", err);
+      finish(false);
+    }
+  });
+}
+
 // ── Window creation ─────────────────────────────────────────────────────────
 // Splash flow: createWindow loads electron/loading.html immediately so the user
 // sees a wordmark + spinner during initDatabase (which can take seconds when
@@ -1257,6 +1294,22 @@ function createWindow() {
 
   mainWindow.once("ready-to-show", () => {
     mainWindow.show();
+  });
+
+  // Close interception: flush the renderer's debounced edits before the
+  // window closes (the X button / Alt-F4 path). preventDefault exactly once;
+  // the second close() goes through whether or not the flush succeeded (hard
+  // timeout inside flushRendererEdits), so the window can never become
+  // unclosable. Quit paths skip this — before-quit runs its own renderer
+  // flush, and app.exit() there skips close events anyway.
+  let _closeFlushed = false;
+  mainWindow.on("close", (e) => {
+    if (_closeFlushed || _isQuitting) return;
+    e.preventDefault();
+    flushRendererEdits(mainWindow).finally(() => {
+      _closeFlushed = true;
+      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.close();
+    });
   });
 }
 
@@ -3263,6 +3316,13 @@ app.on("before-quit", async (e) => {
   if (_isQuitting) return; // re-entry guard; second pass falls through to default quit
   _isQuitting = true;
   e.preventDefault();
+  // Flush the renderer's debounced edits into main BEFORE flushing main's DB
+  // image to disk — otherwise the final flushDb persists a state missing the
+  // last <800ms of typing. The window-close interception can't cover this
+  // path: menu quit / Cmd-Q reach before-quit without a window close event,
+  // and app.exit() below skips close events entirely. No-op (resolves false,
+  // fast) when the window is already gone.
+  try { await flushRendererEdits(mainWindow); } catch (err) { logError("[quit] renderer flush threw", err); }
   // Never flush when init aborted (_initError): db may hold a half-migrated or
   // empty image, and flushing it would overwrite the pristine on-disk DB the
   // abort was protecting.
