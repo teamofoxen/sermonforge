@@ -74,6 +74,15 @@ export const saveApiKeys     = (keys) => api.saveApiKeys(keys);
 // Main process enforces a hard allowlist — only known URLs ever open.
 export const openExternal = (url) => api.openExternal(url);
 
+// ── Support ───────────────────────────────────────────────────────────────────
+// Opens a mailto to the support address (address lives main-side).
+export const emailSupport = (data) => api.emailSupport(data);
+
+// ── Updater ───────────────────────────────────────────────────────────────────
+export const getUpdaterStatus = () => api.getUpdaterStatus();
+export const updaterRestart   = () => api.updaterRestart();
+export const onUpdaterStatus  = (callback) => api.onUpdaterStatus(callback);
+
 // ── Feedback ──────────────────────────────────────────────────────────────────
 export const getSchemaVersion = () => api.getSchemaVersion();
 export const getAppVersion    = () => api.getAppVersion();

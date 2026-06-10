@@ -1,15 +1,97 @@
 // electron/updater.js — auto-update via GitHub Releases.
 //
-// Only active in packaged builds. In dev or any unpackaged run this is a no-op.
-// Downloads silently in the background. When ready, prompts the user to restart
-// or defers to the next launch (autoInstallOnAppQuit handles the deferred case).
+// Only active in packaged builds. In dev or any unpackaged run the
+// background check is a no-op and the manual check explains itself.
+//
+// Quiet by design: downloads happen silently and install on the next quit
+// (autoInstallOnAppQuit). When a download finishes, the renderer gets a
+// push on "updater-status" and shows a dismissible line — no focus-stealing
+// dialog, no default-Enter restart while the pastor is mid-sentence. The
+// optional "Restart now" routes through main's before-quit handler, which
+// flushes the renderer's debounced edits before anything closes.
 
 const { autoUpdater } = require("electron-updater");
-const { dialog } = require("electron");
+const { app, dialog } = require("electron");
 const { logInfo, logError } = require("./logger");
 const { isPackaged } = require("./config");
 
-function initUpdater() {
+// Last known status — pulled by the renderer on mount (covers the race
+// where the download finished before React subscribed) and pushed on
+// change. Shape: { state: "downloaded", version } is the only state the
+// renderer acts on today (downloaded = installs on next quit).
+let _status = null;
+
+function getUpdaterStatus() {
+  return _status;
+}
+
+// Renderer-initiated restart ("Restart now"). quitAndInstall routes
+// through app.quit() → main's before-quit (renderer edit flush + WAL
+// checkpoint + db close) → app.exit(0) → 'quit' → the installer hook
+// autoInstallOnAppQuit registered. The before-quit preventDefault may
+// preempt quitAndInstall's immediate path; the install still happens on
+// the resulting exit.
+function restartAndInstall() {
+  if (!isPackaged) return;
+  autoUpdater.quitAndInstall();
+}
+
+// Help > Check for Updates… — never silent. Each outcome speaks, parented
+// to the main window so it can't be lost behind it.
+async function checkForUpdatesInteractive(win) {
+  const parent = win && !win.isDestroyed() ? win : undefined;
+  if (!isPackaged) {
+    dialog.showMessageBox(parent, {
+      type: "info",
+      title: "Check for Updates",
+      message: "Updates only run in the installed app.",
+      buttons: ["OK"],
+    });
+    return;
+  }
+  if (_status?.state === "downloaded") {
+    dialog.showMessageBox(parent, {
+      type: "info",
+      title: "Check for Updates",
+      message: `SermonForge ${_status.version} is ready.`,
+      detail: "It will install itself the next time you close the app.",
+      buttons: ["OK"],
+    });
+    return;
+  }
+  try {
+    const res = await autoUpdater.checkForUpdates();
+    const current = app.getVersion();
+    const latest = res?.updateInfo?.version;
+    if (!latest || latest === current) {
+      dialog.showMessageBox(parent, {
+        type: "info",
+        title: "Check for Updates",
+        message: `You're up to date — SermonForge ${current}.`,
+        buttons: ["OK"],
+      });
+    } else {
+      dialog.showMessageBox(parent, {
+        type: "info",
+        title: "Check for Updates",
+        message: "A new version is downloading — you don't need to do anything.",
+        detail: "It will install itself the next time you close SermonForge.",
+        buttons: ["OK"],
+      });
+    }
+  } catch (err) {
+    logError("[updater] manual check failed", err);
+    dialog.showMessageBox(parent, {
+      type: "warning",
+      title: "Check for Updates",
+      message: "SermonForge couldn't check for updates.",
+      detail: "Check your internet connection and try again.",
+      buttons: ["OK"],
+    });
+  }
+}
+
+function initUpdater({ getWindow } = {}) {
   if (!isPackaged) return;
 
   autoUpdater.logger = null; // we handle all logging ourselves
@@ -38,18 +120,11 @@ function initUpdater() {
 
   autoUpdater.on("update-downloaded", ({ version }) => {
     logInfo(`[updater] Update downloaded: ${version}`);
-    dialog.showMessageBox({
-      type: "info",
-      title: "Update Ready",
-      message: `SermonForge ${version} is ready to install.`,
-      detail: "Restart now to apply the update, or it will install automatically the next time you open the app.",
-      buttons: ["Restart Now", "Later"],
-      defaultId: 0,
-    }).then(({ response }) => {
-      if (response === 0) autoUpdater.quitAndInstall();
-    }).catch((err) => {
-      logError("[updater] Dialog error", err);
-    });
+    _status = { state: "downloaded", version };
+    const win = getWindow?.();
+    if (win && !win.isDestroyed()) {
+      win.webContents.send("updater-status", _status);
+    }
   });
 
   // Delay 3 seconds so the app feels instant on launch
@@ -60,4 +135,9 @@ function initUpdater() {
   }, 3000);
 }
 
-module.exports = { initUpdater };
+module.exports = {
+  initUpdater,
+  getUpdaterStatus,
+  restartAndInstall,
+  checkForUpdatesInteractive,
+};

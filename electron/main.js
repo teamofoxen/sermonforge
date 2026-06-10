@@ -35,7 +35,9 @@ process.on("unhandledRejection", (reason) => {
 require("dotenv").config({ path: paths.env, override: true });
 
 const { saveKeys, loadEsvKey } = require("./keystore");
-const { initUpdater } = require("./updater");
+const { initUpdater, getUpdaterStatus, restartAndInstall } = require("./updater");
+const { buildApplicationMenu } = require("./menu");
+const { SUPPORT_EMAIL } = require("./support");
 const telemetryBus = require("./telemetry/bus");
 const BetterSqlite3 = require("better-sqlite3");
 const sqliteVec = require("sqlite-vec");
@@ -45,7 +47,18 @@ let dbPath = null;
 let theologyDb = null;   // better-sqlite3 instance for theology.db (+ sqlite-vec)
 let mainWindow;
 let _firstLaunch = false;  // true when sermonforge.db did not exist at initDatabase entry; drives the first-run OneDrive modal
-let _pendingStartupWarning = null; // set in maybeWarnOneDrive; renderer fetches via app-get-startup-warning on mount
+// Startup warnings queue — initDatabase and maybeWarnOneDrive PUSH here;
+// the renderer pulls one per app-get-startup-warning call in severity
+// order, so a OneDrive nag can never overwrite a corruption-recovery
+// message (the overlap cohort is exactly the highest-corruption-risk one).
+let _pendingStartupWarnings = [];
+const STARTUP_WARNING_PRIORITY = [
+  "db_corrupt_quarantined",
+  "db_recovered_backup",
+  "db_migrated",
+  "onedrive-first-run",
+  "onedrive",
+];
 let _appOpenEmitted = false; // app-open telemetry emits exactly once per session, and only after consent
 let _initError = null; // set when initDatabase aborts to protect data (locked file / failed migration); whenReady shows it and quits
 let _rendererReloads = 0; // bounded auto-reloads after a renderer crash before giving up
@@ -256,22 +269,22 @@ async function initDatabase() {
         }
       }
       if (recoveredFromBak) {
-        _pendingStartupWarning = {
+        _pendingStartupWarnings.push({
           kind: "db_recovered_backup",
-          message: "SermonForge restored your library from its automatic backup after the main file was damaged. Your most recent one or two edits may be missing. The damaged file was kept aside for recovery — contact support if you need it.",
-        };
+          message: `SermonForge restored your library from its automatic backup after the main file was damaged. Your most recent one or two edits may be missing. The damaged file was kept aside for recovery — email ${SUPPORT_EMAIL} if you need it.`,
+        });
       } else if (!db) {
         // Both primary and .bak are corrupt. The primary is quarantined (kept
         // on disk for manual recovery); start fresh at the active path.
         db = new BetterSqlite3(dbPath);
-        _pendingStartupWarning = {
+        _pendingStartupWarnings.push({
           kind: "db_corrupt_quarantined",
           message:
             "SermonForge couldn't read your library or its backup, so it started a fresh one. Your original file was NOT deleted — it was kept aside" +
             (q ? ` as ${path.basename(q)}` : "") +
-            " in your data folder. Please contact support before doing more work so we can try to recover it.",
+            ` in your data folder. Please email ${SUPPORT_EMAIL} before doing more work so we can try to recover it.`,
           path: q,
-        };
+        });
       }
     }
   } else if (fs.existsSync(bakPath)) {
@@ -282,10 +295,10 @@ async function initDatabase() {
       db = await loadWithRetry(dbPath);
       recoveredFromBak = true;
       logInfo(`[DB] restored backup; primary missing`);
-      _pendingStartupWarning = {
+      _pendingStartupWarnings.push({
         kind: "db_recovered_backup",
         message: "SermonForge restored your library from its automatic backup after the main file went missing. Your most recent one or two edits may be missing.",
-      };
+      });
     } catch (e) {
       if (e._sfClass === "transient" || classifyReadError(e) === "transient") {
         logError(`[DB] .bak temporarily unreadable (locked); aborting boot to protect data`, e);
@@ -295,10 +308,10 @@ async function initDatabase() {
       logError(`[DB] backup unreadable, starting fresh`, e);
       try { fs.unlinkSync(dbPath); } catch { /* ignore */ }
       db = new BetterSqlite3(dbPath);
-      _pendingStartupWarning = {
+      _pendingStartupWarnings.push({
         kind: "db_corrupt_quarantined",
-        message: "SermonForge couldn't read your library backup, so it started a fresh one. If you had sermons before, contact support before doing more work so we can try to recover them.",
-      };
+        message: `SermonForge couldn't read your library backup, so it started a fresh one. If you had sermons before, email ${SUPPORT_EMAIL} before doing more work so we can try to recover them.`,
+      });
     }
   } else {
     db = new BetterSqlite3(dbPath); // genuine fresh install — creates the file
@@ -375,10 +388,10 @@ async function initDatabase() {
     applyConnectionPragmas(db);
     if (migrated) {
       legacyMigrated = true;
-      _pendingStartupWarning = {
+      _pendingStartupWarnings.push({
         kind: "db_migrated",
         message: `Restored your library from a previous install location (${migrated.source}). The original file is preserved there as a backup.`,
-      };
+      });
     }
     // Mark this active path resolved whether or not a winner was found — we
     // looked once; we don't keep overwriting the active DB on later boots.
@@ -500,7 +513,7 @@ async function initDatabase() {
     logError("[DB] runMigrations threw — transaction rolled back, on-disk DB untouched", e);
     _initError = {
       kind: "migration_failed",
-      message: "SermonForge couldn't finish updating your library to this version. Your sermons are safe and were not changed. Please reopen the app; if this keeps happening, contact support so we can fix the update.",
+      message: `SermonForge couldn't finish updating your library to this version. Your sermons are safe and were not changed. Please reopen the app; if this keeps happening, email ${SUPPORT_EMAIL} so we can fix the update.`,
     };
     try { db.close(); } catch { /* ignore */ }
     db = null; // ensure no later flush (quit handler included) persists a partial image
@@ -1241,7 +1254,7 @@ function createWindow() {
       loadAppContent();
     } else {
       try {
-        dialog.showErrorBox("SermonForge", "SermonForge's display kept crashing and couldn't recover. Your sermons are saved. Please reopen the app; if it keeps happening, contact support.");
+        dialog.showErrorBox("SermonForge", `SermonForge's display kept crashing and couldn't recover. Your sermons are saved. Please reopen the app; if it keeps happening, email ${SUPPORT_EMAIL}.`);
       } catch (_) {}
       app.quit();
     }
@@ -1297,7 +1310,15 @@ function maybeWarnOneDrive() {
   if (!/OneDrive/i.test(paths.userData)) return;
   const kind = _firstLaunch ? "onedrive-first-run" : "onedrive";
   logError(`[startup] userData is inside OneDrive (${paths.userData}); SQLite corruption risk`, null);
-  _pendingStartupWarning = { kind, path: paths.userData };
+  // Causal link: when a recovery warning is already queued, OneDrive is
+  // the most likely cause of the damage — say so on the recovery message
+  // itself, where the pastor is actually reading.
+  for (const w of _pendingStartupWarnings) {
+    if (w.kind === "db_recovered_backup" || w.kind === "db_corrupt_quarantined") {
+      w.message += " Your data folder is inside OneDrive, which is the most likely cause of the damage.";
+    }
+  }
+  _pendingStartupWarnings.push({ kind, path: paths.userData });
 }
 
 // ── IPC handlers ────────────────────────────────────────────────────────────
@@ -3038,14 +3059,42 @@ ipcMain.handle("app-open-data-folder", () => {
   return shell.openPath(paths.userData);
 });
 
-// Pulled by the renderer on mount to receive any one-shot startup warning
-// (e.g. OneDrive). Pull-pattern avoids races against React mount that a
-// webContents.send would lose. Returns null when nothing is pending; clears
-// the slot on read so the next mount in the same process sees nothing.
+// Pulled by the renderer on mount to receive one-shot startup warnings.
+// Pull-pattern avoids races against React mount that a webContents.send
+// would lose. Pops ONE warning per call in severity order (the renderer's
+// dismiss handler re-fetches, presenting warnings one at a time); returns
+// null when nothing is pending. The IPC shape is unchanged from the old
+// single-slot design.
 ipcMain.handle("app-get-startup-warning", () => {
-  const w = _pendingStartupWarning;
-  _pendingStartupWarning = null;
-  return w;
+  if (_pendingStartupWarnings.length === 0) return null;
+  _pendingStartupWarnings.sort(
+    (a, b) =>
+      STARTUP_WARNING_PRIORITY.indexOf(a.kind) -
+      STARTUP_WARNING_PRIORITY.indexOf(b.kind)
+  );
+  return _pendingStartupWarnings.shift();
+});
+
+// Email support with a prefilled subject/body. The address lives in
+// electron/support.js — main-controlled, so the renderer can never route
+// "support" mail anywhere else.
+ipcMain.handle("app-email-support", async (_, { subject, body } = {}) => {
+  const s = encodeURIComponent(String(subject || "SermonForge"));
+  const b = body ? `&body=${encodeURIComponent(String(body))}` : "";
+  await shell.openExternal(`mailto:${SUPPORT_EMAIL}?subject=${s}${b}`);
+  return { success: true };
+});
+
+// Updater — status pull (covers the race where the download finished
+// before React subscribed) and the renderer-initiated restart.
+ipcMain.handle("updater-get-status", () => getUpdaterStatus());
+
+ipcMain.handle("updater-restart", async () => {
+  // Belt and braces: drain the renderer's debounce first; before-quit
+  // (triggered inside restartAndInstall) flushes again regardless.
+  try { await flushRendererEdits(mainWindow); } catch (err) { logError("[updater-restart] flush threw", err); }
+  restartAndInstall();
+  return { ok: true };
 });
 
 // ── First-run gate ────────────────────────────────────────────────────────────
@@ -3325,9 +3374,12 @@ if (!app.requestSingleInstanceLock()) {
         if (_telemetryPref === "false") telemetryBus.setEnabled(false);
         emitAppOpenOnce();
       }
-      maybeWarnOneDrive();         // populates the startup-warning slot before renderer mounts
+      maybeWarnOneDrive();         // queues startup warnings before renderer mounts
       loadAppContent();            // swap splash → real app
-      initUpdater();
+      initUpdater({ getWindow: () => mainWindow });
+      // Pastor-shaped menu replaces the stock Electron one — also kills the
+      // stock Ctrl+R / DevTools accelerators in packaged builds.
+      buildApplicationMenu({ getWindow: () => mainWindow });
     } catch (err) {
       // Any unexpected boot failure (native module unloadable, userData not
       // writable, etc.) — show a clear message and quit instead of hanging on
@@ -3336,7 +3388,7 @@ if (!app.requestSingleInstanceLock()) {
       try {
         dialog.showErrorBox(
           "SermonForge",
-          "SermonForge ran into a problem starting up and couldn't open. Your sermons are safe and were not changed. Please reopen the app; if this keeps happening, contact support.\n\nDetails: " + (err?.message || String(err))
+          `SermonForge ran into a problem starting up and couldn't open. Your sermons are safe and were not changed. Please reopen the app; if this keeps happening, email ${SUPPORT_EMAIL}.\n\nDetails: ` + (err?.message || String(err))
         );
       } catch (_) {}
       app.quit();

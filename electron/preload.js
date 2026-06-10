@@ -38,6 +38,23 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // ── External links (hard-allowlisted in main) ─────────────────────────────
   openExternal: (url) => ipcRenderer.invoke("app-open-external", url),
 
+  // ── Support ───────────────────────────────────────────────────────────────
+  // Opens a mailto to the support address (main-controlled; the renderer
+  // supplies only subject/body).
+  emailSupport: (data) => ipcRenderer.invoke("app-email-support", data),
+
+  // ── Updater ───────────────────────────────────────────────────────────────
+  // Pull current status on mount (covers the download-finished-before-React
+  // race), subscribe for pushes, and request the safe renderer-initiated
+  // restart (main flushes edits before anything closes).
+  getUpdaterStatus: () => ipcRenderer.invoke("updater-get-status"),
+  updaterRestart:   () => ipcRenderer.invoke("updater-restart"),
+  onUpdaterStatus: (callback) => {
+    const handler = (_event, payload) => callback(payload);
+    ipcRenderer.on("updater-status", handler);
+    return () => ipcRenderer.removeListener("updater-status", handler);
+  },
+
   // ── Feedback ──────────────────────────────────────────────────────────────
   getSchemaVersion: () => ipcRenderer.invoke("db-getSchemaVersion"),
   getAppVersion:    () => ipcRenderer.invoke("app-get-version"),

@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-06-10 — The frame stops speaking developer: real menu, quiet updates, a support address that exists
+
+- New pastor-shaped application menu (File/Edit/View/Help) replaces Electron's stock one — Reload/DevTools/Electron-website links are gone from packaged builds (the stock Ctrl+R edit-destroyer dies with them); Edit keeps full clipboard roles; View offers plain-named text zoom; Help carries Check for Updates, Email Support, Website, Open Data Folder, and an About dialog hosting the real version + the full Crossway ESV notice.
+- Updates are quiet and safe: the focus-stealing "Restart Now" dialog is gone — a downloaded update shows a dismissible sidebar line ("installs the next time you close the app") with an optional Restart now that drains edits through the before-quit flush; Help > Check for Updates always answers (up to date / downloading / couldn't check); the sidebar finally shows the real version instead of "v1.0".
+- "Contact support" now means something: ross.appleton@gmail.com (one constant, flagged for a dedicated address later) is named in all six recovery/crash strings, and the corruption + OneDrive modals gained one-click "Email support" with prefilled subjects.
+- Startup warnings queue by severity — a OneDrive nag can no longer overwrite the corruption-recovery message for exactly the highest-risk cohort; recovery messages name OneDrive as the likely cause when both apply.
+- OneDrive copy rewritten to ask only for possible things (no more "pause sync for the data folder"); honest about the automatic backup; "Continue anyway." Sweep PASS; 706 tests.
+
+---
+
 ## 2026-06-10 — Passage popup recovers in place: structured states, plain copy, the key modal opens where the pain is
 
 - passage-fetch now returns structured `esvState` codes (no-key / key-unreadable / bad-key / rate-limited / offline / error); raw "ESV API HTTP 401" and "fetch failed" strings never reach the screen again — every state renders authored copy plus exactly one action.

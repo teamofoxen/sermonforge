@@ -1,36 +1,50 @@
-import { useEffect, useState } from "react";
-import { getStartupWarning, openDataFolder } from "../db/database";
+import { useCallback, useEffect, useState } from "react";
+import { getStartupWarning, openDataFolder, emailSupport } from "../db/database";
+import { SUPPORT_EMAIL } from "../constants/support";
 import PrimaryButton from "./primitives/PrimaryButton";
 import SecondaryButton from "./primitives/SecondaryButton";
 
 const BANNER_DISMISS_KEY = "sf-onedrive-banner-dismissed";
 
+const KNOWN_KINDS = new Set([
+  "onedrive",
+  "onedrive-first-run",
+  "db_migrated",
+  "db_recovered_backup",
+  "db_corrupt_quarantined",
+]);
+
 export default function OneDriveWarning() {
   const [warning, setWarning] = useState(null);
 
-  useEffect(() => {
-    let cancelled = false;
+  // Main queues warnings and hands out one per call in severity order;
+  // dismissing re-fetches so they present one at a time instead of the
+  // lower-priority one silently overwriting the higher.
+  const fetchNext = useCallback(() => {
     getStartupWarning()
       .then((payload) => {
-        if (cancelled || !payload) return;
-        const known = payload.kind === "onedrive"
-          || payload.kind === "onedrive-first-run"
-          || payload.kind === "db_migrated"
-          || payload.kind === "db_recovered_backup"
-          || payload.kind === "db_corrupt_quarantined";
-        if (!known) return;
-        if (payload.kind === "onedrive" && localStorage.getItem(BANNER_DISMISS_KEY) === "1") return;
+        if (!payload || !KNOWN_KINDS.has(payload.kind)) {
+          setWarning(null);
+          return;
+        }
+        if (payload.kind === "onedrive" && localStorage.getItem(BANNER_DISMISS_KEY) === "1") {
+          // Already dismissed for good — skip to whatever is queued next.
+          fetchNext();
+          return;
+        }
         setWarning(payload);
       })
       .catch(() => {});
-    return () => { cancelled = true; };
   }, []);
+
+  useEffect(() => { fetchNext(); }, [fetchNext]);
 
   if (!warning) return null;
 
   const dismiss = () => {
     if (warning.kind === "onedrive") localStorage.setItem(BANNER_DISMISS_KEY, "1");
     setWarning(null);
+    fetchNext();
   };
 
   if (warning.kind === "db_migrated") {
@@ -75,7 +89,17 @@ export default function OneDriveWarning() {
           <p style={modalBody}>{warning.message}</p>
           {warning.path ? <p style={modalPath}>{warning.path}</p> : null}
           <div style={modalActions}>
-            <PrimaryButton onClick={() => openDataFolder()}>Open data folder</PrimaryButton>
+            <PrimaryButton
+              onClick={() =>
+                emailSupport({
+                  subject: "SermonForge library recovery",
+                  body: warning.path ? `Quarantined file: ${warning.path}` : "",
+                })
+              }
+            >
+              Email support
+            </PrimaryButton>
+            <SecondaryButton onClick={() => openDataFolder()}>Open data folder</SecondaryButton>
             <SecondaryButton onClick={dismiss}>Continue with a fresh library</SecondaryButton>
           </div>
         </div>
@@ -87,19 +111,28 @@ export default function OneDriveWarning() {
     return (
       <div style={backdrop} role="dialog" aria-modal="true" aria-labelledby="onedrive-modal-title">
         <div style={modal}>
-          <h2 id="onedrive-modal-title" style={modalTitle}>Move SermonForge data out of OneDrive</h2>
+          <h2 id="onedrive-modal-title" style={modalTitle}>Your sermons are being kept in a OneDrive folder</h2>
           <p style={modalBody}>
-            SermonForge stores your sermons in a SQLite database. OneDrive's cloud sync can rewrite
-            that database mid-write and corrupt it. Before adding any sermons, please pause OneDrive
-            sync for the data folder, or relocate it to a folder OneDrive does not sync.
+            OneDrive sometimes changes files while SermonForge is saving, which
+            can damage the file where your sermons are kept. SermonForge
+            protects you with an automatic backup, but the safest thing is to
+            move your sermons out of OneDrive. Email {SUPPORT_EMAIL} and we'll
+            walk you through it — it takes a few minutes.
           </p>
           <p style={modalPath}>{warning.path}</p>
           <div style={modalActions}>
-            <PrimaryButton onClick={() => openDataFolder()}>
-              Open data folder
+            <PrimaryButton
+              onClick={() =>
+                emailSupport({ subject: "Help moving SermonForge out of OneDrive" })
+              }
+            >
+              Email support
             </PrimaryButton>
+            <SecondaryButton onClick={() => openDataFolder()}>
+              Open data folder
+            </SecondaryButton>
             <SecondaryButton onClick={dismiss}>
-              I understand the risk — continue
+              Continue anyway
             </SecondaryButton>
           </div>
         </div>
@@ -112,7 +145,9 @@ export default function OneDriveWarning() {
       <div className="write-error-banner-text">
         <strong>Your data folder is inside OneDrive.</strong>
         <span className="write-error-banner-detail">
-          Cloud sync can corrupt the SermonForge database. Move the folder off OneDrive sync when convenient.
+          Synced folders can damage the file where your sermons are kept.
+          SermonForge keeps an automatic backup; email {SUPPORT_EMAIL} when
+          you'd like help moving it.
         </span>
       </div>
       <div className="write-error-banner-actions">

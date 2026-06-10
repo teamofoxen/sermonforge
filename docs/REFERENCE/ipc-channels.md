@@ -255,18 +255,58 @@ process enforces a hard exact-match allowlist (currently only
 `https://api.esv.org/`) — non-allowlisted URLs are refused and logged,
 never opened. Extend the allowlist deliberately, one URL at a time.
 
+### `"app-email-support"`
+```
+receives: { subject?: string, body?: string }
+returns:  { success: true }
+```
+Opens a `mailto:` to the support address with the given subject/body via
+`shell.openExternal`. The address lives in `electron/support.js`
+(mirrored at `src/constants/support.js`) — main-controlled, so the
+renderer can never route "support" mail anywhere else.
+
+### `"updater-get-status"`
+```
+receives: nothing
+returns:  null | { state: "downloaded", version: string }
+```
+Last known updater status (`downloaded` = installs on next quit). Pulled
+on renderer mount to cover the race where the download finished before
+React subscribed to the push channel.
+
+### `"updater-status"` (push, main → renderer)
+```
+payload: { state: "downloaded", version: string }
+```
+Sent on `update-downloaded`. The renderer (Sidebar) shows a quiet
+dismissible line; no dialog ever steals focus.
+
+### `"updater-restart"`
+```
+receives: nothing
+returns:  { ok: true }
+```
+Renderer-initiated "Restart now". Main flushes the renderer's debounced
+edits (`flushRendererEdits`), then `quitAndInstall` routes through the
+before-quit handler (second flush + WAL checkpoint + db close) before the
+installer runs.
+
 ### `"app-get-startup-warning"`
 ```
 receives: nothing
 returns:  null | { kind: "onedrive" | "onedrive-first-run", path: string }
 ```
-Pull-pattern delivery of one-shot startup warnings. Renderer
-(`OneDriveWarning.jsx`) calls once on mount; main returns the pending
-warning and clears the slot so subsequent calls in the same process see
-`null`. The warning is populated in `app.whenReady` after `initDatabase`
-when `paths.userData` matches `/OneDrive/i`. `kind === "onedrive-first-run"`
-when no `sermonforge.db` existed at init entry (drives a blocking modal);
-`kind === "onedrive"` otherwise (drives a localStorage-sticky banner).
+Pull-pattern delivery of one-shot startup warnings. Main holds a QUEUE
+(`_pendingStartupWarnings`) populated by `initDatabase` (recovery kinds:
+`db_corrupt_quarantined`, `db_recovered_backup`, `db_migrated`) and
+`maybeWarnOneDrive` (`onedrive-first-run` / `onedrive`); each call pops
+ONE warning in severity order (corrupt > recovered > migrated >
+onedrive-first-run > onedrive), so the OneDrive nag can never overwrite
+a corruption-recovery message. The renderer (`OneDriveWarning.jsx`)
+re-fetches on dismiss, presenting warnings one at a time. Returns `null`
+when the queue is empty — the per-call shape is unchanged from the old
+single-slot design. When a recovery warning coexists with a OneDrive
+path, the recovery message names OneDrive as the likely cause.
 
 ### `"app-open-data-folder"`
 ```

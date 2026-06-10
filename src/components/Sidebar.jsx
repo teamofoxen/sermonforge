@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { getRecentSermons } from "../core/spine";
+import { getAppVersion, getUpdaterStatus, onUpdaterStatus, updaterRestart } from "../db/database";
 import { VIEW } from "../core/contracts";
 import NewSermonModal from "./NewSermonModal.jsx";
 import FeedbackForm from "./FeedbackForm.jsx";
 import EsvKeyModal from "./EsvKeyModal.jsx";
 import IconButton from "./primitives/IconButton";
 import TextButton from "./primitives/TextButton";
+import SecondaryButton from "./primitives/SecondaryButton";
 import Logo from "./Logo.jsx";
 
 const NAV_ITEMS = [
@@ -47,6 +49,32 @@ export default function Sidebar({ currentView, onNavigate, onOpenSermon, theme, 
   const [recentSermons, setRecentSermons] = useState([]);
   const [showFeedback, setShowFeedback] = useState(false);
   const [showEsvModal, setShowEsvModal] = useState(false);
+  const [appVersion, setAppVersion] = useState("");
+  // Quiet update-ready line — never steals focus; the update installs on
+  // next close either way. "Restart now" drains the renderer's debounced
+  // edits before asking main to quit.
+  const [updateReady, setUpdateReady] = useState(null);
+  const [updateDismissed, setUpdateDismissed] = useState(false);
+
+  useEffect(() => {
+    getAppVersion()
+      .then((r) => { if (r?.version) setAppVersion(r.version); })
+      .catch(() => {});
+    getUpdaterStatus()
+      .then((s) => { if (s?.state === "downloaded") setUpdateReady(s); })
+      .catch(() => {});
+    const unsubscribe = onUpdaterStatus((s) => {
+      if (s?.state === "downloaded") setUpdateReady(s);
+    });
+    return typeof unsubscribe === "function" ? unsubscribe : undefined;
+  }, []);
+
+  async function handleRestartNow() {
+    // Main's updater-restart handler drains the renderer's debounced edits
+    // (ask/ack via flushRendererEdits) before quitAndInstall — no local
+    // pre-drain needed.
+    try { await updaterRestart(); } catch { /* app is quitting */ }
+  }
 
   const visibleRecents = recentSermons.filter((s) => s.title?.trim());
 
@@ -163,8 +191,24 @@ export default function Sidebar({ currentView, onNavigate, onOpenSermon, theme, 
       </nav>
 
       <div className="sidebar-footer">
+        {updateReady && !updateDismissed && (
+          <div className="sidebar-update-note" role="status">
+            <span className="sidebar-update-note-text">
+              A new version of SermonForge is ready. It will install itself the
+              next time you close the app.
+            </span>
+            <div className="sidebar-update-note-actions">
+              <SecondaryButton size="sm" onClick={handleRestartNow}>
+                Restart now
+              </SecondaryButton>
+              <TextButton size="sm" onClick={() => setUpdateDismissed(true)}>
+                OK
+              </TextButton>
+            </div>
+          </div>
+        )}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span>SermonForge v1.0</span>
+          <span>SermonForge{appVersion ? ` v${appVersion}` : ""}</span>
           <IconButton
             onClick={onToggleTheme}
             aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}

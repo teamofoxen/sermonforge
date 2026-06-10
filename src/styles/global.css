@@ -228,6 +228,33 @@ body {
   opacity: 1;
 }
 
+/* Quiet update-ready note — sits above the version line; never steals
+   focus. The update installs on next close whether or not it's read. */
+.sidebar-update-note {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  background: var(--parchment-warm);
+  border: 1px solid var(--parchment-deep);
+  border-radius: var(--radius);
+  font-family: 'IBM Plex Serif', serif;
+  font-size: 12px;
+  letter-spacing: normal;
+  text-transform: none;
+  line-height: 1.5;
+  color: var(--ink-mid);
+}
+
+.sidebar-update-note-text {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.sidebar-update-note-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
 /* ── Main content area ───────────────────────────────────────────────────── */
 .main-content {
   flex: 1;
