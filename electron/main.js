@@ -1077,6 +1077,38 @@ function runMigrations() {
     version = 23;
   }
 
+  if (version < 24) {
+    // v24 (UX overhaul, 2026-06-10), two coordinated changes:
+    //
+    // (a) Soft delete — deleted_at NULL = live, ISO timestamp = deleted.
+    //     Deleting becomes recoverable (undo affordances on the list
+    //     surfaces; no Trash UI yet). deleted_at is deliberately NOT in
+    //     SERMON_COLUMNS: only main's delete-sermon / restore-sermon ops
+    //     write it, never the renderer's update path.
+    safeAlter("ALTER TABLE sermons ADD COLUMN deleted_at TEXT DEFAULT NULL");
+    //
+    // (b) sermon_search rebuild — functional_elements (the sermon body,
+    //     previously invisible to search) in; delivery_notes/timing_notes
+    //     out (their stage UI is gone — dead weight in the index). The
+    //     table is recreated FROM SERMON_SEARCH_COLUMNS so the schema and
+    //     the indexer can't drift.
+    dbRun("DROP TABLE IF EXISTS sermon_search");
+    dbRun(`CREATE TABLE sermon_search (
+      sermon_id TEXT PRIMARY KEY,
+      ${SERMON_SEARCH_COLUMNS.map((c) => `${c.key} TEXT NOT NULL DEFAULT ''`).join(",\n      ")}
+    )`);
+    const v24rows = queryAll(
+      `SELECT s.*, sr.title AS series_title
+         FROM sermons s
+         LEFT JOIN series sr ON sr.id = s.series_id`
+    );
+    for (const row of v24rows) {
+      indexSermonFtsFromRow(row);
+    }
+    dbRun("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '24')");
+    version = 24;
+  }
+
   // True when at least one block actually ran. Lets initDatabase skip the
   // boot-time flush on a clean boot of an up-to-date DB — so a healthy library
   // is never re-serialized and rotated over its own backup for no reason.
@@ -1470,8 +1502,10 @@ const SERMON_SEARCH_COLUMNS = [
   { key: "redemptive_thread",   source: "redemptive_thread",   json: true  },
   { key: "implications",        source: "implications",        json: true  },
   { key: "outline",             source: "outline",             json: true  },
-  { key: "delivery_notes",      source: "delivery_notes",      json: false },
-  { key: "timing_notes",        source: "timing_notes",        json: false },
+  // v24: functional_elements (the sermon body — explanation/illustration/
+  // application prose under each outline point) replaced delivery_notes +
+  // timing_notes, which indexed columns whose stage UI no longer exists.
+  { key: "functional_elements", source: "functional_elements", json: true  },
 ];
 
 // Index a sermon row (with joined series_title) into sermon_search.
@@ -1600,7 +1634,8 @@ function searchSermonsFts(rawQuery, limit = 50) {
        FROM sermon_search ss
        JOIN sermons s ON s.id = ss.sermon_id
        LEFT JOIN series sr ON sr.id = s.series_id
-       WHERE ${tokenClauses}
+       WHERE s.deleted_at IS NULL
+         AND ${tokenClauses}
        ORDER BY s.updated_at DESC, s.created_at DESC
        LIMIT ?`,
       [...params, limit],
@@ -1750,6 +1785,7 @@ function spineRead(op, payload) {
         `SELECT s.*, sr.title as series_title, sr.color as series_color
          FROM sermons s LEFT JOIN series sr ON s.series_id = sr.id
          WHERE s.id NOT LIKE 'sample-%'
+           AND s.deleted_at IS NULL
          ORDER BY s.date DESC, s.created_at DESC`,
       ).map((r) => shapeSermon(r, computeParentContext(r)));
     case "get-all-series":
@@ -1762,6 +1798,7 @@ function spineRead(op, payload) {
          FROM sermons s LEFT JOIN series sr ON s.series_id = sr.id
          WHERE s.stage != ?
            AND s.id NOT LIKE 'sample-%'
+           AND s.deleted_at IS NULL
          ORDER BY s.updated_at DESC, s.created_at DESC
          LIMIT ?`,
         [SERMON_STATUS.Complete, payload?.limit ?? 3],
@@ -1781,6 +1818,7 @@ function spineRead(op, payload) {
          FROM sermons s LEFT JOIN series sr ON s.series_id = sr.id
          WHERE s.stage = ?
            AND s.id NOT LIKE 'sample-%'
+           AND s.deleted_at IS NULL
          ORDER BY s.updated_at DESC, s.created_at DESC`,
         [SERMON_STATUS.InProgress],
       ).map((r) => shapeSermon(r, computeParentContext(r)));
@@ -1788,7 +1826,8 @@ function spineRead(op, payload) {
       return queryAll(
         `SELECT s.*, ss.title as section_title FROM sermons s
          LEFT JOIN series_sections ss ON s.section_id = ss.id
-         WHERE s.series_id = ? ORDER BY s.date ASC, s.created_at ASC`,
+         WHERE s.series_id = ? AND s.deleted_at IS NULL
+         ORDER BY s.date ASC, s.created_at ASC`,
         [payload],
       );
     case "get-sections-by-series":
@@ -1973,8 +2012,20 @@ function validateAndCommit(op, payload) {
     }
 
     case "delete-sermon":
-      dbRun("DELETE FROM sermons WHERE id = ?", [payload]);
+      // Soft delete (v24) — the row stays, stops appearing everywhere, and
+      // restore-sermon brings it back. Search row drops so a deleted
+      // sermon can't be found either.
+      dbRun("UPDATE sermons SET deleted_at = ? WHERE id = ?", [
+        new Date().toISOString(),
+        payload,
+      ]);
       dropSermonFts(payload);
+      return success();
+
+    case "restore-sermon":
+      // Undo for delete-sermon. Clears the tombstone and re-indexes.
+      dbRun("UPDATE sermons SET deleted_at = NULL WHERE id = ?", [payload]);
+      indexSermonFts(payload);
       return success();
 
     case "delete-series": {

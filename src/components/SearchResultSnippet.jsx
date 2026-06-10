@@ -21,8 +21,9 @@ const COLUMN_LABELS = {
   notebook_study:      "STUDY NOTEBOOK",
   notebook_blueprint:  "ASSEMBLY NOTEBOOK",
   notebook_manuscript: "MANUSCRIPT NOTEBOOK",
-  delivery_notes:      "DELIVERY NOTES",
-  timing_notes:        "TIMING NOTES",
+  // v24 — functional_elements (the sermon body) replaced the struck
+  // delivery_notes / timing_notes index columns.
+  functional_elements: "EQUIP · SERMON BODY",
 };
 
 export default function SearchResultSnippet({ matchedColumn, snippet }) {

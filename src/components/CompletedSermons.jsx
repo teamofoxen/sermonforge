@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { getAllSermons, deleteSermon, updateSermon } from "../core/spine";
+import { getAllSermons, updateSermon } from "../core/spine";
+import DeletedSermonStub, { useSoftDelete } from "./DeletedSermonStub";
 import { exportManuscript, searchSermons } from "../db/database";
 import mapError from "../utils/mapError";
 import { formatDate, buildManuscriptExportPayload } from "../utils";
@@ -11,6 +12,7 @@ import { SERMON_STATUS, LOADING_VERB } from "../core/contracts";
 import EmptyState from "./primitives/EmptyState";
 import LoadingState from "./primitives/LoadingState";
 import SecondaryButton from "./primitives/SecondaryButton";
+import { TextButton } from "./primitives/TextButton";
 
 // Preached Sermons (component name CompletedSermons; the stored enum value
 // stays `complete`) — the body of work whose lifecycle has reached
@@ -34,6 +36,9 @@ export default function CompletedSermons({ onOpenSermon }) {
   const [exportingId, setExportingId] = useState(null);
   const [exportError, setExportError] = useState(null);
   const [exportNote, setExportNote] = useState(null); // { id, text } per-card success note
+  // v24 soft-delete: the card swaps to a stub with Undo instead of
+  // vanishing (shared DeletedSermonStub).
+  const { justDeleted, handleDelete, undoDelete } = useSoftDelete();
 
   useEffect(() => {
     getAllSermons()
@@ -147,6 +152,9 @@ export default function CompletedSermons({ onOpenSermon }) {
         ) : (
           <div className="sermon-grid">
             {filtered.map((sermon) => (
+              justDeleted.has(sermon.id) ? (
+                <DeletedSermonStub key={sermon.id} sermon={sermon} onUndo={undoDelete} />
+              ) : (
               <div
                 key={sermon.id}
                 className="sermon-card"
@@ -191,10 +199,7 @@ export default function CompletedSermons({ onOpenSermon }) {
                     </SecondaryButton>
                     <DeleteButton
                       small
-                      onDelete={async () => {
-                        await deleteSermon(sermon.id);
-                        setSermons((prev) => prev.filter((s) => s.id !== sermon.id));
-                      }}
+                      onDelete={() => handleDelete(sermon)}
                     />
                   </div>
                 </div>
@@ -204,6 +209,7 @@ export default function CompletedSermons({ onOpenSermon }) {
                   </p>
                 )}
               </div>
+              )
             ))}
           </div>
         )}

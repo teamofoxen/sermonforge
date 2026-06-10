@@ -38,7 +38,8 @@ Single channel for all sermon, series, and section state. Operations dispatch to
 | `create-series` | `{ name, color?, description?, year?, ... }` | State #3: name required |
 | `update-sermon` | `{ id, ...fields }` | Fields go through `buildUpdate()` allowlist |
 | `update-series` | `{ id, ...fields }` | — |
-| `delete-sermon` | sermonId string | — |
+| `delete-sermon` | sermonId string | v24 soft delete: sets `deleted_at`, drops the search row; list reads exclude tombstoned rows |
+| `restore-sermon` | sermonId string | Undo for delete-sermon: clears `deleted_at`, re-indexes |
 | `delete-series` | seriesId string | — |
 | `create-section` | `{ series_id, title, sort_order? }` | — |
 | `update-section` | `{ id, ...fields }` | — |

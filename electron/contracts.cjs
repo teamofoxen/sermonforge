@@ -19,11 +19,11 @@ const STAGE = Object.freeze({
   Study: "Study",
   Assembly: "Assembly",
   Manuscript: "Manuscript",
-  Delivery: "Delivery",
 });
 
-// ARI Phase 7 — "Delivery" removed from the visible tab sequence; the Stage
-// type still admits it so legacy data doesn't break.
+// "Delivery" struck from the vocabulary in the v24 migration session
+// (2026-06-10) — the ARI Phase 7 legacy tolerance retired with no
+// production sermons in existence.
 const STAGE_SEQUENCE = Object.freeze(["Study", "Assembly", "Manuscript"]);
 
 const SUB_PHASE = Object.freeze({
@@ -93,7 +93,9 @@ const LOADING_VERB = Object.freeze({
 const SERMON_COLUMNS = Object.freeze(new Set([
   "title", "passage", "date", "preacher", "stage", "mpt", "mps",
   "observations", "interpretation", "redemptive_thread", "implications",
-  "outline", "manuscript", "delivery_notes", "timing_notes", "post_sermon",
+  // delivery_notes / timing_notes struck in the v24 migration session
+  // (2026-06-10) — Delivery UI gone, nothing writes them; DB columns remain.
+  "outline", "manuscript", "post_sermon",
   "functional_elements", "checklist", "series_id", "section_id", "is_one_off",
   // topic_theme / audience_assumptions / background_noise removed in the
   // trail deletion sweep (Phase B1) — legacy PC columns, zero readers, zero

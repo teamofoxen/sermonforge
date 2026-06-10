@@ -23,12 +23,13 @@ const HINT_MAP = {
   // Assembly sub-phases.
   main_point_pair:     { stage: "Assembly", subPhase: "Anchor" },
   outline:             { stage: "Assembly", subPhase: "Outline" },
+  // v24 — functional_elements (the sermon body) replaced the struck
+  // delivery_notes / timing_notes columns in the search index.
+  functional_elements: { stage: "Assembly", subPhase: "Equip" },
   sermon_frame:        { stage: "Assembly", subPhase: "Frame" },
 
   // Manuscript surfaces — all land in the writing room.
   manuscript:          { stage: "Manuscript" },
-  delivery_notes:      { stage: "Manuscript" },
-  timing_notes:        { stage: "Manuscript" },
 
   // Notebooks — open the drawer on the matching stage's trail.
   notebook_study:      { stage: "Study",     openNotebook: true },

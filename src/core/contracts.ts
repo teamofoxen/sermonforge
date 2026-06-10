@@ -49,22 +49,19 @@
 // Anchor / Outline / Equip / Frame; Manuscript: none).
 //
 // Legacy values: `Blueprint` and `Frame` (from a prior 4-stage shape) are
-// coerced to `Assembly` on read in the spine. `Delivery` stays admissible
-// for legacy data per ARI Phase 7 but is not part of the visible sequence.
-export type Stage = "Study" | "Assembly" | "Manuscript" | "Delivery";
+// coerced to `Assembly` on read in the spine. `Delivery` was struck from
+// the vocabulary entirely in the v24 migration session (2026-06-10) — its
+// ARI Phase 7 "stays admissible for legacy data" tolerance retired with no
+// production sermons in existence; Manuscript is the terminal stage, with
+// Export to Word as the terminal action.
+export type Stage = "Study" | "Assembly" | "Manuscript";
 
 export const STAGE = {
   Study: "Study",
   Assembly: "Assembly",
   Manuscript: "Manuscript",
-  Delivery: "Delivery",
 } as const satisfies Record<Stage, Stage>;
 
-// ARI Phase 7 — "Delivery" removed from the visible tab sequence (the
-// Delivery tab UI is gone). The Stage type still admits "Delivery" so legacy
-// data with `current_stage = "Delivery"` doesn't blow up the contract; it
-// just doesn't render as a tab. Manuscript is now the terminal sermon-prep
-// stage, with Export to Word as the terminal action.
 export const STAGE_SEQUENCE: readonly Stage[] = Object.freeze([
   "Study", "Assembly", "Manuscript",
 ]);
@@ -73,7 +70,6 @@ export const STAGE_LABELS: Readonly<Record<Stage, string>> = Object.freeze({
   Study: "Study",
   Assembly: "Assembly",
   Manuscript: "Manuscript",
-  Delivery: "Delivery",
 });
 
 // ── Process Contract #4 — SubPhase (within-Stage progression) ────────────────
@@ -321,7 +317,11 @@ export type MainPointPairUpdate = { op: "set"; questionKey: string; value: strin
 export const SERMON_COLUMNS: ReadonlySet<string> = Object.freeze(new Set([
   "title", "passage", "date", "preacher", "stage", "mpt", "mps",
   "observations", "interpretation", "redemptive_thread", "implications",
-  "outline", "manuscript", "delivery_notes", "timing_notes", "post_sermon",
+  // delivery_notes / timing_notes struck from the allowlist in the v24
+  // migration session (2026-06-10) — the Delivery stage UI is gone, nothing
+  // writes them, and removing them from the writable set means nothing can
+  // resurrect them by accident. The DB columns remain (dead, harmless).
+  "outline", "manuscript", "post_sermon",
   "functional_elements", "checklist", "series_id", "section_id", "is_one_off",
   // topic_theme / audience_assumptions / background_noise removed in the
   // trail deletion sweep (Phase B1) — legacy PC columns, zero readers, zero

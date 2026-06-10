@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-06-10 — v24: deleting is undoable, search finds the sermon body, "Delivery" leaves the vocabulary
+
+- Deleting a sermon is now a soft delete (`deleted_at` tombstone, written only by main — deliberately outside the renderer-writable allowlist) and every delete surface shows an Undo instead of vanishing the card (shared DeletedSermonStub; Dashboard rows settle to "Deleted · Undo"). The two-step confirm stays; no Trash UI yet.
+- `sermon_search` rebuilt (drop + recreate from `SERMON_SEARCH_COLUMNS` + full reindex): the sermon body (`functional_elements` — per-point explanation/illustration/application) is finally searchable, and the dead `delivery_notes`/`timing_notes` index columns are gone. Search results label body hits "EQUIP · SERMON BODY" and land on Assembly/Equip.
+- "Delivery" struck from the vocabulary in one commit — Stage type, runtime mirrors, test spine, ~200 lines of orphaned CSS, search labels, and the CORE vocabulary entry; the ARI Phase 7 legacy tolerance retired with no production sermons in existence.
+- All list reads and search exclude tombstoned rows; schema.md updated to v24. Sweep PASS; 706 tests.
+
+---
+
 ## 2026-06-10 — Dark launches stop flashing light
 
 - index.html now pre-paints the stored theme (inline script + critical CSS) before React loads; the BrowserWindow background and the splash screen follow the theme too (main reads a tiny ui-prefs.json synchronously — localStorage can't serve the splash's file:// origin).

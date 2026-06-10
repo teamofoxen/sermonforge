@@ -244,8 +244,14 @@ export function updateSeries(id: string, fields: Record<string, unknown>): Promi
   return call("update-series", { id, fields });
 }
 
+// Soft delete (v24) — the row stays in the DB with a deleted_at tombstone
+// and stops appearing everywhere; restoreSermon is its undo.
 export function deleteSermon(id: string): Promise<void> {
   return call("delete-sermon", id);
+}
+
+export function restoreSermon(id: string): Promise<void> {
+  return call("restore-sermon", id);
 }
 
 export function deleteSeries(id: string): Promise<void> {
@@ -287,10 +293,8 @@ export interface TransitionInput {
 
 const STAGE_VALUES: ReadonlySet<string> = new Set([
   ...STAGE_SEQUENCE as readonly string[],
-  // "Blueprint" / "Frame" removed in the trail deletion sweep (Phase B3).
-  // "Delivery" stays — separate ARI Phase 7 defensive-tolerance for legacy
-  // data; not in scope for this sweep.
-  "Delivery",
+  // "Blueprint" / "Frame" removed in the trail deletion sweep (Phase B3);
+  // "Delivery" struck in the v24 migration session (2026-06-10).
 ]);
 const SUB_PHASE_VALUES: ReadonlySet<string> = new Set(SUB_PHASE_CANONICAL_SEQUENCE as readonly string[]);
 

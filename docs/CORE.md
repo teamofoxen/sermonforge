@@ -62,10 +62,12 @@ When contracts appear to conflict, this resolves it:
 Terms used by the contracts below. Code, docs, and contract clauses bind to
 these names. (See State Contract clause 5: *one name per concept*.)
 
-- **Stage** — one of Study, Assembly, Manuscript, Delivery. Tracked as
+- **Stage** — one of Study, Assembly, Manuscript. Tracked as
   `current_stage` on every sermon. (Workspace Restructure 2026-05-10:
   pre-restructure stages `Blueprint` and `Frame` retired, both coerced to
-  `Assembly` on read.)
+  `Assembly` on read. `Delivery` struck from the vocabulary in the v24
+  migration session, 2026-06-10 — its ARI Phase 7 legacy tolerance retired
+  with no production sermons in existence.)
 - **Sub-phase** — within Study: Observe, Interpret, Redemptive Thread,
   Implications. Within Assembly: Anchor, Outline, Equip, Frame. Tracked as
   `current_sub_phase`. (Workspace Restructure 2026-05-10: the within-Study

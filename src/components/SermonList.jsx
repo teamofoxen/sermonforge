@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { getAllSermons, deleteSermon, updateSermon } from "../core/spine";
+import { getAllSermons, updateSermon } from "../core/spine";
+import DeletedSermonStub, { useSoftDelete } from "./DeletedSermonStub";
 import { searchSermons } from "../db/database";
 import { formatDate } from "../utils";
 import { hintFromMatchedColumn } from "../utils/searchHints";
@@ -26,6 +27,9 @@ export default function SermonList({ onOpenSermon }) {
   // instead of reading as deletion (the old select filtered the card out
   // instantly with no message).
   const [justPreached, setJustPreached] = useState(() => new Set());
+  // Same visibility rule for deletes (v24 soft-delete): the card swaps to
+  // a stub with Undo instead of vanishing (shared DeletedSermonStub).
+  const { justDeleted, handleDelete, undoDelete } = useSoftDelete();
 
   async function markPreached(sermon) {
     await updateSermon(sermon.id, { stage: SERMON_STATUS.Complete });
@@ -120,7 +124,9 @@ export default function SermonList({ onOpenSermon }) {
         ) : (
           <div className="sermon-grid">
             {filtered.map((sermon) => (
-              justPreached.has(sermon.id) ? (
+              justDeleted.has(sermon.id) ? (
+                <DeletedSermonStub key={sermon.id} sermon={sermon} onUndo={undoDelete} />
+              ) : justPreached.has(sermon.id) ? (
                 <div key={sermon.id} className="sermon-card">
                   <p className="sermon-card-preached-stub">
                     “{sermon.title}” moved to Preached Sermons.
@@ -174,10 +180,7 @@ export default function SermonList({ onOpenSermon }) {
                     </SecondaryButton>
                     <DeleteButton
                       small
-                      onDelete={async () => {
-                        await deleteSermon(sermon.id);
-                        setSermons((prev) => prev.filter((s) => s.id !== sermon.id));
-                      }}
+                      onDelete={() => handleDelete(sermon)}
                     />
                   </div>
                 </div>

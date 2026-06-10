@@ -30,7 +30,8 @@ import { randomUUID } from "node:crypto";
 // Workspace Restructure (2026-05-10) — Stage collapses to three (Blueprint
 // + Frame retired); Step layer retires; SubPhase extends with Assembly's
 // Anchor / Outline / Equip / Frame.
-export const STAGE = { Study: "Study", Assembly: "Assembly", Manuscript: "Manuscript", Delivery: "Delivery" } as const;
+// "Delivery" struck in the v24 migration session (2026-06-10).
+export const STAGE = { Study: "Study", Assembly: "Assembly", Manuscript: "Manuscript" } as const;
 export const STAGE_SEQUENCE = ["Study", "Assembly", "Manuscript"] as const;
 export const SUB_PHASE = {
   Observe: "Observe", Interpret: "Interpret", RedemptiveThread: "RedemptiveThread", Implications: "Implications",
@@ -56,7 +57,8 @@ export const MUTATION_KIND = { UserInput: "user_input", AiProposal: "ai_proposal
 export const SERMON_COLUMNS = new Set([
   "title", "passage", "date", "preacher", "stage", "mpt", "mps",
   "observations", "interpretation", "redemptive_thread", "implications",
-  "outline", "manuscript", "delivery_notes", "timing_notes", "post_sermon",
+  // delivery_notes / timing_notes struck in v24 — mirrors contracts.
+  "outline", "manuscript", "post_sermon",
   "functional_elements", "checklist", "series_id", "section_id", "is_one_off",
   // topic_theme / audience_assumptions / background_noise removed in the
   // trail deletion sweep (Phase B1) — mirrors SERMON_COLUMNS in contracts.
@@ -284,7 +286,17 @@ function validateAndCommit(op: string, payload: any) {
       for (const [k, v] of entries) row[k] = v;
       return success();
     }
-    case "delete-sermon": sermons.delete(payload); return success();
+    // v24 soft-delete mirror: tombstone + restore, like production.
+    case "delete-sermon": {
+      const s = sermons.get(payload);
+      if (s) s.deleted_at = new Date().toISOString();
+      return success();
+    }
+    case "restore-sermon": {
+      const s = sermons.get(payload);
+      if (s) s.deleted_at = null;
+      return success();
+    }
     case "delete-series": {
       // Cascade: remove series_sections, null out sermons.series_id + section_id.
       for (const [sid, sec] of sections) {
@@ -461,7 +473,7 @@ function spineRead(op: string, payload: any): any {
     case "get-series": return shapeSeries(series.get(payload));
     case "get-all-sermons":
       return [...sermons.values()]
-        .filter((s) => !s.id.startsWith("tour-"))
+        .filter((s) => !s.id.startsWith("tour-") && !s.deleted_at)
         .sort((a, b) => {
           const d = (b.date || "").localeCompare(a.date || "");
           return d !== 0 ? d : (b.created_at || "").localeCompare(a.created_at || "");
@@ -477,7 +489,7 @@ function spineRead(op: string, payload: any): any {
         .map(shapeSeries);
     case "get-recent-sermons":
       return [...sermons.values()]
-        .filter((s) => s.stage !== SERMON_STATUS.Complete && !s.id.startsWith("tour-"))
+        .filter((s) => s.stage !== SERMON_STATUS.Complete && !s.id.startsWith("tour-") && !s.deleted_at)
         .sort((a, b) => {
           const u = (b.updated_at || "").localeCompare(a.updated_at || "");
           return u !== 0 ? u : (b.created_at || "").localeCompare(a.created_at || "");
@@ -496,7 +508,7 @@ function spineRead(op: string, payload: any): any {
         .map(shapeSeries);
     case "get-in-progress-sermons":
       return [...sermons.values()]
-        .filter((s) => s.stage === SERMON_STATUS.InProgress && !s.id.startsWith("tour-"))
+        .filter((s) => s.stage === SERMON_STATUS.InProgress && !s.id.startsWith("tour-") && !s.deleted_at)
         .sort((a, b) => {
           const u = (b.updated_at || "").localeCompare(a.updated_at || "");
           return u !== 0 ? u : (b.created_at || "").localeCompare(a.created_at || "");

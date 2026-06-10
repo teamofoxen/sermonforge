@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { loadSampleSermon, getInProgressSermons, deleteSermon, updateSermon } from "../core/spine";
+import { loadSampleSermon, getInProgressSermons, deleteSermon, restoreSermon, updateSermon } from "../core/spine";
 import { SERMON_STATUS } from "../core/contracts";
 import NewSermonModal from "./NewSermonModal";
 import DashboardVerseCarousel from "./DashboardVerseCarousel";
@@ -42,11 +42,20 @@ export default function Dashboard({ onOpenSermon }) {
   const overdue = inProgress.filter((s) => s.date && s.date < today);
   const upcoming = inProgress.filter((s) => !s.date || s.date >= today);
 
+  // v24 soft-delete: the row swaps to a settled "Deleted · Undo" note
+  // instead of vanishing (same visibility rule as Mark preached).
+  const [deletedIds, setDeletedIds] = useState(() => new Set());
   async function handleDeleteSermon(id) {
     await deleteSermon(id);
-    setInProgress((prev) =>
-      prev.some((s) => s.id === id) ? prev.filter((s) => s.id !== id) : prev,
-    );
+    setDeletedIds((prev) => new Set(prev).add(id));
+  }
+  async function handleUndoDelete(id) {
+    await restoreSermon(id);
+    setDeletedIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
   }
 
   // Return-day reminders resolve in ONE click, right here. The row swaps to a
@@ -119,8 +128,10 @@ export default function Dashboard({ onOpenSermon }) {
               upcoming={upcoming}
               onOpenSermon={onOpenSermon}
               onDeleteSermon={handleDeleteSermon}
+              onUndoDelete={handleUndoDelete}
               onMarkPreached={handleMarkPreached}
               preachedIds={preachedIds}
+              deletedIds={deletedIds}
             />
 
             {/* EXPLORE — orientation paths for new pastors. */}
@@ -184,7 +195,7 @@ export default function Dashboard({ onOpenSermon }) {
 // When the preacher has nothing in flight, the tile renders an empty-state
 // pointing back to the hero "Build a sermon" tile.
 
-function ResumeWorkTile({ overdue, upcoming, onOpenSermon, onDeleteSermon, onMarkPreached, preachedIds }) {
+function ResumeWorkTile({ overdue, upcoming, onOpenSermon, onDeleteSermon, onUndoDelete, onMarkPreached, preachedIds, deletedIds }) {
   const isEmpty = overdue.length === 0 && upcoming.length === 0;
 
   return (
@@ -204,13 +215,22 @@ function ResumeWorkTile({ overdue, upcoming, onOpenSermon, onDeleteSermon, onMar
               sermon={s}
               onOpen={onOpenSermon}
               onDelete={onDeleteSermon}
+              onUndoDelete={onUndoDelete}
               onMarkPreached={onMarkPreached}
               settled={preachedIds?.has(s.id)}
+              deleted={deletedIds?.has(s.id)}
               flagged
             />
           ))}
           {upcoming.map((s) => (
-            <ResumeRow key={s.id} sermon={s} onOpen={onOpenSermon} onDelete={onDeleteSermon} />
+            <ResumeRow
+              key={s.id}
+              sermon={s}
+              onOpen={onOpenSermon}
+              onDelete={onDeleteSermon}
+              onUndoDelete={onUndoDelete}
+              deleted={deletedIds?.has(s.id)}
+            />
           ))}
         </div>
       )}
@@ -218,7 +238,20 @@ function ResumeWorkTile({ overdue, upcoming, onOpenSermon, onDeleteSermon, onMar
   );
 }
 
-function ResumeRow({ sermon, onOpen, onDelete, onMarkPreached, settled, flagged }) {
+function ResumeRow({ sermon, onOpen, onDelete, onUndoDelete, onMarkPreached, settled, deleted, flagged }) {
+  if (deleted) {
+    return (
+      <div className="dash-row">
+        <div className="dash-row-body">
+          <div className="dash-row-title">{sermon.title || "Untitled"}</div>
+          <div className="dash-row-meta">Deleted.</div>
+        </div>
+        <TextButton size="sm" onClick={(e) => { e.stopPropagation(); onUndoDelete?.(sermon.id); }}>
+          Undo
+        </TextButton>
+      </div>
+    );
+  }
   if (settled) {
     return (
       <div className="dash-row">

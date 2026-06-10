@@ -1,6 +1,6 @@
 # SermonForge — Database Schema Reference
 
-Current schema version: **22**
+Current schema version: **24**
 
 | Version | Bumped for |
 |---------|-----------|
@@ -14,6 +14,7 @@ Current schema version: **22**
 | v21 | Per-stage sub-phase memory — `last_study_subphase`, `last_assembly_subphase` |
 | v22 | Sermon full-content search — `sermon_search` table (flattened text per indexed column for LIKE-based search) |
 | v23 | Trail deletion sweep (Phase D1) — `last_touched_position` (session re-entry routing) + `thresholds_seen` (dismissed-thresholds JSON array, one mechanism for all threshold-orientation "seen" flags) |
+| v24 | UX overhaul migration session — `deleted_at` soft-delete tombstone on `sermons`; `sermon_search` rebuilt with `functional_elements` in and `delivery_notes` / `timing_notes` out (Delivery stage struck from the vocabulary) |
 
 ---
 
@@ -80,8 +81,8 @@ Current schema version: **22**
 | `implications` | TEXT | Study sub-phase 4 — Implications (JSON: structured per-question fields + compiled, or legacy plain text) |
 | `outline` | TEXT | JSON array of point strings |
 | `manuscript` | TEXT | |
-| `delivery_notes` | TEXT | |
-| `timing_notes` | TEXT | |
+| `delivery_notes` | TEXT | Dead column — Delivery stage struck in v24; removed from the writable allowlist, retained in the DB |
+| `timing_notes` | TEXT | Dead column — same as `delivery_notes` |
 | `post_sermon` | TEXT | |
 | `functional_elements` | TEXT | JSON object `{0:{explanation,application,illustration},...}` — keyed by outline point UUID |
 | `checklist` | TEXT | JSON object keyed by item label `{label:bool,...}` |
@@ -103,6 +104,7 @@ Current schema version: **22**
 | `last_assembly_subphase` | TEXT | Pastor's last position within Assembly (one of `Anchor \| Outline \| Equip \| Frame`). Same purpose as `last_study_subphase` for the Assembly stage. Added v21 migration. |
 | `last_touched_position` | TEXT | Pastor's last-touched field-level position, stored as canonical slash-composite `"<stage>/<subPhase>/<fieldKey>"`. NULL = first session (sermon-start landing fires); non-NULL = land on that field on re-open. Written by the writing surface on every arrival at a question. Added v23 migration (trail deletion sweep, Phase D1). Distinct from `current_step` (retired Phase B2) — same conceptual role, different field, different fate. |
 | `thresholds_seen` | TEXT | JSON array of dismissed threshold ids. One mechanism for "has this threshold been dismissed" across sermon-start, Study→Anchor handoff, and any future threshold — so the codebase doesn't accumulate one boolean per threshold. Defaults to `'[]'`. Added v23 migration (trail deletion sweep, Phase D1). |
+| `deleted_at` | TEXT | Soft-delete tombstone — NULL = live, ISO timestamp = deleted. Written only by main's `delete-sermon` / `restore-sermon` ops (deliberately NOT in `SERMON_COLUMNS`); every list read and search excludes tombstoned rows. Added v24 migration. |
 | `created_at` | TEXT | |
 | `updated_at` | TEXT | |
 
@@ -132,12 +134,13 @@ sync. Search runs as LIKE-based matching against the flattened text columns.
 | `notebook_study` | TEXT | Plain notebook text |
 | `notebook_blueprint` | TEXT | Plain notebook text (column name preserved from pre-restructure schema; feeds Assembly's notebook) |
 | `notebook_manuscript` | TEXT | Plain notebook text |
-| `delivery_notes` | TEXT | Plain text |
-| `timing_notes` | TEXT | Plain text |
+| `functional_elements` | TEXT | Flattened text of the sermon body (per-point explanation / illustration / application). Added in the v24 rebuild, which also dropped `delivery_notes` / `timing_notes` (their stage UI is gone) |
 
-Added v22 migration. Backfill on first launch indexes every existing sermon.
+Added v22 migration; rebuilt (drop + recreate + full reindex) in v24. The
+table is created FROM `SERMON_SEARCH_COLUMNS` in `electron/main.js` so the
+schema and the indexer can't drift.
 
-> **Why not FTS5:** `sql.js` (the sermon DB's engine) doesn't compile the FTS5 extension by default. Rather than swap the WASM build, the search table is a regular SQLite table with one row per sermon and per-column flattened text. LIKE-based matching is fast enough at typical pastor library sizes (<500 sermons). If libraries grow significantly, swapping to FTS5 (or building a sql.js variant with FTS5 enabled) is the future-state path.
+> **Why not FTS5:** the table predates the better-sqlite3 driver swap (`sql.js` lacked FTS5). It remains a regular SQLite table with one row per sermon and per-column flattened text; LIKE-based matching is fast enough at typical pastor library sizes (<500 sermons). better-sqlite3 has FTS5 available if libraries grow significantly.
 
 ---
 
