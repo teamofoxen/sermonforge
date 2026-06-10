@@ -194,8 +194,15 @@ these names. (See State Contract clause 5: *one name per concept*.)
    Export and Mark-as-preached actions — the moment the deliverable leaves
    the app is by this clause's own logic the largest threshold there is.
    It is summoned, never automatic, and re-openable forever. Within-stage
-   step movement (chevron-next, map-jump) is silent by design. The line between orientation (helpful, at boundaries)
-   and narration (clunky, always-on) is load-bearing per the
+   step movement (chevron-next, map-jump) is silent by design. A static
+   statement of place is permitted (amended 2026-06-10): the writing surface
+   may carry a standing "Study · Interpret"-shaped place line, and the map a
+   "You are here" line — these state *where*, never *that movement happened*,
+   and they never change register when the pastor moves. What stays banned is
+   movement narration: any surface that announces, celebrates, or comments on
+   a transition outside the threshold screens above. The line between
+   orientation (helpful — at boundaries, or statically present) and narration
+   (clunky, always-on commentary) is load-bearing per the
    invisible-system build spec's *Strategic orientation at thresholds*
    section ("*Orientation is discrete and lives at thresholds. It is never
    continuous and never present during the work.*") and the era-2 primacy

@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-06-10 — Orientation: you-are-here eyebrow, Back button, map header with counts, jump lands on the question
+
+- The writing surface carries a static place line ("Study · Interpret") above the field name — states where, never narrates movement; CORE Process #3 amended to permit static place explicitly.
+- A Back button joins Next in a `.sws-nav` pair (prevField — the walk reverses as freely as it advances); the floating ☰ is now a labeled "Map" pill.
+- The map gained a fixed header (title, "You are here" line, answered/started/not-yet legend) over a scrolling list, and each region label shows "answered of total" counts.
+- Map jumps now pass the full question entry: the surface scrolls to that exact question and flashes it once on landing.
+- The Implications→Anchor SCREEN_BOUNDARIES carve-out is gone — revisits of MPT permanently render "Anchor opens, against your Study work." (FRAME_OVERRIDES, one voice with the handoff screen).
+
+---
+
 ## 2026-06-10 — "Preached" is the word: labeled lifecycle, undo, reopen, resolvable reminders
 
 - The user-facing lifecycle word is now "Preached" everywhere (SERMON_STATUS_LABELS; stored enum value unchanged): sidebar "Preached Sermons", view title, empty states, search placeholder.

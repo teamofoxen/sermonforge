@@ -22,6 +22,17 @@
   margin: 0 auto;
 }
 
+/* Static statement of place — stage · region, above the field name.
+   Orientation only; it never narrates movement (CORE Process #3). */
+.sws-place {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-ghost);
+  margin-bottom: 10px;
+}
+
 .sws-region-frame {
   font-family: var(--font-serif);
   font-size: 13px;
@@ -141,6 +152,27 @@
   box-shadow: var(--shadow-soft);
 }
 
+/* Question anchor — wraps each rendered question; the map's jump target.
+   Carries the inter-question spacing (each .sws-prompt-block is now the
+   only child of its anchor, so the block's own :last-child zero applies). */
+.sws-qblock {
+  margin-bottom: 44px;
+}
+
+.sws-qblock:last-child {
+  margin-bottom: 0;
+}
+
+.sws-qblock.is-flash {
+  animation: sws-flash 1400ms ease-out;
+  border-radius: var(--radius);
+}
+
+@keyframes sws-flash {
+  0%, 30% { box-shadow: 0 0 0 10px var(--gold-pale); background: var(--gold-pale); }
+  100%    { box-shadow: 0 0 0 10px transparent; background: transparent; }
+}
+
 .sws-prompt-block {
   margin-bottom: 44px;
 }
@@ -235,10 +267,37 @@
   z-index: 2;
 }
 
-.sws-forward {
+/* Walk navigation — Back + Next/Finish travel together, anchored where the
+   lone forward chevron used to sit. */
+.sws-nav {
   position: absolute;
   bottom: 36px;
-  right: 108px;
+  right: 132px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.sws-back {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-ghost);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: color 120ms ease, border-color 120ms ease;
+}
+
+.sws-back:hover {
+  color: var(--ink-soft);
+  border-color: var(--parchment-deep);
+}
+
+.sws-forward {
   font-family: var(--font-mono);
   font-size: 12px;
   letter-spacing: 0.06em;
@@ -282,9 +341,9 @@
   position: absolute;
   bottom: 32px;
   right: 32px;
-  width: 52px;
   height: 52px;
-  border-radius: 50%;
+  padding: 0 18px;
+  border-radius: 26px;
   background: var(--ink);
   color: var(--parchment);
   border: none;
@@ -293,9 +352,17 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   line-height: 1;
   transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.sws-map-summon-icon {
+  font-size: 16px;
 }
 
 .sws-map-summon:hover {

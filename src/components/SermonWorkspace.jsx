@@ -81,6 +81,9 @@ export default function SermonWorkspace({
   const { saving, saveError, lastSavedAt } = saveState;
   const [siblingIds, setSiblingIds] = useState([]);
   const [mapOpen, setMapOpen] = useState(false);
+  // Question the last map jump targeted — the writing surface scrolls to it
+  // and flashes it once, then clears this via onHighlightDone.
+  const [jumpHighlight, setJumpHighlight] = useState(null);
   const [notebookOpen, setNotebookOpen] = useState(false);
   // Finish threshold — plain React state, deliberately NOT thresholds_seen:
   // the completion screen is re-openable forever (Process #3: dismissal ends
@@ -349,11 +352,18 @@ export default function SermonWorkspace({
 
   // Map jump and handoff jump both share the pattern: flush, write
   // position, optionally mark a threshold seen, close any overlay.
+  // The map passes the full question entry; position serialization only
+  // reads stage/subPhase/fieldKey, and questionKey drives the landing flash.
   const handleMapJump = useCallback(async (next) => {
     await beforePositionChange();
     writePositionAndThresholds(next);
+    setJumpHighlight(next.questionKey ?? null);
     setMapOpen(false);
   }, [beforePositionChange, writePositionAndThresholds]);
+
+  // Stable identity — the writing surface's flash effect depends on this;
+  // an inline closure would restart the flash on every workspace render.
+  const clearJumpHighlight = useCallback(() => setJumpHighlight(null), []);
 
   const handleHandoffJump = useCallback(async (next) => {
     if (!sermon) return;
@@ -624,6 +634,8 @@ export default function SermonWorkspace({
             onOpenMap={() => setMapOpen(true)}
             onOpenNotebook={() => setNotebookOpen(true)}
             onOpenFinish={() => setFinishOpen(true)}
+            highlightQuestion={jumpHighlight}
+            onHighlightDone={clearJumpHighlight}
           />
           {/* FeedbackFlag — gated on !_fixtureSermon for the same reason
               persistUpdate is: fixture interactions must not pollute real

@@ -1,20 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { QUESTION_WALK_ORDER, questionId } from "../utils/walkOrder";
+import { QUESTION_WALK_ORDER, questionId, findField, REGION_DISPLAY } from "../utils/walkOrder";
 import "./sermonMap.css";
 
-const REGION_LABEL = {
-  Observe: "Observe",
-  Interpret: "Interpret",
-  RedemptiveThread: "Redemptive Thread",
-  Implications: "Implications",
-  Anchor: "Anchor",
-  Outline: "Outline",
-  Equip: "Equip",
-  Frame: "Frame",
-};
-
 function regionLabelFor(entry) {
-  return REGION_LABEL[entry.subPhase] ?? entry.stage;
+  return REGION_DISPLAY[entry.subPhase] ?? entry.stage;
 }
 
 function buildGroups(questions) {
@@ -62,7 +51,7 @@ function QuestionRow({ entry, status, onJump }) {
 
   return (
     <div className={`sm-row sm-row--${state}`}>
-      <button type="button" className="sm-jump" onClick={onJump}>
+      <button type="button" className="sm-jump" onClick={() => onJump?.(entry)}>
         {entry.questionPrompt}
       </button>
       {showPreview && (
@@ -94,6 +83,20 @@ export default function SermonMap({
   const panelRef = useRef(null);
   const currentRowRef = useRef(null);
 
+  // Per-region answered counts — the map's standing completeness summary
+  // (Process #2: the map carries continuous low-weight visibility). Keyed
+  // "stage/subPhase" → { answered, total }.
+  const regionCounts = useMemo(() => {
+    const counts = {};
+    for (const q of questions) {
+      const key = `${q.stage}/${q.subPhase}`;
+      counts[key] = counts[key] || { answered: 0, total: 0 };
+      counts[key].total += 1;
+      if (questionStates[questionId(q)]?.state === "answered") counts[key].answered += 1;
+    }
+    return counts;
+  }, [questions, questionStates]);
+
   useEffect(() => {
     const onKey = (e) => {
       if (e.key === "Escape") onClose?.();
@@ -112,6 +115,20 @@ export default function SermonMap({
     currentPosition.subPhase === subPhase &&
     currentPosition.fieldKey === fieldKey;
 
+  // "You are here" — one line, current-position vocabulary only.
+  const hereField = currentPosition
+    ? findField(currentPosition.stage, currentPosition.subPhase, currentPosition.fieldKey)
+    : null;
+  const hereLine = currentPosition
+    ? [
+        currentPosition.stage,
+        currentPosition.stage === currentPosition.subPhase
+          ? null
+          : (REGION_DISPLAY[currentPosition.subPhase] ?? currentPosition.subPhase),
+        hereField?.label ?? null,
+      ].filter(Boolean).join(" · ")
+    : null;
+
   return (
     <>
       <div className="sm-backdrop" onClick={onClose} />
@@ -125,52 +142,70 @@ export default function SermonMap({
         >
           ×
         </button>
-        <div className="sm-list">
-          {groups.map((g, i) => {
-            if (g.kind === "stage-break") {
-              return <div key={`break-${i}`} className="sm-stage-break" aria-hidden="true" />;
-            }
-            if (g.kind === "region") {
+        <header className="sm-head">
+          <h2 className="sm-title">The whole sermon, every question.</h2>
+          <p className="sm-sub">Click any question to go there.</p>
+          {hereLine && (
+            <p className="sm-here">
+              <span className="sm-here-label">You are here</span> {hereLine}
+            </p>
+          )}
+          <p className="sm-legend" aria-hidden="true">
+            <span className="sm-legend-answered">answered</span>
+            <span className="sm-legend-sep">·</span>
+            <span className="sm-legend-partial">started</span>
+            <span className="sm-legend-sep">·</span>
+            <span className="sm-legend-unanswered">not yet</span>
+          </p>
+        </header>
+        <div className="sm-scroll">
+          <div className="sm-list">
+            {groups.map((g, i) => {
+              if (g.kind === "stage-break") {
+                return <div key={`break-${i}`} className="sm-stage-break" aria-hidden="true" />;
+              }
+              if (g.kind === "region") {
+                const count = regionCounts[`${g.stage}/${g.subPhase}`];
+                return (
+                  <h3 key={`region-${i}`} className="sm-region-label">
+                    {g.label}
+                    {count && (
+                      <span className="sm-region-count">
+                        {count.answered} of {count.total}
+                      </span>
+                    )}
+                  </h3>
+                );
+              }
+              if (g.kind === "field") {
+                const current = isCurrentField(g.stage, g.subPhase, g.fieldKey);
+                const className = "sm-field-label" + (current ? " is-current" : "");
+                return current ? (
+                  <h4
+                    key={`field-${i}`}
+                    className={className}
+                    ref={currentRowRef}
+                  >
+                    {g.fieldLabel}
+                  </h4>
+                ) : (
+                  <h4 key={`field-${i}`} className={className}>
+                    {g.fieldLabel}
+                  </h4>
+                );
+              }
+              const entry = g.entry;
+              const id = questionId(entry);
               return (
-                <h3 key={`region-${i}`} className="sm-region-label">
-                  {g.label}
-                </h3>
+                <QuestionRow
+                  key={id}
+                  entry={entry}
+                  status={questionStates[id]}
+                  onJump={onJump}
+                />
               );
-            }
-            if (g.kind === "field") {
-              const current = isCurrentField(g.stage, g.subPhase, g.fieldKey);
-              const className = "sm-field-label" + (current ? " is-current" : "");
-              return current ? (
-                <h4
-                  key={`field-${i}`}
-                  className={className}
-                  ref={currentRowRef}
-                >
-                  {g.fieldLabel}
-                </h4>
-              ) : (
-                <h4 key={`field-${i}`} className={className}>
-                  {g.fieldLabel}
-                </h4>
-              );
-            }
-            const entry = g.entry;
-            const id = questionId(entry);
-            return (
-              <QuestionRow
-                key={id}
-                entry={entry}
-                status={questionStates[id]}
-                onJump={() => {
-                  onJump?.({
-                    stage: entry.stage,
-                    subPhase: entry.subPhase,
-                    fieldKey: entry.fieldKey,
-                  });
-                }}
-              />
-            );
-          })}
+            })}
+          </div>
         </div>
       </section>
     </>

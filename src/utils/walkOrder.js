@@ -154,7 +154,9 @@ const REGION_NAMED_OUTCOME = {
   Manuscript: "Manuscript",
 };
 
-const REGION_DISPLAY = {
+// Exported: the writing surface's static place line ("Study · Interpret")
+// and the map's you-are-here header both render these display names.
+export const REGION_DISPLAY = {
   Observe: "Observe",
   Interpret: "Interpret",
   RedemptiveThread: "Redemptive Thread",
@@ -166,9 +168,17 @@ const REGION_DISPLAY = {
   Manuscript: "Manuscript",
 };
 
-// Region boundaries that get a separate landing screen instead of an
-// in-question frame. Keyed `prior:new`.
-const SCREEN_BOUNDARIES = new Set(["Implications:Anchor"]);
+// Per-boundary frame overrides. Implications → Anchor is the biggest
+// conceptual shift in the walk (Study ends, sermon-shaping begins); the
+// one-shot handoff screen used to be its only carrier, which left REVISITS
+// of the first Anchor field as the only region boundary with zero
+// orientation (the old SCREEN_BOUNDARIES carve-out). The override renders
+// the handoff's own frame line permanently — one voice, two surfaces —
+// because Anchor opens against all four Study outcomes, not just the
+// Implications Synthesis the default template would name.
+const FRAME_OVERRIDES = {
+  "Implications:Anchor": "Anchor opens, against your Study work.",
+};
 
 // arcSummary — derived from WALK_ORDER. Each entry: one stage with its
 // regions in order, each region with its label and named outcome. Used by
@@ -201,7 +211,8 @@ export function regionFrameFor(stage, subPhase, fieldKey) {
   if (idx <= 0) return null;
   const prev = WALK_ORDER[idx - 1];
   if (prev.stage === stage && prev.subPhase === subPhase) return null;
-  if (SCREEN_BOUNDARIES.has(`${prev.subPhase}:${subPhase}`)) return null;
+  const override = FRAME_OVERRIDES[`${prev.subPhase}:${subPhase}`];
+  if (override) return override;
   const newLabel = REGION_DISPLAY[subPhase] ?? subPhase;
   const priorOutcome = REGION_NAMED_OUTCOME[prev.subPhase] ?? prev.subPhase;
   // "X opens, against Y." — the load-bearing half is "against Y" (names the

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
-import { findField, nextField, regionFrameFor } from "../utils/walkOrder";
+import { findField, nextField, prevField, regionFrameFor, REGION_DISPLAY } from "../utils/walkOrder";
 import { createOutlinePoint } from "../utils";
 import PassageCanvas from "./PassageCanvas";
 import "./sermonWritingSurface.css";
@@ -315,8 +315,30 @@ export default function SermonWritingSurface({
   onOpenMap,
   onOpenNotebook,
   onOpenFinish,
+  highlightQuestion,
+  onHighlightDone,
 }) {
   const field = findField(stage, subPhase, fieldKey);
+  const questionRefs = useRef({});
+
+  // Map jump → land on the exact question: scroll it to center and flash it
+  // once. The class comes off on a timer (and the parent clears the prop via
+  // onHighlightDone) so a later jump to the same question flashes again.
+  useEffect(() => {
+    if (!highlightQuestion) return undefined;
+    const el = questionRefs.current[highlightQuestion];
+    if (!el) {
+      onHighlightDone?.();
+      return undefined;
+    }
+    el.scrollIntoView({ block: "center", behavior: "smooth" });
+    el.classList.add("is-flash");
+    const t = setTimeout(() => {
+      el.classList.remove("is-flash");
+      onHighlightDone?.();
+    }, 1400);
+    return () => clearTimeout(t);
+  }, [highlightQuestion, onHighlightDone]);
 
   // Wrap onPositionChange so every internal position-change site (chevron,
   // unmet-state door) awaits beforePositionChange first. Production wires
@@ -338,6 +360,16 @@ export default function SermonWritingSurface({
       stage: next.stage,
       subPhase: next.subPhase,
       fieldKey: next.key,
+    });
+  }, [stage, subPhase, fieldKey, handleInternalPositionChange]);
+
+  const goBack = useCallback(async () => {
+    const prev = prevField({ stage, subPhase, fieldKey });
+    if (!prev) return;
+    await handleInternalPositionChange({
+      stage: prev.stage,
+      subPhase: prev.subPhase,
+      fieldKey: prev.key,
     });
   }, [stage, subPhase, fieldKey, handleInternalPositionChange]);
 
@@ -365,106 +397,124 @@ export default function SermonWritingSurface({
 
   const answers = fieldAnswers ?? {};
   const hasNext = !!nextField({ stage, subPhase, fieldKey });
+  const hasPrev = !!prevField({ stage, subPhase, fieldKey });
+
+  // Static statement of place above the field name — stage and region only,
+  // never movement ("Study · Interpret", not "moving into Interpret"; CORE
+  // Process #3 allows static place, bans narration). Manuscript has no
+  // sub-phase (the stage doubles as the sub-phase slot), so it collapses
+  // to the stage name alone.
+  const placeLine =
+    stage === subPhase ? stage : `${stage} · ${REGION_DISPLAY[subPhase] ?? subPhase}`;
+
+  const renderQuestion = (q) => {
+    if (q.kind === "cumulative-synthesis-table") {
+      return (
+        <CumulativeSynthesisTable
+          question={q}
+          thoughtUnits={thoughtUnits}
+          onUnitColumnChange={onUnitColumnChange}
+          onPositionChange={handleInternalPositionChange}
+        />
+      );
+    }
+    if (q.kind === "indented-canvas") {
+      const rows = answers[q.key]?.value;
+      return (
+        <div className="sws-prompt-block">
+          <div className="sws-prompt">{q.prompt}</div>
+          <PassageCanvas
+            rows={Array.isArray(rows) ? rows : []}
+            onChange={(next) => onCanvasChange?.(field.key, q.key, next)}
+          />
+        </div>
+      );
+    }
+    if (q.kind === "outline-builder") {
+      return (
+        <OutlineBuilder
+          question={q}
+          points={outlinePoints}
+          onChange={onOutlineChange}
+        />
+      );
+    }
+    if (q.kind === "functional-elements") {
+      return (
+        <FunctionalElementsEditor
+          question={q}
+          points={outlinePoints}
+          functionalElements={functionalElements}
+          onChange={onFunctionalElementChange}
+          onPositionChange={handleInternalPositionChange}
+        />
+      );
+    }
+    if (q.kind === "manuscript-transitions") {
+      return (
+        <ManuscriptTransitions
+          question={q}
+          points={outlinePoints}
+          manuscript={manuscript}
+          onChange={onManuscriptChange}
+          onPositionChange={handleInternalPositionChange}
+        />
+      );
+    }
+    if (q.kind === "manuscript-prose") {
+      const v = manuscript?.[q.section]?.[q.key] ?? "";
+      return (
+        <div className="sws-prompt-block">
+          <div className="sws-prompt">{q.prompt}</div>
+          <AutoGrowTextarea
+            value={v}
+            onChange={(val) => onManuscriptChange?.(q.section, q.key, val)}
+            ariaLabel={q.prompt}
+          />
+        </div>
+      );
+    }
+    return (
+      <PromptBlock
+        prompt={q.prompt}
+        answer={answers[q.key]}
+        onValueChange={(v) =>
+          onAnswerChange?.(field.key, q.key, { value: v, na: false })
+        }
+        onToggleNA={() => {
+          const current = answers[q.key] ?? { value: "", na: false };
+          onAnswerChange?.(field.key, q.key, {
+            value: current.value ?? "",
+            na: !current.na,
+          });
+        }}
+      />
+    );
+  };
 
   return (
     <div className="sws-shell">
       <main className="sws-writing">
         <div className="sws-field">
+          <div className="sws-place">{placeLine}</div>
           {(() => {
             const frame = regionFrameFor(stage, subPhase, fieldKey);
             return frame ? <div className="sws-region-frame">{frame}</div> : null;
           })()}
           {field.label && <div className="sws-field-name">{field.label}</div>}
           {field.hint && <div className="sws-field-hint">{field.hint}</div>}
-          {field.questions.map((q) => {
-            if (q.kind === "cumulative-synthesis-table") {
-              return (
-                <CumulativeSynthesisTable
-                  key={q.key}
-                  question={q}
-                  thoughtUnits={thoughtUnits}
-                  onUnitColumnChange={onUnitColumnChange}
-                  onPositionChange={handleInternalPositionChange}
-                />
-              );
-            }
-            if (q.kind === "indented-canvas") {
-              const rows = answers[q.key]?.value;
-              return (
-                <div key={q.key} className="sws-prompt-block">
-                  <div className="sws-prompt">{q.prompt}</div>
-                  <PassageCanvas
-                    rows={Array.isArray(rows) ? rows : []}
-                    onChange={(next) => onCanvasChange?.(field.key, q.key, next)}
-                  />
-                </div>
-              );
-            }
-            if (q.kind === "outline-builder") {
-              return (
-                <OutlineBuilder
-                  key={q.key}
-                  question={q}
-                  points={outlinePoints}
-                  onChange={onOutlineChange}
-                />
-              );
-            }
-            if (q.kind === "functional-elements") {
-              return (
-                <FunctionalElementsEditor
-                  key={q.key}
-                  question={q}
-                  points={outlinePoints}
-                  functionalElements={functionalElements}
-                  onChange={onFunctionalElementChange}
-                  onPositionChange={handleInternalPositionChange}
-                />
-              );
-            }
-            if (q.kind === "manuscript-transitions") {
-              return (
-                <ManuscriptTransitions
-                  key={q.key}
-                  question={q}
-                  points={outlinePoints}
-                  manuscript={manuscript}
-                  onChange={onManuscriptChange}
-                  onPositionChange={handleInternalPositionChange}
-                />
-              );
-            }
-            if (q.kind === "manuscript-prose") {
-              const v = manuscript?.[q.section]?.[q.key] ?? "";
-              return (
-                <div key={q.key} className="sws-prompt-block">
-                  <div className="sws-prompt">{q.prompt}</div>
-                  <AutoGrowTextarea
-                    value={v}
-                    onChange={(val) => onManuscriptChange?.(q.section, q.key, val)}
-                    ariaLabel={q.prompt}
-                  />
-                </div>
-              );
-            }
-            return (
-              <PromptBlock
-                key={q.key}
-                prompt={q.prompt}
-                answer={answers[q.key]}
-                onValueChange={(v) =>
-                  onAnswerChange?.(field.key, q.key, { value: v, na: false })
-                }
-                onToggleNA={() => {
-                  const current = answers[q.key] ?? { value: "", na: false };
-                  onAnswerChange?.(field.key, q.key, {
-                    value: current.value ?? "",
-                    na: !current.na,
-                  });
-                }}
-              />
-            );
-          })}
+          {field.questions.map((q) => (
+            <div
+              key={q.key}
+              className="sws-qblock"
+              ref={(el) => {
+                if (el) questionRefs.current[q.key] = el;
+                else delete questionRefs.current[q.key];
+              }}
+            >
+              {renderQuestion(q)}
+            </div>
+          ))}
         </div>
       </main>
 
@@ -479,28 +529,42 @@ export default function SermonWritingSurface({
         </button>
       )}
 
-      {/* End of the walk: the forward control becomes the door to the
+      {/* Walk navigation. Back mirrors the chevron in reverse (free
+          navigation both ways — the walk is an ordering, not a ratchet).
+          At the end of the walk the forward control becomes the door to the
           completion threshold instead of silently greying out (the audit's
           worst dead end). SermonFinish is re-openable, never one-shot. */}
-      {hasNext ? (
-        <button
-          type="button"
-          className="sws-forward"
-          onClick={advance}
-          aria-label="Next field"
-        >
-          Next →
-        </button>
-      ) : (
-        <button
-          type="button"
-          className="sws-forward is-finish"
-          onClick={onOpenFinish}
-          aria-label="Finish sermon"
-        >
-          Finish sermon →
-        </button>
-      )}
+      <div className="sws-nav">
+        {hasPrev && (
+          <button
+            type="button"
+            className="sws-back"
+            onClick={goBack}
+            aria-label="Previous field"
+          >
+            ← Back
+          </button>
+        )}
+        {hasNext ? (
+          <button
+            type="button"
+            className="sws-forward"
+            onClick={advance}
+            aria-label="Next field"
+          >
+            Next →
+          </button>
+        ) : (
+          <button
+            type="button"
+            className="sws-forward is-finish"
+            onClick={onOpenFinish}
+            aria-label="Finish sermon"
+          >
+            Finish sermon →
+          </button>
+        )}
+      </div>
 
       <button
         type="button"
@@ -509,7 +573,8 @@ export default function SermonWritingSurface({
         aria-label="Open map"
         title="Open map"
       >
-        ☰
+        <span className="sws-map-summon-icon" aria-hidden="true">☰</span>
+        Map
       </button>
     </div>
   );

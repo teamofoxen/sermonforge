@@ -16,9 +16,72 @@
   border-left: 1px solid var(--parchment-deep);
   box-shadow: var(--shadow-deep);
   z-index: 91;
-  overflow-y: auto;
-  padding: 56px 56px 96px;
+  display: flex;
+  flex-direction: column;
+  padding: 56px 0 0;
   animation: sm-slide 180ms ease-out;
+}
+
+/* Header stays put; only the question list scrolls. */
+.sm-head {
+  flex: none;
+  padding: 0 56px 18px;
+  border-bottom: 1px solid var(--parchment-deep);
+}
+
+.sm-title {
+  font-family: var(--font-serif);
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--ink);
+  margin: 0 0 4px;
+}
+
+.sm-sub {
+  font-family: var(--font-serif);
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin: 0 0 12px;
+}
+
+.sm-here {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--ink);
+  margin: 0 0 10px;
+}
+
+.sm-here-label {
+  display: inline-block;
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold-bright);
+  margin-right: 8px;
+}
+
+.sm-legend {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.sm-legend-answered { color: var(--ink); }
+.sm-legend-partial { color: var(--ink-mid); font-style: italic; }
+.sm-legend-unanswered { color: var(--ink-ghost); }
+
+.sm-legend-sep {
+  color: var(--ink-ghost);
+  margin: 0 8px;
+}
+
+.sm-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 56px 96px;
 }
 
 @keyframes sm-fade {
@@ -66,6 +129,14 @@
   color: var(--ink-soft);
   margin: 36px 0 14px;
   font-weight: 500;
+}
+
+.sm-region-count {
+  margin-left: 10px;
+  letter-spacing: 0.06em;
+  text-transform: none;
+  font-weight: 400;
+  color: var(--ink-ghost);
 }
 
 .sm-list > .sm-region-label:first-child {
