@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, Component, lazy, Suspense } from "react";
-import { getApiKeyStatus, onDbWriteError, onDbWriteOk, flushDb, getSermonColumns, onFlushEdits, flushEditsDone } from "./db/database";
+import { getApiKeyStatus, onDbWriteError, onDbWriteOk, flushDb, getSermonColumns, onFlushEdits, flushEditsDone, setUiTheme } from "./db/database";
 import { runRegisteredFlushes } from "./utils/closeFlush";
 import mapError from "./utils/mapError";
 import { SERMON_COLUMNS } from "./constants/sermonColumns";
@@ -156,6 +156,10 @@ function AppInner() {
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     localStorage.setItem("sf-theme", theme);
+    // Fire-and-forget: main persists the theme to ui-prefs.json so the NEXT
+    // launch's window + splash paint the right color from the first frame
+    // (index.html's inline pre-paint script covers this process).
+    try { setUiTheme(theme); } catch { /* preview stub / app quitting */ }
   }, [theme]);
 
   const toggleTheme = useCallback(() => {

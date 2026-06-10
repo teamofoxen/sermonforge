@@ -1224,13 +1224,30 @@ function flushRendererEdits(win, timeoutMs = 2000) {
 // complete, app.whenReady calls loadAppContent() to swap the same window to
 // the real renderer entry point. The window stays visible the whole time —
 // no flash of unstyled second window.
+// UI prefs (currently just the theme) — persisted as a tiny JSON file so
+// main can read it SYNCHRONOUSLY before constructing the BrowserWindow
+// (the dark-launch light-flash fix). localStorage can't serve here: main
+// has no access, and the file:// splash doesn't share the app's origin.
+const uiPrefsPath = () => path.join(paths.userData, "ui-prefs.json");
+
+function readUiTheme() {
+  try {
+    const prefs = JSON.parse(fs.readFileSync(uiPrefsPath(), "utf8"));
+    return prefs?.theme === "dark" ? "dark" : "light";
+  } catch {
+    return "light"; // first run / unreadable — matches current behavior
+  }
+}
+
 function createWindow() {
+  const theme = readUiTheme();
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
     minWidth: 1024,
     minHeight: 700,
-    backgroundColor: "#f7f3ec",
+    // First frame matches the theme — mirrors --parchment in both.
+    backgroundColor: theme === "dark" ? "#1a1614" : "#f7f3ec",
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
@@ -1240,7 +1257,9 @@ function createWindow() {
     show: false,
   });
 
-  mainWindow.loadFile(path.join(__dirname, "loading.html"));
+  mainWindow.loadFile(path.join(__dirname, "loading.html"), {
+    query: { theme },
+  });
 
   // Renderer crash recovery: the sermon DB lives in the main process, so a
   // renderer crash loses at most a few unsynced keystrokes. Reload the app a
@@ -3073,6 +3092,20 @@ ipcMain.handle("app-get-startup-warning", () => {
       STARTUP_WARNING_PRIORITY.indexOf(b.kind)
   );
   return _pendingStartupWarnings.shift();
+});
+
+// Fire-and-forget theme persistence — the renderer's toggle writes here so
+// the NEXT launch's window + splash paint the right color from frame one.
+// Value is validated to the two known themes; anything else is ignored.
+ipcMain.handle("set-ui-theme", (_, theme) => {
+  if (theme !== "dark" && theme !== "light") return { ok: false };
+  try {
+    fs.writeFileSync(uiPrefsPath(), JSON.stringify({ theme }));
+    return { ok: true };
+  } catch (e) {
+    logError("[set-ui-theme] write failed", e);
+    return { ok: false };
+  }
 });
 
 // Email support with a prefilled subject/body. The address lives in

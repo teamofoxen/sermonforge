@@ -74,6 +74,10 @@ export const saveApiKeys     = (keys) => api.saveApiKeys(keys);
 // Main process enforces a hard allowlist — only known URLs ever open.
 export const openExternal = (url) => api.openExternal(url);
 
+// ── UI prefs ──────────────────────────────────────────────────────────────────
+// Theme persistence for the dark-launch pre-paint (main-side ui-prefs.json).
+export const setUiTheme = (theme) => api.setUiTheme(theme);
+
 // ── Support ───────────────────────────────────────────────────────────────────
 // Opens a mailto to the support address (address lives main-side).
 export const emailSupport = (data) => api.emailSupport(data);

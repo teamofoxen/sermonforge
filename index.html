@@ -4,6 +4,22 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SermonForge</title>
+    <!-- Theme pre-paint: set data-theme BEFORE the module script loads so a
+         dark-mode launch never flashes light. Defensive try/catch — a
+         storage error must never blank the boot. App.jsx keeps writing
+         localStorage on toggle; its effect is then a harmless confirm. -->
+    <script>
+      try {
+        var t = localStorage.getItem("sf-theme");
+        if (t === "dark") document.documentElement.dataset.theme = "dark";
+      } catch (e) { /* default light */ }
+    </script>
+    <style>
+      /* Critical pre-paint colors — correct first frame even before
+         global.css parses. Values mirror --parchment in both themes. */
+      html { background: #f7f3ec; }
+      html[data-theme="dark"] { background: #1a1614; }
+    </style>
   </head>
   <body>
     <div id="root"></div>

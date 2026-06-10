@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-06-10 — Dark launches stop flashing light
+
+- index.html now pre-paints the stored theme (inline script + critical CSS) before React loads; the BrowserWindow background and the splash screen follow the theme too (main reads a tiny ui-prefs.json synchronously — localStorage can't serve the splash's file:// origin).
+- The theme toggle persists through a new validated `set-ui-theme` IPC; every layer is defensive, so the worst case anywhere is today's behavior (one light first frame).
+- The splash gained a proper dark palette. Full splash/window verification flagged for the next release smoke (Electron-only path).
+
+---
+
 ## 2026-06-10 — Dark mode actually reads: corrected ink ramp, themed natives, keyboard reach
 
 - The dark token palette is complete and ordered: the ink ramp's ghost/soft inversion is fixed (faint text is now actually the faintest — the map's answered/started/not-yet shading reads the right direction again, verified 208>170>124 luminance); `--gold-pale` becomes a dark amber surface (search hits and passage chips keep the gold identity with readable ink); `--sage` and `--slate` finally get dark values. The sidebar's "+ New Sermon" moved off gold-pale before the flip.

@@ -3,6 +3,15 @@
 <head>
   <meta charset="utf-8" />
   <title>SermonForge</title>
+  <!-- Theme arrives as ?theme=dark from createWindow (file:// doesn't share
+       localStorage with the app's origin, so main passes it explicitly). -->
+  <script>
+    try {
+      if (/[?&]theme=dark\b/.test(location.search)) {
+        document.documentElement.dataset.theme = "dark";
+      }
+    } catch (e) { /* default light */ }
+  </script>
   <style>
     html, body {
       margin: 0;
@@ -12,6 +21,10 @@
       color: #1a1410;
       font-family: 'IBM Plex Serif', Georgia, serif;
       overflow: hidden;
+    }
+    html[data-theme="dark"], html[data-theme="dark"] body {
+      background: #1a1614;
+      color: #d8cfc5;
     }
     .wrap {
       height: 100%;
@@ -28,10 +41,12 @@
       letter-spacing: 0.01em;
       color: #1a1410;
     }
+    html[data-theme="dark"] .wordmark { color: #d8cfc5; }
     .sub {
       font-size: 13px;
       color: #6b5d50;
     }
+    html[data-theme="dark"] .sub { color: #a09080; }
     .spinner {
       width: 22px;
       height: 22px;
@@ -40,6 +55,10 @@
       border-radius: 50%;
       animation: spin 0.9s linear infinite;
       margin-top: 6px;
+    }
+    html[data-theme="dark"] .spinner {
+      border-color: rgba(216, 207, 197, 0.15);
+      border-top-color: #d8cfc5;
     }
     @keyframes spin {
       to { transform: rotate(360deg); }

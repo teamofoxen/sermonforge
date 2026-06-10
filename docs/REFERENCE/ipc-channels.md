@@ -255,6 +255,18 @@ process enforces a hard exact-match allowlist (currently only
 `https://api.esv.org/`) — non-allowlisted URLs are refused and logged,
 never opened. Extend the allowlist deliberately, one URL at a time.
 
+### `"set-ui-theme"`
+```
+receives: "light" | "dark"
+returns:  { ok: bool }
+```
+Fire-and-forget theme persistence from the renderer's toggle. Main writes
+`ui-prefs.json` in userData and reads it SYNCHRONOUSLY in `createWindow`
+to set the BrowserWindow `backgroundColor` and pass `?theme=` to the
+splash — the dark-launch light-flash fix. localStorage can't serve here
+(main has no access; the `file://` splash doesn't share the app origin).
+Values outside the two known themes are ignored.
+
 ### `"app-email-support"`
 ```
 receives: { subject?: string, body?: string }

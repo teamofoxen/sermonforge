@@ -38,6 +38,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // ── External links (hard-allowlisted in main) ─────────────────────────────
   openExternal: (url) => ipcRenderer.invoke("app-open-external", url),
 
+  // ── UI prefs ──────────────────────────────────────────────────────────────
+  // Theme persistence for the pre-paint path (main reads it synchronously
+  // before constructing the window). Fire-and-forget from the toggle.
+  setUiTheme: (theme) => ipcRenderer.invoke("set-ui-theme", theme),
+
   // ── Support ───────────────────────────────────────────────────────────────
   // Opens a mailto to the support address (main-controlled; the renderer
   // supplies only subject/body).
