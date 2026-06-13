@@ -171,7 +171,10 @@ The system is silent during the work but orients the preacher at thresholds. A t
   surfaced in prose** ("Three of the four are written. The Implications Synthesis isn't yet
   — Anchor opens against all four.") with an inline "go write it" door per missing one. The
   active surfacing is load-bearing — passive "not yet written" placeholders are too quiet for
-  a load-bearing artifact that's missing.
+  a load-bearing artifact that's missing. *(Saturation amendment, 2026-06-10: the handoff now
+  also renders the passage itself, under a "Before you forge — read it once more" section
+  ahead of the named outcomes — the re-read beat CORE Process Contract #6's saturation
+  amendment places at this seam. See `StudyAnchorHandoff.jsx`.)*
 - **Session re-entry** — when the preacher opens the app after a break. Lightweight
   orientation. Lands on **last-touched** (not last-answered — different concept; last-answered
   is walk-frontier and re-imports the wall). The thin "glance at recent work" card is a

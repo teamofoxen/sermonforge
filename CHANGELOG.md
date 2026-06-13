@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-06-10 — Marinate restored: the text comes back to the forge
+
+- A 9-agent saturation investigation (ultracode) confirmed the pastor's instinct: from the Study→Anchor seam onward the walk fed him only his own summaries, the reference pane flipped away from the passage the instant he left Study, and nothing sent him back into the text — an "equation" feel at exactly the load-bearing moments. Merida's method puts a "back away and marinate" beat right there; the app had renamed it into "write the synthesis" and pointed it at the notes.
+- **Marinate is restored as a return to the passage** (not a relabeling of the synthesis — that conflation stays gone). The Implications send-off now sends the pastor back to re-read the text before the Main Point; the Study→Anchor handoff renders the passage itself under "Before you forge — read it once more"; the MPT draft prompt opens "With the passage open beside you, read it through once more."
+- **The Bible no longer disappears by default.** The reference pane defaults to the Passage in every region (was: flipped to "Your work" the moment Study ended); "Your work" is always one tab-flip away but never displaces the text unbidden. The MPS gospel-check prompt now directs the flip explicitly for its side-by-side.
+- **Minimize is cleaner:** the pane defaults to open (no more screen-width auto-collapse), the writing surface grows to reclaim the width, and the minimized state is a single legible "Open Bible" tab (was a sideways "Reference" sliver).
+- **Constitution updated, not silently:** CORE Process #6 gains a dated saturation amendment; era-2 primacy Rulings 1 and 4 carry dated "superseded in part" banners (marinate-as-text-return restored; the synthesis-as-marinate-output conflation and the other struck pastoral-practice lines stay out). The pastor's own framework drove the reversal.
+
+---
+
 ## 2026-06-10 — T18: the reference pane, the teaching layer, and copy that tells the truth
 
 - A collapsible reference pane now sits on the left of the writing surface — "a Bible open beside the notepad." Study shows the ESV passage by default; from Anchor onward it shows the work the current field builds against (the ratified per-region table: MPT forges against the four Study outcomes, MPS against MPT + the Christ-Connection Statement, Outline/Frame against MPT+MPS, Equip/Manuscript add the outline). Anything not yet written says so, with a "go write it" jump.

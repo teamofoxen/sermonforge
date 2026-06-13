@@ -36,6 +36,53 @@
   margin: 0 0 18px;
 }
 
+/* Marinate beat — the passage rides onto the handoff so the last thing the
+   pastor reads before the forge is the text itself. */
+.sah-marinate {
+  margin-bottom: 56px;
+}
+
+.sah-marinate-note {
+  font-family: var(--font-serif);
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--ink-mid);
+  font-style: italic;
+  margin: 0 0 20px;
+  max-width: 620px;
+}
+
+.sah-passage-loading {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 14px;
+  color: var(--ink-ghost);
+  margin: 0;
+}
+
+.sah-passage-text {
+  font-family: var(--font-serif);
+  font-size: 15px;
+  line-height: 1.8;
+  color: var(--ink);
+  white-space: pre-wrap;
+  margin: 0;
+  padding: 20px 24px;
+  border-left: 2px solid var(--gold-bright);
+  background: var(--parchment-warm);
+  border-radius: var(--radius);
+  max-height: 42vh;
+  overflow-y: auto;
+}
+
+.sah-passage-copyright {
+  font-family: var(--font-serif);
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--ink-ghost);
+  margin: 10px 0 0;
+}
+
 .sah-outcomes-intro {
   font-family: var(--font-serif);
   font-size: 15px;

@@ -896,6 +896,7 @@ export default function SermonWorkspace({
       )}
       {(showHandoff || rereadingHandoff) && (
         <StudyAnchorHandoff
+          passage={sermon.passage}
           outcomes={studyOutcomes}
           unfinished={studyUnfinished}
           onJump={handleHandoffJump}

@@ -70,6 +70,23 @@ This charter supersedes specific rulings in SFDI and SADI named in the relevant 
 
 ### Ruling 1 — Marinate is curriculum, not architecture
 
+> **⚠ SUPERSEDED IN PART — 2026-06-10 (pastor's saturation ruling).** Marinate
+> is restored to the architecture, but NOT as the conflation this ruling
+> struck. The Implications Synthesis remains the named outcome of Phase 4 — the
+> "marinate-output" label stays gone, and the synthesis (plus the four named
+> outcomes) is still the substrate the Main Point draws from. What returns is
+> marinate as Merida actually means it: a return to the PASSAGE before the
+> forge. Two architectural commitments now carry it — the reference pane keeps
+> the passage present by default in every region, and a re-read beat sits at
+> the Study→Anchor seam (Implications send-off, the handoff screen which now
+> renders the passage, and the MPT draft prompt). The clause below — "whether
+> the pastor re-soaks is the pastor's call, not the system's" — is reversed:
+> the system now surfaces the re-read. Driver: the 2026-06-10 saturation
+> investigation found the walk fed only the pastor's own summaries forward from
+> this seam, producing an "equation" feel at the load-bearing moments. See CORE
+> Process Contract #6 saturation amendment (2026-06-10). Original ruling text
+> retained below for traceability.
+
 **The change:** "Marinate" exits the architecture. It is removed from Process Contract #6's invocations, from the Implications Synthesis overview copy, from SFDI Phase 4's named-outcome framing, and from any other surface that treats it as a structural commitment.
 
 **The reasoning:** Merida tells the pastor to step back after Implications and ponder before crafting the sermon. That is pastoral practice. SermonForge's job is to produce the substrate the pastor sits with — the Implications Synthesis paragraph plus the cumulative table plus the prior named outcomes. Whether the pastor closes the laptop after writing the Synthesis is the pastor's call, not the system's.
@@ -137,6 +154,17 @@ The pause's actual job is orientation: *you just produced X; next is Y*. That jo
 
 ### Ruling 4 — Overview and hint copy describes architectural function, not pastoral practice
 
+> **⚠ SUPERSEDED IN PART — 2026-06-10 (pastor's saturation ruling).** The
+> specific removal of the "step back and [marinate]" / "read it once more" beat
+> is REVERSED: a text-facing return-to-the-passage instruction is restored at
+> the Study→Anchor seam (the Implications send-off, the handoff screen, the MPT
+> draft prompt). This is deliberate architectural copy now — the system points
+> the pastor back into the text before the forge. The OTHER items struck below
+> ("ease back if you're drafting application," "don't insert Christ where he
+> isn't," "make Jesus the hero") remain OUT unless separately ruled — this
+> reversal is scoped to the re-read-the-passage beat only. See CORE Process
+> Contract #6 saturation amendment (2026-06-10).
+
 **The change:** Every overview screen, field hint, pause-clearing copy, and named-outcome description is rewritten (opportunistically, when touched) to describe what the field produces and how it composes into the throughline. Pastoral practice — "step back and marinate," "ease back when you find yourself drafting application," "make sure you're in awareness, not focus" — is removed from architectural copy.
 
 **The reasoning:** Architectural copy that instructs pastoral practice is era 1 instruction wearing era 2 framing. It is also a tell of invisibility violation: the system is announcing how the pastor should think, not letting the work do the thinking. The field's prompt asks for what it asks for. The pastor either does the work or doesn't; the architecture's job is the gate, not the lecture.
@@ -191,6 +219,16 @@ The cost: heavy-lifting fields (Field 3's canvas, the synthesis tables) get less
 ---
 
 ### Ruling 7 — Implications Synthesis depletion is real; mitigation is invisibility, not architecture
+
+> **⚠ CLARIFIED — 2026-06-10 (pastor's saturation ruling).** The 2026-06-10 ruling adds a
+> system-SURFACED re-read-the-passage beat at the Study→Anchor seam (the Implications
+> send-off, the handoff screen which now renders the passage, the MPT prompt) and a
+> passage-default reference pane. This does NOT reverse this ruling's rejection of a marinate
+> *gate*, a forced save-and-step-away, or AI-assisted synthesis: the restored beat is
+> non-enforcing (informational — the pastor may proceed without acting on it) and it re-reads
+> the PASSAGE, rather than gating or instrumenting the synthesis. "The fix is not more system"
+> stands for the depletion problem; the saturation beat is a separate, non-gating surface. See
+> CORE Process Contract #6 saturation amendment (2026-06-10).
 
 **The change:** No architectural change to the Implications Synthesis. The friction (most important named outcome written at the moment of greatest depletion) is acknowledged and not fixed by adding architecture.
 
@@ -376,7 +414,7 @@ The threshold between inline and full-document is judgment. A useful test: if th
 
 **Specific SFDI sections to amend when next touched:**
 
-- Phase 4 named-outcome description — strike "marinate-output" framing per ruling 1.
+- Phase 4 named-outcome description — strike "marinate-output" framing per ruling 1. *(Saturation amendment, 2026-06-10: the "marinate-output" conflation strike stands, but marinate-as-return-to-the-passage is deliberately restored — see Ruling 1's supersession banner and CORE PC#6.)*
 - Sub-phase pause-clearing section (the four one-sentence synthesis questions table) — struck per ruling 2.
 - Phase 1 Field 3 (Divisions / Thought Units) — rewritten per ruling 8 (canvas reworked to depth-only structural layout; paraphrase, thought-unit-end markers, signal field all come out; depth-marking and per-row UUIDs stay).
 - Phase 2 Field 8, Phase 3 Field 5, Phase 4 Field 4 cumulative-table column shapes — simplified per ruling 8 (single thought_unit_text read-only column + the cumulative-phase column).
@@ -391,7 +429,7 @@ The threshold between inline and full-document is judgment. A useful test: if th
 
 ## CORE.md amendments
 
-**Process Contract #6** — current text references the throughline producing named outcomes via field-work; per ruling 1, any "marinate" language in this contract is struck. The contract's structural commitment (named outcomes, handoffs, structural integrity) is preserved.
+**Process Contract #6** — current text references the throughline producing named outcomes via field-work; per ruling 1, any "marinate" language in this contract is struck. The contract's structural commitment (named outcomes, handoffs, structural integrity) is preserved. *(Superseded in part 2026-06-10: PC#6 now carries a saturation amendment that deliberately restores marinate as a return to the passage; "any marinate language is struck" no longer holds for the re-read beat. The "marinate-output" label strike stands.)*
 
 **Canonical Vocabulary section** — no changes. Vocabulary is era 2 and stands.
 

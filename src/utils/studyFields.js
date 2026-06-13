@@ -473,7 +473,7 @@ export const IMPLICATIONS_FIELDS = [
         "You've named what the text teaches (Theological Significance), what it asks (Personal Implications), and the specific room it's landing in (Pastoral Context). Three voices.",
         "One more move closes Implications — and closes the Study work. Take what you've worked out and integrate it. For each thought unit — what does it ask of THIS hearer in THIS room? Drawing on the three voices.",
         "Then, the whole passage. One paragraph. The Implications Synthesis. What does the text teach, what does it ask, and how does it land for the people in this room — all in one voice. Not three sections. One synthesis.",
-        "This is the marinate-output. Step back after Implications and sit with what you've named before moving to MPT and MPS. What you write here is what you carry forward — when you open the MPT, this synthesis sits in the reference pane beside you, with the other three named outcomes. The foundation has been earned.",
+        "Now marinate. Before you move to the Main Point, step back and read the passage through once more — slowly, the way you read it at the start. Let it sit on you. The Main Point should rise from the text, not only from your notes. The passage stays open in the reference pane beside you by default; your Implications Synthesis and the other three named outcomes are a flip away on its 'Your work' tab. The foundation has been earned — let the text breathe on you before you forge.",
       ],
     },
     questions: [

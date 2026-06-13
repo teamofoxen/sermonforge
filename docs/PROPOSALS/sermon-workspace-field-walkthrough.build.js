@@ -258,8 +258,8 @@ const children = [
     ["Once in Observe Field 8 (Possible Implications) as awareness. Once in Implications Field 3 (Pastoral Context) as the integrated voice. The room enters when the text has done its work, not before."],
   ]),
   numberedThroughline([
-    ["Implications Synthesis is the marinate-output. ", { bold: true }],
-    ["That one paragraph is what you sit with before crafting the sermon. It's also what MPT/MPS opens against — no AI re-summary, no reaching back into the worksheets. The foundation has been earned."],
+    ["Then marinate — return to the passage before you forge. ", { bold: true }],
+    ["The Implications Synthesis is the named outcome of Phase 4, and it (with the four named outcomes) is the content substrate MPT/MPS draws from — no AI re-summary, no reaching back into the scattered worksheet answers. But before you forge the Main Point the system sends you back to read the passage through once more: the Implications send-off, the Study→Anchor handoff which now carries the passage, and the MPT draft prompt all point you into the text. The reference pane keeps the passage present beside your work by default the whole way. The foundation has been earned; the saturation is in the text. (Note, 2026-06-10 — pastor's saturation ruling: this item previously read \"Implications Synthesis is the marinate-output\" and called the synthesis the thing you sit with. That conflation is struck — marinate is a return to the PASSAGE, a separate beat, not a relabeling of the synthesis. See CORE Process Contract #6 saturation amendment.)"],
   ]),
   numberedThroughline([
     ["MPT → MPS is the bridge. ", { bold: true }],

@@ -52,7 +52,7 @@ By the time the pastor reaches MPT/MPS, PC's substance is integrated into the Im
 
 ### The non-negotiables
 
-- **The Implications Synthesis is the substrate for MPT/MPS.** No AI re-summary; no reaching back into raw worksheet content.
+- **The Implications Synthesis is the substrate for MPT/MPS.** No AI re-summary; no reaching back into raw worksheet content. (*Saturation amendment, 2026-06-10:* the synthesis remains the **content** substrate — the pastor does not re-gather his scattered raw Q&A answers. But the **passage** is not worksheet content. Before forging the Main Point, the pastor is sent back to re-read the passage once more — the restored marinate beat — and the reference pane keeps the ESV text present by default. Synthesis is the substrate; the passage is the saturation. The two are orthogonal and both binding.)
 - **MPT is past tense + author-intended.** Single sentence, anchored in what the text meant.
 - **MPS is present/future tense + redemptive.** Single sentence, derived from MPT, gospel-driven (not moralistic — the gospel-makes-it-possible thread from SFDI Phase 3 Field 3 carries forward).
 - **Intro and Conclusion frame, don't repeat.** Intro doesn't restate the body; Conclusion summates and lands a response, not a recap.
@@ -63,7 +63,7 @@ By the time the pastor reaches MPT/MPS, PC's substance is integrated into the Im
 
 ### The qualitative test
 
-When the SermonForge workflow is run end-to-end, opening Step 2 should feel like the natural close of Step 1 (the Implications Synthesis is right there). Opening Step 5 should feel like the natural close of Step 4 (the body's named outcomes are right there). MPT shouldn't reach into raw text; MPS shouldn't be moralistic; Intro shouldn't improvise; Conclusion shouldn't recap. If each anchor feels earned, the sermon is preachable. If not, the anchors aren't anchored.
+When the SermonForge workflow is run end-to-end, opening Step 2 should feel like the natural close of Step 1 (the Implications Synthesis is right there). Opening Step 5 should feel like the natural close of Step 4 (the body's named outcomes are right there). MPT shouldn't reach back into raw worksheet content (the synthesis is its substrate) — though the pastor *does* re-read the passage once more before forging, the restored marinate beat (2026-06-10); MPS shouldn't be moralistic; Intro shouldn't improvise; Conclusion shouldn't recap. If each anchor feels earned, the sermon is preachable. If not, the anchors aren't anchored.
 
 ---
 
@@ -98,6 +98,8 @@ Three field-level commitments flow from Merida + SFDI's vision and bind SADI's w
 
 **1. The Implications Synthesis is the substrate for MPT/MPS.** The pastor enters Step 2 with the four named outcomes from Study (Observation Set, Interpretation Set, Christ-Connection Statement, Implications Synthesis) plus the cumulative thought-unit table (six columns by Phase 4). MPT and MPS draw from these directly — no AI re-summary, no reaching back into raw worksheet content.
 
+> **Saturation amendment, 2026-06-10.** The substrate principle above stands: the pastor draws from his *integrated* synthesis (plus the four named outcomes), not from re-gathering his scattered raw Q&A answers. What this commitment never meant — and must not be read to mean — is that the pastor stops looking at the passage. The biblical text is not "worksheet content." Before forging the Main Point, the pastor is now sent back to read the passage through once more (the restored marinate beat), and the reference pane defaults to the ESV passage in every region so the text stays present at his side while he forges. Synthesis = the content substrate; the passage = the saturation. Both hold at once. See CORE.md Process Contract #6 (Saturation amendment, 2026-06-10) and `era-2-primacy-initiative.md` Rulings 1 and 4 ("SUPERSEDED IN PART") for the governing framing.
+
 **2. MPT is past tense + author-intended; MPS is present/future tense + redemptive.** Per Merida's specifics — MPT names what the text *meant* in its historical context; MPS names what *this sermon* is doing for *this congregation* with this passage. Both are single sentences. MPS is derived directly from MPT and cannot stand without it. The gospel-makes-it-possible thread from SFDI Phase 3 Field 3 carries forward into MPS so the application doesn't collapse into moralism.
 
 **3. Intro frames the listener; Conclusion frames the response.** Per Merida — Intro incites interest, introduces the text + MPT + MPS, includes a redemptive quality, names expectations. Conclusion summates + invites response. Both anchor in the body's named outcomes (Outline, Functional Elements, Christ-Connection Statement) but speak to the listener's posture rather than the text's content.
@@ -128,7 +130,7 @@ The working SADI document at [`sermon-anchor-definition-initiative.md`](./sermon
 
 **For downstream.** The MPS Draft prompt rewrite becomes actionable (drops the heavy PC-tier-weighting; reads SFDI's Implications Synthesis directly). Step 5 elevation as its own workspace step (SPRD backlog item) becomes informed by SADI's Intro/Conclusion field definitions.
 
-**The qualitative test.** The sermon's anchors feel earned. MPT doesn't reach into raw worksheet content because the Implications Synthesis is the substrate. MPS isn't moralistic because the gospel-power thread from Phase 3 is in the substrate. Intro and Conclusion don't feel improvised because they connect to the body's named outcomes by handoff.
+**The qualitative test.** The sermon's anchors feel earned. MPT doesn't reach back into raw worksheet content because the Implications Synthesis is the substrate — but the pastor *does* re-read the passage once more before forging (the restored marinate beat, 2026-06-10), with the reference pane holding the text present by default. The synthesis carries the content; the passage carries the saturation. MPS isn't moralistic because the gospel-power thread from Phase 3 is in the substrate. Intro and Conclusion don't feel improvised because they connect to the body's named outcomes by handoff.
 
 ---
 

@@ -8,24 +8,28 @@ import "./referencePane.css";
 
 // ReferencePane — "a Bible open beside the notepad."
 //
-// A collapsible panel beside the writing surface showing the thing the
-// current work BUILDS AGAINST (per-region table ratified 2026-06-10):
+// A collapsible panel beside the writing surface. It DEFAULTS to the ESV
+// passage in every region (2026-06-10 saturation ruling: the Bible stays in
+// front of the pastor unless he minimizes it — it never flips away on its
+// own). A "Your work" tab is always one flip away, showing what the current
+// work builds against per region:
 //
-//   Study (all regions)  → the ESV passage
-//   Anchor / MPT         → the four Study named outcomes
-//                          (Implications Synthesis expanded, rest collapsed)
-//   Anchor / MPS         → MPT + Christ-Connection Statement
-//                          (the gospel-check's comparison pair)
-//   Outline              → MPT + MPS
-//   Equip                → MPT + MPS + outline points
-//   Frame                → MPT + MPS
-//   Manuscript           → MPT + MPS + outline (NOT the Study outcomes —
-//                          they're already baked into Assembly's outputs)
+//   Anchor / MPT   → the four Study named outcomes
+//                    (Implications Synthesis expanded, rest collapsed)
+//   Anchor / MPS   → MPT + Christ-Connection Statement
+//                    (the gospel-check's comparison pair)
+//   Outline        → MPT + MPS
+//   Equip          → MPT + MPS + outline points
+//   Frame          → MPT + MPS
+//   Manuscript     → MPT + MPS + outline (NOT the Study outcomes —
+//                    they're already baked into Assembly's outputs)
 //
-// The header switch ("Passage / Your work") auto-defaults per region and
-// resets on region change; the pastor can flip it any time. Collapse state
-// persists in localStorage; small screens start collapsed. The passage
-// view shares the popup's recovery states + Crossway line — one voice.
+// The header switch ("Passage / Your work") starts on Passage everywhere and
+// resets to Passage on region change; the pastor can flip to his work any
+// time. Collapse state persists in localStorage and defaults to OPEN — there
+// is no screen-width auto-collapse. When minimized, the writing surface grows
+// to reclaim the width and a single legible "Open Bible" tab remains. The
+// passage view shares the popup's recovery states + Crossway line — one voice.
 //
 // This is the architecture the invisible-system spec described ("the
 // passage on one side, the question and a place to write on the other");
@@ -33,14 +37,15 @@ import "./referencePane.css";
 // used to carry, inside the one-field-at-a-time surface.
 
 const COLLAPSE_KEY = "sf-refpane-collapsed";
-const NARROW_PX = 1280;
 
 function readInitialCollapsed() {
   try {
     const stored = localStorage.getItem(COLLAPSE_KEY);
     if (stored != null) return stored === "1";
   } catch { /* default below */ }
-  return typeof window !== "undefined" && window.innerWidth < NARROW_PX;
+  // Default open — the Bible stays visible unless the preacher minimizes it
+  // (2026-06-10 ruling). No screen-width auto-collapse.
+  return false;
 }
 
 // One reference item: a named artifact, its text (or "not yet written" +
@@ -193,7 +198,11 @@ export default function ReferencePane({
   onJump,
 }) {
   const [collapsed, setCollapsed] = useState(readInitialCollapsed);
-  const defaultMode = stage === "Study" ? "passage" : "work";
+  // The Bible is the default companion in every region (2026-06-10 saturation
+  // ruling); "Your work" is always one flip away on the header tab. Previously
+  // this flipped to "work" the instant the pastor left Study, which is what
+  // made the passage feel like it "disappeared" at the forge.
+  const defaultMode = "passage";
   const [mode, setMode] = useState(defaultMode);
   const regionKey = `${stage}/${subPhase}`;
 
@@ -216,15 +225,14 @@ export default function ReferencePane({
   if (collapsed) {
     return (
       <aside className="sws-refpane is-collapsed">
-        <IconButton
-          className="refpane-toggle"
-          aria-label="Open reference pane"
-          title="Open reference pane"
+        <TextButton
+          className="refpane-reopen"
+          aria-label="Open the Bible panel"
+          title="Open the Bible panel"
           onClick={toggleCollapsed}
         >
-          ▸
-        </IconButton>
-        <span className="refpane-rail-label" aria-hidden="true">Reference</span>
+          <span className="refpane-reopen-label">Open Bible</span>
+        </TextButton>
       </aside>
     );
   }

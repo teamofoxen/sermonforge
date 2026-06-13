@@ -37,6 +37,18 @@ a single deepening exegetical arc: text says → text means → text points to C
 text lands on this congregation. Pastoral Context (PC) enters the arc progressively;
 the text drives the sermon toward PC, not the other way around.
 
+The arc is forward-compiling but **not closed to the text** (CORE
+[Process Contract #6](../CORE.md) saturation amendment, 2026-06-10). The reference
+pane keeps the passage present by default in every region — Study and Assembly alike
+— so the pastor never loses the text on the way forward, and a return-to-the-text
+beat sits at the Study → Anchor seam: before forging the Main Point the pastor is
+sent back to re-read the passage (surfaced by the Implications send-off, the
+Study → Anchor handoff which now carries the passage, and the MPT draft prompt).
+This re-read is the restored "marinate" beat and is orthogonal to the
+synthesis-is-substrate principle below — the Main Point still draws its *content*
+from the integrated Implications Synthesis and the four named outcomes, not from
+re-gathered raw worksheet answers; the passage is the *saturation*, a separate beat.
+
 **Articulated by the product owner during SPRD planning (2026-04-30, verbatim):**
 
 > The point of exegesis is engagement with the world of text itself, as much as
@@ -176,11 +188,14 @@ named outcomes); pastor dismisses with Close, which writes the id into
 [`StudyAnchorHandoff.jsx`](../../src/components/StudyAnchorHandoff.jsx).
 Renders the `.sah-overlay`. Fires when the position lands in
 Assembly/Anchor's first field, sermon-start has been dismissed, and the
-`THRESHOLD_ID.StudyToAnchorHandoff` id is not in `thresholds_seen`. Reads
-back the four Study named outcomes (Observation Set, Interpretation Set,
-Christ-Connection Statement, Implications Synthesis) and actively surfaces
-any missing required outcome in prose with an inline "go write it" door per
-the door pattern. Dismissal writes the id into `thresholds_seen`.
+`THRESHOLD_ID.StudyToAnchorHandoff` id is not in `thresholds_seen`. Renders
+the passage under a "Before you forge — read it once more" section ahead of the
+outcomes — the re-read beat the CORE Process Contract #6 saturation amendment
+(2026-06-10) places at this seam. Then reads back the four Study named outcomes
+(Observation Set, Interpretation Set, Christ-Connection Statement, Implications
+Synthesis) and actively surfaces any missing required outcome in prose with an
+inline "go write it" door per the door pattern. Dismissal writes the id into
+`thresholds_seen`.
 
 Both overlays read from and write to the same `thresholds_seen` array — one
 canonical mechanism for "has this threshold been dismissed" per the spec's

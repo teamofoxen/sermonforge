@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useEsvPassage } from "../utils/useEsvPassage";
 import "./studyAnchorHandoff.css";
 
 // The Study → Anchor handoff is the heaviest threshold the spec carves out.
@@ -37,8 +38,12 @@ function buildOutcomesIntro(outcomes) {
   return `${filledWord} of the four ${verb} written. ${joinMissingLabels(missing)} ${missingVerb} yet — Anchor opens against all four.`;
 }
 
-export default function StudyAnchorHandoff({ outcomes, unfinished, onJump, onClose }) {
+export default function StudyAnchorHandoff({ passage, outcomes, unfinished, onJump, onClose }) {
   const outcomesIntro = buildOutcomesIntro(outcomes);
+  // The passage rides onto the handoff itself (2026-06-10 saturation ruling):
+  // before forging the Main Point, the last thing the pastor sees is the text,
+  // not just his own summaries. Shares the cached ESV fetch with the pane/popup.
+  const { data: passageData, loading: passageLoading } = useEsvPassage(passage || "");
   useEffect(() => {
     const onKey = (e) => {
       if (e.key === "Escape" || e.key === "Enter") onClose?.();
@@ -51,6 +56,26 @@ export default function StudyAnchorHandoff({ outcomes, unfinished, onJump, onClo
     <div className="sah-overlay" role="dialog" aria-label="Study to Anchor handoff">
       <article className="sah-card">
         <p className="sah-frame">Anchor opens, against your Study work.</p>
+
+        <section className="sah-marinate">
+          <h2 className="sah-section-label">Before you forge — read it once more</h2>
+          <p className="sah-marinate-note">
+            Step back and read the passage through again, slowly, the way you
+            read it at the start. Let it sit on you. The Main Point you're about
+            to forge should rise from the text, not only from your notes.
+          </p>
+          {passage && passageLoading && (
+            <p className="sah-passage-loading">Loading the passage</p>
+          )}
+          {passage && !passageLoading && passageData?.esv && (
+            <>
+              <p className="sah-passage-text">{passageData.esv}</p>
+              <p className="sah-passage-copyright">
+                ESV® Bible © 2001 by Crossway. Used by permission.
+              </p>
+            </>
+          )}
+        </section>
 
         <h2 className="sah-section-label">What you produced in Study</h2>
         {outcomesIntro && (

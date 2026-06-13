@@ -12,7 +12,7 @@
 
 ## Orientation
 
-The arc, in one sentence: the text says → the text means → the text points to Christ → the text lands on this congregation. One deepening exegetical work, one throughline, one preaching foundation strong enough that MPT and MPS can be drafted without reaching back into raw worksheet content.
+The arc, in one sentence: the text says → the text means → the text points to Christ → the text lands on this congregation. One deepening exegetical work, one throughline, one preaching foundation strong enough that MPT and MPS can be drafted without reaching back into raw worksheet content — drawing instead on the Implications Synthesis and the four named outcomes. (The passage itself is exempt: the pastor IS sent back to re-read the text before forging — the restored marinate beat, 2026-06-10 saturation ruling. The passage is the saturation, not worksheet content; the reference pane keeps it present by default.)
 
 ### The four sub-phases and what they produce
 
@@ -41,7 +41,7 @@ The progression: **Observe** awareness (PC's first surfacing through "Possible I
 
 ### The qualitative test
 
-By the time you reach MPT/MPS, the foundation feels earned. The four named outcomes are themselves substantive — you don't need to reach back into raw worksheet content to write the main point. If each element feels earned to you, the pastor will feel it too. The work is done when the throughline is real.
+By the time you reach MPT/MPS, the foundation feels earned. The four named outcomes are themselves substantive — you don't need to reach back into raw worksheet content to write the main point; the Implications Synthesis (plus the four named outcomes) is the content substrate. What you DO return to is the passage: before forging the main point, the pastor re-reads the text once more — the restored marinate beat (2026-06-10 saturation ruling). The passage is not worksheet content; it is the saturation, and it stays present by default in the reference pane. If each element feels earned to you, the pastor will feel it too. The work is done when the throughline is real.
 
 ---
 
@@ -86,6 +86,8 @@ The SFDI document gathers all three layers into one place. It is not pre-structu
 The test of SFDI completion isn't a length target or a parser check. It's experiential. Here's what we should see when the walkthrough is done.
 
 **For the pastor.** Opening a sermon and working Observe → Interpret → Redemptive Thread → Implications → MPT/MPS reads as a single deepening exegetical work, not four stapled worksheets. Each sub-phase's fields read as an ordered sequence where each one sets up the next. At the end of each sub-phase, the pastor walks away with a named outcome they can trace back to the field-work that produced it. The handoff into the next sub-phase is felt — the prior outcome is the substrate the next work builds on, not just an AI bullet summary at the top. By the time MPT/MPS opens, the foundation has been earned: the main point doesn't need to reach back into raw worksheet content because the named outcomes of the four sub-phases are themselves substantive.
+
+> **⚠ AMENDED — 2026-06-10 (pastor's saturation ruling).** The "doesn't need to reach back into raw worksheet content" principle above stands and is preserved: the substrate the main point draws on is the Implications Synthesis plus the four named outcomes, NOT a re-gathering of scattered raw Q&A answers. What this paragraph did not say — and now must — is that the pastor IS sent back to the PASSAGE before forging. Re-reading the text once more is the restored marinate beat; the passage is exempt from the no-worksheet rule because it is the saturation, not worksheet content. The two are orthogonal and both true: the synthesis is the content substrate, the passage is the saturation. The reference pane keeps the passage present by default in every region, and a re-read beat sits at the Study→Anchor seam (the Implications Synthesis send-off, the handoff screen which renders the passage, and the MPT draft prompt). See CORE Process Contract #6 saturation amendment (2026-06-10).
 
 **For the artifact.** The SFDI document holds a seven-slot entry for every field in every sub-phase (name, intent, question sequence, what gets written per question, role in sub-phase, connects from, connects to); a flow declaration per sub-phase (named outcome + ordered field sequence + how the field-work composes into the outcome); and a handoff articulation at each sub-phase boundary. The document reads narratively, not as a spec sheet. A pastor or another developer could read it cover-to-cover and understand the entire exegetical pedagogy SermonForge encodes. The working document lives at `docs/PROPOSALS/study-field-definition-initiative.md` and accumulates as walks proceed.
 

@@ -290,6 +290,28 @@ these names. (See State Contract clause 5: *one name per concept*.)
    then this contract is testable in full only for Study and
    Anchor/Frame.)
 
+   (Saturation amendment, 2026-06-10 — pastor's ruling: the throughline is
+   forward-compiling, but it is NOT closed to the text. Two commitments hold.
+   (a) The reference pane keeps the passage present BY DEFAULT in every region,
+   Study and Assembly alike — it never flips away from the passage on its own;
+   the pastor's own work is always one tab-flip away but never displaces the
+   text unbidden. (b) A return-to-the-text beat sits at the Study→Anchor seam:
+   before forging the Main Point, the pastor is sent back to re-read the
+   passage (the Implications send-off, the Study→Anchor handoff which now
+   carries the passage, and the MPT draft prompt). This SUPERSEDES the era-2
+   primacy charter's Ruling 1 and Ruling 4 insofar as they removed "marinate"
+   from the architecture and barred "step back and read" from architectural
+   copy — see those rulings' dated supersession banners. It does NOT revive the
+   era-1 conflation those rulings rightly struck: the Implications Synthesis is
+   the named outcome of Phase 4, not "the marinate-output," and the substrate
+   the Main Point draws from is still the pastor's integrated synthesis and
+   four named outcomes. Marinate is restored as what Merida means by it — a
+   return to the passage before the forge — now surfaced by the system rather
+   than left entirely to the pastor. Rationale: the saturation investigation
+   (2026-06-10) found the walk fed the pastor only his own summaries forward
+   from the Study→Anchor seam onward, producing an "equation" feel at the
+   load-bearing moments; this amendment restores the text to those moments.)
+
 ### 3. Mutation Contract — what happens when something changes
 
 1. **User typing always wins by default.** All sermon content is pastor-typed.

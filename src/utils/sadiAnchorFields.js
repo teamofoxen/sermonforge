@@ -18,6 +18,15 @@
 // references now point at the reference pane, which renders the MPT and
 // Christ-Connection Statement beside the MPS field — restoring the SADI
 // side-by-side pedagogy the deleted SpotlightWorksheet carried.
+//
+// Saturation ruling (2026-06-10): the reference pane now defaults to the
+// PASSAGE in every region, so the forge opens with the text in front of the
+// pastor. The MPT draft prompt sends him back to re-read the passage before
+// forging (the restored marinate beat); the four named outcomes + MPT/CCS
+// live one flip away on the pane's "Your work" tab, which the gospel-check
+// prompt directs him to. The Implications Synthesis is still the content
+// substrate the Main Point draws from — marinate is the re-reading of the
+// text, not a relabeling of the synthesis.
 
 export const MAIN_POINT_PAIR_FIELDS = [
   {
@@ -29,7 +38,7 @@ export const MAIN_POINT_PAIR_FIELDS = [
       {
         key: "draft",
         prompt:
-          "Drawing from your Implications Synthesis and the four named outcomes from Study, draft what this text was saying to its original audience. Past tense. Author-intended. As many sentences as you need to get the substance right — tightening is next.",
+          "With the passage open beside you, read it through once more — then draw from your Implications Synthesis and the four named outcomes to draft what this text was saying to its original audience. Past tense. Author-intended. As many sentences as you need to get the substance right — tightening is next.",
       },
       {
         key: "tighten",
@@ -46,7 +55,7 @@ export const MAIN_POINT_PAIR_FIELDS = [
     overview: {
       title: "MPS",
       paragraphs: [
-        "Your MPT is in the reference pane beside you — what the text meant, in past tense. MPS turns that into the present: what the text means for *us today*. Present or future tense.",
+        "Your MPT is in the reference pane on the 'Your work' tab — what the text meant, in past tense. MPS turns that into the present: what the text means for *us today*. Present or future tense.",
         "Three moves: translate the MPT into present/future tense aimed at your people; check it against the Christ-Connection Statement to make sure the call rests on what Christ has done, not what the listener has to muster; tighten to one sentence.",
         "The Christ-Connection Statement is your moralism guard. The gospel-check reads your draft alongside it — if the call slips into 'try harder' or 'be better,' you rewrite. The tighten folds your draft's substance and the gospel-check's gospel-power into one sentence.",
       ],
@@ -55,12 +64,12 @@ export const MAIN_POINT_PAIR_FIELDS = [
       {
         key: "translate",
         prompt:
-          "Your MPT is in the reference pane beside you. Take it from past tense to present or future. Aim it at your people. As many sentences as you need to get the substance right — gospel-check and tightening come next.",
+          "Your MPT is in the reference pane on the 'Your work' tab. Take it from past tense to present or future. Aim it at your people. As many sentences as you need to get the substance right — gospel-check and tightening come next.",
       },
       {
         key: "gospel_check",
         prompt:
-          "Your first draft is right above you. Your Christ-Connection Statement is in the reference pane beside you. Read them side by side. Does the call in your draft rest on what Christ has done, or has it slipped into 'try harder' or 'be better'? If it has, name the drift and rewrite until the gospel-power is visible.",
+          "Your first draft is right above you. Flip the reference pane to 'Your work' and set your Christ-Connection Statement beside it. Read them side by side. Does the call in your draft rest on what Christ has done, or has it slipped into 'try harder' or 'be better'? If it has, name the drift and rewrite until the gospel-power is visible.",
         // SADI: the only N/A-able MPS question — strict "satisfied another
         // way" semantic (the moralism check was run upstream against the
         // Christ-Connection Statement); N/A is not "skip."

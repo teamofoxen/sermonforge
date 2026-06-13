@@ -548,6 +548,7 @@ export default function SermonWritingSurfaceFixture() {
       )}
       {handoffOpen && (
         <StudyAnchorHandoff
+          passage="Romans 8:1–4"
           outcomes={studyOutcomes}
           unfinished={studyUnfinished}
           onJump={handleJump}
