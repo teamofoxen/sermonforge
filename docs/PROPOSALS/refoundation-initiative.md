@@ -73,16 +73,32 @@ history inside its clauses.
 
 ## Phase 1 plan (order of operations)
 
-1. **Reversal-tracing → net-truth (ULTRACODE fan-out).** One agent per live-authority
-   initiative (SFDI, SADI, SPRD, era-2, invisible-system, workspace-restructure,
-   saturation), each producing: *net current contribution* + *what it reversed* +
-   *what's now dead*, grounded against the code at HEAD. Then reconcile into one
-   net-truth map. **Report before drafting.**
-2. **Draft `WORKSPACE-CANON.md`** from net-truth + code-at-HEAD, Merida-annotated for
-   Study/Anchor/OEM (each question tagged faithful / addition / gate / drift).
-3. **Slim CORE + examine the three contracts** (below).
-4. **Thin sermon-workspace.md** to mechanics + cross-refs.
-5. **Banner-historicize the initiatives + update `ANCHORS.md`.**
+**Ultracode allocation principle:** use it for *breadth* (fan-out over many independent
+things) and *confidence* (adversarial verify against ground truth before it hardens) —
+NOT for single-author writing or the rulings that are the pastor's. The verification
+passes are where most of the value is.
+
+1. **Reversal-tracing → net-truth — ULTRACODE (fan-out + verify).** One agent per
+   live-authority initiative (SFDI, SADI, SPRD, era-2, invisible-system,
+   workspace-restructure, saturation), each producing: *net current contribution* +
+   *what it reversed* + *what's now dead*, grounded against the code at HEAD. Then
+   reconcile into one net-truth map. **Report before drafting.**
+2. **Draft `WORKSPACE-CANON.md` — SOLO draft, ULTRACODE verify.** Draft from net-truth +
+   code-at-HEAD, Merida-annotated for Study/Anchor/OEM (each question tagged faithful /
+   addition / gate / drift). One coherent hand. Then fan out a verify pass: every
+   field/question/named-outcome/gate the canon claims must match the code at HEAD, plus
+   a completeness critic ("what field or gate did we miss").
+3. **Slim CORE + examine the three contracts — SOLO** (the examinations are the pastor's
+   rulings; agents lay out options, don't decide). **One exception: the per-unit gate /
+   N-A decision gets a focused ULTRACODE adversarial pass** — it has the most tentacles
+   (Process #2, era-2 Ruling 8, pending N/A ruling, completeness surfacing, Word export).
+4. **Thin sermon-workspace.md — SOLO** migration + light verify (nothing dropped/orphaned;
+   drift-check covers much).
+5. **Banner-historicize the initiatives + update `ANCHORS.md` — SOLO/mechanical** + final
+   consistency verify (banners agree; ANCHORS matches; no doc still claims live authority).
+
+*(Phase 2 Merida surgery, later: SOLO edits + ULTRACODE adversarial review of the
+combined diff before commit — the established pattern.)*
 
 ## The three contract examinations (more than filing)
 
