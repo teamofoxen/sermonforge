@@ -55,6 +55,11 @@ the user; it refuses to let the user proceed without it. Every contract below
 derives from this. Any clause that lets the system substitute for the user is
 wrong, not the principle.
 
+*Scope: Clarity through Constraint is the **tool's** telos — what the software's
+job is. It does not name or displace the **sermon's** telos, which Merida names as
+adoration and beholding Christ; that belongs to the preacher and lives off the
+surface. The Principle measures the tool, not the sermon.*
+
 ### Hierarchy
 
 When contracts appear to conflict, this resolves it:

@@ -326,32 +326,48 @@ nagging," tighten later if the OEM walk decides to:
 - **Sermon Body** — ≥1 functional element written under any point.
 - **Manuscript** — ≥1 Introduction answer **and** the Conclusion response.
 
-### Two N/A rules
+### The N/A policy *(ruled 2026-06-14 — Re-Foundation Phase 1, examination 1)*
 
 1. **A named outcome can never be N/A.** The synthesis/statement questions that *are* the
-   named outcomes carry no N/A escape.
-2. **Per-question N/A means "satisfied another way," not "skip" — and the allowlist is
-   exactly two questions:** `mps.gospel_check` (the moralism check was run upstream against
-   the Christ-Connection Statement) and `intro.redemptive_note` (the hook itself was
-   redemptive). Enforced three-deep (field-def flag · UI toggle · write-path guard). No
-   Study question is on the allowlist at HEAD.
+   named outcomes — `meaning_whole`, the Christ-Connection Statement, both syntheses, and the
+   MPT/MPS `tighten` questions that feed the Word export — carry no N/A escape. This is the
+   hard constraint, not subject to the ruling below.
+2. **An honest "nothing here / doesn't apply" counts as done.** The pastor ruled (examination
+   1) that the completeness signal must never reward manufacturing a connection the text
+   doesn't carry. So N/A means "the text genuinely doesn't carry this" or "satisfied another
+   way" — an *active* gesture, never a silent skip — and it counts toward complete. It is
+   available on: (a) the two anchor questions `mps.gospel_check` and `intro.redemptive_note`;
+   (b) the **declared Study questions** SFDI grants it (Observe Where/When; Genre; Cross-
+   References/Commentary; Redemptive Thread's four-ways; Implications Fields 1–2); and (c)
+   **per thought-unit cell** on the three cumulative tables (Meaning / Christ-Connection /
+   Implication) — a unit marked "nothing here" satisfies its column. The named-outcome
+   paragraphs in rule 1 are excluded throughout.
+3. **Enforcement and timing.** N/A is enforced three-deep (field-def flag · UI toggle ·
+   write-path guard). **At HEAD the shipped code still allows N/A on only the two anchor
+   questions** — restoring the Study-question and per-cell gesture (the SFDI grants and a
+   per-cell table toggle) is a scoped code change tracked separately, not yet built. This
+   section states the *ruled target*; the code follows behind it.
 
-> **⚠ OPEN RULING — do not freeze.** SFDI's working doc grants Study-wide per-question
-> N/A, currently **suspended** behind a "PENDING PASTOR RULING" banner; the code follows
-> the strict two-question allowlist. Canon records the code truth but **must not freeze
-> N/A semantics** until the pastor rules — either extend the allowlist to SFDI's questions,
-> or amend SFDI to the two-question scope. One residual to fold into this ruling: the
-> Observation Set composite still honors a stored Divisions-canvas N/A flag for legacy data,
-> though no live UI or write path can set it post-T19. This ties to the per-unit gate (the
-> **[◆]** tables) and is a CORE Process #2 contract examination (Phase 1 step 3).
+> **✅ RULED 2026-06-14.** The pastor settled this (examination 1): *extend* the honest-absence
+> gesture to Study (above), not amend SFDI down to two questions. The SFDI "PENDING PASTOR
+> RULING" banner is resolved accordingly. The legacy Divisions-canvas N/A short-circuit folds
+> in — it stays honest for stored legacy data and becomes a live, intended gesture once the
+> per-cell toggle ships. What the ruling does NOT relax: the named-outcome paragraphs stay
+> no-N/A (rule 1).
 
-### The per-unit gate *(the load-bearing tension)*
+### The per-unit gate *(ruled — the honest-blank resolution)*
 
-The Interpretation / Christ-Connection / Implications composites require **every** thought
-unit to carry its column — a per-row exhaustiveness the cumulative table makes structural.
-This is the clause most in tension with Merida (whose method allows that some thought units
-legitimately carry no direct Christ-connection). It is flagged **[◆]** throughout §2 and is
-a Phase-2 + contract-examination subject. **Phase 1 records it; it does not change it.**
+The Interpretation / Christ-Connection / Implications composites require an entry on **every**
+thought unit — a per-row exhaustiveness the cumulative table makes structural. This was the
+clause most in tension with Merida (whose method allows that some thought units legitimately
+carry no direct Christ-connection — the app's own Redemptive Thread teaching says so).
+**Resolved by the examination-1 ruling:** a unit may be marked "nothing here" per cell and
+still count complete (N/A policy rule 2c above), so the gate no longer forces a manufactured
+entry on a unit the text leaves bare. The whole-passage synthesis paragraph still must be
+written (rule 1). The per-cell toggle's build is scheduled; until it ships the code still
+requires a filled cell, so this records the ruled target. The **[◆]** tags in §2 remain as
+Phase-2 *Merida-fidelity* annotations on the questions themselves — a separate matter from
+this completeness ruling.
 
 ---
 
