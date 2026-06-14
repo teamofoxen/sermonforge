@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-06-13 — Workspace Re-Foundation Initiative chartered (planning only)
+
+- New working board `docs/PROPOSALS/refoundation-initiative.md` (rescoped from the day's `merida-fidelity-initiative.md`, now deleted). Two coupled jobs: consolidate the sprawled document authority (~15 binding docs, ~8 governing the same concern through supersession chains) into CORE + a new canonical spec, and re-examine the contracts + Study/Anchor question set through Tony Merida's intent.
+- Captures the Merida fidelity findings (the question provenance map — faithful / addition / gate-shaped / drifted), the target three-layer doc structure (CORE = law · `docs/WORKSPACE-CANON.md` = what/why · sermon-workspace.md = how/where · initiatives = frozen history), the Phase-1 plan (ultracode reversal-tracing → net-truth → draft the canon → slim CORE → thin the mechanics doc → historicize), and the three contract examinations (Process #2 completeness/N-A, the CORE-elevated additions' weight, the Principle scope note).
+- **Planning only — no contracts, specs, or code changed.** Phase 1 executes next session; no Study/Anchor question is cut until then.
+
+---
+
 ## 2026-06-10 — Marinate restored: the text comes back to the forge
 
 - A 9-agent saturation investigation (ultracode) confirmed the pastor's instinct: from the Study→Anchor seam onward the walk fed him only his own summaries, the reference pane flipped away from the passage the instant he left Study, and nothing sent him back into the text — an "equation" feel at exactly the load-bearing moments. Merida's method puts a "back away and marinate" beat right there; the app had renamed it into "write the synthesis" and pointed it at the notes.
