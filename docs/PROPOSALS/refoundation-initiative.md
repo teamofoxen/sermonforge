@@ -1,16 +1,17 @@
 # Workspace Re-Foundation Initiative — working board
 
-> **Status: PHASE 1 IN PROGRESS — step 1 (reversal-trace → net-truth map) COMPLETE,
-> 2026-06-14.** Chartered 2026-06-13 at the end of a long design conversation. This is
-> the doc the work runs from. It has two coupled jobs: (1) **consolidate the scattered
-> document authority** into a clean structure, and (2) **re-examine the contracts + the
-> Study/Anchor question set through Tony Merida's intent** (CCE). The two are one act —
-> you cannot state "what is true now" without resolving the initiative reversals, and
-> you should not freeze the current truth without the Merida lens. **Report-only / no
-> question gets cut in Phase 1.** The step-1 net-truth map is recorded below (see
-> "Phase 1 · Step 1 output"); the next action is step 2 — draft `WORKSPACE-CANON.md`.
-> Rescoped from the former `merida-fidelity-initiative.md` (its Merida findings are
-> preserved below as the Phase-2 input).
+> **Status: PHASE 1 IN PROGRESS — steps 1 & 2 COMPLETE, 2026-06-14.** Chartered
+> 2026-06-13 at the end of a long design conversation. This is the doc the work runs from.
+> It has two coupled jobs: (1) **consolidate the scattered document authority** into a
+> clean structure, and (2) **re-examine the contracts + the Study/Anchor question set
+> through Tony Merida's intent** (CCE). The two are one act — you cannot state "what is
+> true now" without resolving the initiative reversals, and you should not freeze the
+> current truth without the Merida lens. **Report-only / no question gets cut in
+> Phase 1.** Step 1's net-truth map is recorded below ("Phase 1 · Step 1 output"); step 2
+> produced the verified draft at `docs/WORKSPACE-CANON.md` (DRAFT, not yet binding). The
+> next action is step 3 — slim CORE + the three contract examinations (the pastor's
+> rulings). Rescoped from the former `merida-fidelity-initiative.md` (its Merida findings
+> are preserved below as the Phase-2 input).
 
 ---
 
@@ -88,11 +89,12 @@ passes are where most of the value is.
    in four more live-authority sources the first pass missed (v24 data-layer, the
    UX-overhaul governance batch, BTI, ARI). Result recorded in "Phase 1 · Step 1 output"
    below.
-2. **Draft `WORKSPACE-CANON.md` — SOLO draft, ULTRACODE verify.** Draft from net-truth +
-   code-at-HEAD, Merida-annotated for Study/Anchor/OEM (each question tagged faithful /
-   addition / gate / drift). One coherent hand. Then fan out a verify pass: every
-   field/question/named-outcome/gate the canon claims must match the code at HEAD, plus
-   a completeness critic ("what field or gate did we miss").
+2. **✅ DONE (2026-06-14) — Draft `WORKSPACE-CANON.md` — SOLO draft, ULTRACODE verify.**
+   Drafted from net-truth + code-at-HEAD, Merida-annotated for Study/Anchor/OEM (each
+   question tagged faithful / addition / gate / drift). One coherent hand. The verify pass
+   (13 section verifiers + a Merida-tag check + a completeness critic vs the code at HEAD)
+   returned **0 blockers** — minor accuracy fixes applied. Output: `docs/WORKSPACE-CANON.md`
+   (DRAFT (verified); not yet binding; does not yet supersede SFDI/SADI).
 3. **Slim CORE + examine the three contracts — SOLO** (the examinations are the pastor's
    rulings; agents lay out options, don't decide). **One exception: the per-unit gate /
    N-A decision gets a focused ULTRACODE adversarial pass** — it has the most tentacles
