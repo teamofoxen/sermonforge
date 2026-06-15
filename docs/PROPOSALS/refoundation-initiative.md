@@ -1,6 +1,6 @@
 # Workspace Re-Foundation Initiative — working board
 
-> **Status: PHASE 1 IN PROGRESS — steps 1 & 2 COMPLETE, 2026-06-14.** Chartered
+> **Status: PHASE 1 IN PROGRESS — steps 1, 2 & 3 COMPLETE, 2026-06-14.** Chartered
 > 2026-06-13 at the end of a long design conversation. This is the doc the work runs from.
 > It has two coupled jobs: (1) **consolidate the scattered document authority** into a
 > clean structure, and (2) **re-examine the contracts + the Study/Anchor question set
@@ -8,10 +8,11 @@
 > true now" without resolving the initiative reversals, and you should not freeze the
 > current truth without the Merida lens. **Report-only / no question gets cut in
 > Phase 1.** Step 1's net-truth map is recorded below ("Phase 1 · Step 1 output"); step 2
-> produced the verified draft at `docs/WORKSPACE-CANON.md` (DRAFT, not yet binding). The
-> next action is step 3 — slim CORE + the three contract examinations (the pastor's
-> rulings). Rescoped from the former `merida-fidelity-initiative.md` (its Merida findings
-> are preserved below as the Phase-2 input).
+> produced the verified draft at `docs/WORKSPACE-CANON.md` (DRAFT, not yet binding); step 3
+> ruled the three contract examinations and slimmed CORE to live law (dated history → new
+> `docs/CORE-CHANGELOG.md`). The next action is step 4 — thin `sermon-workspace.md` to
+> mechanics + cross-refs. Rescoped from the former `merida-fidelity-initiative.md` (its
+> Merida findings are preserved below as the Phase-2 input).
 
 ---
 
@@ -95,10 +96,15 @@ passes are where most of the value is.
    (13 section verifiers + a Merida-tag check + a completeness critic vs the code at HEAD)
    returned **0 blockers** — minor accuracy fixes applied. Output: `docs/WORKSPACE-CANON.md`
    (DRAFT (verified); not yet binding; does not yet supersede SFDI/SADI).
-3. **Slim CORE + examine the three contracts — SOLO** (the examinations are the pastor's
-   rulings; agents lay out options, don't decide). **One exception: the per-unit gate /
-   N-A decision gets a focused ULTRACODE adversarial pass** — it has the most tentacles
-   (Process #2, era-2 Ruling 8, pending N/A ruling, completeness surfacing, Word export).
+3. **✅ DONE (2026-06-14) — Slim CORE + examine the three contracts.** The per-unit-gate / N-A
+   examination got the focused ultracode adversarial pass (6 agents → option matrix); the
+   pastor RULED: **an honest "nothing here / doesn't apply" counts as done** — N/A restored to
+   the declared SFDI Study questions + per thought-unit cell (the named-outcome paragraphs stay
+   no-N/A). Written into WORKSPACE-CANON §5 + the SFDI banner (`abfb58e`); the per-cell/Study
+   *code* build is scheduled separately. Examination 2 (constitutional weight): PC mechanics +
+   moved to spec, principle kept as law. Examination 3: Principle scope note added (tool's telos,
+   not the sermon's). CORE slimmed to live law, dated history → `docs/CORE-CHANGELOG.md`
+   (`6b25097`).
 4. **Thin sermon-workspace.md — SOLO** migration + light verify (nothing dropped/orphaned;
    drift-check covers much).
 5. **Banner-historicize the initiatives + update `ANCHORS.md` — SOLO/mechanical** + final
