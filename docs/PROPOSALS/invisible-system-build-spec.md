@@ -1,5 +1,7 @@
 # SermonForge — Invisible System Build Spec
 
+> **⛔ HISTORICAL RECORD — authority transferred to CORE + WORKSPACE-CANON (Workspace Re-Foundation, 2026-06-15).** The invisible-system rebuild closed 2026-05-18; its target architecture is the production build. The live authority for the sermon walk is now [`docs/CORE.md`](../CORE.md) (the law) and [`docs/WORKSPACE-CANON.md`](../WORKSPACE-CANON.md) (the walk's what & why). This document is the frozen build spec of how the current surface was reached; it is **not a working guide and no longer binds.** Any "open for design" / "in progress" / "still to surface" language below is itself historical (e.g. completeness surfacing is wired — see CORE Process #2). Where this doc and CORE/canon differ, CORE/canon win — do not rebuild from here.
+
 This is a build spec and working brief. Read it fully before writing code. It defines the
 target system, what survives from the current build, what gets deleted, and what is still
 open for design. Where something is open, it says so — do not invent a resolution, surface

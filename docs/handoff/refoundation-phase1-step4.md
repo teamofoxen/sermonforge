@@ -1,5 +1,10 @@
 # Re-Foundation — next-session handoff (Phase 1, step 4)
 
+> **✅ CONSUMED 2026-06-15 — this handoff is spent.** Phase 1 steps 4 **and** 5 shipped; the
+> canon (`docs/WORKSPACE-CANON.md`) is now **LIVE / ratified**, not DRAFT. The DRAFT-era
+> language below is historical. For current state, see the working board
+> (`docs/PROPOSALS/refoundation-initiative.md`).
+
 > Paste the block below into a fresh session to continue. Written 2026-06-14 after
 > Phase 1 steps 1–3 shipped to `main`.
 

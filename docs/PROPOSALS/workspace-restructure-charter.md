@@ -1,5 +1,7 @@
 # Workspace Restructure — Three-Step Sermon Arc (Study → Assembly → Manuscript)
 
+> **⛔ HISTORICAL RECORD — authority transferred to CORE + WORKSPACE-CANON (Workspace Re-Foundation, 2026-06-15).** The three-stage model this charter produced is encoded in CORE's Canonical Vocabulary; the live authority for the sermon walk is now [`docs/CORE.md`](../CORE.md) (the law) and [`docs/WORKSPACE-CANON.md`](../WORKSPACE-CANON.md) (the walk's what & why). This charter is the frozen development record; it is **not a working guide and no longer binds.** Any "live" / "production rendering" language below (e.g. the unified Assembly trail) is itself historical — the trail UI was deleted in the invisible-system rebuild. Where this doc and CORE/canon differ, CORE/canon win — do not rebuild from here.
+
 > **Status (2026-05-10):** Shipped + merged to main. Three-stage shell (Study / Assembly / Manuscript) is the production workspace; unified Assembly trail across all four sub-phases is the production rendering. Pastor walkthrough closed. RW1 + RW2 + RW3 + RW5 + RW6 + RW7 + RW10 resolved here. RW4 + RW8 + RW9 resolved post-walkthrough; implementation queued on [`claude/workspace-trail-sequel`](https://github.com/teamofoxen/sermonforge/tree/claude/workspace-trail-sequel) (heavier step-boundary register + full tour rewrite). See [`workspace-trail-charter.md`](./workspace-trail-charter.md) for the sequel scope.
 >
 > **Audience:** The lone developer of SermonForge, who is also a pastor and the pastor-user. Plain language; technical specifics where they matter.

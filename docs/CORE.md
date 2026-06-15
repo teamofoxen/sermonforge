@@ -219,26 +219,23 @@ these names. (See State Contract clause 5: *one name per concept*.)
    is explicit. The pedagogical content — number of fields, wording, exact
    named-outcome text — may evolve. The structural integrity — that the
    throughline exists, holds, and produces the named outcomes it claims
-   — does not. The canonical articulation lives across two documents: the
-   Study Field Definition Initiative document at
-   `docs/PROPOSALS/study-field-definition-initiative.md` carries Study's
-   four sub-phases, and the Sermon Anchor Definition Initiative document
-   at `docs/PROPOSALS/sermon-anchor-definition-initiative.md` carries
-   Assembly's two SADI-walked anchor sub-phases (Anchor — MPT/MPS;
-   Frame — Intro/Conclusion). As of 2026-05-04, SFDI carries seven-slot
-   entries for all 25 fields across the four Study sub-phases, four
-   named outcomes (Observation Set, Interpretation Set, Christ-Connection
-   Statement, Implications Synthesis), and four sub-phase boundary
-   handoffs (including the handoff out of Study into Assembly's Anchor
-   sub-phase); SADI carries seven-slot entries for all four anchor fields
-   (MPT, MPS, Intro, Conclusion), two named outcomes (Main Point Pair
-   for Anchor; Sermon Frame for Frame), and sub-phase-boundary handoff
-   articulations. This clause is therefore binding in full — the throughline's
-   structural integrity is testable against the SFDI document AND the SADI
-   document together. (Honesty: Assembly's Outline and Equip sub-phases and the
-   Manuscript stage carry DRAFT field definitions — Merida-grounded but not yet
-   preacher-walked; until an OEM content walk completes, this contract is
-   testable in full only for Study and Anchor/Frame.)
+   — does not. The canonical articulation lives in
+   `docs/WORKSPACE-CANON.md` (ratified 2026-06-15) — every stage, sub-phase,
+   field, question, named outcome, and handoff at current truth, Merida-
+   annotated. The throughline's structural integrity is testable against the
+   canon: every field contributes, every named outcome is built from the
+   field-work before it, and every handoff is explicit. The SFDI and SADI
+   initiative documents
+   (`docs/PROPOSALS/study-field-definition-initiative.md`,
+   `docs/PROPOSALS/sermon-anchor-definition-initiative.md`) are the frozen
+   development records that produced the Study content (25 fields, four named
+   outcomes, four handoffs) and the Anchor/Frame content (four anchor fields,
+   two named outcomes); the `scripts/sfdi-*-consistency.py` validators continue
+   to check those frozen records for internal consistency. (Honesty: Assembly's
+   Outline and Equip sub-phases and the Manuscript stage carry DRAFT definitions
+   in the canon — Merida-grounded but not yet preacher-walked; until an OEM
+   content walk completes, this contract is testable in full only for Study and
+   Anchor/Frame.)
 
    (Saturation amendment, 2026-06-10 — pastor's ruling: the throughline is
    forward-compiling, but it is NOT closed to the text. Two commitments hold.

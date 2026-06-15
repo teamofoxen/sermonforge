@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-06-15 — Workspace Re-Foundation Phase 1: step 5 — canon ratified, initiatives historicized (Phase 1 complete)
+
+- Ratified `docs/WORKSPACE-CANON.md` (DRAFT → LIVE): now the binding source for the sermon walk's what & why; the Merida tags stay as Phase-2 input.
+- Re-pointed CORE Process #6 (+ the ENFORCEMENT_STATUS row/summary + the CLAUDE nav) from the SFDI/SADI working docs to the canon; SFDI/SADI become frozen development records.
+- Banner-stamped nine old initiative docs (SFDI/SADI/SPRD/invisible-system/era-2/workspace-restructure/workspace-trail) as historical records; regrouped `ANCHORS.md` (canon = live anchor).
+- A 3-agent ultracode consistency verify confirmed 0 broken refs + authority fully re-pointed, and caught five un-propagated gaps — all folded in.
+- Phase 1 complete; next is Phase 2 (the Merida question surgery). Docs-only.
+
+---
+
 ## 2026-06-15 — Workspace Re-Foundation Phase 1: step 4 — sermon-workspace.md thinned to mechanics
 
 - Thinned `docs/SYSTEMS/sermon-workspace.md` to *how & where*; the walk's *what & why* migrated to `WORKSPACE-CANON.md` via cross-refs, with the Pastoral Context spec kept here as CORE Process #4's pointer target.

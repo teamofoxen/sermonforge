@@ -1,6 +1,6 @@
 # Workspace Re-Foundation Initiative — working board
 
-> **Status: PHASE 1 IN PROGRESS — steps 1–4 COMPLETE (1–3 2026-06-14; 4 2026-06-15).** Chartered
+> **Status: PHASE 1 COMPLETE — steps 1–5 shipped (1–3 2026-06-14; 4–5 2026-06-15); the canon is LIVE. Phase 2 (the Merida question surgery) is the remaining work.** Chartered
 > 2026-06-13 at the end of a long design conversation. This is the doc the work runs from.
 > It has two coupled jobs: (1) **consolidate the scattered document authority** into a
 > clean structure, and (2) **re-examine the contracts + the Study/Anchor question set
@@ -11,9 +11,10 @@
 > produced the verified draft at `docs/WORKSPACE-CANON.md` (DRAFT, not yet binding); step 3
 > ruled the three contract examinations and slimmed CORE to live law (dated history → new
 > `docs/CORE-CHANGELOG.md`); step 4 thinned `sermon-workspace.md` to mechanics + cross-refs
-> (walk what/why → canon) and corrected four code-grounded drifts + the legacy-PC-column
-> disposition (in CORE-CHANGELOG + ENFORCEMENT_STATUS). The next action is step 5 —
-> historicize the initiatives + register WORKSPACE-CANON on ANCHORS + lift its DRAFT banner.
+> (walk what/why → canon); step 5 historicized the nine old initiative docs, registered
+> WORKSPACE-CANON on ANCHORS, and **lifted its DRAFT banner — the canon is now LIVE**, with
+> CORE Process #6 re-pointed to it. **Phase 1 is complete; the next action is Phase 2 — the
+> Merida question surgery against the live canon.**
 > Rescoped from the former `merida-fidelity-initiative.md` (its
 > Merida findings are preserved below as the Phase-2 input).
 
@@ -118,8 +119,17 @@ passes are where most of the value is.
    PC mechanics now explicitly held here, as CORE Process #4 points. Verified by a 3-agent
    ultracode pass (re-ground mechanics vs code · nothing-dropped vs canon · drift/refs):
    **0 orphans, all 39 mechanics claims match code, 0 broken refs.**
-5. **Banner-historicize the initiatives + update `ANCHORS.md` — SOLO/mechanical** + final
-   consistency verify (banners agree; ANCHORS matches; no doc still claims live authority).
+5. **✅ DONE (2026-06-15) — Banner-historicize the initiatives + update `ANCHORS.md` —
+   SOLO/mechanical** + final consistency verify. The nine old initiative docs (SFDI ×2,
+   SADI ×2, SPRD, invisible-system, era-2, workspace-restructure, workspace-trail) carry the
+   "authority transferred to CORE + WORKSPACE-CANON — historical record" stamp; ANCHORS
+   regrouped (canon = live anchor at top; the nine under historical); **the canon's DRAFT
+   banner is lifted — it is now LIVE/ratified** (binds the walk's current shape; Merida tags
+   stay Phase-2 input); CORE Process #6 + the ENFORCEMENT_STATUS Process-#6 row + the CLAUDE
+   nav all re-point to the canon. A 3-agent ultracode consistency verify caught the residual
+   gaps (workspace-trail un-listed on ANCHORS; the ENFORCEMENT summary bullet; canon
+   §7/provenance/boundary DRAFT-era leftovers; the sermon-workspace canon pointer; the spent
+   handoff) — all folded in before commit. **Phase 1 is closed; next is Phase 2.**
 
 *(Phase 2 Merida surgery, later: SOLO edits + ULTRACODE adversarial review of the
 combined diff before commit — the established pattern.)*

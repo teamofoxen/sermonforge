@@ -1,15 +1,21 @@
 # WORKSPACE-CANON — the sermon walk: what & why
 
-> **Status: DRAFT (verified), 2026-06-14.** Phase 1 step-2 solo draft of the Workspace
-> Re-Foundation Initiative (`docs/PROPOSALS/refoundation-initiative.md`). Drafted
-> from the net-truth map + the code at HEAD (`320f272`); **code wins any conflict.**
-> NOT yet ratified and NOT yet binding. It hardens only after: (a) ✅ **the ultracode
-> verify pass — DONE 2026-06-14** (13 section verifiers + a Merida-tag check + a
-> completeness critic vs the code at HEAD; 0 blockers; minor accuracy fixes applied);
-> (b) the three CORE contract examinations (Phase 1 step 3); and (c) the Phase 2 Merida
-> question surgery. Until then the initiative working docs (SFDI, SADI) still hold; this
-> draft does not supersede them. The Merida tags below are **annotations for Phase 2 —
-> Phase 1 cuts nothing.**
+> **Status: LIVE — ratified 2026-06-15 (Workspace Re-Foundation Phase 1 step 5).** This is the
+> binding source for the sermon walk's *what & why*: every stage, sub-phase, field, question,
+> named outcome, handoff, and the completeness policy, at current truth. It is a top-level doc,
+> peer to [`CORE.md`](CORE.md) (the law) and [`RULES.md`](RULES.md); the mechanics that render
+> this walk live in [`SYSTEMS/sermon-workspace.md`](SYSTEMS/sermon-workspace.md). It **supersedes**
+> the SFDI and SADI working docs (now banner-stamped historical records) as the live articulation
+> of the walk. **Ground truth remains the code at HEAD — code wins any conflict.**
+>
+> **What "live" binds, and what it doesn't.** This canon binds the walk's *current shape* — the
+> stages, sub-phases, fields, named outcomes, and completeness policy. It was drafted from the
+> Phase-1 net-truth map + the code at HEAD and verified by a 15-agent ultracode pass (0 blockers)
+> before ratification. The Merida tags (`[M] / [+] / [◆] / [⚠] / [✂]`) and the §7 open-seams are
+> **Phase-2 input**: Phase 1 cut nothing, and the Phase-2 Merida question surgery will edit this
+> live doc (CORE Process #6 permits the pedagogical content — question number, wording, named-
+> outcome text — to evolve; the structural integrity does not). The DRAFT regions (Outline, Equip,
+> Manuscript) are authorable but not yet preacher-walked — see §1 "Maturity of each region."
 
 ---
 
@@ -30,7 +36,8 @@ re-documents them:
 - **`docs/SYSTEMS/sermon-workspace.md` = how & where.** Components, JSON columns,
   derivations, the save flow. *The mechanics that render this walk.*
 - **Initiatives = how we got here.** SFDI, SADI, SPRD, era-2, invisible-system,
-  workspace-restructure, saturation — frozen history once this draft ratifies.
+  workspace-restructure, saturation — now banner-stamped frozen history (this canon ratified
+  2026-06-15).
 
 **Out of scope for canon** (named so the boundary is explicit): the data layer
 (better-sqlite3, soft-delete, search), the beta program + telemetry/privacy (BTI), and
@@ -388,11 +395,14 @@ on, with no claim that the prior region is *closed* (free navigation means it ma
 
 ---
 
-## 7. Open seams (what the remaining Phase-1 steps + Phase 2 settle)
+## 7. Open seams (what Phase 2 settles)
 
 Recorded so canon is honest about what is *not* yet frozen:
 
-1. **The SFDI N/A ruling** (§5) — blocks only the N/A section of canon; pastor's call.
+1. **The N/A code build** — the N/A *policy* is ruled and lives in §5 (an honest "doesn't
+   apply" counts as done; the named-outcome paragraphs stay no-N/A). The shipped app still
+   enforces the two-question allowlist, so restoring the per-question / per-cell gesture is a
+   scheduled code change — not a Phase-2 Merida question.
 2. **DRAFT pedagogy** — Outline / Equip / Manuscript are not preacher-walked; their
    prompts and lenient checks may tighten after the OEM content walk.
 3. **Two provisional named-outcome names** — "Sermon Outline" and "Sermon Body" (RW1) were
@@ -413,4 +423,4 @@ Recorded so canon is honest about what is *not* yet frozen:
   `studyAdvancement.js`, `sermonState.js`.
 - Merida tags from the merida-intent audit (`project_merida_intent_audit`) + the working
   board's Merida provenance map.
-- **Pending the ultracode verify pass before any ratification.**
+- **Verified by a 15-agent ultracode pass (0 blockers) and ratified 2026-06-15 (Re-Foundation Phase 1 step 5).**

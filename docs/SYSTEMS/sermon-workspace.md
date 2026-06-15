@@ -636,7 +636,7 @@ Triggered by Show Text from the writing-surface chrome.
 
 - [`docs/WORKSPACE-CANON.md`](../WORKSPACE-CANON.md) — **the walk's *what & why***: every
   question, named outcome, the completeness policy, Merida fidelity. This doc renders that
-  walk; canon defines it. (DRAFT until the Re-Foundation initiative ratifies it.)
+  walk; canon defines it. (Ratified 2026-06-15 — the live source for the walk's what & why.)
 - [`docs/PROPOSALS/invisible-system-build-spec.md`](../PROPOSALS/invisible-system-build-spec.md)
   — the build spec for the writing-surface architecture; sweep-close
   inventory of remaining open work.

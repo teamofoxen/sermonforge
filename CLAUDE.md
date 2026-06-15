@@ -16,7 +16,8 @@ This file is a navigation guide. Do not load everything by default.
 
 | Task area | Load | Also check |
 |-----------|------|------------|
-| Sermon workspace, study tab, save flow, PassagePopup | [`docs/SYSTEMS/sermon-workspace.md`](docs/SYSTEMS/sermon-workspace.md) | — |
+| Sermon workspace — the walk's *what & why* (questions, named outcomes, completeness policy, Merida fidelity) | [`docs/WORKSPACE-CANON.md`](docs/WORKSPACE-CANON.md) | the law is `docs/CORE.md` |
+| Sermon workspace — *how & where* (components, JSON columns, save flow, study tab, PassagePopup) | [`docs/SYSTEMS/sermon-workspace.md`](docs/SYSTEMS/sermon-workspace.md) | [`docs/WORKSPACE-CANON.md`](docs/WORKSPACE-CANON.md) for the what & why |
 | Database, schema, migrations, FTS | [`docs/SYSTEMS/database.md`](docs/SYSTEMS/database.md) | adding columns to `sermons` requires updating `SERMON_COLUMNS` in `electron/main.js` — `buildUpdate()` throws in dev if you miss this, but only if you exercise the save path in testing |
 | IPC channels, preload, main process boundaries | [`docs/SYSTEMS/ipc.md`](docs/SYSTEMS/ipc.md) | — |
 | Distribution, installers, auto-updates, ESV API key setup, crash logging | [`docs/PROPOSALS/distribution.md`](docs/PROPOSALS/distribution.md) | `electron/config.js` (paths + dev/prod gatekeeper), `electron/keystore.js` (safeStorage for ESV key), `electron/logger.js` (`app.log`), `electron/updater.js` (electron-updater), `src/components/SetupScreen.jsx` (first-run setup) |

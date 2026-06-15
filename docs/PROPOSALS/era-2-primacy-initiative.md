@@ -1,5 +1,7 @@
 # Era-2 Primacy Initiative — Charter
 
+> **⛔ HISTORICAL RECORD — authority transferred to CORE + WORKSPACE-CANON (Workspace Re-Foundation, 2026-06-15).** The live authority for the sermon walk is now [`docs/CORE.md`](../CORE.md) (the law) and [`docs/WORKSPACE-CANON.md`](../WORKSPACE-CANON.md) (the walk's what & why). This charter is a frozen development record; it is **not a working guide and no longer binds.** Its rulings live where they were ratified into CORE (Process #1/#2/#3 + the saturation amendment to #6); several were superseded — quote CORE, not this charter, when they differ. Do not rebuild from here.
+
 **Status:** Ratified, 2026-05-12. Historical record — amendments via banner only.
 **Scope:** Whole workspace (Study + Assembly + Manuscript).
 **Supersedes (selectively):** SFDI and SADI rulings named explicitly below. All other rulings in those docs stand.
