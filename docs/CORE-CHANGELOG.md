@@ -43,11 +43,15 @@
 ## Canonical Vocabulary — Pastoral Context
 
 - **Re-Foundation Phase 1, examination 2 (2026-06-14):** the PC *mechanics* (the two
-  questions The Room / The Cost and Gift, their storage keys, and the three retained legacy
-  columns `topic_theme` / `audience_assumptions` / `background_noise`) moved out of CORE to
-  `docs/SYSTEMS/sermon-workspace.md` — keep the *principle* as law (Process #4), the
-  *mechanics* as spec. SPRD B4.2 / C5 (2026-05-04) retired the standalone PC card; the legacy
-  columns are retained defensively for legacy data and are no longer read.
+  questions The Room / The Cost and Gift, their storage keys, and the disposition of the
+  three legacy columns `topic_theme` / `audience_assumptions` / `background_noise`) moved
+  out of CORE to `docs/SYSTEMS/sermon-workspace.md` — keep the *principle* as law
+  (Process #4), the *mechanics* as spec. SPRD B4.2 / C5 (2026-05-04) retired the standalone
+  PC card; the three legacy columns were **removed** in the trail deletion sweep (Phase B1)
+  — `SERMON_COLUMNS` no longer admits them and nothing reads or writes them.
+  *(Corrected 2026-06-15, Re-Foundation step 4: the original step-3 wording said the columns
+  were "retained defensively for legacy data and are no longer read"; the code at HEAD has
+  them struck — zero readers, zero writers — so "removed" is the accurate disposition.)*
 
 ## Process #1 — Movement is monotonic in expectation
 

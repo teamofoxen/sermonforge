@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-06-15 — Workspace Re-Foundation Phase 1: step 4 — sermon-workspace.md thinned to mechanics
+
+- Thinned `docs/SYSTEMS/sermon-workspace.md` to *how & where*; the walk's *what & why* migrated to `WORKSPACE-CANON.md` via cross-refs, with the Pastoral Context spec kept here as CORE Process #4's pointer target.
+- Corrected four code-grounded drifts: Field 3 kind →`indented-canvas`, completeness composites "uncalled"→*wired*, `saveDb` 500ms debounce→better-sqlite3 handler-commit, SERMON_COLUMNS 37→34.
+- Fixed the legacy-PC-column disposition (removed, zero readers/writers — not "retained defensively") in `CORE-CHANGELOG.md` + `ENFORCEMENT_STATUS.md` (per-clause rows + summary + SPRD deferred bullets).
+- A 3-agent ultracode verify pass confirmed 0 orphans, all 39 mechanics claims match HEAD, 0 broken refs.
+- Docs-only; board marked step 4 done (next: step 5 — historicize initiatives + register the canon). No production code changed.
+
+---
+
 ## 2026-06-14 — Workspace Re-Foundation Phase 1: steps 1–3 shipped
 
 - Net-truth map: two ultracode fan-outs traced all 11 live-authority sources against the code at HEAD into one 22-subject map on the working board.

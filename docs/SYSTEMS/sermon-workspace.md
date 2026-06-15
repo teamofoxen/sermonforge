@@ -1,5 +1,13 @@
 # SermonForge — Sermon Workspace
 
+> **This doc is the *how & where*** — the mechanics that render the sermon walk:
+> components, JSON columns, derivations, the save flow. The walk's *what & why* —
+> every question, named outcome, the completeness policy, Merida fidelity — lives in
+> [`docs/WORKSPACE-CANON.md`](../WORKSPACE-CANON.md); this doc points there and does not
+> restate it. The law (the four contracts) lives in [`docs/CORE.md`](../CORE.md).
+> (Thinned to this boundary 2026-06-15 in the Workspace Re-Foundation Initiative,
+> Phase 1 step 4; the walk content this doc used to carry migrated to the canon.)
+
 > Rewritten end-to-end post-sweep (2026-05-18) to describe the writing-surface
 > + map + threshold-overlay + workspace-notebook-drawer architecture. The
 > pre-sweep StudyTab / AssemblyTab / ManuscriptTab + trail + clearings +
@@ -33,21 +41,21 @@
 ## The Study throughline
 
 The four Study sub-phases — Observe, Interpret, Redemptive Thread, Implications — compose
-a single deepening exegetical arc: text says → text means → text points to Christ →
-text lands on this congregation. Pastoral Context (PC) enters the arc progressively;
-the text drives the sermon toward PC, not the other way around.
+a single deepening exegetical arc (text says → means → points to Christ → lands on the
+room), and Pastoral Context enters it progressively. **The arc's content — what each
+sub-phase asks, its named outcome, and the marinate / return-to-the-text beat — lives in
+[WORKSPACE-CANON §2](../WORKSPACE-CANON.md). The law behind it is CORE
+[Process #6](../CORE.md) (the throughline holds and produces named outcomes) plus its
+saturation amendment (the text stays present; a re-read beat sits at the Study → Anchor
+seam).** What this doc carries is the *mechanics* of that arc: where Pastoral Context
+surfaces (below), and how the re-read beat is rendered — the [passage column / reference
+pane](#the-writing-surface) default and the [Study → Anchor handoff](#threshold-orientation)
+overlay.
 
-The arc is forward-compiling but **not closed to the text** (CORE
-[Process Contract #6](../CORE.md) saturation amendment, 2026-06-10). The reference
-pane keeps the passage present by default in every region — Study and Assembly alike
-— so the pastor never loses the text on the way forward, and a return-to-the-text
-beat sits at the Study → Anchor seam: before forging the Main Point the pastor is
-sent back to re-read the passage (surfaced by the Implications send-off, the
-Study → Anchor handoff which now carries the passage, and the MPT draft prompt).
-This re-read is the restored "marinate" beat and is orthogonal to the
-synthesis-is-substrate principle below — the Main Point still draws its *content*
-from the integrated Implications Synthesis and the four named outcomes, not from
-re-gathered raw worksheet answers; the passage is the *saturation*, a separate beat.
+Pastoral Context is the one piece of the arc's *why* that lives here rather than in canon:
+CORE [Process #4](../CORE.md) makes "PC is driven by the text" the law and points to this
+doc for the phase-by-phase mechanics. The product owner's own articulation of that
+progression is preserved verbatim, as the rationale the mechanics implement:
 
 **Articulated by the product owner during SPRD planning (2026-04-30, verbatim):**
 
@@ -83,17 +91,29 @@ re-gathered raw worksheet answers; the passage is the *saturation*, a separate b
 
 ## Pastoral Context — Phase 4 Field 3
 
-The always-on Pastoral Context card at the top of `SermonWorkspace.jsx` was
-**removed in SPRD B4.2 (2026-05-04)**. PC now lives in Phase 4 Field 3 of Study
-(Implications) as one voice in the three-way conversation, with two questions:
+This is the spec CORE [Process #4](../CORE.md) and the CORE Canonical-Vocabulary PC
+entry point to. **PC surfaces as a field at exactly two points in Study**; the rest of
+the progression CORE Process #4 names ("introduced as awareness during Observe … fully
+integrated at Implications") happens between them with no field of its own — it marinates
+in the deepening understanding:
+
+1. **Observe Field 8 — Possible Implications** (`applications`): PC's first awareness-layer
+   surface (two questions, `pressing` and `hard_and_hopeful`). The pastor begins thinking
+   pastorally without yet leaving the text.
+2. **Implications Field 3 — Pastoral Context** (`pastoral_context`): PC fully enters as one
+   voice in the three-way conversation, two questions:
 
 | Question | Question key | Stored at |
 |----------|--------------|-----------|
 | The Room | `room_specifics` | `implications.pastoral_context.room_specifics.value` |
 | The Cost and Gift | `cost_and_gift` | `implications.pastoral_context.cost_and_gift.value` |
 
-The three legacy schema columns (`topic_theme`, `audience_assumptions`,
-`background_noise`) were retired in the trail deletion sweep (Phase B1).
+The always-on Pastoral Context card that used to sit atop `SermonWorkspace.jsx` was
+**removed in SPRD B4.2 (2026-05-04)**. The three legacy schema columns (`topic_theme`,
+`audience_assumptions`, `background_noise`) were **removed** in the trail deletion sweep
+(Phase B1): `SERMON_COLUMNS` no longer admits them and nothing reads or writes them
+(zero readers, zero writers — see [`electron/contracts.cjs`](../../electron/contracts.cjs)).
+PC content lives entirely in `implications.pastoral_context`.
 
 ---
 
@@ -105,9 +125,11 @@ The writing surface is the field-walking surface — one question at a time, wit
 the passage on one side and the pastor's writing on the other. The field
 sequence is the canonical `WALK_ORDER` exported from
 [`src/utils/walkOrder.js`](../../src/utils/walkOrder.js); the chevron-next
-button advances by `nextField()`. The field-level editors (unified canvas,
-synthesis tables) mount inside the surface unchanged from pre-rebuild — the
-data shapes they read/write are documented per stage below.
+button advances by `nextField()`. The field-level editors (the indented-sentence
+canvas, the synthesis tables) mount inside the surface unchanged from pre-rebuild —
+the data shapes they read/write are documented per stage below. *What* each field
+asks and *why* is in [WORKSPACE-CANON §2–4](../WORKSPACE-CANON.md); this section is the
+rendering mechanism.
 
 Chrome:
 
@@ -298,14 +320,20 @@ deleted. If this count ever fails to reconcile against the live
 `studyAdvancement.js` file, either this table or F's record is wrong and the
 inconsistency must be surfaced, not silently absorbed.
 
-The composites are currently **uncalled outside this file**. The map-weight
-derivation in `sermonState.js` is the partial surface today (it powers the
-Study → Anchor handoff's outcomes section). The workspace-wide "is the
-sermon done" answer that would consume the composites directly is the
-in-progress completeness-surfacing work named at CORE Process Contract #2's
-deferred-enforcement entry in [ENFORCEMENT_STATUS.md](../ENFORCEMENT_STATUS.md).
-The contract is real and its foundation is in place; the full visible
-surface is opportunistic future work.
+The composites are **wired into the workspace-wide "is the sermon done" answer**
+(2026-06-10): `deriveSermonCompleteness(sermon)` in
+[`src/utils/sermonState.js`](../../src/utils/sermonState.js) consumes all eight — plus
+three deliberately lenient presence checks for Sermon Outline / Sermon Body / Manuscript,
+which have no ratified composite yet — and returns the per-artifact roll-up.
+`SermonWorkspace.jsx` calls it for the Finish flow, and
+[`SermonFinish.jsx`](../../src/components/SermonFinish.jsx) renders the result: the
+artifact review with per-artifact "go write it" jumps, Export to Word, and
+Mark-as-preached. At lower weight, the map-weight derivation
+(`deriveQuestionStatesFromSermon`) is the continuous surface, and the Study → Anchor
+handoff surfaces the four Study named outcomes. The answer **informs, never blocks**
+(CORE Process #1 — no walls). The completeness *policy* these composites implement —
+what "done" means per artifact, the N/A rules, the three lenient checks — is
+[WORKSPACE-CANON §5](../WORKSPACE-CANON.md); this section is the wiring.
 
 The advancement gates that used to fire at sub-phase boundaries (the seven
 `check*Threshold` wrappers in `studyAdvancement.js`) were deleted in Phase F
@@ -320,6 +348,10 @@ Equip → Frame empty-evidence baseline). Per-stage detail below.
 
 ## Study stage data
 
+> *What* each Study field asks and *why*, with the Merida-fidelity tags, is
+> [WORKSPACE-CANON §2](../WORKSPACE-CANON.md). This section is the storage + derivation
+> mechanics: which JSON column, which question kind, which composite.
+
 ### Step layer retired (Workspace Restructure 2026-05-10)
 
 The pre-restructure "Step 1 / Step 2 / Step 3 / Step 4" layer inside Study is
@@ -333,8 +365,10 @@ Frame). The `current_step` column was retired in the trail deletion sweep
 — 8-field shape: `context` → `surface_questions` → `divisions` → `characters`
 → `commands_declarations` → `big_ideas` → `obvious_point` → `applications`.
 
-- **Field 3 (Divisions / Thought Units)** — `unified-canvas` kind; the
-  [`IndentedSentenceCanvas`](../../src/components/IndentedSentenceCanvas.jsx)
+- **Field 3 (Divisions / Thought Units)** — `indented-canvas` kind (the live kind
+  string in [`studyFields.js`](../../src/utils/studyFields.js); "unified-canvas" survives
+  only in older comments / test narration as the name of the era-2 rework, not as a kind);
+  the [`IndentedSentenceCanvas`](../../src/components/IndentedSentenceCanvas.jsx)
   component mounts inside the writing surface. Canvas rows produce the
   canonical `thought_units` array via `deriveThoughtUnitsFromCanvas` on every
   save (depth-0 rows are the thought units per era-2-primacy ruling 8).
@@ -401,6 +435,10 @@ Frame). The `current_step` column was retired in the trail deletion sweep
 ---
 
 ## Assembly stage data
+
+> *What* each Assembly field asks and *why*, with the Merida-fidelity tags, is
+> [WORKSPACE-CANON §3](../WORKSPACE-CANON.md). Anchor and Frame are SADI-walked; Outline
+> and Equip are DRAFT pedagogy (not yet preacher-walked). This section is the mechanics.
 
 ### Anchor (MPT + MPS) → `sermons.main_point_pair` (JSON v19 envelope)
 
@@ -485,6 +523,9 @@ both survived Phase F.
 
 ## Manuscript stage data
 
+> *What* the Manuscript fields ask and *why* (DRAFT pedagogy) is
+> [WORKSPACE-CANON §4](../WORKSPACE-CANON.md). This section is the mechanics.
+
 `SERMON_MANUSCRIPT_FIELDS` in
 [`src/utils/sermonManuscriptFields.js`](../../src/utils/sermonManuscriptFields.js)
 — DRAFT pedagogy (2026-06-09, Merida Step 5 + "writing the message"). The
@@ -542,7 +583,11 @@ Triggered by Show Text from the writing-surface chrome.
 7. `updateSermon(id, fields)` IPC → `electron/main.js` `apply-mutation`
    handler.
 8. `buildUpdate()` validates against the `SERMON_COLUMNS` allowlist.
-9. SQL UPDATE runs; `saveDb()` schedules disk write (500ms debounce).
+9. The SQL UPDATE commits durably as it runs — better-sqlite3 in WAL mode, with no
+   serialize-and-rotate pipeline and no disk-write debounce. (`flushDb()` survives only
+   as a WAL checkpoint for the banner's Retry path — it is not a debounced disk write,
+   and the old `saveDb()` 500ms debounce no longer exists; see CORE Absolute Invariants
+   and [`electron/main.js`](../../electron/main.js).)
 
 **Position-write side path (D2c):**
 
@@ -555,9 +600,9 @@ Triggered by Show Text from the writing-surface chrome.
   dismissal) via `persistUpdate`. Draft is on disk before the surface
   re-renders.
 - Graceful close (Cmd-Q / Alt-F4 / menu Quit / taskbar) flushes via the
-  `before-quit` handler in `electron/main.js`. Crash/kill leaves a ~1.3s
-  window of pre-flush typing lost — documented as accepted risk in
-  `electron/main.js`.
+  `before-quit` handler in `electron/main.js`. Crash/kill leaves at most the
+  renderer's autosave-debounce window unflushed — the last `<800ms` of typing —
+  documented as accepted risk in `electron/main.js`.
 
 ---
 
@@ -566,8 +611,9 @@ Triggered by Show Text from the writing-surface chrome.
 - **Adding columns to `sermons`** requires updating `SERMON_COLUMNS` in
   *both* [`electron/contracts.cjs`](../../electron/contracts.cjs) and
   [`src/core/contracts.ts`](../../src/core/contracts.ts) — the two allowlists
-  mirror each other (37 entries each post-G). `buildUpdate()` throws in dev
-  if you miss this, but only if you exercise the save path. The
+  mirror each other (34 entries each as of v24; `delivery_notes` / `timing_notes`
+  were struck from the writable set in the v24 migration). `buildUpdate()` throws
+  in dev if you miss this, but only if you exercise the save path. The
   `assertSchemaContract()` startup check validates the live DB against the
   allowlist.
 - **Field-level editors** (`IndentedSentenceCanvas`, `SynthesisTable`) mount
@@ -588,15 +634,18 @@ Triggered by Show Text from the writing-surface chrome.
 
 ## Related docs
 
+- [`docs/WORKSPACE-CANON.md`](../WORKSPACE-CANON.md) — **the walk's *what & why***: every
+  question, named outcome, the completeness policy, Merida fidelity. This doc renders that
+  walk; canon defines it. (DRAFT until the Re-Foundation initiative ratifies it.)
 - [`docs/PROPOSALS/invisible-system-build-spec.md`](../PROPOSALS/invisible-system-build-spec.md)
   — the build spec for the writing-surface architecture; sweep-close
   inventory of remaining open work.
 - [`docs/CORE.md`](../CORE.md) — Process Contracts #1 (monotonic in
   expectation, not enforcement), #2 (completeness contract), #3 (visible at
-  thresholds, not narrated continuously).
+  thresholds, not narrated continuously), #4 (PC follows the text — points here for
+  mechanics).
 - [`docs/ENFORCEMENT_STATUS.md`](../ENFORCEMENT_STATUS.md) — clause-by-clause
-  enforcement status; the deferred-enforcement entry for Process Contract #2
-  names the completeness-surfacing work.
+  enforcement status for the four contracts.
 - [`docs/PROPOSALS/workspace-restructure-charter.md`](../PROPOSALS/workspace-restructure-charter.md)
   — the 4-stage → 3-stage collapse + Step layer retirement.
 - [`docs/PROPOSALS/era-2-primacy-initiative.md`](../PROPOSALS/era-2-primacy-initiative.md)

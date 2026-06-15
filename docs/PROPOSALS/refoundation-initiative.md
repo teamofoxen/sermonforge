@@ -1,6 +1,6 @@
 # Workspace Re-Foundation Initiative — working board
 
-> **Status: PHASE 1 IN PROGRESS — steps 1, 2 & 3 COMPLETE, 2026-06-14.** Chartered
+> **Status: PHASE 1 IN PROGRESS — steps 1–4 COMPLETE (1–3 2026-06-14; 4 2026-06-15).** Chartered
 > 2026-06-13 at the end of a long design conversation. This is the doc the work runs from.
 > It has two coupled jobs: (1) **consolidate the scattered document authority** into a
 > clean structure, and (2) **re-examine the contracts + the Study/Anchor question set
@@ -10,8 +10,11 @@
 > Phase 1.** Step 1's net-truth map is recorded below ("Phase 1 · Step 1 output"); step 2
 > produced the verified draft at `docs/WORKSPACE-CANON.md` (DRAFT, not yet binding); step 3
 > ruled the three contract examinations and slimmed CORE to live law (dated history → new
-> `docs/CORE-CHANGELOG.md`). The next action is step 4 — thin `sermon-workspace.md` to
-> mechanics + cross-refs. Rescoped from the former `merida-fidelity-initiative.md` (its
+> `docs/CORE-CHANGELOG.md`); step 4 thinned `sermon-workspace.md` to mechanics + cross-refs
+> (walk what/why → canon) and corrected four code-grounded drifts + the legacy-PC-column
+> disposition (in CORE-CHANGELOG + ENFORCEMENT_STATUS). The next action is step 5 —
+> historicize the initiatives + register WORKSPACE-CANON on ANCHORS + lift its DRAFT banner.
+> Rescoped from the former `merida-fidelity-initiative.md` (its
 > Merida findings are preserved below as the Phase-2 input).
 
 ---
@@ -105,8 +108,16 @@ passes are where most of the value is.
    moved to spec, principle kept as law. Examination 3: Principle scope note added (tool's telos,
    not the sermon's). CORE slimmed to live law, dated history → `docs/CORE-CHANGELOG.md`
    (`6b25097`).
-4. **Thin sermon-workspace.md — SOLO** migration + light verify (nothing dropped/orphaned;
-   drift-check covers much).
+4. **✅ DONE (2026-06-15) — Thin sermon-workspace.md — SOLO** migration + light verify. The
+   walk's what/why migrated to canon (per-region cross-refs); the doc is now how & where.
+   Fixed four code-grounded drifts (Field 3 kind → `indented-canvas`; completeness composites
+   are *wired* into `deriveSermonCompleteness`, not "uncalled"; save-flow `saveDb` 500ms debounce
+   → better-sqlite3 handler-commit; SERMON_COLUMNS 37 → 34) plus the ~1.3s → `<800ms` crash-window
+   nit. The legacy-PC-column disposition (removed, zero readers/writers) corrected in
+   CORE-CHANGELOG + ENFORCEMENT_STATUS (per-clause rows 39/41 + summary 24 + deferred 116/117).
+   PC mechanics now explicitly held here, as CORE Process #4 points. Verified by a 3-agent
+   ultracode pass (re-ground mechanics vs code · nothing-dropped vs canon · drift/refs):
+   **0 orphans, all 39 mechanics claims match code, 0 broken refs.**
 5. **Banner-historicize the initiatives + update `ANCHORS.md` — SOLO/mechanical** + final
    consistency verify (banners agree; ANCHORS matches; no doc still claims live authority).
 
@@ -162,7 +173,7 @@ the traced authority belongs elsewhere and must NOT be pulled into canon.
 - **Anchor/Frame fields** — MPT/MPS + Intro/Conclusion definitions live; the SpotlightWorksheet render layer is deleted (ReferencePane carries the pedagogy); flat mpt/mps auto-sync for Word export. SADI doc/memory still name StudyTab/SpotlightWorksheet/AI buttons. `[CANON]`
 - **OEM (Outline/Equip/Manuscript) DRAFT defs** — the "No field found" gap is CLOSED (wired, commit `059bfce`); DRAFT pedagogy, not preacher-walked. Stale: `SermonWritingSurface.jsx:396-403` comment + invisible-system spec still assert the gap; memory `project_oem_field_defs` is stale. `[CANON — DRAFT caveat]`
 - **Named-outcome architecture** — 8 outcomes, one per sub-phase. 2 of 8 (Sermon Outline, Sermon Body, from Restructure RW1) are first-draft names with no Merida/SFDI/SADI ratification — provisional. `[CANON]`
-- **Pastoral Context** — third voice inside Implications Field 3 (`room_specifics`/`cost_and_gift`); standalone PC card retired. Gap: era-2 Ruling 3 ordered the 3 legacy PC columns deleted; they are still retained + read-coerced — Ruling 3 only partly discharged. `[CANON+CORE]`
+- **Pastoral Context** — third voice inside Implications Field 3 (`room_specifics`/`cost_and_gift`); standalone PC card retired. The 3 legacy PC columns era-2 Ruling 3 ordered deleted are **removed** (struck from `SERMON_COLUMNS` in both contracts mirrors, zero readers/writers) — Ruling 3 **fully discharged**. *(Corrected 2026-06-15, step 4: the step-1 map read "still retained + read-coerced," but the code at HEAD has them struck.)* `[CANON+CORE]`
 - **Pending N/A ruling** — code enforces a strict two-question allowlist (`intro.redemptive_note` + `mps.gospel_check`); SFDI's Study-wide N/A grants suspended behind a "PENDING PASTOR RULING" banner. **The one open decision.** `[blocks the N/A section of canon]`
 
 **Saturation**
@@ -198,7 +209,7 @@ the traced authority belongs elsewhere and must NOT be pulled into canon.
 ### Cleanup worklists (for steps 2–5 — NOT step 1)
 
 - **A. Canon-bound doc cruft (highest value):** the SADI working doc (0 saturation mentions; StudyTab / SpotlightWorksheet / AI / 6-column fossils), `workspace-trail-charter.md` (the whole dead trail as "live"), the SPRD doc (`ThroughlineRail` "shipped"). WORKSPACE-CANON should supersede these wholesale.
-- **B. Separate infrastructure-doc pass (newly found in round 2 — do NOT fold into canon):** present-tense `sql.js` / `saveDb` references in `SYSTEMS/ipc.md:78,80`, `SYSTEMS/sermon-workspace.md:545`, `REFERENCE/ipc-channels.md:65,72,102`, `REFERENCE/project-structure.md:73,105`; and a schema-version disagreement at `SYSTEMS/database.md:54` (says v14; code + `schema.md` say v24).
+- **B. Separate infrastructure-doc pass (do NOT fold into canon):** present-tense `sql.js` / `saveDb` references in `SYSTEMS/ipc.md:78,80`, `REFERENCE/ipc-channels.md:65,72,102`, `REFERENCE/project-structure.md:73,105`; a schema-version disagreement at `SYSTEMS/database.md:54` (says v14; code + `schema.md` say v24); and `REFERENCE/schema.md:89-91` still calls the 3 legacy PC columns "retained defensively, no longer read" (stale — code struck them; the same correction step 4 applied to CORE-CHANGELOG, flagged by the step-4 verify pass). *(`SYSTEMS/sermon-workspace.md:545` `saveDb` — DONE in step 4.)*
 - **C. CORE slimming:** ~12 dated 2026-06-10 amendment-history parentheticals (identity, persona, Test Q5, Process #1/#2/#3, Mutation #4, Surface #4) + the pre-invisible-system retired-framing blocks quoted inside Process #1/#2/#3 → move to a changelog so CORE reads like law.
 - **D. Memory housekeeping:** mark `project_oem_field_defs` superseded by `059bfce`; mark `project_invisible_system_state` stale on the "composites uncalled / surfacing in progress" line.
 
