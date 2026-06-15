@@ -226,8 +226,8 @@ The three-voice conversation — what the text **teaches**, what it **asks**, th
 | Field (`key`) | Asks | Merida |
 |---|---|---|
 | Theological Significance (`theological_significance`) | 5 questions: about God / ourselves / Christ / timeless principles / particular doctrines | **[M, exact]** |
-| Personal Implications (`personal_implications`) | 4 verb-slots: Follow / Forsake / Receive / Settle | **[M / ⚠ — missing the necessary / probable / possible authority gradient]** |
-| Pastoral Context (`pastoral_context`) | **`room_specifics`**: who in the room the text speaks into. **`cost_and_gift`**: for those people, the cost and the gift | **[+ — the third voice]**; **[⚠ — "the room includes everyone" can flatten the prodigal / older-brother distinction]** |
+| Personal Implications (`personal_implications`) | 4 verb-slots: Follow / Forsake / Receive / Settle | **[M (Study side) — the necessary / probable / possible authority gradient is now taught here as ambient framing (2026-06-15, Phase 2), no per-row quota; the FULL application gradient lands in Equip at the OEM walk (§3.3)]** |
+| Pastoral Context (`pastoral_context`) | **`room_specifics`**: who in the room the text speaks into — named as the prodigal AND the older brother, not a generic "everyone." **`cost_and_gift`**: for those people, the cost and the gift | **[+ — the third voice]**; **[M — two-brothers restored 2026-06-15 (Phase 2): `room_specifics` now names the prodigal AND the older brother; the prior prompt listed generic groups but lacked that axis]** |
 | Implications Synthesis (`implications_synthesis`) | **`implication_per_unit`**: integrated implication beside each thought unit. **`synthesis`**: the whole passage — teach + ask + land — in one voice. *The Implications Synthesis.* | synthesis **[+ / ◆ named outcome]**; implication_per_unit **[◆ — the least-Merida of the per-unit tables]** |
 
 **The marinate moment.** The Implications Synthesis overview closes Study by sending the
@@ -250,7 +250,7 @@ the reference pane (the marinate beat continues here).
 | Field (`key`) | Questions | Merida |
 |---|---|---|
 | MPT — Main Point of the Text (`mpt`) | **`draft`** — re-read the passage, then draft what the text said to its original audience (past tense, author-intended); **`tighten`** — compress to one past-tense sentence | **[M]** |
-| MPS — Main Point of the Sermon (`mps`) | **`translate`** — MPT into present/future, aimed at your people; **`gospel_check`** — set it beside the Christ-Connection Statement; does the call rest on Christ's work or slip into "try harder"? *(N/A-able — see §5)*; **`tighten`** — fold into one present/future sentence | translate **[⚠ — the biggest single drift: reduced toward a tense-swap; missing the fallen-condition-focus "why do my people need this"]**; gospel_check **[M]**; tighten **[M]** |
+| MPS — Main Point of the Sermon (`mps`) | **`translate`** — begin from the full fallen-condition focus (the human problem; what hearers share with the text's original audience; and the grace this text holds out for that condition), then turn the MPT into present/future aimed at that need and that grace; **`gospel_check`** — set it beside the Christ-Connection Statement; does the call rest on Christ's work or slip into "try harder"? *(N/A-able — see §5)*; **`tighten`** — fold into one present/future sentence | translate **[M — FCF restored 2026-06-15 (Phase 2): now begins from the fallen-condition-focus; was the biggest single drift, a bare tense-swap]**; gospel_check **[M]**; tighten **[M]** |
 
 *Dropped from Merida here, for Phase 2:* the sermon title + the "3 AM test" **[✂]**.
 
@@ -264,7 +264,7 @@ the reference pane (the marinate beat continues here).
 
 | Field (`key`) | Asks | Merida |
 |---|---|---|
-| Equip (`equip`) | **`elements`** — under each outline point, the four functional elements: **Scripture · Explanation · Application · Illustration** (every point needs explanation + application; Scripture grounds; illustration serves) | hierarchy **[M]**; application **[M / ⚠ — Merida's application battery is thinner here: missing the idols-of-the-heart probe, the two-brothers address, and explicit evangelistic address]** |
+| Equip (`equip`) | **`elements`** — under each outline point, the four functional elements: **Scripture · Explanation · Application · Illustration** (every point needs explanation + application; Scripture grounds; illustration serves) | hierarchy **[M]**; application **[M / ⚠ — Merida's application battery is thinner here: missing the idols-of-the-heart probe, the two-brothers address, the necessary / probable / possible authority gradient (taught ambiently in Study §2.4; the full discipline belongs here), and explicit evangelistic address]** |
 
 ### 3.4 Frame → **Sermon Frame** *(SADI-walked)*
 

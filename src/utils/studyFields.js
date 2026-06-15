@@ -446,6 +446,13 @@ export const IMPLICATIONS_FIELDS = [
     key: "personal_implications",
     label: "Personal Implications",
     hint: "The second of three voices: what the text ASKS of the hearer. Articulate what the passage calls them to do, forsake, receive, and settle into.",
+    overview: {
+      title: "Personal Implications — and how firmly the text holds them",
+      paragraphs: [
+        "The second of three voices: what the text ASKS of the hearer — to follow, forsake, receive, and settle into. Name these from the text, not from your own hobby-horses.",
+        "As you name each, weigh how firmly the text holds it. Merida (after Robinson) grades them: necessary — the text demands it, and you can preach it 'thus saith the Lord'; probable — strongly suggested; possible — defensible, but don't preach a possible as if it were a command. More heresy is preached in application than in exegesis; this gradient is the guard. (You'll grade your actual sermon applications fully in Equip later — here, just hold each implication against it.)",
+      ],
+    },
     questions: [
       { key: "follow",  prompt: "What does the text call the hearer to do or follow? (Examples to imitate, commands to keep.)" },
       { key: "forsake", prompt: "What does the text warn against? (Errors to avoid, sins to forsake.)" },
@@ -458,7 +465,7 @@ export const IMPLICATIONS_FIELDS = [
     label: "Pastoral Context",
     hint: "The third of three voices: the SPECIFIC ROOM the text is landing in. Name the people, then articulate how the text lands for them — costly and gifted.",
     questions: [
-      { key: "room_specifics", prompt: "Who in your room is this text speaking into? Name specific people or situations the text speaks into — believers and unbelievers, the wearied, the doubting, the hungry, the new, the long-faithful." },
+      { key: "room_specifics", prompt: "Who in your room is this text speaking into? Name specific people and situations — and name both kinds Merida presses for: the prodigal (the openly lost or wandering) AND the older brother (the moralist in the pew — faithful-looking, trusting his own performance, not grace). A gospel word reaches both. Get specific: the wearied, the doubting, the new, the long-faithful, the one quietly keeping score." },
       { key: "cost_and_gift",  prompt: "For those specific people, what's the cost — what will be hard, costly, counter-intuitive? What's the gift — the comfort, hope, freedom, or invitation this text holds out for them?" },
     ],
   },

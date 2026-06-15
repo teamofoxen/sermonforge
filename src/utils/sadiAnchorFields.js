@@ -27,6 +27,12 @@
 // prompt directs him to. The Implications Synthesis is still the content
 // substrate the Main Point draws from — marinate is the re-reading of the
 // text, not a relabeling of the synthesis.
+//
+// Phase-2 Merida surgery (2026-06-15): MPS `translate` reworked to BEGIN from the
+// fallen-condition-focus — Merida's redemptive-focus questions / Chapell's FCF, "why do
+// my people need this" — not a bare tense-swap. The tense rule stays; the substance now
+// leads. Live source for the walk's questions = `docs/WORKSPACE-CANON.md` §3.1 (the SADI
+// working doc is now a frozen historical record).
 
 export const MAIN_POINT_PAIR_FIELDS = [
   {
@@ -50,13 +56,13 @@ export const MAIN_POINT_PAIR_FIELDS = [
   {
     key: "mps",
     label: "MPS — Main Point of the Sermon",
-    hint: "Present/future tense. Derived from MPT. Gospel-empowered, not moralistic. Single sentence after tightening.",
+    hint: "Present/future tense, starting from why your people need this text. Derived from MPT. Gospel-empowered, not moralistic. Single sentence after tightening.",
     heavyLifting: true,
     overview: {
       title: "MPS",
       paragraphs: [
         "Your MPT is in the reference pane on the 'Your work' tab — what the text meant, in past tense. MPS turns that into the present: what the text means for *us today*. Present or future tense.",
-        "Three moves: translate the MPT into present/future tense aimed at your people; check it against the Christ-Connection Statement to make sure the call rests on what Christ has done, not what the listener has to muster; tighten to one sentence.",
+        "Three moves: translate the MPT into the present — starting from why your people need this (the fallen condition, and the grace this text holds out for it), then aimed at that need in present or future tense; check it against the Christ-Connection Statement to make sure the call rests on what Christ has done, not what the listener has to muster; tighten to one sentence.",
         "The Christ-Connection Statement is your moralism guard. The gospel-check reads your draft alongside it — if the call slips into 'try harder' or 'be better,' you rewrite. The tighten folds your draft's substance and the gospel-check's gospel-power into one sentence.",
       ],
     },
@@ -64,7 +70,7 @@ export const MAIN_POINT_PAIR_FIELDS = [
       {
         key: "translate",
         prompt:
-          "Your MPT is in the reference pane on the 'Your work' tab. Take it from past tense to present or future. Aim it at your people. As many sentences as you need to get the substance right — gospel-check and tightening come next.",
+          "Your MPT is in the reference pane on the 'Your work' tab. Before you change the tense, name why your people need this text: what is the fallen condition — the human problem — this passage speaks to? What do your hearers share with its original audience? And what grace does this text hold out for that condition? Then turn the MPT from past into present or future, aimed at that need and that grace — so the call rests on what God gives, not just what we must do. As many sentences as you need to get the substance right — the gospel-check and tightening come next.",
       },
       {
         key: "gospel_check",

@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-06-15 — Workspace Re-Foundation Phase 2: Merida question surgery, batch 1
+
+- MPS `translate` reworked from a bare tense-swap to Merida's full fallen-condition focus (the human problem, what hearers share with the original audience, and the grace the text holds out), keeping the tense rule — the biggest single Merida drift, now restored.
+- Pastoral Context `room_specifics` now names the prodigal AND the older brother (Merida/Keller two-brothers), replacing a generic-categories list.
+- Personal Implications gained an ambient teaching of Robinson's necessary/probable/possible authority gradient (no new field/quota); the full application gradient is OEM-deferred to Equip.
+- Canon §2.4/§3.1/§3.3 fidelity tags updated (⚠→M); a 2-agent ultracode adversarial review confirmed fidelity, code soundness, and passing tests before commit.
+
+---
+
 ## 2026-06-15 — Workspace Re-Foundation Phase 1: step 5 — canon ratified, initiatives historicized (Phase 1 complete)
 
 - Ratified `docs/WORKSPACE-CANON.md` (DRAFT → LIVE): now the binding source for the sermon walk's what & why; the Merida tags stay as Phase-2 input.
