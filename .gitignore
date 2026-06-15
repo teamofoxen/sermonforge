@@ -34,8 +34,10 @@ Thumbs.db
 *.log
 # .vscode/
 
-# Local Claude settings (personal overrides, not project config)
+# Local Claude settings + runtime artifacts (personal/transient, not project config)
 .claude/settings.local.json
+.claude/scheduled_tasks.lock
+.claude/worktrees/
 
 # Theology source texts — large data files, not source code
 texts/
