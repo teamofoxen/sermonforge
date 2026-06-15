@@ -2,8 +2,9 @@
 
 > **Authority:** This document, together with `docs/RULES.md` and the `docs/SYSTEMS/*` files, defines
 > the system. All constraints here are binding. If code diverges from these rules, the code is wrong
-> unless explicitly justified. `CLAUDE_original.md` is the original monolithic version — retained for
-> historical reference only; do not use it as a working guide.
+> unless explicitly justified. Dated amendment history lives in [`docs/CORE-CHANGELOG.md`](CORE-CHANGELOG.md)
+> so these clauses read as current law. `CLAUDE_original.md` is the original monolithic version — retained
+> for historical reference only; do not use it as a working guide.
 
 ---
 
@@ -14,8 +15,7 @@ preaches ~42 weeks/year and shipped to pastors. The end user is a pastor, not
 a developer — often older, often low in software confidence, always under
 weekly time pressure. **Low software confidence is a binding design
 constraint:** when a labeled control and a minimal one are otherwise tied,
-the labeled one wins. (Persona sentence rearticulated 2026-06-10 in the UX
-overhaul governance batch; the wording is the pastor's to refine.)
+the labeled one wins.
 All application data lives locally on the user's machine under
 `app.getPath("userData")` (typically `%APPDATA%\sermonforge\data\` on Windows;
 resolved via `electron/config.js`). Sermon library files may reside in OneDrive
@@ -24,16 +24,11 @@ correctly without OneDrive. There is no backend, no server, no web deployment.
 All tooling decisions must prioritize simplicity.
 
 **The sermon is the primary unit of the shipped product; the series is carried
-context.** (Rearticulated 2026-06-10 — the previous paragraph described a
-series planning room, a Calendar that assigns sermons to Sundays, and
-reference features that did not exist at HEAD, and it contradicted the
-ratified "dashboard is re-entry" principle. Later the same day, T19 shipped
-the smallest honest form of the calendar sentence: clicking a day opens New
-Sermon with that date pre-filled. The rest — the planning room, reference
-features — remains a named roadmap direction, not the shipped identity: a
-sermon may belong to a series, carries that membership as first-class
-state, and the Series Planner remains a stub until that work gets its own
-charter.)
+context.** A sermon may belong to a series and carries that membership as
+first-class state; the series planning room, a Calendar that assigns sermons
+to Sundays, and top-level reference features remain a named roadmap direction,
+not the shipped identity, and the Series Planner is a stub until that work gets
+its own charter. (History: `docs/CORE-CHANGELOG.md`.)
 
 *One-sentence identity: SermonForge starts where sermon prep actually starts — with the text.
 The system forces clarity through a structured throughline, end to end pastor-authored.
@@ -80,17 +75,13 @@ Terms used by the contracts below. Code, docs, and contract clauses bind to
 these names. (See State Contract clause 5: *one name per concept*.)
 
 - **Stage** — one of Study, Assembly, Manuscript. Tracked as
-  `current_stage` on every sermon. (Workspace Restructure 2026-05-10:
-  pre-restructure stages `Blueprint` and `Frame` retired, both coerced to
-  `Assembly` on read. `Delivery` struck from the vocabulary in the v24
-  migration session, 2026-06-10 — its ARI Phase 7 legacy tolerance retired
-  with no production sermons in existence.)
+  `current_stage` on every sermon. Blueprint, Frame, and Delivery are not
+  stages (retired; `current_stage` is read straight through with no legacy
+  coercion — history in the changelog).
 - **Sub-phase** — within Study: Observe, Interpret, Redemptive Thread,
   Implications. Within Assembly: Anchor, Outline, Equip, Frame. Tracked as
-  `current_sub_phase`. (Workspace Restructure 2026-05-10: the within-Study
-  Step layer — Exegesis / MPT_MPS / Outline / FunctionalElements — retired.
-  The `current_step` column was retired in the trail deletion sweep
-  (Phase B2); field-level last-touched moves to `last_touched_position`.)
+  `current_sub_phase`; field-level last-touched is `last_touched_position`.
+  (The retired within-Study Step layer: history in the changelog.)
 - **Boundary** — the transition point between two adjacent values at the same
   level. *Stage boundary* (e.g., Study → Assembly, Assembly → Manuscript).
   *Sub-phase boundary* (e.g., Observe → Interpret inside Study, Anchor →
@@ -120,14 +111,11 @@ these names. (See State Contract clause 5: *one name per concept*.)
   outcomes that compose into a preaching foundation strong enough to support
   the Main Preaching Thought (MPT) and Main Preaching Statement (MPS).
 - **Pastoral Context (PC)** — the third voice in the Implications three-way
-  conversation. PC lives in Phase 4 Field 3 of Study, with two questions:
-  **The Room** (`room_specifics`) and **The Cost and Gift** (`cost_and_gift`).
-  Stored inside the `implications` JSON column at
-  `pastoral_context.room_specifics` / `pastoral_context.cost_and_gift`. Three
-  legacy schema columns (`topic_theme`, `audience_assumptions`,
-  `background_noise`) are retained for legacy data defensively but no longer
-  rendered or read by the AI context tier (rewired in SPRD B4.2 / C5,
-  2026-05-04).
+  conversation. That PC is *driven by the text, not the reverse* is the law
+  (Process Contract #4). The mechanics — which field PC lives in, its
+  questions, and its storage — are spec, in `docs/SYSTEMS/sermon-workspace.md`.
+  (Moved out of CORE in Re-Foundation Phase 1, examination 2 — principle as
+  law, mechanics as spec; history in the changelog.)
 
 ### 1. State Contract — what exists, and where am I in it
 
@@ -169,17 +157,7 @@ these names. (See State Contract clause 5: *one name per concept*.)
    does not refuse navigation; the expectation lives in the writing surface's
    flow and the map's weighting, not in a wall. This clause has never
    forbidden a Back control — "revisiting earlier work is fully supported"
-   includes a labeled Back beside Next (clarified 2026-06-10; the
-   forward-only chrome came from the invisible-system build spec's
-   one-control line, which the shipped surface had already deviated from,
-   not from this contract). (Pre-invisible-system framing
-   — "movement is monotonic by default; backward movement is allowed but
-   explicit — the user knows they went back" — retired 2026-05-18 in the
-   trail deletion sweep, Phase G. The earlier framing was paired with a
-   spine-side forward-to-prior rejection that refused navigation; that
-   rejection was deleted in G alongside Process #2's. The contract's intent
-   — there is a natural direction the work moves — holds; its enforcement
-   shifted from a refusing wall to a calm surface plus the map.)
+   includes a labeled Back beside Next. (History: `docs/CORE-CHANGELOG.md`.)
 2. **A sermon is complete when its load-bearing artifacts exist.** The four
    Study named outcomes (Observation Set, Interpretation Set, Christ-
    Connection Statement, Implications Synthesis), the Main Point Pair (MPT
@@ -202,51 +180,27 @@ these names. (See State Contract clause 5: *one name per concept*.)
    walls). Completeness is also visible continuously at lower weight via
    the map's per-question shading (`deriveQuestionStatesFromSermon`) and at
    the Study → Anchor handoff (`deriveStudyOutcomesFromSermon`,
-   `deriveStudyUnfinishedFromSermon`). (Pre-invisible-system framing —
-   "movement is gated by user evidence; the system does not advance a
-   sermon to the next stage unless the user has produced the artifact
-   that stage requires; the constraint *is* the gate" — retired 2026-05-18
-   in the trail deletion sweep, Phase G. The advancement-wall it described
-   was deleted across F + G; the deeper commitment — sermon completeness
-   depends on load-bearing artifacts — survives in the completeness
-   contract above. The composites the trail deletion sweep deliberately
-   kept across F as "the surviving completeness contract" become CORE-
-   canonical here.)
+   `deriveStudyUnfinishedFromSermon`). The eight composites are CORE-canonical.
+   (History: `docs/CORE-CHANGELOG.md`.)
 3. **Movement is visible at thresholds, not narrated continuously.** Major
    transitions — sermon start, the Study → Anchor handoff, and sermon
    completion — surface as discrete landing screens (`.ssl-overlay`,
    `.sah-overlay`, `.sfin-overlay`) the pastor reads and dismisses. The
-   completion threshold (added 2026-06-10) is the end of the walk made
-   visible: the "Finish sermon →" control replaces a silently disabled
-   forward chevron, and its screen carries the artifact review plus the
-   Export and Mark-as-preached actions — the moment the deliverable leaves
-   the app is by this clause's own logic the largest threshold there is.
-   It is summoned, never automatic, and re-openable forever. Every threshold
-   screen is re-readable after dismissal (amended 2026-06-10): the map header
-   carries standing "Read again" doors for the sermon-start and handoff
-   screens, and a "go write it" jump off the handoff does not consume it —
-   the screen returns on the next Anchor entry until explicitly closed.
-   Dismissal ends the interruption, never the access. Within-stage
-   step movement (chevron-next, map-jump) is silent by design. A static
-   statement of place is permitted (amended 2026-06-10): the writing surface
-   may carry a standing "Study · Interpret"-shaped place line, and the map a
-   "You are here" line — these state *where*, never *that movement happened*,
-   and they never change register when the pastor moves. What stays banned is
-   movement narration: any surface that announces, celebrates, or comments on
-   a transition outside the threshold screens above. The line between
-   orientation (helpful — at boundaries, or statically present) and narration
-   (clunky, always-on commentary) is load-bearing per the
-   invisible-system build spec's *Strategic orientation at thresholds*
-   section ("*Orientation is discrete and lives at thresholds. It is never
-   continuous and never present during the work.*") and the era-2 primacy
-   charter's *Constraint without ceremony* clause ("*It is not the system's
-   job to announce that work happened, mark that a boundary was
-   crossed...*"). (Pre-invisible-system framing — "movement is a visible
-   event; 'Continue' is movement, and movement is never silent" — retired
-   2026-05-17 in the trail deletion sweep, Phase D2e. The contract's
-   intent — movement gets visibility — holds; its rendering shifted from
-   an always-on tab-change banner to discrete threshold surfaces. The AI
-   clause came out separately in ARI Phase 9, 2026-05-09.)
+   completion threshold is summoned (the "Finish sermon →" control, which
+   replaced a silently disabled forward chevron), never automatic, and
+   re-openable forever; its screen carries the artifact review plus Export and
+   Mark-as-preached. Every threshold screen is re-readable after dismissal —
+   standing "Read again" doors on the map header for the sermon-start and
+   handoff screens, and a "go write it" jump off the handoff does not consume
+   it. Dismissal ends the interruption, never the access. Within-stage step
+   movement (chevron-next, map-jump) is silent by design. A static statement of
+   place is permitted: the writing surface's "Study · Interpret" place line and
+   the map's "You are here" line state *where*, never *that movement happened*.
+   What stays banned is movement narration — any surface that announces,
+   celebrates, or comments on a transition outside the threshold screens. The
+   line between orientation (helpful — at boundaries, or statically present)
+   and narration (clunky, always-on commentary) is load-bearing. (History +
+   the invisible-system and era-2 rationale anchors: `docs/CORE-CHANGELOG.md`.)
 4. **Pastoral Context is driven by the text, not the other way around.** The
    text speaks first. Pastoral Context is a canonical artifact of every sermon,
    but it does not precede engagement with the text and is not a prerequisite
@@ -256,10 +210,7 @@ these names. (See State Contract clause 5: *one name per concept*.)
    and fully integrated at Implications. The exact phase-by-phase mechanics
    are specified in `docs/SYSTEMS/sermon-workspace.md`.
 5. **No AI substitution.** The system contains no AI authorship surfaces. The
-   pastor authors all sermon content. (ARI Phase 9, 2026-05-09: AI removed
-   from the product entirely. The `ai_proposal`/`ai_apply` mutation cycle
-   that previously enforced "AI augments, never substitutes" was removed
-   alongside the AI surfaces it gated.)
+   pastor authors all sermon content. (History: `docs/CORE-CHANGELOG.md`.)
 6. **The workspace throughline is structural.** Each Study or Assembly
    sub-phase produces a named outcome by way of a throughline that runs
    through its fields and crosses each sub-phase boundary by handoff. The
@@ -282,18 +233,12 @@ these names. (See State Contract clause 5: *one name per concept*.)
    sub-phase); SADI carries seven-slot entries for all four anchor fields
    (MPT, MPS, Intro, Conclusion), two named outcomes (Main Point Pair
    for Anchor; Sermon Frame for Frame), and sub-phase-boundary handoff
-   articulations. (Pre-restructure language: SFDI was scoped to
-   "Step 1 — the four sub-phases"; SADI's anchor *steps* were Step 2
-   and Step 5. Workspace Restructure 2026-05-10 collapsed the Step layer
-   so the anchors are sub-phases inside Assembly.) This clause is
-   therefore binding in full — the throughline's structural integrity is
-   testable against the SFDI document AND the SADI document together.
-   (Honesty parenthetical, 2026-06-10: Assembly's Outline and Equip
-   sub-phases and the Manuscript stage carry DRAFT field definitions —
-   drafted 2026-06-09 from the Merida source, not yet preacher-walked;
-   their canonical articulation is pending an OEM content walk. Until
-   then this contract is testable in full only for Study and
-   Anchor/Frame.)
+   articulations. This clause is therefore binding in full — the throughline's
+   structural integrity is testable against the SFDI document AND the SADI
+   document together. (Honesty: Assembly's Outline and Equip sub-phases and the
+   Manuscript stage carry DRAFT field definitions — Merida-grounded but not yet
+   preacher-walked; until an OEM content walk completes, this contract is
+   testable in full only for Study and Anchor/Frame.)
 
    (Saturation amendment, 2026-06-10 — pastor's ruling: the throughline is
    forward-compiling, but it is NOT closed to the text. Two commitments hold.
@@ -312,24 +257,19 @@ these names. (See State Contract clause 5: *one name per concept*.)
    the Main Point draws from is still the pastor's integrated synthesis and
    four named outcomes. Marinate is restored as what Merida means by it — a
    return to the passage before the forge — now surfaced by the system rather
-   than left entirely to the pastor. Rationale: the saturation investigation
-   (2026-06-10) found the walk fed the pastor only his own summaries forward
-   from the Study→Anchor seam onward, producing an "equation" feel at the
-   load-bearing moments; this amendment restores the text to those moments.)
+   than left entirely to the pastor. (Rationale + the era-2 Ruling 1/4
+   supersession detail: `docs/CORE-CHANGELOG.md`.)
 
 ### 3. Mutation Contract — what happens when something changes
 
 1. **User typing always wins by default.** All sermon content is pastor-typed.
    The system does not overwrite user-typed content. There are no system-driven
-   writes to sermon fields outside the pastor's keystrokes. (ARI Phase 9,
-   2026-05-09: pre-ARI this clause governed the AI proposal/apply cycle that
-   gated AI-driven writes; with AI removed, the rule reduces to "the pastor
-   is the only author.")
-2. **The proposal slot was retired in ARI Phase 9.** The original clause
-   reserved a separate slot for AI proposals so the pastor's existing field
-   was never touched while a proposal was pending. With AI removed (ARI,
-   2026-05-09), no system actor ever writes to a sermon field; the slot
-   mechanism is unnecessary.
+   writes to sermon fields outside the pastor's keystrokes. (History:
+   `docs/CORE-CHANGELOG.md`.)
+2. **The proposal slot was retired (ARI Phase 9).** With AI removed, no system
+   actor writes to a sermon field, so the slot mechanism is unnecessary. (Kept
+   as a numbered gravestone to preserve Mutation-contract numbering that other
+   docs reference; history in the changelog.)
 3. **Saves are events, not background noise.** Successful saves are visible —
    the user can answer "is my work safe" at any moment. Failed saves are visible
    and retryable. Silent saves are not allowed in either direction.
@@ -338,8 +278,7 @@ these names. (See State Contract clause 5: *one name per concept*.)
    input-wiping. The friction scales with the loss: a generic two-step
    confirm is the floor for row-level destruction, not the model for
    everything — whole-sermon destruction requires a named confirm or an
-   undo window (amended 2026-06-10; satisfied by the v24 soft delete,
-   whose tombstone + visible Undo makes the reversal cost near zero).
+   undo window, satisfied by the v24 soft delete (tombstone + visible Undo).
    Destruction that arrives without a Delete button — reload, restart,
    re-seed, field-clearing toggles — is governed by this clause too.
    The DeleteButton's two-step inline confirm remains the canonical
@@ -360,10 +299,8 @@ these names. (See State Contract clause 5: *one name per concept*.)
 4. **"You are here" is always answerable — on every surface, including the
    workspace.** Top-level destinations answer it with a canonical sidebar
    entry and active-state. The workspace answers it with a persistent locus
-   (the static "Stage · Region" place line) and an on-demand map (amended
-   2026-06-10 — the clause's promise was bigger than its sidebar mechanism,
-   and the sidebar doesn't exist on the screen the pastor lives in). No
-   nameless wandering.
+   (the static "Stage · Region" place line) and an on-demand map. No
+   nameless wandering. (History: `docs/CORE-CHANGELOG.md`.)
 5. **One re-entry convention.** Back is back. Labeled, consistent, predictable
    from any surface.
 
@@ -383,10 +320,7 @@ questions before it ships:
 5. **Where does the pastor SEE this — and what does it orphan?** Name the
    surface that renders the change; if no surface renders it, it has not
    shipped. If it deletes anything, name what consumed the deleted thing —
-   orphans are handled in the same change or explicitly tombstoned. (Added
-   2026-06-10: the navHint chain built across three files and dropped in
-   the fourth, and the dead composite gates with no caller, are the two
-   failure modes this question exists to catch.)
+   orphans are handled in the same change or explicitly tombstoned.
 
 A change that passes all five ships. A change that fails any one of them
 either reshapes to pass, or it does not ship.
@@ -408,13 +342,12 @@ either reshapes to pass, or it does not ship.
   in `electron/main.js`. No SQL is accepted from the renderer.
 - **No direct `window.electronAPI` outside wrapper modules.** Components use `src/db/database.js`
   exports; they never call `window.electronAPI` directly.
-- **better-sqlite3 for both databases; sqlite-vec loads only on theology.db.** (Amended
-  2026-06-10: sermonforge.db moved from sql.js to better-sqlite3 — writes are durable
-  journaled commits, WAL mode, no serialize-per-write pipeline.) The two connections stay
-  separate: theology.db loads the sqlite-vec extension for vector semantic search; the
-  main DB never loads extensions. Native modules must be rebuilt for Electron's ABI after
-  install: `npx @electron/rebuild -m node_modules/better-sqlite3`. Both native packages
-  are in `asarUnpack` in `package.json`.
+- **better-sqlite3 for both databases; sqlite-vec loads only on theology.db.** Writes are
+  durable journaled commits in WAL mode (no serialize-per-write pipeline). The two
+  connections stay separate: theology.db loads the sqlite-vec extension for vector semantic
+  search; the main DB never loads extensions. Native modules must be rebuilt for Electron's
+  ABI after install: `npx @electron/rebuild -m node_modules/better-sqlite3`. Both native
+  packages are in `asarUnpack` in `package.json`. (Driver-swap history: `docs/CORE-CHANGELOG.md`.)
 - **ESM/CJS boundary.** `src/utils/churchCalendar.js` is ESM and cannot be imported from
   `electron/main.js` (CommonJS). Any main-process feature needing liturgical season logic
   must inline it.
@@ -439,12 +372,11 @@ either reshapes to pass, or it does not ship.
   `src/utils.js`. It assigns the stable UUID that `functional_elements` keys depend on.
   Never construct `{id, text}` objects inline anywhere else.
 
-- **Database writes commit at the IPC handler.** (Amended 2026-06-10; the prior invariant —
-  the 500ms `saveDb()` debounce protecting sql.js's whole-DB serialization — retired with
-  the driver swap.) Every spine write is a durable SQLite commit the moment its handler
-  returns; there is no main-process save debounce to protect, and none may be reintroduced.
-  The renderer-side 800ms autosave debounce in `SermonWorkspace` remains deliberate
-  (keystroke batching), and is flushed on close/quit/reload via `src/utils/closeFlush.js`.
+- **Database writes commit at the IPC handler.** Every spine write is a durable SQLite commit
+  the moment its handler returns; there is no main-process save debounce to protect, and none
+  may be reintroduced. The renderer-side 800ms autosave debounce in `SermonWorkspace` remains
+  deliberate (keystroke batching), and is flushed on close/quit/reload via
+  `src/utils/closeFlush.js`. (Driver-swap history: `docs/CORE-CHANGELOG.md`.)
 
 - **The design system lives entirely in `src/styles/global.css`** as CSS variables. Never
   hardcode colors, font names, or layout dimensions outside that file. Never change the
