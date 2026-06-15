@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-06-14 — Workspace Re-Foundation Phase 1: steps 1–3 shipped
+
+- Net-truth map: two ultracode fan-outs traced all 11 live-authority sources against the code at HEAD into one 22-subject map on the working board.
+- Drafted + verified `docs/WORKSPACE-CANON.md` (the walk's what & why — 3 stages / 8 sub-phases / 8 named outcomes / 34 fields, Merida-tagged); a 15-agent pass found 0 blockers.
+- Ruled the per-unit gate / N-A: an honest "nothing here / doesn't apply" now counts as done (named-outcome paragraphs stay no-N/A) — written into the canon + the SFDI banner; the per-cell code build is scheduled.
+- Slimmed CORE to live law (461→392 lines): dated amendment history relocated to new `docs/CORE-CHANGELOG.md`; Pastoral Context mechanics moved to spec, principle kept as Process #4 law.
+- Canon stays DRAFT (binds at step 5); no production code changed this session.
+
+---
+
 ## 2026-06-13 — Workspace Re-Foundation Initiative chartered (planning only)
 
 - New working board `docs/PROPOSALS/refoundation-initiative.md` (rescoped from the day's `merida-fidelity-initiative.md`, now deleted). Two coupled jobs: consolidate the sprawled document authority (~15 binding docs, ~8 governing the same concern through supersession chains) into CORE + a new canonical spec, and re-examine the contracts + Study/Anchor question set through Tony Merida's intent.

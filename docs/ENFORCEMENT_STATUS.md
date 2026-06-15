@@ -1,6 +1,6 @@
 # Enforcement Status
 
-**Last verified:** 2026-06-10 — Process #2's completeness contract is now fully wired: all eight composites feed `deriveSermonCompleteness`, rendered by the SermonFinish completion threshold (added to Process #3's canonical threshold list). Mutation #5 gained the `mapError` translation layer at every error surface; `canonical-loading-verb` lint extended with 'Exporting…' in lockstep with the LoadingVerb union. 706 tests pass; finish→export→Word verified live.
+**Last verified:** 2026-06-14 — CORE slimmed (Re-Foundation Phase 1 step 3): dated amendment history relocated to [`docs/CORE-CHANGELOG.md`](CORE-CHANGELOG.md), the now-false "Blueprint/Frame coerced to Assembly on read" Stage line dropped, and Pastoral Context *mechanics* moved to `sermon-workspace.md` (the principle stays as Process #4 law) — no enforced-clause semantics or mechanisms changed. The examination-1 N/A ruling lives in WORKSPACE-CANON §5 + the SFDI banner; its code enforcement is unchanged (two-question allowlist), with the per-cell/Study N/A a scheduled build.
 **Verified against:** [`docs/CORE.md`](CORE.md).
 **History:** see `git log docs/ENFORCEMENT_STATUS.md` and [`CHANGELOG.md`](../CHANGELOG.md). Per-event narrative is intentionally not duplicated here.
 
