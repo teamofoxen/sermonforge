@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-06-15 — Workspace Re-Foundation Phase 2: the cuts (item 4)
+
+- Chapell's 3 AM test restored as a crispness self-check folded into MPS `tighten` ("woken at 3am, could you say it?") — not a new field; the sermon title stays dropped (Merida makes it optional; every sermon already has a name).
+- Merida's 25-observations device kept as ambient "don't stop at the obvious" posture in Observe's entry teaching — deliberately NOT a 25-row quota (which would re-commit the mechanization trap the intent audit flags).
+- Canon §2.1/§3.1 drop-notes ratified; a 1-agent ultracode review confirmed fidelity (non-mechanizing), code soundness, and passing tests (21/21 study, 13/13 anchor).
+
+---
+
 ## 2026-06-15 — Workspace Re-Foundation Phase 2: Merida question surgery, batch 1
 
 - MPS `translate` reworked from a bare tense-swap to Merida's full fallen-condition focus (the human problem, what hearers share with the original audience, and the grace the text holds out), keeping the tense rule — the biggest single Merida drift, now restored.

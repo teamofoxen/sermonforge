@@ -84,7 +84,7 @@ export const MAIN_POINT_PAIR_FIELDS = [
       {
         key: "tighten",
         prompt:
-          "Fold your work into one present/future-tense sentence. The substance from your first draft, the gospel-power from your gospel-check — both stay. It doesn't need to be short — it needs to be *one sentence*. Long is fine if it holds together. This is your MPS.",
+          "Fold your work into one present/future-tense sentence. The substance from your first draft, the gospel-power from your gospel-check — both stay. It doesn't need to be short — it needs to be *one sentence*. Long is fine if it holds together. This is your MPS. Chapell's test: if someone woke you at 3 a.m., could you say it? If not, it isn't tight enough yet.",
       },
     ],
   },

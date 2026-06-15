@@ -183,7 +183,7 @@ sight of the room. Eight fields.
 | Obvious Point (`obvious_point`) | The plain-sense point in one sentence | **[M]** — *binds the Observation Set* |
 | Possible Implications (`applications`) | What the passage is starting to press on the room; what's hard, what's hopeful | **[+]** — the first surfacing of Pastoral Context; "early sight, not application" |
 
-*Dropped from Merida here, for Phase 2:* the 25-observations device **[✂]**; the
+*Dropped from Merida here:* the 25-observations device — **ruled 2026-06-15 (Phase 2): kept as ambient posture** (the "don't stop at the obvious" framing now in Observe's entry teaching on the Context field), **not** a 25-row quota, which would re-commit the mechanization trap **[✂ → ratified with teaching]**; the
 author/date/audience/genre "background" layer **[✂, split: world-of-the-book →
 series-level Book Study; the genre slice → Interpret's Genre field]**.
 
@@ -252,7 +252,7 @@ the reference pane (the marinate beat continues here).
 | MPT — Main Point of the Text (`mpt`) | **`draft`** — re-read the passage, then draft what the text said to its original audience (past tense, author-intended); **`tighten`** — compress to one past-tense sentence | **[M]** |
 | MPS — Main Point of the Sermon (`mps`) | **`translate`** — begin from the full fallen-condition focus (the human problem; what hearers share with the text's original audience; and the grace this text holds out for that condition), then turn the MPT into present/future aimed at that need and that grace; **`gospel_check`** — set it beside the Christ-Connection Statement; does the call rest on Christ's work or slip into "try harder"? *(N/A-able — see §5)*; **`tighten`** — fold into one present/future sentence | translate **[M — FCF restored 2026-06-15 (Phase 2): now begins from the fallen-condition-focus; was the biggest single drift, a bare tense-swap]**; gospel_check **[M]**; tighten **[M]** |
 
-*Dropped from Merida here, for Phase 2:* the sermon title + the "3 AM test" **[✂]**.
+*Ruled 2026-06-15 (Phase 2):* the sermon **title** stays dropped — Merida makes it an optional third stage, and every sermon already carries a name (CORE State Contract clause 3); Chapell's **3 AM test** is restored as a crispness self-check folded into MPS `tighten` (not a new field). **[✂ title = ratified drop · 3 AM test = M, restored as a check]**
 
 ### 3.2 Outline → **Sermon Outline** *(DRAFT)*
 

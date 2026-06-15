@@ -70,6 +70,12 @@ export const OBSERVE_FIELDS = [
     key: "context",
     label: "Context",
     hint: "Where in the book is this passage, and how does that shape what's happening here?",
+    overview: {
+      title: "Observe — don't stop at the obvious",
+      paragraphs: [
+        "Observe is the 'Captain Obvious' phase — read, reread, and note what the text plainly says, before any commentary. Bring Merida's posture: he tells students to make twenty-five observations on a passage; they're sure it's impossible, then find it isn't. You won't count to twenty-five here, but don't stop at the first few things you notice — the obvious is the floor, not the ceiling. The labor of looking is itself the formation.",
+      ],
+    },
     questions: [
       { key: "before",             prompt: "What happened before this passage?" },
       { key: "after",              prompt: "What happens after?" },
