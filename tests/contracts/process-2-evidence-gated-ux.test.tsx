@@ -92,10 +92,6 @@ describe("SermonWorkspace mounts the writing surface at sub-phase 1 regardless o
         context: "Romans 8:1 sets the believers in Christ Jesus.",
         divisions: FIELD_3_MINIMAL_FILLED,
         obvious_point: "Believers are now in Christ Jesus, no longer condemned.",
-        applications: {
-          pressing:         { value: "The room needs to hear that condemnation is gone.", na: false },
-          hard_and_hopeful: { value: "Hard: facing felt condemnation. Hopeful: it's already lifted in Christ.", na: false },
-        },
       }),
     });
 

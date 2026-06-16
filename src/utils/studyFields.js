@@ -54,13 +54,15 @@ import { tryParse } from "../utils";
 //   Context → Surface Questions → Divisions / Thought Units
 // Then the lens cluster reads against Field 3's spine:
 //   Main Characters → Commands and Declarations → Big Ideas
-// First synthesis + bridge into Interpret close the segment:
-//   Obvious Point → Possible Implications
+// First synthesis closes the segment:
+//   Obvious Point
+// (Possible Implications was removed 2026-06-15, Phase 2 — a SermonForge addition cut.)
 //
 // Retired keys: `commands`, `statements`, `basic_outline`, `background`. The
 // `background` field (author/date/audience/genre) was retired 2026-05-05 —
 // the world-of-the-book layer was carrying weight better placed in series-
-// level Book Study (`book_background`) and in Phase 2's Genre field. Old
+// level Book Study (`book_background`). (The genre slice briefly lived in an
+// Interpret Genre field, itself removed 2026-06-15, Phase 2.) Old
 // data carrying retired keys stays in the JSON column (parseStructuredField
 // preserves them) but does not render under any current field. No production
 // sermons exist, so no auto-mapping logic ships.
@@ -80,7 +82,6 @@ export const OBSERVE_FIELDS = [
       { key: "before",             prompt: "What happened before this passage?" },
       { key: "after",              prompt: "What happens after?" },
       { key: "impact",             prompt: "Do those answers impact what's happening in this passage? If so, how?" },
-      { key: "holy_spirit_intent", prompt: "Why do you think the Holy Spirit led the author to write (a) this passage, (b) in this place?" },
     ],
   },
   {
@@ -123,34 +124,15 @@ export const OBSERVE_FIELDS = [
   { key: "commands_declarations", label: "Commands and Declarations", hint: "For each main sentence, name what kind of action it carries — a command (asking the hearer to do something) or a declaration (naming reality). Then say in your own words what the sentence is doing." },
   { key: "big_ideas",             label: "Big Ideas",                 hint: "What concepts is the passage wrestling with? List them. For each, a one-line note on how it shows up." },
   { key: "obvious_point",         label: "Obvious Point",             hint: "State the plain-sense point of the passage in one sentence." },
-  {
-    key: "applications",
-    label: "Possible Implications",
-    hint: "First surfacing of Pastoral Context — early sight, not full application.",
-    questions: [
-      { key: "pressing",          prompt: "What is the passage starting to press on for the people you're preaching to?" },
-      { key: "hard_and_hopeful",  prompt: "What's hard here for the hearer? What's hopeful?" },
-    ],
-    heavyLifting: true,
-    overview: {
-      title: "Possible Implications",
-      paragraphs: [
-        "You've worked your way through what the text says — its location, its surface, its spine, its actors, its actions, its concepts, and its plain-sense point. The Observation Set is almost done.",
-        "Before we leave Observe and step into Interpret, one more move. Look at the passage and ask: what is it starting to suggest about the room you're preaching to? What's it pressing on? What's hard? What's hopeful?",
-        "Not full application yet. Application is its own work, later. Here we're naming early sight — the moments where the passage starts to feel weighty for the people in the pews. The first time pastoral context enters, while the text is still doing the leading.",
-        "If you find yourself drafting application or making sermon points, ease back. This is awareness, not exhortation. The text is still ahead of you here.",
-      ],
-    },
-  },
 ];
 
 // ── Phase 2: Interpret ───────────────────────────────────────────────────────
 //
-// 8 fields. Reshaped to 7 fields per SFDI Phase 2 walk (2026-05-03), shipped
-// as SPRD B2.0 (2026-05-04); Genre added 2026-05-05 as a light, optional
-// second-position field that lets the literary form set the lens before the
-// dissection work begins. Merida four-part arc through the eight fields:
-//   Deeper Context → Genre → Recurring Ideas → Character Purpose → Contrasts
+// 7 fields. Reshaped to 7 per SFDI Phase 2 walk (2026-05-03), shipped as SPRD
+// B2.0 (2026-05-04). (Genre was added 2026-05-05 as a light optional field, then
+// removed 2026-06-15 in the Phase-2 Merida surgery — a SermonForge addition cut.)
+// Merida four-part arc through the seven fields:
+//   Deeper Context → Recurring Ideas → Character Purpose → Contrasts
 //   → Cross-References → Commentary Notes (last, to check) → Interpretation Synthesis
 //
 // Retired keys from the prior shape: `context_impact`, `characters`, `diagram`,
@@ -184,15 +166,6 @@ export const INTERPRET_FIELDS = [
     questions: [
       { key: "unresolved",     prompt: "What questions about this passage are still unresolved after Observe — and what can you answer about them now?" },
       { key: "book_argument",  prompt: "How does this passage fit the book's overall argument? What does the author intend across the whole that bears on this passage?" },
-    ],
-  },
-  {
-    key: "genre",
-    label: "Genre",
-    hint: "Name the literary form and let it set the lens. Optional — fill it in when genre is doing real interpretive work for this passage.",
-    questions: [
-      { key: "genre",  prompt: "What is the genre of this passage?" },
-      { key: "impact", prompt: "How might its genre impact interpretation?" },
     ],
   },
   { key: "recurring_ideas",         label: "Recurring Ideas",         hint: "What ideas, words, or themes recur within this passage? For each, name what the recurrence is signaling about what the author is hammering home." },

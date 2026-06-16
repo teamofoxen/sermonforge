@@ -39,7 +39,7 @@ function completeSermon() {
     }),
     sermon_frame: env({
       intro: { hook: "h", bridge_to_text: "b", expectations: "e", redemptive_note: "r" },
-      conclusion: { summate: "s", land_call: "l", gospel_empower: "g", closing_posture: "prayer" },
+      conclusion: { summate: "s", land_call: "l", gospel_empower: "g" },
     }),
     outline: JSON.stringify([{ id: "p1", text: "Point one" }]),
     functional_elements: JSON.stringify({ p1: { explanation: "because" } }),

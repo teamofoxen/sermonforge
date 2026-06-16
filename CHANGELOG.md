@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-06-15 — Workspace Re-Foundation Phase 2: remove the four [+] additions (item 5)
+
+- Removed the four SermonForge-added questions the pastor ruled to cut: Possible Implications (`applications`) + Genre (Study 25→23 fields), and `holy_spirit_intent` + `closing_posture` (Context/Conclusion 4→3 questions) — from field-defs, `checkConclusionComposite`, the sample seed, fixtures, and tests.
+- **CORE Process #4 amended:** Pastoral Context now enters only at Implications, not progressively from Observe (the Observe awareness surface is gone); Process #6 Study count 25→23.
+- Reworked the PC narrative in `sermon-workspace.md` — the product-owner's progressive-PC articulation is kept as dated historical rationale; canon + CORE + mechanics now tell one Implications-entry story.
+- 124 tests pass; a 2-agent ultracode adversarial review caught five dangling cross-references (incl. pastor-facing Manuscript/Frame copy) — all folded in.
+
+---
+
 ## 2026-06-15 — Workspace Re-Foundation Phase 2: the cuts (item 4)
 
 - Chapell's 3 AM test restored as a crispness self-check folded into MPS `tighten` ("woken at 3am, could you say it?") — not a new field; the sermon title stays dropped (Merida makes it optional; every sermon already has a name).

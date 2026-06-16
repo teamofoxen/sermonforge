@@ -21,7 +21,6 @@
 //       summate:         { value, na },
 //       land_call:       { value, na },
 //       gospel_empower:  { value, na },
-//       closing_posture: { value, na },
 //     },
 //   }
 //
@@ -36,9 +35,9 @@
 //   - Intro Q1/Q2/Q3: not N/A-able (load-bearing).
 //   - Intro Q4 (redemptive_note): N/A-able with strict "satisfied another
 //     way" semantic — only when the hook itself was redemptive.
-//   - Conclusion Q1/Q2/Q3/Q4: none N/A-able. Every component is structurally
-//     necessary at the listener's exit; closing_posture in particular forces
-//     an explicit pastoral choice (silence / song / prayer / charge).
+//   - Conclusion Q1/Q2/Q3: none N/A-able. Every component is structurally
+//     necessary at the listener's exit. (closing_posture Q4 removed 2026-06-15,
+//     Phase 2 — a SermonForge addition cut.)
 
 export const SERMON_FRAME_FIELDS = [
   {
@@ -79,13 +78,13 @@ export const SERMON_FRAME_FIELDS = [
   {
     key: "conclusion",
     label: "Conclusion",
-    hint: "Land the body's call — summate the through-line, land the call from MPS, gospel-empower it, and choose the closing posture.",
+    hint: "Land the body's call — summate the through-line, land the call from MPS, and gospel-empower it.",
     heavyLifting: true,
     overview: {
       title: "Conclusion",
       paragraphs: [
         "Intro framed how the listener walked into the body. Conclusion frames how they walk out. The body has done its work; the listener has heard the through-line. Now you land it.",
-        "Four moves: summate (gather the whole arc into one landing — *not* a point-by-point recap; the body already walked the points); land the call (drawn from MPS, made concrete); gospel-empower (drawn from CCS); choose the closing posture (silence, song, prayer, or charge — a required pastoral choice).",
+        "Three moves: summate (gather the whole arc into one landing — *not* a point-by-point recap; the body already walked the points); land the call (drawn from MPS, made concrete); gospel-empower (drawn from CCS).",
         "Gospel-empower is the engine. Without it, the landed call slides into a moralistic push — even with the body's gospel work behind it. With it, the listener walks out knowing the call rests on what Christ has done.",
       ],
     },
@@ -101,10 +100,6 @@ export const SERMON_FRAME_FIELDS = [
       {
         key: "gospel_empower",
         prompt: "Gospel-empower the call. Drawing from the Christ-Connection Statement — name the gospel-shape that makes the call good news, not burden. The listener should leave knowing the call rests on what Christ has done, not on what they must muster.",
-      },
-      {
-        key: "closing_posture",
-        prompt: "Choose the closing posture. How does this sermon end physically and spiritually? Silence (let the gospel weight settle) / song (corporate response) / prayer (pastoral landing) / charge (formal commission or blessing). The choice is pastoral; name it so the manuscript and delivery are prepared.",
       },
     ],
   },

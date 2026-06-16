@@ -95,6 +95,19 @@
   *Constraint without ceremony* clause ("*It is not the system's job to announce that work
   happened, mark that a boundary was crossed...*").
 
+## Process #4 — Pastoral Context follows the text
+
+- **Re-Foundation Phase 2 (2026-06-15):** the PC progression model was simplified. The clause
+  previously read that PC "enters Study progressively as the pastor's understanding deepens —
+  introduced as awareness during Observe, held in marination through Interpret, gaining texture
+  at Redemptive Thread, and fully integrated at Implications." Phase 2 removed the Observe-phase
+  awareness surface — the "Possible Implications" field (`applications`) — as one of four
+  SermonForge `[+]` additions the pastor ruled to cut. With no Observe PC surface, the clause now
+  reads that PC enters only at Implications (the three-voice conversation), driven by the
+  understanding built across Observe / Interpret / Redemptive Thread, and is not surfaced as a
+  field before then. The product owner's original progressive-PC articulation is retained as dated
+  historical design rationale in `docs/SYSTEMS/sermon-workspace.md`.
+
 ## Process #5 — No AI substitution
 
 - **ARI Phase 9, 2026-05-09:** AI removed from the product entirely; the

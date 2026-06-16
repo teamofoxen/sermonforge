@@ -42,7 +42,7 @@
 
 The four Study sub-phases — Observe, Interpret, Redemptive Thread, Implications — compose
 a single deepening exegetical arc (text says → means → points to Christ → lands on the
-room), and Pastoral Context enters it progressively. **The arc's content — what each
+room). Pastoral Context enters at **Implications**, after the text has been heard. **The arc's content — what each
 sub-phase asks, its named outcome, and the marinate / return-to-the-text beat — lives in
 [WORKSPACE-CANON §2](../WORKSPACE-CANON.md). The law behind it is CORE
 [Process #6](../CORE.md) (the throughline holds and produces named outcomes) plus its
@@ -54,8 +54,13 @@ overlay.
 
 Pastoral Context is the one piece of the arc's *why* that lives here rather than in canon:
 CORE [Process #4](../CORE.md) makes "PC is driven by the text" the law and points to this
-doc for the phase-by-phase mechanics. The product owner's own articulation of that
-progression is preserved verbatim, as the rationale the mechanics implement:
+doc for the mechanics. The product owner's original articulation below described a
+*progressive* PC entry — PC surfacing first in Observe (a "Possible Implications" field) and
+marinating through the middle sub-phases. **That Observe surface was removed 2026-06-15
+(Phase-2 Merida surgery), so PC now enters only at Implications.** The articulation is
+**retained verbatim as historical design rationale** — it still captures the load-bearing
+intent (the text drives toward PC, never the reverse), though the per-phase surfaces it names
+have changed:
 
 **Articulated by the product owner during SPRD planning (2026-04-30, verbatim):**
 
@@ -79,10 +84,9 @@ progression is preserved verbatim, as the rationale the mechanics implement:
 
 **Two field-level commitments flow from this articulation:**
 
-1. **Observe ends with the field that first surfaces PC into the awareness layer.**
-   Named "Possible Implications" (renamed from "Possible Applications" in the
-   Vocabulary cleanup pass), this field is where the pastor begins to think
-   pastorally without yet leaving the text.
+1. *(Removed 2026-06-15, Phase 2.)* Observe used to end with a field that first surfaced PC
+   into the awareness layer — "Possible Implications." That field was cut as a SermonForge
+   addition; Observe is now pure text-observation, and PC no longer surfaces there.
 2. **Implications is a three-way conversation between Theological Significance,
    Personal Implications, and PC.** The named outcome — the **Implications Synthesis**
    — is the integrated form of that conversation.
@@ -92,16 +96,13 @@ progression is preserved verbatim, as the rationale the mechanics implement:
 ## Pastoral Context — Phase 4 Field 3
 
 This is the spec CORE [Process #4](../CORE.md) and the CORE Canonical-Vocabulary PC
-entry point to. **PC surfaces as a field at exactly two points in Study**; the rest of
-the progression CORE Process #4 names ("introduced as awareness during Observe … fully
-integrated at Implications") happens between them with no field of its own — it marinates
-in the deepening understanding:
+entry point to. **PC surfaces as a field at exactly one point in Study — Implications
+Field 3.** The text is heard first across Observe, Interpret, and Redemptive Thread; PC
+enters only once that understanding is built. *(Before 2026-06-15 there was an earlier
+surface — the Observe "Possible Implications" field — removed in the Phase-2 Merida surgery.)*
 
-1. **Observe Field 8 — Possible Implications** (`applications`): PC's first awareness-layer
-   surface (two questions, `pressing` and `hard_and_hopeful`). The pastor begins thinking
-   pastorally without yet leaving the text.
-2. **Implications Field 3 — Pastoral Context** (`pastoral_context`): PC fully enters as one
-   voice in the three-way conversation, two questions:
+**Implications Field 3 — Pastoral Context** (`pastoral_context`): PC enters as one
+voice in the three-way conversation, two questions:
 
 | Question | Question key | Stored at |
 |----------|--------------|-----------|
@@ -362,8 +363,9 @@ Frame). The `current_step` column was retired in the trail deletion sweep
 ### Phase 1: Observe → `sermons.observations` (JSON)
 
 `OBSERVE_FIELDS` in [`src/utils/studyFields.js`](../../src/utils/studyFields.js)
-— 8-field shape: `context` → `surface_questions` → `divisions` → `characters`
-→ `commands_declarations` → `big_ideas` → `obvious_point` → `applications`.
+— 7-field shape: `context` → `surface_questions` → `divisions` → `characters`
+→ `commands_declarations` → `big_ideas` → `obvious_point`. (`applications` /
+Possible Implications removed 2026-06-15, Phase 2.)
 
 - **Field 3 (Divisions / Thought Units)** — `indented-canvas` kind (the live kind
   string in [`studyFields.js`](../../src/utils/studyFields.js); "unified-canvas" survives
@@ -373,22 +375,21 @@ Frame). The `current_step` column was retired in the trail deletion sweep
   canonical `thought_units` array via `deriveThoughtUnitsFromCanvas` on every
   save (depth-0 rows are the thought units per era-2-primacy ruling 8).
   Phases 2/3/4 all read from this array.
-- **Field 8 (Possible Implications)** — first PC awareness-layer surface
-  (two questions: `pressing`, `hard_and_hopeful`).
 - **Completeness foundation:** `checkField3Composite` for Field 3 — exported
   as the public completeness API for Divisions / Thought Units. The
-  advancement-gate checks for Field 7 (Obvious Point) and Field 8 (both
-  questions non-empty-or-N/A) were inline in the deleted
+  advancement-gate checks for Field 7 (Obvious Point) and the former Field 8
+  (Possible Implications, removed 2026-06-15) were inline in the deleted
   `checkObserveToInterpretThreshold` wrapper and were removed entirely in
   Phase F — no completeness composite survives for these fields.
 
 ### Phase 2: Interpret → `sermons.interpretation` (JSON)
 
-`INTERPRET_FIELDS` — 8-field shape: `deeper_context` → `genre` →
+`INTERPRET_FIELDS` — 7-field shape: `deeper_context` →
 `recurring_ideas` → `character_purpose` → `contrasts` → `cross_refs` →
-`commentary` → `interpretation_synthesis`.
+`commentary` → `interpretation_synthesis`. (`genre` removed 2026-06-15, Phase 2.)
 
-- **Field 8 (Interpretation Synthesis)** — heavy-lifting, load-bearing. Q1
+- **Interpretation Synthesis** (Field 7 after the Genre cut; its composite keeps the
+  legacy name `checkField8Composite`) — heavy-lifting, load-bearing. Q1
   (`meaning_per_unit`) is a `cumulative-synthesis-table` extending the
   canonical thought-unit array with a writable `meaning` column. Q2
   (`meaning_whole`) is the whole-passage Interpretation Set (text-prompt).
@@ -507,10 +508,9 @@ SADI Step 5. Two fields:
 - **Intro** — 4 questions (`hook`, `bridge_to_text`, `expectations`,
   `redemptive_note`). Q1-Q3 non-empty, no N/A. Q4 non-empty or explicit N/A
   per the SADI carve-out for cases where the hook itself was redemptive.
-- **Conclusion** — 4 questions (`summate`, `land_call`, `gospel_empower`,
-  `closing_posture`). All non-empty, no N/A per the SADI no-carve-out
-  ruling — `closing_posture` in particular forces an explicit pastoral
-  choice.
+- **Conclusion** — 3 questions (`summate`, `land_call`, `gospel_empower`). All
+  non-empty, no N/A. (`closing_posture` Q4 was removed 2026-06-15 in the Phase-2
+  Merida surgery.)
 
 Named outcome: Sermon Frame.
 

@@ -69,7 +69,6 @@ function buildPopulatedSermon({ position, thresholdsSeen, title }) {
         before: { value: "Romans 7 ends with 'Who will deliver me from this body of death?' — the 'therefore' of 8:1 lands directly on that despair.", na: false },
         after: { value: "Romans 8:5–11 develops the flesh/Spirit contrast; 8:12–17 turns to adoption.", na: false },
         impact: { value: "The bind between Romans 7 and 8:1 is the whole rhetorical force.", na: false },
-        holy_spirit_intent: { value: "", na: false },
       },
       surface_questions: {
         where: { value: "No specific physical setting — Paul is writing doctrinally to the church in Rome.", na: false },
@@ -84,14 +83,9 @@ function buildPopulatedSermon({ position, thresholdsSeen, title }) {
       commands_declarations: { primary: { value: "Predominantly declarative — extended announcement.", na: false } },
       big_ideas: { primary: { value: "No condemnation. Two laws. The Son sent. Walking by Spirit.", na: false } },
       obvious_point: { primary: { value: "For those in Christ Jesus, the verdict is no condemnation — because God has done in Christ what the law could not do.", na: false } },
-      applications: {
-        examples: { value: "", na: false },
-        commands: { value: "", na: false },
-      },
     }),
     interpretation: JSON.stringify({
       deeper_context: { primary: { value: "Romans 5–8 forms a unit on the implications of justification; chapter 8 is the pinnacle.", na: false } },
-      genre: { primary: { value: "Doctrinal epistle — tightly argued theological proposition.", na: false } },
       contrasts: { primary: { value: "Law of the Spirit of life ↔ law of sin and death. Flesh ↔ Spirit.", na: false } },
       interpretation_synthesis: {
         meaning_whole: { value: "The verdict for those in Christ Jesus is no condemnation — because God, by sending his own Son for sin, did what the law (weakened by the flesh) could not do, so the law's righteous requirement is fulfilled in us through the Spirit.", na: false },

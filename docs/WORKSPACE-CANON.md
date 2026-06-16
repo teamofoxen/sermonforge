@@ -90,8 +90,8 @@ the binding force lives in CORE.
 
 ## 1. The shape of the whole walk
 
-**Three stages · eight sub-phases · eight sub-phase named outcomes · 25 Study fields + 9
-Assembly/Manuscript fields (34 total).** The preacher sees the whole arc from first entry;
+**Three stages · eight sub-phases · eight sub-phase named outcomes · 23 Study fields + 9
+Assembly/Manuscript fields (32 total).** The preacher sees the whole arc from first entry;
 forward is the natural direction, but every question is reachable from the map at any time.
 (The code's `REGION_NAMED_OUTCOME` also carries a ninth entry, "Manuscript," for the
 terminal stage; the eight *sub-phase* outcomes are the artifacts a throughline produces.)
@@ -169,34 +169,31 @@ code (the per-unit gate, §5) and is a Phase-2 fidelity subject **[◆]**.
 ### 2.1 Observe → **Observation Set**
 
 Outside-in: locate the passage, report its surface, lay out its structure, then read the
-lens cluster against that structure; close with the plain-sense point and the first
-sight of the room. Eight fields.
+lens cluster against that structure; close with the plain-sense point. Seven fields.
 
 | Field (`key`) | Asks | Merida |
 |---|---|---|
-| Context (`context`) | What happened before / after / does it bear on this passage / why did the Spirit lead the author to write this, here | before·after·impact **[M]**; holy_spirit_intent **[+]** |
+| Context (`context`) | What happened before / after / does it bear on this passage | before·after·impact **[M]** |
 | Surface Questions (`surface_questions`) | Where / when / what's happening, in order | **[M]** *(Phase-2: verify against the Merida source which of his surface questions are kept vs trimmed)* |
 | Divisions / Thought Units (`divisions`) | Hand-type the passage; main statements to the margin, supporting clauses indented, parallels aligned — one indented canvas. The thought-unit table is derived from this. | **[M]** |
 | Main Characters (`characters`) | Who acts; name each one's role | **[M]** |
 | Commands and Declarations (`commands_declarations`) | For each main sentence, command vs declaration, and what it's doing | **[M]** |
 | Big Ideas (`big_ideas`) | What concepts the passage wrestles with | **[M]** |
 | Obvious Point (`obvious_point`) | The plain-sense point in one sentence | **[M]** — *binds the Observation Set* |
-| Possible Implications (`applications`) | What the passage is starting to press on the room; what's hard, what's hopeful | **[+]** — the first surfacing of Pastoral Context; "early sight, not application" |
 
 *Dropped from Merida here:* the 25-observations device — **ruled 2026-06-15 (Phase 2): kept as ambient posture** (the "don't stop at the obvious" framing now in Observe's entry teaching on the Context field), **not** a 25-row quota, which would re-commit the mechanization trap **[✂ → ratified with teaching]**; the
 author/date/audience/genre "background" layer **[✂, split: world-of-the-book →
-series-level Book Study; the genre slice → Interpret's Genre field]**.
+series-level Book Study; the genre slice was carried by Interpret's Genre field, itself removed 2026-06-15 (Phase 2 — a SermonForge addition cut)]**.
 
 ### 2.2 Interpret → **Interpretation Set**
 
-Widen the lens, then close with meaning. Eight fields; the Merida arc runs Deeper Context
-→ Genre → Recurring Ideas → Character Purpose → Contrasts → Cross-References → Commentary
+Widen the lens, then close with meaning. Seven fields; the Merida arc runs Deeper Context
+→ Recurring Ideas → Character Purpose → Contrasts → Cross-References → Commentary
 (last, to check) → Interpretation Synthesis.
 
 | Field (`key`) | Asks | Merida |
 |---|---|---|
 | Deeper Context (`deeper_context`) | Unresolved questions after Observe; fit in the book's argument | **[M]** |
-| Genre (`genre`) | The literary form and how it shapes interpretation | **[+]** (optional, light) |
 | Recurring Ideas (`recurring_ideas`) | What recurs and what it signals | **[M]** |
 | Character Purpose (`character_purpose`) | For each character, what they say/do/think and why | **[M]** |
 | Contrasts (`contrasts`) | What's set against what, and what each contrast does | **[M]** |
@@ -274,7 +271,7 @@ fields. The redemptive note / gospel-empower carry the anti-moralism guard to th
 | Field (`key`) | Questions | Merida |
 |---|---|---|
 | Intro (`intro`) | **`hook`** — grab attention from where the listener is; **`bridge_to_text`** — hook into the text + MPT/MPS; **`expectations`** — what the sermon will ask; **`redemptive_note`** — the gospel-shape that makes the call good news *(N/A-able — see §5)* | 4 moves **[M]** |
-| Conclusion (`conclusion`) | **`summate`** — gather the arc into one landing (not a recap); **`land_call`** — the call, from MPS, made concrete; **`gospel_empower`** — from the Christ-Connection Statement; **`closing_posture`** — silence / song / prayer / charge | 4 moves **[M]**; closing_posture **[+ — a forced explicit choice]** |
+| Conclusion (`conclusion`) | **`summate`** — gather the arc into one landing (not a recap); **`land_call`** — the call, from MPS, made concrete; **`gospel_empower`** — from the Christ-Connection Statement | 3 moves **[M]** |
 
 ---
 
@@ -318,7 +315,7 @@ An artifact is complete when its composite returns no reason:
 | Main Point of the Text | `draft` and `tighten` both written. |
 | Main Point of the Sermon | `translate` and `tighten` written; `gospel_check` written **or** marked N/A. |
 | Sermon Frame — Introduction | `hook`, `bridge_to_text`, `expectations` written; `redemptive_note` written **or** marked N/A. |
-| Sermon Frame — Conclusion | All four written; no N/A path. |
+| Sermon Frame — Conclusion | All three written; no N/A path. |
 
 *One asymmetry to note:* the Observation Set is the only outcome whose **surfaced artifact**
 and **done-check** live in different fields — the Study → Anchor handoff renders the **Obvious
@@ -344,7 +341,7 @@ nagging," tighten later if the OEM walk decides to:
    doesn't carry. So N/A means "the text genuinely doesn't carry this" or "satisfied another
    way" — an *active* gesture, never a silent skip — and it counts toward complete. It is
    available on: (a) the two anchor questions `mps.gospel_check` and `intro.redemptive_note`;
-   (b) the **declared Study questions** SFDI grants it (Observe Where/When; Genre; Cross-
+   (b) the **declared Study questions** SFDI grants it (Observe Where/When; Cross-
    References/Commentary; Redemptive Thread's four-ways; Implications Fields 1–2); and (c)
    **per thought-unit cell** on the three cumulative tables (Meaning / Christ-Connection /
    Implication) — a unit marked "nothing here" satisfies its column. The named-outcome

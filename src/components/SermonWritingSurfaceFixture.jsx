@@ -115,7 +115,6 @@ const SEED_ANSWERS = {
         "The bind between Romans 7's despair and 8:1's verdict is the whole rhetorical force of the passage. Without the 'therefore' it reads as abstract doctrine; with it, it reads as gospel relief.",
       na: false,
     },
-    holy_spirit_intent: { value: "", na: false },
   },
   surface_questions: {
     where: {
@@ -156,23 +155,11 @@ const SEED_ANSWERS = {
       na: false,
     },
   },
-  applications: {
-    examples: { value: "", na: false },
-    commands: { value: "", na: false },
-  },
-
   // ── INTERPRET ──────────────────────────────────────────────────────────
   deeper_context: {
     primary: {
       value:
         "Romans is Paul's most systematic letter — written to a church he hadn't yet visited, to lay out the gospel he preached. Chapters 5–8 form a unit on the implications of justification; chapter 8 is the pinnacle.",
-      na: false,
-    },
-  },
-  genre: {
-    primary: {
-      value:
-        "Doctrinal epistle. The passage reads as a tightly argued theological proposition with each verse advancing the case — closer to a legal brief than a narrative.",
       na: false,
     },
   },

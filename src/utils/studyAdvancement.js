@@ -221,14 +221,15 @@ export function checkIntroComposite(frameData) {
   return null;
 }
 
-// Sermon Frame Conclusion composite. Per SADI Step 5 ratification:
-// Conclusion requires Q1+Q2+Q3+Q4 all non-empty (no N/A path).
+// Sermon Frame Conclusion composite. Per SADI Step 5 ratification (closing_posture
+// Q4 removed 2026-06-15, Phase-2 Merida surgery): Conclusion requires Q1+Q2+Q3
+// (summate, land_call, gospel_empower) all non-empty (no N/A path).
 export function checkConclusionComposite(frameData) {
   if (!frameData || typeof frameData !== "object") {
     return "Write the Conclusion answers in Frame.";
   }
   const fieldKey = "conclusion";
-  const required = ["summate", "land_call", "gospel_empower", "closing_posture"];
+  const required = ["summate", "land_call", "gospel_empower"];
   for (const qKey of required) {
     // Conclusion is no-N/A across the board — N/A doesn't satisfy these.
     const answered = !isQuestionNA(frameData, fieldKey, qKey)

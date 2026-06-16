@@ -93,7 +93,7 @@ export const SERMON_MANUSCRIPT_FIELDS = [
       paragraphs: [
         "Intro framed how the listener walked in; the conclusion frames how they walk out. The body has done its work and the listener has heard the through-line. Now you land it — write the words.",
         "Two moves (Merida): summation, then response. Summate the whole arc into one landing in fresh words — not a point-by-point recap. Then deliver the response: tell the listener exactly what to do, drawn from the MPS, gospel-empowered from the Christ-Connection Statement so the call rests on what Christ has done, not on what they must muster.",
-        "You chose your closing posture in Frame — silence, song, prayer, or charge. Write the conclusion so it carries the listener to that ending naturally.",
+        "Land the ending with intention — write the conclusion's final beat so it carries the listener out cleanly, the way the sermon has shaped them.",
       ],
     },
     questions: [
@@ -102,7 +102,7 @@ export const SERMON_MANUSCRIPT_FIELDS = [
         kind: "manuscript-prose",
         section: "conclusion",
         prompt:
-          "Write the conclusion — the summation that gathers the sermon into one landing, then the response that calls the listener to act on the MPS, grounded in the gospel. Carry them to the closing posture you chose in Frame.",
+          "Write the conclusion — the summation that gathers the sermon into one landing, then the response that calls the listener to act on the MPS, grounded in the gospel.",
       },
     ],
   },

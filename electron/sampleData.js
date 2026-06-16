@@ -125,7 +125,6 @@ const sermon = {
       before: { value: "Romans 1–4 has built the argument: all have sinned (3:23), justification is by faith apart from works of the law (3:28), and Abraham was the prototype — counted righteous before circumcision, on the basis of faith (Rom 4). Chapter 4 closes with the resurrection-faith of those who believe in him who raised Jesus from the dead (4:24).", na: false },
       after: { value: "Verse 6 onward grounds the love clause of v.5: while we were still weak, at the right time Christ died for the ungodly (v.6); God shows his love in this — while we were still sinners, Christ died for us (v.8). The argument continues into the Adam–Christ contrast (vv.12–21).", na: false },
       impact: { value: "Romans 5 is the hinge from doctrinal foundation (1–4) to lived implication (6–8). The 'therefore' of v.1 is not decorative — it ties everything Paul has said about justification to the believer's actual experience of pressure. Reading 5:1-5 without the foundation of 4 misses what 'having been justified by faith' is doing in v.1.", na: false },
-      holy_spirit_intent: { value: "The Spirit led Paul to place this passage here so the church under Nero's shadow would not read justification as a merely forensic transaction. The doctrine of chapters 1–4 is meant to land in the body, in suffering, in the experience of waiting. Verses 1–5 anchor the gospel in the believer's interior life before Paul widens the lens to Adam, sin, slavery, Spirit, and glory.", na: false },
     },
     surface_questions: {
       where: { value: "No physical setting — Paul is mid-letter, writing from Corinth to the mixed Jewish-Gentile churches in Rome.", na: false },
@@ -240,20 +239,12 @@ const sermon = {
     obvious_point: {
       primary: { value: "Believers who have been justified can rejoice even in suffering, because suffering produces a hope that will not disappoint — a hope grounded not in their endurance but in God's love already poured into them by the Spirit.", na: false },
     },
-    applications: {
-      pressing: { value: "The passage presses on the gap between what congregants believe is true (justification, peace with God) and how they actually live under pressure (as if hope is something they must muster). Paul's language is gentle but unrelenting — you have peace; you have access; you stand. The pressure point: receive what is already true.", na: false },
-      hard_and_hopeful: { value: "Hard: the path to hope runs through suffering, endurance, and character — not around them. The chain cannot be shortcut. Hopeful: the hope's reliability is not the believer's grip on God but God's love already poured in. The believer does not have to manufacture the anchor; the Spirit has already set it.", na: false },
-    },
   }),
 
   interpretation: JSON.stringify({
     deeper_context: {
       unresolved: { value: "Observe surfaced the 'therefore' of v.1 as load-bearing. Study tools confirm: it draws the conclusion of 1–4 (especially 4:23–25). The 'we have peace' is a declaration, not an exhortation — the textual variant that reads 'let us have peace' is less likely on internal grounds and weaker on external evidence. Paul is declaring, not exhorting.", na: false },
       book_argument: { value: "The book argues that the gospel is God's power for salvation (1:16). Romans 5 turns from how that righteousness is established (1–4) to how it functions in the believer's life. The pivot is structural — most commentators (Moo, Schreiner, Wright) read 5:1 as opening a major new section running through chapter 8. Reading 5:1-5 as merely the closing of chapter 4 misses Paul's deliberate widening from doctrine to lived experience.", na: false },
-    },
-    genre: {
-      genre: { value: "A teaching letter from Paul — Paul builds his argument step by step, with one statement leading into the next.", na: false },
-      impact: { value: "The genre matters: letters argue, and Paul's argument here moves by inference ('therefore' in v.1, 'knowing that' in v.3b, 'because' in v.5). The preacher must follow the logic, not just collect verses. Genre also explains the concentration of theological language (peace, access, grace, hope) — Paul is doing pastoral theology in tightly compressed argument.", na: false },
     },
     recurring_ideas: {
       primary: { value: "Through Christ (vv.1, 2 — twice the mediatorial 'through our Lord Jesus Christ' / 'through him'). Faith (vv.1, 2). Rejoice/boast (the same word in vv.2 and 3). Hope (vv.2, 4, 5). The chain of production (suffering–endurance–character–hope, v.3-4). These are not stylistic repetitions; each layer is a structural pillar of Paul's pastoral logic: the believer stands through Christ, by faith, in joy, oriented to hope, formed by suffering's chain, anchored by the Spirit's love.", na: false },
@@ -437,7 +428,6 @@ Come with empty hands. The gift is already in them.`,
       summate: { value: "Three verbs in verse 1 declare what is already settled. The same word for rejoicing turns in verse 3 toward suffering itself. The chain of suffering–endurance–character–hope does its slow productive work in verse 3-4. And verse 5 anchors the whole thing not in your endurance but in a love already poured in by the Spirit. The whole passage is one declaration: you stand on this; you can rejoice in suffering because of this; the hope holds because of this.", na: false },
       land_call: { value: "So here is the call this passage lays on us: this week, when the chest tightens and the question rises and the prayer feels dry — do not try harder to hold onto God. Remember whose love is already holding you. Stop trying to keep yourself in a place you already stand. The work is to receive what is already true.", na: false },
       gospel_empower: { value: "And what makes that call good news is that Christ has done the work — every gift named in this passage flows 'through our Lord Jesus Christ.' The peace, the access, the standing, the love poured. You do not have to manufacture the anchor; he already set it. You do not have to summon hope; the Spirit has already poured the love in. The call to receive is itself enabled by the One who gave.", na: false },
-      closing_posture: { value: "Silence, then a sung response. After the final line ('the gift is already in them'), 30 seconds of silence — let the gospel weight settle. Then the congregation sings 'Before the Throne of God Above' as a corporate response. No final prayer; the song is the prayer. The pastoral instinct: the sermon has done verbal work; the room now needs an embodied response without more of the pastor's voice.", na: false },
     },
   }),
 };

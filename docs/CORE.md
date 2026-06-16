@@ -204,11 +204,14 @@ these names. (See State Contract clause 5: *one name per concept*.)
 4. **Pastoral Context is driven by the text, not the other way around.** The
    text speaks first. Pastoral Context is a canonical artifact of every sermon,
    but it does not precede engagement with the text and is not a prerequisite
-   for entering Study. PC enters Study progressively as the pastor's
-   understanding of the text deepens — introduced as awareness during Observe,
-   held in marination through Interpret, gaining texture at Redemptive Thread,
-   and fully integrated at Implications. The exact phase-by-phase mechanics
-   are specified in `docs/SYSTEMS/sermon-workspace.md`.
+   for entering Study. PC enters Study only after the text has been heard — it
+   is integrated at Implications (the three-voice conversation), driven by the
+   understanding built across Observe, Interpret, and Redemptive Thread; it is
+   not surfaced as a field before then. The exact mechanics are specified in
+   `docs/SYSTEMS/sermon-workspace.md`. (Amended 2026-06-15, Re-Foundation Phase 2:
+   the Observe-phase awareness surface — the Possible Implications field — was
+   removed; PC no longer enters progressively from Observe. History:
+   `docs/CORE-CHANGELOG.md`.)
 5. **No AI substitution.** The system contains no AI authorship surfaces. The
    pastor authors all sermon content. (History: `docs/CORE-CHANGELOG.md`.)
 6. **The workspace throughline is structural.** Each Study or Assembly
@@ -228,7 +231,7 @@ these names. (See State Contract clause 5: *one name per concept*.)
    initiative documents
    (`docs/PROPOSALS/study-field-definition-initiative.md`,
    `docs/PROPOSALS/sermon-anchor-definition-initiative.md`) are the frozen
-   development records that produced the Study content (25 fields, four named
+   development records that produced the Study content (23 fields, four named
    outcomes, four handoffs) and the Anchor/Frame content (four anchor fields,
    two named outcomes); the `scripts/sfdi-*-consistency.py` validators continue
    to check those frozen records for internal consistency. (Honesty: Assembly's
