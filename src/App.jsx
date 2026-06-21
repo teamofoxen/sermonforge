@@ -162,6 +162,10 @@ function AppInner() {
   // explicit at every hop.
   const [openSermonHint, setOpenSermonHint] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  // Where Back from the workspace returns. Default (null) is the Dashboard; set
+  // when a sermon is opened from the planner so Back returns to the series
+  // instead of the Dashboard (audit M5).
+  const [workspaceReturn, setWorkspaceReturn] = useState(null);
 
   const openSermon = useCallback((id, hint = null) => {
     setOpenSermonId(id);
@@ -179,17 +183,35 @@ function AppInner() {
     setCurrentView(VIEW.SeriesPlanner);
   }, []);
 
+  // Opening a slot FROM the planner remembers the series so Back returns there
+  // (audit M5). plannerSeriesId stays set across the workspace visit because
+  // openSermon sets VIEW.Workspace directly (not via navigate()).
+  const openSermonFromPlanner = useCallback((id) => {
+    setWorkspaceReturn({ view: VIEW.SeriesPlanner, seriesId: plannerSeriesId });
+    openSermon(id);
+  }, [openSermon, plannerSeriesId]);
+
   const closeWorkspace = useCallback(() => {
     setOpenSermonId(null);
     setOpenSermonHint(null);
     setRefreshKey(k => k + 1);
+    if (workspaceReturn?.view === VIEW.SeriesPlanner && workspaceReturn.seriesId) {
+      setPlannerSeriesId(workspaceReturn.seriesId);
+      setWorkspaceReturn(null);
+      setCurrentView(VIEW.SeriesPlanner);
+      return;
+    }
+    setWorkspaceReturn(null);
     setCurrentView(VIEW.Dashboard);
-  }, []);
+  }, [workspaceReturn]);
 
   const navigate = useCallback((view) => {
     setCurrentView(view);
     if (view !== VIEW.Workspace) {
       setOpenSermonId(null);
+      // Navigating away by any route other than workspace Back drops the
+      // pending planner return target.
+      setWorkspaceReturn(null);
     }
     // Leaving the planner clears the open series so re-entry from the Planning
     // list re-picks (and a bare sidebar click can't land on a stale planner).
@@ -259,7 +281,9 @@ function AppInner() {
   // Series Planner preview — mounts the real SeriesPlanner against mock data
   // so the AI-free, workspace-styled planner can be verified in a browser
   // preview without Electron/SQLite. ?planner[=overview|structure|slots|calendar]
+  // Gated to dev so a packaged build never honors the query string (audit L15).
   const isPlannerFixture =
+    import.meta.env.DEV &&
     typeof window !== "undefined" &&
     new URLSearchParams(window.location.search).has("planner");
   if (isPlannerFixture) {
@@ -342,7 +366,7 @@ function AppInner() {
           <SeriesPlanner
             seriesId={plannerSeriesId}
             onBack={() => navigate(VIEW.Planning)}
-            onOpenSermon={openSermon}
+            onOpenSermon={openSermonFromPlanner}
           />
         )}
         {currentView === VIEW.Workspace && openSermonId && (

@@ -25,10 +25,13 @@ All tooling decisions must prioritize simplicity.
 
 **The sermon is the primary unit of the shipped product; the series is carried
 context.** A sermon may belong to a series and carries that membership as
-first-class state; the series planning room, a Calendar that assigns sermons
-to Sundays, and top-level reference features remain a named roadmap direction,
-not the shipped identity, and the Series Planner is a stub until that work gets
-its own charter. (History: `docs/CORE-CHANGELOG.md`.)
+first-class state. The Series Planner — a distinct macro/architect surface for
+shaping a book or season across many sermons, with a Calendar that assigns
+sermons to Sundays and a congregational study-guide export — shipped AI-free
+under its own charter (`docs/PROPOSALS/series-planner-revival-charter.md`,
+2026-06-21); it stands alongside the sermon workspace without displacing the
+sermon as the primary unit. Top-level reference features remain a named roadmap
+direction, not the shipped identity. (History: `docs/CORE-CHANGELOG.md`.)
 
 *One-sentence identity: SermonForge starts where sermon prep actually starts — with the text.
 The system forces clarity through a structured throughline, end to end pastor-authored.

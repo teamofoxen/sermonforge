@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-06-21 — Series Planner: remediate the post-ship audit (38 findings)
+
+- Closed data-safety holes: study-guide export excludes soft-deleted slots, whole-series delete uses a named consequence-confirm, debounced edits flush on exit (`useFlushOnExit`), and a `commitDraft` guard stops duplicate sermons.
+- Made saves honest: section/slot writes drive the save indicator, Retry re-runs the real failed write, and load failures show an error + retry instead of a stuck spinner.
+- Fixed integration/UX: undated slots sort last (shared `seriesSermonOrderBy`), Back returns to the series, the preview mirrors the `.docx`, season pills use theme tokens, cards are keyboard-reachable, modals get dialog a11y.
+- Hardened enforcement: broadened `no-direct-ai`; added churchCalendar/series-spine/allowlist-sync tests; excluded `.claude/worktrees` from vitest (true suite 145).
+- De-stubbed the planner in CORE.md (+ CORE-CHANGELOG, ANCHORS); cleared stale AI phrasing in schema.md.
+
+---
+
 ## 2026-06-21 — Revive the Series Planner (AI-free) with study-guide export
 
 - Revived the Series Planner: an AI-free 5-tab workbench (Book Study/Overview/Structure/Sermon Slots/Calendar) recovered from git, AI stripped, restyled to match the sermon workspace.

@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { useDebounce } from "../utils/hooks";
+import { useDebounce, useFlushOnExit } from "../utils/hooks";
+import { runRegisteredFlushes } from "../utils/closeFlush";
+import { useModalA11y } from "../utils/useModalA11y";
 import {
   getSeries, updateSeries,
   getSectionsBySeries, createSection, updateSection, deleteSection,
@@ -103,8 +105,16 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
   const [saving, setSaving]     = useState(false);
   const [saveError, setSaveError] = useState(false);
   const [loading, setLoading]   = useState(!_fixture);
+  const [loadError, setLoadError] = useState(false);
   const [showHowItWorks, setShowHowItWorks]   = useState(false);
   const [showStudyGuide, setShowStudyGuide]   = useState(false);
+  // The last failed save's mutation thunk, so the topbar Retry re-runs the
+  // real write instead of an empty no-op (audit M3).
+  const lastFailedRef = useRef(null);
+  // Calendar schedule lives in the shell (not CalendarTab) so Suggest Sundays
+  // results and unsaved manual dates survive a tab switch (audit M7).
+  const [schedule, setSchedule] = useState([]);
+  const scheduleDirty = useRef(false);
 
   useEffect(() => {
     if (_fixture) return; // preview fixture — no DB reads
@@ -132,6 +142,7 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
   }
 
   async function load() {
+    setLoadError(false);
     try {
       const [s, sects, serms, notes] = await Promise.all([
         getSeries(seriesId),
@@ -139,37 +150,102 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
         getSermonsBySeries(seriesId),
         getCalendarNotes(),
       ]);
+      // getSeries returns null for a missing/deleted id — treat that as a load
+      // failure too, so we never trap the perpetual "Loading…" spinner (M1).
+      if (!s) {
+        setLoadError(true);
+        return;
+      }
       setSeries(s);
       setSections(sects);
       setSermons(serms);
       setCalNotes(notes);
+      scheduleDirty.current = false;
+      setSchedule(serms.map((sm) => ({ sermonId: sm.id, date: sm.date || "" })));
     } catch (e) {
       console.error("SeriesPlanner load error:", e);
+      setLoadError(true);
     } finally {
       setLoading(false);
     }
   }
 
-  const persistSeries = useCallback(async (fields) => {
-    if (_fixture) return; // preview fixture — no DB writes
+  // One save path for every planner write — series, section, and slot — so the
+  // topbar Saving/Saved/Save-failed indicator reflects them all and no write is
+  // silent (audit M2). runSave remembers the failed thunk so the topbar Retry
+  // re-runs the real write rather than an empty no-op (audit M3).
+  const runSave = useCallback(async (doMutation) => {
+    if (_fixture) return true; // preview fixture — no DB writes
     setSaving(true);
     setSaveError(false);
     try {
-      await updateSeries(seriesId, fields);
-      setSeries(prev => ({ ...prev, ...fields }));
+      await doMutation();
+      lastFailedRef.current = null;
+      return true;
     } catch (e) {
-      console.error("[persistSeries]", e);
+      console.error("[SeriesPlanner save]", e);
+      lastFailedRef.current = doMutation;
       setSaveError(true);
+      return false;
     } finally {
       setSaving(false);
     }
-  }, [seriesId]);
+  }, [_fixture]);
+
+  const persistSeries = useCallback((fields) => {
+    setSeries(prev => ({ ...prev, ...fields }));
+    return runSave(() => updateSeries(seriesId, fields));
+  }, [runSave, seriesId]);
 
   const debouncedPersist = useDebounce(persistSeries, 800);
 
+  // Flush the pending series write on unmount (Back / Open-sermon / tab swap)
+  // and on app quit / reload via the close-flush registry, so the 800ms
+  // debounce window can't silently drop the last keystrokes (audit H3).
+  useFlushOnExit(debouncedPersist);
+
+  // Keep the calendar schedule synced with the slot list (new/removed slots),
+  // but never clobber unsaved Suggest results or manual date edits (audit M7).
+  useEffect(() => {
+    if (scheduleDirty.current) return;
+    setSchedule(sermons.map(s => ({ sermonId: s.id, date: s.date || "" })));
+  }, [sermons]);
+
   function handleSeriesField(field, value) {
     setSeries(prev => ({ ...prev, [field]: value }));
+    // An empty title would be rejected by update-series (State #3) and flash a
+    // transient "Save failed" each time the pastor clears it to retype (audit
+    // L2). Keep the local edit, but don't persist until there's a name again.
+    if (field === "title" && !String(value).trim()) {
+      debouncedPersist.cancel();
+      return;
+    }
     debouncedPersist({ [field]: value });
+  }
+
+  function retryLastSave() {
+    if (lastFailedRef.current) runSave(lastFailedRef.current);
+  }
+
+  // A load failure (throw, or a series id that no longer resolves) gets its own
+  // voice + Retry instead of the perpetual "Loading…" spinner (audit M1).
+  if (loadError && !series) {
+    return (
+      <div style={{
+        display: "flex", flexDirection: "column", alignItems: "center",
+        justifyContent: "center", height: "100%", gap: "14px",
+        padding: "32px", textAlign: "center",
+      }}>
+        <div style={{ color: "var(--ink-soft)", fontFamily: "var(--font-serif)", fontSize: "15px", maxWidth: "420px" }}>
+          This series couldn't be opened. It may have been deleted, or the save
+          file was busy. You can try again or go back to your series.
+        </div>
+        <div style={{ display: "flex", gap: "10px" }}>
+          <SecondaryButton size="sm" onClick={onBack}>Back to Series</SecondaryButton>
+          <PrimaryButton size="sm" onClick={() => { setLoading(true); load(); }}>Try Again</PrimaryButton>
+        </div>
+      </div>
+    );
   }
 
   if (loading || !series) {
@@ -228,7 +304,7 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
           {!saving && saveError && (
             <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "0 6px" }}>
               <span style={{ fontSize: "12px", color: "var(--topbar-danger)" }}>Save failed</span>
-              <SecondaryButton size="sm" style={{ fontSize: "12px", padding: "2px 8px" }} onClick={() => persistSeries({})}>
+              <SecondaryButton size="sm" style={{ fontSize: "12px", padding: "2px 8px" }} onClick={retryLastSave}>
                 Retry
               </SecondaryButton>
             </span>
@@ -238,15 +314,13 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
               Saved
             </span>
           )}
-          <span style={{
-            fontSize: "11px", padding: "3px 10px", borderRadius: "10px",
-            background: "var(--parchment-warm)", border: "1px solid var(--parchment-deep)",
-            color: series.status === SERIES_STATUS.Complete ? "var(--gold)" : "var(--sage)",
-            textTransform: "uppercase", letterSpacing: "0.05em",
-          }}>
-            {SERIES_STATUS_LABELS[series.status] || SERIES_STATUS_LABELS[SERIES_STATUS.InProgress]}
-          </span>
-          {series.status !== SERIES_STATUS.Complete && (
+          {/* Status is already stated in the breadcrumb eyebrow above; the
+              separate parchment pill duplicated it and was low-contrast on the
+              always-dark topbar (audit L12 / L31), so it was removed. The
+              topbar Mark-Series-Complete is hidden while the suggestion banner
+              is showing its own primary button, so the action never appears
+              twice at once (audit L13). */}
+          {series.status !== SERIES_STATUS.Complete && !suggestSeriesComplete && (
             <SecondaryButton
               size="sm"
               onClick={() => persistSeries({ status: SERIES_STATUS.Complete })}
@@ -259,7 +333,7 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
           <TextButton onClick={() => setShowHowItWorks(true)}>
             How this works
           </TextButton>
-          <TextButton onClick={() => setShowStudyGuide(true)}>
+          <TextButton onClick={async () => { await runRegisteredFlushes(); setShowStudyGuide(true); }}>
             Study Guide
           </TextButton>
           <FeedbackFlag surface="series-planner" sermonId={null} step={null} />
@@ -338,6 +412,7 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
             onChange={handleSeriesField}
             onSectionsChange={setSections}
             seriesId={seriesId}
+            runSave={runSave}
           />
         )}
         {activeTab === "slots" && (
@@ -348,6 +423,7 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
             seriesId={seriesId}
             onSermonsChange={setSermons}
             onOpenSermon={onOpenSermon}
+            runSave={runSave}
           />
         )}
         {activeTab === "calendar" && (
@@ -358,6 +434,9 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
             calNotes={calNotes}
             onChange={handleSeriesField}
             onSermonsChange={setSermons}
+            schedule={schedule}
+            onScheduleChange={setSchedule}
+            scheduleDirty={scheduleDirty}
           />
         )}
       </div>
@@ -399,7 +478,7 @@ function BookStudyTab({ series, onChange }) {
           {(series.passage_range || series.canon_category) && (
             <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "8px" }}>
               {series.passage_range && (
-                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "13px", color: "var(--ink-soft)" }}>
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: "13px", color: "var(--ink-soft)" }}>
                   {series.passage_range}
                 </span>
               )}
@@ -478,30 +557,38 @@ function OverviewTab({ series, onChange }) {
       <div className="card" style={{ marginBottom: "20px" }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 80px", gap: "16px" }}>
           <div className="field-group" style={{ marginBottom: 0 }}>
-            <label className="field-label">Color</label>
-            <select className="field-input" value={series.color || "gold"} onChange={(e) => onChange("color", e.target.value)}>
+            <label className="field-label" htmlFor="series-color">Color</label>
+            <select id="series-color" className="field-input" value={series.color || "gold"} onChange={(e) => onChange("color", e.target.value)}>
               {COLOR_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </div>
           <div className="field-group" style={{ marginBottom: 0 }}>
-            <label className="field-label">Biblical Category</label>
-            <select className="field-input" value={series.canon_category || ""} onChange={(e) => onChange("canon_category", e.target.value)}>
+            <label className="field-label" htmlFor="series-category">Biblical Category</label>
+            <select id="series-category" className="field-input" value={series.canon_category || ""} onChange={(e) => onChange("canon_category", e.target.value)}>
               {CANON_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </div>
           <div className="field-group" style={{ marginBottom: 0 }}>
-            <label className="field-label">Status</label>
-            <select className="field-input" value={series.status || SERIES_STATUS.InProgress} onChange={(e) => onChange("status", e.target.value)}>
+            <label className="field-label" htmlFor="series-status">Status</label>
+            <select id="series-status" className="field-input" value={series.status || SERIES_STATUS.InProgress} onChange={(e) => onChange("status", e.target.value)}>
               {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </div>
           <div className="field-group" style={{ marginBottom: 0 }}>
-            <label className="field-label">Year</label>
+            <label className="field-label" htmlFor="series-year">Year</label>
             <input
+              id="series-year"
               type="number"
               className="field-input"
-              value={series.year || new Date().getFullYear()}
-              onChange={(e) => onChange("year", parseInt(e.target.value, 10))}
+              value={series.year ?? ""}
+              onChange={(e) => {
+                // Empty field → null (not NaN). parseInt("") is NaN, which would
+                // land as a NULL/garbage year via the allowlist write (audit L1).
+                const v = e.target.value;
+                if (v === "") { onChange("year", null); return; }
+                const n = parseInt(v, 10);
+                if (!Number.isNaN(n)) onChange("year", n);
+              }}
               min="2000"
               max="2100"
             />
@@ -513,22 +600,23 @@ function OverviewTab({ series, onChange }) {
       <div className="card" style={{ marginBottom: "20px" }}>
         <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: "16px" }}>
           <div className="field-group" style={{ marginBottom: 0 }}>
-            <label className="field-label">Passage Range</label>
+            <label className="field-label" htmlFor="series-passage-range">Passage Range</label>
             <input
+              id="series-passage-range"
               className="field-input"
-              style={{ fontFamily: "'JetBrains Mono', monospace" }}
+              style={{ fontFamily: "var(--font-mono)" }}
               value={series.passage_range || ""}
               onChange={(e) => onChange("passage_range", e.target.value)}
               placeholder="e.g. Luke 1:1–24:53"
             />
           </div>
           <div className="field-group" style={{ marginBottom: 0 }}>
-            <label className="field-label">Start Date</label>
-            <input type="date" className="field-input" value={series.start_date || ""} onChange={(e) => onChange("start_date", e.target.value)} />
+            <label className="field-label" htmlFor="series-start-date-overview">Start Date</label>
+            <input id="series-start-date-overview" type="date" className="field-input" value={series.start_date || ""} onChange={(e) => onChange("start_date", e.target.value)} />
           </div>
           <div className="field-group" style={{ marginBottom: 0 }}>
-            <label className="field-label">End Date</label>
-            <input type="date" className="field-input" value={series.end_date || ""} onChange={(e) => onChange("end_date", e.target.value)} />
+            <label className="field-label" htmlFor="series-end-date">End Date</label>
+            <input id="series-end-date" type="date" className="field-input" value={series.end_date || ""} onChange={(e) => onChange("end_date", e.target.value)} />
           </div>
         </div>
       </div>
@@ -591,19 +679,32 @@ function OverviewTab({ series, onChange }) {
 // commentary), and every section field persists through the debounced
 // updateSection spine. Section CRUD (create/update/delete/reorder) is preserved
 // verbatim from the recovered shell.
-function StructureTab({ series, sections, onChange, onSectionsChange, seriesId }) {
+function StructureTab({ series, sections, onChange, onSectionsChange, seriesId, runSave }) {
   const [expandedSection, setExpandedSection] = useState(null);
 
-  const persistSection = useCallback(async (id, fields) => {
-    await updateSection(id, fields);
-  }, []);
+  // Route section writes through the shell save-state so they show the same
+  // Saving/Saved/Save-failed indicator as series edits (audit M2).
+  const persistSection = useCallback((id, fields) => {
+    return runSave(() => updateSection(id, fields));
+  }, [runSave]);
   const debouncedSectionSave = useDebounce(persistSection, 800);
 
+  // Flush the pending section write on unmount (tab swap) + app quit / reload
+  // so the debounce window can't drop the last keystrokes (audit H3).
+  useFlushOnExit(debouncedSectionSave);
+
   async function addSection() {
-    const id = await createSection({ series_id: seriesId, sort_order: sections.length });
+    // sort_order = max existing + 1 — sections.length collides after a delete
+    // leaves a gap in the order (audit L5).
+    const nextOrder = sections.length
+      ? Math.max(...sections.map(s => s.sort_order ?? 0)) + 1
+      : 0;
+    const result = await createSection({ series_id: seriesId, sort_order: nextOrder });
     const updated = await getSectionsBySeries(seriesId);
     onSectionsChange(updated);
-    setExpandedSection(id);
+    // createSection resolves to { id }; using the object as the id meant the new
+    // section never auto-expanded (audit L4).
+    if (result?.id) setExpandedSection(result.id);
   }
 
   function handleSectionField(id, field, value) {
@@ -612,9 +713,9 @@ function StructureTab({ series, sections, onChange, onSectionsChange, seriesId }
   }
 
   async function handleDeleteSection(id) {
-    await deleteSection(id);
     onSectionsChange(prev => prev.filter(s => s.id !== id));
     if (expandedSection === id) setExpandedSection(null);
+    await runSave(() => deleteSection(id));
   }
 
   async function moveSection(id, direction) {
@@ -624,7 +725,15 @@ function StructureTab({ series, sections, onChange, onSectionsChange, seriesId }
     const reordered = [...sections];
     [reordered[idx], reordered[newIdx]] = [reordered[newIdx], reordered[idx]];
     onSectionsChange(reordered);
-    await Promise.all(reordered.map((s, i) => updateSection(s.id, { sort_order: i })));
+    // Recompact sort_order to 0..n-1; if any write fails, roll the UI back to
+    // the server's truth so a partial reorder can't desync the order (audit L5).
+    const ok = await runSave(() =>
+      Promise.all(reordered.map((s, i) => updateSection(s.id, { sort_order: i })))
+    );
+    if (!ok) {
+      const fresh = await getSectionsBySeries(seriesId);
+      onSectionsChange(fresh);
+    }
   }
 
   return (
@@ -748,7 +857,7 @@ function SectionEditor({ section, index, total, expanded, onToggle, onChange, on
           {section.title || "Untitled Section"}
         </span>
         {section.passage_range && (
-          <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", color: "var(--ink-soft)" }}>{section.passage_range}</span>
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--ink-soft)" }}>{section.passage_range}</span>
         )}
         <div style={{ display: "flex", gap: "2px" }}>
           {index > 0 && (
@@ -786,7 +895,7 @@ function SectionEditor({ section, index, total, expanded, onToggle, onChange, on
               <label className="field-label">Passage Range</label>
               <input
                 className="field-input"
-                style={{ fontFamily: "'JetBrains Mono', monospace" }}
+                style={{ fontFamily: "var(--font-mono)" }}
                 value={section.passage_range || ""}
                 onChange={(e) => onChange("passage_range", e.target.value)}
                 placeholder="e.g. 1:1–4:13"
@@ -825,7 +934,7 @@ function SectionEditor({ section, index, total, expanded, onToggle, onChange, on
 // slot is a real sermon atom on the spine; the "+ Add Slot" flow defers the
 // spine write until the pastor types a non-empty title (State Contract #3 —
 // no nameless atom ever reaches createSermon).
-function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpenSermon }) {
+function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpenSermon, runSave }) {
   // Draft slots — UI-only rows that have not yet been committed to the spine.
   // State Contract #3 forbids createSermon({ name: "" }), so the "+ Add Slot"
   // button creates a row in this local state instead of immediately calling
@@ -834,11 +943,20 @@ function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpen
   const [drafts, setDrafts] = useState([]);
   const [draftErrors, setDraftErrors] = useState({});
   const isDraftId = (id) => typeof id === "string" && id.startsWith("draft-");
+  // draftId -> in-flight commit promise. Guards the double-commit race: blur +
+  // Open (or Enter) can both fire commitDraft before the first createSermon
+  // resolves; the second caller now reuses the first's promise instead of
+  // minting a second duplicate sermon row (audit H4).
+  const inFlightRef = useRef(new Map());
 
-  const persistSlot = useCallback(async (id, fields) => {
-    await updateSermon(id, fields);
-  }, []);
+  // Committed-slot field writes share the shell save-state so they aren't
+  // silent (audit M2).
+  const persistSlot = useCallback((id, fields) => {
+    return runSave(() => updateSermon(id, fields));
+  }, [runSave]);
   const debouncedSlotSave = useDebounce(persistSlot, 800);
+
+  useFlushOnExit(debouncedSlotSave);
 
   // No spine call — the row exists only in local draft state until the user
   // types a non-empty name. State Contract #3 stays structurally enforced at
@@ -863,50 +981,61 @@ function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpen
   // success, null if there's nothing to commit (empty name) or commit failed.
   // On failure, surfaces an inline error on the row and keeps the draft so
   // the user can retry.
-  async function commitDraft(draftId) {
+  // Returns a Promise<newId | null>. Re-entrant calls for the same draft while
+  // a commit is in flight return that same promise instead of starting a second
+  // createSermon, so blur+Open can't create two rows (audit H4); the Open path
+  // still resolves to the real id and navigates.
+  function commitDraft(draftId) {
+    if (inFlightRef.current.has(draftId)) return inFlightRef.current.get(draftId);
     const draft = drafts.find(d => d.id === draftId);
-    if (!draft) return null;
+    if (!draft) return Promise.resolve(null);
     const name = draft.title?.trim();
-    if (!name) return null;
+    if (!name) return Promise.resolve(null);
     setDraftErrors(prev => {
       if (!(draftId in prev)) return prev;
       const next = { ...prev };
       delete next[draftId];
       return next;
     });
-    try {
-      const result = await createSermon({
-        name,
-        series_id: draft.series_id,
-        section_id: draft.section_id,
-        passage: draft.passage || "",
-        date: draft.date || "",
-        is_one_off: 0,
-      });
-      const newId = result.id;
-      // create-sermon doesn't accept study_guide_note; if the user typed one
-      // before committing, follow up with an updateSermon write.
-      if (draft.study_guide_note?.trim?.()) {
-        await updateSermon(newId, { study_guide_note: draft.study_guide_note });
+    const promise = (async () => {
+      try {
+        const result = await createSermon({
+          name,
+          series_id: draft.series_id,
+          section_id: draft.section_id,
+          passage: draft.passage || "",
+          date: draft.date || "",
+          is_one_off: 0,
+        });
+        const newId = result.id;
+        // create-sermon doesn't accept study_guide_note; if the user typed one
+        // before committing, follow up with an updateSermon write.
+        if (draft.study_guide_note?.trim?.()) {
+          await updateSermon(newId, { study_guide_note: draft.study_guide_note });
+        }
+        const realSlot = {
+          id: newId,
+          series_id: draft.series_id,
+          section_id: draft.section_id,
+          title: name,
+          passage: draft.passage || "",
+          date: draft.date || "",
+          stage: SERMON_STATUS.InProgress,
+          ...(draft.study_guide_note ? { study_guide_note: draft.study_guide_note } : {}),
+        };
+        onSermonsChange(prev => [...prev, realSlot]);
+        setDrafts(prev => prev.filter(d => d.id !== draftId));
+        return newId;
+      } catch (e) {
+        console.error("[commitDraft]", e);
+        setDraftErrors(prev => ({ ...prev, [draftId]: e?.message || "Could not create the sermon." }));
+        return null;
+      } finally {
+        inFlightRef.current.delete(draftId);
       }
-      const realSlot = {
-        id: newId,
-        series_id: draft.series_id,
-        section_id: draft.section_id,
-        title: name,
-        passage: draft.passage || "",
-        date: draft.date || "",
-        stage: SERMON_STATUS.InProgress,
-        ...(draft.study_guide_note ? { study_guide_note: draft.study_guide_note } : {}),
-      };
-      onSermonsChange(prev => [...prev, realSlot]);
-      setDrafts(prev => prev.filter(d => d.id !== draftId));
-      return newId;
-    } catch (e) {
-      console.error("[commitDraft]", e);
-      setDraftErrors(prev => ({ ...prev, [draftId]: e?.message || "Could not create the sermon." }));
-      return null;
-    }
+    })();
+    inFlightRef.current.set(draftId, promise);
+    return promise;
   }
 
   function handleSlotField(id, field, value) {
@@ -933,8 +1062,8 @@ function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpen
       clearDraftError(id);
       return;
     }
-    await deleteSermon(id);
     onSermonsChange(prev => prev.filter(s => s.id !== id));
+    await runSave(() => deleteSermon(id));
   }
 
   // Group sermons by section. Drafts merge in alongside committed sermons
@@ -974,7 +1103,7 @@ function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpen
                 <div>
                   <div className="card-title">{section.title || "Untitled Section"}</div>
                   {section.passage_range && (
-                    <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", color: "var(--ink-ghost)" }}>
+                    <span style={{ fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--ink-ghost)" }}>
                       {section.passage_range}
                     </span>
                   )}
@@ -1095,7 +1224,7 @@ function SlotRow({ slot, index, onChange, onDelete, onCommit, commitError, onCle
         style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 14px", cursor: "pointer" }}
       >
         <span style={{ color: "var(--ink-ghost)", fontSize: "12px", width: "16px" }}>{index + 1}</span>
-        <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "12px", color: "var(--ink-soft)", minWidth: "90px" }}>
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: "12px", color: "var(--ink-soft)", minWidth: "90px" }}>
           {slot.passage || <span style={{ color: "var(--ink-ghost)", fontStyle: "italic", fontFamily: "var(--font-serif)" }}>No passage</span>}
         </span>
         <span style={{ flex: 1, fontSize: "14px", color: slot.title ? "var(--ink)" : "var(--ink-ghost)", fontStyle: slot.title ? "normal" : "italic" }}>
@@ -1124,7 +1253,7 @@ function SlotRow({ slot, index, onChange, onDelete, onCommit, commitError, onCle
             <label className="field-label">Passage</label>
             <input
               className="field-input"
-              style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "14px" }}
+              style={{ fontFamily: "var(--font-mono)", fontSize: "14px" }}
               value={slot.passage || ""}
               onChange={(e) => onChange(slot.id, "passage", e.target.value)}
               placeholder="e.g. Luke 1:1-4"
@@ -1178,29 +1307,28 @@ function SlotRow({ slot, index, onChange, onDelete, onCommit, commitError, onCle
 // Schedules the series' sermon slots onto Sundays, honouring church-calendar
 // seasons and the preacher's special-date notes. AI scheduling advisor removed
 // (constitutional no-direct-ai); the date engine is preserved verbatim.
-function CalendarTab({ series, sections, sermons, calNotes, onChange, onSermonsChange }) {
-  const [schedule, setSchedule]     = useState([]); // [{sermonId, date}]
+function CalendarTab({ series, sections, sermons, calNotes, onChange, onSermonsChange, schedule, onScheduleChange, scheduleDirty }) {
   const [calendarSaving, setCalendarSaving] = useState(false);
   const [calendarSaveMsg, setCalendarSaveMsg] = useState(""); // "" | "saved" | "error"
 
   const excludeDates = calNotes.map(n => n.date);
 
-  // Always initialise schedule from current sermon dates so manual edits have
-  // something to update and the Save button is always available.
-  useEffect(() => {
-    if (sermons.length === 0) return;
-    setSchedule(sermons.map(s => ({ sermonId: s.id, date: s.date || "" })));
-  }, [sermons]);
+  // schedule lives in the shell now and is seeded there from the slot list; it
+  // survives tab switches and the shell only re-syncs it from sermons while
+  // it's NOT dirty (audit M7). Marking dirty here keeps unsaved Suggest results
+  // / manual edits from being clobbered.
 
   function suggestSundays() {
     if (!series.start_date || sermons.length === 0) return;
     const sundays = getUpcomingSundays(series.start_date, sermons.length, excludeDates);
     const newSchedule = sermons.map((s, i) => ({ sermonId: s.id, date: sundays[i] || "" }));
-    setSchedule(newSchedule);
+    scheduleDirty.current = true;
+    onScheduleChange(newSchedule);
   }
 
   function handleDateChange(sermonId, date) {
-    setSchedule(prev => prev.map(s => s.sermonId === sermonId ? { ...s, date } : s));
+    scheduleDirty.current = true;
+    onScheduleChange(prev => prev.map(s => s.sermonId === sermonId ? { ...s, date } : s));
   }
 
   function skipSunday(sermonId) {
@@ -1224,9 +1352,10 @@ function CalendarTab({ series, sections, sermons, calNotes, onChange, onSermonsC
         const entry = schedule.find(e => e.sermonId === s.id);
         return entry ? { ...s, date: entry.date } : s;
       }));
-      // Update series end_date from last slot
-      const lastDate = [...schedule].sort((a, b) => (a.date > b.date ? 1 : -1)).pop()?.date;
+      // Update series end_date from the last DATED slot (ignore blanks).
+      const lastDate = [...schedule].filter(e => e.date).sort((a, b) => (a.date > b.date ? 1 : -1)).pop()?.date;
       if (lastDate) onChange("end_date", lastDate);
+      scheduleDirty.current = false; // saved — let the shell re-sync from sermons
       setCalendarSaveMsg("saved");
       setTimeout(() => setCalendarSaveMsg(""), 2000);
     } catch (e) {
@@ -1318,7 +1447,7 @@ function CalendarTab({ series, sections, sermons, calNotes, onChange, onSermonsC
                         {sermon.title || <span style={{ color: "var(--ink-ghost)", fontStyle: "italic" }}>Untitled</span>}
                       </div>
                       {sermon.passage && (
-                        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "11px", color: "var(--ink-soft)", marginTop: "3px" }}>
+                        <div style={{ fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--ink-soft)", marginTop: "3px" }}>
                           {sermon.passage}
                         </div>
                       )}
@@ -1340,8 +1469,9 @@ function CalendarTab({ series, sections, sermons, calNotes, onChange, onSermonsC
                       {season && (
                         <span style={{
                           fontSize: "11px", padding: "3px 9px", borderRadius: "10px",
-                          background: season.color + "22", color: season.color,
-                          border: `1px solid ${season.color}44`,
+                          background: `color-mix(in srgb, var(${season.token}) 13%, transparent)`,
+                          color: `var(${season.token})`,
+                          border: `1px solid color-mix(in srgb, var(${season.token}) 28%, transparent)`,
                           whiteSpace: "nowrap",
                         }}>
                           {season.shortName}
@@ -1388,18 +1518,14 @@ function CalendarTab({ series, sections, sermons, calNotes, onChange, onSermonsC
 // the shared class. The old "AI Advisor" Calendar node has been relabelled to a
 // mechanical step (no AI anywhere in the revived planner).
 function SeriesHowItWorksModal({ onClose }) {
-  // Escape closes — same pattern as every sibling overlay (NewSeriesModal).
-  useEffect(() => {
-    function onKey(e) { if (e.key === "Escape") onClose?.(); }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  // Escape + focus trap + focus restore (audit L10).
+  const dialogRef = useModalA11y(onClose);
 
   return (
     <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal" style={{ width: "960px" }}>
+      <div className="modal" style={{ width: "960px" }} ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="series-how-title">
         <div className="modal-header">
-          <h2 className="modal-title">How the Series Planner works</h2>
+          <h2 className="modal-title" id="series-how-title">How the Series Planner works</h2>
           <IconButton aria-label="Close how-this-works modal" className="modal-close" onClick={onClose}>×</IconButton>
         </div>
 
@@ -1523,12 +1649,13 @@ function StudyGuideModal({ series, sections, sermons, onClose }) {
   const [exporting, setExporting]       = useState(false);
   const [exportResult, setExportResult] = useState(null); // null | { ok, filepath?, error? }
 
-  // Escape closes — matches the how-this-works overlay and NewSeriesModal.
-  useEffect(() => {
-    function onKey(e) { if (e.key === "Escape") onClose?.(); }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  // Escape + focus trap + focus restore (audit L10).
+  const dialogRef = useModalA11y(onClose);
+
+  // Show the working hypothesis only when it still differs from the final
+  // Series Big Idea — matches the exporter's de-dupe (audit L9/M6).
+  const showWorkingHypothesis = !!series.emerging_big_idea?.trim() &&
+    series.emerging_big_idea.trim() !== (series.big_idea || "").trim();
 
   async function handleExport() {
     setExporting(true);
@@ -1635,7 +1762,7 @@ function StudyGuideModal({ series, sections, sermons, onClose }) {
           <div style={{ flex: 1 }}>
             <div style={{ display: "flex", alignItems: "baseline", gap: "8px", flexWrap: "wrap" }}>
               {sermon.passage && (
-                <span style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "12px", color: "var(--ink-soft)" }}>
+                <span style={{ fontFamily: "var(--font-mono)", fontSize: "12px", color: "var(--ink-soft)" }}>
                   {sermon.passage}
                 </span>
               )}
@@ -1655,8 +1782,9 @@ function StudyGuideModal({ series, sections, sermons, onClose }) {
               {season && (
                 <span style={{
                   fontSize: "11px", padding: "1px 6px", borderRadius: "10px",
-                  background: season.color + "22", color: season.color,
-                  border: `1px solid ${season.color}44`,
+                  background: `color-mix(in srgb, var(${season.token}) 13%, transparent)`,
+                  color: `var(${season.token})`,
+                  border: `1px solid color-mix(in srgb, var(${season.token}) 28%, transparent)`,
                 }}>
                   {season.shortName}
                 </span>
@@ -1679,12 +1807,12 @@ function StudyGuideModal({ series, sections, sermons, onClose }) {
     <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
       {/* Wider than the 560px default and parchment-bodied — this is a reading
           surface, so the body sits on --parchment like the page body. */}
-      <div className="modal" style={{ width: "760px" }}>
+      <div className="modal" style={{ width: "760px" }} ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="study-guide-title">
         <div className="modal-header">
           <div style={{ minWidth: 0 }}>
-            <h2 className="modal-title">Study Guide Preview</h2>
+            <h2 className="modal-title" id="study-guide-title">Study Guide Preview</h2>
             <div style={{
-              fontFamily: "'JetBrains Mono', monospace", fontSize: "12px",
+              fontFamily: "var(--font-mono)", fontSize: "12px",
               color: "var(--ink-ghost)", marginTop: "4px",
             }}>
               {series.title}{series.passage_range ? ` — ${series.passage_range}` : ""}
@@ -1693,50 +1821,94 @@ function StudyGuideModal({ series, sections, sermons, onClose }) {
           <IconButton aria-label="Close study guide preview" className="modal-close" onClick={onClose}>×</IconButton>
         </div>
 
+        {/* This preview mirrors the exported Word document part-for-part
+            (buildStudyGuideDoc in electron/main.js): same part names/order, the
+            same big-idea de-dupe, sermons grouped by section with a "Remaining
+            Sermons" bucket, and the Reference outline — so what the pastor reads
+            here is what he hands his congregation (audit M6). */}
         <div className="modal-body" style={{ background: "var(--parchment)" }}>
-          {/* Part 1: The Series */}
-          <SgPartHeader number="1" title="The Series" />
+          {/* Part 1 — The World of This Book */}
+          <SgPartHeader number="1" title="The World of This Book" />
+          <SgSection label="Then (background)" value={series.book_background} hint="Add in Book Study → The World of This Book" />
+          <SgSection label="The Argument" value={series.book_argument} hint="Add in Book Study → The Book's Controlling Argument" />
+          <SgSection label="How the Book Is Built" value={series.book_structure} hint="Add in Book Study → How the Book Is Built" />
+
+          <SgPartDivider />
+
+          {/* Part 2 — Why We're Here */}
+          <SgPartHeader number="2" title="Why We're Here" />
+          <SgSection label="Where It Sits in the Story" value={series.redemptive_context} hint="Add in Book Study → Where This Book Sits in Redemptive History" />
+          <SgSection label="Why This Congregation, Why Now" value={series.series_motivation} hint="Add in Book Study → Why This Congregation, Why Now" />
+
+          <SgPartDivider />
+
+          {/* Part 3 — The Big Idea */}
+          <SgPartHeader number="3" title="The Big Idea" />
+          {showWorkingHypothesis && (
+            <SgSection label="Working Hypothesis (from Book Study)" value={series.emerging_big_idea} hint="Add in Book Study → Working Big Idea" />
+          )}
           <SgSection label="Series Big Idea" value={series.big_idea} hint="Add in Overview → Series Big Idea" />
           <SgSection label="Overview" value={series.overview} hint="Add in Overview → Series Overview" />
 
           <SgPartDivider />
 
-          {/* Part 2: The Book */}
-          <SgPartHeader number="2" title="The Book" />
-          <SgSection label="The World of This Book" value={series.book_background} hint="Add in Book Study → The World of This Book" />
-          <SgSection label="The Book's Controlling Argument" value={series.book_argument} hint="Add in Book Study → The Book's Controlling Argument" />
-          <SgSection label="How the Book Is Built" value={series.book_structure} hint="Add in Book Study → How the Book Is Built" />
-
-          <SgPartDivider />
-
-          {/* Part 3: Where This Fits */}
-          <SgPartHeader number="3" title="Where This Fits in the Story" />
-          <SgSection label="Redemptive Context" value={series.redemptive_context} hint="Add in Book Study → Where This Book Sits in Redemptive History" />
-          {series.emerging_big_idea?.trim() &&
-            (series.emerging_big_idea.trim() !== series.big_idea?.trim() || !series.big_idea?.trim()) && (
-            <SgSection label="Working Big Idea (from Book Study)" value={series.emerging_big_idea} hint="Add in Book Study → Working Big Idea" />
-          )}
-
-          <SgPartDivider />
-
-          {/* Part 4: Why This Series, Why Now */}
-          <SgPartHeader number="4" title="Why This Series, Why Now" />
-          <SgSection label="Pastoral Motivation" value={series.series_motivation} hint="Add in Book Study → Why This Congregation, Why Now" />
-
-          <SgPartDivider />
-
-          {/* Part 5: The Sermons */}
-          <SgPartHeader number="5" title={`The Sermons (${sermons.length})`} />
+          {/* Part 4 — The Journey (sections grouped, then Remaining Sermons) */}
+          <SgPartHeader number="4" title={`The Journey (${sermons.length} sermon${sermons.length === 1 ? "" : "s"})`} />
           {sermons.length === 0 ? (
             <div style={{ fontSize: "13px", fontStyle: "italic", color: "var(--ink-ghost)" }}>
               Add sermon slots in the Sermon Slots tab.
             </div>
           ) : (
-            <div>
-              {sermons.map((sermon, idx) => (
-                <SgSlotRow key={sermon.id} sermon={sermon} index={idx} />
-              ))}
-            </div>
+            <>
+              {sections.map((section) => {
+                const inSection = sermons.filter((s) => s.section_id === section.id);
+                const sectionEmpty = !section.title?.trim() && !section.passage_range?.trim() &&
+                  !section.big_idea?.trim() && !section.overview?.trim() && inSection.length === 0;
+                if (sectionEmpty) return null;
+                return (
+                  <div key={section.id} style={{ marginBottom: "20px" }}>
+                    {section.title?.trim() && (
+                      <h4 style={{ fontFamily: "var(--font-serif)", fontSize: "15px", fontWeight: 600, color: "var(--ink)", margin: "0 0 4px" }}>{section.title}</h4>
+                    )}
+                    {section.passage_range?.trim() && (
+                      <div style={{ fontFamily: "var(--font-mono)", fontSize: "12px", color: "var(--ink-soft)", marginBottom: "4px" }}>{section.passage_range}</div>
+                    )}
+                    {section.big_idea?.trim() && (
+                      <div style={{ fontSize: "13px", fontStyle: "italic", color: "var(--ink-soft)", marginBottom: "6px" }}>{section.big_idea}</div>
+                    )}
+                    {section.overview?.trim() && (
+                      <p style={{ fontSize: "14px", fontFamily: "var(--font-serif)", color: "var(--ink)", lineHeight: "1.7", margin: "0 0 8px" }}>{section.overview}</p>
+                    )}
+                    {inSection.map((sermon, idx) => <SgSlotRow key={sermon.id} sermon={sermon} index={idx} />)}
+                  </div>
+                );
+              })}
+              {(() => {
+                const assigned = new Set();
+                for (const section of sections) {
+                  for (const s of sermons.filter((s) => s.section_id === section.id)) assigned.add(s.id);
+                }
+                const remaining = sermons.filter((s) => !assigned.has(s.id));
+                if (remaining.length === 0) return null;
+                return (
+                  <div style={{ marginBottom: "20px" }}>
+                    {sections.length > 0 && (
+                      <h4 style={{ fontFamily: "var(--font-serif)", fontSize: "15px", fontWeight: 600, color: "var(--ink)", margin: "0 0 8px" }}>Remaining Sermons</h4>
+                    )}
+                    {remaining.map((sermon, idx) => <SgSlotRow key={sermon.id} sermon={sermon} index={idx} />)}
+                  </div>
+                );
+              })()}
+            </>
+          )}
+
+          {/* Part 5 — Reference */}
+          {series.structural_outline?.trim() && (
+            <>
+              <SgPartDivider />
+              <SgPartHeader number="5" title="Reference" />
+              <SgSection label="How the Book Is Built" value={series.structural_outline} hint="Add in Structure → Structural Outline" />
+            </>
           )}
         </div>
 

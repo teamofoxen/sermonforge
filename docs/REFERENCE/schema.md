@@ -32,15 +32,15 @@ Current schema version: **24**
 | `passage_range` | TEXT | e.g. "Luke 1:1–24:53" |
 | `start_date` | TEXT | |
 | `end_date` | TEXT | |
-| `structural_outline` | TEXT | Detailed book outline (paste or AI-generated) |
+| `structural_outline` | TEXT | Detailed book outline — pastor-typed or pasted from a commentary (Structure tab). AI-free since ARI. |
 | `status` | TEXT | `in_progress \| complete` — two-state lifecycle (v16 collapse). `SERIES_STATUS` in `src/core/contracts.ts`; `create-series` writes `in_progress`. (CREATE TABLE default is a vestigial `'planning'`, always overwritten on insert.) |
 | `canon_category` | TEXT | `ot \| nt \| wisdom \| prophetic` |
-| `redemptive_context` | TEXT | Where this book sits in the arc from creation to new creation (Book Study; feeds tier 4) |
-| `book_background` | TEXT | Author, audience, occasion, historical setting, genre (Book Study; excluded from per-sermon context) |
-| `book_argument` | TEXT | The book's controlling argument or central purpose (Book Study; excluded from per-sermon context) |
-| `book_structure` | TEXT | Major movements, structural markers, turning points (Book Study; excluded from per-sermon context) |
-| `series_motivation` | TEXT | Why this congregation needs this book now (Book Study; feeds tier 4) |
-| `emerging_big_idea` | TEXT | Working draft of the series big idea, developed in Book Study (excluded from per-sermon context) |
+| `redemptive_context` | TEXT | Where this book sits in the arc from creation to new creation (Book Study tab) |
+| `book_background` | TEXT | Author, audience, occasion, historical setting, genre (Book Study tab) |
+| `book_argument` | TEXT | The book's controlling argument or central purpose (Book Study tab) |
+| `book_structure` | TEXT | Major movements, structural markers, turning points (Book Study tab) |
+| `series_motivation` | TEXT | Why this congregation needs this book now (Book Study tab) |
+| `emerging_big_idea` | TEXT | Working draft of the series big idea, developed in Book Study |
 
 ---
 

@@ -49,7 +49,9 @@ export function getEaster(year) {
 
 /**
  * Returns the liturgical season for a given date string ("YYYY-MM-DD").
- * @returns {{ name: string, shortName: string, color: string }}
+ * `token` is a design-system CSS variable name (not a hardcoded hex) so season
+ * pills stay on-palette and readable in both light and dark themes (audit M13).
+ * @returns {{ name: string, shortName: string, token: string }}
  */
 export function getSeasonForDate(dateStr) {
   if (!dateStr) return null;
@@ -69,14 +71,14 @@ export function getSeasonForDate(dateStr) {
 
   const epiphany = new Date(year, 0, 6); // Jan 6
 
-  if (d < epiphany)    return { name: "Christmastide",   shortName: "Christmas",  color: "#d4a017" };
-  if (d < ashWednesday) return { name: "Epiphany",        shortName: "Epiphany",   color: "#b8860b" };
-  if (d < palmSunday)  return { name: "Lent",             shortName: "Lent",       color: "#6b5c4e" };
-  if (d < easter)      return { name: "Holy Week",        shortName: "Holy Week",  color: "#8b1a1a" };
-  if (d <= pentecost)  return { name: "Easter Season",    shortName: "Easter",     color: "#228b22" };
-  if (d < adventStart) return { name: "Ordinary Time",    shortName: "Ordinary",   color: "#4a6741" };
-  if (d < christmas)   return { name: "Advent",           shortName: "Advent",     color: "#2c3e50" };
-  return                      { name: "Christmastide",    shortName: "Christmas",  color: "#d4a017" };
+  if (d < epiphany)    return { name: "Christmastide",   shortName: "Christmas",  token: "--gold-bright" };
+  if (d < ashWednesday) return { name: "Epiphany",        shortName: "Epiphany",   token: "--gold" };
+  if (d < palmSunday)  return { name: "Lent",             shortName: "Lent",       token: "--ink-soft" };
+  if (d < easter)      return { name: "Holy Week",        shortName: "Holy Week",  token: "--crimson" };
+  if (d <= pentecost)  return { name: "Easter Season",    shortName: "Easter",     token: "--sage-soft" };
+  if (d < adventStart) return { name: "Ordinary Time",    shortName: "Ordinary",   token: "--sage" };
+  if (d < christmas)   return { name: "Advent",           shortName: "Advent",     token: "--slate" };
+  return                      { name: "Christmastide",    shortName: "Christmas",  token: "--gold-bright" };
 }
 
 // ── Sunday schedule generation ────────────────────────────────────────────────

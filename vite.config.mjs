@@ -18,6 +18,15 @@ export default defineConfig({
   test: {
     environment: "node",
     globals: true,
+    // Don't collect tests from git worktrees under .claude/ — they are stale
+    // pre-revival copies and inflated `npm test` to ~706 tests, masking the
+    // real main-suite count (audit M10). Keep the usual default exclusions too.
+    exclude: [
+      "**/node_modules/**",
+      "**/dist/**",
+      "**/.{idea,git,cache,output,temp}/**",
+      "**/.claude/**",
+    ],
   },
   resolve: {
     alias: {

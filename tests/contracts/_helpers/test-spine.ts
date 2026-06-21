@@ -67,10 +67,14 @@ export const SERMON_COLUMNS = new Set([
   // current_step removed in the trail deletion sweep (Phase B2) — mirrors
   // SERMON_COLUMNS in contracts.
   "current_stage", "current_sub_phase",
+  // v21 — per-stage sub-phase memory (mirrors contracts).
+  "last_study_subphase", "last_assembly_subphase",
   // v18 — SPRD C3 Sermon Frame.
   "sermon_frame",
   // v19 — SADI Step 2 Main Point Pair.
   "main_point_pair",
+  // v20 — ARI Phase 3 per-tab notebooks (mirrors contracts).
+  "notebook_study", "notebook_blueprint", "notebook_manuscript",
   // v23 — trail deletion sweep (Phase D1). last_touched_position drives
   // session re-entry; thresholds_seen is the dismissed-thresholds JSON array.
   "last_touched_position", "thresholds_seen",
@@ -172,12 +176,22 @@ function shapeSeries(row: Row | undefined) {
   };
 }
 
+// Undated slots ("" / null date) sort AFTER dated ones, then by created_at —
+// mirrors the production CASE-WHEN ordering (audit M4) so partial scheduling
+// doesn't scramble position-in-series.
+function compareBySeriesOrder(a: Row, b: Row) {
+  const ae = !a.date, be = !b.date;
+  if (ae !== be) return ae ? 1 : -1;
+  const d = (a.date || "").localeCompare(b.date || "");
+  return d !== 0 ? d : (a.created_at || "").localeCompare(b.created_at || "");
+}
+
 function computeParentContext(row: Row | undefined) {
   if (!row || !row.series_id) return null;
   const seriesRow = series.get(row.series_id);
   const siblings = [...sermons.values()]
-    .filter((s) => s.series_id === row.series_id)
-    .sort((a, b) => (a.date || "").localeCompare(b.date || ""));
+    .filter((s) => s.series_id === row.series_id && !s.deleted_at)
+    .sort(compareBySeriesOrder);
   const idx = siblings.findIndex((s) => s.id === row.id);
   if (idx === -1) return null;
   return {
@@ -516,15 +530,19 @@ function spineRead(op: string, payload: any): any {
         .map((r) => shapeSermon(r, computeParentContext(r)));
     case "get-sermons-by-series":
       return [...sermons.values()]
-        .filter((s) => s.series_id === payload)
-        .sort((a, b) => {
-          const d = (a.date || "").localeCompare(b.date || "");
-          return d !== 0 ? d : (a.created_at || "").localeCompare(b.created_at || "");
-        })
+        .filter((s) => s.series_id === payload && !s.deleted_at)
+        .sort(compareBySeriesOrder)
         .map((s) => {
           const sec = s.section_id ? sections.get(s.section_id) : null;
           return { ...s, section_title: sec?.title || null };
         });
+    case "get-series-sermon-counts": {
+      const counts: Record<string, number> = {};
+      for (const s of sermons.values()) {
+        if (s.series_id && !s.deleted_at) counts[s.series_id] = (counts[s.series_id] || 0) + 1;
+      }
+      return counts;
+    }
     case "get-sections-by-series":
       return [...sections.values()]
         .filter((s) => s.series_id === payload)
@@ -536,7 +554,7 @@ function spineRead(op: string, payload: any): any {
 const SPINE_READ_OPS = new Set([
   "get-sermon", "get-series", "get-all-sermons", "get-all-series",
   "get-recent-sermons", "get-recent-series", "get-in-progress-sermons",
-  "get-sermons-by-series", "get-sections-by-series",
+  "get-sermons-by-series", "get-series-sermon-counts", "get-sections-by-series",
 ]);
 
 async function dispatch(op: string, payload?: any) {

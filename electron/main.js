@@ -1440,6 +1440,17 @@ function buildUpdate(fields, allowedColumns) {
   };
 }
 
+// Shared ORDER BY for sermons within a series: undated slots ('' / NULL) sort
+// AFTER dated ones, then by date, then created_at. One definition so the
+// planner list, the workspace "Sermon N of M" breadcrumb, and the study-guide
+// export stay in lockstep and can't drift (audit M4). `prefix` is a table alias
+// like "s." when the query joins.
+function seriesSermonOrderBy(prefix = "") {
+  const d = `${prefix}date`;
+  const c = `${prefix}created_at`;
+  return `ORDER BY CASE WHEN ${d} IS NULL OR ${d} = '' THEN 1 ELSE 0 END, ${d} ASC, ${c} ASC`;
+}
+
 // ── Sermon search indexer (v22) ───────────────────────────────────────────────
 //
 // Maintains the `sermon_search` table in sync with `sermons`. Every
@@ -1754,8 +1765,14 @@ function fetchSermonRow(id) {
 
 function computeParentContext(row) {
   if (!row || !row.series_id) return null;
+  // Soft-deleted siblings must not inflate the position-in-series count
+  // (Mutation #4 / audit L6). Undated slots sort AFTER dated ones so partial
+  // scheduling doesn't scramble "Sermon N of M" (audit M4) — empty-string
+  // dates would otherwise sort first under BINARY collation.
   const siblings = queryAll(
-    "SELECT id FROM sermons WHERE series_id = ? ORDER BY date ASC, created_at ASC",
+    `SELECT id FROM sermons
+      WHERE series_id = ? AND deleted_at IS NULL
+      ${seriesSermonOrderBy()}`,
     [row.series_id],
   );
   const idx = siblings.findIndex((s) => s.id === row.id);
@@ -1804,10 +1821,13 @@ function spineRead(op, payload) {
         [SERMON_STATUS.Complete, payload?.limit ?? 3],
       ).map((r) => shapeSermon(r, computeParentContext(r)));
     case "get-recent-series":
+      // The series table has no created_at / updated_at columns, so the old
+      // COALESCE(updated_at, created_at) ORDER BY threw whenever this op ran
+      // (audit L7). Order by the columns that exist, matching get-all-series.
       return queryAll(
         `SELECT * FROM series
          WHERE id NOT LIKE 'sample-%'
-         ORDER BY COALESCE(updated_at, created_at) DESC
+         ORDER BY year DESC, title ASC
          LIMIT ?`,
         [payload?.limit ?? 3],
       ).map(shapeSeries);
@@ -1823,13 +1843,31 @@ function spineRead(op, payload) {
         [SERMON_STATUS.InProgress],
       ).map((r) => shapeSermon(r, computeParentContext(r)));
     case "get-sermons-by-series":
+      // Undated slots sort AFTER dated ones (audit M4): empty-string dates
+      // sort first under BINARY collation, which scrambles the planner order
+      // and the workspace "Sermon N of M" breadcrumb once only some slots are
+      // dated. Keep this ORDER BY in lockstep with computeParentContext and
+      // the study-guide export query.
       return queryAll(
         `SELECT s.*, ss.title as section_title FROM sermons s
          LEFT JOIN series_sections ss ON s.section_id = ss.id
          WHERE s.series_id = ? AND s.deleted_at IS NULL
-         ORDER BY s.date ASC, s.created_at ASC`,
+         ${seriesSermonOrderBy("s.")}`,
         [payload],
       );
+    case "get-series-sermon-counts": {
+      // One grouped read for the Planning list's per-series counts, replacing
+      // an N+1 fan-out of get-sermons-by-series (audit perf). Returns a plain
+      // { [seriesId]: count } map of undeleted sermons.
+      const rows = queryAll(
+        `SELECT series_id, COUNT(*) AS count FROM sermons
+          WHERE series_id IS NOT NULL AND deleted_at IS NULL
+          GROUP BY series_id`,
+      );
+      const counts = {};
+      for (const r of rows) counts[r.series_id] = r.count;
+      return counts;
+    }
     case "get-sections-by-series":
       return queryAll(
         "SELECT * FROM series_sections WHERE series_id = ? ORDER BY sort_order ASC, created_at ASC",
@@ -2315,6 +2353,7 @@ const SPINE_READ_OPS = new Set([
   "get-recent-series",
   "get-in-progress-sermons",
   "get-sermons-by-series",
+  "get-series-sermon-counts",
   "get-sections-by-series",
 ]);
 
@@ -2830,9 +2869,14 @@ function buildStudyGuideDoc(series, sections, sermons) {
   }
 
   // PART 3 — THE BIG IDEA
-  if (hasContent(series.emerging_big_idea) || hasContent(series.big_idea) || hasContent(series.overview)) {
+  // Show the working hypothesis only when it still differs from the final
+  // Series Big Idea — otherwise it's the same sentence printed twice (audit
+  // L9). Mirrors the on-screen preview's de-dupe.
+  const emergingDiffersFromBig = hasContent(series.emerging_big_idea) &&
+    series.emerging_big_idea.trim() !== (series.big_idea || "").trim();
+  if (emergingDiffersFromBig || hasContent(series.big_idea) || hasContent(series.overview)) {
     children.push(partHeading("PART 3 — THE BIG IDEA"));
-    if (hasContent(series.emerging_big_idea)) {
+    if (emergingDiffersFromBig) {
       children.push(subHead("Working Hypothesis"));
       children.push(...bodyParas(series.emerging_big_idea));
     }
@@ -2895,11 +2939,21 @@ ipcMain.handle("series-export-study-guide", async (_, seriesId) => {
     if (!series) return { success: false, error: "Series not found" };
 
     const sections = queryAll(
-      "SELECT * FROM series_sections WHERE series_id = ? ORDER BY sort_order ASC",
+      // Same tiebreaker as get-sections-by-series so the export order matches
+      // what the planner shows when two sections share a sort_order (audit M24).
+      "SELECT * FROM series_sections WHERE series_id = ? ORDER BY sort_order ASC, created_at ASC",
       [seriesId]
     );
+    // deleted_at IS NULL: a soft-deleted slot must NOT resurface in the
+    // exported study guide (audit H1) — every other series-sermon read filters
+    // tombstones, and the on-screen preview is fed from the filtered
+    // get-sermons-by-series, so without this the .docx silently contradicted
+    // the preview. Ordering matches get-sermons-by-series / computeParentContext
+    // so undated slots land last (audit M4).
     const sermons = queryAll(
-      "SELECT * FROM sermons WHERE series_id = ? ORDER BY date ASC, created_at ASC",
+      `SELECT * FROM sermons
+        WHERE series_id = ? AND deleted_at IS NULL
+        ${seriesSermonOrderBy()}`,
       [seriesId]
     );
 
@@ -2910,7 +2964,14 @@ ipcMain.handle("series-export-study-guide", async (_, seriesId) => {
       fs.mkdirSync(studyGuidesDir, { recursive: true });
     }
 
-    const safeTitle = (series.title || "Untitled").replace(/[<>:"/\\|?*\n\r\t]/g, "—").trim();
+    // Strip path separators / illegal filename chars, then cap length so a
+    // pathologically long series title can't blow past the OS path limit and
+    // fail with a misleading "Try again" (audit L8).
+    const safeTitle = ((series.title || "Untitled")
+      .replace(/[<>:"/\\|?*\n\r\t]/g, "—")
+      .trim()
+      .slice(0, 120)
+      .trim()) || "Untitled";
     const filepath = path.join(studyGuidesDir, `${safeTitle} — Study Guide.docx`);
 
     const { Packer } = require("docx");

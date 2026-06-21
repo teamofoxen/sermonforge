@@ -9,6 +9,12 @@
 
 ## Project Identity
 
+- **2026-06-21 (Series Planner revival, audit remediation):** the "the Series Planner is a
+  stub until that work gets its own charter" clause was retired — the charter now exists
+  (`docs/PROPOSALS/series-planner-revival-charter.md`) and the AI-free planner + church-calendar
+  scheduling + congregational study-guide export shipped (commit `74406e5`). The Project
+  Identity paragraph now describes the planner as a shipped, distinct macro/architect surface
+  that stands alongside the sermon workspace, while keeping the sermon as the primary unit.
 - **2026-06-10 (UX-overhaul governance batch):** the persona sentence was rearticulated —
   low software confidence made a *binding design constraint* ("when a labeled control and a
   minimal one are otherwise tied, the labeled one wins"); the wording is the pastor's to

@@ -79,6 +79,9 @@ function browserPreviewMock(op: string, payload?: unknown): unknown {
   if (op === "create-series") {
     return { id: "preview-mock-series" };
   }
+  if (op === "get-series-sermon-counts") {
+    return {};
+  }
   if (op === "get-sermon") {
     return {
       id: PREVIEW_MOCK_SERMON_ID,
@@ -179,6 +182,12 @@ export function getInProgressSermons(): Promise<any[]> {
 }
 export function getSermonsBySeries(seriesId: string): Promise<any[]> {
   return call("get-sermons-by-series", seriesId);
+}
+// Single grouped read of per-series sermon counts — replaces the Planning
+// list's N+1 fan-out of getSermonsBySeries (audit perf). Returns a plain
+// { [seriesId]: count } map.
+export function getSeriesSermonCounts(): Promise<Record<string, number>> {
+  return call("get-series-sermon-counts");
 }
 export function getSectionsBySeries(seriesId: string): Promise<any[]> {
   return call("get-sections-by-series", seriesId);

@@ -208,19 +208,26 @@ export default function Sidebar({ currentView, onNavigate, onOpenSermon, theme, 
         )}
 
         {/* Remaining nav items */}
-        {NAV_ITEMS.map((item) => (
-          <div
-            key={item.id}
-            className={`nav-item ${currentView === item.id ? "active" : ""}`}
-            onClick={() => handleNavigate(item.id)}
-            role="button"
-            tabIndex={0}
-            onKeyDown={buttonKeydown(() => handleNavigate(item.id))}
-          >
-            {item.icon}
-            {item.label}
-          </div>
-        ))}
+        {NAV_ITEMS.map((item) => {
+          // The planner (VIEW.SeriesPlanner) is reached from the Series Planning
+          // entry, so keep that entry lit while inside it — "You are here"
+          // stays answerable (Surface #4), matching Workspace ↔ Sermons above.
+          const active = currentView === item.id ||
+            (item.id === VIEW.Planning && currentView === VIEW.SeriesPlanner);
+          return (
+            <div
+              key={item.id}
+              className={`nav-item ${active ? "active" : ""}`}
+              onClick={() => handleNavigate(item.id)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={buttonKeydown(() => handleNavigate(item.id))}
+            >
+              {item.icon}
+              {item.label}
+            </div>
+          );
+        })}
       </nav>
 
       <div className="sidebar-footer">

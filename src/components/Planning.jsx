@@ -1,9 +1,13 @@
 import { useState, useEffect } from "react";
-import { getAllSeries, deleteSeries, getSermonsBySeries } from "../core/spine";
+import { getAllSeries, deleteSeries, getSeriesSermonCounts } from "../core/spine";
 import { SERIES_STATUS, SERIES_STATUS_LABELS } from "../core/contracts";
-import DeleteButton from "./primitives/DeleteButton";
+import { useModalA11y } from "../utils/useModalA11y";
+import { buttonKeydown } from "../utils/buttonKeydown";
 import PrimaryButton from "./primitives/PrimaryButton";
+import SecondaryButton from "./primitives/SecondaryButton";
+import IconButton from "./primitives/IconButton";
 import EmptyState from "./primitives/EmptyState";
+import InlineError from "./InlineError";
 import NewSeriesModal from "./NewSeriesModal";
 
 // Series Planning landing — the front door restored after the ARI Phase-0 stub.
@@ -19,21 +23,21 @@ export default function Planning({ onOpenPlanner }) {
   const [sermonCounts, setSermonCounts] = useState({});
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
+  // Whole-series deletion is irreversible (hard delete of the series + its
+  // sections, no undo), so it gets a named, consequence-stating confirm
+  // proportional to the loss (Mutation #4 / audit H2) instead of the generic
+  // two-step row confirm. pendingDelete holds the series awaiting confirmation.
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const [deleteError, setDeleteError] = useState(null);
 
   useEffect(() => { load(); }, []);
 
   async function load() {
     try {
-      const all = await getAllSeries();
+      // One grouped count read instead of an N+1 getSermonsBySeries fan-out.
+      const [all, counts] = await Promise.all([getAllSeries(), getSeriesSermonCounts()]);
       setSeries(all);
-      const counts = {};
-      await Promise.all(
-        all.map(async (s) => {
-          const sermons = await getSermonsBySeries(s.id);
-          counts[s.id] = sermons.length;
-        })
-      );
-      setSermonCounts(counts);
+      setSermonCounts(counts || {});
     } catch (e) {
       console.error("Planning load error:", e);
     } finally {
@@ -41,9 +45,19 @@ export default function Planning({ onOpenPlanner }) {
     }
   }
 
-  async function handleDelete(id) {
-    await deleteSeries(id);
-    await load();
+  async function confirmDelete() {
+    const target = pendingDelete;
+    if (!target) return;
+    setDeleteError(null);
+    try {
+      await deleteSeries(target.id);
+      setPendingDelete(null);
+      await load();
+    } catch (e) {
+      // A failed delete must speak, not vanish silently (Mutation #5 / audit L3).
+      console.error("Planning delete error:", e);
+      setDeleteError("That series couldn't be deleted. Try again.");
+    }
   }
 
   // Canon coverage tallies — a quiet "what have I preached across the canon" read.
@@ -119,7 +133,7 @@ export default function Planning({ onOpenPlanner }) {
                 series={s}
                 sermonCount={sermonCounts[s.id] || 0}
                 onOpen={() => onOpenPlanner(s.id)}
-                onDelete={() => handleDelete(s.id)}
+                onRequestDelete={() => { setDeleteError(null); setPendingDelete(s); }}
               />
             ))}
           </div>
@@ -135,11 +149,21 @@ export default function Planning({ onOpenPlanner }) {
           }}
         />
       )}
+
+      {pendingDelete && (
+        <DeleteSeriesModal
+          series={pendingDelete}
+          sermonCount={sermonCounts[pendingDelete.id] || 0}
+          error={deleteError}
+          onConfirm={confirmDelete}
+          onClose={() => { setPendingDelete(null); setDeleteError(null); }}
+        />
+      )}
     </>
   );
 }
 
-function SeriesCard({ series: s, sermonCount, onOpen, onDelete }) {
+function SeriesCard({ series: s, sermonCount, onOpen, onRequestDelete }) {
   const cat = s.canon_category || "";
   const statusColor = { [SERIES_STATUS.InProgress]: "var(--sage)", [SERIES_STATUS.Complete]: "var(--gold)" };
 
@@ -148,6 +172,12 @@ function SeriesCard({ series: s, sermonCount, onOpen, onDelete }) {
       className="card"
       style={{ cursor: "pointer", position: "relative" }}
       onClick={onOpen}
+      // The whole card opens the series; make that reachable by keyboard, not
+      // mouse-only (audit M14) — matches the app's other clickable cards.
+      role="button"
+      tabIndex={0}
+      aria-label={`Open ${s.title || "series"}`}
+      onKeyDown={buttonKeydown(onOpen)}
     >
       {/* Color accent */}
       <div style={{
@@ -172,7 +202,7 @@ function SeriesCard({ series: s, sermonCount, onOpen, onDelete }) {
 
       {/* Passage range */}
       {s.passage_range && (
-        <div style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: "12px", color: "var(--ink-soft)", marginBottom: "6px" }}>
+        <div style={{ fontFamily: "var(--font-mono)", fontSize: "12px", color: "var(--ink-soft)", marginBottom: "6px" }}>
           {s.passage_range}
         </div>
       )}
@@ -193,7 +223,66 @@ function SeriesCard({ series: s, sermonCount, onOpen, onDelete }) {
             <span style={{ color: CANON_COLORS[cat], fontWeight: "500" }}>{CANON_LABELS[cat]}</span>
           )}
         </div>
-        <DeleteButton small confirmLabel="Delete series?" ariaLabel={`Delete ${s.title || "series"}`} onDelete={onDelete} />
+        <SecondaryButton
+          size="sm"
+          onClick={(e) => { e.stopPropagation(); onRequestDelete(); }}
+          title={`Delete ${s.title || "series"}`}
+          style={{ fontSize: "12px", padding: "3px 10px", color: "var(--ink-soft)" }}
+        >
+          Delete
+        </SecondaryButton>
+      </div>
+    </div>
+  );
+}
+
+// Named, consequence-stating confirm for irreversible whole-series deletion
+// (Mutation #4 / audit H2).
+function DeleteSeriesModal({ series, sermonCount, error, onConfirm, onClose }) {
+  const dialogRef = useModalA11y(onClose);
+  const [deleting, setDeleting] = useState(false);
+
+  async function handleConfirm() {
+    if (deleting) return;
+    setDeleting(true);
+    try {
+      await onConfirm();
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  return (
+    <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal" ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="delete-series-title">
+        <div className="modal-header">
+          <h2 className="modal-title" id="delete-series-title">Delete this series?</h2>
+          <IconButton aria-label="Close" className="modal-close" onClick={onClose}>×</IconButton>
+        </div>
+
+        <div className="modal-body">
+          <p style={{ fontFamily: "var(--font-serif)", fontSize: "15px", color: "var(--ink)", lineHeight: "1.6", margin: "0 0 10px" }}>
+            This permanently deletes <strong>{series.title || "this series"}</strong> — its
+            book study, overview, structure, sections, and calendar. <strong>This can&rsquo;t be undone.</strong>
+          </p>
+          <p style={{ fontFamily: "var(--font-serif)", fontSize: "14px", color: "var(--ink-soft)", lineHeight: "1.6", margin: 0 }}>
+            {sermonCount > 0
+              ? `Its ${sermonCount} sermon${sermonCount === 1 ? "" : "s"} will keep their content but lose their series — they'll become stand-alone sermons in your library.`
+              : "No sermons are attached to this series."}
+          </p>
+          {error && <div style={{ marginTop: "12px" }}><InlineError>{error}</InlineError></div>}
+        </div>
+
+        <div className="modal-footer">
+          <SecondaryButton onClick={onClose}>Cancel</SecondaryButton>
+          <PrimaryButton
+            onClick={handleConfirm}
+            disabled={deleting}
+            style={{ background: "var(--crimson)" }}
+          >
+            Delete series
+          </PrimaryButton>
+        </div>
       </div>
     </div>
   );

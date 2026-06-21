@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { createSeries } from "../core/spine";
 import mapError from "../utils/mapError";
+import { useModalA11y } from "../utils/useModalA11y";
 import InlineError from "./InlineError";
 import PrimaryButton from "./primitives/PrimaryButton";
 import SecondaryButton from "./primitives/SecondaryButton";
@@ -16,12 +17,9 @@ export default function NewSeriesModal({ onClose, onCreated }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
-  // Escape closes — same pattern as every sibling overlay.
-  useEffect(() => {
-    function onKey(e) { if (e.key === "Escape") onClose?.(); }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  // Escape + focus trap + focus restore; respects the title input's autoFocus
+  // (audit L10).
+  const dialogRef = useModalA11y(onClose);
 
   async function handleCreate() {
     if (saving) return;
@@ -49,9 +47,9 @@ export default function NewSeriesModal({ onClose, onCreated }) {
 
   return (
     <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal">
+      <div className="modal" ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="new-series-title">
         <div className="modal-header">
-          <h2 className="modal-title">New Series</h2>
+          <h2 className="modal-title" id="new-series-title">New Series</h2>
           <IconButton aria-label="Close" className="modal-close" onClick={onClose}>×</IconButton>
         </div>
 
