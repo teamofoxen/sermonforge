@@ -1,0 +1,52 @@
+# Series Planner Revival — Charter
+
+**Status:** ACTIVE (build) · opened 2026-06-21 · supersedes the ARI Phase-0 "coming soon" stub.
+
+## Decision
+
+Series-level planning is a first-class **macro / architect** mode of work — deciding
+and shaping what gets preached across a book or season — genuinely distinct from the
+weekly per-sermon walk. It returns to SermonForge as its own surface. CORE conditioned
+the planner's return on "its own charter"; this is it.
+
+The whole series backend (tables, CRUD IPC, the church-calendar engine, the study-guide
+`.docx` exporter) is already live and passing CI. What was removed in ARI was only the
+AI-saturated authoring **UI**. So this is a revival of a surface onto a living spine, not
+a from-scratch build.
+
+## Principles
+
+- **AI-free.** Rebuilt from the pre-ARI bones (`git 4e3c42d~1`) with every AI sidecar
+  removed (no Analyze / Generate / Assist / Chat / scheduling-advisor). Every field is
+  pastor-authored. Enforced by `sermonforge/no-direct-ai`.
+- **Stands alone.** It need not feed per-sermon prep. The existing series↔sermon links
+  (workspace breadcrumb, New-Sermon picker) remain, but they are not the point.
+- **Keep the 5-tab bones for v1.** Book Study · Overview · Structure · Sermon Slots ·
+  Calendar — ending in the congregational Study Guide export. A tabbed workbench fits
+  macro work. Re-skinning to the invisible-system idiom is deferred, not promised.
+
+## Scope — 3 increments
+
+1. **Front door** — create a series, list/open it, a sidebar entry. Closes the one
+   genuinely-missing piece: `createSeries` had no UI caller, so no series could be made.
+2. **The planner** — recover `SeriesPlanner.jsx`, strip the AI sidecar, convert the one
+   raw button, land it in today's primitives + lint rules.
+3. **Study-guide export** — rides along with #2 (already AI-free); verify end-to-end and
+   fix the schema doc-drift uncovered along the way.
+
+## Key rulings
+
+- **Persistence: create-then-update.** `createSeries` takes only name/year/color; the
+  Book Study / Overview fields persist via debounced `updateSeries`. Do **not** widen the
+  create INSERT to "fix" the 6 unwritten Book Study columns — that is by design.
+- **Slots: keep the draft-row / commit pattern verbatim.** `createSermon` throws on an
+  empty name (State Contract #3), so a slot stays UI-only until its first non-empty title.
+- **`onOpenSermon`: drop the 3rd (seriesId) arg for v1** — the planner stands alone;
+  return is via the sidebar / Planning list. Revisit only if return-to-this-series is asked for.
+- **Nav:** `VIEW.Planning` = the list/picker (sidebar-reachable); `VIEW.SeriesPlanner` =
+  planner-with-id, reached only via `openPlanner(id)`.
+
+## Out of scope (v1)
+
+Re-skin to the invisible-system idiom; any AI-era "book-understanding feeds the sermon
+walk" pipeline; return-to-planner after opening a slot.

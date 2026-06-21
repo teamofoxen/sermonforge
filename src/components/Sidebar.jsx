@@ -13,6 +13,16 @@ import Logo from "./Logo.jsx";
 
 const NAV_ITEMS = [
   {
+    id: VIEW.Planning,
+    label: "Series Planning",
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+        <path d="M2 4h6a3 3 0 0 1 3 3v13a2.5 2.5 0 0 0-2.5-2.5H2z" />
+        <path d="M22 4h-6a3 3 0 0 0-3 3v13a2.5 2.5 0 0 1 2.5-2.5H22z" />
+      </svg>
+    ),
+  },
+  {
     id: VIEW.Calendar,
     label: "Calendar",
     icon: (

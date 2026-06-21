@@ -10,10 +10,11 @@
 > doesn't flag them as broken references — they are historical, not
 > current. Names retained for searchability when reading old git history:
 > electron/ai.js, src/utils/ai.js, src/prompts/, AIPanel.jsx,
-> ProposalPanel.jsx, InlineAIResponse.jsx, SeriesPlanner.jsx, Planning.jsx,
-> NewSeriesModal.jsx, DeliveryTab.jsx, memory.js (localStorage layer),
-> contextBuilder.js, contextSchema.js. None of them exist in the current
-> tree.
+> ProposalPanel.jsx, InlineAIResponse.jsx, DeliveryTab.jsx, memory.js
+> (localStorage layer), contextBuilder.js, contextSchema.js. None of them
+> exist in the current tree. (SeriesPlanner.jsx, Planning.jsx, and
+> NewSeriesModal.jsx were on this ARI removed-files list but were REVIVED
+> 2026-06-21 — see the component tree below.)
 >
 > Removed-files note (trail deletion sweep + post-sweep audit, 2026-05-17 →
 > 2026-05-18): era 3 trail UI + workspace tab files + tour engine +
@@ -182,6 +183,10 @@ SermonForge/
         ├── PassagePopup.jsx         — Floating ESV scripture viewer (portal to document.body)
         ├── EsvKeyModal.jsx          — First-run ESV API key entry modal
         ├── NewSermonModal.jsx
+        ├── Planning.jsx             — Series Planner front door: series list / picker (VIEW.Planning; sidebar "Series Planning"). Revived 2026-06-21
+        ├── SeriesPlanner.jsx        — 5-tab series-planning workbench (Book Study / Overview / Structure / Sermon Slots / Calendar) ending in the Study Guide .docx export; reached via openPlanner(id) (VIEW.SeriesPlanner). AI-free
+        ├── SeriesPlannerFixture.jsx — preview fixture for SeriesPlanner (?planner route)
+        ├── NewSeriesModal.jsx       — create-series front door (name / year / color)
         ├── SetupScreen.jsx          — First-run setup (ESV key + telemetry preference)
         ├── OneDriveWarning.jsx
         ├── SearchResultSnippet.jsx

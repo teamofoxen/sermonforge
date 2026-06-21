@@ -33,7 +33,7 @@ Current schema version: **24**
 | `start_date` | TEXT | |
 | `end_date` | TEXT | |
 | `structural_outline` | TEXT | Detailed book outline (paste or AI-generated) |
-| `status` | TEXT | `planning \| active \| complete` |
+| `status` | TEXT | `in_progress \| complete` — two-state lifecycle (v16 collapse). `SERIES_STATUS` in `src/core/contracts.ts`; `create-series` writes `in_progress`. (CREATE TABLE default is a vestigial `'planning'`, always overwritten on insert.) |
 | `canon_category` | TEXT | `ot \| nt \| wisdom \| prophetic` |
 | `redemptive_context` | TEXT | Where this book sits in the arc from creation to new creation (Book Study; feeds tier 4) |
 | `book_background` | TEXT | Author, audience, occasion, historical setting, genre (Book Study; excluded from per-sermon context) |
@@ -71,7 +71,7 @@ Current schema version: **24**
 | `passage` | TEXT | |
 | `date` | TEXT | |
 | `preacher` | TEXT | |
-| `stage` | TEXT | `planning \| study \| outline \| writing \| ready \| archived` |
+| `stage` | TEXT | `in_progress \| complete` — two-state lifecycle since the v16 collapse (NOT the old 6-state process position). `SERMON_STATUS` in `src/core/contracts.ts`; `create-sermon` writes `in_progress`; `complete` renders as "Preached". The real process position lives in `current_stage` / `current_sub_phase`. (CREATE TABLE default is a vestigial `'planning'`, always overwritten on insert.) |
 | `big_idea` | TEXT | (legacy — never written via IPC; sermon big idea is always read through the series JOIN) |
 | `mpt` | TEXT | Main Point of the Text (past tense) |
 | `mps` | TEXT | Main Point of the Sermon (present tense) |
@@ -86,9 +86,9 @@ Current schema version: **24**
 | `post_sermon` | TEXT | |
 | `functional_elements` | TEXT | JSON object `{0:{explanation,application,illustration},...}` — keyed by outline point UUID |
 | `checklist` | TEXT | JSON object keyed by item label `{label:bool,...}` |
-| `topic_theme` | TEXT | Legacy PC column (v6); retained defensively, no longer rendered or read by the AI context tier. PC's substance moved to Phase 4 Field 3 (`implications.pastoral_context.cost_and_gift`) in SPRD B4.2. |
-| `audience_assumptions` | TEXT | Legacy PC column (v6); retained defensively, no longer rendered or read by the AI context tier. PC's substance moved to Phase 4 Field 3 (`implications.pastoral_context.room_specifics`) in SPRD B4.2. |
-| `background_noise` | TEXT | Legacy PC column (v6); retained defensively, no longer rendered or read by the AI context tier. PC's substance is folded into Phase 4 Field 3 in SPRD B4.2. |
+| `topic_theme` | — | **REMOVED** in the trail deletion sweep (Phase B1): not in `CREATE TABLE`, not in the v14 backfill, not in `SERMON_COLUMNS`. Old DBs may keep it as an orphan column; new DBs never get it, and nothing reads/writes it. PC's substance moved to Phase 4 Field 3 (`implications.pastoral_context`). |
+| `audience_assumptions` | — | **REMOVED** in the trail deletion sweep (Phase B1): not in `CREATE TABLE`, not in the v14 backfill, not in `SERMON_COLUMNS`. Old DBs may keep it as an orphan column; new DBs never get it. |
+| `background_noise` | — | **REMOVED** in the trail deletion sweep (Phase B1): not in `CREATE TABLE`, not in the v14 backfill, not in `SERMON_COLUMNS`. Old DBs may keep it as an orphan column; new DBs never get it. |
 | `study_guide_note` | TEXT | Short note orienting congregation readers to how this sermon fits the series arc |
 | `preaching_blocks` | TEXT | CMC (Contour-Mapped Compression) without-notes output; added v8 migration |
 | `manuscript_delivery` | TEXT | AI-formatted delivery manuscript; added v9 migration |

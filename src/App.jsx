@@ -17,21 +17,9 @@ const CompletedSermons = lazy(() => import("./components/CompletedSermons"));
 const SermonWorkspace = lazy(() => import("./components/SermonWorkspace"));
 const SermonWritingSurfaceFixture = lazy(() => import("./components/SermonWritingSurfaceFixture"));
 const SermonWorkspaceFixture = lazy(() => import("./components/SermonWorkspaceFixture"));
-
-function SeriesPlannerComingSoon() {
-  return (
-    <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", padding: "48px 32px" }}>
-      <div style={{ maxWidth: 520, textAlign: "center" }}>
-        <h1 style={{ fontFamily: "var(--font-serif)", fontSize: 28, fontWeight: 600, color: "var(--ink)", marginBottom: 12 }}>
-          Series planner — coming soon
-        </h1>
-        <p style={{ fontFamily: "var(--font-serif)", fontSize: 16, color: "var(--ink-soft)", lineHeight: 1.6 }}>
-          Series planning is in development and will return in a later release. For now, plan one sermon at a time from the Dashboard.
-        </p>
-      </div>
-    </div>
-  );
-}
+const Planning = lazy(() => import("./components/Planning"));
+const SeriesPlanner = lazy(() => import("./components/SeriesPlanner"));
+const SeriesPlannerFixture = lazy(() => import("./components/SeriesPlannerFixture"));
 
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -181,6 +169,16 @@ function AppInner() {
     setCurrentView(VIEW.Workspace);
   }, []);
 
+  // Series Planner entry. The Planning list calls openPlanner(id) to open one
+  // series into the planner (VIEW.SeriesPlanner). Kept separate from openSermon
+  // — the planner is its own macro surface, reached only with a series id, never
+  // from a bare sidebar click.
+  const [plannerSeriesId, setPlannerSeriesId] = useState(null);
+  const openPlanner = useCallback((id) => {
+    setPlannerSeriesId(id);
+    setCurrentView(VIEW.SeriesPlanner);
+  }, []);
+
   const closeWorkspace = useCallback(() => {
     setOpenSermonId(null);
     setOpenSermonHint(null);
@@ -192,6 +190,11 @@ function AppInner() {
     setCurrentView(view);
     if (view !== VIEW.Workspace) {
       setOpenSermonId(null);
+    }
+    // Leaving the planner clears the open series so re-entry from the Planning
+    // list re-picks (and a bare sidebar click can't land on a stale planner).
+    if (view !== VIEW.SeriesPlanner) {
+      setPlannerSeriesId(null);
     }
   }, []);
 
@@ -249,6 +252,20 @@ function AppInner() {
     return (
       <Suspense fallback={null}>
         <SermonWorkspaceFixture />
+      </Suspense>
+    );
+  }
+
+  // Series Planner preview — mounts the real SeriesPlanner against mock data
+  // so the AI-free, workspace-styled planner can be verified in a browser
+  // preview without Electron/SQLite. ?planner[=overview|structure|slots|calendar]
+  const isPlannerFixture =
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).has("planner");
+  if (isPlannerFixture) {
+    return (
+      <Suspense fallback={null}>
+        <SeriesPlannerFixture />
       </Suspense>
     );
   }
@@ -318,8 +335,16 @@ function AppInner() {
         {currentView === VIEW.CompletedSermons && (
           <CompletedSermons onOpenSermon={openSermon} />
         )}
-        {currentView === VIEW.Planning && <SeriesPlannerComingSoon />}
-        {currentView === VIEW.SeriesPlanner && <SeriesPlannerComingSoon />}
+        {currentView === VIEW.Planning && (
+          <Planning onOpenPlanner={openPlanner} />
+        )}
+        {currentView === VIEW.SeriesPlanner && plannerSeriesId && (
+          <SeriesPlanner
+            seriesId={plannerSeriesId}
+            onBack={() => navigate(VIEW.Planning)}
+            onOpenSermon={openSermon}
+          />
+        )}
         {currentView === VIEW.Workspace && openSermonId && (
           // key forces a REMOUNT per sermon: the old instance's unmount
           // flush persists its own sermon and useDebounce's cleanup clears

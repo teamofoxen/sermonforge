@@ -14,16 +14,21 @@ import * as path from "node:path";
 // router destination missing from the sidebar is "nameless wandering" —
 // the user can land there but no canonical "you are here" will activate.
 //
-// `Planning`, `SeriesPlanner`, and `Workspace` are deep destinations not
-// surfaced as sidebar entries. The test allows them via the EXPECTED_DEEP set.
+// `SeriesPlanner` and `Workspace` are deep destinations not surfaced as
+// sidebar entries; the test allows them via the EXPECTED_DEEP set. `Planning`
+// IS a canonical sidebar entry post-revival (2026-06-21) but is left in
+// EXPECTED_DEEP as a harmless fallback (it is matched by the sidebar set first).
 
 const ROOT = path.resolve(__dirname, "..", "..");
 
-// Deep routes not surfaced in the sidebar:
-//   • Planning + SeriesPlanner — placeholder routes after ARI removed the
-//     Series Planner (2026-05-09); both render <SeriesPlannerComingSoon />
-//     in App.jsx so legacy internal navigation lands on the placeholder
-//     instead of crashing.
+// Deep routes / canonical entries:
+//   • Planning — REVIVED 2026-06-21 (series-planner-revival). Now a real
+//     destination with a canonical "Series Planning" sidebar entry
+//     (Sidebar.jsx NAV_ITEMS, id: VIEW.Planning); matched by the sidebar set,
+//     not by EXPECTED_DEEP.
+//   • SeriesPlanner — the live planner workspace, entered deeply from Planning
+//     by opening a specific series (plannerSeriesId); intentionally not a
+//     top-level sidebar entry, so it stays in EXPECTED_DEEP.
 //   • Workspace — entered by clicking a sermon card; topbar breadcrumbs
 //     provide its "you are here".
 //
@@ -82,8 +87,9 @@ describe("Surface Contract #4: 'you are here' is always answerable", () => {
 
   it("the router exposes at least the four canonical top-level destinations", () => {
     const router = parseRouterDestinations();
-    // Post-ARI canonical top-level destinations (Planning is now a coming-soon
-    // placeholder, not a canonical destination — see EXPECTED_DEEP above).
+    // Canonical top-level destinations checked here. Planning is also canonical
+    // post-revival (sidebar "Series Planning") but is asserted via the sidebar
+    // set in the orphan test above rather than re-checked here.
     expect(router.has("Dashboard")).toBe(true);
     expect(router.has("Sermons")).toBe(true);
     expect(router.has("CompletedSermons")).toBe(true);

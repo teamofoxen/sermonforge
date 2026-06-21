@@ -190,11 +190,10 @@ returns:  { success: true, filepath: string }
         | { success: false, error: string }
 ```
 Assembles a 5-part `.docx` study guide from all series fields, sections, and sermon slots.
-Saves to `~/OneDrive/SermonForge/StudyGuides/[title] — Study Guide.docx`.
-Creates the `StudyGuides` directory if absent. Empty parts are omitted entirely.
-(Series Planner is currently gated behind a "Coming soon" placeholder — ARI Phase 0,
-2026-05-09 — so this handler is reachable only via the legacy Planning route, which now
-renders the placeholder. Handler retained for future Series Planner re-enablement.)
+Saves to `Documents/SermonForge/exports/StudyGuides/[title] — Study Guide.docx` (via `app.getPath("documents")`).
+Creates the directory if absent. Empty parts are omitted entirely.
+(Reachable from the revived Series Planner — the Study Guide button on every planner
+screen. Planner revived 2026-06-21, series-planner-revival.)
 
 ### `"sermon-export-manuscript"`
 ```

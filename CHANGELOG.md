@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-06-21 — Revive the Series Planner (AI-free) with study-guide export
+
+- Revived the Series Planner: an AI-free 5-tab workbench (Book Study/Overview/Structure/Sermon Slots/Calendar) recovered from git, AI stripped, restyled to match the sermon workspace.
+- Restored the front door (create/list/open a series + a "Series Planning" sidebar entry) and the live study-guide `.docx` export + church-calendar scheduling.
+- Added a preview fixture + `?planner` route; ESLint/types clean, all tabs + export modal render, 124/124 tests, drift-check PASS.
+- Fixed schema.md drift (two-state `series.status`/`sermon.stage`; removed PC columns) and stale planner refs in ipc-channels, project-structure, ENFORCEMENT_STATUS, CLAUDE.md.
+- Added the revival charter + recreated `docs/SYSTEMS/series-planner.md`.
+
+---
+
 ## 2026-06-15 — Workspace Re-Foundation Phase 2: remove the four [+] additions (item 5)
 
 - Removed the four SermonForge-added questions the pastor ruled to cut: Possible Implications (`applications`) + Genre (Study 25→23 fields), and `holy_spirit_intent` + `closing_posture` (Context/Conclusion 4→3 questions) — from field-defs, `checkConclusionComposite`, the sample seed, fixtures, and tests.
