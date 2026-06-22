@@ -1,14 +1,8 @@
 'use strict';
 
-// Approach A — pre-commit lint runs only against staged files, with the two
-// deferred Phase-4 rules (sermonforge/no-raw-button + canonical-loading-verb)
-// downgraded via SF_LINT_STAGED=1 so existing baseline noise on touched
-// files doesn't block commits. `npm run lint` (no env var) still surfaces
-// the full 185-error count as the visible reminder.
-//
-// The plugin's own rule sources are excluded — canonical-stage-name.js
-// contains literal forbidden-alias strings as part of its definition, and
-// the rule would self-flag if linted.
+// Pre-commit lint runs only against staged files — all rules at full severity.
+// The plugin's own rule sources are excluded because canonical-stage-name.js
+// contains literal forbidden-alias strings and would self-flag if linted.
 const path = require('node:path');
 
 module.exports = {
@@ -24,6 +18,6 @@ module.exports = {
     });
     if (filtered.length === 0) return [];
     const args = filtered.map((f) => JSON.stringify(f)).join(' ');
-    return `cross-env SF_LINT_STAGED=1 eslint --max-warnings 0 ${args}`;
+    return `eslint --max-warnings 0 ${args}`;
   },
 };

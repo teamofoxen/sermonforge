@@ -3,7 +3,6 @@
 # codebase because the gate scans every file for structural violations.
 node scripts/spine-integrity.js || exit 1
 
-# Lint-staged — runs eslint on STAGED files only (Approach A in
-# .eslintrc.cjs). Existing deferred-Phase noise (no-raw-button etc.) on
-# untouched files doesn't block commits; new violations on the diff do.
+# Lint-staged — runs eslint on STAGED files only. All rules fire at full
+# severity; no per-commit downgrade in place (rules are clean project-wide).
 npx lint-staged || exit 1

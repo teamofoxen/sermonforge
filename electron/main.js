@@ -16,6 +16,7 @@ const {
   STRUCTURED_FIELDS,
   ContractViolation,
 } = require("./contracts.cjs");
+const { buildStudyGuideModel } = require("./studyGuideModel.cjs");
 
 // coerceLegacyStage removed in the trail deletion sweep (Phase B3) —
 // pre-restructure "Blueprint" / "Frame" stage values are no longer admitted
@@ -2809,6 +2810,7 @@ function buildStudyGuideDoc(series, sections, sermons) {
     return rows;
   }
 
+  const model = buildStudyGuideModel(series, sections, sermons);
   const children = [];
 
   // Title block
@@ -2869,14 +2871,9 @@ function buildStudyGuideDoc(series, sections, sermons) {
   }
 
   // PART 3 — THE BIG IDEA
-  // Show the working hypothesis only when it still differs from the final
-  // Series Big Idea — otherwise it's the same sentence printed twice (audit
-  // L9). Mirrors the on-screen preview's de-dupe.
-  const emergingDiffersFromBig = hasContent(series.emerging_big_idea) &&
-    series.emerging_big_idea.trim() !== (series.big_idea || "").trim();
-  if (emergingDiffersFromBig || hasContent(series.big_idea) || hasContent(series.overview)) {
+  if (model.showWorkingHypothesis || hasContent(series.big_idea) || hasContent(series.overview)) {
     children.push(partHeading("PART 3 — THE BIG IDEA"));
-    if (emergingDiffersFromBig) {
+    if (model.showWorkingHypothesis) {
       children.push(subHead("Working Hypothesis"));
       children.push(...bodyParas(series.emerging_big_idea));
     }
@@ -2893,13 +2890,7 @@ function buildStudyGuideDoc(series, sections, sermons) {
   // PART 4 — THE JOURNEY
   if (sermons.length > 0) {
     children.push(partHeading("PART 4 — THE JOURNEY"));
-    const assignedIds = new Set();
-    for (const section of sections) {
-      const sectionSermons = sermons.filter(s => s.section_id === section.id);
-      sectionSermons.forEach(s => assignedIds.add(s.id));
-      if (!hasContent(section.title) && !hasContent(section.passage_range) &&
-          !hasContent(section.big_idea) && !hasContent(section.overview) &&
-          sectionSermons.length === 0) continue;
+    for (const { section, sermons: sectionSermons } of model.sectionGroups) {
       if (hasContent(section.title)) children.push(secHead(section.title));
       if (hasContent(section.passage_range)) {
         children.push(new Paragraph({
@@ -2916,10 +2907,9 @@ function buildStudyGuideDoc(series, sections, sermons) {
       if (hasContent(section.overview)) children.push(...bodyParas(section.overview));
       if (sectionSermons.length > 0) children.push(...sermonRows(sectionSermons));
     }
-    const unsectioned = sermons.filter(s => !assignedIds.has(s.id));
-    if (unsectioned.length > 0) {
-      if (sections.length > 0) children.push(secHead("Remaining Sermons"));
-      children.push(...sermonRows(unsectioned));
+    if (model.remainingSermons.length > 0) {
+      if (model.hasSections) children.push(secHead("Remaining Sermons"));
+      children.push(...sermonRows(model.remainingSermons));
     }
   }
 

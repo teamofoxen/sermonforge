@@ -7,9 +7,8 @@
 // commit time, and the test layer at CI time. All three cite docs/CORE.md
 // clauses on failure.
 //
-// Lint approach: Approach A (lint-staged). Pre-commit lints only the staged
-// files, so existing deferred-Phase noise (no-raw-button, canonical-loading-verb)
-// doesn't block commits, but new violations on touched files do.
+// Lint approach: lint-staged. Pre-commit lints only staged files; all rules
+// fire at full severity (no per-commit downgrade in place).
 
 module.exports = {
   root: true,
@@ -40,13 +39,8 @@ module.exports = {
     },
   ],
   rules: {
-    // Approach A: when invoked from .lintstagedrc.cjs (pre-commit), the env
-    // var SF_LINT_STAGED=1 downgrades the two deferred-Phase-4 rules to
-    // 'off' so existing baseline noise on touched files doesn't block
-    // commits. `npm run lint` (no env var set) still surfaces the full
-    // count as the visible reminder.
-    'sermonforge/no-raw-button': process.env.SF_LINT_STAGED ? 'off' : 'error',
-    'sermonforge/canonical-loading-verb': process.env.SF_LINT_STAGED ? 'off' : 'error',
+    'sermonforge/no-raw-button': 'error',
+    'sermonforge/canonical-loading-verb': 'error',
     // Structural rules — always enforced.
     'sermonforge/no-window-alert': 'error',
     'sermonforge/no-direct-database': 'error',

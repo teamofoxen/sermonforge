@@ -1,6 +1,6 @@
 # Enforcement Status
 
-**Last verified:** 2026-06-21 — Surface #2 / Pilot C catch-up: the 25 residual `sermonforge/no-raw-button` hits in the D2c/D2d writing-surface stack migrated to `<IconButton>`, so `npm run lint` is now fully green (0 errors). `sermonforge/canonical-loading-verb` test exemption extended to the repo's colocated `*.test.*` convention. (Prior — Series Planner revival audit remediation: `no-direct-ai` broadened + `contracts-allowlist-sync` test added; see `git log` / `CHANGELOG.md`.)
+**Last verified:** 2026-06-22 — Lint gate hardened: with the baseline at zero, the `SF_LINT_STAGED=1` downgrade was removed so `no-raw-button` + `canonical-loading-verb` now block at full severity in pre-commit. (Prior 2026-06-21 — Surface #2 / Pilot C catch-up: the 25 residual `no-raw-button` hits migrated to `<IconButton>`; `canonical-loading-verb` test exemption extended to the repo's colocated `*.test.*` convention.)
 **Verified against:** [`docs/CORE.md`](CORE.md).
 **History:** see `git log docs/ENFORCEMENT_STATUS.md` and [`CHANGELOG.md`](../CHANGELOG.md). Per-event narrative is intentionally not duplicated here.
 
@@ -150,7 +150,7 @@ The class of regression where a renderer component imports a name the spine does
 | `react/jsx-no-undef` | 0 | Enabled post-audit-triage as the structural fix for the consumer-side import-drift class (see §"Consumer-side import drift" above). |
 | `no-undef` | 0 | Enabled alongside `react/jsx-no-undef`; one pre-existing drift surfaced (`BackButton.tsx` referenced `React.MouseEvent` without importing the namespace) and was fixed in the same change. |
 
-**Approach A** (lint-staged in `.husky/pre-commit`) means the residual baseline doesn't block commits on untouched files. New violations on staged files do block. The visible total is **5** (residual `no-raw-button` only — tab/pill nav buttons, outside Surface #2's CTA scope), down from 149 at Pilot C start (and from the original 185 across all rules pre-enforcement). The expanded `canonical-stage-name` forbidden set surfaces zero violations because the corresponding migrations (view keys, workspace tab keys, AI-loading state keys, DeliveryTab panel keys, step-pill status values) all landed in the same commit.
+Lint runs on staged files in `.husky/pre-commit` (lint-staged) and full-repo via `npm run lint`. The visible total is now **0** across every rule, down from 149 at Pilot C start (and from the original 185 across all rules pre-enforcement). Because the baseline is empty, the former `SF_LINT_STAGED=1` downgrade — which suppressed `no-raw-button` + `canonical-loading-verb` during pre-commit so baseline noise on touched files wouldn't block commits — was removed 2026-06-22; both rules now fire at full severity in the gate, so a newly-added file carrying a raw `<button>` can no longer pass commit silently.
 
 ## What's NOT enforced
 

@@ -13,6 +13,7 @@ import {
   SERMON_STATUS, LOADING_VERB,
 } from "../core/contracts";
 import { getSeasonForDate, getUpcomingSundays, toDateString } from "../utils/churchCalendar";
+import { buildStudyGuideModel } from "../utils/studyGuideModel";
 import { formatDate, autoResize } from "../utils";
 import { buttonKeydown } from "../utils/buttonKeydown";
 import DeleteButton from "./DeleteButton";
@@ -1693,10 +1694,7 @@ function StudyGuideModal({ series, sections, sermons, onClose }) {
   // Escape + focus trap + focus restore (audit L10).
   const dialogRef = useModalA11y(onClose);
 
-  // Show the working hypothesis only when it still differs from the final
-  // Series Big Idea — matches the exporter's de-dupe (audit L9/M6).
-  const showWorkingHypothesis = !!series.emerging_big_idea?.trim() &&
-    series.emerging_big_idea.trim() !== (series.big_idea || "").trim();
+  const model = buildStudyGuideModel(series, sections, sermons);
 
   async function handleExport() {
     setExporting(true);
@@ -1848,12 +1846,7 @@ function StudyGuideModal({ series, sections, sermons, onClose }) {
     <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
       {/* Wider than the 560px default and parchment-bodied — this is a reading
           surface, so the body sits on --parchment like the page body. */}
-      {/* Planner-local override of the shared .modal scroll model: make this one
-          modal a bounded flex column so the .modal-body scrolls and the header +
-          footer pin — otherwise the whole modal scrolls and the primary
-          "Export to Word" action sits ~1100px below the fold on a long guide.
-          The shared .modal class (and every short modal) is left untouched. */}
-      <div className="modal" style={{ width: "760px", display: "flex", flexDirection: "column", overflow: "hidden" }} ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="study-guide-title">
+      <div className="modal" style={{ width: "760px" }} ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="study-guide-title">
         <div className="modal-header">
           <div style={{ minWidth: 0 }}>
             <h2 className="modal-title" id="study-guide-title">Study Guide Preview</h2>
@@ -1872,7 +1865,7 @@ function StudyGuideModal({ series, sections, sermons, onClose }) {
             same big-idea de-dupe, sermons grouped by section with a "Remaining
             Sermons" bucket, and the Reference outline — so what the pastor reads
             here is what he hands his congregation (audit M6). */}
-        <div className="modal-body" style={{ background: "var(--parchment)", flex: 1, minHeight: 0, overflowY: "auto" }}>
+        <div className="modal-body" style={{ background: "var(--parchment)" }}>
           {/* Part 1 — The World of This Book */}
           <SgPartHeader number="1" title="The World of This Book" />
           <SgSection label="Then (background)" value={series.book_background} hint="Add in Book Study → The World of This Book" />
@@ -1890,7 +1883,7 @@ function StudyGuideModal({ series, sections, sermons, onClose }) {
 
           {/* Part 3 — The Big Idea */}
           <SgPartHeader number="3" title="The Big Idea" />
-          {showWorkingHypothesis && (
+          {model.showWorkingHypothesis && (
             <SgSection label="Working Hypothesis (from Book Study)" value={series.emerging_big_idea} hint="Add in Book Study → Working Big Idea" />
           )}
           <SgSection label="Series Big Idea" value={series.big_idea} hint="Add in Overview → Series Big Idea" />
@@ -1906,45 +1899,31 @@ function StudyGuideModal({ series, sections, sermons, onClose }) {
             </div>
           ) : (
             <>
-              {sections.map((section) => {
-                const inSection = sermons.filter((s) => s.section_id === section.id);
-                const sectionEmpty = !section.title?.trim() && !section.passage_range?.trim() &&
-                  !section.big_idea?.trim() && !section.overview?.trim() && inSection.length === 0;
-                if (sectionEmpty) return null;
-                return (
-                  <div key={section.id} style={{ marginBottom: "20px" }}>
-                    {section.title?.trim() && (
-                      <h4 style={{ fontFamily: "var(--font-serif)", fontSize: "15px", fontWeight: 600, color: "var(--ink)", margin: "0 0 4px" }}>{section.title}</h4>
-                    )}
-                    {section.passage_range?.trim() && (
-                      <div style={{ fontFamily: "var(--font-mono)", fontSize: "12px", color: "var(--ink-soft)", marginBottom: "4px" }}>{section.passage_range}</div>
-                    )}
-                    {section.big_idea?.trim() && (
-                      <div style={{ fontSize: "13px", fontStyle: "italic", color: "var(--ink-soft)", marginBottom: "6px" }}>{section.big_idea}</div>
-                    )}
-                    {section.overview?.trim() && (
-                      <p style={{ fontSize: "14px", fontFamily: "var(--font-serif)", color: "var(--ink)", lineHeight: "1.7", margin: "0 0 8px" }}>{section.overview}</p>
-                    )}
-                    {inSection.map((sermon, idx) => <SgSlotRow key={sermon.id} sermon={sermon} index={idx} />)}
-                  </div>
-                );
-              })}
-              {(() => {
-                const assigned = new Set();
-                for (const section of sections) {
-                  for (const s of sermons.filter((s) => s.section_id === section.id)) assigned.add(s.id);
-                }
-                const remaining = sermons.filter((s) => !assigned.has(s.id));
-                if (remaining.length === 0) return null;
-                return (
-                  <div style={{ marginBottom: "20px" }}>
-                    {sections.length > 0 && (
-                      <h4 style={{ fontFamily: "var(--font-serif)", fontSize: "15px", fontWeight: 600, color: "var(--ink)", margin: "0 0 8px" }}>Remaining Sermons</h4>
-                    )}
-                    {remaining.map((sermon, idx) => <SgSlotRow key={sermon.id} sermon={sermon} index={idx} />)}
-                  </div>
-                );
-              })()}
+              {model.sectionGroups.map(({ section, sermons: inSection }) => (
+                <div key={section.id} style={{ marginBottom: "20px" }}>
+                  {section.title?.trim() && (
+                    <h4 style={{ fontFamily: "var(--font-serif)", fontSize: "15px", fontWeight: 600, color: "var(--ink)", margin: "0 0 4px" }}>{section.title}</h4>
+                  )}
+                  {section.passage_range?.trim() && (
+                    <div style={{ fontFamily: "var(--font-mono)", fontSize: "12px", color: "var(--ink-soft)", marginBottom: "4px" }}>{section.passage_range}</div>
+                  )}
+                  {section.big_idea?.trim() && (
+                    <div style={{ fontSize: "13px", fontStyle: "italic", color: "var(--ink-soft)", marginBottom: "6px" }}>{section.big_idea}</div>
+                  )}
+                  {section.overview?.trim() && (
+                    <p style={{ fontSize: "14px", fontFamily: "var(--font-serif)", color: "var(--ink)", lineHeight: "1.7", margin: "0 0 8px" }}>{section.overview}</p>
+                  )}
+                  {inSection.map((sermon, idx) => <SgSlotRow key={sermon.id} sermon={sermon} index={idx} />)}
+                </div>
+              ))}
+              {model.remainingSermons.length > 0 && (
+                <div style={{ marginBottom: "20px" }}>
+                  {model.hasSections && (
+                    <h4 style={{ fontFamily: "var(--font-serif)", fontSize: "15px", fontWeight: 600, color: "var(--ink)", margin: "0 0 8px" }}>Remaining Sermons</h4>
+                  )}
+                  {model.remainingSermons.map((sermon, idx) => <SgSlotRow key={sermon.id} sermon={sermon} index={idx} />)}
+                </div>
+              )}
             </>
           )}
 

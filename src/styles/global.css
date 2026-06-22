@@ -1458,7 +1458,9 @@ button {
   width: 560px;
   max-width: 100%;
   max-height: 90vh;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .modal-header {
@@ -1490,6 +1492,9 @@ button {
 
 .modal-body {
   padding: 24px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .modal-footer {

@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-06-22 — Close three deferred follow-ups: lint gate, modal scroll, study-guide model
+
+- Removed the `SF_LINT_STAGED` downgrade so `no-raw-button` and `canonical-loading-verb` fire at full severity in pre-commit — closing the gap that let raw-button debt accumulate via new files.
+- Lifted the flex scroll model onto the shared `.modal` class so every modal's header and footer pin while the body scrolls; removed the planner-local override.
+- Single-sourced the study-guide view model behind the preview and the `.docx` exporter, following the `contracts.cjs`/`contracts.ts` mirror convention (`src/utils/studyGuideModel.js` + `electron/studyGuideModel.cjs`) since `src/` isn't packaged.
+- Verified: lint 0, 145 tests, planner preview renders all five Study Guide parts with the footer pinned and no console errors.
+
+---
+
 ## 2026-06-21 — Clear all lint errors: migrate raw buttons to IconButton (Surface #2)
 
 - Migrated the 25 residual `no-raw-button` violations to `<IconButton>` across the writing-surface stack (6 files).
