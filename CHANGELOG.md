@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-06-22 — Audit canonical book data: clamp coverage to the series' span, harden fail-soft, cleanups
+
+- Independent 12-agent audit (verse data re-verified against a third KJV source; 0 Blocker / 0 High) confirmed the build holds against all four hard constraints.
+- Coverage now clamps to the series' `passage_range` when it parses, so a sub-book series is measured against its declared span instead of the whole book (falls back to whole-book otherwise).
+- Fixed the sample seed (legacy `canon_category: "nt"` + no `book_id` → `nt_pauline` + `romans`), widened the seed INSERT, and added a seed-validity test.
+- Hardened fail-soft: pacing null-element guard, coverage out-of-range self-defense, passage-ref numeric-overflow cap, arc month-overflow clamp and testament gating.
+- Cleanups: extracted shared `parseLocalDate`, deleted dead `verseIndex`/`totalVersesInBook` exports, single-sourced `CANON_COLORS` off `GENRES`; lint 0, 231 tests, sweep PASS.
+
+---
+
 ## 2026-06-22 — Canonical book data: book picker, pacing, coverage, and the Series Arc view
 
 - New bundled `src/data/canonicalBooks.js` (66 books, KJV verse counts to 31,102, checksum-gated, cross-verified against two sources); the only schema change is a nullable `series.book_id` (v25), with `canon_category` migrated to Dever's 7 genres.

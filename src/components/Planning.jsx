@@ -21,11 +21,18 @@ import NewSeriesModal from "./NewSeriesModal";
 // coverage tally + grid so a migrated series can't silently fall out of the count.
 const GENRE_KEYS = Object.keys(GENRES);
 const CANON_LABELS = { ...GENRES, "": "Unclassified" };
-const CANON_COLORS = {
+// Palette per genre. Built off GENRE_KEYS (+ the "" Unclassified state) so a new
+// genre key can't fall through to `3px solid undefined` in the coverage grid — an
+// unmapped key gets the neutral ghost color. Single-sources off GENRES the same
+// way CANON_LABELS does, instead of a hand-keyed literal that can drift.
+const GENRE_PALETTE = {
   ot_law: "var(--gold)", ot_history: "var(--crimson)", ot_writings: "var(--sage)",
   ot_prophets: "var(--slate)", nt_gospels: "var(--gold)", nt_pauline: "var(--sage)",
-  nt_general: "var(--crimson)", "": "var(--ink-ghost)",
+  nt_general: "var(--crimson)",
 };
+const CANON_COLORS = Object.fromEntries(
+  [...GENRE_KEYS, ""].map((k) => [k, GENRE_PALETTE[k] || "var(--ink-ghost)"]),
+);
 
 export default function Planning({ onOpenPlanner }) {
   const [series, setSeries] = useState([]);
@@ -114,7 +121,7 @@ export default function Planning({ onOpenPlanner }) {
                   padding: "14px 16px",
                   borderRadius: "var(--radius)",
                   background: "var(--parchment-warm)",
-                  borderLeft: `3px solid ${CANON_COLORS[cat]}`,
+                  borderLeft: `3px solid ${CANON_COLORS[cat] || "var(--ink-ghost)"}`,
                 }}>
                   <div style={{ fontSize: "22px", fontWeight: "700", color: "var(--ink)", fontFamily: "var(--font-serif)" }}>
                     {coverage[cat]}

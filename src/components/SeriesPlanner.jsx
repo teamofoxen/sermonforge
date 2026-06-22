@@ -17,7 +17,7 @@ import { computePacing } from "../utils/pacing";
 import { computeCoverage } from "../utils/coverage";
 import { buildStudyGuideModel } from "../utils/studyGuideModel";
 import { BOOKS, GENRES, bookById, bookSpan } from "../data/canonicalBooks";
-import { formatDate, autoResize } from "../utils";
+import { formatDate, autoResize, parseLocalDate } from "../utils";
 import { buttonKeydown } from "../utils/buttonKeydown";
 import DeleteButton from "./DeleteButton";
 import InlineError from "./InlineError";
@@ -1039,8 +1039,7 @@ function PacingStrip({ sermons, series, calNotes }) {
 
 // "2026-10-11" -> "Oct 11" (a date-only string, parsed in local time).
 function formatPacingDate(iso) {
-  const d = new Date(`${iso}T00:00:00`);
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return parseLocalDate(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 // ── Coverage Panel ────────────────────────────────────────────────────────────
@@ -1049,7 +1048,10 @@ function formatPacingDate(iso) {
 // passage refs. Purely informational (src/utils/coverage.js) — never a gate. You
 // can intentionally skip a passage; it just shows what you're skipping.
 function CoveragePanel({ series, sermons }) {
-  const cov = computeCoverage(series?.book_id, sermons);
+  // Coverage is clamped to the series' declared passage_range when it parses, so
+  // a series scoped to part of a book is measured against that span, not the
+  // whole book (falls back to whole-book when the range is empty/free-text).
+  const cov = computeCoverage(series?.book_id, sermons, series?.passage_range);
   const book = bookById(series?.book_id);
 
   if (cov.noBook || !book) {
@@ -1090,7 +1092,7 @@ function CoveragePanel({ series, sermons }) {
       <div className="card-header" style={{ marginBottom: "10px" }}>
         <div className="card-title">Coverage</div>
         <span style={{ fontSize: "13px", color: "var(--ink-soft)" }}>
-          {cov.percent}% of {book.name}{cov.mode === "chapter" ? " (by chapter)" : ""}
+          {cov.percent}% of {book.name}{cov.scopeLabel ? ` ${cov.scopeLabel}` : ""}{cov.mode === "chapter" ? " (by chapter)" : ""}
         </span>
       </div>
       <div style={{ height: "8px", borderRadius: "4px", background: "var(--parchment-deep)", overflow: "hidden" }}>

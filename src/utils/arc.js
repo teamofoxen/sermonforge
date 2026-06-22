@@ -9,16 +9,15 @@ import { toDateString } from "./churchCalendar";
 
 const GENRE_KEYS = Object.keys(GENRES);
 
-// Testament from the chosen book if any, else inferred from the genre key
-// prefix (ot_* / nt_*), else null (unclassified).
+// Testament from the chosen book if any, else inferred from a RECOGNIZED genre
+// (its ot_* / nt_* prefix), else null (unclassified). Gating on classifiedGenre
+// (not the raw prefix) keeps an unknown ot_*/nt_*-shaped value from counting as
+// both a testament AND unclassified — which would stop the sidebar reconciling.
 function testamentOf(s) {
   const book = bookById(s.book_id);
   if (book) return book.testament;
-  const g = s.canon_category;
-  if (typeof g === "string") {
-    if (g.startsWith("ot_")) return "OT";
-    if (g.startsWith("nt_")) return "NT";
-  }
+  const g = classifiedGenre(s);
+  if (g) return g.startsWith("ot_") ? "OT" : "NT";
   return null;
 }
 
@@ -35,7 +34,12 @@ function daysBetween(a, b) {
 
 function minusMonths(iso, months) {
   const d = new Date(`${iso}T00:00:00`);
+  const day = d.getDate();
   d.setMonth(d.getMonth() - months);
+  // setMonth rolls FORWARD when the target month is shorter (e.g. Mar 31 − 1 →
+  // "Mar 3"); clamp back to the target month's last day so the window boundary
+  // stays correct (and a Feb-29 `now` doesn't slip a day going back to a non-leap year).
+  if (d.getDate() < day) d.setDate(0);
   return toDateString(d);
 }
 
@@ -77,7 +81,6 @@ export function computeArc(series, { nowISO = "", windowMonths = 24 } = {}) {
 
   const touched = new Set(inWindow.map((r) => r.genre).filter(Boolean));
   const genresTouched = GENRE_KEYS.filter((k) => touched.has(k));
-  const genresMissing = GENRE_KEYS.filter((k) => !touched.has(k));
 
   return {
     rows,
@@ -85,7 +88,6 @@ export function computeArc(series, { nowISO = "", windowMonths = 24 } = {}) {
     windowMonths,
     inWindowCount: inWindow.length,
     genresTouched,
-    genresMissing,
     otCount: inWindow.filter((r) => r.testament === "OT").length,
     ntCount: inWindow.filter((r) => r.testament === "NT").length,
     unclassifiedCount: rows.filter((r) => !r.genre).length,

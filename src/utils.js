@@ -225,13 +225,21 @@ export function autoResize(el) {
   el.style.height = Math.min(el.scrollHeight, window.innerHeight * 0.6) + "px";
 }
 
+// Parse a date-only or datetime string at LOCAL midnight, so a "YYYY-MM-DD" value
+// renders as that calendar day instead of being shifted by the timezone offset.
+// The shared primitive behind formatDate (here), formatPacingDate (SeriesPlanner),
+// and formatMonthYear (Arc) — each appends its own toLocaleDateString options.
+export function parseLocalDate(dateStr) {
+  // Strip any time component so "2026-03-20 14:23:00" and "2026-03-20T14:23:00"
+  // both resolve to the correct local date.
+  const datePart = String(dateStr).split(/[T ]/)[0];
+  return new Date(`${datePart}T00:00:00`);
+}
+
 export function formatDate(dateStr) {
   if (!dateStr) return "";
   try {
-    // Strip any time component so "2026-03-20 14:23:00" and "2026-03-20T14:23:00"
-    // both produce the correct local date rather than being offset by timezone.
-    const datePart = dateStr.split(/[T ]/)[0];
-    return new Date(datePart + "T00:00:00").toLocaleDateString("en-US", {
+    return parseLocalDate(dateStr).toLocaleDateString("en-US", {
       month: "short", day: "numeric", year: "numeric",
     });
   } catch { return dateStr; }

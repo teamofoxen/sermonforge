@@ -3,8 +3,6 @@ import {
   BOOKS,
   GENRES,
   bookById,
-  totalVersesInBook,
-  verseIndex,
   bookSpan,
 } from "../../src/data/canonicalBooks";
 
@@ -84,24 +82,6 @@ describe("canonicalBooks — helpers", () => {
     expect(bookById("luke").name).toBe("Luke");
     expect(bookById("luke").totalVerses).toBe(1151);
     expect(bookById("not-a-book")).toBeNull();
-  });
-
-  it("totalVersesInBook returns the count or 0 for unknown", () => {
-    expect(totalVersesInBook("genesis")).toBe(1533);
-    expect(totalVersesInBook("not-a-book")).toBe(0);
-  });
-
-  it("verseIndex is a 1-based linear index across chapters", () => {
-    expect(verseIndex("genesis", 1, 1)).toBe(1);
-    expect(verseIndex("genesis", 1, 31)).toBe(31);
-    expect(verseIndex("genesis", 2, 1)).toBe(32); // right after Genesis 1's 31
-    expect(verseIndex("genesis", 2, 25)).toBe(56); // Gen 2 has 25 verses
-  });
-
-  it("verseIndex is fail-soft on bad input", () => {
-    expect(verseIndex("not-a-book", 1, 1)).toBeNull();
-    expect(verseIndex("genesis", 0, 1)).toBeNull();
-    expect(verseIndex("genesis", 51, 1)).toBeNull(); // Genesis has 50 chapters
   });
 
   it("bookSpan returns the full canonical span string (the passage_range pre-fill)", () => {

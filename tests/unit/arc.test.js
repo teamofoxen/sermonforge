@@ -41,7 +41,6 @@ describe("computeArc — windowed balance", () => {
     // In-window: s1, s5, s2, s3 (s4 is 2022, outside).
     expect(arc.inWindowCount).toBe(4);
     expect(arc.genresTouched).toEqual(["ot_prophets", "nt_general"]);
-    expect(arc.genresMissing).toEqual(["ot_law", "ot_history", "ot_writings", "nt_gospels", "nt_pauline"]);
     expect(arc.otCount).toBe(1); // Daniel
     expect(arc.ntCount).toBe(2); // 1 Peter, Revelation
     expect(arc.unclassifiedCount).toBe(1); // Mystery (all rows, not just window)
@@ -67,6 +66,33 @@ describe("computeArc — fail-soft", () => {
   it("handles empty / missing input", () => {
     expect(computeArc([]).rows).toEqual([]);
     expect(computeArc(undefined).unclassifiedCount).toBe(0);
-    expect(computeArc(null).genresMissing.length).toBe(7);
+    expect(computeArc(null).genresTouched).toEqual([]);
+  });
+});
+
+describe("computeArc — trailing-window boundary (minusMonths month-overflow clamp)", () => {
+  it("clamps a month-end 'now' back to the target month's last day, not forward", () => {
+    // now = 2026-03-31, window = 1 month. Naive setMonth(−1) rolls Feb-31 → Mar 3
+    // (a window that's too SHORT). Clamped, windowStart must be Feb 28 (2026 is
+    // not a leap year), so the Mar series is in and the mid-Feb series is out.
+    const series = [
+      { id: "mar", canon_category: "nt_pauline", book_id: "romans", start_date: "2026-03-10", end_date: "2026-03-20" },
+      { id: "feb", canon_category: "ot_law", book_id: "genesis", start_date: "2026-02-15", end_date: "2026-02-20" },
+    ];
+    const arc = computeArc(series, { nowISO: "2026-03-31", windowMonths: 1 });
+    expect(arc.windowStart).toBe("2026-02-28");
+    expect(arc.inWindowCount).toBe(1);
+  });
+});
+
+describe("computeArc — testament inference is gated on a recognized genre", () => {
+  it("an unknown ot_/nt_-shaped genre is unclassified, not counted as a testament", () => {
+    const series = [
+      { id: "x", canon_category: "ot_apocrypha", book_id: null, start_date: "2025-06-01", end_date: "2025-06-30" },
+    ];
+    const arc = computeArc(series, { nowISO: "2026-01-01", windowMonths: 24 });
+    expect(arc.otCount).toBe(0); // NOT inferred from the bogus "ot_" prefix
+    expect(arc.ntCount).toBe(0);
+    expect(arc.unclassifiedCount).toBe(1);
   });
 });

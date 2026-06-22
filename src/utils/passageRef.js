@@ -45,15 +45,25 @@ export function parsePassageRef(raw, bookId) {
   const prefix = s.slice(0, m.index);
   if (prefix && !BOOK_PREFIX_RE.test(prefix)) return { error: true };
 
+  // Sanity cap: the largest book is Psalms (150 chapters), so any chapter/verse
+  // beyond this is a malformed or overflowing token — e.g. a 20-digit number that
+  // parseInt turns into 1e20, or a 50000-digit one that becomes Infinity. Reject
+  // it as unreadable rather than letting an unbounded value leak through for an
+  // UNKNOWN book (the known-book path is already bounded by the book's own counts).
+  const MAX_REF = 10000;
+  const bad = (n) => !Number.isInteger(n) || n < 1 || n > MAX_REF;
+
   const [, c1, v1, c2, v2] = m;
   const startCh = parseInt(c1, 10);
   const startHasVerse = v1 !== undefined;
   const startV = startHasVerse ? parseInt(v1, 10) : 1;
-  if (startCh < 1 || (startHasVerse && startV < 1)) return { error: true };
+  if (bad(startCh) || (startHasVerse && bad(startV))) return { error: true };
 
   const book = bookById(bookId);
   // For a KNOWN book, a chapter past its end is a typo for this book → error.
-  const chapterOutOfRange = (ch) => book && (ch < 1 || ch > book.chapters);
+  // (startCh / endNum are already validated >= 1 by bad() above, so only the
+  // upper bound is checked here.)
+  const chapterOutOfRange = (ch) => book && ch > book.chapters;
   const lastVerseOf = (ch) =>
     book && ch >= 1 && ch <= book.chapters ? book.chapterVerses[ch - 1] : null;
 
@@ -76,14 +86,14 @@ export function parsePassageRef(raw, bookId) {
     }
   } else {
     const endNum = parseInt(c2, 10);
-    if (endNum < 1) return { error: true };
+    if (bad(endNum)) return { error: true };
     const endHasVerse = v2 !== undefined;
     if (endHasVerse) {
       // "1:1-4:13" / "1-4:13" — endNum is a CHAPTER.
       if (chapterOutOfRange(endNum)) return { error: true };
       endCh = endNum;
       endV = parseInt(v2, 10);
-      if (endV < 1) return { error: true };
+      if (bad(endV)) return { error: true };
     } else if (startHasVerse) {
       // "1:1-4" — endNum is an end VERSE in the start chapter.
       endCh = startCh;

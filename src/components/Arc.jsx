@@ -4,6 +4,7 @@ import { GENRES } from "../data/canonicalBooks";
 import { toDateString } from "../utils/churchCalendar";
 import { buttonKeydown } from "../utils/buttonKeydown";
 import { computeArc } from "../utils/arc";
+import { parseLocalDate } from "../utils";
 import EmptyState from "./primitives/EmptyState";
 
 // Series Arc — the cross-series planning-retreat view. Reads ALL series and
@@ -16,7 +17,7 @@ const WINDOW_OPTIONS = [12, 24, 36];
 
 function formatMonthYear(iso) {
   if (!iso) return null;
-  return new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", { month: "short", year: "numeric" });
+  return parseLocalDate(iso).toLocaleDateString("en-US", { month: "short", year: "numeric" });
 }
 
 function formatDateRange(start, end) {
@@ -159,9 +160,9 @@ export default function Arc({ onOpenPlanner, _fixture }) {
                 <span style={{ fontWeight: 600, color: "var(--ink)" }}>{arc.otCount} : {arc.ntCount}</span>
               </div>
 
-              {/* Unclassified */}
+              {/* Unclassified — whole-list scope (unlike the windowed rows above) */}
               <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderTop: "1px solid var(--parchment-deep)", fontSize: "12.5px", color: "var(--ink-soft)" }}>
-                <span>Unclassified</span>
+                <span>Unclassified <span style={{ color: "var(--ink-ghost)", fontSize: "11px" }}>(all series)</span></span>
                 <span style={{ fontWeight: 600, color: arc.unclassifiedCount ? "var(--crimson)" : "var(--ink)" }}>{arc.unclassifiedCount}</span>
               </div>
               {arc.unclassifiedCount > 0 && (

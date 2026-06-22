@@ -115,24 +115,6 @@ const _byId = new Map(BOOKS.map((b) => [b.id, b]));
 // The book record for a stored book_id, or null if unknown (fail-soft).
 export const bookById = (id) => _byId.get(id) || null;
 
-// Total verses in a book, or 0 if the id is unknown (safe for arithmetic).
-export const totalVersesInBook = (id) => {
-  const b = _byId.get(id);
-  return b ? b.totalVerses : 0;
-};
-
-// 1-based linear verse position within a book, counting across chapters
-// (e.g. Genesis 2:1 === 32, the verse right after Genesis 1's 31). Returns
-// null for an unknown book or an out-of-range chapter. Verse is not bounds-
-// checked here — the coverage engine validates ranges. Used for span math.
-export const verseIndex = (id, chapter, verse) => {
-  const b = _byId.get(id);
-  if (!b || chapter < 1 || chapter > b.chapters) return null;
-  let idx = 0;
-  for (let c = 0; c < chapter - 1; c++) idx += b.chapterVerses[c];
-  return idx + verse;
-};
-
 // The full canonical span of a book as a display/parse string, e.g.
 // "Luke 1:1-24:53" — used to pre-fill a series' passage_range. Hyphen (not
 // en-dash) so it round-trips cleanly through the passage parser. "" if unknown.

@@ -66,16 +66,50 @@ function honestPercent(covered, total, hasGaps) {
 }
 
 function emptyResult(mode, extra = {}) {
-  return { mode, percent: 0, covered: 0, total: 0, gaps: [], overlaps: [], outOfOrder: [], unreadable: [], ...extra };
+  return { mode, percent: 0, covered: 0, total: 0, gaps: [], overlaps: [], outOfOrder: [], unreadable: [], scopeLabel: null, ...extra };
 }
 
-function verseLevel(book, readable, unreadable) {
+// The coverage universe. When the series declares a passage_range that is
+// NARROWER than the whole book, coverage is measured against THAT span (the
+// scope the pastor actually committed to) rather than the entire book — so a
+// "Romans 1-8" series isn't reported at 9% and dinged for chapters 9-16 it never
+// meant to preach. Falls back to the whole book when the range is empty,
+// unreadable, verse-unknown, or already the full span. Returns a normalized
+// { startCh, startV, endCh, endV } or null (= whole book). Fail-soft, never throws.
+function resolveWindow(book, passageRange, bookId) {
+  const s = typeof passageRange === "string" ? passageRange.trim() : "";
+  if (!s) return null;
+  const ref = parsePassageRef(s, bookId);
+  if (!ref || ref.error || ref.verseUnknown || ref.endV == null) return null;
+  const lastCh = book.chapters;
+  const lastV = Array.isArray(book.chapterVerses) ? book.chapterVerses[lastCh - 1] : null;
+  const isWholeBook =
+    ref.startCh === 1 && ref.startV === 1 && ref.endCh === lastCh && ref.endV === lastV;
+  return isWholeBook ? null : ref;
+}
+
+function verseLevel(book, readable, unreadable, window) {
   const ix = makeIndexer(book);
-  const spans = readable.map((p) => ({
-    index: p.index,
-    start: ix.toIdx(p.ref.startCh, p.ref.startV),
-    end: ix.toIdx(p.ref.endCh, p.ref.endV),
-  }));
+  const winLo = window ? ix.toIdx(window.startCh, window.startV) : 1;
+  const winHi = window ? ix.toIdx(window.endCh, window.endV) : ix.total;
+  const total = winHi - winLo + 1;
+
+  // Self-defense: coverageFromParsed is a public, reuse-invited export, so a
+  // hand-built ref could index out of range and NaN-poison the sweep into a
+  // false 100%. Route any non-finite or out-of-[1, ix.total] span to
+  // `unreadable` rather than trusting the parser to have validated it.
+  const extraUnreadable = [];
+  const spans = [];
+  for (const p of readable) {
+    const start = ix.toIdx(p.ref.startCh, p.ref.startV);
+    const end = ix.toIdx(p.ref.endCh, p.ref.endV);
+    if (!Number.isFinite(start) || !Number.isFinite(end) || start < 1 || end > ix.total || start > end) {
+      extraUnreadable.push(p.index);
+      continue;
+    }
+    spans.push({ index: p.index, start, end });
+  }
+  const allUnreadable = [...unreadable, ...extraUnreadable].sort((a, b) => a - b);
 
   // Out-of-order: a slot whose range starts before the previous slot's (list order).
   const outOfOrder = [];
@@ -93,18 +127,23 @@ function verseLevel(book, readable, unreadable) {
     }
   }
 
-  // Gaps + covered count via a forward sweep (handles overlaps correctly).
-  const sorted = [...spans].sort((a, b) => a.start - b.start);
+  // Gaps + covered via a forward sweep WITHIN the window. Each span is clipped to
+  // [winLo, winHi]; a slot entirely outside the declared scope contributes
+  // nothing (and so doesn't inflate coverage or erase a gap).
+  const clipped = spans
+    .map((s) => ({ start: Math.max(s.start, winLo), end: Math.min(s.end, winHi) }))
+    .filter((s) => s.start <= s.end)
+    .sort((a, b) => a.start - b.start);
   const gapSpans = [];
-  let cursor = 1;
-  for (const s of sorted) {
+  let cursor = winLo;
+  for (const s of clipped) {
     if (s.start > cursor) gapSpans.push([cursor, s.start - 1]);
     cursor = Math.max(cursor, s.end + 1);
   }
-  if (cursor <= ix.total) gapSpans.push([cursor, ix.total]);
+  if (cursor <= winHi) gapSpans.push([cursor, winHi]);
 
   const uncovered = gapSpans.reduce((sum, [a, b]) => sum + (b - a + 1), 0);
-  const covered = ix.total - uncovered;
+  const covered = total - uncovered;
   const gaps = gapSpans.map(([a, b]) => {
     const s = ix.toRef(a);
     const e = ix.toRef(b);
@@ -113,23 +152,26 @@ function verseLevel(book, readable, unreadable) {
 
   return {
     mode: "verse",
-    percent: honestPercent(covered, ix.total, gaps.length > 0),
+    percent: honestPercent(covered, total, gaps.length > 0),
     covered,
-    total: ix.total,
+    total,
     gaps,
     overlaps,
     outOfOrder,
-    unreadable,
+    unreadable: allUnreadable,
+    scopeLabel: window ? formatRange(window.startCh, window.startV, window.endCh, window.endV) : null,
   };
 }
 
-function chapterLevel(book, readable, unreadable) {
-  const total = book.chapters;
+function chapterLevel(book, readable, unreadable, window) {
+  const winStartCh = window ? window.startCh : 1;
+  const winEndCh = window ? window.endCh : book.chapters;
+  const total = winEndCh - winStartCh + 1;
   const spans = readable.map((p) => ({ index: p.index, startCh: p.ref.startCh, endCh: p.ref.endCh }));
 
   const touched = new Set();
   for (const s of spans) {
-    for (let c = Math.max(1, s.startCh); c <= Math.min(total, s.endCh); c++) touched.add(c);
+    for (let c = Math.max(winStartCh, s.startCh); c <= Math.min(winEndCh, s.endCh); c++) touched.add(c);
   }
 
   const outOfOrder = [];
@@ -147,7 +189,7 @@ function chapterLevel(book, readable, unreadable) {
   }
 
   const missing = [];
-  for (let c = 1; c <= total; c++) if (!touched.has(c)) missing.push(c);
+  for (let c = winStartCh; c <= winEndCh; c++) if (!touched.has(c)) missing.push(c);
 
   return {
     mode: "chapter",
@@ -158,12 +200,15 @@ function chapterLevel(book, readable, unreadable) {
     overlaps,
     outOfOrder,
     unreadable,
+    scopeLabel: window ? `${winStartCh}-${winEndCh}` : null,
   };
 }
 
-// Core: a resolved book object + slots already parsed into refs. Exported so the
-// chapter-level fallback is testable with a synthetic no-verse-data book.
-export function coverageFromParsed(book, parsed) {
+// Core: a resolved book object + slots already parsed into refs, plus an optional
+// coverage window (a normalized ref restricting the universe to the series' span).
+// Exported so the chapter-level fallback is testable with a synthetic no-verse-
+// data book.
+export function coverageFromParsed(book, parsed, window = null) {
   if (!book) return emptyResult("none", { noBook: true });
   const unreadable = parsed.filter((p) => p.ref && p.ref.error).map((p) => p.index);
   const readable = parsed.filter((p) => p.ref && !p.ref.error);
@@ -173,12 +218,15 @@ export function coverageFromParsed(book, parsed) {
     book.chapterVerses.length === book.chapters &&
     !readable.some((p) => p.ref.verseUnknown);
 
-  return hasVerseData ? verseLevel(book, readable, unreadable) : chapterLevel(book, readable, unreadable);
+  return hasVerseData
+    ? verseLevel(book, readable, unreadable, window)
+    : chapterLevel(book, readable, unreadable, window);
 }
 
 // Public: resolve the book from its id and parse each slot's passage string.
-// `slots` is an array of objects with a `.passage` field (sermon rows).
-export function computeCoverage(bookId, slots = []) {
+// `slots` is an array of objects with a `.passage` field (sermon rows). When the
+// series carries a `passageRange`, coverage is clamped to that declared span.
+export function computeCoverage(bookId, slots = [], passageRange = "") {
   const book = bookById(bookId);
   if (!book) return emptyResult("none", { noBook: true });
   const parsed = (slots || []).map((s, i) => ({
@@ -186,5 +234,6 @@ export function computeCoverage(bookId, slots = []) {
     passage: (s && s.passage) || "",
     ref: parsePassageRef((s && s.passage) || "", bookId),
   }));
-  return coverageFromParsed(book, parsed);
+  const window = resolveWindow(book, passageRange, bookId);
+  return coverageFromParsed(book, parsed, window);
 }

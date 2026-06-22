@@ -77,6 +77,54 @@ describe("computeCoverage — honest percent and hardened refs (adversarial revi
   });
 });
 
+describe("computeCoverage — clamped to the series' passage_range", () => {
+  // Jonah scoped to "1-2" (verses 1–27): coverage is measured against THAT span,
+  // not all 48 verses — so the slots aren't dinged for chapters 3–4.
+  it("measures % and gaps against the declared span, not the whole book", () => {
+    const r = computeCoverage("jonah", [slot("1")], "1-2");
+    expect(r.total).toBe(27); // ch1 (17) + ch2 (10), not 48
+    expect(r.covered).toBe(17); // ch1
+    expect(r.percent).toBe(63); // 17/27, not 35 (17/48)
+    expect(r.gaps).toEqual(["2:1-10"]); // only the uncovered tail WITHIN the span
+    expect(r.scopeLabel).toBe("1:1-2:10");
+  });
+
+  it("ignores a slot that falls outside the declared span (clipped, not flagged)", () => {
+    const r = computeCoverage("jonah", [slot("1"), slot("3")], "1-2");
+    expect(r.covered).toBe(17); // the ch3 slot is outside 1–2 and contributes nothing
+    expect(r.gaps).toEqual(["2:1-10"]);
+    expect(r.unreadable).toEqual([]); // out-of-scope ≠ unreadable
+  });
+
+  it("a whole-book passage_range is NOT a clamp (same as no range)", () => {
+    const full = computeCoverage("jonah", [slot("1"), slot("2"), slot("3"), slot("4")], "Jonah 1:1-4:11");
+    expect(full.percent).toBe(100);
+    expect(full.total).toBe(48);
+    expect(full.scopeLabel).toBeNull();
+  });
+
+  it("free-text / unparseable passage_range falls back to the whole book", () => {
+    const r = computeCoverage("jonah", [slot("1")], "selected highlights");
+    expect(r.total).toBe(48);
+    expect(r.scopeLabel).toBeNull();
+  });
+});
+
+describe("coverageFromParsed — self-defends against out-of-range hand-built refs", () => {
+  // A real verse-data book reached directly with a bad ref must NOT NaN-poison the
+  // sweep into a false 100%; the bad span is routed to `unreadable`.
+  const JONAH = { id: "jonah", name: "Jonah", chapters: 4, chapterVerses: [17, 10, 10, 11] };
+  it("routes a non-existent-chapter ref to unreadable, never inflating coverage", () => {
+    const r = coverageFromParsed(JONAH, [
+      { index: 1, ref: { startCh: 1, startV: 1, endCh: 1, endV: 17 } },
+      { index: 2, ref: { startCh: 9, startV: 1, endCh: 9, endV: 5 } }, // Jonah has no ch9
+    ]);
+    expect(r.unreadable).toEqual([2]);
+    expect(r.covered).toBe(17);
+    expect(r.percent).toBe(35); // 17/48 — not a false 100
+  });
+});
+
 describe("computeCoverage — no book", () => {
   it("null / unknown book → mode 'none' with noBook flag", () => {
     expect(computeCoverage(null, [slot("1")]).noBook).toBe(true);

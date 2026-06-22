@@ -2305,18 +2305,21 @@ function validateAndCommit(op, payload) {
       try {
         dbRun("DELETE FROM sermons WHERE id LIKE 'sample-%'");
         dbRun("DELETE FROM series  WHERE id LIKE 'sample-%'");
+        // Full-INSERT seed path (distinct from the create-series user flow, which
+        // stays create-then-update). book_id is seeded directly here so the sample
+        // exercises the canonical-book path the feature exists to showcase.
         dbRun(
           `INSERT INTO series (
             id, title, color, description, year,
             big_idea, overview, passage_range, start_date, end_date,
-            structural_outline, status, canon_category,
+            structural_outline, status, canon_category, book_id,
             redemptive_context, book_background, book_argument,
             book_structure, series_motivation, emerging_big_idea
-          ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+          ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
           [
             series.id, series.title, series.color, series.description, series.year,
             series.big_idea, series.overview, series.passage_range, series.start_date, series.end_date,
-            series.structural_outline, series.status, series.canon_category,
+            series.structural_outline, series.status, series.canon_category, series.book_id,
             series.redemptive_context, series.book_background, series.book_argument,
             series.book_structure, series.series_motivation, series.emerging_big_idea,
           ],

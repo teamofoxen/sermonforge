@@ -105,6 +105,16 @@ describe("parsePassageRef — hardening (adversarial review)", () => {
   it("still accepts a range ending on the chapter's exact last verse", () => {
     expect(parsePassageRef("1:1-1:17", "jonah")).toEqual({ startCh: 1, startV: 1, endCh: 1, endV: 17 });
   });
+
+  it("rejects absurdly large / overflowing numbers, even for an unknown book", () => {
+    // No book to bound the value, so the sanity cap is the only guard. parseInt
+    // turns these into 1e20 / Infinity; they must come back unreadable, never as
+    // a numeric range that would poison downstream coverage math.
+    expect(parsePassageRef("99999999999999999999:1", null)).toEqual({ error: true });
+    expect(parsePassageRef("1:99999999999999999999", null)).toEqual({ error: true });
+    expect(parsePassageRef("9".repeat(50000), null)).toEqual({ error: true });
+    expect(parsePassageRef("1-99999999999999999999", null)).toEqual({ error: true });
+  });
 });
 
 describe("parsePassageRef — malformed inputs never throw, return { error: true }", () => {

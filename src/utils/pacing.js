@@ -27,7 +27,7 @@ export function computePacing({ slotCount = 0, startDate = "", calNotes = [] } =
   const months = slotCount > 0 ? slotCount / WEEKS_PER_MONTH : 0;
   const band = lengthBand(slotCount);
 
-  const excludeDates = (calNotes || []).map((n) => n.date).filter(Boolean);
+  const excludeDates = (calNotes || []).map((n) => n && n.date).filter(Boolean);
   // Project the run the SAME way "Suggest Sundays" steps: round up to the first
   // Sunday on/after the start, +7 per slot, skipping the pastor's noted dates
   // (which push the end LATER). The projected end is the last Sunday — NOT a
@@ -50,7 +50,7 @@ export function computePacing({ slotCount = 0, startDate = "", calNotes = [] } =
   // The pastor's special-date notes that fall inside the projected window
   // (ISO date strings compare lexicographically, so >=/<= is correct here).
   const crossedNotes = sundays.length
-    ? (calNotes || []).filter((n) => n.date && n.date >= sundays[0] && n.date <= endDate)
+    ? (calNotes || []).filter((n) => n && n.date && n.date >= sundays[0] && n.date <= endDate)
     : [];
 
   return { slotCount, weeks, months, band, endDate, seasons, crossedNotes };

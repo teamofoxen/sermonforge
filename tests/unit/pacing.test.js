@@ -84,4 +84,14 @@ describe("computePacing — fail-soft", () => {
     expect(p.slotCount).toBe(0);
     expect(p.endDate).toBeNull();
   });
+  it("tolerates null/undefined/empty elements in calNotes (no throw)", () => {
+    const p = computePacing({
+      slotCount: 4,
+      startDate: "2026-01-04",
+      calNotes: [{ date: "2026-01-11", label: "VBS week" }, null, undefined, {}],
+    });
+    // The valid note still pushes the end out; the junk elements are skipped.
+    expect(p.endDate).toBe("2026-02-01");
+    expect(p.crossedNotes.map((n) => n.label)).toEqual(["VBS week"]);
+  });
 });
