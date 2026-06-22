@@ -2,6 +2,17 @@
 
 A plan to add canonical book data to SermonForge and build the features it unlocks. Structured as scoped prompts for Claude Code. Hand them over one at a time, in order.
 
+> **Superseded 2026-06-22 — historical build plan; do not use as current spec.** This
+> canonical-book-data build shipped (`b022731`, audited/remediated `89fcc1c`). The Series
+> Planner it builds on was then **re-leveled to four movements** (Understand · Design ·
+> Schedule · Overview, `3330f35`), so the present-tense tab names below — "Book Study tab",
+> "Overview tab", "Sermon Slots and Calendar tabs", "Structure" — no longer exist as named
+> tabs. For the current planner field homes and mechanics see
+> [`docs/SYSTEMS/series-planner.md`](../SYSTEMS/series-planner.md); for the schema (incl.
+> `book_id` and `melodic_evidence` at v26) see [`docs/REFERENCE/schema.md`](../REFERENCE/schema.md).
+> The core architectural decisions below (bundled static data, create-then-update,
+> fail-soft, AI-free) all still hold; the plan is retained as the build record.
+
 ---
 
 ## Core architectural decisions (honor these throughout)

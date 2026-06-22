@@ -1,6 +1,6 @@
 # Series Planner Revival — Charter
 
-**Status:** ACTIVE (build) · opened 2026-06-21 · supersedes the ARI Phase-0 "coming soon" stub.
+**Status:** SHIPPED — revived 2026-06-21, re-leveled to four movements 2026-06-22 (`3330f35`), audited + cleaned up since · opened 2026-06-21 · supersedes the ARI Phase-0 "coming soon" stub. Current shape: [`docs/SYSTEMS/series-planner.md`](../SYSTEMS/series-planner.md) (see the four-movement supersession note below).
 
 ## Decision
 
@@ -47,6 +47,10 @@ a from-scratch build.
 - **Persistence: create-then-update.** `createSeries` takes only name/year/color; the
   Book Study / Overview fields persist via debounced `updateSeries`. Do **not** widen the
   create INSERT to "fix" the 6 unwritten Book Study columns — that is by design.
+  - **Naming superseded 2026-06-22:** the "Book Study" and "Overview" fields now live in
+    the **Understand** and **Design** movements; the create-then-update ruling itself still
+    holds unchanged — audit-confirmed at `3330f35` that the INSERT writes only
+    name/year/color and was not widened for `book_id`/`melodic_evidence`.
 - **Slots: keep the draft-row / commit pattern verbatim.** `createSermon` throws on an
   empty name (State Contract #3), so a slot stays UI-only until its first non-empty title.
 - **`onOpenSermon`: drop the 3rd (seriesId) arg for v1** — the planner stands alone;
@@ -58,3 +62,8 @@ a from-scratch build.
 
 Re-skin to the invisible-system idiom; any AI-era "book-understanding feeds the sermon
 walk" pipeline; return-to-planner after opening a slot.
+
+> **Update 2026-06-22:** the planner was re-leveled to **four movements** (a structural
+> reshape — see the supersession note above), which goes beyond v1's "keep the 5-tab
+> bones." It is not a full invisible-system re-skin; the AI-era pipeline and
+> return-to-planner remain out of scope.
