@@ -532,7 +532,6 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
             onSermonsChange={setSermons}
             onOpenSermon={onOpenSermon}
             runSave={runSave}
-            calNotes={calNotes}
           />
         )}
       </div>
@@ -679,8 +678,8 @@ function BookStudyTab({ series, onChange, onSelectBook }) {
             </div>
           ))}
           {/* Literary structure is also evidence — the book's shape points to its
-              line. This is the SAME structural_outline column the Structure tab
-              uses; during the transition it appears in both, reading one column. */}
+              line. This is the sole editor of the structural_outline column; the
+              study guide renders it read-only as "How the Book Is Built". */}
           <div className="field-group" style={{ marginBottom: 0 }}>
             <label className="field-label">How the Book Is Built</label>
             <p className="field-caption" style={{ margin: "0 0 8px" }}>
@@ -925,12 +924,12 @@ function OverviewTab({ series, onChange, onNavigate, onOpenStudyGuide, sermons =
 // commentary), and every section field persists through the debounced
 // updateSection spine. Section CRUD (create/update/delete/reorder) is preserved
 // verbatim from the recovered shell.
-// `embedded` (used by the Design tab) renders ONLY the Series Sections cards —
-// the pastor's grouping of slots into movements. It deliberately omits the
-// book's literary Structural Outline (that now lives in Understand as melodic-
-// line evidence) and the page chrome. The standalone Structure tab passes
-// embedded=false and renders both, unchanged, until the collapse step.
-function StructureTab({ series, sections, onChange, onSectionsChange, seriesId, runSave, embedded = false }) {
+// Renders the Series Sections cards — the pastor's grouping of slots into
+// movements — for the Design movement's BAND 3. The book's literary Structural
+// Outline lives in Understand (as melodic-line evidence), not here, and the page
+// chrome belongs to the movement shell. (The pre-collapse standalone Structure
+// tab and its `embedded` toggle were removed once Design became the only caller.)
+function StructureTab({ series, sections, onSectionsChange, seriesId, runSave }) {
   const [expandedSection, setExpandedSection] = useState(null);
   // The id of the section just created via "+ Add Section", so its editor can
   // reveal itself and focus its title — the new section appends at the bottom
@@ -994,11 +993,10 @@ function StructureTab({ series, sections, onChange, onSectionsChange, seriesId, 
     }
   }
 
-  // The Series Sections card — shared by the standalone Structure tab and the
-  // embedded Design BAND 3. In embedded mode it carries no top margin (the
-  // Design band header spaces it instead).
+  // The Series Sections card for Design BAND 3 — no top margin (the Design band
+  // header spaces it instead).
   const sectionsCard = (
-    <div className="card" style={embedded ? undefined : { marginTop: "20px" }}>
+    <div className="card">
       <div className="card-header">
         <div>
           <h3 className="card-title">Series Sections</h3>
@@ -1043,44 +1041,7 @@ function StructureTab({ series, sections, onChange, onSectionsChange, seriesId, 
     </div>
   );
 
-  // Embedded in Design — just the grouping cards, no outline, no page chrome.
-  if (embedded) return sectionsCard;
-
-  return (
-    <div className="page-body">
-
-      {/* Section intro — workspace vocabulary */}
-      <div className="page-header" style={{ padding: "0 0 4px" }}>
-        <div className="page-title">Structure</div>
-        <div className="page-subtitle">
-          The skeleton of the book — its major divisions and the shape your series
-          will follow through them.
-        </div>
-      </div>
-
-      {/* Structural Outline */}
-      <div className="card" style={{ marginTop: "20px" }}>
-        <div className="field-group" style={{ marginBottom: 0 }}>
-          <label className="field-label">Structural Outline</label>
-          <p className="field-caption" style={{ margin: "0 0 8px" }}>
-            Build this yourself, or paste from a commentary.
-          </p>
-          <textarea
-            className="field-textarea large"
-            rows={5}
-            value={series.structural_outline || ""}
-            onChange={(e) => onChange("structural_outline", e.target.value)}
-            onInput={(e) => autoResize(e.target)}
-            ref={(el) => autoResize(el)}
-            placeholder={"I. Major Division (1:1–3:21)\n   A. Sub-section (1:1-25)\n      1. Point\n      2. Point\n   B. Sub-section (1:26-38)"}
-          />
-        </div>
-      </div>
-
-      {sectionsCard}
-
-    </div>
-  );
+  return sectionsCard;
 }
 
 // ── Section editor ─────────────────────────────────────────────────────────────
@@ -1335,11 +1296,12 @@ function CoveragePanel({ series, sermons }) {
 // slot is a real sermon atom on the spine; the "+ Add Slot" flow defers the
 // spine write until the pastor types a non-empty title (State Contract #3 —
 // no nameless atom ever reaches createSermon).
-// `embedded` (used by the Design tab) drops the page-body wrapper and the
-// pacing strip (pacing belongs to Schedule) but keeps the coverage panel and the
-// full slot apparatus — drafts, commit, section grouping, big-idea echoes. The
-// standalone Slots tab passes embedded=false and is unchanged until the collapse.
-function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpenSermon, runSave, calNotes, embedded = false }) {
+// Renders the coverage panel + full slot apparatus (drafts, commit, section
+// grouping, big-idea echoes) for the Design movement, with no page-body wrapper.
+// Pacing belongs to Schedule, so it is not shown here. (The pre-collapse
+// standalone Slots tab and its `embedded` toggle were removed once Design became
+// the only caller.)
+function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpenSermon, runSave }) {
   // Draft slots — UI-only rows that have not yet been committed to the spine.
   // State Contract #3 forbids createSermon({ name: "" }), so the "+ Add Slot"
   // button creates a row in this local state instead of immediately calling
@@ -1487,8 +1449,6 @@ function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpen
 
   const body = (
     <>
-      {/* Pacing belongs to Schedule; the Design embed omits it. */}
-      {!embedded && <PacingStrip sermons={sermons} series={series} calNotes={calNotes} />}
       <CoveragePanel series={series} sermons={sermons} />
       <div className="card-header" style={{ marginBottom: "20px" }}>
         <div>
@@ -1567,7 +1527,7 @@ function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpen
     </>
   );
 
-  return embedded ? body : <div className="page-body">{body}</div>;
+  return body;
 }
 
 function SlotList({ slots, onChange, onDelete, onCommit, draftErrors, onClearError, showAdd, onAdd, onOpenSermon, seriesId, series, totalSlots, sectionBigIdea }) {
@@ -1763,7 +1723,7 @@ function SlotRow({ slot, index, onChange, onDelete, onCommit, commitError, onCle
 // persistence path. Three bands, top to bottom.
 function DesignTab({
   series, onChange, sections, sermons, seriesId,
-  onSectionsChange, onSermonsChange, onOpenSermon, runSave, calNotes,
+  onSectionsChange, onSermonsChange, onOpenSermon, runSave,
 }) {
   return (
     <div className="page-body">
@@ -1860,11 +1820,10 @@ function DesignTab({
         </div>
       </div>
 
-      {/* The slot apparatus + coverage panel, reused wholesale (embedded: no
-          page-body wrapper, no pacing strip). */}
+      {/* The slot apparatus + coverage panel, reused wholesale (no page-body
+          wrapper, no pacing strip — pacing belongs to Schedule). */}
       <div style={{ marginTop: "16px" }}>
         <SlotsTab
-          embedded
           series={series}
           sections={sections}
           sermons={sermons}
@@ -1872,7 +1831,6 @@ function DesignTab({
           onSermonsChange={onSermonsChange}
           onOpenSermon={onOpenSermon}
           runSave={runSave}
-          calNotes={calNotes}
         />
       </div>
 
@@ -1881,10 +1839,8 @@ function DesignTab({
 
       <div style={{ marginTop: "12px" }}>
         <StructureTab
-          embedded
           series={series}
           sections={sections}
-          onChange={onChange}
           onSectionsChange={onSectionsChange}
           seriesId={seriesId}
           runSave={runSave}
