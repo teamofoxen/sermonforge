@@ -748,6 +748,21 @@ function EchoText({ value, emptyHint }) {
   );
 }
 
+// The coverage meter — a track with a sage fill at `percent`. Shared by the
+// Overview cockpit echo and the Design CoveragePanel so the two bars can't drift
+// (both bind the same computeCoverage output). The panel animates width changes;
+// the static cockpit echo doesn't.
+function CoverageBar({ percent, animate = false }) {
+  return (
+    <div style={{ height: "8px", borderRadius: "4px", background: "var(--parchment-deep)", overflow: "hidden" }}>
+      <div style={{
+        width: `${percent}%`, height: "100%", background: "var(--sage)",
+        ...(animate ? { transition: "width 200ms" } : {}),
+      }} />
+    </div>
+  );
+}
+
 // One tappable at-a-glance card. The whole card is a button that switches to the
 // tab where its content is authored (onTap). Read-only — no nested inputs.
 function GlanceCard({ label, target, onTap, filled, children }) {
@@ -874,9 +889,7 @@ function OverviewTab({ series, onChange, onNavigate, onOpenStudyGuide, sermons =
                 <span>{book.name}{cov.scopeLabel ? ` ${cov.scopeLabel}` : ""}</span>
                 <span>{cov.percent}% covered{cov.mode === "chapter" ? " (by chapter)" : ""}</span>
               </div>
-              <div style={{ height: "8px", borderRadius: "4px", background: "var(--parchment-deep)", overflow: "hidden" }}>
-                <div style={{ width: `${cov.percent}%`, height: "100%", background: "var(--sage)" }} />
-              </div>
+              <CoverageBar percent={cov.percent} />
             </>
           ) : (
             <EchoText emptyHint="No book or slots yet — tap to build the series in Design." />
@@ -1269,9 +1282,7 @@ function CoveragePanel({ series, sermons }) {
           {cov.percent}% of {book.name}{cov.scopeLabel ? ` ${cov.scopeLabel}` : ""}{cov.mode === "chapter" ? " (by chapter)" : ""}
         </span>
       </div>
-      <div style={{ height: "8px", borderRadius: "4px", background: "var(--parchment-deep)", overflow: "hidden" }}>
-        <div style={{ width: `${cov.percent}%`, height: "100%", background: "var(--sage)", transition: "width 200ms" }} />
-      </div>
+      <CoverageBar percent={cov.percent} animate />
       <div style={{ marginTop: "12px", display: "flex", flexDirection: "column", gap: "5px" }}>
         {notes.length === 0 ? (
           <div style={{ fontSize: "12.5px", color: "var(--sage)" }}>
