@@ -1,13 +1,19 @@
 # SermonForge — Field-by-Field Walkthrough
 
-> **Stale post-ARI (2026-05-09).** This walkthrough was authored before the AI
-> Removal Initiative and the Series Planner gate. It still describes Series Planner
-> tabs as live (Series Planner is gated behind a "Coming soon" placeholder per ARI
-> Phase 0) and still describes "Analyze" / "Review Outline" / "Review E/A/I"
-> buttons as AI affordances (the AI subsystem was deleted in ARI Phase 8). For the
-> current pastor-facing field shape, see
-> [`docs/SYSTEMS/sermon-workspace.md`](../SYSTEMS/sermon-workspace.md). Retained for
-> historical reference; do not use as current spec.
+> **Stale — historical reference only; do not use as current spec.** This
+> walkthrough was authored before the AI Removal Initiative (2026-05-09) and still
+> describes "Analyze" / "Review Outline" / "Review E/A/I" buttons as AI affordances
+> (the AI subsystem was deleted in ARI Phase 8).
+>
+> The **Series Planner** half below is doubly superseded: the planner was revived
+> 2026-06-21 and then **re-leveled to four movements** (Understand · Design ·
+> Schedule · Overview) — the old five tabs (Book Study · Overview · Structure ·
+> Sermon Slots · Calendar) described here no longer exist. For the current planner
+> field homes and mechanics see [`docs/SYSTEMS/series-planner.md`](../SYSTEMS/series-planner.md)
+> and [`docs/REFERENCE/schema.md`](../REFERENCE/schema.md). For the current Sermon
+> Workspace field shape see [`docs/SYSTEMS/sermon-workspace.md`](../SYSTEMS/sermon-workspace.md).
+> A full four-movement rewrite of this briefing is deferred (a from-scratch
+> re-author, not a reconcile); it is retained as a historical record meanwhile.
 
 > Every field a pastor touches in SermonForge, in the order the work actually
 > happens, with how each one feeds the next. Plain English. No internals.

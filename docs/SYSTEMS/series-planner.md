@@ -25,42 +25,66 @@ different headspace from the per-sermon walk. Two views:
 Front door: `NewSeriesModal.jsx` → `createSeries({ name, year, color })` →
 `onCreated(result.id)` navigates straight into the planner.
 
-Files: `src/components/Planning.jsx`, `SeriesPlanner.jsx` (the ~1759-line
-workbench), `NewSeriesModal.jsx`, `SeriesPlannerFixture.jsx` (preview fixture,
-`?planner[=overview|structure|slots|calendar]` route).
+Files: `src/components/Planning.jsx`, `SeriesPlanner.jsx` (the workbench),
+`NewSeriesModal.jsx`, `SeriesPlannerFixture.jsx` (preview fixture,
+`?planner[=design|calendar|overview]` route; default `book-study`).
 
 ## 2. AI-free
 
 No Analyze / Generate / Assist / Chat / scheduling-advisor. Every field is
 pastor-authored. Enforced by `sermonforge/no-direct-ai`. Do not reintroduce AI.
 
-## 3. The 5-tab workflow (`SeriesPlanner.jsx`)
+## 3. The four-movement workflow (`SeriesPlanner.jsx`)
 
 The topbar reuses the workspace `.topbar` (Back · series eyebrow · serif title ·
-"Saved" indicator · status pill · Mark Series Complete · How this works · Study
-Guide · feedback flag). The tab bar reuses `.stage-tabs`. The body is the
-parchment content area.
+"Saved" indicator · Mark Series Complete · How this works · Study Guide ·
+feedback flag). The tab bar reuses `.stage-tabs`. The body is the parchment
+content area. The four tabs, in workflow order, each feed the next:
 
-- **Book Study** — 6 theology columns: `book_background`, `book_argument`,
-  `book_structure`, `redemptive_context`, `series_motivation`, `emerging_big_idea`.
-- **Overview** — `big_idea`, `overview`, `passage_range`, `color`
-  (gold/crimson/sage/slate), `start_date`, `end_date`; read-only "working
-  hypothesis" echo of `emerging_big_idea`.
-- **Structure** — `structural_outline` + sections (`series_sections` rows:
-  `title`, `passage_range`, `big_idea`, `overview`, `sort_order`).
-- **Sermon Slots** — the slots; see the draft-row/commit pattern below.
-- **Calendar** — `suggestSundays()` via `src/utils/churchCalendar.js`
-  (`getUpcomingSundays` / `getSeasonForDate` / `toDateString`); "Save Dates"
-  writes each slot's `date`; season labels rendered per slot.
+- **Understand** (tab id `book-study`) — two stacked moves:
+  - *Place the book* — the canonical book picker (`book_id`, auto-fills genre +
+    span), the genre override (`canon_category`), and `redemptive_context` +
+    `book_background`. (Read-only passage/genre chips confirm the auto-fill; the
+    title is not editable here — it lives on the cockpit masthead.)
+  - *Hear the line* — `book_argument`; the **evidence worksheet** (`melodic_evidence`,
+    a JSON blob of labeled slots: repeated words, top-and-tail, purpose, OT
+    quotations); `structural_outline` rendered here as structural evidence; and
+    `emerging_big_idea`, "The Melodic Line", the output.
+- **Design** (tab id `design`) — three bands:
+  - *The hinge* — `emerging_big_idea` read-only (carried from Understand) →
+    `series_motivation` (editable) → `big_idea` (the decision).
+  - *Divide into sermons* — `overview`, `passage_range`, the sermon slots
+    (draft-row/commit, §5), and the coverage panel (`src/utils/coverage.js`
+    `computeCoverage`, read-only). Slots reuse `SlotsTab` via an `embedded` flag.
+  - *Group into movements* — the series sections (`series_sections` rows:
+    `title`, `passage_range`, `big_idea`, `overview`, `sort_order`). Reuses
+    `StructureTab` via the `embedded` flag (sections only; no `structural_outline`).
+- **Schedule** (tab id `calendar`) — `suggestSundays()` via
+  `src/utils/churchCalendar.js` (`getUpcomingSundays` / `getSeasonForDate` /
+  `toDateString`); "Save Dates" writes each slot's `date` and derives `end_date`;
+  season labels per slot; the pacing strip (`src/utils/pacing.js` `computePacing`).
+- **Overview** (cockpit, tab id `overview`) — read-mostly dashboard. The only
+  authored fields are the masthead: `title`, `description`, `color`, plus the
+  `status` + `year` identity metadata. Everything else is a read-only, tappable
+  echo (melodic line → Understand; big idea / motivation / coverage → Design;
+  pacing / dates → Schedule) reusing `handleTabChange`. Study Guide export
+  launches from here too. **Not a progress meter** — no score, %, or next-step
+  nudge; neutral presence dots only.
+
+The standalone Structure and Sermon Slots tabs were removed at the tab collapse;
+their apparatus now renders inside Design via the `embedded` flag. A remembered
+`localStorage` tab id for a removed tab falls back to Understand (`PLANNER_TAB_IDS`).
 
 ## 4. Persistence — create-then-update
 
 `createSeries` writes **only** `name`/`year`/`color` (the `create-series` INSERT
-seeds the 6 theology columns empty). Every rich field persists afterward via
+seeds the rich columns empty). Every rich field persists afterward via
 **debounced `updateSeries`** (`handleSeriesField` → `debouncedPersist` →
 `updateSeries`); section/sermon fields via `update-section` / `update-sermon`.
+This explicitly includes `book_id` and `melodic_evidence` — both persist via
+`updateSeries`, **never** the create INSERT.
 
-**Do not widen the `create-series` INSERT** to "fix" the unwritten Book Study
+**Do not widen the `create-series` INSERT** to "fix" the unwritten Understand
 columns — create-then-update is the design (charter ruling). Write allowlists:
 `SERIES_COLUMNS` / `SECTION_COLUMNS` / `SERMON_COLUMNS` in `electron/contracts.cjs`;
 all writes gate through `buildUpdate` in `electron/main.js`.
@@ -82,11 +106,15 @@ Chain: the StudyGuideModal "Export to Word" → `exportStudyGuide(seriesId)`
 (`src/db/database.js`) → `"series-export-study-guide"` IPC (`electron/preload.js`)
 → handler (`electron/main.js`) → `buildStudyGuideDoc(series, sections, sermons)`.
 The handler fetches series + sections (by `sort_order`) + sermons (by `date`,
-`created_at`) and builds a 5-part document: **Part 1** World (background /
-argument / structure / redemptive context), **Part 2** Why We Are Here
-(`series_motivation`), **Part 3** Big Idea, **Part 4** The Journey (sections +
+`created_at`) and builds a 5-part document: **Part 1** World (`book_background`,
+`book_argument`), **Part 2** Why We're Here (`redemptive_context`,
+`series_motivation`), **Part 3** Big Idea (`emerging_big_idea` de-duped against
+`big_idea`, then `big_idea`, `overview`), **Part 4** The Journey (sections +
 numbered sermon rows: passage, title, date+season, indented `study_guide_note`),
 **Part 5** Reference (`structural_outline`). Heading color from the series color.
+The book's structure appears **once**, in Part 5 — `book_structure` was retired
+(v26) and is no longer read by the exporter. The Part-4 grouping + Part-3 de-dup
+live in `src/utils/studyGuideModel.js` (mirrored to `electron/studyGuideModel.cjs`).
 
 Output: `Documents/SermonForge/exports/StudyGuides/<title> — Study Guide.docx`
 (via `app.getPath("documents")`); dir created recursively; filename sanitized;

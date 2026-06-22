@@ -8,7 +8,7 @@ Load-bearing strategic documents that span multiple sessions and anchor downstre
 - [`docs/PROPOSALS/refoundation-initiative.md`](PROPOSALS/refoundation-initiative.md) — Workspace Re-Foundation working board; the ACTIVE initiative (Phase 1 complete 2026-06-15; Phase 2 Merida question surgery pending). Holds the net-truth map (registered 2026-06-14).
 - [`docs/PROPOSALS/beta-testing-initiative.md`](PROPOSALS/beta-testing-initiative.md) — BTI charter; closed-cohort beta program governing invasiveness/workflow-fit testing.
 - [`docs/PROPOSALS/bti-tester-summary.md`](PROPOSALS/bti-tester-summary.md) — BTI tester-facing letter; what the cohort actually reads at onboarding (must stay in sync with the charter).
-- [`docs/PROPOSALS/series-planner-revival-charter.md`](PROPOSALS/series-planner-revival-charter.md) — Series Planner revival charter; the *what & why* / build rulings behind the AI-free 5-tab planner (shipped 2026-06-21). Mechanics live in [`SYSTEMS/series-planner.md`](SYSTEMS/series-planner.md).
+- [`docs/PROPOSALS/series-planner-revival-charter.md`](PROPOSALS/series-planner-revival-charter.md) — Series Planner revival charter; the *what & why* / build rulings behind the AI-free planner (shipped 2026-06-21 as five tabs; re-leveled 2026-06-22 to four movements — Understand · Design · Schedule · Overview). Mechanics live in [`SYSTEMS/series-planner.md`](SYSTEMS/series-planner.md).
 
 **Historical record** — authority transferred to CORE + WORKSPACE-CANON (2026-06-15, Re-Foundation step 5); each is banner-stamped at the top, retained as development history, **not a working guide**:
 

@@ -24,6 +24,14 @@ a from-scratch build.
 - **Keep the 5-tab bones for v1.** Book Study · Overview · Structure · Sermon Slots ·
   Calendar — ending in the congregational Study Guide export. A tabbed workbench fits
   macro work. Re-skinning to the invisible-system idiom is deferred, not promised.
+  - **Superseded 2026-06-22 — four-movement re-leveling.** The five peer tabs held three
+    different kinds of work — understand / design / logistics — flattened into one row: a
+    process, not a workflow. Re-leveled to four movements that each feed the next:
+    **Understand · Design · Schedule · Overview.** Current field homes:
+    [`docs/SYSTEMS/series-planner.md`](../SYSTEMS/series-planner.md); schema changes
+    (`melodic_evidence` added in v26; `book_structure` retired, folded into
+    `structural_outline`): [`docs/REFERENCE/schema.md`](../REFERENCE/schema.md). The
+    original v1 ruling above stays as the build record.
 
 ## Scope — 3 increments
 

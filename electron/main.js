@@ -1136,6 +1136,38 @@ function runMigrations() {
     version = 25;
   }
 
+  if (version < 26) {
+    // v26 (Series Planner re-leveling, Step 2) — two coordinated changes.
+    //
+    // (a) melodic_evidence: a nullable JSON column for the forthcoming
+    //     "Hear the line" worksheet (labeled evidence slots the pastor fills).
+    //     Unused for now — the schema is prepped here so the next step is pure
+    //     UI. It rides the create-then-update path: melodic_evidence is in
+    //     SERIES_COLUMNS, so the debounced update-series write gates through
+    //     buildUpdate. The create-series INSERT is deliberately NOT widened
+    //     (charter ruling), exactly like book_id (v25).
+    safeAlter("ALTER TABLE series ADD COLUMN melodic_evidence TEXT DEFAULT NULL");
+    //
+    // (b) Field collapse — book_structure ("How the Book Is Built") and
+    //     structural_outline are the same thing (the book's literary shape) in
+    //     two forms. Fold book_structure INTO structural_outline so structure
+    //     lives in ONE place across the UI and the export. This is a run-ONCE
+    //     backfill gated by the version mechanism (NOT a content check), so a
+    //     restart never appends a second time. book_structure is left INTACT in
+    //     the DB as a backup — we only stop reading/rendering it after this.
+    const v26rows = queryAll(
+      "SELECT id, structural_outline, book_structure FROM series WHERE book_structure IS NOT NULL AND TRIM(book_structure) != ''"
+    );
+    for (const row of v26rows) {
+      const merged = (row.structural_outline || "").trim()
+        ? `${row.structural_outline}\n\n${row.book_structure}`
+        : row.book_structure;
+      dbRun("UPDATE series SET structural_outline = ? WHERE id = ?", [merged, row.id]);
+    }
+    dbRun("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '26')");
+    version = 26;
+  }
+
   // True when at least one block actually ran. Lets initDatabase skip the
   // boot-time flush on a clean boot of an up-to-date DB — so a healthy library
   // is never re-serialized and rotated over its own backup for no reason.
@@ -2870,19 +2902,18 @@ function buildStudyGuideDoc(series, sections, sermons) {
   }
 
   // PART 1 — THE WORLD OF THIS BOOK
-  if (hasContent(series.book_background) || hasContent(series.book_argument) || hasContent(series.book_structure)) {
+  // book_structure ("How the Book Is Built") retired in Step 2 of the planner
+  // re-leveling — its content was folded into structural_outline (v26), which
+  // is the single home for the book's structure, in Part 5 (Reference).
+  if (hasContent(series.book_background) || hasContent(series.book_argument)) {
     children.push(partHeading("PART 1 — THE WORLD OF THIS BOOK"));
     if (hasContent(series.book_background)) {
       children.push(subHead("Then"));
       children.push(...bodyParas(series.book_background));
     }
-    if (hasContent(series.book_argument) || hasContent(series.book_structure)) {
+    if (hasContent(series.book_argument)) {
       children.push(subHead("The Argument"));
-      if (hasContent(series.book_argument)) children.push(...bodyParas(series.book_argument));
-      if (hasContent(series.book_structure)) {
-        if (hasContent(series.book_argument)) children.push(spacer());
-        children.push(...bodyParas(series.book_structure));
-      }
+      children.push(...bodyParas(series.book_argument));
     }
   }
 

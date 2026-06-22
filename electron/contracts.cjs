@@ -140,7 +140,7 @@ const SERIES_COLUMNS = Object.freeze(new Set([
   "passage_range", "start_date", "end_date", "structural_outline",
   "status", "canon_category", "book_id",
   "redemptive_context", "book_background", "book_argument", "book_structure",
-  "series_motivation", "emerging_big_idea",
+  "series_motivation", "emerging_big_idea", "melodic_evidence",
 ]));
 
 const SECTION_COLUMNS = Object.freeze(new Set([

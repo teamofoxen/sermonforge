@@ -49,52 +49,124 @@ const STATUS_OPTIONS = [
   { value: SERIES_STATUS.Complete,   label: SERIES_STATUS_LABELS[SERIES_STATUS.Complete] },
 ];
 
-// ── Book Study field definitions ──────────────────────────────────────────────
-// soloPrompt keys stripped — they were consumed only by the removed AI analyze
-// path. The pastor now fills these from his own study; the labels and
-// placeholders are the only scaffolding that remains.
-const BOOK_STUDY_FIELDS = [
-  {
-    key: "redemptive_context",
+// The four movement tab ids, in workflow order. Used to validate a remembered
+// tab from localStorage — a stale id (e.g. the removed `structure`/`slots`)
+// falls back to the first tab so the planner never lands on a blank render.
+const PLANNER_TAB_IDS = ["book-study", "design", "calendar", "overview"];
+
+// ── Understand field definitions ──────────────────────────────────────────────
+// Plain label + prompt text for the receptive notes the pastor writes by hand.
+// AI-FREE: the prompt is the only scaffolding — nothing is generated, prefilled,
+// or suggested. (soloPrompt keys were stripped with the removed AI analyze path.)
+const UNDERSTAND_FIELDS = {
+  redemptive_context: {
     label: "Where This Book Sits in Redemptive History",
-    placeholder: "How does this book fit in the arc from creation to new creation? Where does it land in the story of Israel, the coming of Christ, the mission of the church?",
+    placeholder: "Where does this book sit in the arc from creation to new creation? How does it anticipate or reflect Christ?",
   },
-  {
-    key: "book_background",
+  book_background: {
     label: "The World of This Book",
-    placeholder: "Author, audience, occasion, historical setting, genre — what shaped why this book was written and who first received it?",
+    placeholder: "Author, audience, occasion, date, historical setting, literary genre. Paste from a commentary introduction or write your own notes.",
   },
-  {
-    key: "book_argument",
+  book_argument: {
     label: "The Book's Controlling Argument",
-    placeholder: "What is the author's central claim? What is he trying to prove, teach, or accomplish from beginning to end?",
+    placeholder: "What is the author's central claim or purpose? What is this book trying to do to its reader?",
   },
-  {
-    key: "book_structure",
-    label: "How the Book Is Built",
-    placeholder: "Major movements, structural markers, turning points — how does the book progress from its opening to its conclusion?",
-  },
-  {
-    key: "series_motivation",
+  series_motivation: {
     label: "Why This Congregation, Why Now",
-    placeholder: "What pastoral need, cultural moment, or congregational gap makes this book urgent for this people at this time?",
+    placeholder: "What does this congregation need from this book right now? What pastoral urgency drives this series?",
+  },
+  emerging_big_idea: {
+    label: "The Melodic Line",
+    placeholder: "The single line every passage in this book sounds — the note you'll listen for all series.",
+  },
+};
+
+// The labeled evidence slots in "Hear the Line", stored as a single JSON object
+// on series.melodic_evidence. Adding a 5th evidence type is ONE entry here — the
+// worksheet renders from this list and the blob is keyed by `key`. AI-FREE: each
+// slot is an empty input the pastor fills; the prompt never prefills or suggests.
+const MELODIC_EVIDENCE_FIELDS = [
+  {
+    key: "repeated",
+    label: "Repeated Words & Phrases",
+    prompt: "Words, images, or ideas the book keeps returning to. What does the author say again and again?",
   },
   {
-    key: "emerging_big_idea",
-    label: "Working Big Idea",
-    placeholder: "The book's melodic line — the one truth this whole book is saying, that every passage in the series relates back to.",
+    key: "topAndTail",
+    label: "The Book's Top-and-Tail",
+    prompt: "How the book opens and how it closes. The first note and the last often frame the whole.",
+  },
+  {
+    key: "purpose",
+    label: "Purpose / Thesis Statement",
+    prompt: "A verse where the author states why he wrote (e.g. Luke 1:1-4, John 20:30-31). Put it in your own words.",
+  },
+  {
+    key: "otQuotations",
+    label: "Old Testament Quotations & Allusions",
+    prompt: "Where the book quotes or echoes earlier Scripture — the story it's continuing.",
   },
 ];
 
-// Rich placeholders that replace the generic ones from BOOK_STUDY_FIELDS.
-const BOOK_STUDY_PLACEHOLDERS = {
-  redemptive_context: "Where does this book sit in the arc from creation to new creation? How does it anticipate or reflect Christ?",
-  book_background: "Author, audience, occasion, date, historical setting, literary genre. Paste from a commentary introduction or write your own notes.",
-  book_argument: "What is the author's central claim or purpose? What is this book trying to do to its reader?",
-  book_structure: "Major movements, structural markers, turning points, chiasms, repeated refrains. How does the shape of the book serve its argument?",
-  series_motivation: "What does this congregation need from this book right now? What pastoral urgency drives this series?",
-  emerging_big_idea: "The book's melodic line — the one truth this whole book is saying, that every passage in the series will relate back to. Draft it now; sharpen it as you preach.",
-};
+// The empty blob, derived from the field list so it stays in step automatically.
+const EMPTY_EVIDENCE = MELODIC_EVIDENCE_FIELDS.reduce((acc, f) => { acc[f.key] = ""; return acc; }, {});
+
+// Parse the melodic_evidence JSON column into a plain { key: string } object.
+// Fail-soft: null / non-string / malformed JSON / non-object all degrade to an
+// empty blob — never throws, never blocks. Only known keys with string values
+// are kept, so stale or junk keys can't leak into the worksheet.
+function parseMelodicEvidence(raw) {
+  if (!raw || typeof raw !== "string") return { ...EMPTY_EVIDENCE };
+  try {
+    const obj = JSON.parse(raw);
+    if (!obj || typeof obj !== "object" || Array.isArray(obj)) return { ...EMPTY_EVIDENCE };
+    const out = { ...EMPTY_EVIDENCE };
+    for (const f of MELODIC_EVIDENCE_FIELDS) {
+      if (typeof obj[f.key] === "string") out[f.key] = obj[f.key];
+    }
+    return out;
+  } catch {
+    return { ...EMPTY_EVIDENCE };
+  }
+}
+
+// A receptive note field bound to a series column through the debounced
+// updateSeries path (onChange). Label + prompt come from UNDERSTAND_FIELDS.
+function UnderstandNote({ fieldKey, series, onChange }) {
+  const def = UNDERSTAND_FIELDS[fieldKey];
+  return (
+    <div className="field-group" style={{ marginBottom: 0 }}>
+      <label className="field-label">{def.label}</label>
+      <textarea
+        className="field-textarea large"
+        value={series[fieldKey] || ""}
+        onChange={(e) => onChange(fieldKey, e.target.value)}
+        onInput={(e) => autoResize(e.target)}
+        ref={(el) => autoResize(el)}
+        placeholder={def.placeholder}
+      />
+    </div>
+  );
+}
+
+// The numbered header that marks each of Understand's two moves.
+function MoveHeader({ n, title, subtitle }) {
+  return (
+    <div style={{ display: "flex", alignItems: "baseline", gap: "12px", margin: "30px 0 2px" }}>
+      <span style={{
+        display: "inline-flex", alignItems: "center", justifyContent: "center",
+        width: "26px", height: "26px", borderRadius: "50%", flexShrink: 0,
+        background: "var(--gold)", color: "var(--white)",
+        fontFamily: "var(--font-serif)", fontWeight: 700, fontSize: "13px",
+        alignSelf: "center",
+      }}>{n}</span>
+      <div>
+        <div style={{ fontFamily: "var(--font-serif)", fontSize: "18px", fontWeight: 600, color: "var(--ink)" }}>{title}</div>
+        {subtitle && <div style={{ fontSize: "13px", color: "var(--ink-soft)", marginTop: "2px" }}>{subtitle}</div>}
+      </div>
+    </div>
+  );
+}
 
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture }) {
@@ -124,7 +196,9 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
     if (_fixture) return; // preview fixture — no DB reads
     load();
     const saved = localStorage.getItem(`sermonforge_planner_tab_${seriesId}`);
-    setActiveTab(saved || "book-study");
+    // A remembered id for a since-removed tab (`structure`/`slots`) must not
+    // stick — fall back to the first movement so the render is never blank.
+    setActiveTab(PLANNER_TAB_IDS.includes(saved) ? saved : "book-study");
   }, [seriesId]);
 
   // Auto-suggest series complete — Pilot B.3 / Process Contract #2
@@ -277,11 +351,10 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
   }
 
   const tabs = [
-    { id: "book-study", label: "Book Study" },
+    { id: "book-study", label: "Understand" },
+    { id: "design",     label: "Design" },
+    { id: "calendar",   label: "Schedule" },
     { id: "overview",   label: "Overview" },
-    { id: "structure",  label: "Structure" },
-    { id: "slots",      label: "Sermon Slots" },
-    { id: "calendar",   label: "Calendar" },
   ];
 
   return (
@@ -429,27 +502,9 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
           <OverviewTab
             series={series}
             onChange={handleSeriesField}
-          />
-        )}
-        {activeTab === "structure" && (
-          <StructureTab
-            series={series}
-            sections={sections}
-            onChange={handleSeriesField}
-            onSectionsChange={setSections}
-            seriesId={seriesId}
-            runSave={runSave}
-          />
-        )}
-        {activeTab === "slots" && (
-          <SlotsTab
-            series={series}
-            sections={sections}
+            onNavigate={handleTabChange}
+            onOpenStudyGuide={async () => { await runRegisteredFlushes(); setShowStudyGuide(true); }}
             sermons={sermons}
-            seriesId={seriesId}
-            onSermonsChange={setSermons}
-            onOpenSermon={onOpenSermon}
-            runSave={runSave}
             calNotes={calNotes}
           />
         )}
@@ -466,6 +521,20 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
             scheduleDirty={scheduleDirty}
           />
         )}
+        {activeTab === "design" && (
+          <DesignTab
+            series={series}
+            onChange={handleSeriesField}
+            sections={sections}
+            sermons={sermons}
+            seriesId={seriesId}
+            onSectionsChange={setSections}
+            onSermonsChange={setSermons}
+            onOpenSermon={onOpenSermon}
+            runSave={runSave}
+            calNotes={calNotes}
+          />
+        )}
       </div>
     </div>
     {showHowItWorks && <SeriesHowItWorksModal onClose={() => setShowHowItWorks(false)} />}
@@ -473,110 +542,259 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
     </>
   );
 }
-// ── Book Study Tab ────────────────────────────────────────────────────────────
-// The walk's first stage: the pastor reads the book before he plans the series.
-// AI-free — every field is the pastor's own working note, persisted through the
-// debounced updateSeries spine via the `onChange` prop the shell owns.
+// ── Understand Tab ────────────────────────────────────────────────────────────
+// The first movement: where the workflow begins. Two distinct moves, stacked so
+// the whole movement stays visible —
+//   1. Place the Book — receptive identity + context (book, genre, world).
+//   2. Hear the Line — the guided, non-AI worksheet: gather evidence, then state
+//      the melodic line in the pastor's own words.
+// AI-FREE throughout: every field is empty until the pastor types; nothing is
+// generated, prefilled, suggested, or scored. Persists through the debounced
+// updateSeries spine via the `onChange` prop the shell owns.
 function BookStudyTab({ series, onChange, onSelectBook }) {
+  // One debounced write of the whole melodic_evidence JSON blob: merge the
+  // changed slot into the parsed object and persist the stringified result
+  // through the same updateSeries path every other field uses (create-then-
+  // update — never the create INSERT). AI-free — pure capture of typed text.
+  function handleEvidenceChange(key, value) {
+    const next = { ...parseMelodicEvidence(series.melodic_evidence), [key]: value };
+    onChange("melodic_evidence", JSON.stringify(next));
+  }
+  const evidence = parseMelodicEvidence(series.melodic_evidence);
+
   return (
     <div className="page-body" style={{ background: "var(--parchment)" }}>
 
-      {/* Section intro — workspace vocabulary */}
+      {/* Movement intro */}
       <div className="page-header" style={{ padding: "0 0 4px" }}>
-        <div className="page-title">Book Study</div>
+        <div className="page-title">Understand</div>
         <div className="page-subtitle">
-          Read the book before you plan the series. These notes are the soil the
-          whole series grows out of.
+          Read the book, then hear the one line it sings. This is where the series begins.
         </div>
       </div>
 
-      {/* Book identity card — pick the canonical book (fills genre + passage
-          span), the series title the pastor edits, and the read-only passage
-          range + genre chips that light up from the book. */}
-      <div className="card" style={{ marginTop: "20px" }}>
-        <div className="field-group">
-          <label className="field-label" htmlFor="book-study-book">Canonical Book</label>
-          <select
-            id="book-study-book"
-            className="field-input"
-            value={series.book_id || ""}
-            onChange={(e) => onSelectBook(e.target.value)}
-          >
-            <option value="">— Select book —</option>
-            {Object.entries(GENRES).map(([genreKey, genreLabel]) => (
-              <optgroup key={genreKey} label={genreLabel}>
-                {BOOKS.filter((b) => b.genre === genreKey).map((b) => (
-                  <option key={b.id} value={b.id}>{b.name}</option>
-                ))}
-              </optgroup>
-            ))}
-          </select>
-          <div style={{ fontSize: "12px", color: "var(--ink-ghost)", marginTop: "6px" }}>
-            Sets the genre and fills the passage span below; the category stays editable on Overview.
+      {/* ── Move 1: Place the Book ─────────────────────────────────────────── */}
+      <MoveHeader n="1" title="Place the Book" subtitle="Where it sits, and the world it speaks into." />
+
+      {/* Book identity — pick the canonical book (fills genre + passage span),
+          the genre override (relocated here from Overview), the series text the
+          pastor edits, and the read-only passage + genre chips. */}
+      <div className="card" style={{ marginTop: "12px" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+          <div className="field-group" style={{ marginBottom: 0 }}>
+            <label className="field-label" htmlFor="understand-book">Canonical Book</label>
+            <select
+              id="understand-book"
+              className="field-input"
+              value={series.book_id || ""}
+              onChange={(e) => onSelectBook(e.target.value)}
+            >
+              <option value="">— Select book —</option>
+              {Object.entries(GENRES).map(([genreKey, genreLabel]) => (
+                <optgroup key={genreKey} label={genreLabel}>
+                  {BOOKS.filter((b) => b.genre === genreKey).map((b) => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+            <div style={{ fontSize: "12px", color: "var(--ink-ghost)", marginTop: "6px" }}>
+              Sets the genre and fills the passage span; the genre stays editable beside it.
+            </div>
+          </div>
+          {/* Genre override — relocated here from Overview. Picking a book
+              re-fills it; a manual edit overrides until the book changes again. */}
+          <div className="field-group" style={{ marginBottom: 0 }}>
+            <label className="field-label" htmlFor="understand-category">Biblical Category</label>
+            <select
+              id="understand-category"
+              className="field-input"
+              value={series.canon_category || ""}
+              onChange={(e) => onChange("canon_category", e.target.value)}
+            >
+              {CANON_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
           </div>
         </div>
-        <div className="field-group" style={{ marginBottom: 0 }}>
-          <label className="field-label">Series Text</label>
-          <input
-            className="field-input"
-            style={{ fontWeight: 600 }}
-            value={series.title || ""}
-            onChange={(e) => onChange("title", e.target.value)}
-            placeholder="Series Text"
-          />
-          {(series.passage_range || series.canon_category || series.book_id) && (
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "8px" }}>
-              {series.passage_range && (
-                <span style={{ fontFamily: "var(--font-mono)", fontSize: "13px", color: "var(--ink-soft)" }}>
-                  {series.passage_range}
-                </span>
-              )}
-              <span style={{
-                fontSize: "10px", padding: "2px 7px", borderRadius: "10px",
-                background: "var(--parchment-deep)", color: "var(--ink-soft)",
-                fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em",
-              }}>
-                {GENRES[series.canon_category] || "Unclassified"}
+        {/* Read-only confirmation of the canonical auto-fill. The title is
+            authored on the Overview masthead (its single home), so it is not
+            editable here; the topbar shows it at all times. */}
+        {(series.passage_range || series.canon_category || series.book_id) && (
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "16px" }}>
+            {series.passage_range && (
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: "13px", color: "var(--ink-soft)" }}>
+                {series.passage_range}
               </span>
-            </div>
-          )}
-        </div>
+            )}
+            <span style={{
+              fontSize: "10px", padding: "2px 7px", borderRadius: "10px",
+              background: "var(--parchment-deep)", color: "var(--ink-soft)",
+              fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em",
+            }}>
+              {GENRES[series.canon_category] || "Unclassified"}
+            </span>
+          </div>
+        )}
       </div>
 
-      {/* The six book-study notes, each bound to a series column and persisted
-          through the debounced updateSeries path the shell wires to onChange. */}
-      <div className="card" style={{ marginTop: "20px" }}>
-        {BOOK_STUDY_FIELDS.map((fieldDef) => (
-          <div key={fieldDef.key} className="field-group">
-            <label className="field-label">{fieldDef.label}</label>
+      {/* The two context notes — receptive input, often pasted from a commentary. */}
+      <div className="card" style={{ marginTop: "16px", display: "flex", flexDirection: "column", gap: "20px" }}>
+        <UnderstandNote fieldKey="redemptive_context" series={series} onChange={onChange} />
+        <UnderstandNote fieldKey="book_background" series={series} onChange={onChange} />
+      </div>
+
+      {/* ── Move 2: Hear the Line ──────────────────────────────────────────── */}
+      <MoveHeader n="2" title="Hear the Line" subtitle="Gather what the book keeps showing you, then name the one line you hear." />
+
+      {/* The reasoning that feeds the line. */}
+      <div className="card" style={{ marginTop: "12px" }}>
+        <UnderstandNote fieldKey="book_argument" series={series} onChange={onChange} />
+      </div>
+
+      {/* The evidence worksheet — labeled slots the pastor fills by hand. AI-free:
+          empty inputs, prompt text only; never generated or suggested. Stored as
+          one JSON blob on melodic_evidence (handleEvidenceChange). */}
+      <div className="card" style={{ marginTop: "16px" }}>
+        <div className="card-header" style={{ marginBottom: "4px" }}>
+          <div>
+            <div className="card-title">Evidence</div>
+            <p className="field-caption" style={{ marginTop: "2px" }}>
+              What the book itself keeps pointing to. Fill what you find; leave the rest.
+            </p>
+          </div>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginTop: "12px" }}>
+          {MELODIC_EVIDENCE_FIELDS.map((f) => (
+            <div key={f.key} className="field-group" style={{ marginBottom: 0 }}>
+              <label className="field-label">{f.label}</label>
+              <textarea
+                className="field-textarea"
+                rows={2}
+                value={evidence[f.key]}
+                onChange={(e) => handleEvidenceChange(f.key, e.target.value)}
+                onInput={(e) => autoResize(e.target)}
+                ref={(el) => autoResize(el)}
+                placeholder={f.prompt}
+              />
+            </div>
+          ))}
+          {/* Literary structure is also evidence — the book's shape points to its
+              line. This is the SAME structural_outline column the Structure tab
+              uses; during the transition it appears in both, reading one column. */}
+          <div className="field-group" style={{ marginBottom: 0 }}>
+            <label className="field-label">How the Book Is Built</label>
+            <p className="field-caption" style={{ margin: "0 0 8px" }}>
+              The book's outline — its movements and turning points. Build it yourself, or paste from a commentary.
+            </p>
             <textarea
               className="field-textarea large"
-              value={series[fieldDef.key] || ""}
-              onChange={(e) => onChange(fieldDef.key, e.target.value)}
+              rows={5}
+              value={series.structural_outline || ""}
+              onChange={(e) => onChange("structural_outline", e.target.value)}
               onInput={(e) => autoResize(e.target)}
               ref={(el) => autoResize(el)}
-              placeholder={BOOK_STUDY_PLACEHOLDERS[fieldDef.key] || fieldDef.placeholder}
+              placeholder={"I. Major Division (1:1–3:21)\n   A. Sub-section (1:1-25)\n   B. Sub-section (1:26-38)"}
             />
           </div>
-        ))}
+        </div>
       </div>
+
+      {/* The output — the one line the pastor hears, in their own words. Still
+          echoes into Overview as the working hypothesis (echo wired there). */}
+      <div className="card" style={{ marginTop: "16px", borderLeft: "3px solid var(--gold)" }}>
+        <UnderstandNote fieldKey="emerging_big_idea" series={series} onChange={onChange} />
+      </div>
+
+      {/* series_motivation is authored in the Design hinge, not here — the
+          transitional editor that lived here was removed at the tab collapse. */}
 
     </div>
   );
 }
-// ── Overview Tab ──────────────────────────────────────────────────────────────
-function OverviewTab({ series, onChange }) {
+// ── Cockpit (Overview Tab) ──────────────────────────────────────────────────
+// The "bucket that contains all the work": a read-mostly dashboard surfacing,
+// at a glance, everything authored across the movements. Each surfaced item is
+// tappable — it jumps to where that field is authored (handleTabChange).
+//
+// AI-FREE and deliberately NOT a progress meter: it reflects content read-only;
+// it never grades, scores, ranks, computes a "% complete", or nudges a next
+// step. Neutral presence dots (filled = has content, hollow = empty) are
+// presence indicators, not a grade. The ONLY authored fields here are the
+// masthead (title, tagline, color); everything else is a read-only echo.
+
+// A neutral presence dot — filled when the source has content, hollow when not.
+// Reused idea from the study-guide preview; a dot is presence, not a score.
+function PresenceDot({ filled }) {
+  return (
+    <span
+      aria-hidden="true"
+      style={{
+        display: "inline-block", width: "8px", height: "8px", borderRadius: "50%",
+        flexShrink: 0,
+        background: filled ? "var(--sage)" : "transparent",
+        border: filled ? "none" : "2px solid var(--ink-ghost)",
+      }}
+    />
+  );
+}
+
+// A read-only text echo, or a neutral pointer (not a nudge) when empty.
+function EchoText({ value, emptyHint }) {
+  return value?.trim() ? (
+    <div style={{ fontSize: "14px", fontFamily: "var(--font-serif)", color: "var(--ink)", lineHeight: 1.55 }}>
+      {value}
+    </div>
+  ) : (
+    <div style={{ fontSize: "13px", fontStyle: "italic", color: "var(--ink-ghost)" }}>{emptyHint}</div>
+  );
+}
+
+// One tappable at-a-glance card. The whole card is a button that switches to the
+// tab where its content is authored (onTap). Read-only — no nested inputs.
+function GlanceCard({ label, target, onTap, filled, children }) {
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onTap}
+      onKeyDown={buttonKeydown(onTap)}
+      className="card"
+      style={{ marginBottom: 0, cursor: "pointer" }}
+      title={`Open ${target}`}
+    >
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", marginBottom: "8px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          {filled !== undefined && <PresenceDot filled={filled} />}
+          <span className="field-label" style={{ marginBottom: 0 }}>{label}</span>
+        </div>
+        <span style={{ fontSize: "11px", color: "var(--ink-ghost)", whiteSpace: "nowrap" }}>{target} →</span>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function OverviewTab({ series, onChange, onNavigate, onOpenStudyGuide, sermons = [], calNotes = [] }) {
+  // Read-only readouts from the existing engines — rendered, not re-implemented.
+  const cov = computeCoverage(series.book_id, sermons, series.passage_range);
+  const book = bookById(series.book_id);
+  const hasCoverage = !cov.noBook && !!book;
+  const hasSlots = sermons.length > 0;
+  const hasDates = !!(series.start_date || series.end_date);
+
+  const go = (tabId) => () => onNavigate?.(tabId);
+
   return (
     <div className="page-body">
       <div className="page-header" style={{ padding: 0, marginBottom: "20px" }}>
-        <div className="page-title">Overview</div>
+        <div className="page-title">{series.title || "Series"}</div>
         <div className="page-subtitle">
-          The identity of the series — its name, its arc, and the one idea it drives home.
+          Everything you've built, at a glance. Tap any card to jump to where you author it.
         </div>
       </div>
 
-      {/* Title + description */}
-      <div className="card" style={{ marginBottom: "20px" }}>
+      {/* ── Masthead — the only authored band ──────────────────────────────── */}
+      <div className="card" style={{ marginBottom: "24px" }}>
         <div className="field-group">
           <label className="field-label">Series Title</label>
           <input
@@ -587,7 +805,7 @@ function OverviewTab({ series, onChange }) {
             placeholder="e.g. The Gospel of Luke: Reintroducing Jesus"
           />
         </div>
-        <div className="field-group" style={{ marginBottom: 0 }}>
+        <div className="field-group">
           <label className="field-label">
             Short Description <span style={{ color: "var(--ink-ghost)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(tagline or subtitle)</span>
           </label>
@@ -598,21 +816,13 @@ function OverviewTab({ series, onChange }) {
             placeholder="A one-line description for the congregation or your own notes…"
           />
         </div>
-      </div>
-
-      {/* Row: color + canon + status + year */}
-      <div className="card" style={{ marginBottom: "20px" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 80px", gap: "16px" }}>
+        {/* color + status + year — series-identity metadata (NOT movement echoes,
+            and with no other authoring home), kept alongside the masthead. */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 80px", gap: "16px" }}>
           <div className="field-group" style={{ marginBottom: 0 }}>
             <label className="field-label" htmlFor="series-color">Color</label>
             <select id="series-color" className="field-input" value={series.color || "gold"} onChange={(e) => onChange("color", e.target.value)}>
               {COLOR_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
-          </div>
-          <div className="field-group" style={{ marginBottom: 0 }}>
-            <label className="field-label" htmlFor="series-category">Biblical Category</label>
-            <select id="series-category" className="field-input" value={series.canon_category || ""} onChange={(e) => onChange("canon_category", e.target.value)}>
-              {CANON_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </div>
           <div className="field-group" style={{ marginBottom: 0 }}>
@@ -643,78 +853,67 @@ function OverviewTab({ series, onChange }) {
         </div>
       </div>
 
-      {/* Passage range + dates */}
-      <div className="card" style={{ marginBottom: "20px" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: "16px" }}>
-          <div className="field-group" style={{ marginBottom: 0 }}>
-            <label className="field-label" htmlFor="series-passage-range">Passage Range</label>
-            <input
-              id="series-passage-range"
-              className="field-input"
-              style={{ fontFamily: "var(--font-mono)" }}
-              value={series.passage_range || ""}
-              onChange={(e) => onChange("passage_range", e.target.value)}
-              placeholder="e.g. Luke 1:1–24:53"
-            />
-          </div>
-          <div className="field-group" style={{ marginBottom: 0 }}>
-            <label className="field-label" htmlFor="series-start-date-overview">Start Date</label>
-            <input id="series-start-date-overview" type="date" className="field-input" value={series.start_date || ""} onChange={(e) => onChange("start_date", e.target.value)} />
-          </div>
-          <div className="field-group" style={{ marginBottom: 0 }}>
-            <label className="field-label" htmlFor="series-end-date">End Date</label>
-            <input id="series-end-date" type="date" className="field-input" value={series.end_date || ""} onChange={(e) => onChange("end_date", e.target.value)} />
-          </div>
-        </div>
-      </div>
+      {/* ── At a glance — read-only echoes, each tappable to its real home ──── */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+        <GlanceCard label="The Melodic Line" target="Understand" onTap={go("book-study")} filled={!!series.emerging_big_idea?.trim()}>
+          <EchoText value={series.emerging_big_idea} emptyHint="No melodic line yet — tap to hear it in Understand." />
+        </GlanceCard>
 
-      {/* Big Idea */}
-      <div className="card" style={{ marginBottom: "20px" }}>
-        {/* Working hypothesis from Book Study — read-only, shown when both fields have content */}
-        {series.emerging_big_idea?.trim() && series.big_idea?.trim() && (
-          <>
-            <div style={{
-              padding: "10px 14px", marginBottom: "12px",
-              background: "var(--parchment-warm)",
-              border: "1px solid var(--parchment-deep)",
-              borderRadius: "var(--radius)",
-            }}>
-              <div className="field-label" style={{ marginBottom: "4px" }}>Working hypothesis from Book Study</div>
-              <div style={{
-                fontSize: "14px", fontFamily: "var(--font-serif)",
-                color: "var(--ink-soft)", fontStyle: "italic", lineHeight: "1.6",
-              }}>
-                {series.emerging_big_idea}
+        <GlanceCard label="The Series Big Idea" target="Design" onTap={go("design")} filled={!!series.big_idea?.trim()}>
+          <EchoText value={series.big_idea} emptyHint="No big idea yet — tap to decide it in Design." />
+        </GlanceCard>
+
+        <GlanceCard label="Why This Congregation, Why Now" target="Design" onTap={go("design")} filled={!!series.series_motivation?.trim()}>
+          <EchoText value={series.series_motivation} emptyHint="Not written yet — tap to write it in Design." />
+        </GlanceCard>
+
+        {/* Coverage — computeCoverage output, read-only bar + %. */}
+        <GlanceCard label="Coverage" target="Design" onTap={go("design")} filled={hasCoverage}>
+          {hasCoverage ? (
+            <>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", color: "var(--ink-soft)", marginBottom: "6px" }}>
+                <span>{book.name}{cov.scopeLabel ? ` ${cov.scopeLabel}` : ""}</span>
+                <span>{cov.percent}% covered{cov.mode === "chapter" ? " (by chapter)" : ""}</span>
               </div>
+              <div style={{ height: "8px", borderRadius: "4px", background: "var(--parchment-deep)", overflow: "hidden" }}>
+                <div style={{ width: `${cov.percent}%`, height: "100%", background: "var(--sage)" }} />
+              </div>
+            </>
+          ) : (
+            <EchoText emptyHint="No book or slots yet — tap to build the series in Design." />
+          )}
+        </GlanceCard>
+
+        {/* Pacing — computePacing output, the same read-only strip Schedule shows. */}
+        <GlanceCard label="Pacing" target="Schedule" onTap={go("calendar")} filled={hasSlots}>
+          {hasSlots ? (
+            <PacingStrip sermons={sermons} series={series} calNotes={calNotes} />
+          ) : (
+            <EchoText emptyHint="No slots yet — tap to schedule them." />
+          )}
+        </GlanceCard>
+
+        {/* Dates — read-only start → end. */}
+        <GlanceCard label="Dates" target="Schedule" onTap={go("calendar")} filled={hasDates}>
+          {hasDates ? (
+            <div style={{ fontSize: "14px", fontFamily: "var(--font-mono)", color: "var(--ink)" }}>
+              {series.start_date ? formatDate(series.start_date) : "—"} → {series.end_date ? formatDate(series.end_date) : "—"}
             </div>
-            <div style={{ borderTop: "1px solid var(--parchment-deep)", marginBottom: "12px" }} />
-          </>
-        )}
-        <div className="field-group" style={{ marginBottom: 0 }}>
-          <label className="field-label">Series Big Idea</label>
-          <input
-            className="field-input"
-            value={series.big_idea || ""}
-            onChange={(e) => onChange("big_idea", e.target.value)}
-            placeholder="The controlling idea of the entire series in one sentence."
-          />
-        </div>
+          ) : (
+            <EchoText emptyHint="No dates yet — tap to lay them out in Schedule." />
+          )}
+        </GlanceCard>
       </div>
 
-      {/* Overview */}
-      <div className="card">
-        <div className="field-group" style={{ marginBottom: 0 }}>
-          <label className="field-label">Series Overview</label>
-          <textarea
-            className="field-textarea"
-            rows={3}
-            value={series.overview || ""}
-            onChange={(e) => onChange("overview", e.target.value)}
-            onInput={(e) => autoResize(e.target)}
-            ref={(el) => autoResize(el)}
-            placeholder="The theological arc of this series — where it starts, where it goes, what it asks of the congregation."
-          />
+      {/* ── Study Guide — the deliverable, launched from its natural home ───── */}
+      <div className="card" style={{ marginTop: "24px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+        <div>
+          <div className="card-title">Study Guide</div>
+          <p className="field-caption" style={{ marginTop: "2px" }}>
+            The congregational handout, built from everything above.
+          </p>
         </div>
+        <SecondaryButton size="sm" onClick={onOpenStudyGuide}>Study Guide</SecondaryButton>
       </div>
     </div>
   );
@@ -726,7 +925,12 @@ function OverviewTab({ series, onChange }) {
 // commentary), and every section field persists through the debounced
 // updateSection spine. Section CRUD (create/update/delete/reorder) is preserved
 // verbatim from the recovered shell.
-function StructureTab({ series, sections, onChange, onSectionsChange, seriesId, runSave }) {
+// `embedded` (used by the Design tab) renders ONLY the Series Sections cards —
+// the pastor's grouping of slots into movements. It deliberately omits the
+// book's literary Structural Outline (that now lives in Understand as melodic-
+// line evidence) and the page chrome. The standalone Structure tab passes
+// embedded=false and renders both, unchanged, until the collapse step.
+function StructureTab({ series, sections, onChange, onSectionsChange, seriesId, runSave, embedded = false }) {
   const [expandedSection, setExpandedSection] = useState(null);
   // The id of the section just created via "+ Add Section", so its editor can
   // reveal itself and focus its title — the new section appends at the bottom
@@ -790,6 +994,58 @@ function StructureTab({ series, sections, onChange, onSectionsChange, seriesId, 
     }
   }
 
+  // The Series Sections card — shared by the standalone Structure tab and the
+  // embedded Design BAND 3. In embedded mode it carries no top margin (the
+  // Design band header spaces it instead).
+  const sectionsCard = (
+    <div className="card" style={embedded ? undefined : { marginTop: "20px" }}>
+      <div className="card-header">
+        <div>
+          <h3 className="card-title">Series Sections</h3>
+          <p className="field-caption" style={{ marginTop: "2px" }}>
+            Optional. Use for longer books with natural major divisions.
+          </p>
+        </div>
+        <SecondaryButton size="sm" onClick={addSection}>+ Add Section</SecondaryButton>
+      </div>
+
+      {sections.length === 0 ? (
+        <div style={{
+          padding: "24px",
+          background: "var(--parchment-warm)",
+          borderRadius: "var(--radius)",
+          textAlign: "center",
+          color: "var(--ink-ghost)",
+          fontSize: "14px",
+        }}>
+          No sections yet. Add sections if this book has natural major divisions
+          (e.g., Luke's four movements).
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+          {sections.map((section, idx) => (
+            <SectionEditor
+              key={section.id}
+              section={section}
+              index={idx}
+              total={sections.length}
+              expanded={expandedSection === section.id}
+              justCreated={justCreatedId === section.id}
+              onToggle={() => setExpandedSection(expandedSection === section.id ? null : section.id)}
+              onChange={(field, value) => handleSectionField(section.id, field, value)}
+              onDelete={() => handleDeleteSection(section.id)}
+              onMove={(dir) => moveSection(section.id, dir)}
+              series={series}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  // Embedded in Design — just the grouping cards, no outline, no page chrome.
+  if (embedded) return sectionsCard;
+
   return (
     <div className="page-body">
 
@@ -821,50 +1077,7 @@ function StructureTab({ series, sections, onChange, onSectionsChange, seriesId, 
         </div>
       </div>
 
-      {/* Sections */}
-      <div className="card" style={{ marginTop: "20px" }}>
-        <div className="card-header">
-          <div>
-            <h3 className="card-title">Series Sections</h3>
-            <p className="field-caption" style={{ marginTop: "2px" }}>
-              Optional. Use for longer books with natural major divisions.
-            </p>
-          </div>
-          <SecondaryButton size="sm" onClick={addSection}>+ Add Section</SecondaryButton>
-        </div>
-
-        {sections.length === 0 ? (
-          <div style={{
-            padding: "24px",
-            background: "var(--parchment-warm)",
-            borderRadius: "var(--radius)",
-            textAlign: "center",
-            color: "var(--ink-ghost)",
-            fontSize: "14px",
-          }}>
-            No sections yet. Add sections if this book has natural major divisions
-            (e.g., Luke's four movements).
-          </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-            {sections.map((section, idx) => (
-              <SectionEditor
-                key={section.id}
-                section={section}
-                index={idx}
-                total={sections.length}
-                expanded={expandedSection === section.id}
-                justCreated={justCreatedId === section.id}
-                onToggle={() => setExpandedSection(expandedSection === section.id ? null : section.id)}
-                onChange={(field, value) => handleSectionField(section.id, field, value)}
-                onDelete={() => handleDeleteSection(section.id)}
-                onMove={(dir) => moveSection(section.id, dir)}
-                series={series}
-              />
-            ))}
-          </div>
-        )}
-      </div>
+      {sectionsCard}
 
     </div>
   );
@@ -1122,7 +1335,11 @@ function CoveragePanel({ series, sermons }) {
 // slot is a real sermon atom on the spine; the "+ Add Slot" flow defers the
 // spine write until the pastor types a non-empty title (State Contract #3 —
 // no nameless atom ever reaches createSermon).
-function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpenSermon, runSave, calNotes }) {
+// `embedded` (used by the Design tab) drops the page-body wrapper and the
+// pacing strip (pacing belongs to Schedule) but keeps the coverage panel and the
+// full slot apparatus — drafts, commit, section grouping, big-idea echoes. The
+// standalone Slots tab passes embedded=false and is unchanged until the collapse.
+function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpenSermon, runSave, calNotes, embedded = false }) {
   // Draft slots — UI-only rows that have not yet been committed to the spine.
   // State Contract #3 forbids createSermon({ name: "" }), so the "+ Add Slot"
   // button creates a row in this local state instead of immediately calling
@@ -1268,9 +1485,10 @@ function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpen
     }
   }
 
-  return (
-    <div className="page-body">
-      <PacingStrip sermons={sermons} series={series} calNotes={calNotes} />
+  const body = (
+    <>
+      {/* Pacing belongs to Schedule; the Design embed omits it. */}
+      {!embedded && <PacingStrip sermons={sermons} series={series} calNotes={calNotes} />}
       <CoveragePanel series={series} sermons={sermons} />
       <div className="card-header" style={{ marginBottom: "20px" }}>
         <div>
@@ -1346,8 +1564,10 @@ function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpen
           />
         </div>
       )}
-    </div>
+    </>
   );
+
+  return embedded ? body : <div className="page-body">{body}</div>;
 }
 
 function SlotList({ slots, onChange, onDelete, onCommit, draftErrors, onClearError, showAdd, onAdd, onOpenSermon, seriesId, series, totalSlots, sectionBigIdea }) {
@@ -1534,6 +1754,145 @@ function SlotRow({ slot, index, onChange, onDelete, onCommit, commitError, onCle
     </div>
   );
 }
+// ── Design Tab ────────────────────────────────────────────────────────────────
+// The second movement: where the heard line becomes a made series. Mostly an
+// ASSEMBLED view — it relocates fields out of the dissolving Overview/Structure
+// tabs and reuses the slot apparatus + coverage engine wholesale (no engine
+// touched). The only new substance is the hinge at the top. AI-free: no
+// worksheet, no suggestion — every field is the pastor's own, on its existing
+// persistence path. Three bands, top to bottom.
+function DesignTab({
+  series, onChange, sections, sermons, seriesId,
+  onSectionsChange, onSermonsChange, onOpenSermon, runSave, calNotes,
+}) {
+  return (
+    <div className="page-body">
+      <div className="page-header" style={{ padding: "0 0 4px" }}>
+        <div className="page-title">Design</div>
+        <div className="page-subtitle">
+          Turn the line you heard into a series — the big idea, the sermons, the movements.
+        </div>
+      </div>
+
+      {/* ── BAND 1: The Hinge — line → why now → the decision ───────────────── */}
+      <MoveHeader n="1" title="The Hinge" subtitle="The line you heard → why this congregation now → the series big idea." />
+      <div className="card" style={{
+        marginTop: "12px",
+        borderLeft: "3px solid var(--gold)",
+        background: "var(--parchment-warm)",
+        display: "flex", flexDirection: "column", gap: "14px",
+      }}>
+        {/* The Melodic Line — read-only, carried from Understand (the same
+            working-hypothesis echo pattern, surfaced at the head of Design). */}
+        <div>
+          <div className="field-label" style={{ marginBottom: "4px" }}>The Melodic Line (from Understand)</div>
+          {series.emerging_big_idea?.trim() ? (
+            <div style={{
+              fontSize: "15px", fontFamily: "var(--font-serif)",
+              color: "var(--ink)", fontStyle: "italic", lineHeight: "1.6",
+            }}>
+              {series.emerging_big_idea}
+            </div>
+          ) : (
+            <div style={{ fontSize: "13px", fontStyle: "italic", color: "var(--ink-ghost)" }}>
+              Hear the line in Understand first — it's the thing you design against.
+            </div>
+          )}
+        </div>
+
+        <div style={{ textAlign: "center", color: "var(--ink-ghost)", fontSize: "13px" }} aria-hidden="true">↓</div>
+
+        {/* Why this congregation, why now — relocated from Understand, editable
+            in its real home: the bridge from what the book says to these people. */}
+        <UnderstandNote fieldKey="series_motivation" series={series} onChange={onChange} />
+
+        <div style={{ textAlign: "center", color: "var(--ink-ghost)", fontSize: "13px" }} aria-hidden="true">↓</div>
+
+        {/* Series Big Idea — the decision and the hinge's payoff. Distinct from
+            the notes above: which facet of the line drives THIS series. Same
+            wiring the Understand echo de-dupes against. */}
+        <div style={{
+          padding: "14px 16px", borderRadius: "var(--radius)",
+          background: "var(--white)", border: "1px solid var(--gold)",
+        }}>
+          <div className="field-group" style={{ marginBottom: 0 }}>
+            <label className="field-label">Series Big Idea</label>
+            <input
+              className="field-input"
+              style={{ fontSize: "16px", fontWeight: 600 }}
+              value={series.big_idea || ""}
+              onChange={(e) => onChange("big_idea", e.target.value)}
+              placeholder="The controlling idea of the entire series in one sentence."
+            />
+            <p className="field-caption" style={{ marginTop: "6px" }}>
+              Which facet of the line you'll drive for this congregation, now.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* ── BAND 2: Divide into sermons ─────────────────────────────────────── */}
+      <MoveHeader n="2" title="Divide into Sermons" subtitle="The arc, the span, and the slots that cover it." />
+
+      <div className="card" style={{ marginTop: "12px" }}>
+        <div className="field-group">
+          <label className="field-label">Series Overview</label>
+          <textarea
+            className="field-textarea"
+            rows={3}
+            value={series.overview || ""}
+            onChange={(e) => onChange("overview", e.target.value)}
+            onInput={(e) => autoResize(e.target)}
+            ref={(el) => autoResize(el)}
+            placeholder="The theological arc of this series — where it starts, where it goes, what it asks of the congregation."
+          />
+        </div>
+        <div className="field-group" style={{ marginBottom: 0 }}>
+          <label className="field-label" htmlFor="design-passage-range">Passage Range</label>
+          <input
+            id="design-passage-range"
+            className="field-input"
+            style={{ fontFamily: "var(--font-mono)" }}
+            value={series.passage_range || ""}
+            onChange={(e) => onChange("passage_range", e.target.value)}
+            placeholder="e.g. Luke 1:1–24:53"
+          />
+        </div>
+      </div>
+
+      {/* The slot apparatus + coverage panel, reused wholesale (embedded: no
+          page-body wrapper, no pacing strip). */}
+      <div style={{ marginTop: "16px" }}>
+        <SlotsTab
+          embedded
+          series={series}
+          sections={sections}
+          sermons={sermons}
+          seriesId={seriesId}
+          onSermonsChange={onSermonsChange}
+          onOpenSermon={onOpenSermon}
+          runSave={runSave}
+          calNotes={calNotes}
+        />
+      </div>
+
+      {/* ── BAND 3: Group into movements — the series' sections ──────────────── */}
+      <MoveHeader n="3" title="Group into Movements" subtitle="Gather the sermons into the series' sections — your grouping, not the book's literary outline." />
+
+      <div style={{ marginTop: "12px" }}>
+        <StructureTab
+          embedded
+          series={series}
+          sections={sections}
+          onChange={onChange}
+          onSectionsChange={onSectionsChange}
+          seriesId={seriesId}
+          runSave={runSave}
+        />
+      </div>
+    </div>
+  );
+}
 // ── Calendar Tab ───────────────────────────────────────────────────────────
 // Schedules the series' sermon slots onto Sundays, honouring church-calendar
 // seasons and the preacher's special-date notes. AI scheduling advisor removed
@@ -1600,7 +1959,7 @@ function CalendarTab({ series, sections, sermons, calNotes, onChange, onSermonsC
   return (
     <>
       <div className="page-header">
-        <div className="page-title">Calendar</div>
+        <div className="page-title">Schedule</div>
         <div className="page-subtitle">
           Lay each slot on a Sunday. Seasons and your special-date notes ride along so nothing lands where it shouldn't.
         </div>
@@ -1743,12 +2102,11 @@ function CalendarTab({ series, sections, sermons, calNotes, onChange, onSermonsC
   );
 }
 // ── Series Planner "How this works" modal ──────────────────────────────────────
-// Pure copy — no AI, no DB. Explains the five planning stages and their
-// sub-items. Restyled to the app's .modal-* vocabulary (NewSeriesModal idiom):
+// Pure copy — no AI, no DB. Explains the four movements and their sub-items.
+// Restyled to the app's .modal-* vocabulary (NewSeriesModal idiom):
 // .modal-backdrop → .modal → .modal-header/.modal-body. Width is widened past
-// the 560px default (inline) so the five-column SVG breathes; everything else is
-// the shared class. The old "AI Advisor" Calendar node has been relabelled to a
-// mechanical step (no AI anywhere in the revived planner).
+// the 560px default (inline) so the four-column SVG breathes; everything else is
+// the shared class. No AI anywhere in the planner.
 function SeriesHowItWorksModal({ onClose }) {
   // Escape + focus trap + focus restore (audit L10).
   const dialogRef = useModalA11y(onClose);
@@ -1765,103 +2123,89 @@ function SeriesHowItWorksModal({ onClose }) {
           <p style={{
             fontSize: "13px", color: "var(--ink-ghost)",
             marginBottom: "24px", fontFamily: "var(--font-serif)",
-          }}>Plan and build a sermon series through five planning stages.</p>
+          }}>Plan and build a sermon series through four movements, each feeding the next:
+            Understand — read the book and hear its melodic line; Design — make the series
+            from the line; Schedule — lay the sermons on the calendar; Overview — the series
+            at a glance.</p>
 
           <div style={{ overflowX: "auto" }}>
-            <svg viewBox="0 0 1080 228" style={{ width: "100%", height: "auto", display: "block" }}>
+            <svg viewBox="0 0 1080 224" style={{ width: "100%", height: "auto", display: "block" }}>
 
-              {/* ── Stage boxes ─────────────────────────────────────────────────── */}
-              <rect x="10" y="16" width="180" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
-              <text x="100" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "var(--font-serif)", fontWeight: 600 }}>Book Study</text>
+              {/* ── Movement boxes (4, in workflow order) ───────────────────────── */}
+              <rect x="10" y="16" width="230" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
+              <text x="125" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "var(--font-serif)", fontWeight: 600 }}>Understand</text>
 
-              <rect x="230" y="16" width="180" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
-              <text x="320" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "var(--font-serif)", fontWeight: 600 }}>Overview</text>
+              <rect x="270" y="16" width="230" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
+              <text x="385" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "var(--font-serif)", fontWeight: 600 }}>Design</text>
 
-              <rect x="450" y="16" width="180" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
-              <text x="540" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "var(--font-serif)", fontWeight: 600 }}>Structure</text>
+              <rect x="530" y="16" width="230" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
+              <text x="645" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "var(--font-serif)", fontWeight: 600 }}>Schedule</text>
 
-              <rect x="670" y="16" width="180" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
-              <text x="760" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "var(--font-serif)", fontWeight: 600 }}>Sermon Slots</text>
+              <rect x="790" y="16" width="230" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
+              <text x="905" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "var(--font-serif)", fontWeight: 600 }}>Overview</text>
 
-              <rect x="890" y="16" width="180" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
-              <text x="980" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "var(--font-serif)", fontWeight: 600 }}>Calendar</text>
+              {/* ── Forward-flow arrows between movements ───────────────────────── */}
+              <text x="255" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-ghost)", fontSize: "14px" }}>→</text>
+              <text x="515" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-ghost)", fontSize: "14px" }}>→</text>
+              <text x="775" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-ghost)", fontSize: "14px" }}>→</text>
 
-              {/* ── Between-stage arrows ────────────────────────────────────────── */}
-              <text x="210" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-ghost)", fontSize: "14px" }}>→</text>
-              <text x="430" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-ghost)", fontSize: "14px" }}>→</text>
-              <text x="650" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-ghost)", fontSize: "14px" }}>→</text>
-              <text x="870" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-ghost)", fontSize: "14px" }}>→</text>
+              {/* ── Movement → first sub-item connectors ────────────────────────── */}
+              <line x1="125" y1="56" x2="125" y2="72" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+              <line x1="385" y1="56" x2="385" y2="72" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+              <line x1="645" y1="56" x2="645" y2="72" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+              <line x1="905" y1="56" x2="905" y2="72" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
 
-              {/* ── Stage → first sub-item connectors ───────────────────────────── */}
-              <line x1="100" y1="56" x2="100" y2="76" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-              <line x1="320" y1="56" x2="320" y2="76" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-              <line x1="540" y1="56" x2="540" y2="76" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-              <line x1="760" y1="56" x2="760" y2="76" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-              <line x1="980" y1="56" x2="980" y2="76" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+              {/* ── Understand sub-items (4) ────────────────────────────────────── */}
+              <rect x="10" y="72" width="230" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+              <text x="125" y="86" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Place the book</text>
+              <line x1="125" y1="100" x2="125" y2="108" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
 
-              {/* ── Book Study sub-items (4) ────────────────────────────────────── */}
-              <rect x="10" y="76" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-              <text x="100" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Redemptive Context</text>
-              <line x1="100" y1="104" x2="100" y2="112" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+              <rect x="10" y="108" width="230" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+              <text x="125" y="122" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Hear the line</text>
+              <line x1="125" y1="136" x2="125" y2="144" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
 
-              <rect x="10" y="112" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-              <text x="100" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Book Background</text>
-              <line x1="100" y1="140" x2="100" y2="148" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+              <rect x="10" y="144" width="230" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+              <text x="125" y="158" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Evidence worksheet</text>
+              <line x1="125" y1="172" x2="125" y2="180" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
 
-              <rect x="10" y="148" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-              <text x="100" y="162" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Argument &amp; Structure</text>
-              <line x1="100" y1="176" x2="100" y2="184" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+              <rect x="10" y="180" width="230" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+              <text x="125" y="194" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>The melodic line</text>
 
-              <rect x="10" y="184" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-              <text x="100" y="198" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Working Big Idea</text>
+              {/* ── Design sub-items (3) ────────────────────────────────────────── */}
+              <rect x="270" y="72" width="230" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+              <text x="385" y="86" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>The hinge</text>
+              <line x1="385" y1="100" x2="385" y2="108" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
 
-              {/* ── Overview sub-items (4) ───────────────────────────────────────── */}
-              <rect x="230" y="76" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-              <text x="320" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>{"Title & identity"}</text>
-              <line x1="320" y1="104" x2="320" y2="112" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+              <rect x="270" y="108" width="230" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+              <text x="385" y="122" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Divide into sermons</text>
+              <line x1="385" y1="136" x2="385" y2="144" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
 
-              <rect x="230" y="112" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-              <text x="320" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>{"Passage & dates"}</text>
-              <line x1="320" y1="140" x2="320" y2="148" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+              <rect x="270" y="144" width="230" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+              <text x="385" y="158" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Group into movements</text>
 
-              <rect x="230" y="148" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-              <text x="320" y="162" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Series Big Idea</text>
-              <line x1="320" y1="176" x2="320" y2="184" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+              {/* ── Schedule sub-items (3) ──────────────────────────────────────── */}
+              <rect x="530" y="72" width="230" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+              <text x="645" y="86" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>{"Dates & Suggest Sundays"}</text>
+              <line x1="645" y1="100" x2="645" y2="108" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
 
-              <rect x="230" y="184" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-              <text x="320" y="198" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Series Overview</text>
+              <rect x="530" y="108" width="230" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+              <text x="645" y="122" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Liturgical seasons</text>
+              <line x1="645" y1="136" x2="645" y2="144" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
 
-              {/* ── Structure sub-items (2) ──────────────────────────────────────── */}
-              <rect x="450" y="76" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-              <text x="540" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Structural Outline</text>
-              <line x1="540" y1="104" x2="540" y2="112" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+              <rect x="530" y="144" width="230" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+              <text x="645" y="158" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Pacing</text>
 
-              <rect x="450" y="112" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-              <text x="540" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Series Sections</text>
+              {/* ── Overview sub-items (3) ──────────────────────────────────────── */}
+              <rect x="790" y="72" width="230" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+              <text x="905" y="86" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>{"Identity (title · tagline · color)"}</text>
+              <line x1="905" y1="100" x2="905" y2="108" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
 
-              {/* ── Sermon Slots sub-items (3) ───────────────────────────────────── */}
-              <rect x="670" y="76" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-              <text x="760" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Sermon Slots</text>
-              <line x1="760" y1="104" x2="760" y2="112" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+              <rect x="790" y="108" width="230" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+              <text x="905" y="122" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Series at a glance</text>
+              <line x1="905" y1="136" x2="905" y2="144" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
 
-              <rect x="670" y="112" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-              <text x="760" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Assign passages</text>
-              <line x1="760" y1="140" x2="760" y2="148" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-
-              <rect x="670" y="148" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-              <text x="760" y="162" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Open in Workspace</text>
-
-              {/* ── Calendar sub-items (3) ───────────────────────────────────────── */}
-              <rect x="890" y="76" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-              <text x="980" y="90" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Date assignment</text>
-              <line x1="980" y1="104" x2="980" y2="112" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-
-              <rect x="890" y="112" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-              <text x="980" y="126" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Liturgical seasons</text>
-              <line x1="980" y1="140" x2="980" y2="148" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-
-              <rect x="890" y="148" width="180" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-              <text x="980" y="162" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Study Guide export</text>
+              <rect x="790" y="144" width="230" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
+              <text x="905" y="158" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Study Guide export</text>
 
             </svg>
           </div>
@@ -2058,26 +2402,28 @@ function StudyGuideModal({ series, sections, sermons, onClose }) {
         <div className="modal-body" style={{ background: "var(--parchment)" }}>
           {/* Part 1 — The World of This Book */}
           <SgPartHeader number="1" title="The World of This Book" />
-          <SgSection label="Then (background)" value={series.book_background} hint="Add in Book Study → The World of This Book" />
-          <SgSection label="The Argument" value={series.book_argument} hint="Add in Book Study → The Book's Controlling Argument" />
-          <SgSection label="How the Book Is Built" value={series.book_structure} hint="Add in Book Study → How the Book Is Built" />
+          <SgSection label="Then (background)" value={series.book_background} hint="Add in Understand → Place the Book → The World of This Book" />
+          <SgSection label="The Argument" value={series.book_argument} hint="Add in Understand → Hear the Line → The Book's Controlling Argument" />
+          {/* "How the Book Is Built" (book_structure) retired in Step 2 — the
+              book's structure now lives once, in Part 5 (Reference), sourced
+              from structural_outline. */}
 
           <SgPartDivider />
 
           {/* Part 2 — Why We're Here */}
           <SgPartHeader number="2" title="Why We're Here" />
-          <SgSection label="Where It Sits in the Story" value={series.redemptive_context} hint="Add in Book Study → Where This Book Sits in Redemptive History" />
-          <SgSection label="Why This Congregation, Why Now" value={series.series_motivation} hint="Add in Book Study → Why This Congregation, Why Now" />
+          <SgSection label="Where It Sits in the Story" value={series.redemptive_context} hint="Add in Understand → Place the Book → Where This Book Sits in Redemptive History" />
+          <SgSection label="Why This Congregation, Why Now" value={series.series_motivation} hint="Add in Design → The Hinge → Why This Congregation, Why Now" />
 
           <SgPartDivider />
 
           {/* Part 3 — The Big Idea */}
           <SgPartHeader number="3" title="The Big Idea" />
           {model.showWorkingHypothesis && (
-            <SgSection label="Working Hypothesis (from Book Study)" value={series.emerging_big_idea} hint="Add in Book Study → Working Big Idea" />
+            <SgSection label="Working Hypothesis (from Understand)" value={series.emerging_big_idea} hint="Add in Understand → Hear the Line → The Melodic Line" />
           )}
-          <SgSection label="Series Big Idea" value={series.big_idea} hint="Add in Overview → Series Big Idea" />
-          <SgSection label="Overview" value={series.overview} hint="Add in Overview → Series Overview" />
+          <SgSection label="Series Big Idea" value={series.big_idea} hint="Add in Design → The Hinge → Series Big Idea" />
+          <SgSection label="Overview" value={series.overview} hint="Add in Design → Divide into Sermons → Series Overview" />
 
           <SgPartDivider />
 
@@ -2122,7 +2468,7 @@ function StudyGuideModal({ series, sections, sermons, onClose }) {
             <>
               <SgPartDivider />
               <SgPartHeader number="5" title="Reference" />
-              <SgSection label="How the Book Is Built" value={series.structural_outline} hint="Add in Structure → Structural Outline" />
+              <SgSection label="How the Book Is Built" value={series.structural_outline} hint="Add in Understand → Hear the Line → How the Book Is Built" />
             </>
           )}
         </div>

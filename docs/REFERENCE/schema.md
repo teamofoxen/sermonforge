@@ -1,6 +1,6 @@
 # SermonForge — Database Schema Reference
 
-Current schema version: **25**
+Current schema version: **26**
 
 | Version | Bumped for |
 |---------|-----------|
@@ -16,6 +16,7 @@ Current schema version: **25**
 | v23 | Trail deletion sweep (Phase D1) — `last_touched_position` (session re-entry routing) + `thresholds_seen` (dismissed-thresholds JSON array, one mechanism for all threshold-orientation "seen" flags) |
 | v24 | UX overhaul migration session — `deleted_at` soft-delete tombstone on `sermons`; `sermon_search` rebuilt with `functional_elements` in and `delivery_notes` / `timing_notes` out (Delivery stage struck from the vocabulary) |
 | v25 | Canonical-books build — `book_id` (nullable) on `series`; `canon_category` enum switched from legacy 4-value (`ot`/`nt`/`wisdom`/`prophetic`) to Dever's 7 genre keys, migrating `wisdom`→`ot_writings`, `prophetic`→`ot_prophets`, `ot`/`nt`→NULL |
+| v26 | Series Planner re-leveling — `melodic_evidence` (nullable JSON) on `series` for the "Hear the line" evidence worksheet; one-time fold of `book_structure` into `structural_outline` (run-once, version-gated). `book_structure` retained as a backup column, not dropped. |
 
 ---
 
@@ -28,21 +29,22 @@ Current schema version: **25**
 | `color` | TEXT | `gold \| crimson \| sage \| slate` |
 | `description` | TEXT | |
 | `year` | INTEGER | |
-| `big_idea` | TEXT | Series-level big idea |
-| `overview` | TEXT | Extended theological narrative |
-| `passage_range` | TEXT | e.g. "Luke 1:1–24:53" |
+| `big_idea` | TEXT | Series-level big idea — the pastor's decision (Design → the hinge) |
+| `overview` | TEXT | Extended theological narrative (Design → divide into sermons) |
+| `passage_range` | TEXT | e.g. "Luke 1:1–24:53". Editable in Design; auto-filled on book pick in Understand. |
 | `start_date` | TEXT | |
 | `end_date` | TEXT | |
-| `structural_outline` | TEXT | Detailed book outline — pastor-typed or pasted from a commentary (Structure tab). AI-free since ARI. |
-| `status` | TEXT | `in_progress \| complete` — two-state lifecycle (v16 collapse). `SERIES_STATUS` in `src/core/contracts.ts`; `create-series` writes `in_progress`. (CREATE TABLE default is a vestigial `'planning'`, always overwritten on insert.) |
-| `canon_category` | TEXT | Dever 7-genre key: `ot_law \| ot_history \| ot_writings \| ot_prophets \| nt_gospels \| nt_pauline \| nt_general`. NULL or `''` = unclassified. Auto-filled from the chosen book, pastor-overridable per series. (v25 switch from legacy `ot \| nt \| wisdom \| prophetic`.) |
-| `book_id` | TEXT | Stable key of the chosen canonical book (e.g. `luke`) from `src/data/canonicalBooks.js`; NULL until a book is picked. Only the key is stored — genre, testament, and span are looked up from that bundled module at render. (v25) |
-| `redemptive_context` | TEXT | Where this book sits in the arc from creation to new creation (Book Study tab) |
-| `book_background` | TEXT | Author, audience, occasion, historical setting, genre (Book Study tab) |
-| `book_argument` | TEXT | The book's controlling argument or central purpose (Book Study tab) |
-| `book_structure` | TEXT | Major movements, structural markers, turning points (Book Study tab) |
-| `series_motivation` | TEXT | Why this congregation needs this book now (Book Study tab) |
-| `emerging_big_idea` | TEXT | Working draft of the series big idea, developed in Book Study |
+| `structural_outline` | TEXT | The book's literary outline — pastor-typed or pasted from a commentary. The single home for the book's structure: it renders in Understand → Hear the line as melodic-line evidence. `book_structure` was folded into this column (v26). AI-free since ARI. |
+| `status` | TEXT | `in_progress \| complete` — two-state lifecycle (v16 collapse). `SERIES_STATUS` in `src/core/contracts.ts`; `create-series` writes `in_progress`. (CREATE TABLE default is a vestigial `'planning'`, always overwritten on insert.) Edited on the Overview cockpit masthead. |
+| `canon_category` | TEXT | Dever 7-genre key: `ot_law \| ot_history \| ot_writings \| ot_prophets \| nt_gospels \| nt_pauline \| nt_general`. NULL or `''` = unclassified. Auto-filled from the chosen book, pastor-overridable in Understand → Place the book. (v25 switch from legacy `ot \| nt \| wisdom \| prophetic`.) |
+| `book_id` | TEXT | Stable key of the chosen canonical book (e.g. `luke`) from `src/data/canonicalBooks.js`; NULL until a book is picked (Understand → Place the book). Only the key is stored — genre, testament, and span are looked up from that bundled module at render. Persisted via `updateSeries`, never the create INSERT. (v25) |
+| `redemptive_context` | TEXT | Where this book sits in the arc from creation to new creation (Understand → Place the book) |
+| `book_background` | TEXT | Author, audience, occasion, historical setting, genre (Understand → Place the book) |
+| `book_argument` | TEXT | The book's controlling argument or central purpose (Understand → Hear the line) |
+| `book_structure` | TEXT | **Retired live field (v26).** Was "How the Book Is Built" on the old Book Study tab; its content was folded into `structural_outline` and it is no longer rendered or exported. Retained as a backup column — never dropped or nulled. |
+| `series_motivation` | TEXT | Why this congregation needs this book now (Design → the hinge) |
+| `emerging_big_idea` | TEXT | The melodic line — the one line every passage in the book sounds. Authored in Understand → Hear the line; echoed read-only on the Design hinge and the Overview cockpit. |
+| `melodic_evidence` | TEXT (JSON) | The "Hear the line" evidence worksheet: a JSON object of labeled, pastor-filled slots (`repeated`, `topAndTail`, `purpose`, `otQuotations`). Nullable; fail-soft parse (null/garbage → empty). Persisted via `updateSeries` (create-then-update), never the create INSERT. AI-free capture. (v26) |
 
 ---
 

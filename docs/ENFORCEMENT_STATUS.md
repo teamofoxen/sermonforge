@@ -1,6 +1,6 @@
 # Enforcement Status
 
-**Last verified:** 2026-06-22 — Canonical-books build: `book_id` added to `SERIES_COLUMNS` across all three mirrors (contracts.ts / contracts.cjs / test-spine — allowlist-sync test still gates) and `VIEW.Arc` added to the `View` union + `VIEW` map for the new Series Arc surface; both additive, no clause weakened. (Prior 2026-06-22 — Lint gate hardened: the `SF_LINT_STAGED=1` downgrade removed so `no-raw-button` + `canonical-loading-verb` block at full severity in pre-commit.)
+**Last verified:** 2026-06-22 — Series Planner four-movement re-leveling: `melodic_evidence` added to `SERIES_COLUMNS` across all three mirrors (contracts.ts / contracts.cjs / test-spine — allowlist-sync test still gates); schema v26 (additive column + run-once `book_structure`→`structural_outline` fold, `book_structure` retained as backup). Additive, no clause weakened; create-then-update preserved (INSERT not widened).
 **Verified against:** [`docs/CORE.md`](CORE.md).
 **History:** see `git log docs/ENFORCEMENT_STATUS.md` and [`CHANGELOG.md`](../CHANGELOG.md). Per-event narrative is intentionally not duplicated here.
 

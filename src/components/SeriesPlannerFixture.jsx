@@ -3,7 +3,7 @@ import SeriesPlanner from "./SeriesPlanner";
 // Preview-only fixture (mirrors SermonWorkspaceFixture). Mounts the real,
 // AI-free SeriesPlanner against mock data so the workspace-styled planner can
 // be verified in a browser preview without Electron/SQLite. Never used in prod.
-// Route: ?planner  (optionally ?planner=overview|structure|slots|calendar)
+// Route: ?planner  (optionally ?planner=design|calendar|overview; default book-study)
 
 const SERIES = {
   id: "fixture-series",
@@ -20,8 +20,11 @@ const SERIES = {
   big_idea: "The righteousness of God is revealed in the gospel — from faith for faith.",
   overview:
     "Romans moves from humanity's guilt under sin, to justification by faith, to life in the Spirit and the security of those God has called.",
+  // Mirrors a v26-migrated series: structure lives once in structural_outline.
+  // The old book_structure text is folded in (appended) here; the book_structure
+  // field below is the untouched DB backup and is no longer rendered.
   structural_outline:
-    "I. The gospel and God's righteousness (1–4)\nII. Life in the Spirit (5–8)",
+    "I. The gospel and God's righteousness (1–4)\nII. Life in the Spirit (5–8)\n\nDoctrine (1–11) then exhortation (12–16); a tight logical argument built on rhetorical questions and answers.",
   redemptive_context:
     "Romans stands at the center of the New Testament's exposition of the gospel — the fullest account of how a holy God justifies the ungodly through Christ.",
   book_background:
@@ -48,7 +51,7 @@ const SERMONS = [
 
 export default function SeriesPlannerFixture() {
   const tab = new URLSearchParams(window.location.search).get("planner");
-  const activeTab = ["overview", "structure", "slots", "calendar"].includes(tab) ? tab : "book-study";
+  const activeTab = ["design", "calendar", "overview"].includes(tab) ? tab : "book-study";
   return (
     <SeriesPlanner
       seriesId="fixture-series"

@@ -2,7 +2,13 @@
 
 ---
 
-## 2026-06-22 — Audit canonical book data: clamp coverage to the series' span, harden fail-soft, cleanups
+## 2026-06-22 — Series Planner: re-level five tabs into four movements (Understand · Design · Schedule · Overview)
+
+- Re-leveled the planner from five peer tabs into four movements that each feed the next: Understand (place the book + hear the line), Design (the hinge + divide into sermons + group into movements), Schedule, and a read-mostly Overview cockpit.
+- Understand adds an AI-free melodic-line evidence worksheet on a new `melodic_evidence` JSON column (schema v26); `book_structure` is folded into `structural_outline` and retired as a live field but retained as a backup column.
+- The cockpit surfaces read-only, tappable echoes of every movement's work (melodic line, big idea, coverage, pacing, dates) and authors only the masthead; it never grades or scores.
+- Design reuses the slot/coverage and section apparatus via an `embedded` flag (no engine touched); create-then-update preserved — `melodic_evidence`/`book_id` persist via `updateSeries`, never the create INSERT.
+- Redrew the "How this works" diagram and reconciled the docs + charter (supersession note via anchor-update); lint 0, 231 tests, sweep PASS.
 
 - Independent 12-agent audit (verse data re-verified against a third KJV source; 0 Blocker / 0 High) confirmed the build holds against all four hard constraints.
 - Coverage now clamps to the series' `passage_range` when it parses, so a sub-book series is measured against its declared span instead of the whole book (falls back to whole-book otherwise).
