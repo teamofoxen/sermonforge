@@ -297,6 +297,14 @@ function AppInner() {
   if (keyReady === null) return null; // brief loading — avoids flash of setup screen
   if (keyReady === false) return <SetupScreen onComplete={() => setKeyReady(true)} />;
 
+  // Views that render their OWN .topbar (and own full-bleed layout) must not
+  // also get the app-chrome topbar + sidebar stacked on top of them. Both the
+  // Workspace and the Series Planner own their chrome — gate both guards on
+  // this one flag so adding the next own-chrome view can't reintroduce the
+  // double-topbar bug that SeriesPlanner slipped through.
+  const isOwnChrome =
+    currentView === VIEW.Workspace || currentView === VIEW.SeriesPlanner;
+
   return (
     <ErrorBoundary>
     <OneDriveWarning />
@@ -326,7 +334,7 @@ function AppInner() {
       </div>
     )}
     <div className="app-shell">
-      {currentView !== VIEW.Workspace && (
+      {!isOwnChrome && (
         <Sidebar
           currentView={currentView}
           onNavigate={navigate}
@@ -336,7 +344,7 @@ function AppInner() {
         />
       )}
       <div className="main-content">
-        {currentView !== VIEW.Workspace && (
+        {!isOwnChrome && (
           <header className="topbar" aria-label="Topbar"></header>
         )}
         <Suspense fallback={null}>

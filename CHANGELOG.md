@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-06-21 — Series Planner: fix tab scroll + rendered-UI sweep remediation
+
+- Fixed the reported bug — every planner tab scrolls again: the tab-content wrapper is now a bounded flex column so each `.page-body` is its own scroll region.
+- Removed stacked app-chrome on the real route: `App.jsx` no longer renders the sidebar + empty topbar over the planner's own topbar (shared `isOwnChrome` guard, mirroring the Workspace).
+- Study Guide modal now scrolls its body with the header and footer pinned, so the primary "Export to Word" action stays visible on open.
+- Newly-added slots and sections scroll into view and focus their first input instead of mounting below the fold.
+- Polish: a long export filepath wraps instead of forcing a modal scrollbar; the planner stage tabs get the gold focus-visible ring.
+
+---
+
 ## 2026-06-21 — Series Planner: remediate the post-ship audit (38 findings)
 
 - Closed data-safety holes: study-guide export excludes soft-deleted slots, whole-series delete uses a named consequence-confirm, debounced edits flush on exit (`useFlushOnExit`), and a `commitDraft` guard stops duplicate sermons.

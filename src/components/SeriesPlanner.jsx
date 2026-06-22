@@ -391,8 +391,13 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
       </div>
 
       {/* Tab content — the parchment body. Each tab renders its own
-          .page-body scaffolding. AI drawer props are gone. */}
-      <div style={{ flex: 1, overflow: "hidden", background: "var(--parchment)" }}>
+          .page-body scaffolding, which carries `flex: 1; overflow-y: auto`
+          and IS the scroll region. For that to engage, this wrapper must be a
+          bounded column flex container (display:flex + minHeight:0), not a
+          plain block — otherwise .page-body grows to full content height and
+          this wrapper's overflow:hidden just clips it with no scrollbar.
+          AI drawer props are gone. */}
+      <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden", background: "var(--parchment)" }}>
         {activeTab === "book-study" && (
           <BookStudyTab
             series={series}
@@ -681,6 +686,10 @@ function OverviewTab({ series, onChange }) {
 // verbatim from the recovered shell.
 function StructureTab({ series, sections, onChange, onSectionsChange, seriesId, runSave }) {
   const [expandedSection, setExpandedSection] = useState(null);
+  // The id of the section just created via "+ Add Section", so its editor can
+  // reveal itself and focus its title — the new section appends at the bottom
+  // and would otherwise land below the fold on a long list (audit R3).
+  const [justCreatedId, setJustCreatedId] = useState(null);
 
   // Route section writes through the shell save-state so they show the same
   // Saving/Saved/Save-failed indicator as series edits (audit M2).
@@ -704,7 +713,10 @@ function StructureTab({ series, sections, onChange, onSectionsChange, seriesId, 
     onSectionsChange(updated);
     // createSection resolves to { id }; using the object as the id meant the new
     // section never auto-expanded (audit L4).
-    if (result?.id) setExpandedSection(result.id);
+    if (result?.id) {
+      setExpandedSection(result.id);
+      setJustCreatedId(result.id);
+    }
   }
 
   function handleSectionField(id, field, value) {
@@ -800,6 +812,7 @@ function StructureTab({ series, sections, onChange, onSectionsChange, seriesId, 
                 index={idx}
                 total={sections.length}
                 expanded={expandedSection === section.id}
+                justCreated={justCreatedId === section.id}
                 onToggle={() => setExpandedSection(expandedSection === section.id ? null : section.id)}
                 onChange={(field, value) => handleSectionField(section.id, field, value)}
                 onDelete={() => handleDeleteSection(section.id)}
@@ -820,7 +833,7 @@ function StructureTab({ series, sections, onChange, onSectionsChange, seriesId, 
 // title, and passage range with reorder (↑/↓) and delete controls; expanding it
 // reveals the four editable fields. All four persist through the debounced
 // updateSection path the parent wires to `onChange`. AI-free.
-function SectionEditor({ section, index, total, expanded, onToggle, onChange, onDelete, onMove, series }) {
+function SectionEditor({ section, index, total, expanded, justCreated, onToggle, onChange, onDelete, onMove, series }) {
   const chevronBtnStyle = {
     background: "none",
     border: "none",
@@ -830,8 +843,20 @@ function SectionEditor({ section, index, total, expanded, onToggle, onChange, on
     padding: "2px 4px",
   };
 
+  const cardRef = useRef(null);
+  const titleRef = useRef(null);
+  // Reveal + focus a just-created section: it appends at the bottom and is
+  // auto-expanded, so on a long list it would otherwise mount below the fold
+  // (audit R3). Mirrors the slot-row reveal and SermonWritingSurface's idiom.
+  useEffect(() => {
+    if (justCreated) {
+      cardRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+      titleRef.current?.focus();
+    }
+  }, [justCreated]);
+
   return (
-    <div style={{
+    <div ref={cardRef} style={{
       border: "1px solid var(--parchment-deep)",
       borderRadius: "var(--radius)",
       background: "var(--white)",
@@ -885,6 +910,7 @@ function SectionEditor({ section, index, total, expanded, onToggle, onChange, on
             <div className="field-group" style={{ marginBottom: 0 }}>
               <label className="field-label">Section Title</label>
               <input
+                ref={titleRef}
                 className="field-input"
                 value={section.title || ""}
                 onChange={(e) => onChange("title", e.target.value)}
@@ -1197,6 +1223,20 @@ function SlotList({ slots, onChange, onDelete, onCommit, draftErrors, onClearErr
 function SlotRow({ slot, index, onChange, onDelete, onCommit, commitError, onClearError, onOpenSermon, seriesId, series, totalSlots, sectionBigIdea }) {
   const [expanded, setExpanded] = useState(!slot.title && !slot.passage);
   const isDraft = !!slot._draft;
+  const rowRef = useRef(null);
+  const titleInputRef = useRef(null);
+
+  // A freshly-added draft row is auto-expanded but, on an already-overflowing
+  // slot list, mounts below the fold — so the add can read as a no-op (and
+  // tempt a second, duplicate slot). Reveal it and focus its title so the
+  // pastor lands where he types. Draft rows mount once under a stable `draft-`
+  // key and are replaced on commit, so a mount-only effect is correct.
+  useEffect(() => {
+    if (slot._draft) {
+      rowRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+      titleInputRef.current?.focus();
+    }
+  }, []);
 
   // Commit a draft when the user signals "I'm done with the title": blur the
   // title input, press Enter in it, or click Open. No-op for committed slots.
@@ -1214,7 +1254,7 @@ function SlotRow({ slot, index, onChange, onDelete, onCommit, commitError, onCle
   }
 
   return (
-    <div style={{ border: "1px solid var(--parchment-deep)", borderRadius: "var(--radius)", background: "var(--white)", overflow: "hidden" }}>
+    <div ref={rowRef} style={{ border: "1px solid var(--parchment-deep)", borderRadius: "var(--radius)", background: "var(--white)", overflow: "hidden" }}>
       <div
         role="button"
         tabIndex={0}
@@ -1263,6 +1303,7 @@ function SlotRow({ slot, index, onChange, onDelete, onCommit, commitError, onCle
           <div className="field-group" style={{ marginBottom: 0 }}>
             <label className="field-label">Working Title</label>
             <input
+              ref={titleInputRef}
               className="field-input"
               style={{ fontSize: "14px" }}
               value={slot.title || ""}
@@ -1807,7 +1848,12 @@ function StudyGuideModal({ series, sections, sermons, onClose }) {
     <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
       {/* Wider than the 560px default and parchment-bodied — this is a reading
           surface, so the body sits on --parchment like the page body. */}
-      <div className="modal" style={{ width: "760px" }} ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="study-guide-title">
+      {/* Planner-local override of the shared .modal scroll model: make this one
+          modal a bounded flex column so the .modal-body scrolls and the header +
+          footer pin — otherwise the whole modal scrolls and the primary
+          "Export to Word" action sits ~1100px below the fold on a long guide.
+          The shared .modal class (and every short modal) is left untouched. */}
+      <div className="modal" style={{ width: "760px", display: "flex", flexDirection: "column", overflow: "hidden" }} ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="study-guide-title">
         <div className="modal-header">
           <div style={{ minWidth: 0 }}>
             <h2 className="modal-title" id="study-guide-title">Study Guide Preview</h2>
@@ -1826,7 +1872,7 @@ function StudyGuideModal({ series, sections, sermons, onClose }) {
             same big-idea de-dupe, sermons grouped by section with a "Remaining
             Sermons" bucket, and the Reference outline — so what the pastor reads
             here is what he hands his congregation (audit M6). */}
-        <div className="modal-body" style={{ background: "var(--parchment)" }}>
+        <div className="modal-body" style={{ background: "var(--parchment)", flex: 1, minHeight: 0, overflowY: "auto" }}>
           {/* Part 1 — The World of This Book */}
           <SgPartHeader number="1" title="The World of This Book" />
           <SgSection label="Then (background)" value={series.book_background} hint="Add in Book Study → The World of This Book" />
@@ -1914,12 +1960,12 @@ function StudyGuideModal({ series, sections, sermons, onClose }) {
 
         <div className="modal-footer" style={{ flexDirection: "column", alignItems: "stretch", gap: "10px" }}>
           {exportResult?.ok && (
-            <div style={{ fontSize: "12px", color: "var(--sage)", fontFamily: "var(--font-serif)" }}>
+            <div style={{ fontSize: "12px", color: "var(--sage)", fontFamily: "var(--font-serif)", overflowWrap: "anywhere", wordBreak: "break-word" }}>
               Saved to: {exportResult.filepath}
             </div>
           )}
           {exportResult && !exportResult.ok && (
-            <div style={{ fontSize: "12px", color: "var(--crimson)", fontFamily: "var(--font-serif)" }}>
+            <div style={{ fontSize: "12px", color: "var(--crimson)", fontFamily: "var(--font-serif)", overflowWrap: "anywhere", wordBreak: "break-word" }}>
               Export failed: {exportResult.error}
             </div>
           )}

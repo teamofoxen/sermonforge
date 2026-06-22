@@ -868,6 +868,14 @@ button {
   font-weight: 500;
 }
 
+/* Keyboard focus ring — the tabs are role="button" tabIndex=0 divs, so without
+   this they fall back to the faint UA outline. Matches the gold ring the T15
+   pass gave every sibling surface (.nav-item, .dash-tile, .sermon-card …). */
+.stage-tab:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: -2px;
+}
+
 /* ── Workspace layout ─────────────────────────────────────────────────────── */
 .workspace-body {
   flex: 1;
