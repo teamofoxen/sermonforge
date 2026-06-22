@@ -1274,7 +1274,7 @@ function CoveragePanel({ series, sermons }) {
         background: "var(--parchment-warm)", border: "1px dashed var(--parchment-deep)",
         borderRadius: "var(--radius)", fontSize: "12.5px", color: "var(--ink-ghost)",
       }}>
-        Pick a canonical book on the Book Study tab to see how your slots cover it.
+        Pick a canonical book on Understand → Place the Book to see how your slots cover it.
       </div>
     );
   }
@@ -2010,7 +2010,7 @@ function CalendarTab({ series, sections, sermons, calNotes, onChange, onSermonsC
             color: "var(--ink-ghost)",
             fontSize: "14px",
           }}>
-            Add sermon slots in the Sermon Slots tab first.
+            Add sermon slots in Design → Divide into Sermons first.
           </div>
         ) : (
           <>
@@ -2431,7 +2431,7 @@ function StudyGuideModal({ series, sections, sermons, onClose }) {
           <SgPartHeader number="4" title={`The Journey (${sermons.length} sermon${sermons.length === 1 ? "" : "s"})`} />
           {sermons.length === 0 ? (
             <div style={{ fontSize: "13px", fontStyle: "italic", color: "var(--ink-ghost)" }}>
-              Add sermon slots in the Sermon Slots tab.
+              Add sermon slots in Design → Divide into Sermons.
             </div>
           ) : (
             <>

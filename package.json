@@ -11,7 +11,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "spine-integrity": "node scripts/spine-integrity.js",
-    "lint": "eslint --ext .js,.jsx,.ts,.tsx src electron scripts",
+    "lint": "eslint --ext .js,.jsx,.ts,.tsx,.cjs src electron scripts",
     "lint:staged": "lint-staged",
     "prepare": "husky"
   },

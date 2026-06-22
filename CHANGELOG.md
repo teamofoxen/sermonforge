@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-06-22 — Series Planner audit follow-up: finish tab-rename copy sweep + close no-direct-ai CI gap
+
+- Repointed three empty-state strings that still named removed/renamed tabs to their four-movement homes: the Schedule and Study-Guide "add slots" prompts now say "Design → Divide into Sermons"; the coverage panel's no-book prompt now says "Understand → Place the Book".
+- Added `.cjs` to the `npm run lint` `--ext` list so the full/CI lint runs `no-direct-ai` on `contracts.cjs` and `studyGuideModel.cjs` (pre-commit's `lint-staged` glob already covered them).
+- Follow-up to the read-only 8-dimension audit of `3330f35` (0 blockers / 0 critical); gates green — ESLint 0, 231 tests pass.
+
+---
+
 ## 2026-06-22 — Series Planner: re-level five tabs into four movements (Understand · Design · Schedule · Overview)
 
 - Re-leveled the planner from five peer tabs into four movements that each feed the next: Understand (place the book + hear the line), Design (the hinge + divide into sermons + group into movements), Schedule, and a read-mostly Overview cockpit.
