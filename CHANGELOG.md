@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-06-21 — Clear all lint errors: migrate raw buttons to IconButton (Surface #2)
+
+- Migrated the 25 residual `no-raw-button` violations to `<IconButton>` across the writing-surface stack (6 files).
+- Used `<IconButton>` (passthrough, not the CTA primitives) since every site had a bespoke class — Pilot C is structural-only — preserving props and adding `aria-label` where missing.
+- Fixed 2 `canonical-loading-verb` false positives at the rule: extended its test exemption to the repo's colocated `*.test.*` convention (a `"Once..."` opener fixture was tripping the regex).
+- `npm run lint` now fully green (0 errors, was 27); 145 tests still pass.
+- Recorded zero residual `no-raw-button` in ENFORCEMENT_STATUS.md.
+
+---
+
 ## 2026-06-21 — Series Planner: fix tab scroll + rendered-UI sweep remediation
 
 - Fixed the reported bug — every planner tab scrolls again: the tab-content wrapper is now a bounded flex column so each `.page-body` is its own scroll region.

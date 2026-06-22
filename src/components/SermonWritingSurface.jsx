@@ -4,6 +4,7 @@ import { createOutlinePoint } from "../utils";
 import PassageCanvas from "./PassageCanvas";
 import ReferencePane from "./ReferencePane";
 import FieldTeaching from "./FieldTeaching";
+import IconButton from "./primitives/IconButton";
 import "./sermonWritingSurface.css";
 
 // The Assembly/Outline writing position. "outline" is the canonical sub-phase
@@ -56,17 +57,18 @@ function PromptBlock({ prompt, answer, naAllowed, onValueChange, onToggleNA }) {
         ariaLabel={prompt}
       />
       {(naAllowed || na) && (
-        <button
+        <IconButton
           type="button"
           className={"sws-na-toggle" + (na ? " is-on" : "")}
           onClick={onToggleNA}
+          aria-label="not applicable"
         >
           {na
             ? value.trim()
               ? "not applicable · undo — your words are kept"
               : "not applicable · undo"
             : "not applicable"}
-        </button>
+        </IconButton>
       )}
     </div>
   );
@@ -98,7 +100,7 @@ function CumulativeSynthesisTable({
             haven't laid out the passage's structure yet — start there, and this
             table will be ready when you come back.
           </p>
-          <button
+          <IconButton
             type="button"
             className="sws-unmet-door"
             onClick={() =>
@@ -108,9 +110,10 @@ function CumulativeSynthesisTable({
                 fieldKey: "divisions",
               })
             }
+            aria-label="Lay out the passage's structure"
           >
             Lay out the passage's structure →
-          </button>
+          </IconButton>
         </div>
       ) : (
         <div className="sws-per-unit">
@@ -181,18 +184,18 @@ function OutlineBuilder({ question, points, onChange }) {
                   placeholder="What does this movement of the text say to us?"
                 />
                 <div className="sws-outline-point-actions">
-                  <button type="button" className="sws-na-toggle" onClick={() => movePoint(idx, -1)} disabled={idx === 0} aria-label="Move point up">↑ up</button>
-                  <button type="button" className="sws-na-toggle" onClick={() => movePoint(idx, 1)} disabled={idx === list.length - 1} aria-label="Move point down">↓ down</button>
-                  <button type="button" className="sws-na-toggle" onClick={() => removePoint(pt.id)} aria-label="Remove point">remove</button>
+                  <IconButton type="button" className="sws-na-toggle" onClick={() => movePoint(idx, -1)} disabled={idx === 0} aria-label="Move point up">↑ up</IconButton>
+                  <IconButton type="button" className="sws-na-toggle" onClick={() => movePoint(idx, 1)} disabled={idx === list.length - 1} aria-label="Move point down">↓ down</IconButton>
+                  <IconButton type="button" className="sws-na-toggle" onClick={() => removePoint(pt.id)} aria-label="Remove point">remove</IconButton>
                 </div>
               </div>
             </article>
           ))}
         </div>
       )}
-      <button type="button" className="sws-unmet-door sws-outline-add" onClick={addPoint}>
+      <IconButton type="button" className="sws-unmet-door sws-outline-add" onClick={addPoint} aria-label="Add point">
         + Add point
-      </button>
+      </IconButton>
     </div>
   );
 }
@@ -215,13 +218,14 @@ function FunctionalElementsEditor({ question, points, functionalElements, onChan
             the outline yet. Start there, and the points will be ready to equip when
             you come back.
           </p>
-          <button
+          <IconButton
             type="button"
             className="sws-unmet-door"
             onClick={() => onPositionChange?.(OUTLINE_POSITION)}
+            aria-label="Build the outline"
           >
             Build the outline →
-          </button>
+          </IconButton>
         </div>
       </div>
     );
@@ -270,13 +274,14 @@ function ManuscriptTransitions({ question, points, manuscript, onChange, onPosit
             Transitions bridge your outline points — but there's no outline yet.
             Build it first, then come back to write the bridges between movements.
           </p>
-          <button
+          <IconButton
             type="button"
             className="sws-unmet-door"
             onClick={() => onPositionChange?.(OUTLINE_POSITION)}
+            aria-label="Build the outline"
           >
             Build the outline →
-          </button>
+          </IconButton>
         </div>
       </div>
     );
@@ -560,14 +565,14 @@ export default function SermonWritingSurface({
       </main>
 
       {onOpenNotebook && (
-        <button
+        <IconButton
           type="button"
           className="sws-notebook-summon"
           onClick={onOpenNotebook}
           aria-label="Open notebook"
         >
           Notebook
-        </button>
+        </IconButton>
       )}
 
       {/* Walk navigation. Back mirrors the chevron in reverse (free
@@ -577,37 +582,37 @@ export default function SermonWritingSurface({
           worst dead end). SermonFinish is re-openable, never one-shot. */}
       <div className="sws-nav">
         {hasPrev && (
-          <button
+          <IconButton
             type="button"
             className="sws-back"
             onClick={goBack}
             aria-label="Previous field"
           >
             ← Back
-          </button>
+          </IconButton>
         )}
         {hasNext ? (
-          <button
+          <IconButton
             type="button"
             className="sws-forward"
             onClick={advance}
             aria-label="Next field"
           >
             Next →
-          </button>
+          </IconButton>
         ) : (
-          <button
+          <IconButton
             type="button"
             className="sws-forward is-finish"
             onClick={onOpenFinish}
             aria-label="Finish sermon"
           >
             Finish sermon →
-          </button>
+          </IconButton>
         )}
       </div>
 
-      <button
+      <IconButton
         type="button"
         className="sws-map-summon"
         onClick={onOpenMap}
@@ -616,7 +621,7 @@ export default function SermonWritingSurface({
       >
         <span className="sws-map-summon-icon" aria-hidden="true">☰</span>
         Map
-      </button>
+      </IconButton>
     </div>
   );
 }

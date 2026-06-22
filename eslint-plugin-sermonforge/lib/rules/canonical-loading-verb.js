@@ -39,9 +39,12 @@ module.exports = {
   create(context) {
     const filename = (context.getFilename ? context.getFilename() : context.filename || '').replace(/\\/g, '/');
     // The contracts module owns the canonical set; tests are allowed to
-    // reference deprecated verbs in fixtures.
+    // reference deprecated verbs in fixtures. Cover both a `/tests/` directory
+    // AND the repo's colocated `*.test.{js,jsx,ts,tsx}` convention — fixture
+    // data like a manuscript opener "Once..." is sermon content, not a loading
+    // verb, and was tripping the regex from `src/utils/*.test.js`.
     if (filename.includes('src/core/contracts')) return {};
-    if (filename.includes('/tests/')) return {};
+    if (filename.includes('/tests/') || /\.test\.[jt]sx?$/.test(filename)) return {};
     return {
       Literal(node) {
         if (typeof node.value !== 'string') return;

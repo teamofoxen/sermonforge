@@ -31,6 +31,7 @@
 import React, { useId } from "react";
 import { CUMULATIVE_COLUMN_KEYS } from "../utils/studyFields";
 import DeleteButton from "./primitives/DeleteButton";
+import IconButton from "./primitives/IconButton";
 
 // Per-cell character cap on writable textarea cells in any synthesis-table
 // surface. Applies to thought_unit_summary (Phase 1) and the cumulative
@@ -236,7 +237,7 @@ export default function SynthesisTable({
               })}
               <td className="synthesis-table-cell synthesis-table-cell-actions">
                 {disabled ? (
-                  <button
+                  <IconButton
                     type="button"
                     className="synthesis-table-delete-row"
                     disabled
@@ -244,7 +245,7 @@ export default function SynthesisTable({
                     title="Remove row"
                   >
                     ×
-                  </button>
+                  </IconButton>
                 ) : (
                   <DeleteButton
                     small
@@ -264,14 +265,15 @@ export default function SynthesisTable({
         </tbody>
       </table>
       <div className="synthesis-table-controls">
-        <button
+        <IconButton
           type="button"
           className="synthesis-table-add-row"
           onClick={addRow}
           disabled={disabled}
+          aria-label="Add thought unit"
         >
           + Add thought unit
-        </button>
+        </IconButton>
       </div>
       {canvasLineCount > 0 && (
         <datalist id={datalistId}>

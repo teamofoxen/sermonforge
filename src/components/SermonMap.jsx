@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { QUESTION_WALK_ORDER, questionId, findField, REGION_DISPLAY } from "../utils/walkOrder";
 import { THRESHOLD_ID } from "../utils/sermonState";
 import TextButton from "./primitives/TextButton";
+import IconButton from "./primitives/IconButton";
 import "./sermonMap.css";
 
 function regionLabelFor(entry) {
@@ -53,21 +54,22 @@ function QuestionRow({ entry, status, onJump }) {
 
   return (
     <div className={`sm-row sm-row--${state}`}>
-      <button type="button" className="sm-jump" onClick={() => onJump?.(entry)}>
+      <IconButton type="button" className="sm-jump" onClick={() => onJump?.(entry)} aria-label={entry.questionPrompt}>
         {entry.questionPrompt}
-      </button>
+      </IconButton>
       {showPreview && (
         <div className="sm-preview-wrap">
-          <button
+          <IconButton
             type="button"
             className={"sm-preview" + (expanded ? " is-expanded" : "") + (state === "partial" ? " is-partial" : "")}
             onClick={() => isExpandable && setExpanded((v) => !v)}
             aria-expanded={expanded}
             disabled={!isExpandable}
+            aria-label="Toggle answer preview"
           >
             {expanded && fullValue ? fullValue : preview}
             {state === "partial" && !expanded && "…"}
-          </button>
+          </IconButton>
         </div>
       )}
     </div>
@@ -136,7 +138,7 @@ export default function SermonMap({
     <>
       <div className="sm-backdrop" onClick={onClose} />
       <section className="sm-panel" role="dialog" aria-label="Sermon map" ref={panelRef}>
-        <button
+        <IconButton
           type="button"
           className="sm-close"
           onClick={onClose}
@@ -144,7 +146,7 @@ export default function SermonMap({
           title="Close map"
         >
           ×
-        </button>
+        </IconButton>
         <header className="sm-head">
           <h2 className="sm-title">The whole sermon, every question.</h2>
           <p className="sm-sub">Click any question to go there.</p>

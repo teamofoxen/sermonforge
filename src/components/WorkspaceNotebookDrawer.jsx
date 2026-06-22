@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import TextButton from "./primitives/TextButton";
+import IconButton from "./primitives/IconButton";
 import "./workspaceNotebookDrawer.css";
 
 // WorkspaceNotebookDrawer — bottom-slide overlay that hosts a per-stage
@@ -59,7 +60,7 @@ export default function WorkspaceNotebookDrawer({ stage, value, onChange, onStag
               </TextButton>
             ))}
           </div>
-          <button
+          <IconButton
             type="button"
             className="wnd-close"
             onClick={onClose}
@@ -67,7 +68,7 @@ export default function WorkspaceNotebookDrawer({ stage, value, onChange, onStag
             title="Close notebook"
           >
             ×
-          </button>
+          </IconButton>
         </div>
         <textarea
           ref={textareaRef}

@@ -34,6 +34,7 @@
 import React, { useRef, useState, useEffect, useCallback } from "react";
 import { autoResize } from "../utils";
 import { generateRowId } from "../utils/studyFields";
+import IconButton from "./primitives/IconButton";
 
 const MAX_DEPTH_DEFAULT = 5;
 const PASTE_HINT_TIMEOUT_MS = 2200;
@@ -423,7 +424,7 @@ export default function IndentedSentenceCanvas({
                         disabled={disabled}
                       />
                       <div className="indented-canvas-unit-editor-actions">
-                        <button
+                        <IconButton
                           type="button"
                           className="indented-canvas-unit-remove"
                           onClick={() => {
@@ -431,17 +432,19 @@ export default function IndentedSentenceCanvas({
                             closeEditor(mainRow.id);
                           }}
                           disabled={disabled}
+                          aria-label="Remove"
                         >
                           Remove
-                        </button>
-                        <button
+                        </IconButton>
+                        <IconButton
                           type="button"
                           className="indented-canvas-unit-done"
                           onClick={() => closeEditor(mainRow.id)}
                           disabled={disabled}
+                          aria-label="Done"
                         >
                           Done
-                        </button>
+                        </IconButton>
                       </div>
                     </div>
                   ) : tueFilled ? (
@@ -471,14 +474,15 @@ export default function IndentedSentenceCanvas({
                     </div>
                   ) : (
                     !disabled && (
-                      <button
+                      <IconButton
                         type="button"
                         className="indented-canvas-mark-unit"
                         onClick={() => openEditor(mainRow.id)}
                         data-testid={`indented-canvas-mark-unit-${mainIdx}`}
+                        aria-label="Mark as thought-unit end"
                       >
                         + Mark as thought-unit end
-                      </button>
+                      </IconButton>
                     )
                   )}
                 </li>

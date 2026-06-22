@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useEsvPassage } from "../utils/useEsvPassage";
+import IconButton from "./primitives/IconButton";
 import "./studyAnchorHandoff.css";
 
 // The Study → Anchor handoff is the heaviest threshold the spec carves out.
@@ -90,9 +91,10 @@ export default function StudyAnchorHandoff({ passage, outcomes, unfinished, onJu
               ) : (
                 <>
                   <p className="sah-outcome-empty">not yet written</p>
-                  <button
+                  <IconButton
                     type="button"
                     className="sah-outcome-write"
+                    aria-label="go write it"
                     onClick={() =>
                       onJump?.({
                         stage: o.stage,
@@ -102,7 +104,7 @@ export default function StudyAnchorHandoff({ passage, outcomes, unfinished, onJu
                     }
                   >
                     go write it
-                  </button>
+                  </IconButton>
                 </>
               )}
             </article>
@@ -118,9 +120,10 @@ export default function StudyAnchorHandoff({ passage, outcomes, unfinished, onJu
                   key={`${q.fieldKey}/${q.questionKey}`}
                   className="sah-unfinished"
                 >
-                  <button
+                  <IconButton
                     type="button"
                     className="sah-unfinished-btn"
+                    aria-label={q.questionPrompt}
                     onClick={() =>
                       onJump?.({
                         stage: q.stage,
@@ -133,21 +136,21 @@ export default function StudyAnchorHandoff({ passage, outcomes, unfinished, onJu
                     <span className="sah-unfinished-prompt">
                       {q.questionPrompt}
                     </span>
-                  </button>
+                  </IconButton>
                 </li>
               ))}
             </ul>
           </>
         )}
 
-        <button
+        <IconButton
           type="button"
           className="sah-dismiss"
           onClick={onClose}
           aria-label="Close"
         >
           Close
-        </button>
+        </IconButton>
       </article>
     </div>
   );
