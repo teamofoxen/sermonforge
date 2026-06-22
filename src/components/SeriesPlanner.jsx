@@ -13,7 +13,10 @@ import {
   SERMON_STATUS, LOADING_VERB,
 } from "../core/contracts";
 import { getSeasonForDate, getUpcomingSundays, toDateString } from "../utils/churchCalendar";
+import { computePacing } from "../utils/pacing";
+import { computeCoverage } from "../utils/coverage";
 import { buildStudyGuideModel } from "../utils/studyGuideModel";
+import { BOOKS, GENRES, bookById, bookSpan } from "../data/canonicalBooks";
 import { formatDate, autoResize } from "../utils";
 import { buttonKeydown } from "../utils/buttonKeydown";
 import DeleteButton from "./DeleteButton";
@@ -26,12 +29,12 @@ import TextButton from "./primitives/TextButton";
 import FeedbackFlag from "./FeedbackFlag";
 
 
+// The Overview "Biblical Category" dropdown — the 7 Dever genres from the
+// canonical module (single source of truth), plus an Unclassified state for
+// legacy/never-set rows. Selecting a book auto-fills this; it stays editable.
 const CANON_OPTIONS = [
-  { value: "", label: "— Select category —" },
-  { value: "ot", label: "Old Testament" },
-  { value: "nt", label: "New Testament" },
-  { value: "wisdom", label: "Wisdom" },
-  { value: "prophetic", label: "Prophetic" },
+  { value: "", label: "Unclassified" },
+  ...Object.entries(GENRES).map(([value, label]) => ({ value, label })),
 ];
 
 const COLOR_OPTIONS = [
@@ -79,7 +82,7 @@ const BOOK_STUDY_FIELDS = [
   {
     key: "emerging_big_idea",
     label: "Working Big Idea",
-    placeholder: "A working draft of the central truth this series will drive home — the one thing you want every listener to carry out the door.",
+    placeholder: "The book's melodic line — the one truth this whole book is saying, that every passage in the series relates back to.",
   },
 ];
 
@@ -90,7 +93,7 @@ const BOOK_STUDY_PLACEHOLDERS = {
   book_argument: "What is the author's central claim or purpose? What is this book trying to do to its reader?",
   book_structure: "Major movements, structural markers, turning points, chiasms, repeated refrains. How does the shape of the book serve its argument?",
   series_motivation: "What does this congregation need from this book right now? What pastoral urgency drives this series?",
-  emerging_big_idea: "A draft of the series big idea — what this book is saying and doing in one sentence. Refine it as you go.",
+  emerging_big_idea: "The book's melodic line — the one truth this whole book is saying, that every passage in the series will relate back to. Draft it now; sharpen it as you preach.",
 };
 
 // ── Main Component ────────────────────────────────────────────────────────────
@@ -223,6 +226,22 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
     }
     debouncedPersist({ [field]: value });
   }
+
+  // Selecting a canonical book is ONE explicit act that fills several fields at
+  // once, so it persists as a single multi-field write — not three
+  // handleSeriesField calls, whose 800ms debounce would let later fields clobber
+  // earlier ones. Genre is (re)filled from the book every time (the explicit act
+  // the override rule hangs on); passage_range is only pre-filled when empty, so
+  // a range the pastor typed is never clobbered. AI-free — pure module lookup.
+  const handleSelectBook = useCallback((bookId) => {
+    const book = bookById(bookId);
+    if (!book) { persistSeries({ book_id: null }); return; }
+    const fields = { book_id: book.id, canon_category: book.genre };
+    if (!String(series?.passage_range || "").trim()) {
+      fields.passage_range = bookSpan(book.id);
+    }
+    persistSeries(fields);
+  }, [series?.passage_range, persistSeries]);
 
   function retryLastSave() {
     if (lastFailedRef.current) runSave(lastFailedRef.current);
@@ -403,6 +422,7 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
           <BookStudyTab
             series={series}
             onChange={handleSeriesField}
+            onSelectBook={handleSelectBook}
           />
         )}
         {activeTab === "overview" && (
@@ -430,6 +450,7 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
             onSermonsChange={setSermons}
             onOpenSermon={onOpenSermon}
             runSave={runSave}
+            calNotes={calNotes}
           />
         )}
         {activeTab === "calendar" && (
@@ -456,7 +477,7 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
 // The walk's first stage: the pastor reads the book before he plans the series.
 // AI-free — every field is the pastor's own working note, persisted through the
 // debounced updateSeries spine via the `onChange` prop the shell owns.
-function BookStudyTab({ series, onChange }) {
+function BookStudyTab({ series, onChange, onSelectBook }) {
   return (
     <div className="page-body" style={{ background: "var(--parchment)" }}>
 
@@ -469,9 +490,31 @@ function BookStudyTab({ series, onChange }) {
         </div>
       </div>
 
-      {/* Book identity card — the title the pastor edits, with the read-only
-          passage range + canon category chips alongside it. */}
+      {/* Book identity card — pick the canonical book (fills genre + passage
+          span), the series title the pastor edits, and the read-only passage
+          range + genre chips that light up from the book. */}
       <div className="card" style={{ marginTop: "20px" }}>
+        <div className="field-group">
+          <label className="field-label" htmlFor="book-study-book">Canonical Book</label>
+          <select
+            id="book-study-book"
+            className="field-input"
+            value={series.book_id || ""}
+            onChange={(e) => onSelectBook(e.target.value)}
+          >
+            <option value="">— Select book —</option>
+            {Object.entries(GENRES).map(([genreKey, genreLabel]) => (
+              <optgroup key={genreKey} label={genreLabel}>
+                {BOOKS.filter((b) => b.genre === genreKey).map((b) => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+          <div style={{ fontSize: "12px", color: "var(--ink-ghost)", marginTop: "6px" }}>
+            Sets the genre and fills the passage span below; the category stays editable on Overview.
+          </div>
+        </div>
         <div className="field-group" style={{ marginBottom: 0 }}>
           <label className="field-label">Series Text</label>
           <input
@@ -481,22 +524,20 @@ function BookStudyTab({ series, onChange }) {
             onChange={(e) => onChange("title", e.target.value)}
             placeholder="Series Text"
           />
-          {(series.passage_range || series.canon_category) && (
+          {(series.passage_range || series.canon_category || series.book_id) && (
             <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "8px" }}>
               {series.passage_range && (
                 <span style={{ fontFamily: "var(--font-mono)", fontSize: "13px", color: "var(--ink-soft)" }}>
                   {series.passage_range}
                 </span>
               )}
-              {series.canon_category && (
-                <span style={{
-                  fontSize: "10px", padding: "2px 7px", borderRadius: "10px",
-                  background: "var(--parchment-deep)", color: "var(--ink-soft)",
-                  fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em",
-                }}>
-                  {series.canon_category}
-                </span>
-              )}
+              <span style={{
+                fontSize: "10px", padding: "2px 7px", borderRadius: "10px",
+                background: "var(--parchment-deep)", color: "var(--ink-soft)",
+                fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em",
+              }}>
+                {GENRES[series.canon_category] || "Unclassified"}
+              </span>
             </div>
           )}
         </div>
@@ -955,13 +996,131 @@ function SectionEditor({ section, index, total, expanded, justCreated, onToggle,
     </div>
   );
 }
+// ── Pacing Strip ──────────────────────────────────────────────────────────────
+// A compact, read-only mirror of the series' shape — slot count, approximate
+// weeks/months, projected end date (stepped the same way Suggest Sundays steps),
+// a neutral length band, and any liturgical seasons / special-date notes the run
+// spans. Pure arithmetic (src/utils/pacing.js); it states facts, never advises.
+function PacingStrip({ sermons, series, calNotes }) {
+  const p = computePacing({
+    slotCount: sermons.length,
+    startDate: series?.start_date || "",
+    calNotes: calNotes || [],
+  });
+  if (!p.slotCount) return null;
+
+  const parts = [
+    `${p.slotCount} slot${p.slotCount === 1 ? "" : "s"}`,
+    `~${p.weeks} week${p.weeks === 1 ? "" : "s"}`,
+    `~${p.months.toFixed(1)} months`,
+  ];
+  if (p.endDate) parts.push(`ends ~${formatPacingDate(p.endDate)}`);
+  if (p.band) parts.push(p.band);
+  if (p.seasons.length > 1) parts.push(`spans ${p.seasons.map((s) => s.shortName).join(" → ")}`);
+  for (const n of p.crossedNotes) parts.push(`crosses "${n.label}"`);
+
+  return (
+    <div style={{
+      display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px",
+      padding: "9px 14px", marginBottom: "16px",
+      background: "var(--parchment-warm)", border: "1px solid var(--parchment-deep)",
+      borderRadius: "var(--radius)", fontSize: "12.5px", color: "var(--ink-soft)",
+    }}>
+      <span aria-hidden="true" style={{ opacity: 0.7 }}>⏱</span>
+      {parts.map((part, i) => (
+        <span key={i} style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          {i > 0 && <span style={{ color: "var(--ink-ghost)" }}>·</span>}
+          {part}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+// "2026-10-11" -> "Oct 11" (a date-only string, parsed in local time).
+function formatPacingDate(iso) {
+  const d = new Date(`${iso}T00:00:00`);
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+// ── Coverage Panel ────────────────────────────────────────────────────────────
+// A read-only picture of how the slots partition the series' book: a proportional
+// bar + plain notes on gaps, overlaps, out-of-order slots, and any unreadable
+// passage refs. Purely informational (src/utils/coverage.js) — never a gate. You
+// can intentionally skip a passage; it just shows what you're skipping.
+function CoveragePanel({ series, sermons }) {
+  const cov = computeCoverage(series?.book_id, sermons);
+  const book = bookById(series?.book_id);
+
+  if (cov.noBook || !book) {
+    return (
+      <div style={{
+        padding: "10px 14px", marginBottom: "20px",
+        background: "var(--parchment-warm)", border: "1px dashed var(--parchment-deep)",
+        borderRadius: "var(--radius)", fontSize: "12.5px", color: "var(--ink-ghost)",
+      }}>
+        Pick a canonical book on the Book Study tab to see how your slots cover it.
+      </div>
+    );
+  }
+
+  const notes = [];
+  if (cov.gaps.length) {
+    notes.push({ key: "gaps", label: "Uncovered", text: cov.gaps.join(", ") });
+  }
+  if (cov.overlaps.length) {
+    notes.push({ key: "overlaps", label: "Overlap", text: cov.overlaps.map((o) => `slots ${o.a} & ${o.b}`).join(", ") });
+  }
+  if (cov.outOfOrder.length) {
+    notes.push({ key: "order", label: "Out of order", text: cov.outOfOrder.map((n) => `slot ${n}`).join(", ") });
+  }
+  if (cov.unreadable.length) {
+    notes.push({
+      key: "unreadable",
+      label: "Couldn't read",
+      text: cov.unreadable.map((n) => {
+        const p = sermons[n - 1] && sermons[n - 1].passage;
+        return p ? `slot ${n} ("${p}")` : `slot ${n}`;
+      }).join(", "),
+    });
+  }
+
+  return (
+    <div className="card" style={{ marginBottom: "20px" }}>
+      <div className="card-header" style={{ marginBottom: "10px" }}>
+        <div className="card-title">Coverage</div>
+        <span style={{ fontSize: "13px", color: "var(--ink-soft)" }}>
+          {cov.percent}% of {book.name}{cov.mode === "chapter" ? " (by chapter)" : ""}
+        </span>
+      </div>
+      <div style={{ height: "8px", borderRadius: "4px", background: "var(--parchment-deep)", overflow: "hidden" }}>
+        <div style={{ width: `${cov.percent}%`, height: "100%", background: "var(--sage)", transition: "width 200ms" }} />
+      </div>
+      <div style={{ marginTop: "12px", display: "flex", flexDirection: "column", gap: "5px" }}>
+        {notes.length === 0 ? (
+          <div style={{ fontSize: "12.5px", color: "var(--sage)" }}>
+            Every verse covered exactly once, in order.
+          </div>
+        ) : notes.map((n) => (
+          <div key={n.key} style={{ fontSize: "12.5px", color: "var(--ink-soft)" }}>
+            <span style={{ fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", fontSize: "10.5px", marginRight: "8px", color: "var(--ink-ghost)" }}>
+              {n.label}
+            </span>
+            {n.text}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Sermon Slots Tab ──────────────────────────────────────────────────────────
 // Plan the individual sermons that make up the series. Slots can be grouped by
 // section (when the Structure tab has sections) or kept as a flat list. Each
 // slot is a real sermon atom on the spine; the "+ Add Slot" flow defers the
 // spine write until the pastor types a non-empty title (State Contract #3 —
 // no nameless atom ever reaches createSermon).
-function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpenSermon, runSave }) {
+function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpenSermon, runSave, calNotes }) {
   // Draft slots — UI-only rows that have not yet been committed to the spine.
   // State Contract #3 forbids createSermon({ name: "" }), so the "+ Add Slot"
   // button creates a row in this local state instead of immediately calling
@@ -1109,6 +1268,8 @@ function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpen
 
   return (
     <div className="page-body">
+      <PacingStrip sermons={sermons} series={series} calNotes={calNotes} />
+      <CoveragePanel series={series} sermons={sermons} />
       <div className="card-header" style={{ marginBottom: "20px" }}>
         <div>
           <div className="card-title">Sermon Slots</div>
@@ -1290,6 +1451,32 @@ function SlotRow({ slot, index, onChange, onDelete, onCommit, commitError, onCle
       </div>
       {expanded && (
         <div style={{ padding: "14px", borderTop: "1px solid var(--parchment-deep)", background: "var(--parchment-warm)", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
+          {/* Read-only echo of the whole this slot serves — its section's Big
+              Idea and the Series Big Idea — so the sermon is always related to
+              the whole while slotting. Echoes only; no fields, no persistence. */}
+          {(sectionBigIdea?.trim() || series?.big_idea?.trim()) && (
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                gridColumn: "1 / -1", padding: "10px 12px", borderRadius: "var(--radius)",
+                background: "var(--white)", borderLeft: "3px solid var(--sage)",
+                display: "flex", flexDirection: "column", gap: "6px",
+              }}
+            >
+              {sectionBigIdea?.trim() && (
+                <div style={{ fontSize: "12px", color: "var(--ink-soft)", lineHeight: 1.4 }}>
+                  <span style={{ fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", fontSize: "10px", color: "var(--ink-ghost)", marginRight: "8px" }}>Section</span>
+                  {sectionBigIdea}
+                </div>
+              )}
+              {series?.big_idea?.trim() && (
+                <div style={{ fontSize: "12px", color: "var(--ink-soft)", lineHeight: 1.4 }}>
+                  <span style={{ fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", fontSize: "10px", color: "var(--ink-ghost)", marginRight: "8px" }}>Series</span>
+                  {series.big_idea}
+                </div>
+              )}
+            </div>
+          )}
           <div className="field-group" style={{ marginBottom: 0 }}>
             <label className="field-label">Passage</label>
             <input
@@ -1418,6 +1605,7 @@ function CalendarTab({ series, sections, sermons, calNotes, onChange, onSermonsC
       </div>
 
       <div className="page-body">
+        <PacingStrip sermons={sermons} series={series} calNotes={calNotes} />
         {/* Controls */}
         <div className="card" style={{ marginBottom: "20px" }}>
           <div style={{ display: "flex", alignItems: "flex-end", gap: "16px", flexWrap: "wrap" }}>

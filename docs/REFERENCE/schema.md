@@ -1,6 +1,6 @@
 # SermonForge — Database Schema Reference
 
-Current schema version: **24**
+Current schema version: **25**
 
 | Version | Bumped for |
 |---------|-----------|
@@ -15,6 +15,7 @@ Current schema version: **24**
 | v22 | Sermon full-content search — `sermon_search` table (flattened text per indexed column for LIKE-based search) |
 | v23 | Trail deletion sweep (Phase D1) — `last_touched_position` (session re-entry routing) + `thresholds_seen` (dismissed-thresholds JSON array, one mechanism for all threshold-orientation "seen" flags) |
 | v24 | UX overhaul migration session — `deleted_at` soft-delete tombstone on `sermons`; `sermon_search` rebuilt with `functional_elements` in and `delivery_notes` / `timing_notes` out (Delivery stage struck from the vocabulary) |
+| v25 | Canonical-books build — `book_id` (nullable) on `series`; `canon_category` enum switched from legacy 4-value (`ot`/`nt`/`wisdom`/`prophetic`) to Dever's 7 genre keys, migrating `wisdom`→`ot_writings`, `prophetic`→`ot_prophets`, `ot`/`nt`→NULL |
 
 ---
 
@@ -34,7 +35,8 @@ Current schema version: **24**
 | `end_date` | TEXT | |
 | `structural_outline` | TEXT | Detailed book outline — pastor-typed or pasted from a commentary (Structure tab). AI-free since ARI. |
 | `status` | TEXT | `in_progress \| complete` — two-state lifecycle (v16 collapse). `SERIES_STATUS` in `src/core/contracts.ts`; `create-series` writes `in_progress`. (CREATE TABLE default is a vestigial `'planning'`, always overwritten on insert.) |
-| `canon_category` | TEXT | `ot \| nt \| wisdom \| prophetic` |
+| `canon_category` | TEXT | Dever 7-genre key: `ot_law \| ot_history \| ot_writings \| ot_prophets \| nt_gospels \| nt_pauline \| nt_general`. NULL or `''` = unclassified. Auto-filled from the chosen book, pastor-overridable per series. (v25 switch from legacy `ot \| nt \| wisdom \| prophetic`.) |
+| `book_id` | TEXT | Stable key of the chosen canonical book (e.g. `luke`) from `src/data/canonicalBooks.js`; NULL until a book is picked. Only the key is stored — genre, testament, and span are looked up from that bundled module at render. (v25) |
 | `redemptive_context` | TEXT | Where this book sits in the arc from creation to new creation (Book Study tab) |
 | `book_background` | TEXT | Author, audience, occasion, historical setting, genre (Book Study tab) |
 | `book_argument` | TEXT | The book's controlling argument or central purpose (Book Study tab) |

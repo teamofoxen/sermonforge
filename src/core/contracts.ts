@@ -193,6 +193,7 @@ export type View =
   | "Calendar"
   | "CompletedSermons"
   | "Planning"
+  | "Arc"
   | "SeriesPlanner"
   | "Workspace";
 
@@ -202,6 +203,7 @@ export const VIEW = {
   Calendar: "Calendar",
   CompletedSermons: "CompletedSermons",
   Planning: "Planning",
+  Arc: "Arc",
   SeriesPlanner: "SeriesPlanner",
   Workspace: "Workspace",
 } as const satisfies Record<View, View>;
@@ -360,7 +362,7 @@ export const SERMON_COLUMNS: ReadonlySet<string> = Object.freeze(new Set([
 export const SERIES_COLUMNS: ReadonlySet<string> = Object.freeze(new Set([
   "title", "color", "description", "year", "big_idea", "overview",
   "passage_range", "start_date", "end_date", "structural_outline",
-  "status", "canon_category",
+  "status", "canon_category", "book_id",
   "redemptive_context", "book_background", "book_argument", "book_structure",
   "series_motivation", "emerging_big_idea",
 ])) as ReadonlySet<string>;

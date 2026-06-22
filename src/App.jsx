@@ -20,6 +20,8 @@ const SermonWorkspaceFixture = lazy(() => import("./components/SermonWorkspaceFi
 const Planning = lazy(() => import("./components/Planning"));
 const SeriesPlanner = lazy(() => import("./components/SeriesPlanner"));
 const SeriesPlannerFixture = lazy(() => import("./components/SeriesPlannerFixture"));
+const Arc = lazy(() => import("./components/Arc"));
+const ArcFixture = lazy(() => import("./components/ArcFixture"));
 
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -294,6 +296,21 @@ function AppInner() {
     );
   }
 
+  // Series Arc preview — mounts the real Arc view against mock cross-series data
+  // so the timeline + balance sidebar can be verified without Electron/SQLite.
+  // Gated to dev so a packaged build never honors the query string. ?arc
+  const isArcFixture =
+    import.meta.env.DEV &&
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).has("arc");
+  if (isArcFixture) {
+    return (
+      <Suspense fallback={null}>
+        <ArcFixture />
+      </Suspense>
+    );
+  }
+
   if (keyReady === null) return null; // brief loading — avoids flash of setup screen
   if (keyReady === false) return <SetupScreen onComplete={() => setKeyReady(true)} />;
 
@@ -369,6 +386,9 @@ function AppInner() {
         )}
         {currentView === VIEW.Planning && (
           <Planning onOpenPlanner={openPlanner} />
+        )}
+        {currentView === VIEW.Arc && (
+          <Arc onOpenPlanner={openPlanner} />
         )}
         {currentView === VIEW.SeriesPlanner && plannerSeriesId && (
           <SeriesPlanner

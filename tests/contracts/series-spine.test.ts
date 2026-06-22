@@ -33,6 +33,18 @@ describe("Series spine: create / cascade / counts / ordering", () => {
     expect(row?.status).toBe("in_progress");
   });
 
+  it("book_id is unset at create and persists via update-series (create-then-update, canonical-books P2)", async () => {
+    const id = await mkSeries("Luke");
+    // Create-then-update: book_id is never written by create-series.
+    const before = await spine()("get-series", id);
+    expect(before.book_id == null).toBe(true);
+
+    // It rides the debounced update path, gated by SERIES_COLUMNS (buildUpdate).
+    await spine()("update-series", { id, fields: { book_id: "luke" } });
+    const after = await spine()("get-series", id);
+    expect(after.book_id).toBe("luke");
+  });
+
   it("delete-series orphans child sermons (series_id nulled) but does NOT delete them, and removes sections", async () => {
     const seriesId = await mkSeries("Luke");
     await spine()("create-section", { series_id: seriesId, sort_order: 0 });

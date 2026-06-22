@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { getAllSeries, deleteSeries, getSeriesSermonCounts } from "../core/spine";
 import { SERIES_STATUS, SERIES_STATUS_LABELS } from "../core/contracts";
+import { GENRES } from "../data/canonicalBooks";
 import { useModalA11y } from "../utils/useModalA11y";
 import { buttonKeydown } from "../utils/buttonKeydown";
 import PrimaryButton from "./primitives/PrimaryButton";
@@ -15,8 +16,16 @@ import NewSeriesModal from "./NewSeriesModal";
 // series backend (getAllSeries / createSeries / deleteSeries) is live; this is
 // the UI that finally calls it again.
 
-const CANON_LABELS = { ot: "Old Testament", nt: "New Testament", wisdom: "Wisdom", prophetic: "Prophetic", "": "Uncategorized" };
-const CANON_COLORS = { ot: "var(--gold)", nt: "var(--sage)", wisdom: "var(--crimson)", prophetic: "var(--slate)", "": "var(--ink-ghost)" };
+// The 7 Dever genres (labels from the canonical module — single source of truth)
+// plus an Unclassified state for null/never-set rows. GENRE_KEYS drives the
+// coverage tally + grid so a migrated series can't silently fall out of the count.
+const GENRE_KEYS = Object.keys(GENRES);
+const CANON_LABELS = { ...GENRES, "": "Unclassified" };
+const CANON_COLORS = {
+  ot_law: "var(--gold)", ot_history: "var(--crimson)", ot_writings: "var(--sage)",
+  ot_prophets: "var(--slate)", nt_gospels: "var(--gold)", nt_pauline: "var(--sage)",
+  nt_general: "var(--crimson)", "": "var(--ink-ghost)",
+};
 
 export default function Planning({ onOpenPlanner }) {
   const [series, setSeries] = useState([]);
@@ -60,13 +69,15 @@ export default function Planning({ onOpenPlanner }) {
     }
   }
 
-  // Canon coverage tallies — a quiet "what have I preached across the canon" read.
-  const coverage = { ot: 0, nt: 0, wisdom: 0, prophetic: 0, "": 0 };
+  // Canon coverage tallies — a quiet "what have I preached across the canon" read,
+  // across the 7 genres. Series with no valid genre (null/'' unclassified) are
+  // left out of the categorized total, not bucketed into a phantom key.
+  const coverage = Object.fromEntries(GENRE_KEYS.map((k) => [k, 0]));
   for (const s of series) {
-    const cat = s.canon_category || "";
-    coverage[cat] = (coverage[cat] || 0) + 1;
+    const cat = s.canon_category;
+    if (cat && coverage[cat] !== undefined) coverage[cat] += 1;
   }
-  const totalCategorized = coverage.ot + coverage.nt + coverage.wisdom + coverage.prophetic;
+  const totalCategorized = GENRE_KEYS.reduce((sum, k) => sum + coverage[k], 0);
 
   if (loading) {
     return (
@@ -97,8 +108,8 @@ export default function Planning({ onOpenPlanner }) {
               <h2 className="card-title">Biblical Coverage</h2>
               <span style={{ fontSize: "13px", color: "var(--ink-ghost)" }}>{totalCategorized} categorized series</span>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "12px" }}>
-              {["ot", "nt", "wisdom", "prophetic"].map((cat) => (
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: "12px" }}>
+              {GENRE_KEYS.map((cat) => (
                 <div key={cat} style={{
                   padding: "14px 16px",
                   borderRadius: "var(--radius)",
@@ -219,9 +230,9 @@ function SeriesCard({ series: s, sermonCount, onOpen, onRequestDelete }) {
         <div style={{ display: "flex", gap: "12px", fontSize: "12px", color: "var(--ink-ghost)" }}>
           <span>{sermonCount} sermon{sermonCount !== 1 ? "s" : ""}</span>
           {s.start_date && <span>{s.start_date.slice(0, 4)}</span>}
-          {cat && (
-            <span style={{ color: CANON_COLORS[cat], fontWeight: "500" }}>{CANON_LABELS[cat]}</span>
-          )}
+          <span style={{ color: CANON_COLORS[cat] || "var(--ink-ghost)", fontWeight: "500" }}>
+            {CANON_LABELS[cat] || "Unclassified"}
+          </span>
         </div>
         <SecondaryButton
           size="sm"

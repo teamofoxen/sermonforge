@@ -1110,6 +1110,32 @@ function runMigrations() {
     version = 24;
   }
 
+  if (version < 25) {
+    // v25 (canonical-books build, Prompt 2) — two coordinated changes.
+    //
+    // (a) book_id: the stable key of a canonical book (e.g. "luke") from the
+    //     bundled src/data/canonicalBooks.js reference module. Nullable — a
+    //     series with no chosen book stays NULL. It rides the normal create-
+    //     then-update path: book_id is in SERIES_COLUMNS, so the debounced
+    //     update-series write gates through buildUpdate. The create-series
+    //     INSERT is deliberately NOT widened (charter ruling).
+    safeAlter("ALTER TABLE series ADD COLUMN book_id TEXT DEFAULT NULL");
+    //
+    // (b) canon_category enum switch — legacy 4-value scheme
+    //     (ot|nt|wisdom|prophetic) -> Dever's 7 genre keys. Migrate the two
+    //     unambiguous values; the two testament-only values are too coarse to
+    //     place, so they become NULL (rendered "unclassified", fixable by
+    //     picking the book). '' (never-set) is left as-is, also "unclassified".
+    //       wisdom    -> ot_writings
+    //       prophetic -> ot_prophets
+    //       ot | nt   -> NULL
+    dbRun("UPDATE series SET canon_category = 'ot_writings' WHERE canon_category = 'wisdom'");
+    dbRun("UPDATE series SET canon_category = 'ot_prophets' WHERE canon_category = 'prophetic'");
+    dbRun("UPDATE series SET canon_category = NULL WHERE canon_category IN ('ot', 'nt')");
+    dbRun("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '25')");
+    version = 25;
+  }
+
   // True when at least one block actually ran. Lets initDatabase skip the
   // boot-time flush on a clean boot of an up-to-date DB — so a healthy library
   // is never re-serialized and rotated over its own backup for no reason.

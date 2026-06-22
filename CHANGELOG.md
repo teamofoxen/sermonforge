@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-06-22 — Canonical book data: book picker, pacing, coverage, and the Series Arc view
+
+- New bundled `src/data/canonicalBooks.js` (66 books, KJV verse counts to 31,102, checksum-gated, cross-verified against two sources); the only schema change is a nullable `series.book_id` (v25), with `canon_category` migrated to Dever's 7 genres.
+- Book Study gains a canonical-book picker that auto-fills genre + passage span (overridable); Overview's category dropdown and the Planning surfaces move to the 7 genres with an Unclassified state.
+- Sermon Slots + Calendar show a read-only pacing strip; Sermon Slots adds a fail-soft coverage panel (gaps / overlaps / out-of-order / %).
+- New Series Arc view: a cross-series timeline table + a windowed genre-balance read (touched/missing, OT:NT, unclassified).
+- AI-free arithmetic throughout; +78 unit tests (223 total), lint + sweep green.
+
+---
+
 ## 2026-06-22 — Close three deferred follow-ups: lint gate, modal scroll, study-guide model
 
 - Removed the `SF_LINT_STAGED` downgrade so `no-raw-button` and `canonical-loading-verb` fire at full severity in pre-commit — closing the gap that let raw-button debt accumulate via new files.

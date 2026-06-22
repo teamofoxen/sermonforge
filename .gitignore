@@ -49,8 +49,12 @@ corpus/raw/
 corpus/parsed/
 corpus/chunked/
 
-# Generated / empty data directory
-src/data/
+# Generated / empty data directory — but keep the bundled canonical reference
+# module: it's real source that ships with the app, not generated output.
+# (See docs/PROPOSALS/canonical-books-plan.md.) Trailing /* + negation is
+# required because git won't re-include a file under a wholesale-ignored dir.
+src/data/*
+!src/data/canonicalBooks.js
 
 # User-generated feedback files
 Feedback/

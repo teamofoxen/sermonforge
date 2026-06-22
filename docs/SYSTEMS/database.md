@@ -51,7 +51,7 @@ no shared statements.
 
 ## Schema Version
 
-Current schema version: **14**
+Current schema version: **25**
 
 The version is stored in the `meta` table under key `schema_version`.
 Read via IPC `"db-getSchemaVersion"`.
