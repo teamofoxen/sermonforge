@@ -141,4 +141,22 @@ Built (all three tabs functional so the app is never broken mid-night):
   preview + wire study_guide_extras. The on-screen preview is the new model now;
   the export catches up in Phase 3.
 
+## Phase 2 — Schedule two-way + the jump button (DONE)
+
+Phase 1 already landed single-source dates and a tab-switch "Schedule" button;
+Phase 2 makes the connection tangible and genuinely two-way:
+- **The date is now editable on BOTH surfaces** — added a Date field to the
+  expanded pericope on the Outline, wired through the same single-source
+  `handleSermonField` path the Schedule screen uses. Editing on either surface
+  reflects live on the other (verified: a Schedule edit to Feb 1 showed on the
+  Outline chip immediately). The collapsed chip stays a read-only summary.
+- **The "Schedule" jump now lands on the row that owns the date** — it carries
+  the sermon id (`goToSchedule`), and the Schedule screen scrolls that row into
+  view and flashes it (gold ring, fades after ~1.6s), then consumes the focus
+  once. Verified: clicking a pericope's Schedule button switches to the Schedule
+  tab with exactly one row flashed.
+- `end_date` continues to mirror the last dated sermon on any date change.
+- **Verify:** eslint 0; vite build compiles; preview — jump+flash lands on the
+  right row, two-way date reflection works, zero console errors.
+
 (Phases below are appended as they complete.)

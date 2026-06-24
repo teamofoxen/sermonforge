@@ -112,6 +112,10 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
   const [loading, setLoading]   = useState(!_fixture);
   const [loadError, setLoadError] = useState(false);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
+  // When the pastor taps "Schedule" on an Outline pericope, remember which one so
+  // the Schedule screen can scroll to it and flash it — the two screens share one
+  // date field, so the jump lands on the row that owns it.
+  const [scheduleFocusId, setScheduleFocusId] = useState(null);
   // The last failed save's mutation thunk, so the topbar Retry re-runs the real
   // write instead of an empty no-op.
   const lastFailedRef = useRef(null);
@@ -151,6 +155,13 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
   function handleTabChange(tabId) {
     setActiveTab(tabId);
     localStorage.setItem(`sermonforge_planner_tab_${seriesId}`, tabId);
+  }
+
+  // Jump from a pericope to its Schedule row (the "Schedule" button on the
+  // Outline). Remembers the sermon so ScheduleTab can scroll to + flash it.
+  function goToSchedule(sermonId) {
+    setScheduleFocusId(sermonId || null);
+    handleTabChange("schedule");
   }
 
   async function load() {
@@ -404,6 +415,7 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
             onSermonsChange={setSermons}
             onOpenSermon={onOpenSermon}
             onNavigate={handleTabChange}
+            onGoToSchedule={goToSchedule}
             runSave={runSave}
           />
         )}
@@ -417,6 +429,8 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
             onSermonField={handleSermonField}
             onSermonsChange={setSermons}
             onNavigate={handleTabChange}
+            focusId={scheduleFocusId}
+            onFocusConsumed={() => setScheduleFocusId(null)}
             runSave={runSave}
           />
         )}
@@ -564,7 +578,7 @@ function formatPacingDate(iso) {
 function OutlineTab({
   series, sections, sermons, seriesId,
   onSeriesField, onSelectBook, onSectionField, onSermonField,
-  onSectionsChange, onSermonsChange, onOpenSermon, onNavigate, runSave,
+  onSectionsChange, onSermonsChange, onOpenSermon, onNavigate, onGoToSchedule, runSave,
 }) {
   const [bookDetailsOpen, setBookDetailsOpen] = useState(false);
   const [referenceOpen, setReferenceOpen] = useState(false);
@@ -863,7 +877,7 @@ function OutlineTab({
             draftErrors={draftErrors}
             onClearDraftError={clearDraftError}
             onOpenSermon={onOpenSermon}
-            onNavigate={onNavigate}
+            onGoToSchedule={onGoToSchedule}
           />
         ))}
 
@@ -895,7 +909,7 @@ function OutlineTab({
                   commitError={draftErrors[p.id]}
                   onClearError={clearDraftError}
                   onOpenSermon={onOpenSermon}
-                  onNavigate={onNavigate}
+                  onGoToSchedule={onGoToSchedule}
                 />
               ))}
             </div>
@@ -938,7 +952,7 @@ function SectionNode({
   section, index, total, collapsed, justCreated, pericopes, expandedPericopes,
   onToggle, onField, onDelete, onMove, onAddPericope, onTogglePericope,
   onPericopeField, onCommitPericope, onDeletePericope, draftErrors,
-  onClearDraftError, onOpenSermon, onNavigate,
+  onClearDraftError, onOpenSermon, onGoToSchedule,
 }) {
   const cardRef = useRef(null);
   const titleRef = useRef(null);
@@ -1032,7 +1046,7 @@ function SectionNode({
                 commitError={draftErrors[p.id]}
                 onClearError={onClearDraftError}
                 onOpenSermon={onOpenSermon}
-                onNavigate={onNavigate}
+                onGoToSchedule={onGoToSchedule}
               />
             ))}
             <SecondaryButton size="sm" onClick={onAddPericope} style={{ alignSelf: "flex-start", marginTop: "2px" }}>+ Add pericope</SecondaryButton>
@@ -1047,7 +1061,7 @@ function SectionNode({
 // One pericope = one sermon = one scheduled unit. Collapsed: passage · title ·
 // date chip · Schedule jump · Open. Expanded: passage · title · big idea ·
 // overview. Draft rows commit on title blur/Enter (State #3 deferral).
-function PericopeNode({ pericope: p, expanded, onToggle, onField, onCommit, onDelete, commitError, onClearError, onOpenSermon, onNavigate }) {
+function PericopeNode({ pericope: p, expanded, onToggle, onField, onCommit, onDelete, commitError, onClearError, onOpenSermon, onGoToSchedule }) {
   const isDraft = !!p._draft;
   const rowRef = useRef(null);
   const titleRef = useRef(null);
@@ -1084,8 +1098,9 @@ function PericopeNode({ pericope: p, expanded, onToggle, onField, onCommit, onDe
         <span style={{ flex: 1, fontSize: "14px", color: p.title ? "var(--ink)" : "var(--ink-ghost)", fontStyle: p.title ? "normal" : "italic" }}>
           {p.title || "Untitled"}
         </span>
-        {/* Date chip — read-only here; the date is single-source on the sermon
-            and edited on Schedule (two-way). */}
+        {/* Date chip — a read-only summary of the single-source sermon date.
+            It's editable here too (expanded, below) and on Schedule — the same
+            field on both surfaces, so they reflect each other live. */}
         <span
           style={{
             fontFamily: "var(--font-mono)", fontSize: "11px", whiteSpace: "nowrap",
@@ -1094,15 +1109,15 @@ function PericopeNode({ pericope: p, expanded, onToggle, onField, onCommit, onDe
             border: "1px solid var(--parchment-deep)",
             color: p.date ? "var(--ink-soft)" : "var(--ink-ghost)",
           }}
-          title={p.date ? "Scheduled date — edit on Schedule" : "Not scheduled yet"}
+          title={p.date ? "Scheduled date" : "Not scheduled yet"}
         >
           {p.date ? formatDate(p.date) : "No date"}
         </span>
         {!isDraft && (
           <TextButton
-            onClick={(e) => { e.stopPropagation(); onNavigate?.("schedule"); }}
+            onClick={(e) => { e.stopPropagation(); onGoToSchedule?.(p.id); }}
             style={{ fontSize: "11px" }}
-            title="Go to the Schedule screen"
+            title="Open this sermon on the Schedule screen"
           >
             Schedule
           </TextButton>
@@ -1149,6 +1164,19 @@ function PericopeNode({ pericope: p, expanded, onToggle, onField, onCommit, onDe
               {commitError && <div style={{ marginTop: "6px" }}><InlineError onDismiss={() => onClearError?.(p.id)}>{commitError}</InlineError></div>}
             </div>
           </div>
+          {/* Date — the SAME single-source field the Schedule screen edits, so
+              the two surfaces reflect each other live. */}
+          <div className="field-group" style={{ marginBottom: 0 }}>
+            <label className="field-label">Date</label>
+            <input
+              type="date" className="field-input"
+              style={{ width: "auto", fontSize: "14px", padding: "8px 12px" }}
+              value={p.date || ""}
+              onChange={(e) => onField(p.id, "date", e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              aria-label="Scheduled date"
+            />
+          </div>
           <div className="field-group" style={{ marginBottom: 0 }}>
             <label className="field-label">Big Idea</label>
             <input
@@ -1183,9 +1211,26 @@ function PericopeNode({ pericope: p, expanded, onToggle, onField, onCommit, onDe
 // (no separate snapshot that can drift). Suggest Sundays is one explicit bulk
 // gesture; manual edits autosave like any other field. AI scheduling advisor
 // stays removed (no-direct-ai); the church-calendar engine is preserved verbatim.
-function ScheduleTab({ series, sermons, calNotes, onSeriesField, onSermonField, onSermonsChange, onNavigate, runSave }) {
+function ScheduleTab({ series, sermons, calNotes, onSeriesField, onSermonField, onSermonsChange, onNavigate, focusId, onFocusConsumed, runSave }) {
   const [suggesting, setSuggesting] = useState(false);
   const excludeDates = calNotes.map((n) => n.date);
+  // Scroll-to + flash the row the pastor jumped to from the Outline's
+  // "Schedule" button. The flash fades; the focus id is consumed once.
+  const rowRefs = useRef(new Map());
+  const [flashId, setFlashId] = useState(null);
+  useEffect(() => {
+    if (!focusId) return;
+    const el = rowRefs.current.get(focusId);
+    if (el) {
+      el.scrollIntoView({ block: "center", behavior: "smooth" });
+      setFlashId(focusId);
+      const t = setTimeout(() => setFlashId(null), 1600);
+      onFocusConsumed?.();
+      return () => clearTimeout(t);
+    }
+    onFocusConsumed?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusId]);
 
   // The series end_date mirrors the last dated sermon — recompute from a list
   // and persist it (debounced via onSeriesField) when it moves.
@@ -1264,13 +1309,20 @@ function ScheduleTab({ series, sermons, calNotes, onSeriesField, onSermonField, 
             const date = sermon.date || "";
             const season = date ? getSeasonForDate(date) : null;
             const note = calNotes.find((n) => n.date === date);
+            const flashing = flashId === sermon.id;
             return (
-              <div key={sermon.id} style={{
-                display: "grid", gridTemplateColumns: "24px 1fr 1fr auto auto",
-                alignItems: "center", gap: "14px", padding: "12px 16px",
-                background: "var(--white)", border: "1px solid var(--parchment-deep)",
-                borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-soft)",
-              }}>
+              <div
+                key={sermon.id}
+                ref={(el) => { if (el) rowRefs.current.set(sermon.id, el); else rowRefs.current.delete(sermon.id); }}
+                style={{
+                  display: "grid", gridTemplateColumns: "24px 1fr 1fr auto auto",
+                  alignItems: "center", gap: "14px", padding: "12px 16px",
+                  background: "var(--white)",
+                  border: flashing ? "1px solid var(--gold)" : "1px solid var(--parchment-deep)",
+                  boxShadow: flashing ? "0 0 0 2px var(--gold-pale)" : "var(--shadow-soft)",
+                  borderRadius: "var(--radius-lg)", transition: "box-shadow 200ms, border-color 200ms",
+                }}
+              >
                 <span style={{ fontSize: "12px", color: "var(--ink-ghost)", textAlign: "center" }}>{idx + 1}</span>
                 <div>
                   <div style={{ fontSize: "14px", color: "var(--ink)", fontFamily: "var(--font-serif)", lineHeight: "1.3" }}>
