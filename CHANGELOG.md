@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-06-24 — Series Planner flow: a guided spine over the four-movement workbench
+
+- Added named-outcome seam frames ("X opens, against the Y") at the Design/Schedule heads, a "Continue to <next>" forward control at each movement's foot, and a "Movement N of 4" topbar place-line — the sermon walk's handoffs and orientation, without making the planner a one-question walk.
+- Made the Coverage and Schedule empty-state pointers clickable jumps.
+- Promoted the Overview cockpit into a tap-to-jump arc-rail map (presence dots, "You are here") and reframed it as the arrival, with the Study Guide as the terminal door — no score or meter added.
+- First open of a series now auto-shows the existing "How this works" modal once, via a write-only localStorage flag (no new component, no schema change).
+- Adversarial multi-agent review (1 low confirmed, 6 refuted) led to single-sourcing the modal's movement labels off `PLANNER_MOVEMENTS`; all changes in `SeriesPlanner.jsx`, AI-free, 231 tests + lint green.
+
+---
+
 ## 2026-06-22 — Series Planner audit follow-up: finish tab-rename copy sweep + close no-direct-ai CI gap
 
 - Repointed three empty-state strings that still named removed/renamed tabs to their four-movement homes: the Schedule and Study-Guide "add slots" prompts now say "Design → Divide into Sermons"; the coverage panel's no-book prompt now says "Understand → Place the Book".
