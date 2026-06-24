@@ -412,6 +412,10 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
   // Derived from the one movement list so the tab labels can't drift from the
   // seam frames / arc rail that read the same source.
   const tabs = PLANNER_MOVEMENTS.map(({ id, label }) => ({ id, label }));
+  // Sequence position of the current movement — the "you are here" the tab
+  // underline can't state (Surface #4: place is always answerable). -1 only if
+  // a remembered tab somehow falls outside the list, in which case it's hidden.
+  const activeMovementIndex = PLANNER_MOVEMENTS.findIndex((m) => m.id === activeTab);
 
   return (
     <>
@@ -436,6 +440,9 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
           <div className="topbar-left">
             <div className="topbar-series">
               {SERIES_STATUS_LABELS[series.status] || SERIES_STATUS_LABELS[SERIES_STATUS.InProgress]}
+              {activeMovementIndex >= 0 && (
+                <> · Movement {activeMovementIndex + 1} of {PLANNER_MOVEMENTS.length} · {PLANNER_MOVEMENTS[activeMovementIndex].label}</>
+              )}
             </div>
             <div className="topbar-title">{series.title}</div>
           </div>
