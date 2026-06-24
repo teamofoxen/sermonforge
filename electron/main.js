@@ -1168,6 +1168,47 @@ function runMigrations() {
     version = 26;
   }
 
+  if (version < 27) {
+    // v27 (Series Planner content-model rebuild) — the planner becomes the
+    // pastor's real three-level series document (Book ▸ Section ▸ Pericope),
+    // every level the same unit: Title + range · Big idea · Overview.
+    //
+    // (a) Pericope-level big idea + overview on the sermon row. `big_idea` was
+    //     dropped from sermons back in v11 (superseded then by mpt/mps); it
+    //     returns here with fresh semantics — the one-line big idea of a
+    //     pericope, distinct from the sermon's MPT/MPS. `overview` is the
+    //     pericope's paragraph (its study-guide commentary body). Both ride the
+    //     create-then-update path: they are in SERMON_COLUMNS so debounced
+    //     update-sermon writes gate through buildUpdate; the create-sermon
+    //     INSERT is deliberately NOT widened (slot draft/commit ruling).
+    safeAlter("ALTER TABLE sermons ADD COLUMN big_idea TEXT DEFAULT ''");
+    safeAlter("ALTER TABLE sermons ADD COLUMN overview TEXT DEFAULT ''");
+    //
+    // (b) study_guide_extras: a nullable JSON column for the guide-local layer
+    //     of each sermon's study-guide page — { additions: [{id,type,text}],
+    //     notesLines: int }. The booklet's imported content is a live projection
+    //     of the Outline; only these pastor-authored additions + blank-notes
+    //     sizing are stored, so re-importing never wipes them (they live here,
+    //     and Import never writes this column). Rides create-then-update.
+    safeAlter("ALTER TABLE sermons ADD COLUMN study_guide_extras TEXT DEFAULT NULL");
+    //
+    // (c) Fold the retired per-sermon study_guide_note INTO the new overview
+    //     where the pastor wrote a note and overview is still empty (the pastor
+    //     asked to kill the double-entry). Run-ONCE, version-gated (NOT a content
+    //     check), so a restart never folds twice. study_guide_note is left INTACT
+    //     in the DB as a backup — it is simply retired from the writable set.
+    const v27rows = queryAll(
+      "SELECT id, study_guide_note, overview FROM sermons WHERE study_guide_note IS NOT NULL AND TRIM(study_guide_note) != ''"
+    );
+    for (const row of v27rows) {
+      if (!(row.overview || "").trim()) {
+        dbRun("UPDATE sermons SET overview = ? WHERE id = ?", [row.study_guide_note, row.id]);
+      }
+    }
+    dbRun("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '27')");
+    version = 27;
+  }
+
   // True when at least one block actually ran. Lets initDatabase skip the
   // boot-time flush on a clean boot of an up-to-date DB — so a healthy library
   // is never re-serialized and rotated over its own backup for no reason.

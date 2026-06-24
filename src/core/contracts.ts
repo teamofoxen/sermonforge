@@ -328,7 +328,9 @@ export const SERMON_COLUMNS: ReadonlySet<string> = Object.freeze(new Set([
   // topic_theme / audience_assumptions / background_noise removed in the
   // trail deletion sweep (Phase B1) — legacy PC columns, zero readers, zero
   // writers; PC content lives in implications.pastoral_context now.
-  "study_guide_note",
+  // study_guide_note retired from the writable set in the Series Planner
+  // content-model rebuild (v27) — its content folded into the new pericope
+  // `overview`; the DB column remains as backup but is no longer writable.
   "preaching_blocks", "manuscript_delivery", "last_tune_up",
   // v17 — canonical process position columns added by spine layer.
   // current_step removed in the trail deletion sweep (Phase B2) — position
@@ -357,14 +359,25 @@ export const SERMON_COLUMNS: ReadonlySet<string> = Object.freeze(new Set([
   // threshold ids — one mechanism for "has this threshold been dismissed"
   // across sermon-start, Study→Anchor handoff, and any future threshold.
   "last_touched_position", "thresholds_seen",
+  // v27 — Series Planner content-model rebuild. Pericope-level big idea +
+  // overview (the same Title/range · Big idea · Overview unit the book and
+  // sections carry), and the guide-local study-guide extras JSON
+  // ({ additions, notesLines }). All three ride create-then-update — the
+  // create-sermon INSERT is never widened (slot draft/commit ruling).
+  "big_idea", "overview", "study_guide_extras",
 ])) as ReadonlySet<string>;
 
+// v27 — Series Planner content-model rebuild retired the four book-study
+// prompts (redemptive_context / book_background / book_argument), the folded
+// book_structure, and the melodic-line worksheet fields (series_motivation /
+// emerging_big_idea / melodic_evidence) from the writable set. The DB columns
+// remain as backup (house pattern), but nothing writes them anymore. The
+// series unit is now Title (`title`) · Big idea (`big_idea`) · Overview
+// (`overview`) plus book identity + calendar metadata.
 export const SERIES_COLUMNS: ReadonlySet<string> = Object.freeze(new Set([
   "title", "color", "description", "year", "big_idea", "overview",
   "passage_range", "start_date", "end_date", "structural_outline",
   "status", "canon_category", "book_id",
-  "redemptive_context", "book_background", "book_argument", "book_structure",
-  "series_motivation", "emerging_big_idea", "melodic_evidence",
 ])) as ReadonlySet<string>;
 
 export const SECTION_COLUMNS: ReadonlySet<string> = Object.freeze(new Set([

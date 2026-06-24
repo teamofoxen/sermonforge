@@ -62,7 +62,8 @@ export const SERMON_COLUMNS = new Set([
   "functional_elements", "checklist", "series_id", "section_id", "is_one_off",
   // topic_theme / audience_assumptions / background_noise removed in the
   // trail deletion sweep (Phase B1) — mirrors SERMON_COLUMNS in contracts.
-  "study_guide_note",
+  // study_guide_note retired from the writable set in v27 (Series Planner
+  // content-model rebuild) — content folded into the pericope `overview`.
   "preaching_blocks", "manuscript_delivery", "last_tune_up",
   // current_step removed in the trail deletion sweep (Phase B2) — mirrors
   // SERMON_COLUMNS in contracts.
@@ -78,14 +79,17 @@ export const SERMON_COLUMNS = new Set([
   // v23 — trail deletion sweep (Phase D1). last_touched_position drives
   // session re-entry; thresholds_seen is the dismissed-thresholds JSON array.
   "last_touched_position", "thresholds_seen",
+  // v27 — Series Planner content-model rebuild (mirrors contracts): pericope
+  // big idea + overview + guide-local study_guide_extras.
+  "big_idea", "overview", "study_guide_extras",
 ]);
 
+// v27 — Series Planner content-model rebuild retired the book-study prompts +
+// melodic-line worksheet fields from the writable set (mirrors contracts).
 export const SERIES_COLUMNS = new Set([
   "title", "color", "description", "year", "big_idea", "overview",
   "passage_range", "start_date", "end_date", "structural_outline",
   "status", "canon_category", "book_id",
-  "redemptive_context", "book_background", "book_argument", "book_structure",
-  "series_motivation", "emerging_big_idea", "melodic_evidence",
 ]);
 
 export const SECTION_COLUMNS = new Set([

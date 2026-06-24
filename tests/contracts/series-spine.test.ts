@@ -108,4 +108,61 @@ describe("Series spine: create / cascade / counts / ordering", () => {
     expect(r.ok).toBe(false);
     expect(r.clause).toBe("State #3");
   });
+
+  // v27 — Series Planner content-model rebuild. A pericope is a sermon; its
+  // Title · Big idea · Overview unit persists via create-then-update (the
+  // create INSERT is never widened — slot draft/commit ruling).
+  it("pericope big_idea + overview are unset at create and persist via update-sermon (create-then-update)", async () => {
+    const seriesId = await mkSeries("Luke");
+    const id = await mkSermon({ name: "Through the eyes of Luke", series_id: seriesId });
+
+    // create-sermon does NOT write big_idea / overview (create-then-update).
+    const before = await spine()("get-sermon", id);
+    expect(before.big_idea == null || before.big_idea === "").toBe(true);
+    expect(before.overview == null || before.overview === "").toBe(true);
+
+    // They ride the debounced update path, gated by SERMON_COLUMNS (buildUpdate).
+    await spine()("update-sermon", {
+      id,
+      fields: {
+        big_idea: "To be a Christian is to be on mission with Jesus at the centre.",
+        overview: "The big picture of Luke-Acts shows Jesus as the central figure in God's plan.",
+      },
+    });
+    const after = await spine()("get-sermon", id);
+    expect(after.big_idea).toMatch(/on mission/);
+    expect(after.overview).toMatch(/central figure/);
+  });
+
+  it("guide-local study_guide_extras persists on the sermon and is not written by create-sermon", async () => {
+    const seriesId = await mkSeries("Luke");
+    const id = await mkSermon({ name: "Through the eyes of Mary", series_id: seriesId });
+
+    const before = await spine()("get-sermon", id);
+    expect(before.study_guide_extras == null).toBe(true);
+
+    const extras = JSON.stringify({
+      additions: [{ id: "a1", type: "question", text: "Where do you see God's faithfulness?" }],
+      notesLines: 8,
+    });
+    await spine()("update-sermon", { id, fields: { study_guide_extras: extras } });
+    const after = await spine()("get-sermon", id);
+    expect(JSON.parse(after.study_guide_extras).additions[0].type).toBe("question");
+  });
+
+  it("retired series columns are dropped from update-series (book_background no longer writable)", async () => {
+    const id = await mkSeries("Luke");
+    // Only-retired-fields → no valid fields → rejected (State #5), proving the
+    // book-study prompts left the writable set.
+    const bad = await spine()("update-series", { id, fields: { book_background: "x", series_motivation: "y" } });
+    expect(bad.ok).toBe(false);
+    expect(bad.clause).toBe("State #5");
+
+    // The series unit's own fields still apply.
+    await spine()("update-series", { id, fields: { big_idea: "Reintroducing Jesus", overview: "An orderly account." } });
+    const row = await spine()("get-series", id);
+    expect(row.big_idea).toBe("Reintroducing Jesus");
+    expect(row.overview).toBe("An orderly account.");
+    expect(row.book_background).toBeUndefined();
+  });
 });
