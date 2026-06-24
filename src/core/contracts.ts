@@ -329,7 +329,7 @@ export const SERMON_COLUMNS: ReadonlySet<string> = Object.freeze(new Set([
   // trail deletion sweep (Phase B1) — legacy PC columns, zero readers, zero
   // writers; PC content lives in implications.pastoral_context now.
   // study_guide_note retired from the writable set in the Series Planner
-  // content-model rebuild (v27) — its content folded into the new pericope
+  // content-model rebuild (v27) — its content folded into the new sermon
   // `overview`; the DB column remains as backup but is no longer writable.
   "preaching_blocks", "manuscript_delivery", "last_tune_up",
   // v17 — canonical process position columns added by spine layer.
@@ -359,7 +359,7 @@ export const SERMON_COLUMNS: ReadonlySet<string> = Object.freeze(new Set([
   // threshold ids — one mechanism for "has this threshold been dismissed"
   // across sermon-start, Study→Anchor handoff, and any future threshold.
   "last_touched_position", "thresholds_seen",
-  // v27 — Series Planner content-model rebuild. Pericope-level big idea +
+  // v27 — Series Planner content-model rebuild. Sermon-level big idea +
   // overview (the same Title/range · Big idea · Overview unit the book and
   // sections carry), and the guide-local study-guide extras JSON
   // ({ additions, notesLines }). All three ride create-then-update — the

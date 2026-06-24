@@ -120,7 +120,7 @@ const sermon = {
     },
   }),
 
-  // v27 pericope fields — the same Title · Big idea · Overview unit the book and
+  // v27 sermon fields — the same Title · Big idea · Overview unit the book and
   // sections carry. big_idea is the passage's one-line idea (distinct from the
   // MPT/MPS); overview is the study-guide commentary body the booklet renders.
   big_idea: "Because we are already justified, suffering no longer threatens the believer's hope — it forges it, on the ground of a love God has already poured in.",

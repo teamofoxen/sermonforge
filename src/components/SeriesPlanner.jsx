@@ -30,9 +30,9 @@ import FeedbackFlag from "./FeedbackFlag";
 
 // ── The three screens ─────────────────────────────────────────────────────────
 // The planner is a top-down way to understand the book at three levels —
-// Book ▸ Section ▸ Pericope — yielding the sermon calendar, text-familiarity
-// before preaching, and the study guide's raw material. A pericope IS a sermon
-// IS the scheduled unit (the series→sections→sermons spine). Every level is the
+// Book ▸ Section ▸ Sermon — yielding the sermon calendar, text-familiarity
+// before preaching, and the study guide's raw material. A sermon is one passage,
+// scheduled on one Sunday (the series→sections→sermons spine). Every level is the
 // same unit: Title + range · Big idea · Overview. The four-movement workbench and
 // the melodic-line model were retired in the 2026-06-24 content-model rebuild.
 const PLANNER_TABS = [
@@ -112,7 +112,7 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
   const [loading, setLoading]   = useState(!_fixture);
   const [loadError, setLoadError] = useState(false);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
-  // When the pastor taps "Schedule" on an Outline pericope, remember which one so
+  // When the pastor taps "Schedule" on an Outline sermon, remember which one so
   // the Schedule screen can scroll to it and flash it — the two screens share one
   // date field, so the jump lands on the row that owns it.
   const [scheduleFocusId, setScheduleFocusId] = useState(null);
@@ -157,7 +157,7 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
     localStorage.setItem(`sermonforge_planner_tab_${seriesId}`, tabId);
   }
 
-  // Jump from a pericope to its Schedule row (the "Schedule" button on the
+  // Jump from a sermon to its Schedule row (the "Schedule" button on the
   // Outline). Remembers the sermon so ScheduleTab can scroll to + flash it.
   function goToSchedule(sermonId) {
     setScheduleFocusId(sermonId || null);
@@ -266,7 +266,7 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
     debouncedSectionSave(id, fields);
   }, [debouncedSectionSave]);
 
-  // ── Sermon (pericope) field persistence — debounced + immediate paths ───────
+  // ── Sermon (sermon) field persistence — debounced + immediate paths ───────
   const persistSermon = useCallback((id, fields) => runSave(() => updateSermon(id, fields)), [runSave]);
   const debouncedSermonSave = useDebounce(persistSermon, 800);
   useFlushOnExit(debouncedSermonSave);
@@ -274,7 +274,7 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
   // Debounced edit — for keystroke fields (title, passage, big idea, overview,
   // dates). Flushes on a sermon-id OR field change so the single trailing-args
   // timer never drops an earlier field's write (e.g. title then overview on the
-  // SAME pericope inside 800ms).
+  // SAME sermon inside 800ms).
   const handleSermonField = useCallback((id, fields) => {
     const field = Object.keys(fields)[0];
     const prev = lastSermonEdit.current;
@@ -499,7 +499,7 @@ function CoverageBar({ percent, animate = false }) {
   );
 }
 
-// A read-only picture of how the pericopes partition the series' book: a
+// A read-only picture of how the sermons partition the series' book: a
 // proportional bar + plain notes on gaps, overlaps, out-of-order slots, and any
 // unreadable passage refs. Purely informational (src/utils/coverage.js) — never
 // a gate. Clamped to the declared passage_range when it parses.
@@ -514,7 +514,7 @@ function CoveragePanel({ series, sermons }) {
         background: "var(--parchment-warm)", border: "1px dashed var(--parchment-deep)",
         borderRadius: "var(--radius)", fontSize: "12.5px", color: "var(--ink-ghost)",
       }}>
-        Pick a canonical book in <strong>Book details</strong> above to see how your pericopes cover it.
+        Pick a canonical book in <strong>Book details</strong> above to see how your sermons cover it.
       </div>
     );
   }
@@ -604,23 +604,22 @@ function formatPacingDate(iso) {
 }
 
 // ── Outline Tab ───────────────────────────────────────────────────────────────
-// The book as ONE live nested outline: Book ▸ Section ▸ Pericope, each rung the
+// The book as ONE live nested outline: Book ▸ Section ▸ Sermon, each rung the
 // same unit (Title + range · Big idea · Overview). Replaces the old
 // Understand/Design tabs AND the Overview cockpit — the outline IS the
-// at-a-glance. Draft-row/commit is preserved for new pericopes (createSermon
+// at-a-glance. Draft-row/commit is preserved for new sermons (createSermon
 // throws on an empty name, State #3). AI-free throughout.
 function OutlineTab({
   series, sections, sermons, seriesId,
   onSeriesField, onSelectBook, onSectionField, onSermonField, onSermonDate,
   onSectionsChange, onSermonsChange, onOpenSermon, onNavigate, onGoToSchedule, runSave,
 }) {
-  const [bookDetailsOpen, setBookDetailsOpen] = useState(false);
   const [referenceOpen, setReferenceOpen] = useState(false);
-  // Expanded section / pericope ids. Sections default expanded; pericopes
+  // Expanded section / sermon ids. Sections default expanded; sermons
   // default collapsed (one-line rows the pastor expands to edit).
   const [collapsedSections, setCollapsedSections] = useState(() => new Set());
-  const [expandedPericopes, setExpandedPericopes] = useState(() => new Set());
-  // Draft pericopes — UI-only rows not yet committed to the spine (State #3
+  const [expandedSermons, setExpandedSermons] = useState(() => new Set());
+  // Draft sermons — UI-only rows not yet committed to the spine (State #3
   // forbids createSermon({name:""})). Keyed by their section_id grouping.
   const [drafts, setDrafts] = useState([]);
   const [draftErrors, setDraftErrors] = useState({});
@@ -636,8 +635,8 @@ function OutlineTab({
       return next;
     });
   }
-  function togglePericope(id) {
-    setExpandedPericopes((prev) => {
+  function toggleSermon(id) {
+    setExpandedSermons((prev) => {
       const next = new Set(prev);
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
@@ -663,7 +662,7 @@ function OutlineTab({
   async function deleteSectionRow(id) {
     onSectionsChange((prev) => prev.filter((s) => s.id !== id));
     // delete-section nulls section_id on its sermons — reflect that locally so
-    // those pericopes drop into the Unsectioned group instead of vanishing.
+    // those sermons drop into the Unsectioned group instead of vanishing.
     onSermonsChange((prev) => prev.map((s) => (s.section_id === id ? { ...s, section_id: null } : s)));
     await runSave(() => deleteSection(id));
   }
@@ -678,15 +677,15 @@ function OutlineTab({
     if (!ok) onSectionsChange(await getSectionsBySeries(seriesId));
   }
 
-  // ── Pericope draft / commit ──────────────────────────────────────────────
-  function addPericope(sectionId = null) {
+  // ── Sermon draft / commit ──────────────────────────────────────────────
+  function addSermon(sectionId = null) {
     const id = `draft-${crypto.randomUUID()}`;
     setDrafts((prev) => [...prev, {
       id, _draft: true, series_id: seriesId, section_id: sectionId,
       title: "", passage: "", big_idea: "", overview: "", date: "",
       stage: SERMON_STATUS.InProgress,
     }]);
-    setExpandedPericopes((prev) => new Set(prev).add(id));
+    setExpandedSermons((prev) => new Set(prev).add(id));
   }
   function clearDraftError(id) {
     setDraftErrors((prev) => {
@@ -724,13 +723,13 @@ function OutlineTab({
         onSermonsChange((prev) => [...prev, realSlot]);
         setDrafts((prev) => prev.filter((d) => d.id !== draftId));
         // Carry the expanded state from the draft row to the committed row.
-        setExpandedPericopes((prev) => {
+        setExpandedSermons((prev) => {
           const n = new Set(prev); n.delete(draftId); n.add(newId); return n;
         });
         return newId;
       } catch (e) {
         console.error("[commitDraft]", e);
-        setDraftErrors((prev) => ({ ...prev, [draftId]: e?.message || "Could not create the pericope." }));
+        setDraftErrors((prev) => ({ ...prev, [draftId]: e?.message || "Could not create the sermon." }));
         return null;
       } finally {
         inFlightRef.current.delete(draftId);
@@ -739,7 +738,7 @@ function OutlineTab({
     inFlightRef.current.set(draftId, promise);
     return promise;
   }
-  function handlePericopeField(id, field, value) {
+  function handleSermonRowField(id, field, value) {
     if (isDraftId(id)) {
       setDrafts((prev) => prev.map((s) => (s.id === id ? { ...s, [field]: value } : s)));
       return;
@@ -750,7 +749,7 @@ function OutlineTab({
     if (field === "date") { onSermonDate(id, value); return; }
     onSermonField(id, { [field]: value });
   }
-  async function deletePericope(id) {
+  async function removeSermonRow(id) {
     if (isDraftId(id)) { setDrafts((prev) => prev.filter((s) => s.id !== id)); clearDraftError(id); return; }
     onSermonsChange((prev) => prev.filter((s) => s.id !== id));
     await runSave(() => deleteSermon(id));
@@ -759,10 +758,10 @@ function OutlineTab({
   // Group committed sermons + drafts by section. Drafts merge in so they render
   // in the right place; downstream tabs read `sermons` directly so drafts never
   // leak past the Outline.
-  const allPericopes = [...sermons, ...drafts];
+  const allSermons = [...sermons, ...drafts];
   const bySection = {};
   const unsectioned = [];
-  for (const p of allPericopes) {
+  for (const p of allSermons) {
     if (p.section_id) { (bySection[p.section_id] ||= []).push(p); }
     else unsectioned.push(p);
   }
@@ -772,13 +771,17 @@ function OutlineTab({
       <div className="page-header" style={{ padding: "0 0 4px" }}>
         <div className="page-title">Outline</div>
         <div className="page-subtitle">
-          Understand the book top-down — the book, its sections, and each pericope (a sermon).
-          Every level carries the same three things: a title and range, a one-line big idea, and an overview.
+          Plan the book from the top down in three levels — the book, its sections, and the sermons inside them.
+          Each level holds the same three things: a title and passage range, a one-line big idea, and a short overview.
         </div>
       </div>
 
-      {/* ── The book node — the root of the outline ─────────────────────────── */}
-      <div className="card" style={{ marginTop: "12px", borderLeft: "3px solid var(--gold)" }}>
+      {/* ── BOOK LEVEL — the root of the outline ───────────────────────────── */}
+      <TierBand step={1} label="Book level">
+        Start here. Choose the book you're preaching and set how much of it you'll cover, then write the one big idea
+        of the whole book and a short overview. This frames everything below.
+      </TierBand>
+      <div className="card" style={{ borderLeft: "3px solid var(--gold)" }}>
         <div className="field-group">
           <label className="field-label">Book Title</label>
           <input
@@ -789,31 +792,16 @@ function OutlineTab({
             placeholder="e.g. The Gospel of Luke: Reintroducing Jesus"
           />
         </div>
-        <div className="field-group">
-          <label className="field-label">Big Idea <span style={{ color: "var(--ink-ghost)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(one line)</span></label>
-          <input
-            className="field-input"
-            value={series.big_idea || ""}
-            onChange={(e) => onSeriesField("big_idea", e.target.value)}
-            placeholder="The single idea the whole book sounds — in one sentence."
-          />
-        </div>
-        <div className="field-group" style={{ marginBottom: 0 }}>
-          <label className="field-label">Overview <span style={{ color: "var(--ink-ghost)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(a paragraph)</span></label>
-          <textarea
-            className="field-textarea large"
-            value={series.overview || ""}
-            onChange={(e) => onSeriesField("overview", e.target.value)}
-            onInput={(e) => autoResize(e.target)}
-            ref={(el) => autoResize(el)}
-            placeholder="What is this book, and why does it matter for this congregation? The arc of the whole."
-          />
-        </div>
 
-        {/* Book details — identity + calendar metadata, tucked away so the
-            Title · Big idea · Overview unit stays prominent. */}
-        <Disclosure open={bookDetailsOpen} onToggle={() => setBookDetailsOpen((o) => !o)} label="Book details">
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginTop: "12px" }}>
+        {/* Book details first — which book, and how much of it. This is the
+            setup the rest of the outline hangs on, so it's visible and up top
+            (not tucked in a collapse below the big idea). */}
+        <div className="field-group">
+          <label className="field-label">Book details</label>
+          <p className="field-caption" style={{ margin: "0 0 10px" }}>
+            Which book, and how much of it. Pick a book to fill in the genre and passage span — both stay editable.
+          </p>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
             <div className="field-group" style={{ marginBottom: 0 }}>
               <label className="field-label" htmlFor="outline-book">Canonical Book</label>
               <select id="outline-book" className="field-input" value={series.book_id || ""} onChange={(e) => onSelectBook(e.target.value)}>
@@ -875,7 +863,28 @@ function OutlineTab({
           <div style={{ marginTop: "16px" }}>
             <CoveragePanel series={series} sermons={sermons} />
           </div>
-        </Disclosure>
+        </div>
+
+        <div className="field-group">
+          <label className="field-label">Big Idea <span style={{ color: "var(--ink-ghost)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(one line)</span></label>
+          <input
+            className="field-input"
+            value={series.big_idea || ""}
+            onChange={(e) => onSeriesField("big_idea", e.target.value)}
+            placeholder="The single idea the whole book sounds — in one sentence."
+          />
+        </div>
+        <div className="field-group" style={{ marginBottom: 0 }}>
+          <label className="field-label">Overview <span style={{ color: "var(--ink-ghost)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(a paragraph)</span></label>
+          <textarea
+            className="field-textarea large"
+            value={series.overview || ""}
+            onChange={(e) => onSeriesField("overview", e.target.value)}
+            onInput={(e) => autoResize(e.target)}
+            ref={(el) => autoResize(el)}
+            placeholder="What is this book, and why does it matter for this congregation? The arc of the whole."
+          />
+        </div>
 
         {/* Reference — the pasted commentary outline (structural_outline),
             collapsed. The book's literary shape, kept for reference. */}
@@ -896,8 +905,12 @@ function OutlineTab({
         </Disclosure>
       </div>
 
-      {/* ── Sections (and their pericopes) ─────────────────────────────────── */}
-      <div style={{ marginTop: "20px", display: "flex", flexDirection: "column", gap: "12px" }}>
+      {/* ── SECTION LEVEL — the book's major movements ─────────────────────── */}
+      <TierBand step={2} label="Section level">
+        Divide the book into its major movements. Give each section a title and passage range, its one-line big idea,
+        and a short overview. Your sermons live inside these sections — that's the next level down.
+      </TierBand>
+      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
         {sections.map((section, idx) => (
           <SectionNode
             key={section.id}
@@ -906,17 +919,17 @@ function OutlineTab({
             total={sections.length}
             collapsed={collapsedSections.has(section.id)}
             justCreated={justCreatedSectionId === section.id}
-            pericopes={bySection[section.id] || []}
-            expandedPericopes={expandedPericopes}
+            sermons={bySection[section.id] || []}
+            expandedSermons={expandedSermons}
             onToggle={() => toggleSection(section.id)}
             onField={(field, value) => onSectionField(section.id, { [field]: value })}
             onDelete={() => deleteSectionRow(section.id)}
             onMove={(dir) => moveSection(section.id, dir)}
-            onAddPericope={() => addPericope(section.id)}
-            onTogglePericope={togglePericope}
-            onPericopeField={handlePericopeField}
-            onCommitPericope={commitDraft}
-            onDeletePericope={deletePericope}
+            onAddSermon={() => addSermon(section.id)}
+            onToggleSermon={toggleSermon}
+            onSermonRowField={handleSermonRowField}
+            onCommitSermon={commitDraft}
+            onDeleteSermon={removeSermonRow}
             draftErrors={draftErrors}
             onClearDraftError={clearDraftError}
             onOpenSermon={onOpenSermon}
@@ -924,31 +937,33 @@ function OutlineTab({
           />
         ))}
 
-        {/* Unsectioned pericopes — always shown when present; also the home for
-            pericopes when the book has no sections yet. */}
+        {/* Sermons with no section yet — a holding area until they're filed
+            under a section (or the home for sermons when there are no sections). */}
         {(unsectioned.length > 0 || sections.length === 0) && (
           <div className="card">
-            <div className="card-header" style={{ marginBottom: unsectioned.length ? "12px" : 0 }}>
-              <div>
+            <div className="card-header" style={{ marginBottom: unsectioned.length ? "12px" : 0, alignItems: "flex-start" }}>
+              <div style={{ maxWidth: "640px" }}>
                 <div className="card-title" style={{ color: sections.length ? "var(--ink-soft)" : "var(--ink)" }}>
-                  {sections.length ? "Unsectioned pericopes" : "Pericopes"}
+                  {sections.length ? "Sermons not yet in a section" : "Sermons"}
                 </div>
-                {sections.length === 0 && (
-                  <p className="field-caption" style={{ marginTop: "2px" }}>Each pericope is a sermon. Add sections above to group them.</p>
-                )}
+                <p className="field-caption" style={{ marginTop: "2px" }}>
+                  {sections.length
+                    ? "These belong to the series but aren't filed under a section yet — a holding area. Open one to write it."
+                    : "Add the sermons you'll preach — one per passage. Add sections above when you want to group them into movements."}
+                </p>
               </div>
-              <SecondaryButton size="sm" onClick={() => addPericope(null)}>+ Add pericope</SecondaryButton>
+              <SecondaryButton size="sm" onClick={() => addSermon(null)}>+ Add sermon</SecondaryButton>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
               {unsectioned.map((p) => (
-                <PericopeNode
+                <SermonNode
                   key={p.id}
-                  pericope={p}
-                  expanded={expandedPericopes.has(p.id)}
-                  onToggle={() => togglePericope(p.id)}
-                  onField={handlePericopeField}
+                  sermon={p}
+                  expanded={expandedSermons.has(p.id)}
+                  onToggle={() => toggleSermon(p.id)}
+                  onField={handleSermonRowField}
                   onCommit={commitDraft}
-                  onDelete={deletePericope}
+                  onDelete={removeSermonRow}
                   commitError={draftErrors[p.id]}
                   onClearError={clearDraftError}
                   onOpenSermon={onOpenSermon}
@@ -963,6 +978,34 @@ function OutlineTab({
           <SecondaryButton size="sm" onClick={addSection}>+ Add section</SecondaryButton>
         </div>
       </div>
+    </div>
+  );
+}
+
+// A labeled tier band — the on-screen signpost for each level of the outline
+// (Book ▸ Section ▸ Sermon). The numbered label + a plain "what to do here" line
+// make the screen teach itself, instead of leaving the model to the
+// How-this-works modal (low software confidence is a binding CORE constraint —
+// labeled beats minimal).
+function TierBand({ step, label, children }) {
+  return (
+    <div style={{ marginTop: "26px", marginBottom: "10px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        <span style={{
+          display: "inline-flex", alignItems: "center", justifyContent: "center",
+          width: "22px", height: "22px", borderRadius: "50%", flexShrink: 0,
+          background: "var(--gold)", color: "var(--white)",
+          fontFamily: "var(--font-mono)", fontWeight: 700, fontSize: "12px",
+        }}>{step}</span>
+        <span style={{
+          fontFamily: "var(--font-mono)", fontSize: "12px", fontWeight: 700,
+          letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--ink)",
+        }}>{label}</span>
+      </div>
+      <p style={{
+        margin: "6px 0 0 32px", fontFamily: "var(--font-serif)", fontSize: "13.5px",
+        color: "var(--ink-soft)", lineHeight: 1.55, maxWidth: "820px",
+      }}>{children}</p>
     </div>
   );
 }
@@ -990,11 +1033,11 @@ function Disclosure({ open, onToggle, label, children }) {
 // ── Section node ──────────────────────────────────────────────────────────────
 // One collapsible card per section, indented under the book. Header shows the
 // number, title, and range with reorder/delete; expanding reveals the section's
-// own Title · range · Big idea · Overview unit AND its nested pericopes.
+// own Title · range · Big idea · Overview unit AND its nested sermons.
 function SectionNode({
-  section, index, total, collapsed, justCreated, pericopes, expandedPericopes,
-  onToggle, onField, onDelete, onMove, onAddPericope, onTogglePericope,
-  onPericopeField, onCommitPericope, onDeletePericope, draftErrors,
+  section, index, total, collapsed, justCreated, sermons, expandedSermons,
+  onToggle, onField, onDelete, onMove, onAddSermon, onToggleSermon,
+  onSermonRowField, onCommitSermon, onDeleteSermon, draftErrors,
   onClearDraftError, onOpenSermon, onGoToSchedule,
 }) {
   const cardRef = useRef(null);
@@ -1031,7 +1074,7 @@ function SectionNode({
           <span style={{ fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--ink-soft)" }}>{section.passage_range}</span>
         )}
         <span style={{ fontSize: "11px", color: "var(--ink-ghost)" }}>
-          {pericopes.length} pericope{pericopes.length === 1 ? "" : "s"}
+          {sermons.length} sermon{sermons.length === 1 ? "" : "s"}
         </span>
         <div style={{ display: "flex", gap: "2px" }}>
           {index > 0 && <IconButton aria-label="Move section up" onClick={(e) => { e.stopPropagation(); onMove(-1); }} style={chevronBtnStyle} title="Move up">↑</IconButton>}
@@ -1070,29 +1113,37 @@ function SectionNode({
             />
           </div>
 
-          {/* Nested pericopes */}
+          {/* Nested sermons — the SERMON LEVEL, kept inside its section. */}
           <div style={{ borderTop: "1px solid var(--parchment-deep)", paddingTop: "12px", marginLeft: "12px", borderLeft: "2px solid var(--parchment-deep)", paddingLeft: "12px", display: "flex", flexDirection: "column", gap: "8px" }}>
-            {pericopes.length === 0 && (
+            <div>
+              <div style={{ fontFamily: "var(--font-mono)", fontSize: "11px", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--ink-soft)" }}>
+                Sermon level · sermons in this section
+              </div>
+              <p className="field-caption" style={{ margin: "2px 0 0" }}>
+                One sermon per passage. Each has its own title, big idea, overview, and date — open it to write it.
+              </p>
+            </div>
+            {sermons.length === 0 && (
               <div style={{ padding: "12px", background: "var(--parchment-warm)", borderRadius: "var(--radius)", textAlign: "center", color: "var(--ink-ghost)", fontSize: "13px", fontFamily: "var(--font-serif)" }}>
-                No pericopes in this section yet.
+                No sermons in this section yet.
               </div>
             )}
-            {pericopes.map((p) => (
-              <PericopeNode
+            {sermons.map((p) => (
+              <SermonNode
                 key={p.id}
-                pericope={p}
-                expanded={expandedPericopes.has(p.id)}
-                onToggle={() => onTogglePericope(p.id)}
-                onField={onPericopeField}
-                onCommit={onCommitPericope}
-                onDelete={onDeletePericope}
+                sermon={p}
+                expanded={expandedSermons.has(p.id)}
+                onToggle={() => onToggleSermon(p.id)}
+                onField={onSermonRowField}
+                onCommit={onCommitSermon}
+                onDelete={onDeleteSermon}
                 commitError={draftErrors[p.id]}
                 onClearError={onClearDraftError}
                 onOpenSermon={onOpenSermon}
                 onGoToSchedule={onGoToSchedule}
               />
             ))}
-            <SecondaryButton size="sm" onClick={onAddPericope} style={{ alignSelf: "flex-start", marginTop: "2px" }}>+ Add pericope</SecondaryButton>
+            <SecondaryButton size="sm" onClick={onAddSermon} style={{ alignSelf: "flex-start", marginTop: "2px" }}>+ Add sermon</SecondaryButton>
           </div>
         </div>
       )}
@@ -1100,11 +1151,11 @@ function SectionNode({
   );
 }
 
-// ── Pericope node ─────────────────────────────────────────────────────────────
-// One pericope = one sermon = one scheduled unit. Collapsed: passage · title ·
+// ── Sermon node ─────────────────────────────────────────────────────────────
+// One sermon = one passage = one scheduled Sunday. Collapsed: passage · title ·
 // date chip · Schedule jump · Open. Expanded: passage · title · big idea ·
 // overview. Draft rows commit on title blur/Enter (State #3 deferral).
-function PericopeNode({ pericope: p, expanded, onToggle, onField, onCommit, onDelete, commitError, onClearError, onOpenSermon, onGoToSchedule }) {
+function SermonNode({ sermon: p, expanded, onToggle, onField, onCommit, onDelete, commitError, onClearError, onOpenSermon, onGoToSchedule }) {
   const isDraft = !!p._draft;
   const rowRef = useRef(null);
   const titleRef = useRef(null);
@@ -1249,7 +1300,7 @@ function PericopeNode({ pericope: p, expanded, onToggle, onField, onCommit, onDe
 }
 
 // ── Schedule Tab ──────────────────────────────────────────────────────────────
-// Lays each pericope (sermon) on a Sunday. The date is SINGLE-SOURCE on the
+// Lays each sermon (sermon) on a Sunday. The date is SINGLE-SOURCE on the
 // sermon — edits here reflect live on the Outline date chip and vice versa
 // (no separate snapshot that can drift). Suggest Sundays is one explicit bulk
 // gesture; manual edits autosave like any other field. AI scheduling advisor
@@ -1308,7 +1359,7 @@ function ScheduleTab({ series, sermons, calNotes, onSeriesField, onSermonDate, o
       <div className="page-header" style={{ padding: "0 0 4px" }}>
         <div className="page-title">Schedule</div>
         <div className="page-subtitle">
-          Lay each pericope on a Sunday. Seasons and your special-date notes ride along so nothing lands where it shouldn't.
+          Lay each sermon on a Sunday. Seasons and your special-date notes ride along so nothing lands where it shouldn't.
           Dates are saved as you go and show on the Outline.
         </div>
       </div>
@@ -1337,7 +1388,7 @@ function ScheduleTab({ series, sermons, calNotes, onSeriesField, onSermonDate, o
           padding: "32px", background: "var(--parchment-warm)", border: "1px solid var(--parchment-deep)",
           borderRadius: "var(--radius-lg)", textAlign: "center", color: "var(--ink-ghost)", fontSize: "14px",
         }}>
-          Add pericopes in{" "}
+          Add sermons in{" "}
           <TextButton onClick={() => onNavigate?.("book-outline")} style={{ fontSize: "inherit", padding: 0, verticalAlign: "baseline" }}>Outline</TextButton>{" "}
           first.
         </div>
@@ -1512,7 +1563,7 @@ function StudyGuideTab({ series, sections, sermons, seriesId, onSermonExtras, on
         </div>
 
         {sermons.length === 0 && (
-          <SgEmptyHint>Add pericopes in <TextButton onClick={() => onNavigate?.("book-outline")} style={{ fontSize: "inherit", padding: 0, verticalAlign: "baseline" }}>Outline</TextButton> to build the booklet's pages.</SgEmptyHint>
+          <SgEmptyHint>Add sermons in <TextButton onClick={() => onNavigate?.("book-outline")} style={{ fontSize: "inherit", padding: 0, verticalAlign: "baseline" }}>Outline</TextButton> to build the booklet's pages.</SgEmptyHint>
         )}
 
         {/* Section parts + their sermon pages */}
@@ -1647,7 +1698,7 @@ function StudyGuidePage({ sermon, onSermonExtras }) {
       )}
       {sermon.overview?.trim()
         ? <SgBody text={sermon.overview} />
-        : <SgEmptyHint>No overview yet — add it on this pericope in Outline.</SgEmptyHint>}
+        : <SgEmptyHint>No overview yet — add it on this sermon in Outline.</SgEmptyHint>}
 
       {/* Pastor-authored additions */}
       {extras.additions.length > 0 && (
@@ -1704,8 +1755,8 @@ function StudyGuidePage({ sermon, onSermonExtras }) {
 function SeriesHowItWorksModal({ onClose }) {
   const dialogRef = useModalA11y(onClose);
   const screens = [
-    { name: "Outline", body: "Understand the book top-down — the book, its sections, and each pericope (a sermon). Every level carries a title and range, a one-line big idea, and an overview." },
-    { name: "Schedule", body: "Lay each pericope on a Sunday. Liturgical seasons and your special-date notes ride along. Dates save as you go and show on the Outline." },
+    { name: "Outline", body: "Plan the book from the top down in three labeled levels — Book, Section, and the Sermons inside each section. Every level holds a title and passage range, a one-line big idea, and a short overview." },
+    { name: "Schedule", body: "Lay each sermon on a Sunday. Liturgical seasons and your special-date notes ride along. Dates save as you go and show on the Outline." },
     { name: "Study guide", body: "Build a congregational booklet from your outline — an introduction, a part per section, and a page per sermon. Add questions, cross-references, and quotes; export to Word." },
   ];
   return (
@@ -1717,9 +1768,9 @@ function SeriesHowItWorksModal({ onClose }) {
         </div>
         <div className="modal-body">
           <p style={{ fontSize: "14px", color: "var(--ink-soft)", marginBottom: "20px", fontFamily: "var(--font-serif)", lineHeight: 1.6 }}>
-            Plan a book as one nested outline at three levels — Book ▸ Section ▸ Pericope — where every level
-            is the same unit: a title and range, a one-line big idea, and an overview. A pericope is a sermon
-            is a scheduled Sunday. Three screens:
+            Plan a book as one nested outline at three levels — Book ▸ Section ▸ Sermon — where every level
+            is the same unit: a title and range, a one-line big idea, and an overview. A sermon is one passage
+            on one Sunday. Three screens:
           </p>
           <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
             {screens.map((s, i) => (

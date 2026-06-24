@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-06-24 — Series Planner Outline: labeled levels + pericope→sermon rename
+
+- The Outline now signposts itself — numbered tier bands (**Book level · Section level · Sermon level**), each with a plain "what to do here" line, instead of three identical unlabeled forms.
+- **Book details** moved to the top and made visible, so you choose the book and its range before writing the book's big idea (it was collapsed in the middle).
+- Sermons stay nested under their section beneath a "Sermon level" sub-label; the holding area is relabeled "Sermons not yet in a section" with an explanation.
+- Renamed **"pericope" → "sermon"** across the product, code, and live reference docs (no seminary jargon in the UI); the frozen charter + buildlog are left as historical records.
+- eslint 0, 234 tests, drift PASS; preview screenshots confirm the three labeled tiers render clean.
+
+---
+
 ## 2026-06-24 — Series Planner rebuild: audit remediation
 
 - Fixed a debounce field-clobber — a rapid two-field edit on the same pericope / section / series no longer drops the first field's saved write (flush on field-or-id change); `addSection` now routes through `runSave` so a failed create shows Save-failed + Retry.

@@ -6,7 +6,7 @@ import SeriesPlanner from "./SeriesPlanner";
 // Route: ?planner  (optionally ?planner=schedule|study-guide; default outline)
 //
 // Seed mirrors the pastor's real artifact (Jesus of Luke), so the preview shows
-// the three-level model on its native shape: Book ▸ Section ▸ Pericope, each
+// the three-level model on its native shape: Book ▸ Section ▸ Sermon, each
 // level Title + range · Big idea · Overview.
 
 const SERIES = {

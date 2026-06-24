@@ -109,10 +109,10 @@ describe("Series spine: create / cascade / counts / ordering", () => {
     expect(r.clause).toBe("State #3");
   });
 
-  // v27 — Series Planner content-model rebuild. A pericope is a sermon; its
+  // v27 — Series Planner content-model rebuild. A sermon is one scheduled passage; its
   // Title · Big idea · Overview unit persists via create-then-update (the
   // create INSERT is never widened — slot draft/commit ruling).
-  it("pericope big_idea + overview are unset at create and persist via update-sermon (create-then-update)", async () => {
+  it("sermon big_idea + overview are unset at create and persist via update-sermon (create-then-update)", async () => {
     const seriesId = await mkSeries("Luke");
     const id = await mkSermon({ name: "Through the eyes of Luke", series_id: seriesId });
 

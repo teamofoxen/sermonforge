@@ -9,9 +9,9 @@
 > ("2026-06-24 — Content-model rebuild").
 
 The planner is a top-down way to **understand the book at three levels —
-Book ▸ Section ▸ Pericope** — producing three outputs: the sermon calendar,
+Book ▸ Section ▸ Sermon** — producing three outputs: the sermon calendar,
 familiarity with the text before preaching, and the study guide's raw material.
-A pericope **is** a sermon **is** the scheduled unit (the existing
+A sermon **is** one passage, scheduled on one Sunday (the existing
 series→sections→sermons spine). **Every level is the same unit: Title + range ·
 Big idea (one line) · Overview (paragraph).** The whole series backend (tables,
 spine CRUD, the church-calendar engine, the study-guide `.docx` exporter) was
@@ -59,15 +59,15 @@ human label is "Outline"). A remembered `localStorage` tab id for a removed tab
     commentary outline (`structural_outline`).
   - *Section nodes* (`SectionNode`) — each its own Title · range · Big idea ·
     Overview unit, with reorder (↑/↓, recompacts `sort_order`) and delete, and a
-    nested list of its pericopes plus "+ Add pericope".
-  - *Pericope nodes* (`PericopeNode`) — each is a sermon: passage · title · big
+    nested list of its sermons plus "+ Add sermon".
+  - *Sermon nodes* (`SermonNode`) — each is a sermon: passage · title · big
     idea · overview, an editable **Date** field (single-source — see Schedule), a
     read-only date chip in the collapsed header, a **Schedule** jump (scrolls to
     + flashes that row on the Schedule screen), and **Open** (`onOpenSermon`).
-    New pericopes use the draft-row/commit pattern (§5). "+ Add section" sits
-    under the book; unsectioned pericopes render in their own group (and are the
+    New sermons use the draft-row/commit pattern (§5). "+ Add section" sits
+    under the book; unsectioned sermons render in their own group (and are the
     only home when the book has no sections yet).
-- **Schedule** (`ScheduleTab`) — lays each pericope on a Sunday. The date is
+- **Schedule** (`ScheduleTab`) — lays each sermon on a Sunday. The date is
   **single-source on the sermon**: per-row edits autosave through the shared
   debounced `updateSermon` path and reflect live on the Outline (and vice versa)
   — there is no separate `schedule` snapshot. "Suggest Sundays"
@@ -100,7 +100,7 @@ per series via the client-local `sermonforge_planner_intro_<seriesId>` flag
 
 `createSeries` writes **only** `name`/`year`/`color`. Every rich field persists
 afterward via **debounced `updateSeries`**; section fields via debounced
-`updateSection`; pericope fields via debounced `updateSermon`. Section- and
+`updateSection`; sermon fields via debounced `updateSermon`. Section- and
 sermon-field savers flush a pending write when the edited id changes, so jumping
 between rows can't drop an earlier entity's last keystrokes.
 
@@ -108,20 +108,20 @@ between rows can't drop an earlier entity's last keystrokes.
 `SERMON_COLUMNS` / `SERIES_COLUMNS` / `SECTION_COLUMNS` — mirrored across
 `src/core/contracts.ts`, `electron/contracts.cjs`, and the test fixture
 `tests/contracts/_helpers/test-spine.ts` (the allowlist-sync test enforces it);
-all writes gate through `buildUpdate` in `electron/main.js`. The pericope unit's
+all writes gate through `buildUpdate` in `electron/main.js`. The sermon unit's
 `big_idea` / `overview` and the guide-local `study_guide_extras` are in
 `SERMON_COLUMNS` (v27); the retired book-study + melodic-line columns left
 `SERIES_COLUMNS` (v27) but remain in the DB as backup.
 
-## 5. Pericope draft / commit
+## 5. Sermon draft / commit
 
-A pericope stays **UI-only** (`id: "draft-…"`, no DB row) until its first
+A sermon stays **UI-only** (`id: "draft-…"`, no DB row) until its first
 non-empty Title, because `createSermon` throws on an empty name (State Contract
 #3). On commit: the `create-sermon` INSERT omits `big_idea`/`overview`; if the
 pastor typed either before committing, `commitDraft` follows with an
 `updateSermon` (create-then-update). Post-commit edits go through the debounced
 `updateSermon`. `delete-section` nulls `section_id` on its sermons, so orphaned
-pericopes fall into the unsectioned group (and "Remaining" in the export).
+sermons fall into the unsectioned group (and "Remaining" in the export).
 `onOpenSermon` takes just the sermon id — the planner stands alone for v1.
 
 ## 6. Study Guide export (`.docx`)

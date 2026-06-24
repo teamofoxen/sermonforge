@@ -184,7 +184,7 @@ SermonForge/
         ├── EsvKeyModal.jsx          — First-run ESV API key entry modal
         ├── NewSermonModal.jsx
         ├── Planning.jsx             — Series Planner front door: series list / picker (VIEW.Planning; sidebar "Series Planning"). Revived 2026-06-21
-        ├── SeriesPlanner.jsx        — three-screen series planner (Outline · Schedule · Study guide); top-down book understanding at Book ▸ Section ▸ Pericope, a pericope IS a sermon row; ends in the Study Guide .docx export; reached via openPlanner(id) (VIEW.SeriesPlanner). AI-free
+        ├── SeriesPlanner.jsx        — three-screen series planner (Outline · Schedule · Study guide); top-down book understanding at Book ▸ Section ▸ Sermon, where each sermon is a row in the sermons table; ends in the Study Guide .docx export; reached via openPlanner(id) (VIEW.SeriesPlanner). AI-free
         ├── SeriesPlannerFixture.jsx — preview fixture for SeriesPlanner (?planner route)
         ├── NewSeriesModal.jsx       — create-series front door (name / year / color)
         ├── SetupScreen.jsx          — First-run setup (ESV key + telemetry preference)

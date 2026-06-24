@@ -1170,14 +1170,14 @@ function runMigrations() {
 
   if (version < 27) {
     // v27 (Series Planner content-model rebuild) — the planner becomes the
-    // pastor's real three-level series document (Book ▸ Section ▸ Pericope),
+    // pastor's real three-level series document (Book ▸ Section ▸ Sermon),
     // every level the same unit: Title + range · Big idea · Overview.
     //
-    // (a) Pericope-level big idea + overview on the sermon row. `big_idea` was
+    // (a) Sermon-level big idea + overview on the sermon row. `big_idea` was
     //     dropped from sermons back in v11 (superseded then by mpt/mps); it
     //     returns here with fresh semantics — the one-line big idea of a
-    //     pericope, distinct from the sermon's MPT/MPS. `overview` is the
-    //     pericope's paragraph (its study-guide commentary body). Both ride the
+    //     sermon, distinct from the sermon's MPT/MPS. `overview` is the
+    //     sermon's paragraph (its study-guide commentary body). Both ride the
     //     create-then-update path: they are in SERMON_COLUMNS so debounced
     //     update-sermon writes gate through buildUpdate; the create-sermon
     //     INSERT is deliberately NOT widened (slot draft/commit ruling).
