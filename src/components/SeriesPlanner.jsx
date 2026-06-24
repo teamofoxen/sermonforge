@@ -203,6 +203,30 @@ function MovementFrame({ movementId }) {
   );
 }
 
+// The forward affordance at a movement's foot — the planner's analog of the
+// sermon walk's Next chevron (SermonWritingSurface). It advances the WHOLE
+// movement at once (never one field at a time — breadth-first macro work keeps
+// its board), is ALWAYS enabled (pure navigation, never gated on completeness),
+// and makes NO closure claim ("Continue to …", not "Mark done"). The last
+// movement has no next and renders nothing — Overview is the arrival, and its
+// terminal action is the Study Guide, not a "continue".
+function MovementFooter({ movementId, onNavigate }) {
+  const idx = PLANNER_MOVEMENTS.findIndex((m) => m.id === movementId);
+  const next = idx >= 0 ? PLANNER_MOVEMENTS[idx + 1] : null;
+  if (!next || !onNavigate) return null;
+  return (
+    <div style={{
+      display: "flex", justifyContent: "flex-end",
+      marginTop: "32px", paddingTop: "20px",
+      borderTop: "1px solid var(--parchment-deep)",
+    }}>
+      <SecondaryButton onClick={() => onNavigate(next.id)}>
+        Continue to {next.label} →
+      </SecondaryButton>
+    </div>
+  );
+}
+
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture }) {
   // _fixture — preview seam (mirrors SermonWorkspace's _fixtureSermon). When
@@ -528,6 +552,7 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
             series={series}
             onChange={handleSeriesField}
             onSelectBook={handleSelectBook}
+            onNavigate={handleTabChange}
           />
         )}
         {activeTab === "overview" && (
@@ -547,6 +572,7 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
             sermons={sermons}
             calNotes={calNotes}
             onChange={handleSeriesField}
+            onNavigate={handleTabChange}
             onSermonsChange={setSermons}
             schedule={schedule}
             onScheduleChange={setSchedule}
@@ -557,6 +583,7 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
           <DesignTab
             series={series}
             onChange={handleSeriesField}
+            onNavigate={handleTabChange}
             sections={sections}
             sermons={sermons}
             seriesId={seriesId}
@@ -582,7 +609,7 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
 // AI-FREE throughout: every field is empty until the pastor types; nothing is
 // generated, prefilled, suggested, or scored. Persists through the debounced
 // updateSeries spine via the `onChange` prop the shell owns.
-function BookStudyTab({ series, onChange, onSelectBook }) {
+function BookStudyTab({ series, onChange, onSelectBook, onNavigate }) {
   // One debounced write of the whole melodic_evidence JSON blob: merge the
   // changed slot into the parsed object and persist the stringified result
   // through the same updateSeries path every other field uses (create-then-
@@ -739,6 +766,7 @@ function BookStudyTab({ series, onChange, onSelectBook }) {
       {/* series_motivation is authored in the Design hinge, not here — the
           transitional editor that lived here was removed at the tab collapse. */}
 
+      <MovementFooter movementId="book-study" onNavigate={onNavigate} />
     </div>
   );
 }
@@ -1765,7 +1793,7 @@ function SlotRow({ slot, index, onChange, onDelete, onCommit, commitError, onCle
 // worksheet, no suggestion — every field is the pastor's own, on its existing
 // persistence path. Three bands, top to bottom.
 function DesignTab({
-  series, onChange, sections, sermons, seriesId,
+  series, onChange, onNavigate, sections, sermons, seriesId,
   onSectionsChange, onSermonsChange, onOpenSermon, runSave,
 }) {
   return (
@@ -1892,6 +1920,8 @@ function DesignTab({
           runSave={runSave}
         />
       </div>
+
+      <MovementFooter movementId="design" onNavigate={onNavigate} />
     </div>
   );
 }
@@ -1899,7 +1929,7 @@ function DesignTab({
 // Schedules the series' sermon slots onto Sundays, honouring church-calendar
 // seasons and the preacher's special-date notes. AI scheduling advisor removed
 // (constitutional no-direct-ai); the date engine is preserved verbatim.
-function CalendarTab({ series, sections, sermons, calNotes, onChange, onSermonsChange, schedule, onScheduleChange, scheduleDirty }) {
+function CalendarTab({ series, sections, sermons, calNotes, onChange, onNavigate, onSermonsChange, schedule, onScheduleChange, scheduleDirty }) {
   const [calendarSaving, setCalendarSaving] = useState(false);
   const [calendarSaveMsg, setCalendarSaveMsg] = useState(""); // "" | "saved" | "error"
 
@@ -2100,6 +2130,8 @@ function CalendarTab({ series, sections, sermons, calNotes, onChange, onSermonsC
             </div>
           </>
         )}
+
+        <MovementFooter movementId="calendar" onNavigate={onNavigate} />
       </div>
     </>
   );
