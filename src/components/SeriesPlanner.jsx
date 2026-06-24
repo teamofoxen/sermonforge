@@ -2269,25 +2269,30 @@ function SeriesHowItWorksModal({ onClose }) {
             fontSize: "13px", color: "var(--ink-ghost)",
             marginBottom: "24px", fontFamily: "var(--font-serif)",
           }}>Plan and build a sermon series through four movements, each feeding the next:
-            Understand — read the book and hear its melodic line; Design — make the series
-            from the line; Schedule — lay the sermons on the calendar; Overview — the series
-            at a glance.</p>
+            {" "}{PLANNER_MOVEMENTS[0].label} — read the book and hear its melodic line;
+            {" "}{PLANNER_MOVEMENTS[1].label} — make the series from the line;
+            {" "}{PLANNER_MOVEMENTS[2].label} — lay the sermons on the calendar;
+            {" "}{PLANNER_MOVEMENTS[3].label} — the series at a glance.</p>
 
           <div style={{ overflowX: "auto" }}>
             <svg viewBox="0 0 1080 224" style={{ width: "100%", height: "auto", display: "block" }}>
 
-              {/* ── Movement boxes (4, in workflow order) ───────────────────────── */}
+              {/* ── Movement boxes (4, in workflow order) — labels bound to
+                  PLANNER_MOVEMENTS by position so the diagram's movement names
+                  share the single source the rail/frames/footer/place-line use
+                  (Surface #1, one vocabulary). Geometry + the finer sub-item
+                  boxes below stay literal (no PLANNER_MOVEMENTS counterpart). ──── */}
               <rect x="10" y="16" width="230" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
-              <text x="125" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "var(--font-serif)", fontWeight: 600 }}>Understand</text>
+              <text x="125" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "var(--font-serif)", fontWeight: 600 }}>{PLANNER_MOVEMENTS[0].label}</text>
 
               <rect x="270" y="16" width="230" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
-              <text x="385" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "var(--font-serif)", fontWeight: 600 }}>Design</text>
+              <text x="385" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "var(--font-serif)", fontWeight: 600 }}>{PLANNER_MOVEMENTS[1].label}</text>
 
               <rect x="530" y="16" width="230" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
-              <text x="645" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "var(--font-serif)", fontWeight: 600 }}>Schedule</text>
+              <text x="645" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "var(--font-serif)", fontWeight: 600 }}>{PLANNER_MOVEMENTS[2].label}</text>
 
               <rect x="790" y="16" width="230" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
-              <text x="905" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "var(--font-serif)", fontWeight: 600 }}>Overview</text>
+              <text x="905" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "var(--font-serif)", fontWeight: 600 }}>{PLANNER_MOVEMENTS[3].label}</text>
 
               {/* ── Forward-flow arrows between movements ───────────────────────── */}
               <text x="255" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-ghost)", fontSize: "14px" }}>→</text>
