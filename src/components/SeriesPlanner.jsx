@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef, Fragment } from "react";
 import { useDebounce, useFlushOnExit } from "../utils/hooks";
 import { runRegisteredFlushes } from "../utils/closeFlush";
 import { useModalA11y } from "../utils/useModalA11y";
@@ -855,6 +855,56 @@ function GlanceCard({ label, target, onTap, filled, children }) {
   );
 }
 
+// The arc rail — the planner's at-a-glance MAP of the whole season, shown atop
+// the Overview cockpit. Each movement is a tap-to-jump node carrying a neutral
+// PresenceDot (filled = that movement has content). This is the map-for-free-
+// navigation half of the sermon walk's map, in the macro headspace: whole arc
+// visible, "you are here" marked, one tap to anywhere. It is deliberately NOT a
+// progress meter — no %, no score, no count, no ordering pressure; presence and
+// free navigation only (the cockpit's standing not-a-grade contract holds).
+function PlannerArcRail({ presenceById, currentId, onNavigate }) {
+  return (
+    <div style={{ display: "flex", alignItems: "stretch", gap: "6px", marginBottom: "24px" }}>
+      {PLANNER_MOVEMENTS.map((m, i) => {
+        const isCurrent = m.id === currentId;
+        const jump = () => onNavigate?.(m.id);
+        return (
+          <Fragment key={m.id}>
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={jump}
+              onKeyDown={buttonKeydown(jump)}
+              aria-current={isCurrent ? "page" : undefined}
+              title={`Open ${m.label}`}
+              style={{
+                flex: "1 1 0", minWidth: 0, cursor: "pointer",
+                padding: "10px 12px", borderRadius: "var(--radius)",
+                background: isCurrent ? "var(--parchment-warm)" : "var(--white)",
+                border: isCurrent ? "1px solid var(--gold)" : "1px solid var(--parchment-deep)",
+                display: "flex", flexDirection: "column", gap: "4px",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <PresenceDot filled={!!presenceById[m.id]} />
+                <span style={{ fontFamily: "var(--font-serif)", fontSize: "13px", fontWeight: 600, color: "var(--ink)" }}>
+                  {m.label}
+                </span>
+              </div>
+              <span style={{ fontSize: "11px", color: "var(--ink-ghost)" }}>
+                {isCurrent ? "You are here" : `→ ${m.outcome}`}
+              </span>
+            </div>
+            {i < PLANNER_MOVEMENTS.length - 1 && (
+              <span aria-hidden="true" style={{ alignSelf: "center", color: "var(--ink-ghost)", fontSize: "12px" }}>→</span>
+            )}
+          </Fragment>
+        );
+      })}
+    </div>
+  );
+}
+
 function OverviewTab({ series, onChange, onNavigate, onOpenStudyGuide, sermons = [], calNotes = [] }) {
   // Read-only readouts from the existing engines — rendered, not re-implemented.
   const cov = computeCoverage(series.book_id, sermons, series.passage_range);
@@ -862,6 +912,16 @@ function OverviewTab({ series, onChange, onNavigate, onOpenStudyGuide, sermons =
   const hasCoverage = !cov.noBook && !!book;
   const hasSlots = sermons.length > 0;
   const hasDates = !!(series.start_date || series.end_date);
+
+  // Presence per movement for the arc-rail map — filled = that movement carries
+  // content. Presence, not a grade: each is a plain boolean, never summed into a
+  // count or percent (the cockpit's not-a-meter contract).
+  const presenceById = {
+    "book-study": !!(series.emerging_big_idea?.trim() || series.book_id || series.book_argument?.trim() || series.book_background?.trim()),
+    "design":     !!(series.big_idea?.trim() || series.overview?.trim() || hasSlots),
+    "calendar":   hasDates,
+    "overview":   !!(series.title?.trim() || series.description?.trim()),
+  };
 
   const go = (tabId) => () => onNavigate?.(tabId);
 
@@ -873,6 +933,9 @@ function OverviewTab({ series, onChange, onNavigate, onOpenStudyGuide, sermons =
           Everything you've built, at a glance. Tap any card to jump to where you author it.
         </div>
       </div>
+
+      {/* ── The arc — the whole season as a map, tap any movement to jump ───── */}
+      <PlannerArcRail presenceById={presenceById} currentId="overview" onNavigate={onNavigate} />
 
       {/* ── Masthead — the only authored band ──────────────────────────────── */}
       <div className="card" style={{ marginBottom: "24px" }}>
