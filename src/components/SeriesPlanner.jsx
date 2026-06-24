@@ -930,7 +930,7 @@ function OverviewTab({ series, onChange, onNavigate, onOpenStudyGuide, sermons =
       <div className="page-header" style={{ padding: 0, marginBottom: "20px" }}>
         <div className="page-title">{series.title || "Series"}</div>
         <div className="page-subtitle">
-          Everything you've built, at a glance. Tap any card to jump to where you author it.
+          Your series, gathered. Each card is one piece of the plan — tap to open where you author it — and the Study Guide below is where it all arrives.
         </div>
       </div>
 
@@ -1047,15 +1047,23 @@ function OverviewTab({ series, onChange, onNavigate, onOpenStudyGuide, sermons =
         </GlanceCard>
       </div>
 
-      {/* ── Study Guide — the deliverable, launched from its natural home ───── */}
-      <div className="card" style={{ marginTop: "24px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+      {/* ── The arrival — the Study Guide is where the whole plan lands. The
+          gold top-rule + arrival copy mark it as the planner's destination (the
+          macro-headspace analog of the sermon Finish screen), not just another
+          card. Informs, never blocks — export whenever, nothing gates it. ───── */}
+      <div className="card" style={{
+        marginTop: "28px",
+        borderTop: "3px solid var(--gold)",
+        display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px",
+      }}>
         <div>
-          <div className="card-title">Study Guide</div>
-          <p className="field-caption" style={{ marginTop: "2px" }}>
-            The congregational handout, built from everything above.
+          <div className="card-title">The Study Guide</div>
+          <p className="field-caption" style={{ marginTop: "4px", maxWidth: "62ch" }}>
+            Where the series arrives — the congregational handout your whole plan produces,
+            built from everything above. Export it whenever you're ready.
           </p>
         </div>
-        <SecondaryButton size="sm" onClick={onOpenStudyGuide}>Study Guide</SecondaryButton>
+        <SecondaryButton onClick={onOpenStudyGuide}>Open the Study Guide →</SecondaryButton>
       </div>
     </div>
   );
