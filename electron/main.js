@@ -2382,19 +2382,19 @@ function validateAndCommit(op, payload) {
         // stays create-then-update). book_id is seeded directly here so the sample
         // exercises the canonical-book path the feature exists to showcase.
         dbRun(
+          // The retired book-study / melodic-line series columns (redemptive_context,
+          // book_background, book_argument, book_structure, series_motivation,
+          // emerging_big_idea) are no longer seeded — they were retired from the
+          // writable set in the v27 content-model rebuild and nothing reads them.
           `INSERT INTO series (
             id, title, color, description, year,
             big_idea, overview, passage_range, start_date, end_date,
-            structural_outline, status, canon_category, book_id,
-            redemptive_context, book_background, book_argument,
-            book_structure, series_motivation, emerging_big_idea
-          ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+            structural_outline, status, canon_category, book_id
+          ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
           [
             series.id, series.title, series.color, series.description, series.year,
             series.big_idea, series.overview, series.passage_range, series.start_date, series.end_date,
             series.structural_outline, series.status, series.canon_category, series.book_id,
-            series.redemptive_context, series.book_background, series.book_argument,
-            series.book_structure, series.series_motivation, series.emerging_big_idea,
           ],
         );
         dbRun(
@@ -2404,18 +2404,18 @@ function validateAndCommit(op, payload) {
             observations, interpretation, redemptive_thread, implications,
             outline, functional_elements,
             manuscript, delivery_notes, timing_notes,
-            study_guide_note, sermon_frame,
+            study_guide_note, big_idea, overview, sermon_frame,
             current_stage, current_sub_phase,
             last_study_subphase, last_assembly_subphase,
             last_touched_position, thresholds_seen
-          ) VALUES (?,?,0,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+          ) VALUES (?,?,0,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
           [
             sermon.id, sermon.series_id, sermon.title, sermon.passage, sermon.date, sermon.stage,
             sermon.mpt, sermon.mps,
             sermon.observations, sermon.interpretation, sermon.redemptive_thread, sermon.implications,
             sermon.outline, sermon.functional_elements,
             sermon.manuscript, sermon.delivery_notes, sermon.timing_notes,
-            sermon.study_guide_note, sermon.sermon_frame,
+            sermon.study_guide_note, sermon.big_idea, sermon.overview, sermon.sermon_frame,
             // current_step removed in the trail deletion sweep (Phase B2).
             STAGE.Study, SUB_PHASE.Observe,
             // Per-stage memory: sample sermon always resets to the first
@@ -2826,7 +2826,9 @@ function getSeasonNameForExport(dateStr) {
     if (date < palmSun)      return "Lent";
     if (date < easter)       return "Holy Week";
     if (date <= pentecost)   return "Easter";
-    if (date < adventStart)  return "Ordinary Time";
+    // "Ordinary" (not "Ordinary Time") to match the on-screen season chip's
+    // shortName (churchCalendar.js) so the preview and the .docx agree (audit M6).
+    if (date < adventStart)  return "Ordinary";
     if (date < christmas)    return "Advent";
     return "Christmas";
   } catch { return null; }
@@ -2859,7 +2861,13 @@ function buildStudyGuideDoc(series, sections, sermons) {
       const obj = JSON.parse(raw);
       if (!obj || typeof obj !== "object" || Array.isArray(obj)) return empty;
       const additions = Array.isArray(obj.additions)
-        ? obj.additions.filter((a) => a && typeof a === "object" && typeof a.text === "string")
+        ? obj.additions
+            .filter((a) => a && typeof a === "object" && typeof a.text === "string")
+            // Normalize an unknown/missing type to "question" — mirrors the
+            // renderer's parseStudyGuideExtras so the preview chip and the .docx
+            // label agree (an unknown type showed "Question" on screen but the
+            // doc's `ADDITION_LABEL[a.type] || "Note"` fallback printed "Note").
+            .map((a) => ({ ...a, type: ADDITION_LABEL[a.type] ? a.type : "question" }))
         : [];
       const notesLines = Number.isInteger(obj.notesLines) ? Math.max(0, Math.min(20, obj.notesLines)) : 8;
       return { additions, notesLines };
@@ -2907,14 +2915,19 @@ function buildStudyGuideDoc(series, sections, sermons) {
     }));
     if (hasContent(sermon.date)) {
       const seasonName = getSeasonNameForExport(sermon.date);
-      try {
-        const [ys, ms, ds] = sermon.date.split("-").map(Number);
-        const formatted = new Date(ys, ms - 1, ds).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+      const [ys, ms, ds] = sermon.date.split("-").map(Number);
+      const dt = new Date(ys, ms - 1, ds);
+      // Guard validity explicitly: new Date(NaN,…).toLocaleDateString() returns
+      // the STRING "Invalid Date" instead of throwing, so the old try/catch never
+      // fired and a malformed date would have printed "Invalid Date" into the
+      // booklet. Drop the date line entirely when the value can't be parsed.
+      if (!Number.isNaN(dt.getTime())) {
+        const formatted = dt.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
         out.push(new Paragraph({
           spacing: { after: 120 },
           children: [new TextRun({ text: seasonName ? `${formatted} · ${seasonName}` : formatted, color: "888888", size: 20 })],
         }));
-      } catch {}
+      }
     }
     if (hasContent(sermon.big_idea)) out.push(leadLine(sermon.big_idea));
     if (hasContent(sermon.overview)) out.push(...bodyParas(sermon.overview));
@@ -2952,6 +2965,10 @@ function buildStudyGuideDoc(series, sections, sermons) {
   const children = [];
 
   // ── Title block ──────────────────────────────────────────────────────────
+  // .docx-ONLY by design: the standalone handout needs its own cover (series
+  // title · passage range · date range), but the on-screen StudyGuideTab preview
+  // omits it because it renders under the planner's page chrome which already
+  // names the series. Everything BELOW this block matches the preview part-for-part.
   children.push(new Paragraph({
     children: [new TextRun({ text: series.title || "Study Guide", bold: true, color: accentHex, size: 48 })],
     spacing: { after: 120 },

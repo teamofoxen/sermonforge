@@ -2,6 +2,26 @@
 
 ---
 
+## 2026-06-24 — Series Planner rebuild: audit remediation
+
+- Fixed a debounce field-clobber — a rapid two-field edit on the same pericope / section / series no longer drops the first field's saved write (flush on field-or-id change); `addSection` now routes through `runSave` so a failed create shows Save-failed + Retry.
+- `end_date` now recomputes on Outline date edits (not just Schedule) and clears when all dates are cleared, so the exported booklet / Series Arc date range can't go stale.
+- Sample seed carries pericope `big_idea` + `overview` (the showcase now exercises the headline fields) and drops the six retired book-study series columns.
+- `.docx`: Schedule-jump ring fades, the season label and addition-type label match the on-screen preview, and a malformed date no longer prints "Invalid Date".
+- Doc-drift cleanup (the missing rebuild CHANGELOG entry, CLAUDE.md, project-structure.md). From an ultracode audit: 18 findings remediated; eslint 0, 234 tests, drift + sweep PASS.
+
+---
+
+## 2026-06-24 — Series Planner content-model rebuild shipped (schema v27 + three-screen planner)
+
+- Schema **v27**: added `big_idea` / `overview` / `study_guide_extras` to `sermons` (the pericope-level Title · Big idea · Overview unit + the guide-local additions/notes JSON). A run-once, version-gated backfill folds the retired `study_guide_note` into `overview` where empty. The book-study + melodic-line series columns and `study_guide_note` are retired from the writable set (kept as backup columns), in lockstep across all three allowlist mirrors (`contracts.ts` / `contracts.cjs` / `test-spine.ts`).
+- `SeriesPlanner.jsx` rewritten end-to-end to three screens — **Outline · Schedule · Study guide** — replacing the four-movement workbench and the melodic-line / guided-spine machinery (all deleted). Outline is one live nested tree (Book ▸ Section ▸ Pericope; collapse/expand, add/reorder/delete, draft-row/commit, book-level Reference, date chip + Schedule jump).
+- Dates are single-source on the sermon and two-way between the Outline and Schedule screens; the drift-prone `schedule` / `scheduleDirty` snapshot is gone.
+- Study guide: "Import from outline" builds a live-projection booklet (book → Introduction, section → part, sermon → page) with listener Notes (blank ruled lines + stepper) and pastor additions (question / cross-reference / quote) stored in `study_guide_extras`; re-import never wipes additions/notes (Import writes no sermon column). `buildStudyGuideDoc` (.docx) rewritten to match the preview part-for-part.
+- Docs brought to the three-screen model (`series-planner.md`, `schema.md`, `ipc-channels.md`). AI-free; create-then-update + draft/commit + single-organism held. Commits `f6636a9` (schema) · `54c7dd8` (planner) · `73fb88d` (dates) · `176b70f` (.docx) · `3cc3566` (docs).
+
+---
+
 ## 2026-06-24 — Series Planner: lock the content-model rebuild into the charter
 
 - Ruled (pastor) that the planner is rebuilt around his real series document: a top-down nested outline — Book ▸ Section ▸ Pericope — with the same unit at every level (Title + passage range · Big idea · Overview).

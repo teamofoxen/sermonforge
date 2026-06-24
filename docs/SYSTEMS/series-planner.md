@@ -77,8 +77,10 @@ human label is "Outline"). A remembered `localStorage` tab id for a removed tab
   are kept.
 - **Study guide** (`StudyGuideTab`) — an editable congregational booklet
   ("mini-commentary"). "Import from outline" gates the empty state → booklet via
-  a write-only `localStorage` flag (`sermonforge_planner_guide_built_<seriesId>`)
-  — no schema bump. The booklet is a **live projection** of the Outline
+  a client-local `localStorage` flag (`sermonforge_planner_guide_built_<seriesId>`)
+  — written by Import, read on mount to choose empty-state vs booklet; no schema
+  bump (the same set-once, not-a-schema-column pattern as the intro flag below).
+  The booklet is a **live projection** of the Outline
   (driftless, single-source): book big idea + overview → **Introduction**; each
   section → a **part** (its overview opens it); each sermon → its own **page**
   (big idea + overview-as-commentary + passage + date/season). Per page: a
@@ -91,7 +93,8 @@ human label is "Outline"). A remembered `localStorage` tab id for a removed tab
 The standalone topbar "Study Guide" button is gone (it's a tab now); the old
 StudyGuideModal was replaced by `StudyGuideTab`. The "How this works" front door
 (`SeriesHowItWorksModal`) is rewritten to the three screens and auto-opens once
-per series via the write-only `sermonforge_planner_intro_<seriesId>` flag.
+per series via the client-local `sermonforge_planner_intro_<seriesId>` flag
+(set-once, read on mount; not a schema column).
 
 ## 4. Persistence — create-then-update
 

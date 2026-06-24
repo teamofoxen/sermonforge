@@ -214,16 +214,24 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
   }, [runSave, seriesId]);
   const debouncedSeries = useDebounce(persistSeries, 800);
   useFlushOnExit(debouncedSeries);
+  const lastSeriesEditField = useRef(null);
 
   function handleSeriesField(field, value) {
     setSeries((prev) => ({ ...prev, [field]: value }));
+    // Flush a pending write for a DIFFERENT series field before starting this one
+    // (same single-timer clobber the section/sermon handlers guard against — e.g.
+    // the book's big idea then its overview inside 800ms). Flush BEFORE the
+    // title-empty branch so clearing the title can't strand a pending big-idea write.
+    if (lastSeriesEditField.current && lastSeriesEditField.current !== field) debouncedSeries.flush();
     // An empty title would be rejected by update-series (State #3) and flash a
     // transient "Save failed" each time the pastor clears it to retype. Keep the
     // local edit, but don't persist until there's a name again.
     if (field === "title" && !String(value).trim()) {
       debouncedSeries.cancel();
+      lastSeriesEditField.current = null;
       return;
     }
+    lastSeriesEditField.current = field;
     debouncedSeries({ [field]: value });
   }
 
@@ -244,14 +252,17 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
   const persistSection = useCallback((id, fields) => runSave(() => updateSection(id, fields)), [runSave]);
   const debouncedSectionSave = useDebounce(persistSection, 800);
   useFlushOnExit(debouncedSectionSave);
-  const lastSectionEditId = useRef(null);
+  const lastSectionEdit = useRef({ id: null, field: null });
   const handleSectionField = useCallback((id, fields) => {
-    // Flush a pending write for a DIFFERENT section before starting this one —
-    // a single debounced fn keyed by trailing args would otherwise drop the
-    // earlier section's last keystrokes when the pastor jumps between sections.
-    if (lastSectionEditId.current && lastSectionEditId.current !== id) debouncedSectionSave.flush();
-    lastSectionEditId.current = id;
-    setSections((prev) => prev.map((s) => (s.id === id ? { ...s, ...fields } : s)));
+    // Flush a pending write before starting a DIFFERENT section OR a different
+    // field of the SAME section. The single debounced timer keeps only the last
+    // args, so without the field check a title→overview hop inside 800ms on one
+    // section would drop the title write (the cross-id check alone misses it).
+    const field = Object.keys(fields)[0];
+    const prev = lastSectionEdit.current;
+    if (prev.id && (prev.id !== id || prev.field !== field)) debouncedSectionSave.flush();
+    lastSectionEdit.current = { id, field };
+    setSections((prevSecs) => prevSecs.map((s) => (s.id === id ? { ...s, ...fields } : s)));
     debouncedSectionSave(id, fields);
   }, [debouncedSectionSave]);
 
@@ -259,13 +270,17 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
   const persistSermon = useCallback((id, fields) => runSave(() => updateSermon(id, fields)), [runSave]);
   const debouncedSermonSave = useDebounce(persistSermon, 800);
   useFlushOnExit(debouncedSermonSave);
-  const lastSermonEditId = useRef(null);
+  const lastSermonEdit = useRef({ id: null, field: null });
   // Debounced edit — for keystroke fields (title, passage, big idea, overview,
-  // dates). Flushes on a sermon-id change for the same reason as sections.
+  // dates). Flushes on a sermon-id OR field change so the single trailing-args
+  // timer never drops an earlier field's write (e.g. title then overview on the
+  // SAME pericope inside 800ms).
   const handleSermonField = useCallback((id, fields) => {
-    if (lastSermonEditId.current && lastSermonEditId.current !== id) debouncedSermonSave.flush();
-    lastSermonEditId.current = id;
-    setSermons((prev) => prev.map((s) => (s.id === id ? { ...s, ...fields } : s)));
+    const field = Object.keys(fields)[0];
+    const prev = lastSermonEdit.current;
+    if (prev.id && (prev.id !== id || prev.field !== field)) debouncedSermonSave.flush();
+    lastSermonEdit.current = { id, field };
+    setSermons((prevSermons) => prevSermons.map((s) => (s.id === id ? { ...s, ...fields } : s)));
     debouncedSermonSave(id, fields);
   }, [debouncedSermonSave]);
   // Immediate write — for discrete (button-driven) changes: study-guide
@@ -274,6 +289,23 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
     setSermons((prev) => prev.map((s) => (s.id === id ? { ...s, ...fields } : s)));
     return runSave(() => updateSermon(id, fields));
   }, [runSave]);
+
+  // The series end_date mirrors the LAST dated sermon. Recompute it from a list
+  // and persist when it moves. No `last &&` truthiness gate — clearing every date
+  // must clear end_date too, not leave a phantom end date on the booklet/Arc.
+  const syncSeriesEndDate = useCallback((list) => {
+    const last = [...list].filter((s) => s.date).sort((a, b) => (a.date > b.date ? 1 : -1)).pop()?.date || "";
+    if (last !== (series?.end_date || "")) handleSeriesField("end_date", last);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [series?.end_date]);
+  // Single-source date write shared by BOTH the Outline date field and the
+  // Schedule screen: persist the date through the same debounced path, then
+  // re-mirror end_date. Previously only the Schedule screen recomputed end_date,
+  // so re-dating from the Outline left a stale date range in the exported booklet.
+  const handleSermonDate = useCallback((id, date) => {
+    handleSermonField(id, { date });
+    syncSeriesEndDate(sermons.map((s) => (s.id === id ? { ...s, date } : s)));
+  }, [handleSermonField, syncSeriesEndDate, sermons]);
 
   function retryLastSave() {
     if (lastFailedRef.current) runSave(lastFailedRef.current);
@@ -411,6 +443,7 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
             onSelectBook={handleSelectBook}
             onSectionField={handleSectionField}
             onSermonField={handleSermonField}
+            onSermonDate={handleSermonDate}
             onSectionsChange={setSections}
             onSermonsChange={setSermons}
             onOpenSermon={onOpenSermon}
@@ -426,7 +459,8 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
             calNotes={calNotes}
             seriesId={seriesId}
             onSeriesField={handleSeriesField}
-            onSermonField={handleSermonField}
+            onSermonDate={handleSermonDate}
+            onSyncEndDate={syncSeriesEndDate}
             onSermonsChange={setSermons}
             onNavigate={handleTabChange}
             focusId={scheduleFocusId}
@@ -577,7 +611,7 @@ function formatPacingDate(iso) {
 // throws on an empty name, State #3). AI-free throughout.
 function OutlineTab({
   series, sections, sermons, seriesId,
-  onSeriesField, onSelectBook, onSectionField, onSermonField,
+  onSeriesField, onSelectBook, onSectionField, onSermonField, onSermonDate,
   onSectionsChange, onSermonsChange, onOpenSermon, onNavigate, onGoToSchedule, runSave,
 }) {
   const [bookDetailsOpen, setBookDetailsOpen] = useState(false);
@@ -613,13 +647,18 @@ function OutlineTab({
   // ── Section CRUD ──────────────────────────────────────────────────────────
   async function addSection() {
     const nextOrder = sections.length ? Math.max(...sections.map((s) => s.sort_order ?? 0)) + 1 : 0;
-    const result = await createSection({ series_id: seriesId, sort_order: nextOrder });
-    const updated = await getSectionsBySeries(seriesId);
-    onSectionsChange(updated);
-    if (result?.id) {
-      setCollapsedSections((prev) => { const n = new Set(prev); n.delete(result.id); return n; });
-      setJustCreatedSectionId(result.id);
-    }
+    // Route through runSave like the sibling section mutations (delete/move) so a
+    // DB-busy / file-lock failure surfaces the topbar Save-failed + Retry instead
+    // of a silent no-op. State is only touched after the writes resolve.
+    await runSave(async () => {
+      const result = await createSection({ series_id: seriesId, sort_order: nextOrder });
+      const updated = await getSectionsBySeries(seriesId);
+      onSectionsChange(updated);
+      if (result?.id) {
+        setCollapsedSections((prev) => { const n = new Set(prev); n.delete(result.id); return n; });
+        setJustCreatedSectionId(result.id);
+      }
+    });
   }
   async function deleteSectionRow(id) {
     onSectionsChange((prev) => prev.filter((s) => s.id !== id));
@@ -705,6 +744,10 @@ function OutlineTab({
       setDrafts((prev) => prev.map((s) => (s.id === id ? { ...s, [field]: value } : s)));
       return;
     }
+    // Date is single-source AND drives the series end_date — route it through the
+    // shared date handler so an Outline date edit recomputes end_date too (the
+    // Schedule screen used to be the only surface that did).
+    if (field === "date") { onSermonDate(id, value); return; }
     onSermonField(id, { [field]: value });
   }
   async function deletePericope(id) {
@@ -1211,7 +1254,7 @@ function PericopeNode({ pericope: p, expanded, onToggle, onField, onCommit, onDe
 // (no separate snapshot that can drift). Suggest Sundays is one explicit bulk
 // gesture; manual edits autosave like any other field. AI scheduling advisor
 // stays removed (no-direct-ai); the church-calendar engine is preserved verbatim.
-function ScheduleTab({ series, sermons, calNotes, onSeriesField, onSermonField, onSermonsChange, onNavigate, focusId, onFocusConsumed, runSave }) {
+function ScheduleTab({ series, sermons, calNotes, onSeriesField, onSermonDate, onSyncEndDate, onSermonsChange, onNavigate, focusId, onFocusConsumed, runSave }) {
   const [suggesting, setSuggesting] = useState(false);
   const excludeDates = calNotes.map((n) => n.date);
   // Scroll-to + flash the row the pastor jumped to from the Outline's
@@ -1221,27 +1264,22 @@ function ScheduleTab({ series, sermons, calNotes, onSeriesField, onSermonField, 
   useEffect(() => {
     if (!focusId) return;
     const el = rowRefs.current.get(focusId);
-    if (el) {
-      el.scrollIntoView({ block: "center", behavior: "smooth" });
-      setFlashId(focusId);
-      const t = setTimeout(() => setFlashId(null), 1600);
-      onFocusConsumed?.();
-      return () => clearTimeout(t);
-    }
-    onFocusConsumed?.();
+    if (!el) { onFocusConsumed?.(); return; }
+    el.scrollIntoView({ block: "center", behavior: "smooth" });
+    setFlashId(focusId);
+    // Consume the focus from INSIDE the timer, not immediately. Consuming now
+    // would flip focusId id→null, re-run this effect, and its cleanup would
+    // clearTimeout the fade timer mid-flash — leaving the gold ring stuck until
+    // the tab unmounts. Deferring the consume lets the ring actually fade at ~1.6s.
+    const t = setTimeout(() => { setFlashId(null); onFocusConsumed?.(); }, 1600);
+    return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusId]);
 
-  // The series end_date mirrors the last dated sermon — recompute from a list
-  // and persist it (debounced via onSeriesField) when it moves.
-  function syncEndDate(list) {
-    const last = [...list].filter((s) => s.date).sort((a, b) => (a.date > b.date ? 1 : -1)).pop()?.date || "";
-    if (last && last !== series.end_date) onSeriesField("end_date", last);
-  }
-
+  // Date writes go through the parent's single-source handler (persists the date
+  // AND re-mirrors series end_date), shared with the Outline date field.
   function handleDate(sermonId, date) {
-    onSermonField(sermonId, { date }); // single-source: updates sermons + autosaves
-    syncEndDate(sermons.map((s) => (s.id === sermonId ? { ...s, date } : s)));
+    onSermonDate(sermonId, date);
   }
 
   function skipSunday(sermonId) {
@@ -1261,7 +1299,7 @@ function ScheduleTab({ series, sermons, calNotes, onSeriesField, onSermonField, 
     const dated = sermons.map((s, i) => ({ ...s, date: sundays[i] || s.date || "" }));
     onSermonsChange(dated);
     await runSave(() => Promise.all(dated.map((s) => updateSermon(s.id, { date: s.date }))));
-    syncEndDate(dated);
+    onSyncEndDate(dated);
     setSuggesting(false);
   }
 
@@ -1452,7 +1490,11 @@ function StudyGuideTab({ series, sections, sermons, seriesId, onSermonExtras, on
         </div>
       </div>
 
-      {/* The booklet — a live projection of the outline + guide-local additions. */}
+      {/* The booklet — a live projection of the outline + guide-local additions.
+          NOTE: the preview intentionally has no cover/Title block (series title ·
+          passage range · date range) — that block is .docx-ONLY because this
+          preview renders under the planner's page chrome which already names the
+          series. The exported booklet adds the cover; everything else matches. */}
       <div style={{ marginTop: "16px", display: "flex", flexDirection: "column", gap: "16px" }}>
         {/* Introduction */}
         <div className="card">
