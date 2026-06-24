@@ -49,10 +49,26 @@ const STATUS_OPTIONS = [
   { value: SERIES_STATUS.Complete,   label: SERIES_STATUS_LABELS[SERIES_STATUS.Complete] },
 ];
 
-// The four movement tab ids, in workflow order. Used to validate a remembered
-// tab from localStorage — a stale id (e.g. the removed `structure`/`slots`)
-// falls back to the first tab so the planner never lands on a blank render.
-const PLANNER_TAB_IDS = ["book-study", "design", "calendar", "overview"];
+// The four movements, in workflow order, each with the named outcome it produces
+// and the prior outcome it opens against. This is the planner's analog of the
+// sermon walk's REGION_NAMED_OUTCOME + regionFrameFor (src/utils/walkOrder.js):
+// ONE source that the seam frames, the foot "continue" affordance, the topbar
+// place-line, and the Overview arc rail all read, so those surfaces can't drift
+// about the shape of the work. `opensAgainst` is null for the source movement
+// (Understand). This is NOT a progress model — no scores, no %, no gates; it
+// only names the shape of the work and what each movement builds on.
+const PLANNER_MOVEMENTS = [
+  { id: "book-study", label: "Understand", outcome: "the Melodic Line",                       opensAgainst: null },
+  { id: "design",     label: "Design",     outcome: "the Big Idea and the slate of sermons",  opensAgainst: "the Melodic Line" },
+  { id: "calendar",   label: "Schedule",   outcome: "the dated journey",                      opensAgainst: "the sermons you divided in Design" },
+  { id: "overview",   label: "Overview",   outcome: "the Study Guide",                        opensAgainst: "everything you've built" },
+];
+
+// The movement tab ids, derived from the one movement list above so a tab id
+// can never drift from the movement model. Used to validate a remembered tab
+// from localStorage — a stale id (e.g. the removed `structure`/`slots`) falls
+// back to the first movement so the planner never lands on a blank render.
+const PLANNER_TAB_IDS = PLANNER_MOVEMENTS.map((m) => m.id);
 
 // ── Understand field definitions ──────────────────────────────────────────────
 // Plain label + prompt text for the receptive notes the pastor writes by hand.
@@ -164,6 +180,25 @@ function MoveHeader({ n, title, subtitle }) {
         <div style={{ fontFamily: "var(--font-serif)", fontSize: "18px", fontWeight: 600, color: "var(--ink)" }}>{title}</div>
         {subtitle && <div style={{ fontSize: "13px", color: "var(--ink-soft)", marginTop: "2px" }}>{subtitle}</div>}
       </div>
+    </div>
+  );
+}
+
+// The named-outcome handoff line at a movement's head — the planner's analog of
+// the sermon walk's "X opens, against the Y" region frame (walkOrder.js
+// regionFrameFor). It names the prior movement's outcome that this movement
+// builds on, so the throughline is felt at the seam instead of only implied by
+// tab order. Like the sermon frame, it makes NO closure claim about the prior
+// movement — navigation is free and movements are revisited out of order.
+function MovementFrame({ movementId }) {
+  const m = PLANNER_MOVEMENTS.find((x) => x.id === movementId);
+  if (!m || !m.opensAgainst) return null;
+  return (
+    <div style={{
+      fontFamily: "var(--font-serif)", fontStyle: "italic",
+      fontSize: "13px", color: "var(--ink-soft)", marginBottom: "6px",
+    }}>
+      {m.label} opens, against {m.opensAgainst}.
     </div>
   );
 }
@@ -350,12 +385,9 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
     );
   }
 
-  const tabs = [
-    { id: "book-study", label: "Understand" },
-    { id: "design",     label: "Design" },
-    { id: "calendar",   label: "Schedule" },
-    { id: "overview",   label: "Overview" },
-  ];
+  // Derived from the one movement list so the tab labels can't drift from the
+  // seam frames / arc rail that read the same source.
+  const tabs = PLANNER_MOVEMENTS.map(({ id, label }) => ({ id, label }));
 
   return (
     <>
@@ -1739,6 +1771,7 @@ function DesignTab({
   return (
     <div className="page-body">
       <div className="page-header" style={{ padding: "0 0 4px" }}>
+        <MovementFrame movementId="design" />
         <div className="page-title">Design</div>
         <div className="page-subtitle">
           Turn the line you heard into a series — the big idea, the sermons, the movements.
@@ -1753,10 +1786,12 @@ function DesignTab({
         background: "var(--parchment-warm)",
         display: "flex", flexDirection: "column", gap: "14px",
       }}>
-        {/* The Melodic Line — read-only, carried from Understand (the same
-            working-hypothesis echo pattern, surfaced at the head of Design). */}
+        {/* The Melodic Line — read-only, carried from Understand. The "(from
+            Understand)" parenthetical was dropped when the head-of-movement seam
+            frame ("Design opens, against the Melodic Line.") took over naming the
+            handoff; this band now just shows the line itself to build against. */}
         <div>
-          <div className="field-label" style={{ marginBottom: "4px" }}>The Melodic Line (from Understand)</div>
+          <div className="field-label" style={{ marginBottom: "4px" }}>The Melodic Line</div>
           {series.emerging_big_idea?.trim() ? (
             <div style={{
               fontSize: "15px", fontFamily: "var(--font-serif)",
@@ -1926,6 +1961,7 @@ function CalendarTab({ series, sections, sermons, calNotes, onChange, onSermonsC
   return (
     <>
       <div className="page-header">
+        <MovementFrame movementId="calendar" />
         <div className="page-title">Schedule</div>
         <div className="page-subtitle">
           Lay each slot on a Sunday. Seasons and your special-date notes ride along so nothing lands where it shouldn't.
