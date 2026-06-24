@@ -1301,7 +1301,7 @@ function formatPacingDate(iso) {
 // bar + plain notes on gaps, overlaps, out-of-order slots, and any unreadable
 // passage refs. Purely informational (src/utils/coverage.js) — never a gate. You
 // can intentionally skip a passage; it just shows what you're skipping.
-function CoveragePanel({ series, sermons }) {
+function CoveragePanel({ series, sermons, onNavigate }) {
   // Coverage is clamped to the series' declared passage_range when it parses, so
   // a series scoped to part of a book is measured against that span, not the
   // whole book (falls back to whole-book when the range is empty/free-text).
@@ -1315,7 +1315,14 @@ function CoveragePanel({ series, sermons }) {
         background: "var(--parchment-warm)", border: "1px dashed var(--parchment-deep)",
         borderRadius: "var(--radius)", fontSize: "12.5px", color: "var(--ink-ghost)",
       }}>
-        Pick a canonical book on Understand → Place the Book to see how your slots cover it.
+        Pick a canonical book on{" "}
+        <TextButton
+          onClick={() => onNavigate?.("book-study")}
+          style={{ fontSize: "inherit", padding: 0, verticalAlign: "baseline" }}
+        >
+          Understand → Place the Book
+        </TextButton>{" "}
+        to see how your slots cover it.
       </div>
     );
   }
@@ -1379,7 +1386,7 @@ function CoveragePanel({ series, sermons }) {
 // Pacing belongs to Schedule, so it is not shown here. (The pre-collapse
 // standalone Slots tab and its `embedded` toggle were removed once Design became
 // the only caller.)
-function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpenSermon, runSave }) {
+function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpenSermon, onNavigate, runSave }) {
   // Draft slots — UI-only rows that have not yet been committed to the spine.
   // State Contract #3 forbids createSermon({ name: "" }), so the "+ Add Slot"
   // button creates a row in this local state instead of immediately calling
@@ -1527,7 +1534,7 @@ function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpen
 
   const body = (
     <>
-      <CoveragePanel series={series} sermons={sermons} />
+      <CoveragePanel series={series} sermons={sermons} onNavigate={onNavigate} />
       <div className="card-header" style={{ marginBottom: "20px" }}>
         <div>
           <div className="card-title">Sermon Slots</div>
@@ -1911,6 +1918,7 @@ function DesignTab({
           seriesId={seriesId}
           onSermonsChange={onSermonsChange}
           onOpenSermon={onOpenSermon}
+          onNavigate={onNavigate}
           runSave={runSave}
         />
       </div>
@@ -2050,7 +2058,14 @@ function CalendarTab({ series, sections, sermons, calNotes, onChange, onNavigate
             color: "var(--ink-ghost)",
             fontSize: "14px",
           }}>
-            Add sermon slots in Design → Divide into Sermons first.
+            Add sermon slots in{" "}
+            <TextButton
+              onClick={() => onNavigate?.("design")}
+              style={{ fontSize: "inherit", padding: 0, verticalAlign: "baseline" }}
+            >
+              Design → Divide into Sermons
+            </TextButton>{" "}
+            first.
           </div>
         ) : (
           <>
