@@ -260,6 +260,23 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
     setActiveTab(PLANNER_TAB_IDS.includes(saved) ? saved : "book-study");
   }, [seriesId]);
 
+  // Front door: the first time a given series is opened, auto-show the "How this
+  // works" overview once — the planner's orientation before the first keystroke
+  // (the macro analog of the sermon-start landing). It reuses the existing modal
+  // (which already draws the four-movement flow) and stays re-readable forever
+  // via the topbar "How this works" button. The seen-flag is write-only
+  // localStorage, mirroring the tour's sf_tour_planner_seen — NEVER a schema
+  // column, so the create-then-update INSERT is untouched. Keyed on seriesId so
+  // opening a different series re-checks its own flag; runs in the fixture too
+  // (no DB needed) so the front door is previewable.
+  useEffect(() => {
+    const introKey = `sermonforge_planner_intro_${seriesId}`;
+    if (!localStorage.getItem(introKey)) {
+      localStorage.setItem(introKey, "1");
+      setShowHowItWorks(true);
+    }
+  }, [seriesId]);
+
   // Auto-suggest series complete — Pilot B.3 / Process Contract #2
   // ("movement gated by user evidence"). The user's evidence is clicking
   // the Mark Series Complete button; the suggestion is just visibility.
