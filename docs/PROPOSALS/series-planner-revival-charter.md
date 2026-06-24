@@ -1,6 +1,25 @@
 # Series Planner Revival — Charter
 
-**Status:** SHIPPED — revived 2026-06-21, re-leveled to four movements 2026-06-22 (`3330f35`), audited + cleaned up since · opened 2026-06-21 · supersedes the ARI Phase-0 "coming soon" stub. Current shape: [`docs/SYSTEMS/series-planner.md`](../SYSTEMS/series-planner.md) (see the four-movement supersession note below).
+**Status:** SHIPPED then UNDER REBUILD — revived 2026-06-21, re-leveled to four movements 2026-06-22 (`3330f35`), guided-spine flow added 2026-06-24. **⚠ CONTENT-MODEL REBUILD ruled 2026-06-24 — see the next section; it supersedes the four-movement workbench and the melodic-line model.** Current shape (until the rebuild lands): [`docs/SYSTEMS/series-planner.md`](../SYSTEMS/series-planner.md).
+
+## 2026-06-24 — Content-model rebuild: the planner becomes the pastor's real series document
+
+> **This is the current ruling. It supersedes the four-movement workbench, the "Book Study / Hear the Line / melodic line" model, and the Tier 1–3 "guided spine" — all now historical build record below.** Still holding and reaffirmed: the macro/architect **Decision**, the AI-free / stands-alone **Principles**, and the create-then-update + draft-row/commit + single-organism **Key rulings**. Full locked design + build phasing: memory `project_planner_flow_study.md`. The shape to mirror is the pastor's own artifact (`…/Sermon Library/_Series/Jesus of Luke/_Jesus of Luke - Big Picture Overview.docx`).
+
+**Why.** The pastor's verdict: the planner's invented vocabulary ("hear the line", "melodic line", the evidence worksheet, "the hinge") did not match how he actually plans, and flow polish could not register on top of an alien content model. His real process is one nested unit repeated at three levels.
+
+**The model.** The planner is a top-down way to **understand the book at three levels — Book ▸ Section ▸ Pericope** — yielding three outputs: (1) the sermon calendar, (2) familiarity with the text before preaching, (3) raw material for the study guide. A pericope **is** a sermon **is** the scheduled unit (the existing series→sections→sermons spine). **Every level is the same unit: Title + passage range · Big idea (one line) · Overview (paragraph).**
+
+**Three screens (tabs): Outline · Schedule · Study guide.**
+- **Outline** — the book as one live nested outline (collapse/expand; Add section / Add pericope; book-level Reference = the pasted commentary outline, collapsed; a date chip per pericope; a "Schedule" jump button). Replaces the Understand/Design tabs and the Overview cockpit (the outline *is* the at-a-glance).
+- **Schedule** — kept (Suggest Sundays / seasons / pacing). The date is single-source on the sermon, so it reflects **two-way** with the Outline.
+- **Study guide** — an editable formatted booklet / "mini-commentary." An **Import from outline** button builds/refreshes it (book Overview → Introduction; section Overviews → part intros; each sermon → its own page with Big idea + Overview-as-commentary + passage + date). Per page: a **Notes** area = blank space for the listener; pastor-authored **additions** (questions / cross-refs / quotes) stored guide-local. Re-import refreshes imported content and **never wipes notes/additions** *(confirmed 2026-06-24)*. **Notes = listener blank space**; additions = pastor content *(confirmed 2026-06-24)*. Export to Word renders the booklet.
+
+**Deleted for good.** The four book-study prompts (`book_background`, `book_argument`, `redemptive_context`, `series_motivation`); the melodic-line / hear-the-line / evidence worksheet / hinge (`melodic_evidence`, `emerging_big_idea`); Key Image (never added); the Tier 1–3 guided-spine pieces (built for the four-movement tabs); the separate per-sermon `study_guide_note` (folded into the new sermon Overview).
+
+**Schema** (migration + both `electron/contracts.cjs` / `src/core/contracts.ts` mirrors, via `runMigrations` + version bump): add `big_idea` + `overview` to `sermons` (pericope level; migrate any existing `study_guide_note` → `overview`, then retire it); add guide-local study-guide storage (notes + additions); drop the deleted `series` columns from the writable set (retain columns as backup per house pattern); `sections` unchanged (already Title/range/Big idea/Overview).
+
+**Build.** End-to-end, phased (schema → Outline → Schedule two-way → Study guide), committing + pushing per phase; verification gates per the build prompt / memory. The mechanics doc `docs/SYSTEMS/series-planner.md` is rewritten as part of the build.
 
 ## Decision
 

@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-06-24 — Series Planner: lock the content-model rebuild into the charter
+
+- Ruled (pastor) that the planner is rebuilt around his real series document: a top-down nested outline — Book ▸ Section ▸ Pericope — with the same unit at every level (Title + passage range · Big idea · Overview).
+- Charter gains a current-truth "Content-model rebuild" section that supersedes the four-movement workbench and the melodic-line model; the macro/architect Decision, AI-free Principles, and create-then-update / draft-commit / single-organism rulings still hold.
+- Three screens replace the four movements: Outline · Schedule (two-way dates) · Study guide (an editable mini-commentary built by "Import from outline", with listener Notes + pastor additions).
+- Deletes the book-study prompts, the melodic-line / hear-the-line / evidence-worksheet / hinge machinery, Key Image, and the Tier-1–3 guided spine; execution is a phased schema migration + UI rebuild handed to a dedicated build session.
+- Doc-only this session; no app code shipped.
+
+---
+
 ## 2026-06-24 — Series Planner flow: a guided spine over the four-movement workbench
 
 - Added named-outcome seam frames ("X opens, against the Y") at the Design/Schedule heads, a "Continue to <next>" forward control at each movement's foot, and a "Movement N of 4" topbar place-line — the sermon walk's handoffs and orientation, without making the planner a one-question walk.
