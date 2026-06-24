@@ -67,3 +67,12 @@ walk" pipeline; return-to-planner after opening a slot.
 > reshape — see the supersession note above), which goes beyond v1's "keep the 5-tab
 > bones." It is not a full invisible-system re-skin; the AI-era pipeline and
 > return-to-planner remain out of scope.
+
+> **Update 2026-06-24:** a "guided spine" of sermon-walk *connective tissue* (seam frames,
+> a per-movement forward affordance, a topbar place-line, an Overview arc-rail map +
+> arrival framing, first-open orientation) was added over the four-movement workbench —
+> see `docs/SYSTEMS/series-planner.md` + CHANGELOG. The deeper **full-walk conversion**
+> (a shared `flowOrder.js` / `PLANNER_WALK_ORDER` engine re-driving the planner from the
+> sermon walk's writing-surface/map/threshold machinery) was **considered and deliberately
+> deferred — kept in the back pocket, not ruled out.** It stays out of scope unless the
+> planner is judged to need to become a walk (it is breadth-first macro work today).
