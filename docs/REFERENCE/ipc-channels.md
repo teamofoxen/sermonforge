@@ -189,11 +189,15 @@ receives: series id string
 returns:  { success: true, filepath: string }
         | { success: false, error: string }
 ```
-Assembles a 5-part `.docx` study guide from all series fields, sections, and sermon slots.
+Assembles the `.docx` study-guide booklet from the series, its sections, and its
+undeleted sermons: Introduction (book big idea + overview) → a part per section →
+a page per sermon (big idea + overview-as-commentary + passage + date, the
+pastor's `study_guide_extras` additions, and blank listener Notes lines) →
+Remaining (unsectioned) → a Reference part (`structural_outline`).
 Saves to `Documents/SermonForge/exports/StudyGuides/[title] — Study Guide.docx` (via `app.getPath("documents")`).
 Creates the directory if absent. Empty parts are omitted entirely.
-(Reachable from the revived Series Planner — the Study Guide button on every planner
-screen. Planner revived 2026-06-21, series-planner-revival.)
+(Reachable from the Study guide tab in the Series Planner. Planner rebuilt around
+the content model 2026-06-24; see `docs/SYSTEMS/series-planner.md`.)
 
 ### `"sermon-export-manuscript"`
 ```

@@ -1,6 +1,6 @@
 # SermonForge — Database Schema Reference
 
-Current schema version: **26**
+Current schema version: **27**
 
 | Version | Bumped for |
 |---------|-----------|
@@ -17,6 +17,7 @@ Current schema version: **26**
 | v24 | UX overhaul migration session — `deleted_at` soft-delete tombstone on `sermons`; `sermon_search` rebuilt with `functional_elements` in and `delivery_notes` / `timing_notes` out (Delivery stage struck from the vocabulary) |
 | v25 | Canonical-books build — `book_id` (nullable) on `series`; `canon_category` enum switched from legacy 4-value (`ot`/`nt`/`wisdom`/`prophetic`) to Dever's 7 genre keys, migrating `wisdom`→`ot_writings`, `prophetic`→`ot_prophets`, `ot`/`nt`→NULL |
 | v26 | Series Planner re-leveling — `melodic_evidence` (nullable JSON) on `series` for the "Hear the line" evidence worksheet; one-time fold of `book_structure` into `structural_outline` (run-once, version-gated). `book_structure` retained as a backup column, not dropped. |
+| v27 | Series Planner content-model rebuild — `big_idea` + `overview` (pericope-level unit) and `study_guide_extras` (nullable JSON: guide-local `{ additions, notesLines }`) on `sermons`; run-once version-gated fold of `study_guide_note` → `overview` where overview is empty. `study_guide_note` retired from the writable set but retained as a backup column. The book-study prompts (`redemptive_context`, `book_background`, `book_argument`), the folded `book_structure`, and the melodic-line worksheet fields (`series_motivation`, `emerging_big_idea`, `melodic_evidence`) were dropped from the writable allowlist (`SERIES_COLUMNS`); their columns are retained as backup. No columns dropped. |
 
 ---
 
@@ -29,22 +30,22 @@ Current schema version: **26**
 | `color` | TEXT | `gold \| crimson \| sage \| slate` |
 | `description` | TEXT | |
 | `year` | INTEGER | |
-| `big_idea` | TEXT | Series-level big idea — the pastor's decision (Design → the hinge) |
-| `overview` | TEXT | Extended theological narrative (Design → divide into sermons) |
-| `passage_range` | TEXT | e.g. "Luke 1:1–24:53". Editable in Design; auto-filled on book pick in Understand. |
-| `start_date` | TEXT | |
-| `end_date` | TEXT | |
-| `structural_outline` | TEXT | The book's literary outline — pastor-typed or pasted from a commentary. The single home for the book's structure: it renders in Understand → Hear the line as melodic-line evidence. `book_structure` was folded into this column (v26). AI-free since ARI. |
-| `status` | TEXT | `in_progress \| complete` — two-state lifecycle (v16 collapse). `SERIES_STATUS` in `src/core/contracts.ts`; `create-series` writes `in_progress`. (CREATE TABLE default is a vestigial `'planning'`, always overwritten on insert.) Edited on the Overview cockpit masthead. |
-| `canon_category` | TEXT | Dever 7-genre key: `ot_law \| ot_history \| ot_writings \| ot_prophets \| nt_gospels \| nt_pauline \| nt_general`. NULL or `''` = unclassified. Auto-filled from the chosen book, pastor-overridable in Understand → Place the book. (v25 switch from legacy `ot \| nt \| wisdom \| prophetic`.) |
-| `book_id` | TEXT | Stable key of the chosen canonical book (e.g. `luke`) from `src/data/canonicalBooks.js`; NULL until a book is picked (Understand → Place the book). Only the key is stored — genre, testament, and span are looked up from that bundled module at render. Persisted via `updateSeries`, never the create INSERT. (v25) |
-| `redemptive_context` | TEXT | Where this book sits in the arc from creation to new creation (Understand → Place the book) |
-| `book_background` | TEXT | Author, audience, occasion, historical setting, genre (Understand → Place the book) |
-| `book_argument` | TEXT | The book's controlling argument or central purpose (Understand → Hear the line) |
-| `book_structure` | TEXT | **Retired live field (v26).** Was "How the Book Is Built" on the old Book Study tab; its content was folded into `structural_outline` and it is no longer rendered or exported. Retained as a backup column — never dropped or nulled. |
-| `series_motivation` | TEXT | Why this congregation needs this book now (Design → the hinge) |
-| `emerging_big_idea` | TEXT | The melodic line — the one line every passage in the book sounds. Authored in Understand → Hear the line; echoed read-only on the Design hinge and the Overview cockpit. |
-| `melodic_evidence` | TEXT (JSON) | The "Hear the line" evidence worksheet: a JSON object of labeled, pastor-filled slots (`repeated`, `topAndTail`, `purpose`, `otQuotations`). Nullable; fail-soft parse (null/garbage → empty). Persisted via `updateSeries` (create-then-update), never the create INSERT. AI-free capture. (v26) |
+| `big_idea` | TEXT | The book's one-line big idea (Outline → book node). The top of the three-level unit (Title · Big idea · Overview). |
+| `overview` | TEXT | The book's overview paragraph (Outline → book node). Becomes the study guide's Introduction. |
+| `passage_range` | TEXT | e.g. "Luke 1:1–24:53". Editable in Outline → Book details; auto-filled on book pick. Clamps the coverage readout. |
+| `start_date` | TEXT | Series start; the basis for Suggest Sundays (Schedule). |
+| `end_date` | TEXT | Mirrors the last dated sermon (derived on Schedule). |
+| `structural_outline` | TEXT | The book's literary/commentary outline — pastor-typed or pasted. Lives once here, shown as **Reference** (Outline → book node, collapsed) and as the study guide's Reference part. `book_structure` was folded into this column (v26). AI-free since ARI. |
+| `status` | TEXT | `in_progress \| complete` — two-state lifecycle (v16 collapse). `SERIES_STATUS` in `src/core/contracts.ts`; `create-series` writes `in_progress`. (CREATE TABLE default is a vestigial `'planning'`, always overwritten on insert.) Edited in Outline → Book details. |
+| `canon_category` | TEXT | Dever 7-genre key: `ot_law \| ot_history \| ot_writings \| ot_prophets \| nt_gospels \| nt_pauline \| nt_general`. NULL or `''` = unclassified. Auto-filled from the chosen book, pastor-overridable in Outline → Book details. (v25 switch from legacy `ot \| nt \| wisdom \| prophetic`.) |
+| `book_id` | TEXT | Stable key of the chosen canonical book (e.g. `luke`) from `src/data/canonicalBooks.js`; NULL until a book is picked (Outline → Book details). Only the key is stored — genre, testament, and span are looked up from that bundled module at render. Persisted via `updateSeries`, never the create INSERT. (v25) |
+| `redemptive_context` | TEXT | **Retired from the writable set (v27).** Was a book-study prompt on the old Understand movement; no longer rendered or written. Retained as a backup column — never dropped or nulled. |
+| `book_background` | TEXT | **Retired from the writable set (v27).** Was a book-study prompt; no longer rendered or written. Backup column. |
+| `book_argument` | TEXT | **Retired from the writable set (v27).** Was a book-study prompt; no longer rendered or written. Backup column. |
+| `book_structure` | TEXT | **Retired live field (v26).** Was "How the Book Is Built"; folded into `structural_outline` and no longer rendered or exported. Backup column. |
+| `series_motivation` | TEXT | **Retired from the writable set (v27).** Was the Design "hinge" field; no longer rendered or written. Backup column. |
+| `emerging_big_idea` | TEXT | **Retired from the writable set (v27).** Was "the melodic line"; the concept was removed in the content-model rebuild. Backup column. |
+| `melodic_evidence` | TEXT (JSON) | **Retired from the writable set (v27).** Was the "Hear the line" evidence worksheet; the concept was removed in the content-model rebuild. Backup column. (Added v26.) |
 
 ---
 
@@ -76,7 +77,9 @@ Current schema version: **26**
 | `date` | TEXT | |
 | `preacher` | TEXT | |
 | `stage` | TEXT | `in_progress \| complete` — two-state lifecycle since the v16 collapse (NOT the old 6-state process position). `SERMON_STATUS` in `src/core/contracts.ts`; `create-sermon` writes `in_progress`; `complete` renders as "Preached". The real process position lives in `current_stage` / `current_sub_phase`. (CREATE TABLE default is a vestigial `'planning'`, always overwritten on insert.) |
-| `big_idea` | TEXT | (legacy — never written via IPC; sermon big idea is always read through the series JOIN) |
+| `big_idea` | TEXT | Pericope-level big idea — the one-line idea of this passage (Outline → pericope). Re-added v27 with this fresh meaning (it had been dropped in v11). Distinct from the sermon's MPT/MPS. Persisted via `updateSermon` (create-then-update); the create INSERT is never widened. |
+| `overview` | TEXT | Pericope-level overview paragraph (Outline → pericope) — becomes the study guide's per-sermon commentary body. Migrated from the retired `study_guide_note` where present (v27). Persisted via `updateSermon`. |
+| `study_guide_extras` | TEXT (JSON) | Guide-local study-guide layer for this sermon's booklet page: `{ additions: [{id,type,text}], notesLines: int }` (type ∈ `question \| cross-reference \| quote`). Nullable; fail-soft parse. "Import from outline" never writes it, so re-import preserves additions/notes. Persisted via `updateSermon`, never the create INSERT. (v27) |
 | `mpt` | TEXT | Main Point of the Text (past tense) |
 | `mps` | TEXT | Main Point of the Sermon (present tense) |
 | `observations` | TEXT | Study sub-phase 1 — Observe (JSON: structured per-question fields, or legacy plain text) |
@@ -93,7 +96,7 @@ Current schema version: **26**
 | `topic_theme` | — | **REMOVED** in the trail deletion sweep (Phase B1): not in `CREATE TABLE`, not in the v14 backfill, not in `SERMON_COLUMNS`. Old DBs may keep it as an orphan column; new DBs never get it, and nothing reads/writes it. PC's substance moved to Phase 4 Field 3 (`implications.pastoral_context`). |
 | `audience_assumptions` | — | **REMOVED** in the trail deletion sweep (Phase B1): not in `CREATE TABLE`, not in the v14 backfill, not in `SERMON_COLUMNS`. Old DBs may keep it as an orphan column; new DBs never get it. |
 | `background_noise` | — | **REMOVED** in the trail deletion sweep (Phase B1): not in `CREATE TABLE`, not in the v14 backfill, not in `SERMON_COLUMNS`. Old DBs may keep it as an orphan column; new DBs never get it. |
-| `study_guide_note` | TEXT | Short note orienting congregation readers to how this sermon fits the series arc |
+| `study_guide_note` | TEXT | **Retired from the writable set (v27).** Was a short congregation-orienting note; its content was folded into the pericope `overview` (run-once, where overview was empty). Retained as a backup column — never dropped or nulled. |
 | `preaching_blocks` | TEXT | CMC (Contour-Mapped Compression) without-notes output; added v8 migration |
 | `manuscript_delivery` | TEXT | AI-formatted delivery manuscript; added v9 migration |
 | `last_tune_up` | TEXT | JSON `{content, ts}` snapshot of the most recent Final Tune-Up response; added v12 migration |

@@ -193,4 +193,95 @@ Word doc now matches the on-screen Study-guide tab part-for-part:
   Word" in the packaged app and open the file) is the one check that needs the
   real shell — worth doing in the morning, but the assembly is proven.
 
-(Phases below are appended as they complete.)
+## Phase 4 — docs (DONE)
+
+- `docs/SYSTEMS/series-planner.md` rewritten to the three-screen mechanics
+  (Outline · Schedule · Study guide): the nested-outline model, single-source
+  dates, the live-projection booklet + study_guide_extras, create-then-update
+  with the v27 columns, pericope draft/commit, and the rewritten `.docx` chain.
+- `docs/REFERENCE/schema.md`: current version 26 → 27; added the v27 row; series
+  `big_idea`/`overview`/`structural_outline`/`status`/`canon_category`/`book_id`
+  notes repointed to the Outline screen; the retired book-study + melodic-line
+  series columns marked "retired from the writable set (v27), backup column";
+  sermons `big_idea` rewritten as the live pericope field, new `overview` +
+  `study_guide_extras` rows added, `study_guide_note` marked retired.
+- `docs/REFERENCE/ipc-channels.md`: `series-export-study-guide` description
+  updated from the old "5-part" doc to the booklet shape.
+- **Verify:** `drift-check.sh` PASS (the C5 "migrations directory" WARN is
+  pre-existing — SermonForge has no `migrations/` dir; it uses `runMigrations`).
+
+---
+
+## Final summary (for the morning audit)
+
+**Status: all 4 phases shipped, each committed + pushed to origin/main with
+per-phase verification and the pre-commit hooks (spine-integrity + lint-staged)
+green.** The app is in a working state at every commit.
+
+**Commits (on main):**
+- Phase 0 — `f6636a9` schema v27 + the three contract mirrors + spine tests.
+- Phase 1 — `54c7dd8` the three-screen planner (Outline · Schedule · Study guide).
+- Phase 2 — `73fb88d` two-way single-source dates + the Schedule jump+flash.
+- Phase 3 — `176b70f` the exported `.docx` booklet matches the model.
+- Phase 4 — this commit: docs (series-planner.md, schema.md, ipc-channels.md).
+
+**What shipped, against the spec:**
+- The model: Book ▸ Section ▸ Pericope, each level Title + range · Big idea ·
+  Overview; a pericope is a sermon is the scheduled unit. ✔
+- Outline screen (nested, collapse/expand, Add section/pericope, draft/commit,
+  book-level Reference, date chip, Schedule jump). ✔
+- Schedule screen kept; date single-source + two-way (also editable on Outline). ✔
+- Study guide screen: Import/build, per-sermon pages, listener Notes (blank
+  ruled lines + stepper), pastor additions; re-import never wipes additions;
+  Export to Word renders the booklet (buildStudyGuideDoc rewritten). ✔
+- Deleted: four-movement tabs + components, the book-study prompts, melodic-line/
+  evidence-worksheet/hinge, Key Image (never added), the Tier-1–3 guided-spine,
+  the per-sermon study_guide_note (folded into overview). ✔
+- Kept/reused: the data spine, create-then-update (INSERT never widened),
+  draft-row/commit, single-organism, coverage/pacing/churchCalendar engines, the
+  `.docx` pipeline (content reworked), shared chrome + button primitives, inline
+  styles bound to CSS tokens. ✔
+- Schema via runMigrations + version bump (v27) + all three allowlist mirrors +
+  schema.md. ✔ AI-free (no-direct-ai passes). ✔
+
+**Hard constraints — all honored:** AI-free; create-then-update (createSeries
+INSERT writes only name/year/color, createSermon INSERT not widened — verified by
+the create-then-update tests); slot draft/commit; single-organism; schema only
+via migration + version bump + mirrors; design system via CSS vars only; Surface
+contracts (one vocabulary — tab id `book-outline` avoids the forbidden `"outline"`
+alias; one CTA system via the primitives, no raw `<button>`; "you are here" via
+the eyebrow + active tab; Back is back); Mutation (saves visible via the topbar
+indicator; series delete keeps its named confirm in Planning.jsx); Electron-only
+1024×700 (no responsive work).
+
+**Decisions made where the spec said "your call" (full rationale up top):**
+- D1 study-guide storage = live projection + per-sermon `study_guide_extras`
+  layer (driftless, avoids re-introducing double-entry).
+- D2 Import = build/refresh gesture gated by a write-only localStorage flag.
+- D3 Schedule dates single-source/autosave (supersedes the old "keep batch Save
+  Dates" note — the new ruling is explicit about no drifting snapshot).
+- D4 How-this-works kept, rewritten to three screens.
+- D5 structural_outline kept as book-level Reference.
+- D6 study_guide_note retired, folded into overview (v27 backfill).
+
+**What's left / uncertain (for the audit):**
+1. **Full Electron export round-trip** — the `.docx` assembly is proven (real
+   `buildStudyGuideDoc` builds a valid multi-page doc against the Luke fixture),
+   but clicking "Export to Word" in the packaged app and opening the file is the
+   one check that needs the real shell. Recommended morning check.
+2. **A real migration run on an existing DB** — v27's ALTERs + the
+   study_guide_note→overview fold are version-gated and idempotent, and
+   `assertSchemaContract` is the runtime canary, but there is no vitest harness
+   for migration SQL (true of every prior migration). Boot the app once on a DB
+   that has a pre-v27 sermon with a study_guide_note to confirm the fold.
+3. **Pastor confirms the live-projection study guide (D1)** vs wanting a truly
+   decoupled editable snapshot. If he wants the latter, it's an additive change
+   (a snapshot sub-object in study_guide_extras) — no migration needed.
+4. **Deferred polish (not blocking):** the Outline pericope debounced saver
+   shares one timer across pericopes (flush-on-id-change mitigates loss, matching
+   the pre-existing house pattern); the study-guide additions are add/delete only
+   (no inline edit — edit = delete + re-add); `notesLines` is per-page with a
+   stepper (no global default control).
+5. The charter still describes the four-movement workbench in its older sections;
+   the 2026-06-24 ruling at the top supersedes them, but a future `/anchor-update`
+   could historicize the stale prose. Out of scope for this build.
