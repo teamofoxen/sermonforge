@@ -159,4 +159,38 @@ Phase 2 makes the connection tangible and genuinely two-way:
 - **Verify:** eslint 0; vite build compiles; preview — jump+flash lands on the
   right row, two-way date reflection works, zero console errors.
 
+## Phase 3 — the exported booklet (.docx) matches the model (DONE)
+
+`electron/main.js` `buildStudyGuideDoc` rewritten to the booklet, so the exported
+Word doc now matches the on-screen Study-guide tab part-for-part:
+- Title block (title · passage range · date range) → **Introduction** (book big
+  idea as an italic lead + overview) → **a part per section** (title, range, big
+  idea, overview) → **a page per sermon** (`pageBreakBefore` so each sermon
+  starts a fresh page: heading = passage — title, date · season, big-idea lead,
+  overview-as-commentary, then the pastor's `study_guide_extras` additions
+  rendered "Question/Cross-reference/Quote: …", then N blank ruled **Notes**
+  lines for the listener) → unsectioned sermons under **Remaining** → a final
+  **Reference** part (page-broken) for the commentary outline.
+- The retired World/Why-We're-Here/Big-Idea/Journey parts (which read
+  book_background / redemptive_context / series_motivation / emerging_big_idea —
+  all now unwritable) are deleted. `study_guide_note` is no longer read.
+- `buildStudyGuideModel` (both mirrors — `src/utils/studyGuideModel.js` +
+  `electron/studyGuideModel.cjs`) dropped the unused `showWorkingHypothesis`
+  flag; the section grouping (sectionGroups / remainingSermons / hasSections) is
+  unchanged and still shared by the preview and the export.
+- A fail-soft `parseExtras` mirrors the renderer's parser inside the doc builder
+  (malformed JSON → empty default, never throws).
+- **Verify:** node --check (main.js, studyGuideModel.cjs) OK; a docx API smoke
+  test confirmed the new paragraph shapes (pageBreakBefore, paragraph border,
+  empty-children ruled lines, addition runs) build; a harness that **extracts the
+  real `buildStudyGuideDoc` from main.js** and runs it against the full Luke
+  fixture (sections, sermon pages, additions, malformed-extras fail-soft, an
+  unsectioned Remaining pericope, Reference) produced a valid 9 KB multi-page
+  .docx. vitest 234 passed; eslint 0; study-guide preview renders, no console
+  errors.
+- **Note for audit:** the export was verified at the doc-assembly level (the real
+  function builds a valid .docx); a full Electron round-trip (click "Export to
+  Word" in the packaged app and open the file) is the one check that needs the
+  real shell — worth doing in the morning, but the assembly is proven.
+
 (Phases below are appended as they complete.)

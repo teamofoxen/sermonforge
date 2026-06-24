@@ -1,5 +1,6 @@
-// Study guide view model — the shared shape behind the Study Guide preview
-// (src/components/SeriesPlanner.jsx StudyGuideModal) and the .docx exporter.
+// Study guide view model — the shared shape behind the Study-guide tab preview
+// (src/components/SeriesPlanner.jsx StudyGuideTab) and the .docx exporter
+// (electron/main.js buildStudyGuideDoc).
 //
 // Source of truth. A hand-maintained mirror lives at
 // `electron/studyGuideModel.cjs` because the main process is CommonJS (per
@@ -8,18 +9,13 @@
 // together — drift means the on-screen preview and the exported handout
 // disagree (audit M6).
 //
-// Returns the computed values both renderers share: the Part-3
-// working-hypothesis de-dupe flag and the Part-4 section grouping.
+// Returns the section grouping both renderers share: each section paired with
+// its sermons, plus any unsectioned ("remaining") sermons. (The old Part-3
+// working-hypothesis de-dupe flag was removed in the 2026-06-24 content-model
+// rebuild — the emerging_big_idea / working-hypothesis concept is gone.)
 export function buildStudyGuideModel(series, sections, sermons) {
-  // Part 3: suppress the working hypothesis when it already matches the
-  // final Series Big Idea — printing the same sentence twice is noise.
-  const showWorkingHypothesis =
-    !!series.emerging_big_idea &&
-    series.emerging_big_idea.trim().length > 0 &&
-    series.emerging_big_idea.trim() !== (series.big_idea || '').trim();
-
-  // Part 4: group sermons into their sections, skipping blank section
-  // shells that have no title/metadata and no assigned sermons.
+  // Group sermons into their sections, skipping blank section shells that have
+  // no title/metadata and no assigned sermons.
   const assignedIds = new Set();
   const sectionGroups = [];
   for (const section of sections) {
@@ -36,7 +32,6 @@ export function buildStudyGuideModel(series, sections, sermons) {
   const remainingSermons = sermons.filter(s => !assignedIds.has(s.id));
 
   return {
-    showWorkingHypothesis,
     sectionGroups,
     remainingSermons,
     hasSections: sections.length > 0,

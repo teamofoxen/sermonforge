@@ -2832,44 +2832,59 @@ function getSeasonNameForExport(dateStr) {
   } catch { return null; }
 }
 
+// Build the congregational study-guide booklet (.docx), mirroring the on-screen
+// Study-guide tab part-for-part: an Introduction (the book's big idea +
+// overview), a part per section (its overview opens it), and a PAGE PER SERMON
+// (big idea + overview-as-commentary + passage + date, the pastor's guide-local
+// additions, and blank listener Notes lines), then a Reference part for the
+// commentary outline. AI-free — every word is the pastor's own. (Rewritten in
+// the 2026-06-24 content-model rebuild; the old World/Why/Big-Idea/Journey parts
+// read the retired book-study columns and are gone.)
 function buildStudyGuideDoc(series, sections, sermons) {
-  const { Document, Paragraph, TextRun, HeadingLevel } = require("docx");
+  const { Document, Paragraph, TextRun, HeadingLevel, BorderStyle } = require("docx");
   const accentHex = SERIES_COLOR_HEX[series.color] || SERIES_COLOR_HEX.gold;
 
+  const ADDITION_LABEL = { question: "Question", "cross-reference": "Cross-reference", quote: "Quote" };
+
   function hasContent(val) {
-    return val != null && val.trim().length > 0;
+    return val != null && String(val).trim().length > 0;
+  }
+
+  // Parse study_guide_extras fail-soft — mirrors parseStudyGuideExtras in the
+  // renderer. Never throws; junk degrades to the empty default.
+  function parseExtras(raw) {
+    const empty = { additions: [], notesLines: 8 };
+    if (!raw || typeof raw !== "string") return empty;
+    try {
+      const obj = JSON.parse(raw);
+      if (!obj || typeof obj !== "object" || Array.isArray(obj)) return empty;
+      const additions = Array.isArray(obj.additions)
+        ? obj.additions.filter((a) => a && typeof a === "object" && typeof a.text === "string")
+        : [];
+      const notesLines = Number.isInteger(obj.notesLines) ? Math.max(0, Math.min(20, obj.notesLines)) : 8;
+      return { additions, notesLines };
+    } catch { return empty; }
   }
 
   function bodyParas(text) {
-    return (text || "").split(/\n+/).filter(l => l.trim()).map(line =>
-      new Paragraph({
-        children: [new TextRun({ text: line.trim() })],
-        spacing: { after: 100 },
-      })
+    return (text || "").split(/\n+/).filter((l) => l.trim()).map((line) =>
+      new Paragraph({ children: [new TextRun({ text: line.trim() })], spacing: { after: 100 } })
     );
   }
 
-  function partHeading(text) {
+  function partHeading(text, pageBreak = false) {
     return new Paragraph({
       heading: HeadingLevel.HEADING_1,
-      spacing: { before: 400, after: 160 },
+      pageBreakBefore: pageBreak,
+      spacing: { before: 360, after: 140 },
       children: [new TextRun({ text, color: accentHex, bold: true })],
     });
   }
 
-  function subHead(text) {
+  function leadLine(text) {
     return new Paragraph({
-      heading: HeadingLevel.HEADING_2,
-      spacing: { before: 240, after: 80 },
-      children: [new TextRun({ text })],
-    });
-  }
-
-  function secHead(text) {
-    return new Paragraph({
-      heading: HeadingLevel.HEADING_3,
-      spacing: { before: 200, after: 80 },
-      children: [new TextRun({ text, color: accentHex })],
+      spacing: { after: 120 },
+      children: [new TextRun({ text, italics: true })],
     });
   }
 
@@ -2877,45 +2892,66 @@ function buildStudyGuideDoc(series, sections, sermons) {
     return new Paragraph({ text: "", spacing: { after: 60 } });
   }
 
-  function sermonRows(list) {
-    const rows = [];
-    list.forEach((sermon, i) => {
-      const labelParts = [];
-      if (sermon.passage) labelParts.push(sermon.passage);
-      if (sermon.title)   labelParts.push(sermon.title);
-      const labelText = `${i + 1}. ${labelParts.join(" — ") || "Untitled"}`;
-      const headerRuns = [new TextRun({ text: labelText, bold: true })];
-      if (sermon.date) {
-        const seasonName = getSeasonNameForExport(sermon.date);
-        try {
-          const [ys, ms, ds] = sermon.date.split("-").map(Number);
-          const formatted = new Date(ys, ms - 1, ds)
-            .toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-          const dateText = seasonName ? `  ${formatted} (${seasonName})` : `  ${formatted}`;
-          headerRuns.push(new TextRun({ text: dateText, color: "888888" }));
-        } catch {}
-      }
-      rows.push(new Paragraph({
-        children: headerRuns,
-        spacing: { before: 160, after: 60 },
+  // One sermon's page in the booklet — page-broken so each sermon starts fresh.
+  function sermonPage(sermon) {
+    const out = [];
+    // Page heading: passage — title (+ date / season).
+    const headParts = [];
+    if (hasContent(sermon.passage)) headParts.push(sermon.passage);
+    if (hasContent(sermon.title))   headParts.push(sermon.title);
+    out.push(new Paragraph({
+      heading: HeadingLevel.HEADING_2,
+      pageBreakBefore: true,
+      spacing: { before: 0, after: 60 },
+      children: [new TextRun({ text: headParts.join(" — ") || "Untitled", bold: true, color: accentHex })],
+    }));
+    if (hasContent(sermon.date)) {
+      const seasonName = getSeasonNameForExport(sermon.date);
+      try {
+        const [ys, ms, ds] = sermon.date.split("-").map(Number);
+        const formatted = new Date(ys, ms - 1, ds).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+        out.push(new Paragraph({
+          spacing: { after: 120 },
+          children: [new TextRun({ text: seasonName ? `${formatted} · ${seasonName}` : formatted, color: "888888", size: 20 })],
+        }));
+      } catch {}
+    }
+    if (hasContent(sermon.big_idea)) out.push(leadLine(sermon.big_idea));
+    if (hasContent(sermon.overview)) out.push(...bodyParas(sermon.overview));
+
+    // Pastor-authored additions (questions / cross-references / quotes).
+    const extras = parseExtras(sermon.study_guide_extras);
+    for (const a of extras.additions) {
+      out.push(new Paragraph({
+        spacing: { before: 80, after: 40 },
+        children: [
+          new TextRun({ text: `${ADDITION_LABEL[a.type] || "Note"}:  `, bold: true, color: accentHex }),
+          new TextRun({ text: String(a.text) }),
+        ],
       }));
-      if (hasContent(sermon.study_guide_note)) {
-        sermon.study_guide_note.trim().split(/\n+/).filter(l => l.trim()).forEach(line => {
-          rows.push(new Paragraph({
-            children: [new TextRun({ text: line.trim() })],
-            indent: { left: 360 },
-            spacing: { after: 80 },
-          }));
-        });
+    }
+
+    // Notes — blank ruled lines for the listener.
+    if (extras.notesLines > 0) {
+      out.push(new Paragraph({
+        spacing: { before: 200, after: 40 },
+        children: [new TextRun({ text: "Notes", bold: true, size: 20, color: "888888" })],
+      }));
+      for (let i = 0; i < extras.notesLines; i++) {
+        out.push(new Paragraph({
+          spacing: { before: 200, after: 0 },
+          border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: "DDDDDD", space: 1 } },
+          children: [],
+        }));
       }
-    });
-    return rows;
+    }
+    return out;
   }
 
   const model = buildStudyGuideModel(series, sections, sermons);
   const children = [];
 
-  // Title block
+  // ── Title block ──────────────────────────────────────────────────────────
   children.push(new Paragraph({
     children: [new TextRun({ text: series.title || "Study Guide", bold: true, color: accentHex, size: 48 })],
     spacing: { after: 120 },
@@ -2928,7 +2964,7 @@ function buildStudyGuideDoc(series, sections, sermons) {
   }
   const dates = [series.start_date, series.end_date].filter(Boolean);
   if (dates.length > 0) {
-    const dateRange = dates.map(d => {
+    const dateRange = dates.map((d) => {
       try {
         const [ys, ms, ds] = d.split("-").map(Number);
         return new Date(ys, ms - 1, ds).toLocaleDateString("en-US", { month: "long", year: "numeric" });
@@ -2936,88 +2972,42 @@ function buildStudyGuideDoc(series, sections, sermons) {
     }).join(" — ");
     children.push(new Paragraph({
       children: [new TextRun({ text: dateRange, color: "888888", size: 22 })],
-      spacing: { after: 480 },
+      spacing: { after: 360 },
     }));
   } else {
     children.push(spacer());
   }
 
-  // PART 1 — THE WORLD OF THIS BOOK
-  // book_structure ("How the Book Is Built") retired in Step 2 of the planner
-  // re-leveling — its content was folded into structural_outline (v26), which
-  // is the single home for the book's structure, in Part 5 (Reference).
-  if (hasContent(series.book_background) || hasContent(series.book_argument)) {
-    children.push(partHeading("PART 1 — THE WORLD OF THIS BOOK"));
-    if (hasContent(series.book_background)) {
-      children.push(subHead("Then"));
-      children.push(...bodyParas(series.book_background));
-    }
-    if (hasContent(series.book_argument)) {
-      children.push(subHead("The Argument"));
-      children.push(...bodyParas(series.book_argument));
-    }
+  // ── Introduction — the book's big idea + overview ────────────────────────
+  if (hasContent(series.big_idea) || hasContent(series.overview)) {
+    children.push(partHeading("Introduction"));
+    if (hasContent(series.big_idea)) children.push(leadLine(series.big_idea));
+    if (hasContent(series.overview)) children.push(...bodyParas(series.overview));
   }
 
-  // PART 2 — WHY WE'RE HERE
-  if (hasContent(series.redemptive_context) || hasContent(series.series_motivation)) {
-    children.push(partHeading("PART 2 — WHY WE'RE HERE"));
-    if (hasContent(series.redemptive_context)) {
-      children.push(subHead("Where It Sits in the Story"));
-      children.push(...bodyParas(series.redemptive_context));
+  // ── A part per section, a page per sermon ────────────────────────────────
+  for (const { section, sermons: sectionSermons } of model.sectionGroups) {
+    children.push(partHeading(hasContent(section.title) ? section.title : "Untitled section"));
+    if (hasContent(section.passage_range)) {
+      children.push(new Paragraph({
+        children: [new TextRun({ text: section.passage_range, italics: true, size: 20, color: "888888" })],
+        spacing: { after: 80 },
+      }));
     }
-    if (hasContent(series.series_motivation)) {
-      children.push(subHead("Why This Congregation, Why Now"));
-      children.push(...bodyParas(series.series_motivation));
-    }
+    if (hasContent(section.big_idea)) children.push(leadLine(section.big_idea));
+    if (hasContent(section.overview)) children.push(...bodyParas(section.overview));
+    for (const sermon of sectionSermons) children.push(...sermonPage(sermon));
   }
 
-  // PART 3 — THE BIG IDEA
-  if (model.showWorkingHypothesis || hasContent(series.big_idea) || hasContent(series.overview)) {
-    children.push(partHeading("PART 3 — THE BIG IDEA"));
-    if (model.showWorkingHypothesis) {
-      children.push(subHead("Working Hypothesis"));
-      children.push(...bodyParas(series.emerging_big_idea));
-    }
-    if (hasContent(series.big_idea)) {
-      children.push(subHead("Series Big Idea"));
-      children.push(...bodyParas(series.big_idea));
-    }
-    if (hasContent(series.overview)) {
-      children.push(subHead("Overview"));
-      children.push(...bodyParas(series.overview));
-    }
+  // Unsectioned sermons.
+  if (model.remainingSermons.length > 0) {
+    if (model.hasSections) children.push(partHeading("Remaining"));
+    for (const sermon of model.remainingSermons) children.push(...sermonPage(sermon));
   }
 
-  // PART 4 — THE JOURNEY
-  if (sermons.length > 0) {
-    children.push(partHeading("PART 4 — THE JOURNEY"));
-    for (const { section, sermons: sectionSermons } of model.sectionGroups) {
-      if (hasContent(section.title)) children.push(secHead(section.title));
-      if (hasContent(section.passage_range)) {
-        children.push(new Paragraph({
-          children: [new TextRun({ text: section.passage_range, italics: true, size: 20 })],
-          spacing: { after: 80 },
-        }));
-      }
-      if (hasContent(section.big_idea)) {
-        children.push(new Paragraph({
-          children: [new TextRun({ text: section.big_idea, italics: true })],
-          spacing: { after: 80 },
-        }));
-      }
-      if (hasContent(section.overview)) children.push(...bodyParas(section.overview));
-      if (sectionSermons.length > 0) children.push(...sermonRows(sectionSermons));
-    }
-    if (model.remainingSermons.length > 0) {
-      if (model.hasSections) children.push(secHead("Remaining Sermons"));
-      children.push(...sermonRows(model.remainingSermons));
-    }
-  }
-
-  // PART 5 — REFERENCE
+  // ── Reference — the book's commentary outline ────────────────────────────
   if (hasContent(series.structural_outline)) {
-    children.push(partHeading("PART 5 — REFERENCE"));
-    children.push(subHead("How the Book Is Built"));
+    children.push(partHeading("Reference", true));
     children.push(...bodyParas(series.structural_outline));
   }
 

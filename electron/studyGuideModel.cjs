@@ -12,11 +12,6 @@
 'use strict';
 
 function buildStudyGuideModel(series, sections, sermons) {
-  const showWorkingHypothesis =
-    !!series.emerging_big_idea &&
-    series.emerging_big_idea.trim().length > 0 &&
-    series.emerging_big_idea.trim() !== (series.big_idea || '').trim();
-
   const assignedIds = new Set();
   const sectionGroups = [];
   for (const section of sections) {
@@ -33,7 +28,6 @@ function buildStudyGuideModel(series, sections, sermons) {
   const remainingSermons = sermons.filter(s => !assignedIds.has(s.id));
 
   return {
-    showWorkingHypothesis,
     sectionGroups,
     remainingSermons,
     hasSections: sections.length > 0,
