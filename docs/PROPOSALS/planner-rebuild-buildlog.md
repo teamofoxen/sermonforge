@@ -87,4 +87,58 @@ range · Big idea (one line) · Overview (paragraph).** Three screens (tabs):
   is the canary that the columns landed. The spine-field contract tests cover the
   testable layer.
 
+## Phase 1 — the rebuilt planner (Outline · Schedule · Study guide) (DONE)
+
+`src/components/SeriesPlanner.jsx` rewritten end-to-end (2647 → ~1180 lines).
+Deleted: the four-movement model (PLANNER_MOVEMENTS, BookStudyTab/DesignTab/
+OverviewTab/CalendarTab-as-movement, UNDERSTAND_FIELDS, MELODIC_EVIDENCE_FIELDS,
+parseMelodicEvidence) and every guided-spine piece (MovementFrame,
+MovementFooter, MoveHeader, PlannerArcRail, PresenceDot/EchoText/GlanceCard,
+the topbar "Movement N of 4" place-line, the old four-column How-this-works SVG).
+
+Built (all three tabs functional so the app is never broken mid-night):
+- **Outline** — the book as one live nested outline. Book node (Title · Big idea ·
+  Overview + collapsible "Book details" carrying the canonical-book picker /
+  genre / passage range / color / status / year / description + a CoveragePanel,
+  and a collapsible "Reference" = structural_outline). Section nodes (their own
+  Title · range · Big idea · Overview) with reorder/delete and nested pericopes.
+  Pericope nodes = sermons (passage · title · big idea · overview), a date chip
+  (read-only here), a "Schedule" jump, Open, and the draft-row/commit flow
+  preserved (createSermon never widened; big_idea/overview follow on commit).
+- **Schedule** — single-source dates (D3): per-row edits autosave via the shared
+  debounced updateSermon path and reflect live on the Outline chip; Suggest
+  Sundays is one bulk gesture; end_date mirrors the last dated sermon. Pacing
+  strip + seasons + skip-a-week kept. The drift-prone `schedule` snapshot is gone.
+- **Study guide** — "Import from outline" builds the booklet (D2 localStorage
+  flag), then a live projection (D1): Introduction (book big idea/overview),
+  a part per section, a page per sermon (big idea + overview-as-commentary +
+  passage + date + season), each with a pastor-authored additions composer
+  (Question / Cross-reference / Quote → study_guide_extras) and a blank listener
+  Notes block with a line-count stepper. Export to Word wired to the existing
+  pipeline (the .docx itself is rewritten in Phase 3). Reference part renders the
+  commentary outline.
+- Tab id is `book-outline` (not `outline`) — the bare literal `"outline"` is a
+  forbidden pre-Pilot-B stage alias under the `canonical-stage-name` lint rule;
+  the human label stays "Outline". Topbar eyebrow shows "status · current screen"
+  for "you are here" (Surface #4). Front-door How-this-works rewritten to the
+  three screens (D4). The standalone topbar "Study Guide" button is gone (it's a
+  tab now); the StudyGuideModal was replaced by the Study-guide tab.
+- Multi-entity debounce safety: section + sermon field savers flush a pending
+  write when the edited id changes (a single trailing-args timer would otherwise
+  drop an earlier entity's last keystrokes when jumping between rows).
+- Fixture (`SeriesPlannerFixture.jsx`) reseeded to the pastor's real Luke artifact
+  (Book ▸ 2 sections ▸ 3 pericopes, each with big idea + overview); route accepts
+  `?planner=schedule|study-guide`, default outline. Stale copy fixed in
+  `Planning.jsx` (delete-modal) and `App.jsx` (fixture-route comment).
+- **Verify:** eslint 0 on all changed files; vitest 234 passed; `vite build`
+  compiles (SeriesPlanner 52 kB); preview render of `?planner`, `?planner=schedule`,
+  and `?planner=study-guide` (after Import) all render the new model with **zero
+  console errors** (Outline nested tree, Schedule single-source dates + pacing,
+  Study-guide booklet with pages/notes/additions).
+- **Interim note for audit:** the exported `.docx` still uses the OLD
+  buildStudyGuideDoc (reads the now-unwritable book_background etc., so it exports
+  mostly-empty legacy parts) until Phase 3 rewrites it to match the booklet
+  preview + wire study_guide_extras. The on-screen preview is the new model now;
+  the export catches up in Phase 3.
+
 (Phases below are appended as they complete.)

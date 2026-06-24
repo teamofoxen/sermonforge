@@ -281,7 +281,7 @@ function DeleteSeriesModal({ series, sermonCount, error, onConfirm, onClose }) {
         <div className="modal-body">
           <p style={{ fontFamily: "var(--font-serif)", fontSize: "15px", color: "var(--ink)", lineHeight: "1.6", margin: "0 0 10px" }}>
             This permanently deletes <strong>{series.title || "this series"}</strong> — its
-            book study, overview, structure, sections, and calendar. <strong>This can&rsquo;t be undone.</strong>
+            outline, sections, and calendar. <strong>This can&rsquo;t be undone.</strong>
           </p>
           <p style={{ fontFamily: "var(--font-serif)", fontSize: "14px", color: "var(--ink-soft)", lineHeight: "1.6", margin: 0 }}>
             {sermonCount > 0

@@ -282,8 +282,8 @@ function AppInner() {
 
   // Series Planner preview — mounts the real SeriesPlanner against mock data
   // so the AI-free, workspace-styled planner can be verified in a browser
-  // preview without Electron/SQLite. ?planner[=overview|structure|slots|calendar]
-  // Gated to dev so a packaged build never honors the query string (audit L15).
+  // preview without Electron/SQLite. ?planner[=schedule|study-guide] (default
+  // outline). Gated to dev so a packaged build never honors the query string (audit L15).
   const isPlannerFixture =
     import.meta.env.DEV &&
     typeof window !== "undefined" &&

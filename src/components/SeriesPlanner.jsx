@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef, Fragment } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useDebounce, useFlushOnExit } from "../utils/hooks";
 import { runRegisteredFlushes } from "../utils/closeFlush";
 import { useModalA11y } from "../utils/useModalA11y";
@@ -28,10 +28,22 @@ import BackButton from "./primitives/BackButton";
 import TextButton from "./primitives/TextButton";
 import FeedbackFlag from "./FeedbackFlag";
 
+// ── The three screens ─────────────────────────────────────────────────────────
+// The planner is a top-down way to understand the book at three levels —
+// Book ▸ Section ▸ Pericope — yielding the sermon calendar, text-familiarity
+// before preaching, and the study guide's raw material. A pericope IS a sermon
+// IS the scheduled unit (the series→sections→sermons spine). Every level is the
+// same unit: Title + range · Big idea · Overview. The four-movement workbench and
+// the melodic-line model were retired in the 2026-06-24 content-model rebuild.
+const PLANNER_TABS = [
+  { id: "book-outline", label: "Outline" },
+  { id: "schedule",    label: "Schedule" },
+  { id: "study-guide", label: "Study guide" },
+];
+const PLANNER_TAB_IDS = PLANNER_TABS.map((t) => t.id);
 
-// The Overview "Biblical Category" dropdown — the 7 Dever genres from the
-// canonical module (single source of truth), plus an Unclassified state for
-// legacy/never-set rows. Selecting a book auto-fills this; it stays editable.
+// The "Biblical Category" dropdown — the 7 Dever genres (single source) plus an
+// Unclassified state for legacy/never-set rows. Picking a book auto-fills it.
 const CANON_OPTIONS = [
   { value: "", label: "Unclassified" },
   ...Object.entries(GENRES).map(([value, label]) => ({ value, label })),
@@ -49,226 +61,76 @@ const STATUS_OPTIONS = [
   { value: SERIES_STATUS.Complete,   label: SERIES_STATUS_LABELS[SERIES_STATUS.Complete] },
 ];
 
-// The four movements, in workflow order, each with the named outcome it produces
-// and the prior outcome it opens against. This is the planner's analog of the
-// sermon walk's REGION_NAMED_OUTCOME + regionFrameFor (src/utils/walkOrder.js):
-// ONE source that the seam frames, the foot "continue" affordance, the topbar
-// place-line, and the Overview arc rail all read, so those surfaces can't drift
-// about the shape of the work. `opensAgainst` is null for the source movement
-// (Understand). This is NOT a progress model — no scores, no %, no gates; it
-// only names the shape of the work and what each movement builds on.
-const PLANNER_MOVEMENTS = [
-  { id: "book-study", label: "Understand", outcome: "the Melodic Line",                       opensAgainst: null },
-  { id: "design",     label: "Design",     outcome: "the Big Idea and the slate of sermons",  opensAgainst: "the Melodic Line" },
-  { id: "calendar",   label: "Schedule",   outcome: "the dated journey",                      opensAgainst: "the sermons you divided in Design" },
-  { id: "overview",   label: "Overview",   outcome: "the Study Guide",                        opensAgainst: "everything you've built" },
+// Study-guide page "additions" — pastor-authored extras stored guide-local on
+// the sermon (study_guide_extras JSON). Adding a 4th type is ONE entry here.
+const ADDITION_TYPES = [
+  { value: "question",        label: "Question" },
+  { value: "cross-reference", label: "Cross-reference" },
+  { value: "quote",           label: "Quote" },
 ];
+const ADDITION_LABEL = Object.fromEntries(ADDITION_TYPES.map((t) => [t.value, t.label]));
+// Blank listener lines printed under each study-guide page by default.
+const DEFAULT_NOTES_LINES = 8;
 
-// The movement tab ids, derived from the one movement list above so a tab id
-// can never drift from the movement model. Used to validate a remembered tab
-// from localStorage — a stale id (e.g. the removed `structure`/`slots`) falls
-// back to the first movement so the planner never lands on a blank render.
-const PLANNER_TAB_IDS = PLANNER_MOVEMENTS.map((m) => m.id);
-
-// ── Understand field definitions ──────────────────────────────────────────────
-// Plain label + prompt text for the receptive notes the pastor writes by hand.
-// AI-FREE: the prompt is the only scaffolding — nothing is generated, prefilled,
-// or suggested. (soloPrompt keys were stripped with the removed AI analyze path.)
-const UNDERSTAND_FIELDS = {
-  redemptive_context: {
-    label: "Where This Book Sits in Redemptive History",
-    placeholder: "Where does this book sit in the arc from creation to new creation? How does it anticipate or reflect Christ?",
-  },
-  book_background: {
-    label: "The World of This Book",
-    placeholder: "Author, audience, occasion, date, historical setting, literary genre. Paste from a commentary introduction or write your own notes.",
-  },
-  book_argument: {
-    label: "The Book's Controlling Argument",
-    placeholder: "What is the author's central claim or purpose? What is this book trying to do to its reader?",
-  },
-  series_motivation: {
-    label: "Why This Congregation, Why Now",
-    placeholder: "What does this congregation need from this book right now? What pastoral urgency drives this series?",
-  },
-  emerging_big_idea: {
-    label: "The Melodic Line",
-    placeholder: "The single line every passage in this book sounds — the note you'll listen for all series.",
-  },
-};
-
-// The labeled evidence slots in "Hear the Line", stored as a single JSON object
-// on series.melodic_evidence. Adding a 5th evidence type is ONE entry here — the
-// worksheet renders from this list and the blob is keyed by `key`. AI-FREE: each
-// slot is an empty input the pastor fills; the prompt never prefills or suggests.
-const MELODIC_EVIDENCE_FIELDS = [
-  {
-    key: "repeated",
-    label: "Repeated Words & Phrases",
-    prompt: "Words, images, or ideas the book keeps returning to. What does the author say again and again?",
-  },
-  {
-    key: "topAndTail",
-    label: "The Book's Top-and-Tail",
-    prompt: "How the book opens and how it closes. The first note and the last often frame the whole.",
-  },
-  {
-    key: "purpose",
-    label: "Purpose / Thesis Statement",
-    prompt: "A verse where the author states why he wrote (e.g. Luke 1:1-4, John 20:30-31). Put it in your own words.",
-  },
-  {
-    key: "otQuotations",
-    label: "Old Testament Quotations & Allusions",
-    prompt: "Where the book quotes or echoes earlier Scripture — the story it's continuing.",
-  },
-];
-
-// The empty blob, derived from the field list so it stays in step automatically.
-const EMPTY_EVIDENCE = MELODIC_EVIDENCE_FIELDS.reduce((acc, f) => { acc[f.key] = ""; return acc; }, {});
-
-// Parse the melodic_evidence JSON column into a plain { key: string } object.
-// Fail-soft: null / non-string / malformed JSON / non-object all degrade to an
-// empty blob — never throws, never blocks. Only known keys with string values
-// are kept, so stale or junk keys can't leak into the worksheet.
-function parseMelodicEvidence(raw) {
-  if (!raw || typeof raw !== "string") return { ...EMPTY_EVIDENCE };
+// Parse the study_guide_extras JSON column into { additions: [{id,type,text}],
+// notesLines: int }. Fail-soft: null / non-string / malformed / wrong-shape all
+// degrade to the empty default — never throws, never blocks.
+function parseStudyGuideExtras(raw) {
+  const empty = { additions: [], notesLines: DEFAULT_NOTES_LINES };
+  if (!raw || typeof raw !== "string") return empty;
   try {
     const obj = JSON.parse(raw);
-    if (!obj || typeof obj !== "object" || Array.isArray(obj)) return { ...EMPTY_EVIDENCE };
-    const out = { ...EMPTY_EVIDENCE };
-    for (const f of MELODIC_EVIDENCE_FIELDS) {
-      if (typeof obj[f.key] === "string") out[f.key] = obj[f.key];
-    }
-    return out;
+    if (!obj || typeof obj !== "object" || Array.isArray(obj)) return empty;
+    const additions = Array.isArray(obj.additions)
+      ? obj.additions
+          .filter((a) => a && typeof a === "object" && typeof a.text === "string")
+          .map((a) => ({
+            id: typeof a.id === "string" ? a.id : crypto.randomUUID(),
+            type: ADDITION_LABEL[a.type] ? a.type : "question",
+            text: a.text,
+          }))
+      : [];
+    const notesLines = Number.isInteger(obj.notesLines) ? Math.max(0, Math.min(20, obj.notesLines)) : DEFAULT_NOTES_LINES;
+    return { additions, notesLines };
   } catch {
-    return { ...EMPTY_EVIDENCE };
+    return empty;
   }
-}
-
-// A receptive note field bound to a series column through the debounced
-// updateSeries path (onChange). Label + prompt come from UNDERSTAND_FIELDS.
-function UnderstandNote({ fieldKey, series, onChange }) {
-  const def = UNDERSTAND_FIELDS[fieldKey];
-  return (
-    <div className="field-group" style={{ marginBottom: 0 }}>
-      <label className="field-label">{def.label}</label>
-      <textarea
-        className="field-textarea large"
-        value={series[fieldKey] || ""}
-        onChange={(e) => onChange(fieldKey, e.target.value)}
-        onInput={(e) => autoResize(e.target)}
-        ref={(el) => autoResize(el)}
-        placeholder={def.placeholder}
-      />
-    </div>
-  );
-}
-
-// The numbered header that marks each of Understand's two moves.
-function MoveHeader({ n, title, subtitle }) {
-  return (
-    <div style={{ display: "flex", alignItems: "baseline", gap: "12px", margin: "30px 0 2px" }}>
-      <span style={{
-        display: "inline-flex", alignItems: "center", justifyContent: "center",
-        width: "26px", height: "26px", borderRadius: "50%", flexShrink: 0,
-        background: "var(--gold)", color: "var(--white)",
-        fontFamily: "var(--font-serif)", fontWeight: 700, fontSize: "13px",
-        alignSelf: "center",
-      }}>{n}</span>
-      <div>
-        <div style={{ fontFamily: "var(--font-serif)", fontSize: "18px", fontWeight: 600, color: "var(--ink)" }}>{title}</div>
-        {subtitle && <div style={{ fontSize: "13px", color: "var(--ink-soft)", marginTop: "2px" }}>{subtitle}</div>}
-      </div>
-    </div>
-  );
-}
-
-// The named-outcome handoff line at a movement's head — the planner's analog of
-// the sermon walk's "X opens, against the Y" region frame (walkOrder.js
-// regionFrameFor). It names the prior movement's outcome that this movement
-// builds on, so the throughline is felt at the seam instead of only implied by
-// tab order. Like the sermon frame, it makes NO closure claim about the prior
-// movement — navigation is free and movements are revisited out of order.
-function MovementFrame({ movementId }) {
-  const m = PLANNER_MOVEMENTS.find((x) => x.id === movementId);
-  if (!m || !m.opensAgainst) return null;
-  return (
-    <div style={{
-      fontFamily: "var(--font-serif)", fontStyle: "italic",
-      fontSize: "13px", color: "var(--ink-soft)", marginBottom: "6px",
-    }}>
-      {m.label} opens, against {m.opensAgainst}.
-    </div>
-  );
-}
-
-// The forward affordance at a movement's foot — the planner's analog of the
-// sermon walk's Next chevron (SermonWritingSurface). It advances the WHOLE
-// movement at once (never one field at a time — breadth-first macro work keeps
-// its board), is ALWAYS enabled (pure navigation, never gated on completeness),
-// and makes NO closure claim ("Continue to …", not "Mark done"). The last
-// movement has no next and renders nothing — Overview is the arrival, and its
-// terminal action is the Study Guide, not a "continue".
-function MovementFooter({ movementId, onNavigate }) {
-  const idx = PLANNER_MOVEMENTS.findIndex((m) => m.id === movementId);
-  const next = idx >= 0 ? PLANNER_MOVEMENTS[idx + 1] : null;
-  if (!next || !onNavigate) return null;
-  return (
-    <div style={{
-      display: "flex", justifyContent: "flex-end",
-      marginTop: "32px", paddingTop: "20px",
-      borderTop: "1px solid var(--parchment-deep)",
-    }}>
-      <SecondaryButton onClick={() => onNavigate(next.id)}>
-        Continue to {next.label} →
-      </SecondaryButton>
-    </div>
-  );
 }
 
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture }) {
-  // _fixture — preview seam (mirrors SermonWorkspace's _fixtureSermon). When
-  // set, skip the spine reads and seed from the fixture so the planner renders
-  // in a browser preview without Electron/SQLite. Never set in production.
+  // _fixture — preview seam (mirrors SermonWorkspace's _fixtureSermon). When set,
+  // skip the spine reads and seed from the fixture so the planner renders in a
+  // browser preview without Electron/SQLite. Never set in production.
   const [series, setSeries]     = useState(_fixture?.series ?? null);
   const [sections, setSections] = useState(_fixture?.sections ?? []);
   const [sermons, setSermons]   = useState(_fixture?.sermons ?? []);
   const [calNotes, setCalNotes] = useState(_fixture?.calNotes ?? []);
-  const [activeTab, setActiveTab] = useState(_fixture?.activeTab ?? "book-study");
+  const [activeTab, setActiveTab] = useState(_fixture?.activeTab ?? "book-outline");
   const [saving, setSaving]     = useState(false);
   const [saveError, setSaveError] = useState(false);
   const [loading, setLoading]   = useState(!_fixture);
   const [loadError, setLoadError] = useState(false);
-  const [showHowItWorks, setShowHowItWorks]   = useState(false);
-  const [showStudyGuide, setShowStudyGuide]   = useState(false);
-  // The last failed save's mutation thunk, so the topbar Retry re-runs the
-  // real write instead of an empty no-op (audit M3).
+  const [showHowItWorks, setShowHowItWorks] = useState(false);
+  // The last failed save's mutation thunk, so the topbar Retry re-runs the real
+  // write instead of an empty no-op.
   const lastFailedRef = useRef(null);
-  // Calendar schedule lives in the shell (not CalendarTab) so Suggest Sundays
-  // results and unsaved manual dates survive a tab switch (audit M7).
-  const [schedule, setSchedule] = useState([]);
-  const scheduleDirty = useRef(false);
 
   useEffect(() => {
     if (_fixture) return; // preview fixture — no DB reads
     load();
     const saved = localStorage.getItem(`sermonforge_planner_tab_${seriesId}`);
-    // A remembered id for a since-removed tab (`structure`/`slots`) must not
-    // stick — fall back to the first movement so the render is never blank.
-    setActiveTab(PLANNER_TAB_IDS.includes(saved) ? saved : "book-study");
+    // A remembered id for a since-removed tab (the old book-study / design /
+    // calendar / overview) must not stick — fall back to Outline.
+    setActiveTab(PLANNER_TAB_IDS.includes(saved) ? saved : "book-outline");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seriesId]);
 
-  // Front door: the first time a given series is opened, auto-show the "How this
-  // works" overview once — the planner's orientation before the first keystroke
-  // (the macro analog of the sermon-start landing). It reuses the existing modal
-  // (which already draws the four-movement flow) and stays re-readable forever
-  // via the topbar "How this works" button. The seen-flag is write-only
-  // localStorage, mirroring the tour's sf_tour_planner_seen — NEVER a schema
-  // column, so the create-then-update INSERT is untouched. Keyed on seriesId so
-  // opening a different series re-checks its own flag; runs in the fixture too
-  // (no DB needed) so the front door is previewable.
+  // Front door: the first time a given series is opened, auto-show the short
+  // "How this works" orientation once (the macro analog of the sermon-start
+  // landing). It stays re-readable forever via the topbar button. The seen-flag
+  // is write-only localStorage (mirrors the tour's sf_tour_planner_seen) — NEVER
+  // a schema column, so the create-then-update INSERT is untouched.
   useEffect(() => {
     const introKey = `sermonforge_planner_intro_${seriesId}`;
     if (!localStorage.getItem(introKey)) {
@@ -277,12 +139,8 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
     }
   }, [seriesId]);
 
-  // Auto-suggest series complete — Pilot B.3 / Process Contract #2
-  // ("movement gated by user evidence"). The user's evidence is clicking
-  // the Mark Series Complete button; the suggestion is just visibility.
-  // Conditions: every committed (non-draft) child sermon has reached
-  // SERMON_STATUS.Complete, the series itself isn't already complete, and
-  // there's at least one sermon (don't suggest completion of an empty series).
+  // Auto-suggest series complete — visibility only; the user's click on Mark
+  // Series Complete is the evidence (Process #2 + the Principle).
   const committedSermons = sermons.filter((s) => !s._draft && !s.id?.startsWith?.("draft-"));
   const allChildrenComplete =
     committedSermons.length > 0 &&
@@ -304,18 +162,11 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
         getSermonsBySeries(seriesId),
         getCalendarNotes(),
       ]);
-      // getSeries returns null for a missing/deleted id — treat that as a load
-      // failure too, so we never trap the perpetual "Loading…" spinner (M1).
-      if (!s) {
-        setLoadError(true);
-        return;
-      }
+      if (!s) { setLoadError(true); return; }
       setSeries(s);
       setSections(sects);
       setSermons(serms);
       setCalNotes(notes);
-      scheduleDirty.current = false;
-      setSchedule(serms.map((sm) => ({ sermonId: sm.id, date: sm.date || "" })));
     } catch (e) {
       console.error("SeriesPlanner load error:", e);
       setLoadError(true);
@@ -324,10 +175,9 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
     }
   }
 
-  // One save path for every planner write — series, section, and slot — so the
+  // One save path for every planner write — series, section, and sermon — so the
   // topbar Saving/Saved/Save-failed indicator reflects them all and no write is
-  // silent (audit M2). runSave remembers the failed thunk so the topbar Retry
-  // re-runs the real write rather than an empty no-op (audit M3).
+  // silent. runSave remembers the failed thunk so Retry re-runs the real write.
   const runSave = useCallback(async (doMutation) => {
     if (_fixture) return true; // preview fixture — no DB writes
     setSaving(true);
@@ -346,43 +196,29 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
     }
   }, [_fixture]);
 
+  // ── Series (book-level) field persistence — debounced updateSeries ──────────
   const persistSeries = useCallback((fields) => {
-    setSeries(prev => ({ ...prev, ...fields }));
+    setSeries((prev) => ({ ...prev, ...fields }));
     return runSave(() => updateSeries(seriesId, fields));
   }, [runSave, seriesId]);
-
-  const debouncedPersist = useDebounce(persistSeries, 800);
-
-  // Flush the pending series write on unmount (Back / Open-sermon / tab swap)
-  // and on app quit / reload via the close-flush registry, so the 800ms
-  // debounce window can't silently drop the last keystrokes (audit H3).
-  useFlushOnExit(debouncedPersist);
-
-  // Keep the calendar schedule synced with the slot list (new/removed slots),
-  // but never clobber unsaved Suggest results or manual date edits (audit M7).
-  useEffect(() => {
-    if (scheduleDirty.current) return;
-    setSchedule(sermons.map(s => ({ sermonId: s.id, date: s.date || "" })));
-  }, [sermons]);
+  const debouncedSeries = useDebounce(persistSeries, 800);
+  useFlushOnExit(debouncedSeries);
 
   function handleSeriesField(field, value) {
-    setSeries(prev => ({ ...prev, [field]: value }));
+    setSeries((prev) => ({ ...prev, [field]: value }));
     // An empty title would be rejected by update-series (State #3) and flash a
-    // transient "Save failed" each time the pastor clears it to retype (audit
-    // L2). Keep the local edit, but don't persist until there's a name again.
+    // transient "Save failed" each time the pastor clears it to retype. Keep the
+    // local edit, but don't persist until there's a name again.
     if (field === "title" && !String(value).trim()) {
-      debouncedPersist.cancel();
+      debouncedSeries.cancel();
       return;
     }
-    debouncedPersist({ [field]: value });
+    debouncedSeries({ [field]: value });
   }
 
-  // Selecting a canonical book is ONE explicit act that fills several fields at
-  // once, so it persists as a single multi-field write — not three
-  // handleSeriesField calls, whose 800ms debounce would let later fields clobber
-  // earlier ones. Genre is (re)filled from the book every time (the explicit act
-  // the override rule hangs on); passage_range is only pre-filled when empty, so
-  // a range the pastor typed is never clobbered. AI-free — pure module lookup.
+  // Selecting a canonical book fills several fields at once, so it persists as a
+  // single multi-field write. Genre is (re)filled every time (the explicit act
+  // the override rule hangs on); passage_range is only pre-filled when empty.
   const handleSelectBook = useCallback((bookId) => {
     const book = bookById(bookId);
     if (!book) { persistSeries({ book_id: null }); return; }
@@ -393,12 +229,47 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
     persistSeries(fields);
   }, [series?.passage_range, persistSeries]);
 
+  // ── Section field persistence — debounced updateSection ─────────────────────
+  const persistSection = useCallback((id, fields) => runSave(() => updateSection(id, fields)), [runSave]);
+  const debouncedSectionSave = useDebounce(persistSection, 800);
+  useFlushOnExit(debouncedSectionSave);
+  const lastSectionEditId = useRef(null);
+  const handleSectionField = useCallback((id, fields) => {
+    // Flush a pending write for a DIFFERENT section before starting this one —
+    // a single debounced fn keyed by trailing args would otherwise drop the
+    // earlier section's last keystrokes when the pastor jumps between sections.
+    if (lastSectionEditId.current && lastSectionEditId.current !== id) debouncedSectionSave.flush();
+    lastSectionEditId.current = id;
+    setSections((prev) => prev.map((s) => (s.id === id ? { ...s, ...fields } : s)));
+    debouncedSectionSave(id, fields);
+  }, [debouncedSectionSave]);
+
+  // ── Sermon (pericope) field persistence — debounced + immediate paths ───────
+  const persistSermon = useCallback((id, fields) => runSave(() => updateSermon(id, fields)), [runSave]);
+  const debouncedSermonSave = useDebounce(persistSermon, 800);
+  useFlushOnExit(debouncedSermonSave);
+  const lastSermonEditId = useRef(null);
+  // Debounced edit — for keystroke fields (title, passage, big idea, overview,
+  // dates). Flushes on a sermon-id change for the same reason as sections.
+  const handleSermonField = useCallback((id, fields) => {
+    if (lastSermonEditId.current && lastSermonEditId.current !== id) debouncedSermonSave.flush();
+    lastSermonEditId.current = id;
+    setSermons((prev) => prev.map((s) => (s.id === id ? { ...s, ...fields } : s)));
+    debouncedSermonSave(id, fields);
+  }, [debouncedSermonSave]);
+  // Immediate write — for discrete (button-driven) changes: study-guide
+  // additions, notes sizing, Suggest-Sundays bulk dating.
+  const persistSermonNow = useCallback((id, fields) => {
+    setSermons((prev) => prev.map((s) => (s.id === id ? { ...s, ...fields } : s)));
+    return runSave(() => updateSermon(id, fields));
+  }, [runSave]);
+
   function retryLastSave() {
     if (lastFailedRef.current) runSave(lastFailedRef.current);
   }
 
   // A load failure (throw, or a series id that no longer resolves) gets its own
-  // voice + Retry instead of the perpetual "Loading…" spinner (audit M1).
+  // voice + Retry instead of the perpetual "Loading…" spinner.
   if (loadError && !series) {
     return (
       <div style={{
@@ -426,30 +297,18 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
     );
   }
 
-  // Derived from the one movement list so the tab labels can't drift from the
-  // seam frames / arc rail that read the same source.
-  const tabs = PLANNER_MOVEMENTS.map(({ id, label }) => ({ id, label }));
-  // Sequence position of the current movement — the "you are here" the tab
-  // underline can't state (Surface #4: place is always answerable). -1 only if
-  // a remembered tab somehow falls outside the list, in which case it's hidden.
-  const activeMovementIndex = PLANNER_MOVEMENTS.findIndex((m) => m.id === activeTab);
+  const activeTabLabel = (PLANNER_TABS.find((t) => t.id === activeTab) || {}).label;
 
   return (
     <>
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
       {/* Topbar — always-dark .topbar frame, mirroring SermonWorkspace.
-          Left: BackButton (icon) → series color dot → breadcrumb + title.
-          Right: save indicator (--topbar-* tokens) → status pill →
-          Mark Series Complete → How this works / Study Guide → FeedbackFlag. */}
+          Left: BackButton → series color dot → eyebrow (status · current screen)
+          + serif title. Right: save indicator → Mark Series Complete → How this
+          works → FeedbackFlag. */}
       <div className="topbar">
         <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1, minWidth: 0 }}>
-          <BackButton
-            variant="icon"
-            onClick={onBack}
-            title="Back"
-            className="btn-icon"
-            style={{ flexShrink: 0 }}
-          />
+          <BackButton variant="icon" onClick={onBack} title="Back" className="btn-icon" style={{ flexShrink: 0 }} />
           <div style={{
             width: "10px", height: "10px", borderRadius: "50%", flexShrink: 0,
             background: `var(--${series.color || "gold"})`,
@@ -457,18 +316,13 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
           <div className="topbar-left">
             <div className="topbar-series">
               {SERIES_STATUS_LABELS[series.status] || SERIES_STATUS_LABELS[SERIES_STATUS.InProgress]}
-              {activeMovementIndex >= 0 && (
-                <> · Movement {activeMovementIndex + 1} of {PLANNER_MOVEMENTS.length} · {PLANNER_MOVEMENTS[activeMovementIndex].label}</>
-              )}
+              {activeTabLabel && <> · {activeTabLabel}</>}
             </div>
             <div className="topbar-title">{series.title}</div>
           </div>
         </div>
 
         <div className="topbar-right">
-          {/* These sit on the always-dark topbar — its locally-scoped
-              --topbar-* tokens, never the theme ink ramp (var(--ink-ghost)
-              was near-invisible here in light mode). */}
           {saving && (
             <span style={{ fontSize: "12px", color: "var(--topbar-fg-muted)", fontStyle: "italic", padding: "0 6px" }}>
               {LOADING_VERB.Saving}
@@ -477,22 +331,12 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
           {!saving && saveError && (
             <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "0 6px" }}>
               <span style={{ fontSize: "12px", color: "var(--topbar-danger)" }}>Save failed</span>
-              <SecondaryButton size="sm" style={{ fontSize: "12px", padding: "2px 8px" }} onClick={retryLastSave}>
-                Retry
-              </SecondaryButton>
+              <SecondaryButton size="sm" style={{ fontSize: "12px", padding: "2px 8px" }} onClick={retryLastSave}>Retry</SecondaryButton>
             </span>
           )}
           {!saving && !saveError && (
-            <span style={{ fontSize: "12px", color: "var(--topbar-fg-muted)", padding: "0 6px" }}>
-              Saved
-            </span>
+            <span style={{ fontSize: "12px", color: "var(--topbar-fg-muted)", padding: "0 6px" }}>Saved</span>
           )}
-          {/* Status is already stated in the breadcrumb eyebrow above; the
-              separate parchment pill duplicated it and was low-contrast on the
-              always-dark topbar (audit L12 / L31), so it was removed. The
-              topbar Mark-Series-Complete is hidden while the suggestion banner
-              is showing its own primary button, so the action never appears
-              twice at once (audit L13). */}
           {series.status !== SERIES_STATUS.Complete && !suggestSeriesComplete && (
             <SecondaryButton
               size="sm"
@@ -503,52 +347,30 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
               Mark Series Complete
             </SecondaryButton>
           )}
-          <TextButton onClick={() => setShowHowItWorks(true)}>
-            How this works
-          </TextButton>
-          <TextButton onClick={async () => { await runRegisteredFlushes(); setShowStudyGuide(true); }}>
-            Study Guide
-          </TextButton>
+          <TextButton onClick={() => setShowHowItWorks(true)}>How this works</TextButton>
           <FeedbackFlag surface="series-planner" sermonId={null} step={null} />
         </div>
       </div>
 
-      {/* Auto-suggest Mark Series Complete — fires when every committed
-          child sermon has reached SERMON_STATUS.Complete. The user's click
-          on Mark Series Complete is the explicit evidence; the banner is
-          just visibility (Process Contract #2 + the Principle). */}
+      {/* Auto-suggest Mark Series Complete — fires when every committed child
+          sermon has reached SERMON_STATUS.Complete. */}
       {suggestSeriesComplete && (
-        <div
-          role="status"
-          style={{
-            background: "var(--parchment-warm)",
-            borderBottom: "1px solid var(--parchment-deep)",
-            borderLeft: "3px solid var(--gold)",
-            padding: "10px 28px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: "12px",
-            fontFamily: "var(--font-serif)",
-            fontSize: "13px",
-            color: "var(--ink-mid)",
-          }}
-        >
+        <div role="status" style={{
+          background: "var(--parchment-warm)", borderBottom: "1px solid var(--parchment-deep)",
+          borderLeft: "3px solid var(--gold)", padding: "10px 28px",
+          display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px",
+          fontFamily: "var(--font-serif)", fontSize: "13px", color: "var(--ink-mid)",
+        }}>
           <span>All sermons in this series are complete. Mark the series complete?</span>
-          <PrimaryButton
-            size="sm"
-            onClick={() => persistSeries({ status: SERIES_STATUS.Complete })}
-          >
+          <PrimaryButton size="sm" onClick={() => persistSeries({ status: SERIES_STATUS.Complete })}>
             Mark Series Complete
           </PrimaryButton>
         </div>
       )}
 
-      {/* Tab bar — the app's .stage-tabs idiom (white bar, gold active
-          underline). Each tab is a role="button" div (no raw <button>);
-          buttonKeydown gives it Enter/Space activation. */}
+      {/* Tab bar — the app's .stage-tabs idiom (white bar, gold active underline). */}
       <div className="stage-tabs">
-        {tabs.map((tab) => (
+        {PLANNER_TABS.map((tab) => (
           <div
             key={tab.id}
             role="button"
@@ -563,279 +385,61 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
         ))}
       </div>
 
-      {/* Tab content — the parchment body. Each tab renders its own
-          .page-body scaffolding, which carries `flex: 1; overflow-y: auto`
-          and IS the scroll region. For that to engage, this wrapper must be a
-          bounded column flex container (display:flex + minHeight:0), not a
-          plain block — otherwise .page-body grows to full content height and
-          this wrapper's overflow:hidden just clips it with no scrollbar.
-          AI drawer props are gone. */}
+      {/* Tab content — the parchment body. Each tab renders its own .page-body
+          scaffolding, which carries flex:1; overflow-y:auto and IS the scroll
+          region. This wrapper must be a bounded column flex container so that
+          engages. */}
       <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden", background: "var(--parchment)" }}>
-        {activeTab === "book-study" && (
-          <BookStudyTab
+        {activeTab === "book-outline" && (
+          <OutlineTab
             series={series}
-            onChange={handleSeriesField}
-            onSelectBook={handleSelectBook}
-            onNavigate={handleTabChange}
-          />
-        )}
-        {activeTab === "overview" && (
-          <OverviewTab
-            series={series}
-            onChange={handleSeriesField}
-            onNavigate={handleTabChange}
-            onOpenStudyGuide={async () => { await runRegisteredFlushes(); setShowStudyGuide(true); }}
-            sermons={sermons}
-            calNotes={calNotes}
-          />
-        )}
-        {activeTab === "calendar" && (
-          <CalendarTab
-            series={series}
-            sections={sections}
-            sermons={sermons}
-            calNotes={calNotes}
-            onChange={handleSeriesField}
-            onNavigate={handleTabChange}
-            onSermonsChange={setSermons}
-            schedule={schedule}
-            onScheduleChange={setSchedule}
-            scheduleDirty={scheduleDirty}
-          />
-        )}
-        {activeTab === "design" && (
-          <DesignTab
-            series={series}
-            onChange={handleSeriesField}
-            onNavigate={handleTabChange}
             sections={sections}
             sermons={sermons}
             seriesId={seriesId}
+            onSeriesField={handleSeriesField}
+            onSelectBook={handleSelectBook}
+            onSectionField={handleSectionField}
+            onSermonField={handleSermonField}
             onSectionsChange={setSections}
             onSermonsChange={setSermons}
             onOpenSermon={onOpenSermon}
+            onNavigate={handleTabChange}
             runSave={runSave}
+          />
+        )}
+        {activeTab === "schedule" && (
+          <ScheduleTab
+            series={series}
+            sermons={sermons}
+            calNotes={calNotes}
+            seriesId={seriesId}
+            onSeriesField={handleSeriesField}
+            onSermonField={handleSermonField}
+            onSermonsChange={setSermons}
+            onNavigate={handleTabChange}
+            runSave={runSave}
+          />
+        )}
+        {activeTab === "study-guide" && (
+          <StudyGuideTab
+            series={series}
+            sections={sections}
+            sermons={sermons}
+            seriesId={seriesId}
+            onSermonExtras={persistSermonNow}
+            onNavigate={handleTabChange}
           />
         )}
       </div>
     </div>
     {showHowItWorks && <SeriesHowItWorksModal onClose={() => setShowHowItWorks(false)} />}
-    {showStudyGuide && <StudyGuideModal series={series} sections={sections} sermons={sermons} onClose={() => setShowStudyGuide(false)} />}
     </>
   );
 }
-// ── Understand Tab ────────────────────────────────────────────────────────────
-// The first movement: where the workflow begins. Two distinct moves, stacked so
-// the whole movement stays visible —
-//   1. Place the Book — receptive identity + context (book, genre, world).
-//   2. Hear the Line — the guided, non-AI worksheet: gather evidence, then state
-//      the melodic line in the pastor's own words.
-// AI-FREE throughout: every field is empty until the pastor types; nothing is
-// generated, prefilled, suggested, or scored. Persists through the debounced
-// updateSeries spine via the `onChange` prop the shell owns.
-function BookStudyTab({ series, onChange, onSelectBook, onNavigate }) {
-  // One debounced write of the whole melodic_evidence JSON blob: merge the
-  // changed slot into the parsed object and persist the stringified result
-  // through the same updateSeries path every other field uses (create-then-
-  // update — never the create INSERT). AI-free — pure capture of typed text.
-  function handleEvidenceChange(key, value) {
-    const next = { ...parseMelodicEvidence(series.melodic_evidence), [key]: value };
-    onChange("melodic_evidence", JSON.stringify(next));
-  }
-  const evidence = parseMelodicEvidence(series.melodic_evidence);
 
-  return (
-    <div className="page-body" style={{ background: "var(--parchment)" }}>
+// ── Shared readouts ───────────────────────────────────────────────────────────
 
-      {/* Movement intro */}
-      <div className="page-header" style={{ padding: "0 0 4px" }}>
-        <div className="page-title">Understand</div>
-        <div className="page-subtitle">
-          Read the book, then hear the one line it sings. This is where the series begins.
-        </div>
-      </div>
-
-      {/* ── Move 1: Place the Book ─────────────────────────────────────────── */}
-      <MoveHeader n="1" title="Place the Book" subtitle="Where it sits, and the world it speaks into." />
-
-      {/* Book identity — pick the canonical book (fills genre + passage span),
-          the genre override (relocated here from Overview), the series text the
-          pastor edits, and the read-only passage + genre chips. */}
-      <div className="card" style={{ marginTop: "12px" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-          <div className="field-group" style={{ marginBottom: 0 }}>
-            <label className="field-label" htmlFor="understand-book">Canonical Book</label>
-            <select
-              id="understand-book"
-              className="field-input"
-              value={series.book_id || ""}
-              onChange={(e) => onSelectBook(e.target.value)}
-            >
-              <option value="">— Select book —</option>
-              {Object.entries(GENRES).map(([genreKey, genreLabel]) => (
-                <optgroup key={genreKey} label={genreLabel}>
-                  {BOOKS.filter((b) => b.genre === genreKey).map((b) => (
-                    <option key={b.id} value={b.id}>{b.name}</option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
-            <div style={{ fontSize: "12px", color: "var(--ink-ghost)", marginTop: "6px" }}>
-              Sets the genre and fills the passage span; the genre stays editable beside it.
-            </div>
-          </div>
-          {/* Genre override — relocated here from Overview. Picking a book
-              re-fills it; a manual edit overrides until the book changes again. */}
-          <div className="field-group" style={{ marginBottom: 0 }}>
-            <label className="field-label" htmlFor="understand-category">Biblical Category</label>
-            <select
-              id="understand-category"
-              className="field-input"
-              value={series.canon_category || ""}
-              onChange={(e) => onChange("canon_category", e.target.value)}
-            >
-              {CANON_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
-          </div>
-        </div>
-        {/* Read-only confirmation of the canonical auto-fill. The title is
-            authored on the Overview masthead (its single home), so it is not
-            editable here; the topbar shows it at all times. */}
-        {(series.passage_range || series.canon_category || series.book_id) && (
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "16px" }}>
-            {series.passage_range && (
-              <span style={{ fontFamily: "var(--font-mono)", fontSize: "13px", color: "var(--ink-soft)" }}>
-                {series.passage_range}
-              </span>
-            )}
-            <span style={{
-              fontSize: "10px", padding: "2px 7px", borderRadius: "10px",
-              background: "var(--parchment-deep)", color: "var(--ink-soft)",
-              fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em",
-            }}>
-              {GENRES[series.canon_category] || "Unclassified"}
-            </span>
-          </div>
-        )}
-      </div>
-
-      {/* The two context notes — receptive input, often pasted from a commentary. */}
-      <div className="card" style={{ marginTop: "16px", display: "flex", flexDirection: "column", gap: "20px" }}>
-        <UnderstandNote fieldKey="redemptive_context" series={series} onChange={onChange} />
-        <UnderstandNote fieldKey="book_background" series={series} onChange={onChange} />
-      </div>
-
-      {/* ── Move 2: Hear the Line ──────────────────────────────────────────── */}
-      <MoveHeader n="2" title="Hear the Line" subtitle="Gather what the book keeps showing you, then name the one line you hear." />
-
-      {/* The reasoning that feeds the line. */}
-      <div className="card" style={{ marginTop: "12px" }}>
-        <UnderstandNote fieldKey="book_argument" series={series} onChange={onChange} />
-      </div>
-
-      {/* The evidence worksheet — labeled slots the pastor fills by hand. AI-free:
-          empty inputs, prompt text only; never generated or suggested. Stored as
-          one JSON blob on melodic_evidence (handleEvidenceChange). */}
-      <div className="card" style={{ marginTop: "16px" }}>
-        <div className="card-header" style={{ marginBottom: "4px" }}>
-          <div>
-            <div className="card-title">Evidence</div>
-            <p className="field-caption" style={{ marginTop: "2px" }}>
-              What the book itself keeps pointing to. Fill what you find; leave the rest.
-            </p>
-          </div>
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginTop: "12px" }}>
-          {MELODIC_EVIDENCE_FIELDS.map((f) => (
-            <div key={f.key} className="field-group" style={{ marginBottom: 0 }}>
-              <label className="field-label">{f.label}</label>
-              <textarea
-                className="field-textarea"
-                rows={2}
-                value={evidence[f.key]}
-                onChange={(e) => handleEvidenceChange(f.key, e.target.value)}
-                onInput={(e) => autoResize(e.target)}
-                ref={(el) => autoResize(el)}
-                placeholder={f.prompt}
-              />
-            </div>
-          ))}
-          {/* Literary structure is also evidence — the book's shape points to its
-              line. This is the sole editor of the structural_outline column; the
-              study guide renders it read-only as "How the Book Is Built". */}
-          <div className="field-group" style={{ marginBottom: 0 }}>
-            <label className="field-label">How the Book Is Built</label>
-            <p className="field-caption" style={{ margin: "0 0 8px" }}>
-              The book's outline — its movements and turning points. Build it yourself, or paste from a commentary.
-            </p>
-            <textarea
-              className="field-textarea large"
-              rows={5}
-              value={series.structural_outline || ""}
-              onChange={(e) => onChange("structural_outline", e.target.value)}
-              onInput={(e) => autoResize(e.target)}
-              ref={(el) => autoResize(el)}
-              placeholder={"I. Major Division (1:1–3:21)\n   A. Sub-section (1:1-25)\n   B. Sub-section (1:26-38)"}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* The output — the one line the pastor hears, in their own words. Still
-          echoes into Overview as the working hypothesis (echo wired there). */}
-      <div className="card" style={{ marginTop: "16px", borderLeft: "3px solid var(--gold)" }}>
-        <UnderstandNote fieldKey="emerging_big_idea" series={series} onChange={onChange} />
-      </div>
-
-      {/* series_motivation is authored in the Design hinge, not here — the
-          transitional editor that lived here was removed at the tab collapse. */}
-
-      <MovementFooter movementId="book-study" onNavigate={onNavigate} />
-    </div>
-  );
-}
-// ── Cockpit (Overview Tab) ──────────────────────────────────────────────────
-// The "bucket that contains all the work": a read-mostly dashboard surfacing,
-// at a glance, everything authored across the movements. Each surfaced item is
-// tappable — it jumps to where that field is authored (handleTabChange).
-//
-// AI-FREE and deliberately NOT a progress meter: it reflects content read-only;
-// it never grades, scores, ranks, computes a "% complete", or nudges a next
-// step. Neutral presence dots (filled = has content, hollow = empty) are
-// presence indicators, not a grade. The ONLY authored fields here are the
-// masthead (title, tagline, color); everything else is a read-only echo.
-
-// A neutral presence dot — filled when the source has content, hollow when not.
-// Reused idea from the study-guide preview; a dot is presence, not a score.
-function PresenceDot({ filled }) {
-  return (
-    <span
-      aria-hidden="true"
-      style={{
-        display: "inline-block", width: "8px", height: "8px", borderRadius: "50%",
-        flexShrink: 0,
-        background: filled ? "var(--sage)" : "transparent",
-        border: filled ? "none" : "2px solid var(--ink-ghost)",
-      }}
-    />
-  );
-}
-
-// A read-only text echo, or a neutral pointer (not a nudge) when empty.
-function EchoText({ value, emptyHint }) {
-  return value?.trim() ? (
-    <div style={{ fontSize: "14px", fontFamily: "var(--font-serif)", color: "var(--ink)", lineHeight: 1.55 }}>
-      {value}
-    </div>
-  ) : (
-    <div style={{ fontSize: "13px", fontStyle: "italic", color: "var(--ink-ghost)" }}>{emptyHint}</div>
-  );
-}
-
-// The coverage meter — a track with a sage fill at `percent`. Shared by the
-// Overview cockpit echo and the Design CoveragePanel so the two bars can't drift
-// (both bind the same computeCoverage output). The panel animates width changes;
-// the static cockpit echo doesn't.
+// The coverage meter — a track with a sage fill at `percent`.
 function CoverageBar({ percent, animate = false }) {
   return (
     <div style={{ height: "8px", borderRadius: "4px", background: "var(--parchment-deep)", overflow: "hidden" }}>
@@ -847,502 +451,69 @@ function CoverageBar({ percent, animate = false }) {
   );
 }
 
-// One tappable at-a-glance card. The whole card is a button that switches to the
-// tab where its content is authored (onTap). Read-only — no nested inputs.
-function GlanceCard({ label, target, onTap, filled, children }) {
-  return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={onTap}
-      onKeyDown={buttonKeydown(onTap)}
-      className="card"
-      style={{ marginBottom: 0, cursor: "pointer" }}
-      title={`Open ${target}`}
-    >
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "10px", marginBottom: "8px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          {filled !== undefined && <PresenceDot filled={filled} />}
-          <span className="field-label" style={{ marginBottom: 0 }}>{label}</span>
-        </div>
-        <span style={{ fontSize: "11px", color: "var(--ink-ghost)", whiteSpace: "nowrap" }}>{target} →</span>
-      </div>
-      {children}
-    </div>
-  );
-}
+// A read-only picture of how the pericopes partition the series' book: a
+// proportional bar + plain notes on gaps, overlaps, out-of-order slots, and any
+// unreadable passage refs. Purely informational (src/utils/coverage.js) — never
+// a gate. Clamped to the declared passage_range when it parses.
+function CoveragePanel({ series, sermons }) {
+  const cov = computeCoverage(series?.book_id, sermons, series?.passage_range);
+  const book = bookById(series?.book_id);
 
-// The arc rail — the planner's at-a-glance MAP of the whole season, shown atop
-// the Overview cockpit. Each movement is a tap-to-jump node carrying a neutral
-// PresenceDot (filled = that movement has content). This is the map-for-free-
-// navigation half of the sermon walk's map, in the macro headspace: whole arc
-// visible, "you are here" marked, one tap to anywhere. It is deliberately NOT a
-// progress meter — no %, no score, no count, no ordering pressure; presence and
-// free navigation only (the cockpit's standing not-a-grade contract holds).
-function PlannerArcRail({ presenceById, currentId, onNavigate }) {
-  return (
-    <div style={{ display: "flex", alignItems: "stretch", gap: "6px", marginBottom: "24px" }}>
-      {PLANNER_MOVEMENTS.map((m, i) => {
-        const isCurrent = m.id === currentId;
-        const jump = () => onNavigate?.(m.id);
-        return (
-          <Fragment key={m.id}>
-            <div
-              role="button"
-              tabIndex={0}
-              onClick={jump}
-              onKeyDown={buttonKeydown(jump)}
-              aria-current={isCurrent ? "page" : undefined}
-              title={`Open ${m.label}`}
-              style={{
-                flex: "1 1 0", minWidth: 0, cursor: "pointer",
-                padding: "10px 12px", borderRadius: "var(--radius)",
-                background: isCurrent ? "var(--parchment-warm)" : "var(--white)",
-                border: isCurrent ? "1px solid var(--gold)" : "1px solid var(--parchment-deep)",
-                display: "flex", flexDirection: "column", gap: "4px",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <PresenceDot filled={!!presenceById[m.id]} />
-                <span style={{ fontFamily: "var(--font-serif)", fontSize: "13px", fontWeight: 600, color: "var(--ink)" }}>
-                  {m.label}
-                </span>
-              </div>
-              <span style={{ fontSize: "11px", color: "var(--ink-ghost)" }}>
-                {isCurrent ? "You are here" : `→ ${m.outcome}`}
-              </span>
-            </div>
-            {i < PLANNER_MOVEMENTS.length - 1 && (
-              <span aria-hidden="true" style={{ alignSelf: "center", color: "var(--ink-ghost)", fontSize: "12px" }}>→</span>
-            )}
-          </Fragment>
-        );
-      })}
-    </div>
-  );
-}
-
-function OverviewTab({ series, onChange, onNavigate, onOpenStudyGuide, sermons = [], calNotes = [] }) {
-  // Read-only readouts from the existing engines — rendered, not re-implemented.
-  const cov = computeCoverage(series.book_id, sermons, series.passage_range);
-  const book = bookById(series.book_id);
-  const hasCoverage = !cov.noBook && !!book;
-  const hasSlots = sermons.length > 0;
-  const hasDates = !!(series.start_date || series.end_date);
-
-  // Presence per movement for the arc-rail map — filled = that movement carries
-  // content. Presence, not a grade: each is a plain boolean, never summed into a
-  // count or percent (the cockpit's not-a-meter contract).
-  const presenceById = {
-    "book-study": !!(series.emerging_big_idea?.trim() || series.book_id || series.book_argument?.trim() || series.book_background?.trim()),
-    "design":     !!(series.big_idea?.trim() || series.overview?.trim() || hasSlots),
-    "calendar":   hasDates,
-    "overview":   !!(series.title?.trim() || series.description?.trim()),
-  };
-
-  const go = (tabId) => () => onNavigate?.(tabId);
-
-  return (
-    <div className="page-body">
-      <div className="page-header" style={{ padding: 0, marginBottom: "20px" }}>
-        <div className="page-title">{series.title || "Series"}</div>
-        <div className="page-subtitle">
-          Your series, gathered. Each card is one piece of the plan — tap to open where you author it — and the Study Guide below is where it all arrives.
-        </div>
-      </div>
-
-      {/* ── The arc — the whole season as a map, tap any movement to jump ───── */}
-      <PlannerArcRail presenceById={presenceById} currentId="overview" onNavigate={onNavigate} />
-
-      {/* ── Masthead — the only authored band ──────────────────────────────── */}
-      <div className="card" style={{ marginBottom: "24px" }}>
-        <div className="field-group">
-          <label className="field-label">Series Title</label>
-          <input
-            className="field-input"
-            style={{ fontSize: "18px" }}
-            value={series.title || ""}
-            onChange={(e) => onChange("title", e.target.value)}
-            placeholder="e.g. The Gospel of Luke: Reintroducing Jesus"
-          />
-        </div>
-        <div className="field-group">
-          <label className="field-label">
-            Short Description <span style={{ color: "var(--ink-ghost)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(tagline or subtitle)</span>
-          </label>
-          <input
-            className="field-input"
-            value={series.description || ""}
-            onChange={(e) => onChange("description", e.target.value)}
-            placeholder="A one-line description for the congregation or your own notes…"
-          />
-        </div>
-        {/* color + status + year — series-identity metadata (NOT movement echoes,
-            and with no other authoring home), kept alongside the masthead. */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 80px", gap: "16px" }}>
-          <div className="field-group" style={{ marginBottom: 0 }}>
-            <label className="field-label" htmlFor="series-color">Color</label>
-            <select id="series-color" className="field-input" value={series.color || "gold"} onChange={(e) => onChange("color", e.target.value)}>
-              {COLOR_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
-          </div>
-          <div className="field-group" style={{ marginBottom: 0 }}>
-            <label className="field-label" htmlFor="series-status">Status</label>
-            <select id="series-status" className="field-input" value={series.status || SERIES_STATUS.InProgress} onChange={(e) => onChange("status", e.target.value)}>
-              {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
-          </div>
-          <div className="field-group" style={{ marginBottom: 0 }}>
-            <label className="field-label" htmlFor="series-year">Year</label>
-            <input
-              id="series-year"
-              type="number"
-              className="field-input"
-              value={series.year ?? ""}
-              onChange={(e) => {
-                // Empty field → null (not NaN). parseInt("") is NaN, which would
-                // land as a NULL/garbage year via the allowlist write (audit L1).
-                const v = e.target.value;
-                if (v === "") { onChange("year", null); return; }
-                const n = parseInt(v, 10);
-                if (!Number.isNaN(n)) onChange("year", n);
-              }}
-              min="2000"
-              max="2100"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* ── At a glance — read-only echoes, each tappable to its real home ──── */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-        <GlanceCard label="The Melodic Line" target="Understand" onTap={go("book-study")} filled={!!series.emerging_big_idea?.trim()}>
-          <EchoText value={series.emerging_big_idea} emptyHint="No melodic line yet — tap to hear it in Understand." />
-        </GlanceCard>
-
-        <GlanceCard label="The Series Big Idea" target="Design" onTap={go("design")} filled={!!series.big_idea?.trim()}>
-          <EchoText value={series.big_idea} emptyHint="No big idea yet — tap to decide it in Design." />
-        </GlanceCard>
-
-        <GlanceCard label="Why This Congregation, Why Now" target="Design" onTap={go("design")} filled={!!series.series_motivation?.trim()}>
-          <EchoText value={series.series_motivation} emptyHint="Not written yet — tap to write it in Design." />
-        </GlanceCard>
-
-        {/* Coverage — computeCoverage output, read-only bar + %. */}
-        <GlanceCard label="Coverage" target="Design" onTap={go("design")} filled={hasCoverage}>
-          {hasCoverage ? (
-            <>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", color: "var(--ink-soft)", marginBottom: "6px" }}>
-                <span>{book.name}{cov.scopeLabel ? ` ${cov.scopeLabel}` : ""}</span>
-                <span>{cov.percent}% covered{cov.mode === "chapter" ? " (by chapter)" : ""}</span>
-              </div>
-              <CoverageBar percent={cov.percent} />
-            </>
-          ) : (
-            <EchoText emptyHint="No book or slots yet — tap to build the series in Design." />
-          )}
-        </GlanceCard>
-
-        {/* Pacing — computePacing output, the same read-only strip Schedule shows. */}
-        <GlanceCard label="Pacing" target="Schedule" onTap={go("calendar")} filled={hasSlots}>
-          {hasSlots ? (
-            <PacingStrip sermons={sermons} series={series} calNotes={calNotes} />
-          ) : (
-            <EchoText emptyHint="No slots yet — tap to schedule them." />
-          )}
-        </GlanceCard>
-
-        {/* Dates — read-only start → end. */}
-        <GlanceCard label="Dates" target="Schedule" onTap={go("calendar")} filled={hasDates}>
-          {hasDates ? (
-            <div style={{ fontSize: "14px", fontFamily: "var(--font-mono)", color: "var(--ink)" }}>
-              {series.start_date ? formatDate(series.start_date) : "—"} → {series.end_date ? formatDate(series.end_date) : "—"}
-            </div>
-          ) : (
-            <EchoText emptyHint="No dates yet — tap to lay them out in Schedule." />
-          )}
-        </GlanceCard>
-      </div>
-
-      {/* ── The arrival — the Study Guide is where the whole plan lands. The
-          gold top-rule + arrival copy mark it as the planner's destination (the
-          macro-headspace analog of the sermon Finish screen), not just another
-          card. Informs, never blocks — export whenever, nothing gates it. ───── */}
-      <div className="card" style={{
-        marginTop: "28px",
-        borderTop: "3px solid var(--gold)",
-        display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px",
+  if (cov.noBook || !book) {
+    return (
+      <div style={{
+        padding: "10px 14px",
+        background: "var(--parchment-warm)", border: "1px dashed var(--parchment-deep)",
+        borderRadius: "var(--radius)", fontSize: "12.5px", color: "var(--ink-ghost)",
       }}>
-        <div>
-          <div className="card-title">The Study Guide</div>
-          <p className="field-caption" style={{ marginTop: "4px", maxWidth: "62ch" }}>
-            Where the series arrives — the congregational handout your whole plan produces,
-            built from everything above. Export it whenever you're ready.
-          </p>
-        </div>
-        <SecondaryButton onClick={onOpenStudyGuide}>Open the Study Guide →</SecondaryButton>
+        Pick a canonical book in <strong>Book details</strong> above to see how your pericopes cover it.
       </div>
-    </div>
-  );
-}
-// ── Structure Tab ─────────────────────────────────────────────────────────────
-// The walk's third stage: the pastor lays out the book's skeleton — a free-form
-// structural outline, plus optional major sections for longer books with natural
-// divisions. AI-free: the outline is the pastor's own (typed, or pasted from a
-// commentary), and every section field persists through the debounced
-// updateSection spine. Section CRUD (create/update/delete/reorder) is preserved
-// verbatim from the recovered shell.
-// Renders the Series Sections cards — the pastor's grouping of slots into
-// movements — for the Design movement's BAND 3. The book's literary Structural
-// Outline lives in Understand (as melodic-line evidence), not here, and the page
-// chrome belongs to the movement shell. (The pre-collapse standalone Structure
-// tab and its `embedded` toggle were removed once Design became the only caller.)
-function StructureTab({ series, sections, onSectionsChange, seriesId, runSave }) {
-  const [expandedSection, setExpandedSection] = useState(null);
-  // The id of the section just created via "+ Add Section", so its editor can
-  // reveal itself and focus its title — the new section appends at the bottom
-  // and would otherwise land below the fold on a long list (audit R3).
-  const [justCreatedId, setJustCreatedId] = useState(null);
-
-  // Route section writes through the shell save-state so they show the same
-  // Saving/Saved/Save-failed indicator as series edits (audit M2).
-  const persistSection = useCallback((id, fields) => {
-    return runSave(() => updateSection(id, fields));
-  }, [runSave]);
-  const debouncedSectionSave = useDebounce(persistSection, 800);
-
-  // Flush the pending section write on unmount (tab swap) + app quit / reload
-  // so the debounce window can't drop the last keystrokes (audit H3).
-  useFlushOnExit(debouncedSectionSave);
-
-  async function addSection() {
-    // sort_order = max existing + 1 — sections.length collides after a delete
-    // leaves a gap in the order (audit L5).
-    const nextOrder = sections.length
-      ? Math.max(...sections.map(s => s.sort_order ?? 0)) + 1
-      : 0;
-    const result = await createSection({ series_id: seriesId, sort_order: nextOrder });
-    const updated = await getSectionsBySeries(seriesId);
-    onSectionsChange(updated);
-    // createSection resolves to { id }; using the object as the id meant the new
-    // section never auto-expanded (audit L4).
-    if (result?.id) {
-      setExpandedSection(result.id);
-      setJustCreatedId(result.id);
-    }
-  }
-
-  function handleSectionField(id, field, value) {
-    onSectionsChange(prev => prev.map(s => s.id === id ? { ...s, [field]: value } : s));
-    debouncedSectionSave(id, { [field]: value });
-  }
-
-  async function handleDeleteSection(id) {
-    onSectionsChange(prev => prev.filter(s => s.id !== id));
-    if (expandedSection === id) setExpandedSection(null);
-    await runSave(() => deleteSection(id));
-  }
-
-  async function moveSection(id, direction) {
-    const idx = sections.findIndex(s => s.id === id);
-    const newIdx = idx + direction;
-    if (newIdx < 0 || newIdx >= sections.length) return;
-    const reordered = [...sections];
-    [reordered[idx], reordered[newIdx]] = [reordered[newIdx], reordered[idx]];
-    onSectionsChange(reordered);
-    // Recompact sort_order to 0..n-1; if any write fails, roll the UI back to
-    // the server's truth so a partial reorder can't desync the order (audit L5).
-    const ok = await runSave(() =>
-      Promise.all(reordered.map((s, i) => updateSection(s.id, { sort_order: i })))
     );
-    if (!ok) {
-      const fresh = await getSectionsBySeries(seriesId);
-      onSectionsChange(fresh);
-    }
   }
 
-  // The Series Sections card for Design BAND 3 — no top margin (the Design band
-  // header spaces it instead).
-  const sectionsCard = (
-    <div className="card">
-      <div className="card-header">
-        <div>
-          <h3 className="card-title">Series Sections</h3>
-          <p className="field-caption" style={{ marginTop: "2px" }}>
-            Optional. Use for longer books with natural major divisions.
-          </p>
-        </div>
-        <SecondaryButton size="sm" onClick={addSection}>+ Add Section</SecondaryButton>
-      </div>
-
-      {sections.length === 0 ? (
-        <div style={{
-          padding: "24px",
-          background: "var(--parchment-warm)",
-          borderRadius: "var(--radius)",
-          textAlign: "center",
-          color: "var(--ink-ghost)",
-          fontSize: "14px",
-        }}>
-          No sections yet. Add sections if this book has natural major divisions
-          (e.g., Luke's four movements).
-        </div>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-          {sections.map((section, idx) => (
-            <SectionEditor
-              key={section.id}
-              section={section}
-              index={idx}
-              total={sections.length}
-              expanded={expandedSection === section.id}
-              justCreated={justCreatedId === section.id}
-              onToggle={() => setExpandedSection(expandedSection === section.id ? null : section.id)}
-              onChange={(field, value) => handleSectionField(section.id, field, value)}
-              onDelete={() => handleDeleteSection(section.id)}
-              onMove={(dir) => moveSection(section.id, dir)}
-              series={series}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-
-  return sectionsCard;
-}
-
-// ── Section editor ─────────────────────────────────────────────────────────────
-// One collapsible card per major division. The header shows the section number,
-// title, and passage range with reorder (↑/↓) and delete controls; expanding it
-// reveals the four editable fields. All four persist through the debounced
-// updateSection path the parent wires to `onChange`. AI-free.
-function SectionEditor({ section, index, total, expanded, justCreated, onToggle, onChange, onDelete, onMove, series }) {
-  const chevronBtnStyle = {
-    background: "none",
-    border: "none",
-    cursor: "pointer",
-    color: "var(--ink-ghost)",
-    fontSize: "13px",
-    padding: "2px 4px",
-  };
-
-  const cardRef = useRef(null);
-  const titleRef = useRef(null);
-  // Reveal + focus a just-created section: it appends at the bottom and is
-  // auto-expanded, so on a long list it would otherwise mount below the fold
-  // (audit R3). Mirrors the slot-row reveal and SermonWritingSurface's idiom.
-  useEffect(() => {
-    if (justCreated) {
-      cardRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
-      titleRef.current?.focus();
-    }
-  }, [justCreated]);
+  const notes = [];
+  if (cov.gaps.length) notes.push({ key: "gaps", label: "Uncovered", text: cov.gaps.join(", ") });
+  if (cov.overlaps.length) notes.push({ key: "overlaps", label: "Overlap", text: cov.overlaps.map((o) => `slots ${o.a} & ${o.b}`).join(", ") });
+  if (cov.outOfOrder.length) notes.push({ key: "order", label: "Out of order", text: cov.outOfOrder.map((n) => `slot ${n}`).join(", ") });
+  if (cov.unreadable.length) {
+    notes.push({
+      key: "unreadable", label: "Couldn't read",
+      text: cov.unreadable.map((n) => {
+        const p = sermons[n - 1] && sermons[n - 1].passage;
+        return p ? `slot ${n} ("${p}")` : `slot ${n}`;
+      }).join(", "),
+    });
+  }
 
   return (
-    <div ref={cardRef} style={{
-      border: "1px solid var(--parchment-deep)",
-      borderRadius: "var(--radius)",
-      background: "var(--white)",
-      overflow: "hidden",
+    <div style={{
+      padding: "12px 14px", background: "var(--white)",
+      border: "1px solid var(--parchment-deep)", borderRadius: "var(--radius)",
     }}>
-      {/* Header */}
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={onToggle}
-        onKeyDown={buttonKeydown(onToggle)}
-        aria-expanded={expanded}
-        style={{ display: "flex", alignItems: "center", gap: "8px", padding: "10px 14px", cursor: "pointer" }}
-      >
-        <span style={{ color: "var(--ink-ghost)", fontSize: "12px", width: "16px", textAlign: "center" }}>{index + 1}</span>
-        <span style={{
-          flex: 1,
-          fontFamily: "var(--font-serif)",
-          fontSize: "14px",
-          color: section.title ? "var(--ink)" : "var(--ink-ghost)",
-          fontStyle: section.title ? "normal" : "italic",
-        }}>
-          {section.title || "Untitled Section"}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
+        <span className="field-label" style={{ marginBottom: 0 }}>Coverage</span>
+        <span style={{ fontSize: "13px", color: "var(--ink-soft)" }}>
+          {cov.percent}% of {book.name}{cov.scopeLabel ? ` ${cov.scopeLabel}` : ""}{cov.mode === "chapter" ? " (by chapter)" : ""}
         </span>
-        {section.passage_range && (
-          <span style={{ fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--ink-soft)" }}>{section.passage_range}</span>
-        )}
-        <div style={{ display: "flex", gap: "2px" }}>
-          {index > 0 && (
-            <IconButton aria-label="Move section up" onClick={(e) => { e.stopPropagation(); onMove(-1); }} style={chevronBtnStyle} title="Move up">↑</IconButton>
-          )}
-          {index < total - 1 && (
-            <IconButton aria-label="Move section down" onClick={(e) => { e.stopPropagation(); onMove(1); }} style={chevronBtnStyle} title="Move down">↓</IconButton>
-          )}
-          <DeleteButton small onDelete={onDelete} />
-        </div>
-        <span style={{ color: "var(--ink-ghost)", fontSize: "12px" }}>{expanded ? "▲" : "▼"}</span>
       </div>
-
-      {/* Expanded fields */}
-      {expanded && (
-        <div style={{
-          padding: "14px",
-          borderTop: "1px solid var(--parchment-deep)",
-          display: "flex",
-          flexDirection: "column",
-          gap: "12px",
-          background: "var(--parchment-warm)",
-        }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-            <div className="field-group" style={{ marginBottom: 0 }}>
-              <label className="field-label">Section Title</label>
-              <input
-                ref={titleRef}
-                className="field-input"
-                value={section.title || ""}
-                onChange={(e) => onChange("title", e.target.value)}
-                placeholder="e.g. Seeing Jesus Through Others' Eyes"
-              />
-            </div>
-            <div className="field-group" style={{ marginBottom: 0 }}>
-              <label className="field-label">Passage Range</label>
-              <input
-                className="field-input"
-                style={{ fontFamily: "var(--font-mono)" }}
-                value={section.passage_range || ""}
-                onChange={(e) => onChange("passage_range", e.target.value)}
-                placeholder="e.g. 1:1–4:13"
-              />
-            </div>
+      <CoverageBar percent={cov.percent} animate />
+      <div style={{ marginTop: "12px", display: "flex", flexDirection: "column", gap: "5px" }}>
+        {notes.length === 0 ? (
+          <div style={{ fontSize: "12.5px", color: "var(--sage)" }}>Every verse covered exactly once, in order.</div>
+        ) : notes.map((n) => (
+          <div key={n.key} style={{ fontSize: "12.5px", color: "var(--ink-soft)" }}>
+            <span style={{ fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", fontSize: "10.5px", marginRight: "8px", color: "var(--ink-ghost)" }}>{n.label}</span>
+            {n.text}
           </div>
-          <div className="field-group" style={{ marginBottom: 0 }}>
-            <label className="field-label">Section Big Idea</label>
-            <input
-              className="field-input"
-              value={section.big_idea || ""}
-              onChange={(e) => onChange("big_idea", e.target.value)}
-              placeholder="The central truth of this section"
-            />
-          </div>
-          <div className="field-group" style={{ marginBottom: 0 }}>
-            <label className="field-label">Section Overview</label>
-            <textarea
-              className="field-textarea"
-              rows={3}
-              value={section.overview || ""}
-              onChange={(e) => onChange("overview", e.target.value)}
-              onInput={(e) => autoResize(e.target)}
-              ref={(el) => autoResize(el)}
-              placeholder="What does this section of the book accomplish? What shift happens here?"
-            />
-          </div>
-        </div>
-      )}
+        ))}
+      </div>
     </div>
   );
 }
-// ── Pacing Strip ──────────────────────────────────────────────────────────────
+
 // A compact, read-only mirror of the series' shape — slot count, approximate
-// weeks/months, projected end date (stepped the same way Suggest Sundays steps),
-// a neutral length band, and any liturgical seasons / special-date notes the run
-// spans. Pure arithmetic (src/utils/pacing.js); it states facts, never advises.
+// weeks/months, projected end date, a neutral length band, liturgical seasons,
+// and any special-date notes the run spans. Pure arithmetic (src/utils/pacing.js).
 function PacingStrip({ sermons, series, calNotes }) {
   const p = computePacing({
     slotCount: sermons.length,
@@ -1352,7 +523,7 @@ function PacingStrip({ sermons, series, calNotes }) {
   if (!p.slotCount) return null;
 
   const parts = [
-    `${p.slotCount} slot${p.slotCount === 1 ? "" : "s"}`,
+    `${p.slotCount} sermon${p.slotCount === 1 ? "" : "s"}`,
     `~${p.weeks} week${p.weeks === 1 ? "" : "s"}`,
     `~${p.months.toFixed(1)} months`,
   ];
@@ -1384,191 +555,129 @@ function formatPacingDate(iso) {
   return parseLocalDate(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-// ── Coverage Panel ────────────────────────────────────────────────────────────
-// A read-only picture of how the slots partition the series' book: a proportional
-// bar + plain notes on gaps, overlaps, out-of-order slots, and any unreadable
-// passage refs. Purely informational (src/utils/coverage.js) — never a gate. You
-// can intentionally skip a passage; it just shows what you're skipping.
-function CoveragePanel({ series, sermons, onNavigate }) {
-  // Coverage is clamped to the series' declared passage_range when it parses, so
-  // a series scoped to part of a book is measured against that span, not the
-  // whole book (falls back to whole-book when the range is empty/free-text).
-  const cov = computeCoverage(series?.book_id, sermons, series?.passage_range);
-  const book = bookById(series?.book_id);
+// ── Outline Tab ───────────────────────────────────────────────────────────────
+// The book as ONE live nested outline: Book ▸ Section ▸ Pericope, each rung the
+// same unit (Title + range · Big idea · Overview). Replaces the old
+// Understand/Design tabs AND the Overview cockpit — the outline IS the
+// at-a-glance. Draft-row/commit is preserved for new pericopes (createSermon
+// throws on an empty name, State #3). AI-free throughout.
+function OutlineTab({
+  series, sections, sermons, seriesId,
+  onSeriesField, onSelectBook, onSectionField, onSermonField,
+  onSectionsChange, onSermonsChange, onOpenSermon, onNavigate, runSave,
+}) {
+  const [bookDetailsOpen, setBookDetailsOpen] = useState(false);
+  const [referenceOpen, setReferenceOpen] = useState(false);
+  // Expanded section / pericope ids. Sections default expanded; pericopes
+  // default collapsed (one-line rows the pastor expands to edit).
+  const [collapsedSections, setCollapsedSections] = useState(() => new Set());
+  const [expandedPericopes, setExpandedPericopes] = useState(() => new Set());
+  // Draft pericopes — UI-only rows not yet committed to the spine (State #3
+  // forbids createSermon({name:""})). Keyed by their section_id grouping.
+  const [drafts, setDrafts] = useState([]);
+  const [draftErrors, setDraftErrors] = useState({});
+  const inFlightRef = useRef(new Map());
+  const [justCreatedSectionId, setJustCreatedSectionId] = useState(null);
 
-  if (cov.noBook || !book) {
-    return (
-      <div style={{
-        padding: "10px 14px", marginBottom: "20px",
-        background: "var(--parchment-warm)", border: "1px dashed var(--parchment-deep)",
-        borderRadius: "var(--radius)", fontSize: "12.5px", color: "var(--ink-ghost)",
-      }}>
-        Pick a canonical book on{" "}
-        <TextButton
-          onClick={() => onNavigate?.("book-study")}
-          style={{ fontSize: "inherit", padding: 0, verticalAlign: "baseline" }}
-        >
-          Understand → Place the Book
-        </TextButton>{" "}
-        to see how your slots cover it.
-      </div>
-    );
-  }
+  const isDraftId = (id) => typeof id === "string" && id.startsWith("draft-");
 
-  const notes = [];
-  if (cov.gaps.length) {
-    notes.push({ key: "gaps", label: "Uncovered", text: cov.gaps.join(", ") });
+  function toggleSection(id) {
+    setCollapsedSections((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
   }
-  if (cov.overlaps.length) {
-    notes.push({ key: "overlaps", label: "Overlap", text: cov.overlaps.map((o) => `slots ${o.a} & ${o.b}`).join(", ") });
-  }
-  if (cov.outOfOrder.length) {
-    notes.push({ key: "order", label: "Out of order", text: cov.outOfOrder.map((n) => `slot ${n}`).join(", ") });
-  }
-  if (cov.unreadable.length) {
-    notes.push({
-      key: "unreadable",
-      label: "Couldn't read",
-      text: cov.unreadable.map((n) => {
-        const p = sermons[n - 1] && sermons[n - 1].passage;
-        return p ? `slot ${n} ("${p}")` : `slot ${n}`;
-      }).join(", "),
+  function togglePericope(id) {
+    setExpandedPericopes((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
     });
   }
 
-  return (
-    <div className="card" style={{ marginBottom: "20px" }}>
-      <div className="card-header" style={{ marginBottom: "10px" }}>
-        <div className="card-title">Coverage</div>
-        <span style={{ fontSize: "13px", color: "var(--ink-soft)" }}>
-          {cov.percent}% of {book.name}{cov.scopeLabel ? ` ${cov.scopeLabel}` : ""}{cov.mode === "chapter" ? " (by chapter)" : ""}
-        </span>
-      </div>
-      <CoverageBar percent={cov.percent} animate />
-      <div style={{ marginTop: "12px", display: "flex", flexDirection: "column", gap: "5px" }}>
-        {notes.length === 0 ? (
-          <div style={{ fontSize: "12.5px", color: "var(--sage)" }}>
-            Every verse covered exactly once, in order.
-          </div>
-        ) : notes.map((n) => (
-          <div key={n.key} style={{ fontSize: "12.5px", color: "var(--ink-soft)" }}>
-            <span style={{ fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", fontSize: "10.5px", marginRight: "8px", color: "var(--ink-ghost)" }}>
-              {n.label}
-            </span>
-            {n.text}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ── Sermon Slots Tab ──────────────────────────────────────────────────────────
-// Plan the individual sermons that make up the series. Slots can be grouped by
-// section (when the Structure tab has sections) or kept as a flat list. Each
-// slot is a real sermon atom on the spine; the "+ Add Slot" flow defers the
-// spine write until the pastor types a non-empty title (State Contract #3 —
-// no nameless atom ever reaches createSermon).
-// Renders the coverage panel + full slot apparatus (drafts, commit, section
-// grouping, big-idea echoes) for the Design movement, with no page-body wrapper.
-// Pacing belongs to Schedule, so it is not shown here. (The pre-collapse
-// standalone Slots tab and its `embedded` toggle were removed once Design became
-// the only caller.)
-function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpenSermon, onNavigate, runSave }) {
-  // Draft slots — UI-only rows that have not yet been committed to the spine.
-  // State Contract #3 forbids createSermon({ name: "" }), so the "+ Add Slot"
-  // button creates a row in this local state instead of immediately calling
-  // the spine. The row commits (createSermon + replace draft with real id) on
-  // first non-empty-name blur/Enter, or when the user clicks Open.
-  const [drafts, setDrafts] = useState([]);
-  const [draftErrors, setDraftErrors] = useState({});
-  const isDraftId = (id) => typeof id === "string" && id.startsWith("draft-");
-  // draftId -> in-flight commit promise. Guards the double-commit race: blur +
-  // Open (or Enter) can both fire commitDraft before the first createSermon
-  // resolves; the second caller now reuses the first's promise instead of
-  // minting a second duplicate sermon row (audit H4).
-  const inFlightRef = useRef(new Map());
-
-  // Committed-slot field writes share the shell save-state so they aren't
-  // silent (audit M2).
-  const persistSlot = useCallback((id, fields) => {
-    return runSave(() => updateSermon(id, fields));
-  }, [runSave]);
-  const debouncedSlotSave = useDebounce(persistSlot, 800);
-
-  useFlushOnExit(debouncedSlotSave);
-
-  // No spine call — the row exists only in local draft state until the user
-  // types a non-empty name. State Contract #3 stays structurally enforced at
-  // the spine boundary; this just defers when the IPC call fires so no
-  // nameless atom ever reaches it.
-  function addSlot(sectionId = null) {
-    const id = `draft-${crypto.randomUUID()}`;
-    setDrafts(prev => [...prev, {
-      id,
-      _draft: true,
-      series_id: seriesId,
-      section_id: sectionId,
-      title: "",
-      passage: "",
-      date: "",
-      stage: SERMON_STATUS.InProgress,
-    }]);
+  // ── Section CRUD ──────────────────────────────────────────────────────────
+  async function addSection() {
+    const nextOrder = sections.length ? Math.max(...sections.map((s) => s.sort_order ?? 0)) + 1 : 0;
+    const result = await createSection({ series_id: seriesId, sort_order: nextOrder });
+    const updated = await getSectionsBySeries(seriesId);
+    onSectionsChange(updated);
+    if (result?.id) {
+      setCollapsedSections((prev) => { const n = new Set(prev); n.delete(result.id); return n; });
+      setJustCreatedSectionId(result.id);
+    }
+  }
+  async function deleteSectionRow(id) {
+    onSectionsChange((prev) => prev.filter((s) => s.id !== id));
+    // delete-section nulls section_id on its sermons — reflect that locally so
+    // those pericopes drop into the Unsectioned group instead of vanishing.
+    onSermonsChange((prev) => prev.map((s) => (s.section_id === id ? { ...s, section_id: null } : s)));
+    await runSave(() => deleteSection(id));
+  }
+  async function moveSection(id, direction) {
+    const idx = sections.findIndex((s) => s.id === id);
+    const newIdx = idx + direction;
+    if (newIdx < 0 || newIdx >= sections.length) return;
+    const reordered = [...sections];
+    [reordered[idx], reordered[newIdx]] = [reordered[newIdx], reordered[idx]];
+    onSectionsChange(reordered);
+    const ok = await runSave(() => Promise.all(reordered.map((s, i) => updateSection(s.id, { sort_order: i }))));
+    if (!ok) onSectionsChange(await getSectionsBySeries(seriesId));
   }
 
-  // Commit a draft row to the spine. Called on title blur/Enter (with
-  // non-empty name) and from the Open button. Returns the new sermon id on
-  // success, null if there's nothing to commit (empty name) or commit failed.
-  // On failure, surfaces an inline error on the row and keeps the draft so
-  // the user can retry.
-  // Returns a Promise<newId | null>. Re-entrant calls for the same draft while
-  // a commit is in flight return that same promise instead of starting a second
-  // createSermon, so blur+Open can't create two rows (audit H4); the Open path
-  // still resolves to the real id and navigates.
+  // ── Pericope draft / commit ──────────────────────────────────────────────
+  function addPericope(sectionId = null) {
+    const id = `draft-${crypto.randomUUID()}`;
+    setDrafts((prev) => [...prev, {
+      id, _draft: true, series_id: seriesId, section_id: sectionId,
+      title: "", passage: "", big_idea: "", overview: "", date: "",
+      stage: SERMON_STATUS.InProgress,
+    }]);
+    setExpandedPericopes((prev) => new Set(prev).add(id));
+  }
+  function clearDraftError(id) {
+    setDraftErrors((prev) => {
+      if (!(id in prev)) return prev;
+      const next = { ...prev }; delete next[id]; return next;
+    });
+  }
+  // Commit a draft to the spine. The create-sermon INSERT is never widened —
+  // big_idea / overview (if typed before commit) follow with an updateSermon,
+  // exactly the create-then-update shape the old study_guide_note follow-up used.
   function commitDraft(draftId) {
     if (inFlightRef.current.has(draftId)) return inFlightRef.current.get(draftId);
-    const draft = drafts.find(d => d.id === draftId);
+    const draft = drafts.find((d) => d.id === draftId);
     if (!draft) return Promise.resolve(null);
     const name = draft.title?.trim();
     if (!name) return Promise.resolve(null);
-    setDraftErrors(prev => {
-      if (!(draftId in prev)) return prev;
-      const next = { ...prev };
-      delete next[draftId];
-      return next;
-    });
+    clearDraftError(draftId);
     const promise = (async () => {
       try {
         const result = await createSermon({
-          name,
-          series_id: draft.series_id,
-          section_id: draft.section_id,
-          passage: draft.passage || "",
-          date: draft.date || "",
-          is_one_off: 0,
+          name, series_id: draft.series_id, section_id: draft.section_id,
+          passage: draft.passage || "", date: draft.date || "", is_one_off: 0,
         });
         const newId = result.id;
-        // create-sermon doesn't accept study_guide_note; if the user typed one
-        // before committing, follow up with an updateSermon write.
-        if (draft.study_guide_note?.trim?.()) {
-          await updateSermon(newId, { study_guide_note: draft.study_guide_note });
-        }
+        const followUp = {};
+        if (draft.big_idea?.trim?.()) followUp.big_idea = draft.big_idea;
+        if (draft.overview?.trim?.()) followUp.overview = draft.overview;
+        if (Object.keys(followUp).length) await updateSermon(newId, followUp);
         const realSlot = {
-          id: newId,
-          series_id: draft.series_id,
-          section_id: draft.section_id,
-          title: name,
-          passage: draft.passage || "",
-          date: draft.date || "",
+          id: newId, series_id: draft.series_id, section_id: draft.section_id,
+          title: name, passage: draft.passage || "", date: draft.date || "",
+          big_idea: draft.big_idea || "", overview: draft.overview || "",
           stage: SERMON_STATUS.InProgress,
-          ...(draft.study_guide_note ? { study_guide_note: draft.study_guide_note } : {}),
         };
-        onSermonsChange(prev => [...prev, realSlot]);
-        setDrafts(prev => prev.filter(d => d.id !== draftId));
+        onSermonsChange((prev) => [...prev, realSlot]);
+        setDrafts((prev) => prev.filter((d) => d.id !== draftId));
+        // Carry the expanded state from the draft row to the committed row.
+        setExpandedPericopes((prev) => {
+          const n = new Set(prev); n.delete(draftId); n.add(newId); return n;
+        });
         return newId;
       } catch (e) {
         console.error("[commitDraft]", e);
-        setDraftErrors(prev => ({ ...prev, [draftId]: e?.message || "Could not create the sermon." }));
+        setDraftErrors((prev) => ({ ...prev, [draftId]: e?.message || "Could not create the pericope." }));
         return null;
       } finally {
         inFlightRef.current.delete(draftId);
@@ -1577,197 +686,386 @@ function SlotsTab({ series, sections, sermons, seriesId, onSermonsChange, onOpen
     inFlightRef.current.set(draftId, promise);
     return promise;
   }
-
-  function handleSlotField(id, field, value) {
+  function handlePericopeField(id, field, value) {
     if (isDraftId(id)) {
-      setDrafts(prev => prev.map(s => s.id === id ? { ...s, [field]: value } : s));
+      setDrafts((prev) => prev.map((s) => (s.id === id ? { ...s, [field]: value } : s)));
       return;
     }
-    onSermonsChange(prev => prev.map(s => s.id === id ? { ...s, [field]: value } : s));
-    debouncedSlotSave(id, { [field]: value });
+    onSermonField(id, { [field]: value });
   }
-
-  function clearDraftError(id) {
-    setDraftErrors(prev => {
-      if (!(id in prev)) return prev;
-      const next = { ...prev };
-      delete next[id];
-      return next;
-    });
-  }
-
-  async function handleDeleteSlot(id) {
-    if (isDraftId(id)) {
-      setDrafts(prev => prev.filter(s => s.id !== id));
-      clearDraftError(id);
-      return;
-    }
-    onSermonsChange(prev => prev.filter(s => s.id !== id));
+  async function deletePericope(id) {
+    if (isDraftId(id)) { setDrafts((prev) => prev.filter((s) => s.id !== id)); clearDraftError(id); return; }
+    onSermonsChange((prev) => prev.filter((s) => s.id !== id));
     await runSave(() => deleteSermon(id));
   }
 
-  // Group sermons by section. Drafts merge in alongside committed sermons
-  // so they render in the right place and order; downstream surfaces (Calendar
-  // tab, etc.) read from `sermons` directly so drafts never leak past the
-  // SlotsTab boundary.
-  const allSlots = [...sermons, ...drafts];
-  const unassigned = allSlots.filter(s => !s.section_id);
-  const bySectionId = {};
-  for (const sermon of allSlots) {
-    if (sermon.section_id) {
-      bySectionId[sermon.section_id] = bySectionId[sermon.section_id] || [];
-      bySectionId[sermon.section_id].push(sermon);
-    }
+  // Group committed sermons + drafts by section. Drafts merge in so they render
+  // in the right place; downstream tabs read `sermons` directly so drafts never
+  // leak past the Outline.
+  const allPericopes = [...sermons, ...drafts];
+  const bySection = {};
+  const unsectioned = [];
+  for (const p of allPericopes) {
+    if (p.section_id) { (bySection[p.section_id] ||= []).push(p); }
+    else unsectioned.push(p);
   }
 
-  const body = (
-    <>
-      <CoveragePanel series={series} sermons={sermons} onNavigate={onNavigate} />
-      <div className="card-header" style={{ marginBottom: "20px" }}>
-        <div>
-          <div className="card-title">Sermon Slots</div>
-          <p className="field-caption" style={{ marginTop: "2px" }}>
-            {allSlots.length} slot{allSlots.length !== 1 ? "s" : ""} planned
-          </p>
+  return (
+    <div className="page-body" style={{ background: "var(--parchment)" }}>
+      <div className="page-header" style={{ padding: "0 0 4px" }}>
+        <div className="page-title">Outline</div>
+        <div className="page-subtitle">
+          Understand the book top-down — the book, its sections, and each pericope (a sermon).
+          Every level carries the same three things: a title and range, a one-line big idea, and an overview.
         </div>
-        {sections.length === 0 && (
-          <PrimaryButton size="sm" onClick={() => addSlot(null)}>+ Add Slot</PrimaryButton>
-        )}
       </div>
 
-      {sections.length > 0 ? (
-        // Organized by section
-        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-          {sections.map((section) => (
-            <div className="card" key={section.id}>
-              <div className="card-header">
-                <div>
-                  <div className="card-title">{section.title || "Untitled Section"}</div>
-                  {section.passage_range && (
-                    <span style={{ fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--ink-ghost)" }}>
-                      {section.passage_range}
-                    </span>
-                  )}
-                </div>
-                <SecondaryButton size="sm" onClick={() => addSlot(section.id)}>+ Add Slot</SecondaryButton>
-              </div>
-              <SlotList
-                slots={bySectionId[section.id] || []}
-                onChange={handleSlotField}
-                onDelete={handleDeleteSlot}
-                onCommit={commitDraft}
-                draftErrors={draftErrors}
-                onClearError={clearDraftError}
-                onOpenSermon={onOpenSermon}
-                seriesId={seriesId}
-                series={series}
-                totalSlots={allSlots.length}
-                sectionBigIdea={section.big_idea || ""}
-              />
-            </div>
-          ))}
-
-          {/* Unassigned */}
-          {unassigned.length > 0 && (
-            <div className="card">
-              <div className="card-header">
-                <div className="card-title" style={{ color: "var(--ink-soft)" }}>Unassigned</div>
-              </div>
-              <SlotList slots={unassigned} onChange={handleSlotField} onDelete={handleDeleteSlot} onCommit={commitDraft} draftErrors={draftErrors} onClearError={clearDraftError} onOpenSermon={onOpenSermon} seriesId={seriesId} series={series} totalSlots={allSlots.length} sectionBigIdea="" />
-            </div>
-          )}
-        </div>
-      ) : (
-        // Flat list
-        <div className="card">
-          <SlotList
-            slots={allSlots}
-            onChange={handleSlotField}
-            onDelete={handleDeleteSlot}
-            onCommit={commitDraft}
-            draftErrors={draftErrors}
-            onClearError={clearDraftError}
-            showAdd
-            onAdd={() => addSlot(null)}
-            onOpenSermon={onOpenSermon}
-            seriesId={seriesId}
-            series={series}
-            totalSlots={allSlots.length}
-            sectionBigIdea=""
+      {/* ── The book node — the root of the outline ─────────────────────────── */}
+      <div className="card" style={{ marginTop: "12px", borderLeft: "3px solid var(--gold)" }}>
+        <div className="field-group">
+          <label className="field-label">Book Title</label>
+          <input
+            className="field-input"
+            style={{ fontSize: "18px", fontWeight: 600 }}
+            value={series.title || ""}
+            onChange={(e) => onSeriesField("title", e.target.value)}
+            placeholder="e.g. The Gospel of Luke: Reintroducing Jesus"
           />
         </div>
-      )}
-    </>
-  );
+        <div className="field-group">
+          <label className="field-label">Big Idea <span style={{ color: "var(--ink-ghost)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(one line)</span></label>
+          <input
+            className="field-input"
+            value={series.big_idea || ""}
+            onChange={(e) => onSeriesField("big_idea", e.target.value)}
+            placeholder="The single idea the whole book sounds — in one sentence."
+          />
+        </div>
+        <div className="field-group" style={{ marginBottom: 0 }}>
+          <label className="field-label">Overview <span style={{ color: "var(--ink-ghost)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(a paragraph)</span></label>
+          <textarea
+            className="field-textarea large"
+            value={series.overview || ""}
+            onChange={(e) => onSeriesField("overview", e.target.value)}
+            onInput={(e) => autoResize(e.target)}
+            ref={(el) => autoResize(el)}
+            placeholder="What is this book, and why does it matter for this congregation? The arc of the whole."
+          />
+        </div>
 
-  return body;
+        {/* Book details — identity + calendar metadata, tucked away so the
+            Title · Big idea · Overview unit stays prominent. */}
+        <Disclosure open={bookDetailsOpen} onToggle={() => setBookDetailsOpen((o) => !o)} label="Book details">
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginTop: "12px" }}>
+            <div className="field-group" style={{ marginBottom: 0 }}>
+              <label className="field-label" htmlFor="outline-book">Canonical Book</label>
+              <select id="outline-book" className="field-input" value={series.book_id || ""} onChange={(e) => onSelectBook(e.target.value)}>
+                <option value="">— Select book —</option>
+                {Object.entries(GENRES).map(([genreKey, genreLabel]) => (
+                  <optgroup key={genreKey} label={genreLabel}>
+                    {BOOKS.filter((b) => b.genre === genreKey).map((b) => (
+                      <option key={b.id} value={b.id}>{b.name}</option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+              <div style={{ fontSize: "12px", color: "var(--ink-ghost)", marginTop: "6px" }}>
+                Sets the genre and fills the passage span; both stay editable.
+              </div>
+            </div>
+            <div className="field-group" style={{ marginBottom: 0 }}>
+              <label className="field-label" htmlFor="outline-category">Biblical Category</label>
+              <select id="outline-category" className="field-input" value={series.canon_category || ""} onChange={(e) => onSeriesField("canon_category", e.target.value)}>
+                {CANON_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
+            <div className="field-group" style={{ marginBottom: 0 }}>
+              <label className="field-label" htmlFor="outline-range">Passage Range</label>
+              <input id="outline-range" className="field-input" style={{ fontFamily: "var(--font-mono)" }} value={series.passage_range || ""} onChange={(e) => onSeriesField("passage_range", e.target.value)} placeholder="e.g. Luke 1:1–24:53" />
+            </div>
+            <div className="field-group" style={{ marginBottom: 0 }}>
+              <label className="field-label" htmlFor="outline-desc">Short Description</label>
+              <input id="outline-desc" className="field-input" value={series.description || ""} onChange={(e) => onSeriesField("description", e.target.value)} placeholder="A tagline for the congregation or your own notes…" />
+            </div>
+            <div className="field-group" style={{ marginBottom: 0 }}>
+              <label className="field-label" htmlFor="outline-color">Color</label>
+              <select id="outline-color" className="field-input" value={series.color || "gold"} onChange={(e) => onSeriesField("color", e.target.value)}>
+                {COLOR_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 80px", gap: "12px" }}>
+              <div className="field-group" style={{ marginBottom: 0 }}>
+                <label className="field-label" htmlFor="outline-status">Status</label>
+                <select id="outline-status" className="field-input" value={series.status || SERIES_STATUS.InProgress} onChange={(e) => onSeriesField("status", e.target.value)}>
+                  {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+              </div>
+              <div className="field-group" style={{ marginBottom: 0 }}>
+                <label className="field-label" htmlFor="outline-year">Year</label>
+                <input
+                  id="outline-year" type="number" className="field-input" value={series.year ?? ""}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v === "") { onSeriesField("year", null); return; }
+                    const n = parseInt(v, 10);
+                    if (!Number.isNaN(n)) onSeriesField("year", n);
+                  }}
+                  min="2000" max="2100"
+                />
+              </div>
+            </div>
+          </div>
+          <div style={{ marginTop: "16px" }}>
+            <CoveragePanel series={series} sermons={sermons} />
+          </div>
+        </Disclosure>
+
+        {/* Reference — the pasted commentary outline (structural_outline),
+            collapsed. The book's literary shape, kept for reference. */}
+        <Disclosure open={referenceOpen} onToggle={() => setReferenceOpen((o) => !o)} label="Reference (commentary outline)">
+          <div className="field-group" style={{ marginTop: "12px", marginBottom: 0 }}>
+            <p className="field-caption" style={{ margin: "0 0 8px" }}>
+              The book's outline — its movements and turning points. Build it yourself, or paste from a commentary.
+            </p>
+            <textarea
+              className="field-textarea large" rows={5}
+              value={series.structural_outline || ""}
+              onChange={(e) => onSeriesField("structural_outline", e.target.value)}
+              onInput={(e) => autoResize(e.target)}
+              ref={(el) => autoResize(el)}
+              placeholder={"I. Major Division (1:1–4:13)\n   A. Sub-section (1:1-25)\n   B. Sub-section (1:26-38)"}
+            />
+          </div>
+        </Disclosure>
+      </div>
+
+      {/* ── Sections (and their pericopes) ─────────────────────────────────── */}
+      <div style={{ marginTop: "20px", display: "flex", flexDirection: "column", gap: "12px" }}>
+        {sections.map((section, idx) => (
+          <SectionNode
+            key={section.id}
+            section={section}
+            index={idx}
+            total={sections.length}
+            collapsed={collapsedSections.has(section.id)}
+            justCreated={justCreatedSectionId === section.id}
+            pericopes={bySection[section.id] || []}
+            expandedPericopes={expandedPericopes}
+            onToggle={() => toggleSection(section.id)}
+            onField={(field, value) => onSectionField(section.id, { [field]: value })}
+            onDelete={() => deleteSectionRow(section.id)}
+            onMove={(dir) => moveSection(section.id, dir)}
+            onAddPericope={() => addPericope(section.id)}
+            onTogglePericope={togglePericope}
+            onPericopeField={handlePericopeField}
+            onCommitPericope={commitDraft}
+            onDeletePericope={deletePericope}
+            draftErrors={draftErrors}
+            onClearDraftError={clearDraftError}
+            onOpenSermon={onOpenSermon}
+            onNavigate={onNavigate}
+          />
+        ))}
+
+        {/* Unsectioned pericopes — always shown when present; also the home for
+            pericopes when the book has no sections yet. */}
+        {(unsectioned.length > 0 || sections.length === 0) && (
+          <div className="card">
+            <div className="card-header" style={{ marginBottom: unsectioned.length ? "12px" : 0 }}>
+              <div>
+                <div className="card-title" style={{ color: sections.length ? "var(--ink-soft)" : "var(--ink)" }}>
+                  {sections.length ? "Unsectioned pericopes" : "Pericopes"}
+                </div>
+                {sections.length === 0 && (
+                  <p className="field-caption" style={{ marginTop: "2px" }}>Each pericope is a sermon. Add sections above to group them.</p>
+                )}
+              </div>
+              <SecondaryButton size="sm" onClick={() => addPericope(null)}>+ Add pericope</SecondaryButton>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              {unsectioned.map((p) => (
+                <PericopeNode
+                  key={p.id}
+                  pericope={p}
+                  expanded={expandedPericopes.has(p.id)}
+                  onToggle={() => togglePericope(p.id)}
+                  onField={handlePericopeField}
+                  onCommit={commitDraft}
+                  onDelete={deletePericope}
+                  commitError={draftErrors[p.id]}
+                  onClearError={clearDraftError}
+                  onOpenSermon={onOpenSermon}
+                  onNavigate={onNavigate}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div>
+          <SecondaryButton size="sm" onClick={addSection}>+ Add section</SecondaryButton>
+        </div>
+      </div>
+    </div>
+  );
 }
 
-function SlotList({ slots, onChange, onDelete, onCommit, draftErrors, onClearError, showAdd, onAdd, onOpenSermon, seriesId, series, totalSlots, sectionBigIdea }) {
+// A labeled collapse/expand disclosure used inside the book node.
+function Disclosure({ open, onToggle, label, children }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-      {slots.length === 0 && (
-        <div style={{ padding: "16px", background: "var(--parchment-warm)", borderRadius: "var(--radius)", textAlign: "center", color: "var(--ink-ghost)", fontSize: "13px", fontFamily: "var(--font-serif)" }}>
-          No slots yet.
+    <div style={{ marginTop: "16px", borderTop: "1px solid var(--parchment-deep)", paddingTop: "12px" }}>
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={onToggle}
+        onKeyDown={buttonKeydown(onToggle)}
+        aria-expanded={open}
+        style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer" }}
+      >
+        <span style={{ color: "var(--ink-ghost)", fontSize: "12px" }}>{open ? "▲" : "▼"}</span>
+        <span className="field-label" style={{ marginBottom: 0 }}>{label}</span>
+      </div>
+      {open && children}
+    </div>
+  );
+}
+
+// ── Section node ──────────────────────────────────────────────────────────────
+// One collapsible card per section, indented under the book. Header shows the
+// number, title, and range with reorder/delete; expanding reveals the section's
+// own Title · range · Big idea · Overview unit AND its nested pericopes.
+function SectionNode({
+  section, index, total, collapsed, justCreated, pericopes, expandedPericopes,
+  onToggle, onField, onDelete, onMove, onAddPericope, onTogglePericope,
+  onPericopeField, onCommitPericope, onDeletePericope, draftErrors,
+  onClearDraftError, onOpenSermon, onNavigate,
+}) {
+  const cardRef = useRef(null);
+  const titleRef = useRef(null);
+  useEffect(() => {
+    if (justCreated) {
+      cardRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+      titleRef.current?.focus();
+    }
+  }, [justCreated]);
+
+  const chevronBtnStyle = { background: "none", border: "none", cursor: "pointer", color: "var(--ink-ghost)", fontSize: "13px", padding: "2px 4px" };
+
+  return (
+    <div ref={cardRef} className="card" style={{ borderLeft: "3px solid var(--parchment-deep)" }}>
+      {/* Section header */}
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={onToggle}
+        onKeyDown={buttonKeydown(onToggle)}
+        aria-expanded={!collapsed}
+        style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }}
+      >
+        <span style={{ color: "var(--ink-ghost)", fontSize: "12px", width: "16px", textAlign: "center" }}>{index + 1}</span>
+        <span style={{
+          flex: 1, fontFamily: "var(--font-serif)", fontSize: "15px", fontWeight: 600,
+          color: section.title ? "var(--ink)" : "var(--ink-ghost)",
+          fontStyle: section.title ? "normal" : "italic",
+        }}>
+          {section.title || "Untitled section"}
+        </span>
+        {section.passage_range && (
+          <span style={{ fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--ink-soft)" }}>{section.passage_range}</span>
+        )}
+        <span style={{ fontSize: "11px", color: "var(--ink-ghost)" }}>
+          {pericopes.length} pericope{pericopes.length === 1 ? "" : "s"}
+        </span>
+        <div style={{ display: "flex", gap: "2px" }}>
+          {index > 0 && <IconButton aria-label="Move section up" onClick={(e) => { e.stopPropagation(); onMove(-1); }} style={chevronBtnStyle} title="Move up">↑</IconButton>}
+          {index < total - 1 && <IconButton aria-label="Move section down" onClick={(e) => { e.stopPropagation(); onMove(1); }} style={chevronBtnStyle} title="Move down">↓</IconButton>}
+          <DeleteButton small onDelete={onDelete} />
         </div>
-      )}
-      {slots.map((slot, idx) => (
-        <SlotRow
-          key={slot.id}
-          slot={slot}
-          index={idx}
-          onChange={onChange}
-          onDelete={onDelete}
-          onCommit={onCommit}
-          commitError={draftErrors?.[slot.id]}
-          onClearError={onClearError}
-          onOpenSermon={onOpenSermon}
-          seriesId={seriesId}
-          series={series}
-          totalSlots={totalSlots}
-          sectionBigIdea={sectionBigIdea}
-        />
-      ))}
-      {showAdd && (
-        <SecondaryButton size="sm" onClick={onAdd} style={{ alignSelf: "flex-start", marginTop: "4px" }}>
-          + Add Slot
-        </SecondaryButton>
+        <span style={{ color: "var(--ink-ghost)", fontSize: "12px" }}>{collapsed ? "▼" : "▲"}</span>
+      </div>
+
+      {!collapsed && (
+        <div style={{ marginTop: "14px", display: "flex", flexDirection: "column", gap: "14px" }}>
+          {/* Section's own unit */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+            <div className="field-group" style={{ marginBottom: 0 }}>
+              <label className="field-label">Section Title</label>
+              <input ref={titleRef} className="field-input" value={section.title || ""} onChange={(e) => onField("title", e.target.value)} placeholder="e.g. Seeing Jesus Through Others' Eyes" />
+            </div>
+            <div className="field-group" style={{ marginBottom: 0 }}>
+              <label className="field-label">Passage Range</label>
+              <input className="field-input" style={{ fontFamily: "var(--font-mono)" }} value={section.passage_range || ""} onChange={(e) => onField("passage_range", e.target.value)} placeholder="e.g. 1:1–4:13" />
+            </div>
+          </div>
+          <div className="field-group" style={{ marginBottom: 0 }}>
+            <label className="field-label">Big Idea</label>
+            <input className="field-input" value={section.big_idea || ""} onChange={(e) => onField("big_idea", e.target.value)} placeholder="The central truth of this section, in one line." />
+          </div>
+          <div className="field-group" style={{ marginBottom: 0 }}>
+            <label className="field-label">Overview</label>
+            <textarea
+              className="field-textarea" rows={3}
+              value={section.overview || ""}
+              onChange={(e) => onField("overview", e.target.value)}
+              onInput={(e) => autoResize(e.target)}
+              ref={(el) => autoResize(el)}
+              placeholder="What does this section accomplish? What shift happens here?"
+            />
+          </div>
+
+          {/* Nested pericopes */}
+          <div style={{ borderTop: "1px solid var(--parchment-deep)", paddingTop: "12px", marginLeft: "12px", borderLeft: "2px solid var(--parchment-deep)", paddingLeft: "12px", display: "flex", flexDirection: "column", gap: "8px" }}>
+            {pericopes.length === 0 && (
+              <div style={{ padding: "12px", background: "var(--parchment-warm)", borderRadius: "var(--radius)", textAlign: "center", color: "var(--ink-ghost)", fontSize: "13px", fontFamily: "var(--font-serif)" }}>
+                No pericopes in this section yet.
+              </div>
+            )}
+            {pericopes.map((p) => (
+              <PericopeNode
+                key={p.id}
+                pericope={p}
+                expanded={expandedPericopes.has(p.id)}
+                onToggle={() => onTogglePericope(p.id)}
+                onField={onPericopeField}
+                onCommit={onCommitPericope}
+                onDelete={onDeletePericope}
+                commitError={draftErrors[p.id]}
+                onClearError={onClearDraftError}
+                onOpenSermon={onOpenSermon}
+                onNavigate={onNavigate}
+              />
+            ))}
+            <SecondaryButton size="sm" onClick={onAddPericope} style={{ alignSelf: "flex-start", marginTop: "2px" }}>+ Add pericope</SecondaryButton>
+          </div>
+        </div>
       )}
     </div>
   );
 }
 
-function SlotRow({ slot, index, onChange, onDelete, onCommit, commitError, onClearError, onOpenSermon, seriesId, series, totalSlots, sectionBigIdea }) {
-  const [expanded, setExpanded] = useState(!slot.title && !slot.passage);
-  const isDraft = !!slot._draft;
+// ── Pericope node ─────────────────────────────────────────────────────────────
+// One pericope = one sermon = one scheduled unit. Collapsed: passage · title ·
+// date chip · Schedule jump · Open. Expanded: passage · title · big idea ·
+// overview. Draft rows commit on title blur/Enter (State #3 deferral).
+function PericopeNode({ pericope: p, expanded, onToggle, onField, onCommit, onDelete, commitError, onClearError, onOpenSermon, onNavigate }) {
+  const isDraft = !!p._draft;
   const rowRef = useRef(null);
-  const titleInputRef = useRef(null);
+  const titleRef = useRef(null);
 
-  // A freshly-added draft row is auto-expanded but, on an already-overflowing
-  // slot list, mounts below the fold — so the add can read as a no-op (and
-  // tempt a second, duplicate slot). Reveal it and focus its title so the
-  // pastor lands where he types. Draft rows mount once under a stable `draft-`
-  // key and are replaced on commit, so a mount-only effect is correct.
+  // A freshly-added draft is auto-expanded; reveal + focus it so the add never
+  // reads as a no-op below the fold.
   useEffect(() => {
-    if (slot._draft) {
+    if (p._draft) {
       rowRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
-      titleInputRef.current?.focus();
+      titleRef.current?.focus();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // Commit a draft when the user signals "I'm done with the title": blur the
-  // title input, press Enter in it, or click Open. No-op for committed slots.
-  function maybeCommit() {
-    if (!isDraft) return Promise.resolve(slot.id);
-    if (!slot.title?.trim()) return Promise.resolve(null);
-    return Promise.resolve(onCommit?.(slot.id) ?? null);
-  }
 
   async function handleOpen(e) {
     e.stopPropagation();
-    const id = isDraft ? await maybeCommit() : slot.id;
-    if (!id) return;
-    onOpenSermon(id);
+    const id = isDraft ? await onCommit?.(p.id) : p.id;
+    if (id) onOpenSermon(id);
   }
 
   return (
@@ -1776,619 +1074,285 @@ function SlotRow({ slot, index, onChange, onDelete, onCommit, commitError, onCle
         role="button"
         tabIndex={0}
         aria-expanded={expanded}
-        onClick={() => setExpanded(e => !e)}
-        onKeyDown={buttonKeydown(() => setExpanded(e => !e))}
-        style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 14px", cursor: "pointer" }}
+        onClick={onToggle}
+        onKeyDown={buttonKeydown(onToggle)}
+        style={{ display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px", cursor: "pointer" }}
       >
-        <span style={{ color: "var(--ink-ghost)", fontSize: "12px", width: "16px" }}>{index + 1}</span>
-        <span style={{ fontFamily: "var(--font-mono)", fontSize: "12px", color: "var(--ink-soft)", minWidth: "90px" }}>
-          {slot.passage || <span style={{ color: "var(--ink-ghost)", fontStyle: "italic", fontFamily: "var(--font-serif)" }}>No passage</span>}
+        <span style={{ fontFamily: "var(--font-mono)", fontSize: "12px", color: "var(--ink-soft)", minWidth: "84px" }}>
+          {p.passage || <span style={{ color: "var(--ink-ghost)", fontStyle: "italic", fontFamily: "var(--font-serif)" }}>No passage</span>}
         </span>
-        <span style={{ flex: 1, fontSize: "14px", color: slot.title ? "var(--ink)" : "var(--ink-ghost)", fontStyle: slot.title ? "normal" : "italic" }}>
-          {slot.title || "Untitled"}
+        <span style={{ flex: 1, fontSize: "14px", color: p.title ? "var(--ink)" : "var(--ink-ghost)", fontStyle: p.title ? "normal" : "italic" }}>
+          {p.title || "Untitled"}
         </span>
-        {slot.date && (
-          <span style={{ fontSize: "12px", color: "var(--ink-ghost)" }}>{formatDate(slot.date)}</span>
+        {/* Date chip — read-only here; the date is single-source on the sermon
+            and edited on Schedule (two-way). */}
+        <span
+          style={{
+            fontFamily: "var(--font-mono)", fontSize: "11px", whiteSpace: "nowrap",
+            padding: "2px 8px", borderRadius: "10px",
+            background: p.date ? "var(--parchment-warm)" : "transparent",
+            border: "1px solid var(--parchment-deep)",
+            color: p.date ? "var(--ink-soft)" : "var(--ink-ghost)",
+          }}
+          title={p.date ? "Scheduled date — edit on Schedule" : "Not scheduled yet"}
+        >
+          {p.date ? formatDate(p.date) : "No date"}
+        </span>
+        {!isDraft && (
+          <TextButton
+            onClick={(e) => { e.stopPropagation(); onNavigate?.("schedule"); }}
+            style={{ fontSize: "11px" }}
+            title="Go to the Schedule screen"
+          >
+            Schedule
+          </TextButton>
         )}
         {onOpenSermon && (
           <SecondaryButton
             size="sm"
             onClick={handleOpen}
-            disabled={isDraft && !slot.title?.trim()}
-            title={isDraft && !slot.title?.trim() ? "Type a title first" : undefined}
+            disabled={isDraft && !p.title?.trim()}
+            title={isDraft && !p.title?.trim() ? "Type a title first" : "Open this sermon"}
             style={{ fontSize: "12px", padding: "3px 10px" }}
           >
             Open
           </SecondaryButton>
         )}
-        <DeleteButton small onDelete={() => onDelete(slot.id)} />
+        <DeleteButton small onDelete={() => onDelete(p.id)} />
         <span style={{ color: "var(--ink-ghost)", fontSize: "12px" }}>{expanded ? "▲" : "▼"}</span>
       </div>
+
       {expanded && (
-        <div style={{ padding: "14px", borderTop: "1px solid var(--parchment-deep)", background: "var(--parchment-warm)", display: "grid", gridTemplateColumns: "1fr 1fr", gap: "14px" }}>
-          {/* Read-only echo of the whole this slot serves — its section's Big
-              Idea and the Series Big Idea — so the sermon is always related to
-              the whole while slotting. Echoes only; no fields, no persistence. */}
-          {(sectionBigIdea?.trim() || series?.big_idea?.trim()) && (
-            <div
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                gridColumn: "1 / -1", padding: "10px 12px", borderRadius: "var(--radius)",
-                background: "var(--white)", borderLeft: "3px solid var(--sage)",
-                display: "flex", flexDirection: "column", gap: "6px",
-              }}
-            >
-              {sectionBigIdea?.trim() && (
-                <div style={{ fontSize: "12px", color: "var(--ink-soft)", lineHeight: 1.4 }}>
-                  <span style={{ fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", fontSize: "10px", color: "var(--ink-ghost)", marginRight: "8px" }}>Section</span>
-                  {sectionBigIdea}
-                </div>
-              )}
-              {series?.big_idea?.trim() && (
-                <div style={{ fontSize: "12px", color: "var(--ink-soft)", lineHeight: 1.4 }}>
-                  <span style={{ fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", fontSize: "10px", color: "var(--ink-ghost)", marginRight: "8px" }}>Series</span>
-                  {series.big_idea}
-                </div>
-              )}
+        <div style={{ padding: "14px", borderTop: "1px solid var(--parchment-deep)", background: "var(--parchment-warm)", display: "flex", flexDirection: "column", gap: "12px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+            <div className="field-group" style={{ marginBottom: 0 }}>
+              <label className="field-label">Passage</label>
+              <input
+                className="field-input" style={{ fontFamily: "var(--font-mono)", fontSize: "14px" }}
+                value={p.passage || ""}
+                onChange={(e) => onField(p.id, "passage", e.target.value)}
+                placeholder="e.g. Luke 1:1-4"
+                onClick={(e) => e.stopPropagation()}
+              />
             </div>
-          )}
+            <div className="field-group" style={{ marginBottom: 0 }}>
+              <label className="field-label">Title</label>
+              <input
+                ref={titleRef} className="field-input" style={{ fontSize: "14px" }}
+                value={p.title || ""}
+                onChange={(e) => onField(p.id, "title", e.target.value)}
+                onBlur={() => { if (isDraft && p.title?.trim()) onCommit?.(p.id); }}
+                onKeyDown={(e) => { if (e.key === "Enter" && isDraft && p.title?.trim()) { e.preventDefault(); onCommit?.(p.id); } }}
+                placeholder="e.g. Through the Eyes of Luke"
+                onClick={(e) => e.stopPropagation()}
+              />
+              {commitError && <div style={{ marginTop: "6px" }}><InlineError onDismiss={() => onClearError?.(p.id)}>{commitError}</InlineError></div>}
+            </div>
+          </div>
           <div className="field-group" style={{ marginBottom: 0 }}>
-            <label className="field-label">Passage</label>
+            <label className="field-label">Big Idea</label>
             <input
               className="field-input"
-              style={{ fontFamily: "var(--font-mono)", fontSize: "14px" }}
-              value={slot.passage || ""}
-              onChange={(e) => onChange(slot.id, "passage", e.target.value)}
-              placeholder="e.g. Luke 1:1-4"
+              value={p.big_idea || ""}
+              onChange={(e) => onField(p.id, "big_idea", e.target.value)}
+              placeholder="The one thing this passage says, in a sentence."
               onClick={(e) => e.stopPropagation()}
             />
           </div>
           <div className="field-group" style={{ marginBottom: 0 }}>
-            <label className="field-label">Working Title</label>
-            <input
-              ref={titleInputRef}
-              className="field-input"
-              style={{ fontSize: "14px" }}
-              value={slot.title || ""}
-              onChange={(e) => onChange(slot.id, "title", e.target.value)}
-              onBlur={() => { if (isDraft && slot.title?.trim()) onCommit?.(slot.id); }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && isDraft && slot.title?.trim()) {
-                  e.preventDefault();
-                  onCommit?.(slot.id);
-                }
-              }}
-              placeholder="e.g. Through the Eyes of Luke"
-              onClick={(e) => e.stopPropagation()}
-            />
-            {commitError && (
-              <div style={{ marginTop: "6px" }}>
-                <InlineError onDismiss={() => onClearError?.(slot.id)}>{commitError}</InlineError>
-              </div>
-            )}
-          </div>
-          <div className="field-group" style={{ gridColumn: "1 / -1", marginBottom: 0 }}>
-            <label className="field-label">Study Guide Note</label>
+            <label className="field-label">Overview</label>
             <textarea
-              className="field-textarea"
-              style={{ fontSize: "14px", minHeight: "auto" }}
-              rows={3}
-              value={slot.study_guide_note || ""}
-              onChange={(e) => { onChange(slot.id, "study_guide_note", e.target.value); }}
+              className="field-textarea" rows={3}
+              value={p.overview || ""}
+              onChange={(e) => onField(p.id, "overview", e.target.value)}
               onInput={(e) => autoResize(e.target)}
               ref={(el) => autoResize(el)}
-              placeholder="Orient the congregation reader — how does this sermon fit the series arc? What should they be watching for?"
+              placeholder="A paragraph on this passage — what it shows and where it lands. Becomes the study-guide commentary."
               onClick={(e) => e.stopPropagation()}
             />
-            <p className="field-caption">A short note for the congregational study guide — written in your own voice.</p>
           </div>
         </div>
       )}
     </div>
   );
 }
-// ── Design Tab ────────────────────────────────────────────────────────────────
-// The second movement: where the heard line becomes a made series. Mostly an
-// ASSEMBLED view — it relocates fields out of the dissolving Overview/Structure
-// tabs and reuses the slot apparatus + coverage engine wholesale (no engine
-// touched). The only new substance is the hinge at the top. AI-free: no
-// worksheet, no suggestion — every field is the pastor's own, on its existing
-// persistence path. Three bands, top to bottom.
-function DesignTab({
-  series, onChange, onNavigate, sections, sermons, seriesId,
-  onSectionsChange, onSermonsChange, onOpenSermon, runSave,
-}) {
-  return (
-    <div className="page-body">
-      <div className="page-header" style={{ padding: "0 0 4px" }}>
-        <MovementFrame movementId="design" />
-        <div className="page-title">Design</div>
-        <div className="page-subtitle">
-          Turn the line you heard into a series — the big idea, the sermons, the movements.
-        </div>
-      </div>
 
-      {/* ── BAND 1: The Hinge — line → why now → the decision ───────────────── */}
-      <MoveHeader n="1" title="The Hinge" subtitle="The line you heard → why this congregation now → the series big idea." />
-      <div className="card" style={{
-        marginTop: "12px",
-        borderLeft: "3px solid var(--gold)",
-        background: "var(--parchment-warm)",
-        display: "flex", flexDirection: "column", gap: "14px",
-      }}>
-        {/* The Melodic Line — read-only, carried from Understand. The "(from
-            Understand)" parenthetical was dropped when the head-of-movement seam
-            frame ("Design opens, against the Melodic Line.") took over naming the
-            handoff; this band now just shows the line itself to build against. */}
-        <div>
-          <div className="field-label" style={{ marginBottom: "4px" }}>The Melodic Line</div>
-          {series.emerging_big_idea?.trim() ? (
-            <div style={{
-              fontSize: "15px", fontFamily: "var(--font-serif)",
-              color: "var(--ink)", fontStyle: "italic", lineHeight: "1.6",
-            }}>
-              {series.emerging_big_idea}
-            </div>
-          ) : (
-            <div style={{ fontSize: "13px", fontStyle: "italic", color: "var(--ink-ghost)" }}>
-              Hear the line in Understand first — it's the thing you design against.
-            </div>
-          )}
-        </div>
+// ── Schedule Tab ──────────────────────────────────────────────────────────────
+// Lays each pericope (sermon) on a Sunday. The date is SINGLE-SOURCE on the
+// sermon — edits here reflect live on the Outline date chip and vice versa
+// (no separate snapshot that can drift). Suggest Sundays is one explicit bulk
+// gesture; manual edits autosave like any other field. AI scheduling advisor
+// stays removed (no-direct-ai); the church-calendar engine is preserved verbatim.
+function ScheduleTab({ series, sermons, calNotes, onSeriesField, onSermonField, onSermonsChange, onNavigate, runSave }) {
+  const [suggesting, setSuggesting] = useState(false);
+  const excludeDates = calNotes.map((n) => n.date);
 
-        <div style={{ textAlign: "center", color: "var(--ink-ghost)", fontSize: "13px" }} aria-hidden="true">↓</div>
-
-        {/* Why this congregation, why now — relocated from Understand, editable
-            in its real home: the bridge from what the book says to these people. */}
-        <UnderstandNote fieldKey="series_motivation" series={series} onChange={onChange} />
-
-        <div style={{ textAlign: "center", color: "var(--ink-ghost)", fontSize: "13px" }} aria-hidden="true">↓</div>
-
-        {/* Series Big Idea — the decision and the hinge's payoff. Distinct from
-            the notes above: which facet of the line drives THIS series. Same
-            wiring the Understand echo de-dupes against. */}
-        <div style={{
-          padding: "14px 16px", borderRadius: "var(--radius)",
-          background: "var(--white)", border: "1px solid var(--gold)",
-        }}>
-          <div className="field-group" style={{ marginBottom: 0 }}>
-            <label className="field-label">Series Big Idea</label>
-            <input
-              className="field-input"
-              style={{ fontSize: "16px", fontWeight: 600 }}
-              value={series.big_idea || ""}
-              onChange={(e) => onChange("big_idea", e.target.value)}
-              placeholder="The controlling idea of the entire series in one sentence."
-            />
-            <p className="field-caption" style={{ marginTop: "6px" }}>
-              Which facet of the line you'll drive for this congregation, now.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* ── BAND 2: Divide into sermons ─────────────────────────────────────── */}
-      <MoveHeader n="2" title="Divide into Sermons" subtitle="The arc, the span, and the slots that cover it." />
-
-      <div className="card" style={{ marginTop: "12px" }}>
-        <div className="field-group">
-          <label className="field-label">Series Overview</label>
-          <textarea
-            className="field-textarea"
-            rows={3}
-            value={series.overview || ""}
-            onChange={(e) => onChange("overview", e.target.value)}
-            onInput={(e) => autoResize(e.target)}
-            ref={(el) => autoResize(el)}
-            placeholder="The theological arc of this series — where it starts, where it goes, what it asks of the congregation."
-          />
-        </div>
-        <div className="field-group" style={{ marginBottom: 0 }}>
-          <label className="field-label" htmlFor="design-passage-range">Passage Range</label>
-          <input
-            id="design-passage-range"
-            className="field-input"
-            style={{ fontFamily: "var(--font-mono)" }}
-            value={series.passage_range || ""}
-            onChange={(e) => onChange("passage_range", e.target.value)}
-            placeholder="e.g. Luke 1:1–24:53"
-          />
-        </div>
-      </div>
-
-      {/* The slot apparatus + coverage panel, reused wholesale (no page-body
-          wrapper, no pacing strip — pacing belongs to Schedule). */}
-      <div style={{ marginTop: "16px" }}>
-        <SlotsTab
-          series={series}
-          sections={sections}
-          sermons={sermons}
-          seriesId={seriesId}
-          onSermonsChange={onSermonsChange}
-          onOpenSermon={onOpenSermon}
-          onNavigate={onNavigate}
-          runSave={runSave}
-        />
-      </div>
-
-      {/* ── BAND 3: Group into movements — the series' sections ──────────────── */}
-      <MoveHeader n="3" title="Group into Movements" subtitle="Gather the sermons into the series' sections — your grouping, not the book's literary outline." />
-
-      <div style={{ marginTop: "12px" }}>
-        <StructureTab
-          series={series}
-          sections={sections}
-          onSectionsChange={onSectionsChange}
-          seriesId={seriesId}
-          runSave={runSave}
-        />
-      </div>
-
-      <MovementFooter movementId="design" onNavigate={onNavigate} />
-    </div>
-  );
-}
-// ── Calendar Tab ───────────────────────────────────────────────────────────
-// Schedules the series' sermon slots onto Sundays, honouring church-calendar
-// seasons and the preacher's special-date notes. AI scheduling advisor removed
-// (constitutional no-direct-ai); the date engine is preserved verbatim.
-function CalendarTab({ series, sections, sermons, calNotes, onChange, onNavigate, onSermonsChange, schedule, onScheduleChange, scheduleDirty }) {
-  const [calendarSaving, setCalendarSaving] = useState(false);
-  const [calendarSaveMsg, setCalendarSaveMsg] = useState(""); // "" | "saved" | "error"
-
-  const excludeDates = calNotes.map(n => n.date);
-
-  // schedule lives in the shell now and is seeded there from the slot list; it
-  // survives tab switches and the shell only re-syncs it from sermons while
-  // it's NOT dirty (audit M7). Marking dirty here keeps unsaved Suggest results
-  // / manual edits from being clobbered.
-
-  function suggestSundays() {
-    if (!series.start_date || sermons.length === 0) return;
-    const sundays = getUpcomingSundays(series.start_date, sermons.length, excludeDates);
-    const newSchedule = sermons.map((s, i) => ({ sermonId: s.id, date: sundays[i] || "" }));
-    scheduleDirty.current = true;
-    onScheduleChange(newSchedule);
+  // The series end_date mirrors the last dated sermon — recompute from a list
+  // and persist it (debounced via onSeriesField) when it moves.
+  function syncEndDate(list) {
+    const last = [...list].filter((s) => s.date).sort((a, b) => (a.date > b.date ? 1 : -1)).pop()?.date || "";
+    if (last && last !== series.end_date) onSeriesField("end_date", last);
   }
 
-  function handleDateChange(sermonId, date) {
-    scheduleDirty.current = true;
-    onScheduleChange(prev => prev.map(s => s.sermonId === sermonId ? { ...s, date } : s));
+  function handleDate(sermonId, date) {
+    onSermonField(sermonId, { date }); // single-source: updates sermons + autosaves
+    syncEndDate(sermons.map((s) => (s.id === sermonId ? { ...s, date } : s)));
   }
 
   function skipSunday(sermonId) {
-    // Find current date for this slot, advance by one week
-    const entry = schedule.find(s => s.sermonId === sermonId);
+    const entry = sermons.find((s) => s.id === sermonId);
     if (!entry?.date) return;
     const d = new Date(entry.date + "T00:00:00");
     d.setDate(d.getDate() + 7);
-    const next = toDateString(d);
-    handleDateChange(sermonId, next);
+    handleDate(sermonId, toDateString(d));
   }
 
-  async function applySchedule() {
-    setCalendarSaving(true);
-    setCalendarSaveMsg("");
-    try {
-      await Promise.all(
-        schedule.map(({ sermonId, date }) => updateSermon(sermonId, { date }))
-      );
-      onSermonsChange(prev => prev.map(s => {
-        const entry = schedule.find(e => e.sermonId === s.id);
-        return entry ? { ...s, date: entry.date } : s;
-      }));
-      // Update series end_date from the last DATED slot (ignore blanks).
-      const lastDate = [...schedule].filter(e => e.date).sort((a, b) => (a.date > b.date ? 1 : -1)).pop()?.date;
-      if (lastDate) onChange("end_date", lastDate);
-      scheduleDirty.current = false; // saved — let the shell re-sync from sermons
-      setCalendarSaveMsg("saved");
-      setTimeout(() => setCalendarSaveMsg(""), 2000);
-    } catch (e) {
-      console.error("[applySchedule]", e);
-      setCalendarSaveMsg("error");
-    } finally {
-      setCalendarSaving(false);
-    }
+  // Suggest Sundays — one explicit bulk gesture. Writes every sermon's date in a
+  // single round of updates (immediate, not debounced), then syncs end_date.
+  async function suggestSundays() {
+    if (!series.start_date || sermons.length === 0) return;
+    setSuggesting(true);
+    const sundays = getUpcomingSundays(series.start_date, sermons.length, excludeDates);
+    const dated = sermons.map((s, i) => ({ ...s, date: sundays[i] || s.date || "" }));
+    onSermonsChange(dated);
+    await runSave(() => Promise.all(dated.map((s) => updateSermon(s.id, { date: s.date }))));
+    syncEndDate(dated);
+    setSuggesting(false);
   }
 
   return (
-    <>
-      <div className="page-header">
-        <MovementFrame movementId="calendar" />
+    <div className="page-body">
+      <div className="page-header" style={{ padding: "0 0 4px" }}>
         <div className="page-title">Schedule</div>
         <div className="page-subtitle">
-          Lay each slot on a Sunday. Seasons and your special-date notes ride along so nothing lands where it shouldn't.
+          Lay each pericope on a Sunday. Seasons and your special-date notes ride along so nothing lands where it shouldn't.
+          Dates are saved as you go and show on the Outline.
         </div>
       </div>
 
-      <div className="page-body">
-        <PacingStrip sermons={sermons} series={series} calNotes={calNotes} />
-        {/* Controls */}
-        <div className="card" style={{ marginBottom: "20px" }}>
-          <div style={{ display: "flex", alignItems: "flex-end", gap: "16px", flexWrap: "wrap" }}>
-            <div className="field-group" style={{ marginBottom: 0 }}>
-              <label className="field-label" htmlFor="series-start-date">Series Start Date</label>
-              <input
-                id="series-start-date"
-                type="date"
-                className="field-input"
-                style={{ width: "auto", fontSize: "14px", padding: "8px 12px" }}
-                value={series.start_date || ""}
-                onChange={(e) => onChange("start_date", e.target.value)}
-              />
-            </div>
-            <PrimaryButton
-              size="sm"
-              onClick={suggestSundays}
-              disabled={!series.start_date || sermons.length === 0}
-            >
-              Suggest Sundays ({sermons.length} slots)
-            </PrimaryButton>
-            <SecondaryButton size="sm" onClick={applySchedule} disabled={calendarSaving}>
-              {calendarSaving ? LOADING_VERB.Saving : "Save Dates"}
-            </SecondaryButton>
-            {calendarSaveMsg === "saved" && (
-              <span style={{ fontSize: "12px", color: "var(--sage)" }}>Dates saved</span>
-            )}
-            {calendarSaveMsg === "error" && (
-              <span style={{ fontSize: "12px", color: "var(--crimson)" }}>Save failed</span>
-            )}
+      <PacingStrip sermons={sermons} series={series} calNotes={calNotes} />
+
+      <div className="card" style={{ marginBottom: "20px" }}>
+        <div style={{ display: "flex", alignItems: "flex-end", gap: "16px", flexWrap: "wrap" }}>
+          <div className="field-group" style={{ marginBottom: 0 }}>
+            <label className="field-label" htmlFor="series-start-date">Series Start Date</label>
+            <input
+              id="series-start-date" type="date" className="field-input"
+              style={{ width: "auto", fontSize: "14px", padding: "8px 12px" }}
+              value={series.start_date || ""}
+              onChange={(e) => onSeriesField("start_date", e.target.value)}
+            />
           </div>
+          <PrimaryButton size="sm" onClick={suggestSundays} disabled={!series.start_date || sermons.length === 0 || suggesting}>
+            {suggesting ? LOADING_VERB.Saving : `Suggest Sundays (${sermons.length} sermon${sermons.length === 1 ? "" : "s"})`}
+          </PrimaryButton>
         </div>
+      </div>
 
-        {sermons.length === 0 ? (
-          <div style={{
-            padding: "32px",
-            background: "var(--parchment-warm)",
-            border: "1px solid var(--parchment-deep)",
-            borderRadius: "var(--radius-lg)",
-            textAlign: "center",
-            color: "var(--ink-ghost)",
-            fontSize: "14px",
-          }}>
-            Add sermon slots in{" "}
-            <TextButton
-              onClick={() => onNavigate?.("design")}
-              style={{ fontSize: "inherit", padding: 0, verticalAlign: "baseline" }}
-            >
-              Design → Divide into Sermons
-            </TextButton>{" "}
-            first.
-          </div>
-        ) : (
-          <>
-            {/* Schedule list */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              {sermons.map((sermon, idx) => {
-                const entry = schedule.find(s => s.sermonId === sermon.id);
-                const date  = entry?.date || sermon.date || "";
-                const season = date ? getSeasonForDate(date) : null;
-                const note  = calNotes.find(n => n.date === date);
-
-                return (
-                  <div key={sermon.id} style={{
-                    display: "grid", gridTemplateColumns: "24px 1fr 1fr auto auto",
-                    alignItems: "center", gap: "14px",
-                    padding: "12px 16px",
-                    background: "var(--white)",
-                    border: "1px solid var(--parchment-deep)",
-                    borderRadius: "var(--radius-lg)",
-                    boxShadow: "var(--shadow-soft)",
-                  }}>
-                    <span style={{ fontSize: "12px", color: "var(--ink-ghost)", textAlign: "center" }}>{idx + 1}</span>
-                    <div>
-                      <div style={{ fontSize: "14px", color: "var(--ink)", fontFamily: "var(--font-serif)", lineHeight: "1.3" }}>
-                        {sermon.title || <span style={{ color: "var(--ink-ghost)", fontStyle: "italic" }}>Untitled</span>}
-                      </div>
-                      {sermon.passage && (
-                        <div style={{ fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--ink-soft)", marginTop: "3px" }}>
-                          {sermon.passage}
-                        </div>
-                      )}
-                    </div>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                      <input
-                        type="date"
-                        className="field-input"
-                        style={{ fontSize: "13px", padding: "6px 10px" }}
-                        value={date}
-                        onChange={(e) => handleDateChange(sermon.id, e.target.value)}
-                        aria-label={`Date for slot ${idx + 1}`}
-                      />
-                      {note && (
-                        <span style={{ fontSize: "11px", color: "var(--crimson)" }}>⚠ {note.label}</span>
-                      )}
-                    </div>
-                    <div>
-                      {season && (
-                        <span style={{
-                          fontSize: "11px", padding: "3px 9px", borderRadius: "10px",
-                          background: `color-mix(in srgb, var(${season.token}) 13%, transparent)`,
-                          color: `var(${season.token})`,
-                          border: `1px solid color-mix(in srgb, var(${season.token}) 28%, transparent)`,
-                          whiteSpace: "nowrap",
-                        }}>
-                          {season.shortName}
-                        </span>
-                      )}
-                    </div>
-                    <IconButton
-                      aria-label="Skip one week"
-                      className="btn-icon"
-                      onClick={() => skipSunday(sermon.id)}
-                      title="Skip one week"
-                      disabled={!date}
-                      style={{ fontSize: "12px", padding: "5px 9px" }}
-                    >
-                      +1wk
-                    </IconButton>
+      {sermons.length === 0 ? (
+        <div style={{
+          padding: "32px", background: "var(--parchment-warm)", border: "1px solid var(--parchment-deep)",
+          borderRadius: "var(--radius-lg)", textAlign: "center", color: "var(--ink-ghost)", fontSize: "14px",
+        }}>
+          Add pericopes in{" "}
+          <TextButton onClick={() => onNavigate?.("book-outline")} style={{ fontSize: "inherit", padding: 0, verticalAlign: "baseline" }}>Outline</TextButton>{" "}
+          first.
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+          {sermons.map((sermon, idx) => {
+            const date = sermon.date || "";
+            const season = date ? getSeasonForDate(date) : null;
+            const note = calNotes.find((n) => n.date === date);
+            return (
+              <div key={sermon.id} style={{
+                display: "grid", gridTemplateColumns: "24px 1fr 1fr auto auto",
+                alignItems: "center", gap: "14px", padding: "12px 16px",
+                background: "var(--white)", border: "1px solid var(--parchment-deep)",
+                borderRadius: "var(--radius-lg)", boxShadow: "var(--shadow-soft)",
+              }}>
+                <span style={{ fontSize: "12px", color: "var(--ink-ghost)", textAlign: "center" }}>{idx + 1}</span>
+                <div>
+                  <div style={{ fontSize: "14px", color: "var(--ink)", fontFamily: "var(--font-serif)", lineHeight: "1.3" }}>
+                    {sermon.title || <span style={{ color: "var(--ink-ghost)", fontStyle: "italic" }}>Untitled</span>}
                   </div>
-                );
-              })}
-            </div>
-
-            <div style={{ marginTop: "20px", display: "flex", alignItems: "center", gap: "12px" }}>
-              <PrimaryButton onClick={applySchedule} disabled={calendarSaving}>
-                {calendarSaving ? LOADING_VERB.Saving : "Save All Dates to Sermon Records"}
-              </PrimaryButton>
-              {calendarSaveMsg === "saved" && (
-                <span style={{ fontSize: "12px", color: "var(--sage)" }}>Dates saved</span>
-              )}
-              {calendarSaveMsg === "error" && (
-                <span style={{ fontSize: "12px", color: "var(--crimson)" }}>Save failed</span>
-              )}
-            </div>
-          </>
-        )}
-
-        <MovementFooter movementId="calendar" onNavigate={onNavigate} />
-      </div>
-    </>
-  );
-}
-// ── Series Planner "How this works" modal ──────────────────────────────────────
-// Pure copy — no AI, no DB. Explains the four movements and their sub-items.
-// Restyled to the app's .modal-* vocabulary (NewSeriesModal idiom):
-// .modal-backdrop → .modal → .modal-header/.modal-body. Width is widened past
-// the 560px default (inline) so the four-column SVG breathes; everything else is
-// the shared class. No AI anywhere in the planner.
-function SeriesHowItWorksModal({ onClose }) {
-  // Escape + focus trap + focus restore (audit L10).
-  const dialogRef = useModalA11y(onClose);
-
-  return (
-    <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal" style={{ width: "960px" }} ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="series-how-title">
-        <div className="modal-header">
-          <h2 className="modal-title" id="series-how-title">How the Series Planner works</h2>
-          <IconButton aria-label="Close how-this-works modal" className="modal-close" onClick={onClose}>×</IconButton>
+                  {sermon.passage && (
+                    <div style={{ fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--ink-soft)", marginTop: "3px" }}>{sermon.passage}</div>
+                  )}
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                  <input
+                    type="date" className="field-input" style={{ fontSize: "13px", padding: "6px 10px" }}
+                    value={date}
+                    onChange={(e) => handleDate(sermon.id, e.target.value)}
+                    aria-label={`Date for sermon ${idx + 1}`}
+                  />
+                  {note && <span style={{ fontSize: "11px", color: "var(--crimson)" }}>⚠ {note.label}</span>}
+                </div>
+                <div>
+                  {season && (
+                    <span style={{
+                      fontSize: "11px", padding: "3px 9px", borderRadius: "10px",
+                      background: `color-mix(in srgb, var(${season.token}) 13%, transparent)`,
+                      color: `var(${season.token})`,
+                      border: `1px solid color-mix(in srgb, var(${season.token}) 28%, transparent)`,
+                      whiteSpace: "nowrap",
+                    }}>
+                      {season.shortName}
+                    </span>
+                  )}
+                </div>
+                <IconButton
+                  aria-label="Skip one week" className="btn-icon"
+                  onClick={() => skipSunday(sermon.id)}
+                  title="Skip one week" disabled={!date}
+                  style={{ fontSize: "12px", padding: "5px 9px" }}
+                >
+                  +1wk
+                </IconButton>
+              </div>
+            );
+          })}
         </div>
-
-        <div className="modal-body">
-          <p style={{
-            fontSize: "13px", color: "var(--ink-ghost)",
-            marginBottom: "24px", fontFamily: "var(--font-serif)",
-          }}>Plan and build a sermon series through four movements, each feeding the next:
-            {" "}{PLANNER_MOVEMENTS[0].label} — read the book and hear its melodic line;
-            {" "}{PLANNER_MOVEMENTS[1].label} — make the series from the line;
-            {" "}{PLANNER_MOVEMENTS[2].label} — lay the sermons on the calendar;
-            {" "}{PLANNER_MOVEMENTS[3].label} — the series at a glance.</p>
-
-          <div style={{ overflowX: "auto" }}>
-            <svg viewBox="0 0 1080 224" style={{ width: "100%", height: "auto", display: "block" }}>
-
-              {/* ── Movement boxes (4, in workflow order) — labels bound to
-                  PLANNER_MOVEMENTS by position so the diagram's movement names
-                  share the single source the rail/frames/footer/place-line use
-                  (Surface #1, one vocabulary). Geometry + the finer sub-item
-                  boxes below stay literal (no PLANNER_MOVEMENTS counterpart). ──── */}
-              <rect x="10" y="16" width="230" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
-              <text x="125" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "var(--font-serif)", fontWeight: 600 }}>{PLANNER_MOVEMENTS[0].label}</text>
-
-              <rect x="270" y="16" width="230" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
-              <text x="385" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "var(--font-serif)", fontWeight: 600 }}>{PLANNER_MOVEMENTS[1].label}</text>
-
-              <rect x="530" y="16" width="230" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
-              <text x="645" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "var(--font-serif)", fontWeight: 600 }}>{PLANNER_MOVEMENTS[2].label}</text>
-
-              <rect x="790" y="16" width="230" height="40" rx="6" style={{ fill: "var(--gold-pale)", stroke: "var(--gold)", strokeWidth: "1.5" }} />
-              <text x="905" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink)", fontSize: "14px", fontFamily: "var(--font-serif)", fontWeight: 600 }}>{PLANNER_MOVEMENTS[3].label}</text>
-
-              {/* ── Forward-flow arrows between movements ───────────────────────── */}
-              <text x="255" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-ghost)", fontSize: "14px" }}>→</text>
-              <text x="515" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-ghost)", fontSize: "14px" }}>→</text>
-              <text x="775" y="36" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-ghost)", fontSize: "14px" }}>→</text>
-
-              {/* ── Movement → first sub-item connectors ────────────────────────── */}
-              <line x1="125" y1="56" x2="125" y2="72" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-              <line x1="385" y1="56" x2="385" y2="72" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-              <line x1="645" y1="56" x2="645" y2="72" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-              <line x1="905" y1="56" x2="905" y2="72" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-
-              {/* ── Understand sub-items (4) ────────────────────────────────────── */}
-              <rect x="10" y="72" width="230" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-              <text x="125" y="86" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Place the book</text>
-              <line x1="125" y1="100" x2="125" y2="108" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-
-              <rect x="10" y="108" width="230" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-              <text x="125" y="122" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Hear the line</text>
-              <line x1="125" y1="136" x2="125" y2="144" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-
-              <rect x="10" y="144" width="230" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-              <text x="125" y="158" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Evidence worksheet</text>
-              <line x1="125" y1="172" x2="125" y2="180" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-
-              <rect x="10" y="180" width="230" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-              <text x="125" y="194" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>The melodic line</text>
-
-              {/* ── Design sub-items (3) ────────────────────────────────────────── */}
-              <rect x="270" y="72" width="230" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-              <text x="385" y="86" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>The hinge</text>
-              <line x1="385" y1="100" x2="385" y2="108" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-
-              <rect x="270" y="108" width="230" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-              <text x="385" y="122" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Divide into sermons</text>
-              <line x1="385" y1="136" x2="385" y2="144" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-
-              <rect x="270" y="144" width="230" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-              <text x="385" y="158" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Group into movements</text>
-
-              {/* ── Schedule sub-items (3) ──────────────────────────────────────── */}
-              <rect x="530" y="72" width="230" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-              <text x="645" y="86" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>{"Dates & Suggest Sundays"}</text>
-              <line x1="645" y1="100" x2="645" y2="108" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-
-              <rect x="530" y="108" width="230" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-              <text x="645" y="122" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Liturgical seasons</text>
-              <line x1="645" y1="136" x2="645" y2="144" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-
-              <rect x="530" y="144" width="230" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-              <text x="645" y="158" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Pacing</text>
-
-              {/* ── Overview sub-items (3) ──────────────────────────────────────── */}
-              <rect x="790" y="72" width="230" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-              <text x="905" y="86" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>{"Identity (title · tagline · color)"}</text>
-              <line x1="905" y1="100" x2="905" y2="108" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-
-              <rect x="790" y="108" width="230" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-              <text x="905" y="122" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Series at a glance</text>
-              <line x1="905" y1="136" x2="905" y2="144" style={{ stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-
-              <rect x="790" y="144" width="230" height="28" rx="4" style={{ fill: "var(--white)", stroke: "var(--parchment-deep)", strokeWidth: "1" }} />
-              <text x="905" y="158" textAnchor="middle" dominantBaseline="middle" style={{ fill: "var(--ink-soft)", fontSize: "12px", fontFamily: "var(--font-serif)" }}>Study Guide export</text>
-
-            </svg>
-          </div>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
 
-// ── Study Guide Modal ─────────────────────────────────────────────────────────
-// AI-free: renders a five-part read-only preview from series + sections +
-// sermons, and exports to Word via exportStudyGuide(series.id) — a real DB/IPC
-// document export, not AI. Restyled to the app's .modal-* vocabulary; the
-// preview body keeps its bespoke, token-styled sub-components (status dots, part
-// headers, slot rows). In-flight export label is LOADING_VERB.Exporting.
-function StudyGuideModal({ series, sections, sermons, onClose }) {
-  const [exporting, setExporting]       = useState(false);
-  const [exportResult, setExportResult] = useState(null); // null | { ok, filepath?, error? }
-
-  // Escape + focus trap + focus restore (audit L10).
-  const dialogRef = useModalA11y(onClose);
+// ── Study Guide Tab ───────────────────────────────────────────────────────────
+// An editable formatted booklet ("mini-commentary"). "Import from outline" builds
+// it: book Overview → Introduction; each section → a part (its Overview opens it);
+// each sermon → its own page (Big idea + Overview-as-commentary + passage + date).
+// The imported content is a LIVE projection of the Outline — single-source, never
+// snapshotted — so re-importing can never drift and never wipes the guide-local
+// additions/notes (which live in study_guide_extras, untouched by Import).
+// Export to Word renders the booklet (electron/main.js buildStudyGuideDoc).
+function StudyGuideTab({ series, sections, sermons, seriesId, onSermonExtras, onNavigate }) {
+  const builtKey = `sermonforge_planner_guide_built_${seriesId}`;
+  const [built, setBuilt] = useState(() => !!localStorage.getItem(builtKey));
+  const [justRefreshed, setJustRefreshed] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [exportResult, setExportResult] = useState(null);
 
   const model = buildStudyGuideModel(series, sections, sermons);
+
+  function importFromOutline() {
+    // Build/refresh gesture. Content is already a live projection of the
+    // Outline, so this just gates the empty-state → booklet and confirms the
+    // refresh; it NEVER writes study_guide_extras, so additions/notes survive.
+    localStorage.setItem(builtKey, "1");
+    setBuilt(true);
+    setJustRefreshed(true);
+    setTimeout(() => setJustRefreshed(false), 2200);
+  }
 
   async function handleExport() {
     setExporting(true);
     setExportResult(null);
     try {
+      await runRegisteredFlushes(); // flush any pending Outline edits first
       const result = await exportStudyGuide(series.id);
-      setExportResult(result.success
-        ? { ok: true, filepath: result.filepath }
-        : { ok: false, error: result.error || "Export failed" }
-      );
+      setExportResult(result.success ? { ok: true, filepath: result.filepath } : { ok: false, error: result.error || "Export failed" });
     } catch (e) {
       setExportResult({ ok: false, error: e.message });
     } finally {
@@ -2396,249 +1360,288 @@ function StudyGuideModal({ series, sections, sermons, onClose }) {
     }
   }
 
-  function SgStatusDot({ value }) {
-    const len = value?.trim().length || 0;
-    if (len > 100) {
-      return (
-        <span style={{
-          display: "inline-block", width: "8px", height: "8px", borderRadius: "50%",
-          background: "var(--sage)", flexShrink: 0, marginTop: "4px",
-        }} title="Substantive content" />
-      );
-    } else if (len > 0) {
-      return (
-        <span style={{
-          display: "inline-block", width: "8px", height: "8px", borderRadius: "50%",
-          border: "2px solid var(--gold)", flexShrink: 0, marginTop: "4px",
-        }} title="Brief content" />
-      );
-    } else {
-      return (
-        <span style={{
-          display: "inline-block", width: "8px", height: "8px", borderRadius: "50%",
-          border: "2px solid var(--ink-ghost)", flexShrink: 0, marginTop: "4px",
-        }} title="Empty" />
-      );
-    }
-  }
-
-  function SgPartHeader({ number, title }) {
+  if (!built) {
     return (
-      <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "16px" }}>
-        <span style={{
-          display: "flex", alignItems: "center", justifyContent: "center",
-          width: "24px", height: "24px", borderRadius: "50%",
-          background: "var(--gold)", color: "var(--white)",
-          fontSize: "12px", fontWeight: "700", fontFamily: "var(--font-serif)",
-          flexShrink: 0,
-        }}>{number}</span>
-        <h3 style={{
-          fontFamily: "var(--font-serif)", fontSize: "16px",
-          fontWeight: "600", color: "var(--ink)", margin: 0,
-        }}>{title}</h3>
-      </div>
-    );
-  }
-
-  function SgPartDivider() {
-    return <div style={{ borderTop: "1px solid var(--parchment-deep)", margin: "28px 0" }} />;
-  }
-
-  function SgSection({ label, value, hint }) {
-    const content = value?.trim();
-    return (
-      <div style={{ marginBottom: "20px" }}>
-        <div style={{ display: "flex", alignItems: "flex-start", gap: "8px", marginBottom: "6px" }}>
-          <SgStatusDot value={value} />
-          <span className="field-label" style={{ marginBottom: 0 }}>{label}</span>
+      <div className="page-body">
+        <div className="page-header" style={{ padding: "0 0 4px" }}>
+          <div className="page-title">Study guide</div>
+          <div className="page-subtitle">A congregational booklet built from your outline — an introduction, a part per section, and a page per sermon.</div>
         </div>
-        {content ? (
-          <div style={{ paddingLeft: "16px" }}>
-            {content.split(/\n+/).filter(p => p.trim()).map((para, i) => (
-              <p key={i} style={{
-                fontSize: "14px", fontFamily: "var(--font-serif)",
-                color: "var(--ink)", lineHeight: "1.7", margin: "0 0 8px",
-              }}>
-                {para}
-              </p>
-            ))}
+        <div style={{
+          marginTop: "20px", padding: "40px 32px", textAlign: "center",
+          background: "var(--white)", border: "1px solid var(--parchment-deep)", borderRadius: "var(--radius-lg)",
+        }}>
+          <div style={{ fontFamily: "var(--font-serif)", fontSize: "16px", color: "var(--ink)", marginBottom: "8px" }}>
+            Build your study guide
           </div>
-        ) : (
-          <div style={{ paddingLeft: "16px", fontSize: "13px", fontStyle: "italic", color: "var(--ink-ghost)" }}>
-            {hint || "No content yet."}
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  function SgSlotRow({ sermon, index }) {
-    const season = sermon.date ? getSeasonForDate(sermon.date) : null;
-    return (
-      <div style={{
-        marginBottom: "12px", padding: "14px 16px",
-        background: "var(--white)", border: "1px solid var(--parchment-deep)",
-        borderRadius: "var(--radius)",
-      }}>
-        <div style={{ display: "flex", alignItems: "flex-start", gap: "10px", marginBottom: sermon.study_guide_note ? "10px" : 0 }}>
-          <span style={{ fontSize: "12px", color: "var(--ink-ghost)", width: "18px", flexShrink: 0, marginTop: "2px" }}>{index + 1}</span>
-          <div style={{ flex: 1 }}>
-            <div style={{ display: "flex", alignItems: "baseline", gap: "8px", flexWrap: "wrap" }}>
-              {sermon.passage && (
-                <span style={{ fontFamily: "var(--font-mono)", fontSize: "12px", color: "var(--ink-soft)" }}>
-                  {sermon.passage}
-                </span>
-              )}
-              {sermon.title && (
-                <span style={{ fontFamily: "var(--font-serif)", fontSize: "14px", fontWeight: "600", color: "var(--ink)" }}>
-                  {sermon.title}
-                </span>
-              )}
-              {!sermon.passage && !sermon.title && (
-                <span style={{ fontStyle: "italic", color: "var(--ink-ghost)", fontSize: "13px" }}>Untitled</span>
-              )}
-            </div>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
-              {sermon.date && (
-                <span style={{ fontSize: "12px", color: "var(--ink-ghost)" }}>{formatDate(sermon.date)}</span>
-              )}
-              {season && (
-                <span style={{
-                  fontSize: "11px", padding: "1px 6px", borderRadius: "10px",
-                  background: `color-mix(in srgb, var(${season.token}) 13%, transparent)`,
-                  color: `var(${season.token})`,
-                  border: `1px solid color-mix(in srgb, var(${season.token}) 28%, transparent)`,
-                }}>
-                  {season.shortName}
-                </span>
-              )}
-            </div>
-          </div>
+          <p style={{ fontSize: "14px", color: "var(--ink-soft)", maxWidth: "52ch", margin: "0 auto 20px", lineHeight: 1.6 }}>
+            Import your outline to lay it out as a booklet. Your book overview becomes the introduction,
+            each section a part, and each sermon its own page. You can add questions, cross-references, and
+            quotes to any page afterward — re-importing refreshes the text but never touches your additions.
+          </p>
+          <PrimaryButton onClick={importFromOutline}>Import from outline</PrimaryButton>
         </div>
-        {sermon.study_guide_note && (
-          <div style={{ paddingLeft: "28px" }}>
-            <p style={{ fontSize: "14px", fontFamily: "var(--font-serif)", color: "var(--ink)", lineHeight: "1.6", margin: 0 }}>
-              {sermon.study_guide_note}
-            </p>
-          </div>
-        )}
       </div>
     );
   }
 
   return (
-    <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      {/* Wider than the 560px default and parchment-bodied — this is a reading
-          surface, so the body sits on --parchment like the page body. */}
-      <div className="modal" style={{ width: "760px" }} ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="study-guide-title">
-        <div className="modal-header">
-          <div style={{ minWidth: 0 }}>
-            <h2 className="modal-title" id="study-guide-title">Study Guide Preview</h2>
-            <div style={{
-              fontFamily: "var(--font-mono)", fontSize: "12px",
-              color: "var(--ink-ghost)", marginTop: "4px",
-            }}>
-              {series.title}{series.passage_range ? ` — ${series.passage_range}` : ""}
+    <div className="page-body">
+      <div className="page-header" style={{ padding: "0 0 4px" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "16px" }}>
+          <div>
+            <div className="page-title">Study guide</div>
+            <div className="page-subtitle">A booklet built from your outline. Add to any page; re-import refreshes the text, never your additions.</div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexShrink: 0 }}>
+            {justRefreshed && <span style={{ fontSize: "12px", color: "var(--sage)" }}>Refreshed from outline</span>}
+            <SecondaryButton size="sm" onClick={importFromOutline}>Refresh from outline</SecondaryButton>
+          </div>
+        </div>
+      </div>
+
+      {/* The booklet — a live projection of the outline + guide-local additions. */}
+      <div style={{ marginTop: "16px", display: "flex", flexDirection: "column", gap: "16px" }}>
+        {/* Introduction */}
+        <div className="card">
+          <SgPartLabel>Introduction</SgPartLabel>
+          {(series.big_idea?.trim() || series.overview?.trim()) ? (
+            <>
+              {series.big_idea?.trim() && (
+                <p style={{ fontFamily: "var(--font-serif)", fontStyle: "italic", fontSize: "15px", color: "var(--ink)", margin: "0 0 10px", lineHeight: 1.6 }}>{series.big_idea}</p>
+              )}
+              {series.overview?.trim() && <SgBody text={series.overview} />}
+            </>
+          ) : (
+            <SgEmptyHint>Write the book's big idea and overview in <TextButton onClick={() => onNavigate?.("book-outline")} style={{ fontSize: "inherit", padding: 0, verticalAlign: "baseline" }}>Outline</TextButton>.</SgEmptyHint>
+          )}
+        </div>
+
+        {sermons.length === 0 && (
+          <SgEmptyHint>Add pericopes in <TextButton onClick={() => onNavigate?.("book-outline")} style={{ fontSize: "inherit", padding: 0, verticalAlign: "baseline" }}>Outline</TextButton> to build the booklet's pages.</SgEmptyHint>
+        )}
+
+        {/* Section parts + their sermon pages */}
+        {model.sectionGroups.map(({ section, sermons: inSection }) => (
+          <div key={section.id} className="card">
+            <SgPartLabel>{section.title?.trim() || "Untitled section"}</SgPartLabel>
+            {section.passage_range?.trim() && (
+              <div style={{ fontFamily: "var(--font-mono)", fontSize: "12px", color: "var(--ink-soft)", marginBottom: "6px" }}>{section.passage_range}</div>
+            )}
+            {section.big_idea?.trim() && (
+              <p style={{ fontFamily: "var(--font-serif)", fontStyle: "italic", fontSize: "14px", color: "var(--ink-soft)", margin: "0 0 8px" }}>{section.big_idea}</p>
+            )}
+            {section.overview?.trim() && <SgBody text={section.overview} />}
+            <div style={{ marginTop: "12px", display: "flex", flexDirection: "column", gap: "12px" }}>
+              {inSection.map((sermon) => (
+                <StudyGuidePage key={sermon.id} sermon={sermon} onSermonExtras={onSermonExtras} />
+              ))}
             </div>
           </div>
-          <IconButton aria-label="Close study guide preview" className="modal-close" onClick={onClose}>×</IconButton>
-        </div>
+        ))}
 
-        {/* This preview mirrors the exported Word document part-for-part
-            (buildStudyGuideDoc in electron/main.js): same part names/order, the
-            same big-idea de-dupe, sermons grouped by section with a "Remaining
-            Sermons" bucket, and the Reference outline — so what the pastor reads
-            here is what he hands his congregation (audit M6). */}
-        <div className="modal-body" style={{ background: "var(--parchment)" }}>
-          {/* Part 1 — The World of This Book */}
-          <SgPartHeader number="1" title="The World of This Book" />
-          <SgSection label="Then (background)" value={series.book_background} hint="Add in Understand → Place the Book → The World of This Book" />
-          <SgSection label="The Argument" value={series.book_argument} hint="Add in Understand → Hear the Line → The Book's Controlling Argument" />
-          {/* "How the Book Is Built" (book_structure) retired in Step 2 — the
-              book's structure now lives once, in Part 5 (Reference), sourced
-              from structural_outline. */}
-
-          <SgPartDivider />
-
-          {/* Part 2 — Why We're Here */}
-          <SgPartHeader number="2" title="Why We're Here" />
-          <SgSection label="Where It Sits in the Story" value={series.redemptive_context} hint="Add in Understand → Place the Book → Where This Book Sits in Redemptive History" />
-          <SgSection label="Why This Congregation, Why Now" value={series.series_motivation} hint="Add in Design → The Hinge → Why This Congregation, Why Now" />
-
-          <SgPartDivider />
-
-          {/* Part 3 — The Big Idea */}
-          <SgPartHeader number="3" title="The Big Idea" />
-          {model.showWorkingHypothesis && (
-            <SgSection label="Working Hypothesis (from Understand)" value={series.emerging_big_idea} hint="Add in Understand → Hear the Line → The Melodic Line" />
-          )}
-          <SgSection label="Series Big Idea" value={series.big_idea} hint="Add in Design → The Hinge → Series Big Idea" />
-          <SgSection label="Overview" value={series.overview} hint="Add in Design → Divide into Sermons → Series Overview" />
-
-          <SgPartDivider />
-
-          {/* Part 4 — The Journey (sections grouped, then Remaining Sermons) */}
-          <SgPartHeader number="4" title={`The Journey (${sermons.length} sermon${sermons.length === 1 ? "" : "s"})`} />
-          {sermons.length === 0 ? (
-            <div style={{ fontSize: "13px", fontStyle: "italic", color: "var(--ink-ghost)" }}>
-              Add sermon slots in Design → Divide into Sermons.
-            </div>
-          ) : (
-            <>
-              {model.sectionGroups.map(({ section, sermons: inSection }) => (
-                <div key={section.id} style={{ marginBottom: "20px" }}>
-                  {section.title?.trim() && (
-                    <h4 style={{ fontFamily: "var(--font-serif)", fontSize: "15px", fontWeight: 600, color: "var(--ink)", margin: "0 0 4px" }}>{section.title}</h4>
-                  )}
-                  {section.passage_range?.trim() && (
-                    <div style={{ fontFamily: "var(--font-mono)", fontSize: "12px", color: "var(--ink-soft)", marginBottom: "4px" }}>{section.passage_range}</div>
-                  )}
-                  {section.big_idea?.trim() && (
-                    <div style={{ fontSize: "13px", fontStyle: "italic", color: "var(--ink-soft)", marginBottom: "6px" }}>{section.big_idea}</div>
-                  )}
-                  {section.overview?.trim() && (
-                    <p style={{ fontSize: "14px", fontFamily: "var(--font-serif)", color: "var(--ink)", lineHeight: "1.7", margin: "0 0 8px" }}>{section.overview}</p>
-                  )}
-                  {inSection.map((sermon, idx) => <SgSlotRow key={sermon.id} sermon={sermon} index={idx} />)}
-                </div>
+        {/* Unsectioned sermons */}
+        {model.remainingSermons.length > 0 && (
+          <div className="card">
+            {model.hasSections && <SgPartLabel>Remaining</SgPartLabel>}
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+              {model.remainingSermons.map((sermon) => (
+                <StudyGuidePage key={sermon.id} sermon={sermon} onSermonExtras={onSermonExtras} />
               ))}
-              {model.remainingSermons.length > 0 && (
-                <div style={{ marginBottom: "20px" }}>
-                  {model.hasSections && (
-                    <h4 style={{ fontFamily: "var(--font-serif)", fontSize: "15px", fontWeight: 600, color: "var(--ink)", margin: "0 0 8px" }}>Remaining Sermons</h4>
-                  )}
-                  {model.remainingSermons.map((sermon, idx) => <SgSlotRow key={sermon.id} sermon={sermon} index={idx} />)}
-                </div>
-              )}
-            </>
-          )}
+            </div>
+          </div>
+        )}
 
-          {/* Part 5 — Reference */}
-          {series.structural_outline?.trim() && (
-            <>
-              <SgPartDivider />
-              <SgPartHeader number="5" title="Reference" />
-              <SgSection label="How the Book Is Built" value={series.structural_outline} hint="Add in Understand → Hear the Line → How the Book Is Built" />
-            </>
-          )}
+        {/* Reference — the book's commentary outline. */}
+        {series.structural_outline?.trim() && (
+          <div className="card">
+            <SgPartLabel>Reference</SgPartLabel>
+            <SgBody text={series.structural_outline} />
+          </div>
+        )}
+      </div>
+
+      {/* Export */}
+      <div className="card" style={{ marginTop: "20px", borderTop: "3px solid var(--gold)", display: "flex", flexDirection: "column", gap: "10px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px" }}>
+          <div>
+            <div className="card-title">Export the booklet</div>
+            <p className="field-caption" style={{ marginTop: "4px", maxWidth: "60ch" }}>
+              Save a formatted Word document — the introduction, each part, and a page per sermon with room for the congregation's notes.
+            </p>
+          </div>
+          <PrimaryButton onClick={handleExport} disabled={exporting}>
+            {exporting ? LOADING_VERB.Exporting : "Export to Word"}
+          </PrimaryButton>
         </div>
+        {exportResult?.ok && (
+          <div style={{ fontSize: "12px", color: "var(--sage)", fontFamily: "var(--font-serif)", overflowWrap: "anywhere", wordBreak: "break-word" }}>Saved to: {exportResult.filepath}</div>
+        )}
+        {exportResult && !exportResult.ok && (
+          <div style={{ fontSize: "12px", color: "var(--crimson)", fontFamily: "var(--font-serif)", overflowWrap: "anywhere", wordBreak: "break-word" }}>Export failed: {exportResult.error}</div>
+        )}
+      </div>
+    </div>
+  );
+}
 
-        <div className="modal-footer" style={{ flexDirection: "column", alignItems: "stretch", gap: "10px" }}>
-          {exportResult?.ok && (
-            <div style={{ fontSize: "12px", color: "var(--sage)", fontFamily: "var(--font-serif)", overflowWrap: "anywhere", wordBreak: "break-word" }}>
-              Saved to: {exportResult.filepath}
+function SgPartLabel({ children }) {
+  return (
+    <div style={{ fontFamily: "var(--font-mono)", fontSize: "11px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--gold-bright)", marginBottom: "8px" }}>
+      {children}
+    </div>
+  );
+}
+function SgBody({ text }) {
+  return (
+    <>
+      {text.split(/\n+/).filter((p) => p.trim()).map((para, i) => (
+        <p key={i} style={{ fontSize: "14px", fontFamily: "var(--font-serif)", color: "var(--ink)", lineHeight: 1.7, margin: "0 0 8px" }}>{para}</p>
+      ))}
+    </>
+  );
+}
+function SgEmptyHint({ children }) {
+  return <div style={{ fontSize: "13px", fontStyle: "italic", color: "var(--ink-ghost)" }}>{children}</div>;
+}
+
+// One sermon's page in the booklet: title · passage · date · big idea ·
+// overview-as-commentary, then blank listener Notes lines and the pastor's
+// guide-local additions. Additions + notes sizing persist in study_guide_extras.
+function StudyGuidePage({ sermon, onSermonExtras }) {
+  const extras = parseStudyGuideExtras(sermon.study_guide_extras);
+  const [composerType, setComposerType] = useState("question");
+  const [composerText, setComposerText] = useState("");
+  const season = sermon.date ? getSeasonForDate(sermon.date) : null;
+
+  function persistExtras(next) {
+    onSermonExtras(sermon.id, { study_guide_extras: JSON.stringify(next) });
+  }
+  function addAddition() {
+    const text = composerText.trim();
+    if (!text) return;
+    persistExtras({ ...extras, additions: [...extras.additions, { id: crypto.randomUUID(), type: composerType, text }] });
+    setComposerText("");
+  }
+  function removeAddition(id) {
+    persistExtras({ ...extras, additions: extras.additions.filter((a) => a.id !== id) });
+  }
+  function setNotesLines(n) {
+    persistExtras({ ...extras, notesLines: Math.max(0, Math.min(20, n)) });
+  }
+
+  return (
+    <div style={{ border: "1px solid var(--parchment-deep)", borderRadius: "var(--radius)", background: "var(--white)", padding: "16px 18px" }}>
+      <div style={{ display: "flex", alignItems: "baseline", gap: "10px", flexWrap: "wrap", marginBottom: "4px" }}>
+        {sermon.passage && <span style={{ fontFamily: "var(--font-mono)", fontSize: "12px", color: "var(--ink-soft)" }}>{sermon.passage}</span>}
+        <span style={{ fontFamily: "var(--font-serif)", fontSize: "16px", fontWeight: 600, color: "var(--ink)" }}>{sermon.title || "Untitled"}</span>
+        {sermon.date && (
+          <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "12px", color: "var(--ink-ghost)" }}>
+            {formatDate(sermon.date)}
+            {season && (
+              <span style={{
+                fontSize: "11px", padding: "1px 6px", borderRadius: "10px",
+                background: `color-mix(in srgb, var(${season.token}) 13%, transparent)`,
+                color: `var(${season.token})`, border: `1px solid color-mix(in srgb, var(${season.token}) 28%, transparent)`,
+              }}>{season.shortName}</span>
+            )}
+          </span>
+        )}
+      </div>
+      {sermon.big_idea?.trim() && (
+        <p style={{ fontFamily: "var(--font-serif)", fontStyle: "italic", fontSize: "14px", color: "var(--ink-mid)", margin: "0 0 8px" }}>{sermon.big_idea}</p>
+      )}
+      {sermon.overview?.trim()
+        ? <SgBody text={sermon.overview} />
+        : <SgEmptyHint>No overview yet — add it on this pericope in Outline.</SgEmptyHint>}
+
+      {/* Pastor-authored additions */}
+      {extras.additions.length > 0 && (
+        <div style={{ marginTop: "12px", display: "flex", flexDirection: "column", gap: "8px" }}>
+          {extras.additions.map((a) => (
+            <div key={a.id} style={{ display: "flex", alignItems: "flex-start", gap: "8px", padding: "8px 10px", background: "var(--parchment-warm)", borderRadius: "var(--radius)", borderLeft: "3px solid var(--sage)" }}>
+              <span style={{ fontFamily: "var(--font-mono)", fontSize: "10px", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", color: "var(--ink-ghost)", whiteSpace: "nowrap", marginTop: "2px" }}>{ADDITION_LABEL[a.type]}</span>
+              <span style={{ flex: 1, fontSize: "13.5px", fontFamily: "var(--font-serif)", color: "var(--ink)", lineHeight: 1.5 }}>{a.text}</span>
+              <DeleteButton small onDelete={() => removeAddition(a.id)} />
             </div>
-          )}
-          {exportResult && !exportResult.ok && (
-            <div style={{ fontSize: "12px", color: "var(--crimson)", fontFamily: "var(--font-serif)", overflowWrap: "anywhere", wordBreak: "break-word" }}>
-              Export failed: {exportResult.error}
-            </div>
-          )}
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
-            <SecondaryButton size="sm" onClick={onClose}>Close</SecondaryButton>
-            <PrimaryButton onClick={handleExport} disabled={exporting}>
-              {exporting ? LOADING_VERB.Exporting : "Export to Word"}
-            </PrimaryButton>
+          ))}
+        </div>
+      )}
+
+      {/* Add-to-this-page composer */}
+      <div style={{ marginTop: "12px", display: "flex", gap: "8px", alignItems: "flex-start", flexWrap: "wrap" }}>
+        <select className="field-input" style={{ width: "auto", fontSize: "12px", padding: "6px 10px" }} value={composerType} onChange={(e) => setComposerType(e.target.value)} aria-label="Addition type">
+          {ADDITION_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+        </select>
+        <input
+          className="field-input" style={{ flex: 1, minWidth: "180px", fontSize: "13px", padding: "6px 10px" }}
+          value={composerText}
+          onChange={(e) => setComposerText(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter" && composerText.trim()) { e.preventDefault(); addAddition(); } }}
+          placeholder="A question, a cross-reference, a quote…"
+        />
+        <SecondaryButton size="sm" onClick={addAddition} disabled={!composerText.trim()}>Add to this page</SecondaryButton>
+      </div>
+
+      {/* Notes — blank space for the listener (prints as blank lines). */}
+      <div style={{ marginTop: "14px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "6px" }}>
+          <span className="field-label" style={{ marginBottom: 0 }}>Notes</span>
+          <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+            <IconButton aria-label="Fewer note lines" onClick={() => setNotesLines(extras.notesLines - 1)} disabled={extras.notesLines <= 0} style={{ fontSize: "12px", padding: "2px 8px" }}>−</IconButton>
+            <span style={{ fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--ink-ghost)", minWidth: "56px", textAlign: "center" }}>{extras.notesLines} line{extras.notesLines === 1 ? "" : "s"}</span>
+            <IconButton aria-label="More note lines" onClick={() => setNotesLines(extras.notesLines + 1)} disabled={extras.notesLines >= 20} style={{ fontSize: "12px", padding: "2px 8px" }}>+</IconButton>
+          </span>
+        </div>
+        <div aria-hidden="true">
+          {Array.from({ length: extras.notesLines }).map((_, i) => (
+            <div key={i} style={{ borderBottom: "1px solid var(--parchment-deep)", height: "22px" }} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── "How this works" front door ───────────────────────────────────────────────
+// Pure copy — no AI, no DB. Orients the three screens (Outline · Schedule ·
+// Study guide). Auto-opens once per series (write-only localStorage flag) and
+// stays re-readable forever via the topbar button.
+function SeriesHowItWorksModal({ onClose }) {
+  const dialogRef = useModalA11y(onClose);
+  const screens = [
+    { name: "Outline", body: "Understand the book top-down — the book, its sections, and each pericope (a sermon). Every level carries a title and range, a one-line big idea, and an overview." },
+    { name: "Schedule", body: "Lay each pericope on a Sunday. Liturgical seasons and your special-date notes ride along. Dates save as you go and show on the Outline." },
+    { name: "Study guide", body: "Build a congregational booklet from your outline — an introduction, a part per section, and a page per sermon. Add questions, cross-references, and quotes; export to Word." },
+  ];
+  return (
+    <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal" style={{ width: "640px" }} ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="series-how-title">
+        <div className="modal-header">
+          <h2 className="modal-title" id="series-how-title">How the Series Planner works</h2>
+          <IconButton aria-label="Close how-this-works modal" className="modal-close" onClick={onClose}>×</IconButton>
+        </div>
+        <div className="modal-body">
+          <p style={{ fontSize: "14px", color: "var(--ink-soft)", marginBottom: "20px", fontFamily: "var(--font-serif)", lineHeight: 1.6 }}>
+            Plan a book as one nested outline at three levels — Book ▸ Section ▸ Pericope — where every level
+            is the same unit: a title and range, a one-line big idea, and an overview. A pericope is a sermon
+            is a scheduled Sunday. Three screens:
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+            {screens.map((s, i) => (
+              <div key={s.name} style={{ display: "flex", gap: "12px" }}>
+                <span style={{
+                  display: "inline-flex", alignItems: "center", justifyContent: "center",
+                  width: "26px", height: "26px", borderRadius: "50%", flexShrink: 0,
+                  background: "var(--gold)", color: "var(--white)",
+                  fontFamily: "var(--font-serif)", fontWeight: 700, fontSize: "13px",
+                }}>{i + 1}</span>
+                <div>
+                  <div style={{ fontFamily: "var(--font-serif)", fontSize: "15px", fontWeight: 600, color: "var(--ink)" }}>{s.name}</div>
+                  <div style={{ fontSize: "13.5px", color: "var(--ink-soft)", marginTop: "2px", lineHeight: 1.55 }}>{s.body}</div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
