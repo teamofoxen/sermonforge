@@ -9,6 +9,7 @@ Load-bearing strategic documents that span multiple sessions and anchor downstre
 - [`docs/PROPOSALS/beta-testing-initiative.md`](PROPOSALS/beta-testing-initiative.md) — BTI charter; closed-cohort beta program governing invasiveness/workflow-fit testing.
 - [`docs/PROPOSALS/bti-tester-summary.md`](PROPOSALS/bti-tester-summary.md) — BTI tester-facing letter; what the cohort actually reads at onboarding (must stay in sync with the charter).
 - [`docs/PROPOSALS/series-planner-revival-charter.md`](PROPOSALS/series-planner-revival-charter.md) — Series Planner revival charter; the *what & why* / build rulings behind the AI-free planner (shipped 2026-06-21 as five tabs; re-leveled 2026-06-22 to four movements — Understand · Design · Schedule · Overview). Mechanics live in [`SYSTEMS/series-planner.md`](SYSTEMS/series-planner.md).
+- [`docs/PROPOSALS/coverage-initiative.md`](PROPOSALS/coverage-initiative.md) — Coverage Initiative charter; PROPOSED 2026-06-25 (not built). The two-lens "Coverage" home — canon Arc (reworked sermon-grained) + topic tags (sermon-level) — answering *"what have I been feeding my people?"*. Builds on the topical mode (v30, `a6a95f0`).
 
 **Historical record** — authority transferred to CORE + WORKSPACE-CANON (2026-06-15, Re-Foundation step 5); each is banner-stamped at the top, retained as development history, **not a working guide**:
 
