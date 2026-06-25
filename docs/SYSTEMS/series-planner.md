@@ -65,8 +65,11 @@ human label is "Outline"). A remembered `localStorage` tab id for a removed tab
     read-only date chip in the collapsed header, a **Schedule** jump (scrolls to
     + flashes that row on the Schedule screen), and **Open** (`onOpenSermon`).
     New sermons use the draft-row/commit pattern (§5). "+ Add section" sits
-    under the book; unsectioned sermons render in their own group (and are the
-    only home when the book has no sections yet).
+    under the book. **Every sermon lives under a section — there is no
+    "in a series but in no section" group.** When a series has no sections yet,
+    the Outline shows an empty state whose "+ Add sermon" auto-creates a
+    "Section 1" (renameable) and drops the sermon into it. A sermon with no
+    series at all is **standalone** and lives in the library, never in the planner.
 - **Schedule** (`ScheduleTab`) — lays each sermon on a Sunday. The date is
   **single-source on the sermon**: per-row edits autosave through the shared
   debounced `updateSermon` path and reflect live on the Outline (and vice versa)
@@ -120,8 +123,13 @@ non-empty Title, because `createSermon` throws on an empty name (State Contract
 #3). On commit: the `create-sermon` INSERT omits `big_idea`/`overview`; if the
 pastor typed either before committing, `commitDraft` follows with an
 `updateSermon` (create-then-update). Post-commit edits go through the debounced
-`updateSermon`. `delete-section` nulls `section_id` on its sermons, so orphaned
-sermons fall into the unsectioned group (and "Remaining" in the export).
+`updateSermon`. **`delete-section` keeps the no-limbo invariant:** its sermons
+move to the first remaining section of the series; if it was the last section
+they become **standalone** (`series_id` nulled, back to the library), the same
+release `delete-series` does. A **v28** migration normalized existing data once:
+section-less in-series sermons were placed into a first section (auto-creating
+"Section 1" where a series had none), and sermons whose `series_id` pointed at a
+deleted/missing series became standalone.
 `onOpenSermon` takes just the sermon id — the planner stands alone for v1.
 
 ## 6. Study Guide export (`.docx`)

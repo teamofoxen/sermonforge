@@ -1209,6 +1209,49 @@ function runMigrations() {
     version = 27;
   }
 
+  if (version < 28) {
+    // v28 (Series Planner) — no "in a series but in no section" limbo. Every
+    // sermon is either under a section of a series, or standalone (no series).
+    // Normalize existing data, run-once / version-gated:
+    //   • a section-less sermon whose series still exists → placed into that
+    //     series' first section (auto-create "Section 1" if it has none);
+    //   • a sermon whose series_id points at a series that no longer exists
+    //     (a dangling reference) → standalone (series_id NULL).
+    // Data-only (no DDL), so the column allowlists / assertSchemaContract are
+    // untouched.
+    const v28limbo = queryAll(
+      "SELECT id, series_id FROM sermons WHERE series_id IS NOT NULL AND section_id IS NULL AND deleted_at IS NULL"
+    );
+    const firstSectionBySeries = {};
+    for (const row of v28limbo) {
+      const seriesExists = queryOne("SELECT id FROM series WHERE id = ?", [row.series_id]);
+      if (!seriesExists) {
+        dbRun("UPDATE sermons SET series_id = NULL WHERE id = ?", [row.id]);
+        continue;
+      }
+      let sectionId = firstSectionBySeries[row.series_id];
+      if (sectionId === undefined) {
+        const sec = queryOne(
+          "SELECT id FROM series_sections WHERE series_id = ? ORDER BY sort_order ASC, created_at ASC LIMIT 1",
+          [row.series_id]
+        );
+        if (sec) {
+          sectionId = sec.id;
+        } else {
+          sectionId = randomUUID();
+          dbRun(
+            "INSERT INTO series_sections (id, series_id, title, passage_range, big_idea, overview, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            [sectionId, row.series_id, "Section 1", "", "", "", 0]
+          );
+        }
+        firstSectionBySeries[row.series_id] = sectionId;
+      }
+      dbRun("UPDATE sermons SET section_id = ? WHERE id = ?", [sectionId, row.id]);
+    }
+    dbRun("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '28')");
+    version = 28;
+  }
+
   // True when at least one block actually ran. Lets initDatabase skip the
   // boot-time flush on a clean boot of an up-to-date DB — so a healthy library
   // is never re-serialized and rotated over its own backup for no reason.
@@ -2217,17 +2260,39 @@ function validateAndCommit(op, payload) {
       return success();
     }
 
-    case "delete-section":
+    case "delete-section": {
+      // No "in a series but in no section" limbo: the section's sermons move to
+      // the first remaining section of the series; if this was the LAST section,
+      // they become standalone (series_id NULL) — back to the library, the same
+      // way deleting the series itself releases its sermons.
+      const secRow = queryOne("SELECT series_id FROM series_sections WHERE id = ?", [payload]);
+      const delSeriesId = secRow?.series_id ?? null;
+      const affectedSermonRows = queryAll("SELECT id FROM sermons WHERE section_id = ?", [payload]);
+      let wentStandalone = false;
       dbRun("BEGIN");
       try {
-        dbRun("UPDATE sermons SET section_id = NULL WHERE section_id = ?", [payload]);
+        const remaining = delSeriesId
+          ? queryOne(
+              "SELECT id FROM series_sections WHERE series_id = ? AND id != ? ORDER BY sort_order ASC, created_at ASC LIMIT 1",
+              [delSeriesId, payload]
+            )
+          : null;
+        if (remaining) {
+          dbRun("UPDATE sermons SET section_id = ? WHERE section_id = ?", [remaining.id, payload]);
+        } else {
+          dbRun("UPDATE sermons SET series_id = NULL, section_id = NULL WHERE section_id = ?", [payload]);
+          wentStandalone = true;
+        }
         dbRun("DELETE FROM series_sections WHERE id = ?", [payload]);
         dbRun("COMMIT");
       } catch (e) {
         dbRun("ROLLBACK");
         throw e;
       }
+      // Sermons that left the series need their FTS series_title cleared.
+      if (wentStandalone) for (const r of affectedSermonRows) indexSermonFts(r.id);
       return success();
+    }
 
     case "transition-state": {
       // Phase G (2026-05-18) gravestone — the wall layer was deleted here.

@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-06-24 — Series Planner: no section-less limbo (auto-create Section 1)
+
+- A sermon now lives **either under a section of a series, or standalone** (no series → the library). Removed the "Sermons not yet in a section" holding area; standalone sermons were never shown in the planner and still aren't.
+- A new series's "+ Add sermon" **auto-creates a renameable "Section 1"** and drops the sermon into it — no empty limbo state.
+- `delete-section` now moves its sermons to the first remaining section, or makes them standalone if it was the last section (parallels `delete-series`).
+- **v28 migration** (data-only) normalizes existing data: section-less in-series sermons get a section; sermons pointing at a missing/deleted series become standalone. Verified on a copy of the real dev DB (3 limbo → 0).
+- eslint 0, 234 tests, drift PASS, screenshot clean.
+
+---
+
 ## 2026-06-24 — Series Planner Outline: labeled levels + pericope→sermon rename
 
 - The Outline now signposts itself — numbered tier bands (**Book level · Section level · Sermon level**), each with a plain "what to do here" line, instead of three identical unlabeled forms.

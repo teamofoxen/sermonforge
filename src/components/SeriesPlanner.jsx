@@ -660,11 +660,24 @@ function OutlineTab({
     });
   }
   async function deleteSectionRow(id) {
+    // Mirror the server (no section-less limbo): the deleted section's sermons
+    // move to the first remaining section; if it was the LAST section they leave
+    // the series (become standalone) and drop out of the planner.
+    const target = sections
+      .filter((s) => s.id !== id)
+      .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))[0];
     onSectionsChange((prev) => prev.filter((s) => s.id !== id));
-    // delete-section nulls section_id on its sermons — reflect that locally so
-    // those sermons drop into the Unsectioned group instead of vanishing.
-    onSermonsChange((prev) => prev.map((s) => (s.section_id === id ? { ...s, section_id: null } : s)));
-    await runSave(() => deleteSection(id));
+    if (target) {
+      onSermonsChange((prev) => prev.map((s) => (s.section_id === id ? { ...s, section_id: target.id } : s)));
+    } else {
+      onSermonsChange((prev) => prev.filter((s) => s.section_id !== id));
+    }
+    const ok = await runSave(() => deleteSection(id));
+    if (!ok) {
+      const [secs, serms] = await Promise.all([getSectionsBySeries(seriesId), getSermonsBySeries(seriesId)]);
+      onSectionsChange(secs);
+      onSermonsChange(serms);
+    }
   }
   async function moveSection(id, direction) {
     const idx = sections.findIndex((s) => s.id === id);
@@ -678,7 +691,7 @@ function OutlineTab({
   }
 
   // ── Sermon draft / commit ──────────────────────────────────────────────
-  function addSermon(sectionId = null) {
+  function addSermon(sectionId) {
     const id = `draft-${crypto.randomUUID()}`;
     setDrafts((prev) => [...prev, {
       id, _draft: true, series_id: seriesId, section_id: sectionId,
@@ -686,6 +699,25 @@ function OutlineTab({
       stage: SERMON_STATUS.InProgress,
     }]);
     setExpandedSermons((prev) => new Set(prev).add(id));
+  }
+  // The series-level "Add sermon" (when there are no sections yet) — there is no
+  // section-less limbo, so ensure a section exists first (auto-create "Section 1"
+  // you can rename), then add the sermon under it.
+  async function addSermonInNewSection() {
+    let sectionId = [...sections].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))[0]?.id;
+    if (!sectionId) {
+      const ok = await runSave(async () => {
+        const result = await createSection({ series_id: seriesId, title: "Section 1", sort_order: 0 });
+        const updated = await getSectionsBySeries(seriesId);
+        onSectionsChange(updated);
+        if (result?.id) {
+          setCollapsedSections((prev) => { const n = new Set(prev); n.delete(result.id); return n; });
+          sectionId = result.id;
+        }
+      });
+      if (!ok || !sectionId) return;
+    }
+    addSermon(sectionId);
   }
   function clearDraftError(id) {
     setDraftErrors((prev) => {
@@ -757,13 +789,13 @@ function OutlineTab({
 
   // Group committed sermons + drafts by section. Drafts merge in so they render
   // in the right place; downstream tabs read `sermons` directly so drafts never
-  // leak past the Outline.
+  // leak past the Outline. There is no section-less group: every series sermon
+  // lives under a section (the v28 migration + the add/delete flows guarantee
+  // it); a sermon with no series is standalone and lives in the library, not here.
   const allSermons = [...sermons, ...drafts];
   const bySection = {};
-  const unsectioned = [];
   for (const p of allSermons) {
-    if (p.section_id) { (bySection[p.section_id] ||= []).push(p); }
-    else unsectioned.push(p);
+    if (p.section_id) (bySection[p.section_id] ||= []).push(p);
   }
 
   return (
@@ -937,40 +969,15 @@ function OutlineTab({
           />
         ))}
 
-        {/* Sermons with no section yet — a holding area until they're filed
-            under a section (or the home for sermons when there are no sections). */}
-        {(unsectioned.length > 0 || sections.length === 0) && (
-          <div className="card">
-            <div className="card-header" style={{ marginBottom: unsectioned.length ? "12px" : 0, alignItems: "flex-start" }}>
-              <div style={{ maxWidth: "640px" }}>
-                <div className="card-title" style={{ color: sections.length ? "var(--ink-soft)" : "var(--ink)" }}>
-                  {sections.length ? "Sermons not yet in a section" : "Sermons"}
-                </div>
-                <p className="field-caption" style={{ marginTop: "2px" }}>
-                  {sections.length
-                    ? "These belong to the series but aren't filed under a section yet — a holding area. Open one to write it."
-                    : "Add the sermons you'll preach — one per passage. Add sections above when you want to group them into movements."}
-                </p>
-              </div>
-              <SecondaryButton size="sm" onClick={() => addSermon(null)}>+ Add sermon</SecondaryButton>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-              {unsectioned.map((p) => (
-                <SermonNode
-                  key={p.id}
-                  sermon={p}
-                  expanded={expandedSermons.has(p.id)}
-                  onToggle={() => toggleSermon(p.id)}
-                  onField={handleSermonRowField}
-                  onCommit={commitDraft}
-                  onDelete={removeSermonRow}
-                  commitError={draftErrors[p.id]}
-                  onClearError={clearDraftError}
-                  onOpenSermon={onOpenSermon}
-                  onGoToSchedule={onGoToSchedule}
-                />
-              ))}
-            </div>
+        {/* No sections yet — every sermon lives under a section, so adding the
+            first sermon auto-creates "Section 1" (rename it later). A sermon with
+            no series is standalone and lives in the library, never here. */}
+        {sections.length === 0 && (
+          <div className="card" style={{ textAlign: "center", padding: "26px 24px" }}>
+            <p style={{ fontFamily: "var(--font-serif)", color: "var(--ink-soft)", fontSize: "14px", margin: "0 auto 14px", maxWidth: "520px", lineHeight: 1.55 }}>
+              No sermons yet. Add a sermon and we'll start a <strong>Section 1</strong> for it that you can rename — or add a section yourself first.
+            </p>
+            <SecondaryButton size="sm" onClick={addSermonInNewSection}>+ Add sermon</SecondaryButton>
           </div>
         )}
 

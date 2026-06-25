@@ -1,6 +1,6 @@
 # SermonForge — Database Schema Reference
 
-Current schema version: **27**
+Current schema version: **28**
 
 | Version | Bumped for |
 |---------|-----------|
@@ -18,6 +18,7 @@ Current schema version: **27**
 | v25 | Canonical-books build — `book_id` (nullable) on `series`; `canon_category` enum switched from legacy 4-value (`ot`/`nt`/`wisdom`/`prophetic`) to Dever's 7 genre keys, migrating `wisdom`→`ot_writings`, `prophetic`→`ot_prophets`, `ot`/`nt`→NULL |
 | v26 | Series Planner re-leveling — `melodic_evidence` (nullable JSON) on `series` for the "Hear the line" evidence worksheet; one-time fold of `book_structure` into `structural_outline` (run-once, version-gated). `book_structure` retained as a backup column, not dropped. |
 | v27 | Series Planner content-model rebuild — `big_idea` + `overview` (sermon-level unit) and `study_guide_extras` (nullable JSON: guide-local `{ additions, notesLines }`) on `sermons`; run-once version-gated fold of `study_guide_note` → `overview` where overview is empty. `study_guide_note` retired from the writable set but retained as a backup column. The book-study prompts (`redemptive_context`, `book_background`, `book_argument`), the folded `book_structure`, and the melodic-line worksheet fields (`series_motivation`, `emerging_big_idea`, `melodic_evidence`) were dropped from the writable allowlist (`SERIES_COLUMNS`); their columns are retained as backup. No columns dropped. |
+| v28 | Series Planner — no "in a series but in no section" limbo. **Data-only** (no DDL): section-less in-series sermons placed into the series' first section (auto-creating a `series_sections` "Section 1" where a series had none); sermons whose `series_id` points at a missing/deleted series set to standalone (`series_id` NULL). Run-once, version-gated. Column allowlists / `assertSchemaContract` untouched. |
 
 ---
 
