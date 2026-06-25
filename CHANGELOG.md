@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-06-25 — docs(charter): authorize Topical Series planner mode
+
+- Added a dated charter ruling authorizing a second, theme-led "Topical Series" planner mode (Big Idea ▸ Sermon) alongside the existing book-led mode.
+- Locked the design: an explicit `series.kind` discriminator, pastor-authored per-sermon order, a flat / no-sections shape, and the theme stored in `series.big_idea`.
+- Ruled per-sermon book = free text for v1, deferring structured `sermons.book_id` + Series Arc aggregation, with the fragility rationale recorded.
+- Restated AI-free for the new surface; re-scoped "the book is the series' identity" to book mode.
+- No code yet — the ruling authorizes the build (schema v30 → topical front door + page → pastor-authored Schedule order).
+
+---
+
 ## 2026-06-25 — docs: series-planner.md matches the shipped book-first planner
 
 - Updated the Series Planner system doc to the shipped UI: the book-first front door (book = series identity, create-then-update), and the Outline's "Book" picker + demoted optional "Series title" (the old "Book Title" field is gone).
