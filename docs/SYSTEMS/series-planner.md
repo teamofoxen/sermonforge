@@ -26,8 +26,13 @@ Macro/architect mode — a different headspace from the per-sermon walk. Two vie
 - `VIEW.SeriesPlanner` — the planner-with-id. Reached **only** via `openPlanner(id)`
   (`App.jsx`), never from a bare sidebar click. Renders `SeriesPlanner.jsx`.
 
-Front door: `NewSeriesModal.jsx` → `createSeries({ name, year })` →
-`onCreated(result.id)` navigates straight into the planner.
+Front door: `NewSeriesModal.jsx` is **book-first** — pick the canonical **Book**
+(the shared `BookSelect`, which fills genre + passage span), with an optional
+series title that defaults to the book's name; a theme series spanning several
+books may skip the book and supply its own name. **The book is the series'
+identity.** Persistence is create-then-update: `createSeries({ name, year })` then
+`updateSeries(id, { book_id, canon_category, passage_range })` (the INSERT is
+never widened). `onCreated(result.id)` navigates straight into the planner.
 
 Files: `src/components/Planning.jsx`, `SeriesPlanner.jsx` (the three-screen
 workbench), `NewSeriesModal.jsx`, `SeriesPlannerFixture.jsx` (preview fixture,
@@ -50,33 +55,37 @@ human label is "Outline"). A remembered `localStorage` tab id for a removed tab
 (the old `book-study`/`design`/`calendar`/`overview`) falls back to Outline.
 
 - **Outline** (`OutlineTab`) — the book as one live nested outline.
-  - *Book node* — the root: Title (`series.title`), Big idea (`series.big_idea`),
-    Overview (`series.overview`); a collapsible **Book details** disclosure
-    holding the canonical book picker (`book_id`, auto-fills genre + span), the
-    genre override (`canon_category`), and `passage_range`; and a collapsible
-    **Reference** disclosure for the commentary outline (`structural_outline`).
+  - *Book node* — the root, **led by the book** (the book is the series' identity).
+    A visible **Book details** block holds the **Book** picker (the shared
+    `BookSelect` → `book_id`, auto-fills genre + span), the genre override
+    (`canon_category`), and `passage_range`; below it a **demoted, optional Series
+    title** (`series.title`, defaults to the book name — State #3 keeps the name
+    correctable); then Big idea (`series.big_idea`), Overview (`series.overview`),
+    and a collapsible **Reference** disclosure for the commentary outline
+    (`structural_outline`). (The old prominent "Book Title" field is gone.)
     `color` / `status` / `year` / `description` are **no longer edited in the
     planner** (they persist from create / the topbar Complete action and still
     drive the Planning list); the `CoveragePanel` (`src/utils/coverage.js`) moved
     to the Schedule — the Outline is for outlining, not lifecycle/cosmetics.
   - *Section nodes* (`SectionNode`) — each its own Title · range · Big idea ·
     Overview unit, with reorder (↑/↓, recompacts `sort_order`) and delete, and a
-    nested list of its preaching units plus "+ Add preaching unit".
-  - *Sermon nodes* (`SermonNode`) — each is a preaching unit: passage · **working
-    title** · big idea · overview, and **Open** (`onOpenSermon`). **No dates live
-    on the Outline** — scheduling is wholly the Schedule screen's (the old per-unit
+    nested list of its sermons plus "+ Add sermon".
+  - *Sermon nodes* (`SermonNode`) — each is a sermon: passage · **working
+    title** · big idea · overview, and **Build this sermon** (`onOpenSermon` —
+    opens it in the workspace for prep). **No dates live
+    on the Outline** — scheduling is wholly the Schedule screen's (the old per-sermon
     Date field, date chip, and "Schedule" jump are gone, along with their
     focus/flash plumbing). The title field is labeled **Working title** — the rough
     handle the big idea expands on; the final sermon title comes during writing —
-    while the book and section levels keep plain "Title". New units use the
+    while the book and section levels keep plain "Title". New sermons use the
     draft-row/commit pattern (§5). "+ Add section" sits under the book. **Every
-    unit lives under a section — there is no "in a series but in no section"
+    sermon lives under a section — there is no "in a series but in no section"
     group.** When a series has no sections yet, the Outline shows just
-    **"+ Add section"** (the top-down first move). A unit with no series at all is
+    **"+ Add section"** (the top-down first move). A sermon with no series at all is
     **standalone** and lives in the library, never in the planner.
-- **Schedule** (`ScheduleTab`) — **the one place dates live.** Lays each preaching
-  unit on a Sunday; per-row edits autosave through the shared debounced
-  `updateSermon` path (`end_date` mirrors the last dated unit on any change; there
+- **Schedule** (`ScheduleTab`) — **the one place dates live.** Lays each sermon
+  on a Sunday; per-row edits autosave through the shared debounced
+  `updateSermon` path (`end_date` mirrors the last dated sermon on any change; there
   is no separate `schedule` snapshot). Each row is **working title + passage +
   date**, expandable (▾) to its read-only **big idea + overview** (edited on the
   Outline). "Suggest Sundays" (`getUpcomingSundays`) is one explicit bulk gesture
@@ -119,7 +128,7 @@ between rows can't drop an earlier entity's last keystrokes.
 `SERMON_COLUMNS` / `SERIES_COLUMNS` / `SECTION_COLUMNS` — mirrored across
 `src/core/contracts.ts`, `electron/contracts.cjs`, and the test fixture
 `tests/contracts/_helpers/test-spine.ts` (the allowlist-sync test enforces it);
-all writes gate through `buildUpdate` in `electron/main.js`. The sermon unit's
+all writes gate through `buildUpdate` in `electron/main.js`. The sermon's
 `big_idea` / `overview` and the guide-local `study_guide_extras` are in
 `SERMON_COLUMNS` (v27); the retired book-study + melodic-line columns left
 `SERIES_COLUMNS` (v27) but remain in the DB as backup.
@@ -134,13 +143,12 @@ pastor typed either before committing, `commitDraft` follows with an
 `updateSermon`. **`delete-section` keeps the no-limbo invariant:** its sermons
 move to the first remaining section of the series; if it was the last section
 they become **standalone** (`series_id` nulled, back to the library), the same
-release `delete-series` does. **`create-sermon` keeps it too:** a sermon created
-with a `series_id` but no `section_id` — exactly what `NewSermonModal` does when
-it auto-selects the lone in-progress series, reachable from the Calendar,
-Dashboard, library, and sidebar while planning — is auto-filed under that series'
-first section, auto-creating "Section 1" when the series has none. So the Outline
-can't be handed an in-series sermon it would silently drop, whichever surface
-created it. The auto-file is wrapped in a transaction with the sermon INSERT and
+release `delete-series` does. **`create-sermon` keeps it too (defensive net):** a
+sermon created with a `series_id` but no `section_id` is auto-filed under that
+series' first section, auto-creating "Section 1" when the series has none. So the
+Outline can't be handed an in-series sermon it would silently drop, whichever
+surface created it. (`NewSermonModal` no longer *creates* in-series sermons — see
+the planner ↔ prep doors below — but the guard stays as a net for any other path.) The auto-file is wrapped in a transaction with the sermon INSERT and
 guarded on the series actually existing (a stale `series_id` can't spawn an
 orphan section). A **v28** migration normalized existing data once: section-less
 in-series sermons were placed into a first section (auto-creating "Section 1"
@@ -151,6 +159,15 @@ version-gated and does not re-run). The resolve-or-create-first-section step is
 shared by `create-sermon` and both migrations (`firstSectionIdForSeries` in
 `electron/main.js`).
 `onOpenSermon` takes just the sermon id — the planner stands alone for v1.
+
+**Planner ↔ per-sermon prep (navigation, no data coupling).** Two doors connect
+the planner to the sermon workspace: (1) each Outline sermon's **"Build this
+sermon"** button opens it for prep (`onOpenSermon`); (2) the global
+`NewSermonModal` ("Build a sermon") is two-mode — **New sermon** (standalone
+create) and **From a series**, which lists a chosen series' planned units (read
+via `getSermonsBySeries`, Schedule order) and **opens** the picked one for prep,
+reusing each launch site's existing `onCreated(id)` close-and-open callback. It
+creates nothing — series sermons are born in the planner, so no duplicates.
 
 ## 6. Study Guide export (`.docx`)
 

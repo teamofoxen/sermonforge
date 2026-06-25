@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-06-25 — docs: series-planner.md matches the shipped book-first planner
+
+- Updated the Series Planner system doc to the shipped UI: the book-first front door (book = series identity, create-then-update), and the Outline's "Book" picker + demoted optional "Series title" (the old "Book Title" field is gone).
+- Renamed the doc's stale "preaching unit" / "Open" prose to "sermon" / "Build this sermon" to match the shipped copy.
+- Documented the two planner ↔ prep doors (the Outline "Build this sermon" CTA and the New Sermon modal's "From a series" launcher) and corrected the now-defensive `create-sermon` auto-file note.
+
+---
+
 ## 2026-06-25 — Series Planner: shared BookSelect + reuse formatDate (cleanup)
 
 - Extracted a shared `BookSelect` component so the genre-grouped book picker's option list lives once, used by both the New Series modal and the Outline's Book details (was duplicated by this session's book-first work).
