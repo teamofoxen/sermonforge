@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-06-25 — Series Planner: the canonical book is the series' identity
+
+- New Series modal is now book-first: pick the canonical book (it fills the genre + passage span), with an optional series title that defaults to the book's name.
+- A theme series spanning several books can still skip the book and supply its own name.
+- The Outline's book card leads with the renamed "Book" picker; the confusing duplicate "Book Title" field is gone, replaced by a demoted optional "Series title" that keeps the name editable.
+- The book persists via create-then-update (the INSERT stays name/year; book_id + auto-fill go through updateSeries); a failed book write no longer strands a half-made series.
+- No schema or IPC changes; eslint 0, 239 tests, sweep PASS, preview verified (modal + Outline at 1280px).
+
+---
+
 ## 2026-06-25 — Series Planner: one name for the scheduled unit ("sermon")
 
 - The planner now says "sermon" everywhere in its three tabs, replacing a four-way mix of "preaching unit", "unit", and "slot" (tier band, "+ Add sermon", Suggest Sundays, coverage notes, date labels).

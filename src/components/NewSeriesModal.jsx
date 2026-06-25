@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { createSeries } from "../core/spine";
+import { createSeries, updateSeries } from "../core/spine";
+import { BOOKS, GENRES, bookById, bookSpan } from "../data/canonicalBooks";
 import mapError from "../utils/mapError";
 import { useModalA11y } from "../utils/useModalA11y";
 import InlineError from "./InlineError";
@@ -12,29 +13,51 @@ import IconButton from "./primitives/IconButton";
 // the create-series IPC handler. AI-free by construction: the revived Series
 // Planner carries no generate/analyze affordances (sermonforge/no-direct-ai).
 export default function NewSeriesModal({ onClose, onCreated }) {
+  const [bookId, setBookId] = useState("");
   const [title, setTitle] = useState("");
   const [year, setYear] = useState(new Date().getFullYear());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
-  // Escape + focus trap + focus restore; respects the title input's autoFocus
+  // Escape + focus trap + focus restore; respects the book select's autoFocus
   // (audit L10).
   const dialogRef = useModalA11y(onClose);
 
+  // The book IS the series' identity, so the name defaults to the book's name —
+  // picking a book is enough, a custom title is optional. A theme series that
+  // isn't one canonical book skips the book and supplies its own name instead.
   async function handleCreate() {
     if (saving) return;
-    if (!title.trim()) {
+    const book = bookId ? bookById(bookId) : null;
+    const name = title.trim() || book?.name || "";
+    if (!name) {
       // A click always answers — inline message instead of a silently dead button.
-      setError("Give the series a name first — everything else can wait.");
+      setError("Pick the book you're preaching, or give the series a name.");
       return;
     }
     setSaving(true);
     setError(null);
     try {
+      // create-then-update: the INSERT stays name/year/color; book_id and its
+      // auto-filled genre + span persist via updateSeries, never the create INSERT.
       const result = await createSeries({
-        name: title.trim(),
+        name,
         year: Number(year) || new Date().getFullYear(),
       });
+      if (book) {
+        // The series row is already committed; the book is recoverable metadata
+        // (re-pickable on the Outline), so a failed book-write must not strand
+        // the pastor on an error with a half-made series. Log and navigate on.
+        try {
+          await updateSeries(result.id, {
+            book_id: book.id,
+            canon_category: book.genre,
+            passage_range: bookSpan(book.id),
+          });
+        } catch (bookErr) {
+          console.error("series book auto-fill failed (recoverable on Outline):", bookErr);
+        }
+      }
       onCreated(result.id);
     } catch (e) {
       console.error(e);
@@ -55,23 +78,45 @@ export default function NewSeriesModal({ onClose, onCreated }) {
 
         <div className="modal-body">
           <div className="field-group">
-            <label className="field-label">Title *</label>
+            <label className="field-label" htmlFor="new-series-book">Book</label>
+            <select
+              id="new-series-book"
+              className="field-input"
+              value={bookId}
+              onChange={(e) => setBookId(e.target.value)}
+              autoFocus
+            >
+              <option value="">— Select book —</option>
+              {Object.entries(GENRES).map(([genreKey, genreLabel]) => (
+                <optgroup key={genreKey} label={genreLabel}>
+                  {BOOKS.filter((b) => b.genre === genreKey).map((b) => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+            <p className="field-caption">
+              The book you're preaching through — sets the genre and passage span, both editable later.
+              Preaching a theme across several books? Leave this blank and name the series below.
+            </p>
+          </div>
+
+          <div className="field-group">
+            <label className="field-label">Series title <span style={{ color: "var(--ink-ghost)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(optional)</span></label>
             <input
               className="field-input"
-              placeholder="e.g. Romans: The Gospel Unveiled"
+              placeholder={bookId ? (bookById(bookId)?.name || "Defaults to the book name") : "e.g. Advent: The Light Has Come"}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter" && title.trim()) {
+                if (e.key === "Enter" && (bookId || title.trim())) {
                   e.preventDefault();
                   handleCreate();
                 }
               }}
-              autoFocus
             />
             <p className="field-caption">
-              The book or theme you're preaching through. You'll shape the
-              passages, sections, and schedule once it's created.
+              Defaults to the book's name — give it a richer title only if you want one.
             </p>
           </div>
 

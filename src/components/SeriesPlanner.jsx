@@ -801,20 +801,9 @@ function OutlineTab({
         of the whole book and a short overview. This frames everything below.
       </TierBand>
       <div className="card" style={{ borderLeft: "3px solid var(--gold)" }}>
-        <div className="field-group">
-          <label className="field-label">Book Title</label>
-          <input
-            className="field-input"
-            style={{ fontSize: "18px", fontWeight: 600 }}
-            value={series.title || ""}
-            onChange={(e) => onSeriesField("title", e.target.value)}
-            placeholder="e.g. The Gospel of Luke: Reintroducing Jesus"
-          />
-        </div>
-
-        {/* Book details first — which book, and how much of it. This is the
-            setup the rest of the outline hangs on, so it's visible and up top
-            (not tucked in a collapse below the big idea). */}
+        {/* The book IS the series' identity, so the book picker leads the card —
+            it's the first move, and it fills the genre + passage span. The series
+            title is a demoted, optional display name further down. */}
         <div className="field-group">
           <label className="field-label">Book details</label>
           <p className="field-caption" style={{ margin: "0 0 10px" }}>
@@ -822,7 +811,7 @@ function OutlineTab({
           </p>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
             <div className="field-group" style={{ marginBottom: 0 }}>
-              <label className="field-label" htmlFor="outline-book">Canonical Book</label>
+              <label className="field-label" htmlFor="outline-book">Book</label>
               <select id="outline-book" className="field-input" value={series.book_id || ""} onChange={(e) => onSelectBook(e.target.value)}>
                 <option value="">— Select book —</option>
                 {Object.entries(GENRES).map(([genreKey, genreLabel]) => (
@@ -847,6 +836,21 @@ function OutlineTab({
               <label className="field-label" htmlFor="outline-range">Passage Range</label>
               <input id="outline-range" className="field-input" style={{ fontFamily: "var(--font-mono)" }} value={series.passage_range || ""} onChange={(e) => onSeriesField("passage_range", e.target.value)} placeholder="e.g. Luke 1:1–24:53" />
             </div>
+          </div>
+        </div>
+
+        {/* Series title — a demoted, optional display name. State #3 keeps the
+            series name correctable; it defaults to the book, edited here. */}
+        <div className="field-group">
+          <label className="field-label">Series title <span style={{ color: "var(--ink-ghost)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(optional)</span></label>
+          <input
+            className="field-input"
+            value={series.title || ""}
+            onChange={(e) => onSeriesField("title", e.target.value)}
+            placeholder={bookById(series.book_id)?.name || "Defaults to the book name"}
+          />
+          <div style={{ fontSize: "12px", color: "var(--ink-ghost)", marginTop: "6px" }}>
+            Defaults to the book — give it a richer title only if you want one.
           </div>
         </div>
 
