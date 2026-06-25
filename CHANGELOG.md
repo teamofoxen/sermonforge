@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-06-25 — Series Planner: low-risk fork fixes (modal a11y + layout)
+
+- The **New Sermon** modal now uses the shared `useModalA11y` (focus trap, focus restore, `role="dialog"` + labelled title), matching every sibling modal instead of a hand-rolled Escape listener.
+- **Schedule** rows keep the date column aligned: the date track is fixed-width and the season track reserves a stable minimum, so a dated row and an undated / short-title row line up.
+- Outline **Book details**: the Passage Range field spans full width instead of orphaning a half-empty cell beside it.
+- eslint 0, 239 tests, sweep PASS, preview verified at 1280px.
+
+---
+
 ## 2026-06-25 — Series Planner audit backlog: clear bug-fixes (HIGH-A + 6 more)
 
 - **HIGH-A:** series `end_date` now recomputes when a unit (or the last section) is deleted from the Outline — deleting the latest-dated unit no longer strands a phantom date on the exported booklet cover and the Series Arc.

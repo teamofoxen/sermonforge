@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { createSermon, getAllSeries } from "../core/spine";
 import mapError from "../utils/mapError";
+import { useModalA11y } from "../utils/useModalA11y";
 import InlineError from "./InlineError";
 import { SERIES_STATUS } from "../core/contracts";
 import PrimaryButton from "./primitives/PrimaryButton";
@@ -36,12 +37,10 @@ export default function NewSermonModal({ onClose, onCreated, initialDate = "" })
       .catch(console.error);
   }, []);
 
-  // Escape closes — same pattern as every sibling overlay.
-  useEffect(() => {
-    function onKey(e) { if (e.key === "Escape") onClose?.(); }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  // Escape + focus trap + focus restore + dialog ARIA — same as every sibling
+  // overlay (NewSeriesModal / DeleteSeriesModal / SeriesHowItWorksModal). It
+  // respects the title input's autoFocus.
+  const dialogRef = useModalA11y(onClose);
 
   async function handleCreate() {
     if (saving) return;
@@ -67,9 +66,9 @@ export default function NewSermonModal({ onClose, onCreated, initialDate = "" })
 
   return (
     <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal">
+      <div className="modal" ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="new-sermon-title">
         <div className="modal-header">
-          <h2 className="modal-title">New Sermon</h2>
+          <h2 className="modal-title" id="new-sermon-title">New Sermon</h2>
           <IconButton aria-label="Close" className="modal-close" onClick={onClose}>×</IconButton>
         </div>
 

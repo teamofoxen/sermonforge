@@ -826,7 +826,7 @@ function OutlineTab({
                 {CANON_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
             </div>
-            <div className="field-group" style={{ marginBottom: 0 }}>
+            <div className="field-group" style={{ marginBottom: 0, gridColumn: "1 / -1" }}>
               <label className="field-label" htmlFor="outline-range">Passage Range</label>
               <input id="outline-range" className="field-input" style={{ fontFamily: "var(--font-mono)" }} value={series.passage_range || ""} onChange={(e) => onSeriesField("passage_range", e.target.value)} placeholder="e.g. Luke 1:1–24:53" />
             </div>
@@ -1306,7 +1306,7 @@ function ScheduleTab({ series, sermons, calNotes, onSeriesField, onSermonDate, o
                 }}
               >
                 <div style={{
-                  display: "grid", gridTemplateColumns: "24px 1fr 1fr auto auto auto",
+                  display: "grid", gridTemplateColumns: "24px 1fr 150px minmax(84px, auto) auto auto",
                   alignItems: "center", gap: "14px", padding: "12px 16px",
                 }}>
                   <span style={{ fontSize: "12px", color: "var(--ink-ghost)", textAlign: "center" }}>{idx + 1}</span>
