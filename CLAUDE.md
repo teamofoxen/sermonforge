@@ -46,6 +46,14 @@ can lag the disk if `MEMORY.md` was edited just before or during session boot. A
 start of each session, Read `C:\Users\rossa\.claude\projects\C--Projects-SermonForge\memory\MEMORY.md`
 from disk before relying on the index. The file is small; this is cheap.
 
+**Index hygiene (the failure mode that bit us):** every `MEMORY.md` entry is a
+single one-line pointer (`- [Title](file.md) — hook`). When updating an active
+project across sessions, put the new detail in its **topic file** — never append
+it to the index line. That update-time appending is exactly what bloated the index
+past its load limit (the entries that grow are always the active ones). If it ever
+exceeds the limit again, trim the longest entries back to one line; their detail
+already lives in the topic files. See [[feedback_memory_index_hygiene]].
+
 ---
 
 ## Authority

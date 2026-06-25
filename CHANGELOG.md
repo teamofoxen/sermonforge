@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-06-25 — docs: MEMORY.md index-hygiene note in CLAUDE.md
+
+- Added an "Index hygiene" note to CLAUDE.md's Memory section: every `MEMORY.md` entry stays a one-line pointer, and per-session updates go in the topic file instead of being appended to the index line.
+- Documents the failure mode that had grown the memory index past its session-load limit; the index itself was trimmed (26.2KB → 14.9KB) and a matching feedback memory added (both live outside the repo).
+
+---
+
 ## 2026-06-25 — Series Planner: Suggest Sundays fills only the undated units
 
 - "Suggest Sundays" now dates only the units that don't have a date, continuing after the last already-scheduled Sunday — dates set by hand are preserved instead of overwritten.
