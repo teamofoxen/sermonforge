@@ -4,8 +4,11 @@ import { registerFlush } from "../utils/closeFlush";
 import {
   getSermon, updateSermon, deleteSermon,
   getSeries, getSectionsBySeries, getSermonsBySeries,
+  getAllTags,
   persistMutation, INITIAL_SAVE_STATE,
 } from "../core/spine";
+import { parseTags, serializeTags, dedupeTags } from "../utils/tags";
+import TagInput from "./TagInput";
 import { exportManuscript } from "../db/database";
 import mapError from "../utils/mapError";
 import { pickSermonColumns, STAGE, SERMON_STATUS, LOADING_VERB } from "../core/contracts";
@@ -84,6 +87,10 @@ export default function SermonWorkspace({
   const [saveState, setSaveState] = useState(INITIAL_SAVE_STATE);
   const { saving, saveError, lastSavedAt } = saveState;
   const [siblingIds, setSiblingIds] = useState([]);
+  // The pastor's existing topic tags across all sermons — the own-tag
+  // autocomplete source for this sermon's TagInput (Coverage Initiative,
+  // Phase 3). Loaded once on mount; empty in fixture mode (no disk).
+  const [allTags, setAllTags] = useState([]);
   const [mapOpen, setMapOpen] = useState(false);
   // Question the last map jump targeted — the writing surface scrolls to it
   // and flashes it once, then clears this via onHighlightDone.
@@ -192,6 +199,17 @@ export default function SermonWorkspace({
     return () => { cancelled = true; };
   }, [sermonId, _fixtureSermon]);
 
+  // Load the pastor's existing tags once for the autocomplete (skipped in
+  // fixture mode — no disk). Best-effort: a failure just means no suggestions.
+  useEffect(() => {
+    if (_fixtureSermon) return;
+    let cancelled = false;
+    getAllTags()
+      .then((t) => { if (!cancelled) setAllTags(Array.isArray(t) ? t : []); })
+      .catch((e) => console.error("SermonWorkspace tag load error:", e));
+    return () => { cancelled = true; };
+  }, [_fixtureSermon]);
+
   const persistUpdate = useCallback(
     async () => {
       const data = sermonRef.current;
@@ -231,6 +249,14 @@ export default function SermonWorkspace({
     setSermon(merged);
     debouncedSave();
   }, [debouncedSave]);
+
+  // Topic tags — sermon-level, optional, AI-free (Coverage Initiative, Phase 3).
+  // Persist through the same autosave path as every other field, then fold any
+  // new tags into the live autocomplete source so they're reusable immediately.
+  const handleTagsChange = useCallback((nextTags) => {
+    handleUpdate({ tags: serializeTags(nextTags) });
+    setAllTags((prev) => dedupeTags([...prev, ...nextTags]).sort((a, b) => a.localeCompare(b)));
+  }, [handleUpdate]);
 
   // Passage edit — small inline editor next to the topbar passage ref.
   // Commits via handleUpdate so the existing autosave path persists the
@@ -811,6 +837,17 @@ export default function SermonWorkspace({
             {sermon.passage && !editingPassage && (
               <span className="passage-bar-hint">← click to see passage</span>
             )}
+          </div>
+          {/* Topics — sermon-level tags (Coverage Initiative, Phase 3). Optional;
+              browse-what-you've-preached, never a scorecard. */}
+          <div className="workspace-tags-row" style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "6px" }}>
+            <span
+              style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--ink-ghost)", flexShrink: 0 }}
+              title="Free-form topics for this sermon — used to browse what you've preached. Optional."
+            >
+              Topics
+            </span>
+            <TagInput tags={parseTags(sermon.tags)} suggestions={allTags} onChange={handleTagsChange} />
           </div>
         </div>
 

@@ -29,6 +29,7 @@ Single channel for all sermon, series, and section state. Operations dispatch to
 | `get-in-progress-sermons` | — | in-progress sermons (State #6) |
 | `get-sermons-by-series` | seriesId string | sermons in series, date ASC |
 | `get-sections-by-series` | seriesId string | sections in series, sort_order ASC |
+| `get-all-tags` | — | distinct sorted topic tags across all live sermons (own-tag autocomplete + Topics lens; v32) |
 
 **Write ops** (all go through `validateAndCommit`; contract violations return `{ ok: false, code, clause, message }`):
 

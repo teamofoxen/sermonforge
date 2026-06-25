@@ -1,6 +1,6 @@
 # SermonForge — Database Schema Reference
 
-Current schema version: **31**
+Current schema version: **32**
 
 | Version | Bumped for |
 |---------|-----------|
@@ -22,6 +22,7 @@ Current schema version: **31**
 | v29 | Series Planner — re-heal the no-"section-less limbo" invariant. **Data-only** (no DDL), idempotent re-run of the v28 normalize: catches in-series sermons left section-less by the pre-fix `create-sermon` path (the New Sermon modal set `series_id` but never `section_id`), placing each into the series' first section (auto-creating "Section 1" where needed) or setting standalone where the series is missing. The `create-sermon` handler now enforces the invariant on write, so no new limbo is created. Column allowlists / `assertSchemaContract` untouched. |
 | v30 | Topical Series mode — `kind` (`book \| topical`, DEFAULT `book`) on `series`, the explicit theme-led-vs-book-led planner-mode discriminator (NOT inferred from `book_id` being NULL); `sort_order` (nullable INTEGER) on `sermons`, the pastor-authored per-sermon order for a topical series' flat sermon list. Both additive (no backfill, no columns dropped); both ride create-then-update — added to `SERIES_COLUMNS` / `SERMON_COLUMNS`, never the create INSERT. |
 | v31 | Coverage Initiative (Phase 1) — `book_id` (nullable TEXT) on `sermons`, the structured per-sermon canonical book (mirrors `series.book_id`, keys into `src/data/canonicalBooks.js`). A topical sermon picks its own book per-sermon (composed with a chapter:verse ref into the `passage` string so the two can't disagree); a book-series sermon stays NULL and inherits `series.book_id` via the effective-book helper (`sermon.book_id ?? series.book_id`). Additive (no backfill, no columns dropped); rides create-then-update — added to `SERMON_COLUMNS`, never the create INSERT. Makes topical series visible to the sermon-grained Series Arc (Phase 2). |
+| v32 | Coverage Initiative (Phase 3) — `tags` (`TEXT NOT NULL DEFAULT '[]'`) on `sermons`, a JSON array of free-form, sermon-level topic strings tagged at prep in the workspace (mirrors the `thresholds_seen` JSON-array pattern; fail-soft parse). Sermon-level (not series) so the Topics lens reaches into book series; optional + partial. Powers the workspace own-tag autocomplete and the future Topics lens (both aggregate by scanning this column — no tags table at one-pastor scale). Additive (default `'[]'`, no backfill, no columns dropped); rides the workspace autosave — added to `SERMON_COLUMNS`, never the create INSERT. AI-free (the pastor's own words). |
 
 ---
 
@@ -118,6 +119,7 @@ Current schema version: **31**
 | `last_assembly_subphase` | TEXT | Pastor's last position within Assembly (one of `Anchor \| Outline \| Equip \| Frame`). Same purpose as `last_study_subphase` for the Assembly stage. Added v21 migration. |
 | `last_touched_position` | TEXT | Pastor's last-touched field-level position, stored as canonical slash-composite `"<stage>/<subPhase>/<fieldKey>"`. NULL = first session (sermon-start landing fires); non-NULL = land on that field on re-open. Written by the writing surface on every arrival at a question. Added v23 migration (trail deletion sweep, Phase D1). Distinct from `current_step` (retired Phase B2) — same conceptual role, different field, different fate. |
 | `thresholds_seen` | TEXT | JSON array of dismissed threshold ids. One mechanism for "has this threshold been dismissed" across sermon-start, Study→Anchor handoff, and any future threshold — so the codebase doesn't accumulate one boolean per threshold. Defaults to `'[]'`. Added v23 migration (trail deletion sweep, Phase D1). |
+| `tags` | TEXT (JSON) | JSON array of free-form, sermon-level topic strings (e.g. `["money","prayer"]`), tagged at prep in the workspace Topics field. Mirrors the `thresholds_seen` pattern (`NOT NULL DEFAULT '[]'`, fail-soft parse via `src/utils/tags.js`). Sermon-level so the Topics lens reaches into book series; optional + partial. Read distinct + sorted via IPC `get-all-tags` for the own-tag autocomplete + the Topics lens (no tags table at one-pastor scale). Persisted via `updateSermon` (workspace autosave), never the create INSERT. AI-free. (v32) |
 | `deleted_at` | TEXT | Soft-delete tombstone — NULL = live, ISO timestamp = deleted. Written only by main's `delete-sermon` / `restore-sermon` ops (deliberately NOT in `SERMON_COLUMNS`); every list read and search excludes tombstoned rows. Added v24 migration. |
 | `created_at` | TEXT | |
 | `updated_at` | TEXT | |

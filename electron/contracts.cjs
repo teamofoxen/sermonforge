@@ -136,6 +136,9 @@ const SERMON_COLUMNS = Object.freeze(new Set([
   // v31 — Coverage Initiative (Phase 1) (mirrors contracts): structured
   // per-sermon canonical book for the topical planner; nullable.
   "book_id",
+  // v32 — Coverage Initiative (Phase 3) (mirrors contracts): sermon-level topic
+  // tags, a JSON array of free-form topic strings (thresholds_seen pattern).
+  "tags",
 ]));
 /* eslint-enable sermonforge/canonical-stage-name */
 

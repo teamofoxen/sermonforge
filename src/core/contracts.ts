@@ -376,6 +376,11 @@ export const SERMON_COLUMNS: ReadonlySet<string> = Object.freeze(new Set([
   // only topical sermons carry their own. Rides create-then-update — the
   // create-sermon INSERT is never widened.
   "book_id",
+  // v32 — Coverage Initiative (Phase 3). Sermon-level topic tags: a JSON array
+  // of free-form topic strings (thresholds_seen pattern; fail-soft parse) tagged
+  // at prep in the workspace. Powers the Topics lens + own-tag autocomplete.
+  // Rides the workspace autosave — the create-sermon INSERT is never widened.
+  "tags",
 ])) as ReadonlySet<string>;
 
 // v27 — Series Planner content-model rebuild retired the four book-study

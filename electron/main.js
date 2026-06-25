@@ -1353,6 +1353,23 @@ function runMigrations() {
     version = 31;
   }
 
+  if (version < 32) {
+    // v32 (Coverage Initiative, Phase 3) — sermon-level topic tags. A free-form,
+    // reusable JSON array of topic strings tagged at the moment of prep in the
+    // sermon workspace; powers the Topics lens ("show what I've covered", never a
+    // scorecard) and the own-tag autocomplete (charter: docs/PROPOSALS/coverage-initiative.md).
+    //
+    //   sermons.tags: JSON array of topic strings, mirroring the thresholds_seen
+    //   column pattern (TEXT NOT NULL DEFAULT '[]', fail-soft parse). Sermon-level
+    //   (not series) so the Topics lens reaches INTO book series. In SERMON_COLUMNS,
+    //   so it persists via updateSermon; the create-sermon INSERT is NOT widened —
+    //   tags ride the workspace autosave. No new table at one-pastor scale: the
+    //   autocomplete + Topics view aggregate by scanning this column.
+    safeAlter("ALTER TABLE sermons ADD COLUMN tags TEXT NOT NULL DEFAULT '[]'");
+    dbRun("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '32')");
+    version = 32;
+  }
+
   // True when at least one block actually ran. Lets initDatabase skip the
   // boot-time flush on a clean boot of an up-to-date DB — so a healthy library
   // is never re-serialized and rotated over its own backup for no reason.
@@ -2127,6 +2144,29 @@ function spineRead(op, payload) {
       for (const r of rows) counts[r.series_id] = r.count;
       return counts;
     }
+    case "get-all-tags": {
+      // Distinct sorted topic tags across all live sermons (Coverage Initiative,
+      // Phase 3). Feeds the workspace's own-tag autocomplete and the future
+      // Topics lens — both aggregate by scanning the tags column (no tags table
+      // at one-pastor scale). Fail-soft per row so one bad JSON value can't
+      // sink the whole list. Case-insensitive de-dupe keeps the first-seen
+      // casing of each tag.
+      const rows = queryAll(
+        `SELECT tags FROM sermons WHERE deleted_at IS NULL AND id NOT LIKE 'sample-%'`,
+      );
+      const byLower = new Map();
+      for (const r of rows) {
+        let arr;
+        try { arr = JSON.parse(r.tags || "[]"); } catch { arr = []; }
+        if (!Array.isArray(arr)) continue;
+        for (const t of arr) {
+          if (typeof t !== "string") continue;
+          const trimmed = t.trim();
+          if (trimmed && !byLower.has(trimmed.toLowerCase())) byLower.set(trimmed.toLowerCase(), trimmed);
+        }
+      }
+      return [...byLower.values()].sort((a, b) => a.localeCompare(b));
+    }
     case "get-sections-by-series":
       return queryAll(
         "SELECT * FROM series_sections WHERE series_id = ? ORDER BY sort_order ASC, created_at ASC",
@@ -2666,6 +2706,7 @@ const SPINE_READ_OPS = new Set([
   "get-in-progress-sermons",
   "get-sermons-by-series",
   "get-series-sermon-counts",
+  "get-all-tags",
   "get-sections-by-series",
 ]);
 

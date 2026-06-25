@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-06-25 — Coverage Initiative Phase 3 — sermon-level topic tags
+
+- Schema v32 — `sermons.tags` (JSON array, `thresholds_seen` pattern); additive, rides the workspace autosave, synced across all three allowlist mirrors + schema/database/IPC docs.
+- The sermon workspace gains a "Topics" field: free-form tag chips with a native autocomplete drawn from the pastor's own prior tags (AI-free anti-drift); optional and partial.
+- New read-only `get-all-tags` spine op returns the distinct, sorted topic tags across all live sermons (fail-soft scan); feeds the autocomplete and the future Topics lens.
+- Added `src/utils/tags.js` (`parseTags`/`serializeTags`/`dedupeTags`, fail-soft) and `TagInput.jsx`, with unit tests.
+- Verified: eslint 0, 78 unit/contract tests, `/sweep-the-house` PASS, browser preview (add/remove/de-dupe, no console errors).
+
+---
+
 ## 2026-06-25 — Coverage Initiative Phases 1+2 — structured per-sermon book + sermon-grained Series Arc
 
 - Schema v31 — `sermons.book_id` (nullable), the structured per-sermon canonical book for topical series; additive, create-then-update, synced across all three allowlist mirrors + schema/database docs.

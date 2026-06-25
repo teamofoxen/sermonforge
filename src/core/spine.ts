@@ -65,6 +65,7 @@ const READ_OPS_RETURNING_ARRAY: ReadonlySet<string> = new Set([
   "get-in-progress-sermons",
   "get-sermons-by-series",
   "get-sections-by-series",
+  "get-all-tags",
 ]);
 
 // Browser-preview mock — returns enough shape to let the workspace render
@@ -188,6 +189,11 @@ export function getSermonsBySeries(seriesId: string): Promise<any[]> {
 // { [seriesId]: count } map.
 export function getSeriesSermonCounts(): Promise<Record<string, number>> {
   return call("get-series-sermon-counts");
+}
+// Distinct sorted topic tags across all live sermons — feeds the workspace's
+// own-tag autocomplete and the Topics lens (Coverage Initiative, Phase 3).
+export function getAllTags(): Promise<string[]> {
+  return call("get-all-tags");
 }
 export function getSectionsBySeries(seriesId: string): Promise<any[]> {
   return call("get-sections-by-series", seriesId);
