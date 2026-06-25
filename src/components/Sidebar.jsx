@@ -24,7 +24,7 @@ const NAV_ITEMS = [
   },
   {
     id: VIEW.Arc,
-    label: "Series Arc",
+    label: "What I've Preached",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
         <line x1="3" y1="6" x2="14" y2="6" />

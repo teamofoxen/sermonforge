@@ -34,7 +34,10 @@ function formatGap(days) {
   return `${days}d`;
 }
 
-export default function Arc({ onOpenPlanner, _fixture }) {
+// `embedded` suppresses the standalone page-header so the Arc can render as the
+// "By book" lens inside the What I've Preached home (which owns the header + the
+// By book / By topic tabs). Default false keeps the isolated ?arc preview intact.
+export default function Arc({ onOpenPlanner, _fixture, embedded = false }) {
   const [series, setSeries] = useState(_fixture ? _fixture.series || [] : []);
   const [sermons, setSermons] = useState(_fixture ? _fixture.sermons || [] : []);
   const [counts, setCounts] = useState(_fixture ? _fixture.counts || {} : {});
@@ -68,10 +71,12 @@ export default function Arc({ onOpenPlanner, _fixture }) {
 
   return (
     <>
-      <div className="page-header">
-        <h1 className="page-title">Series Arc</h1>
-        <p className="page-subtitle">How your series balance across the canon over time</p>
-      </div>
+      {!embedded && (
+        <div className="page-header">
+          <h1 className="page-title">Series Arc</h1>
+          <p className="page-subtitle">How your series balance across the canon over time</p>
+        </div>
+      )}
 
       <div className="page-body">
         {series.length === 0 ? (

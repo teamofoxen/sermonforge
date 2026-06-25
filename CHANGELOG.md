@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-06-25 — Coverage Initiative Phase 4 — the "What I've Preached" two-lens home
+
+- New "What I've Preached" home (the renamed Series Arc sidebar entry) holds two lenses behind tabs: "By book" and "By topic".
+- By book — the sermon-grained Series Arc rendered embedded (the home owns the header + tabs, so the Arc drops its own).
+- By topic — a new `TopicsView`: a topic rail (with counts) → the sermons under the selected topic, each clickable to open; browse-only, never a scorecard or gap-finder.
+- Sidebar relabeled "Series Arc" → "What I've Preached" (the `VIEW.Arc` key is unchanged for routing stability); added a `?preached` preview fixture.
+- Verified: eslint 0, 168 unit/contract tests, `/sweep-the-house` PASS, browser preview of both lenses (no console errors). Completes the Coverage Initiative.
+
+---
+
 ## 2026-06-25 — Coverage Initiative Phase 3 — sermon-level topic tags
 
 - Schema v32 — `sermons.tags` (JSON array, `thresholds_seen` pattern); additive, rides the workspace autosave, synced across all three allowlist mirrors + schema/database/IPC docs.

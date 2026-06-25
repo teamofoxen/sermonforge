@@ -20,8 +20,9 @@ const SermonWorkspaceFixture = lazy(() => import("./components/SermonWorkspaceFi
 const Planning = lazy(() => import("./components/Planning"));
 const SeriesPlanner = lazy(() => import("./components/SeriesPlanner"));
 const SeriesPlannerFixture = lazy(() => import("./components/SeriesPlannerFixture"));
-const Arc = lazy(() => import("./components/Arc"));
+const WhatIvePreached = lazy(() => import("./components/WhatIvePreached"));
 const ArcFixture = lazy(() => import("./components/ArcFixture"));
+const WhatIvePreachedFixture = lazy(() => import("./components/WhatIvePreachedFixture"));
 
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -311,6 +312,21 @@ function AppInner() {
     );
   }
 
+  // What I've Preached preview — the two-lens home (By book + By topic) against
+  // mock data so both lenses + the tab switch can be verified without Electron.
+  // Gated to dev so a packaged build never honors the query string. ?preached
+  const isPreachedFixture =
+    import.meta.env.DEV &&
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).has("preached");
+  if (isPreachedFixture) {
+    return (
+      <Suspense fallback={null}>
+        <WhatIvePreachedFixture />
+      </Suspense>
+    );
+  }
+
   if (keyReady === null) return null; // brief loading — avoids flash of setup screen
   if (keyReady === false) return <SetupScreen onComplete={() => setKeyReady(true)} />;
 
@@ -388,7 +404,7 @@ function AppInner() {
           <Planning onOpenPlanner={openPlanner} />
         )}
         {currentView === VIEW.Arc && (
-          <Arc onOpenPlanner={openPlanner} />
+          <WhatIvePreached onOpenPlanner={openPlanner} onOpenSermon={openSermon} />
         )}
         {currentView === VIEW.SeriesPlanner && plannerSeriesId && (
           <SeriesPlanner
