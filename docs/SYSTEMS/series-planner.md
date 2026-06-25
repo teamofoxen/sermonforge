@@ -1,21 +1,34 @@
 # Series Planner — Systems (how & where)
 
 > Revived 2026-06-21; **rebuilt around the pastor's real content model
-> 2026-06-24** (the four-movement workbench and the melodic-line model are gone).
-> **AI-free.** This doc is the *how & where* (mechanics). The *what & why* — the
-> decision that series planning is a distinct macro/architect mode, and the
-> content-model ruling — lives in
+> 2026-06-24** (the four-movement workbench and the melodic-line model are gone);
+> **Topical Series mode + the sermon-grained Series Arc / "What I've Preached"
+> home shipped 2026-06-25** (schema v30–v32). **AI-free.** This doc is the
+> *how & where* (mechanics). The *what & why* — the decision that series planning
+> is a distinct macro/architect mode, and the content-model ruling — lives in
 > [`docs/PROPOSALS/series-planner-revival-charter.md`](../PROPOSALS/series-planner-revival-charter.md)
-> ("2026-06-24 — Content-model rebuild").
+> ("2026-06-24 — Content-model rebuild"); the Topical-mode + coverage rulings live
+> in [`docs/PROPOSALS/coverage-initiative.md`](../PROPOSALS/coverage-initiative.md).
 
-The planner is a top-down way to **understand the book at three levels —
-Book ▸ Section ▸ Sermon** — producing three outputs: the sermon calendar,
-familiarity with the text before preaching, and the study guide's raw material.
-A sermon **is** one passage, scheduled on one Sunday (the existing
-series→sections→sermons spine). **Every level is the same unit: Title + range ·
-Big idea (one line) · Overview (paragraph).** The whole series backend (tables,
-spine CRUD, the church-calendar engine, the study-guide `.docx` exporter) was
-always live; the UI is what changed.
+A series is one of **two kinds**, set at creation and stored explicitly as
+`series.kind` (`'book'` | `'topical'`) — never inferred:
+
+- **Book series** (`kind: 'book'`) — a top-down way to **understand one book at
+  three levels — Book ▸ Section ▸ Sermon.** **Every level is the same unit:
+  Title + range · Big idea (one line) · Overview (paragraph).** The book is the
+  series' identity.
+- **Topical series** (`kind: 'topical'`) — a theme-led series that gathers a
+  sermon for each passage (from **any** book) that sounds one big idea. **Big
+  Idea ▸ a flat, pastor-ordered list of sermons — no sections.** Each sermon
+  authors its own structured **Book** (`sermons.book_id`) + chapter:verse, so a
+  topical series spans many books.
+
+Both produce the same three outputs: the sermon calendar, familiarity with the
+text before preaching, and the study guide's raw material. A sermon **is** one
+passage, scheduled on one Sunday (the existing series→sections→sermons spine;
+topical sermons simply have no section). The whole series backend (tables, spine
+CRUD, the church-calendar engine, the study-guide `.docx` exporter) was always
+live; the UI is what changed.
 
 ## 1. What it is / where it mounts
 
@@ -26,18 +39,29 @@ Macro/architect mode — a different headspace from the per-sermon walk. Two vie
 - `VIEW.SeriesPlanner` — the planner-with-id. Reached **only** via `openPlanner(id)`
   (`App.jsx`), never from a bare sidebar click. Renders `SeriesPlanner.jsx`.
 
-Front door: `NewSeriesModal.jsx` is **book-first** — pick the canonical **Book**
-(the shared `BookSelect`, which fills genre + passage span), with an optional
-series title that defaults to the book's name; a theme series spanning several
-books may skip the book and supply its own name. **The book is the series'
-identity.** Persistence is create-then-update: `createSeries({ name, year })` then
-`updateSeries(id, { book_id, canon_category, passage_range })` (the INSERT is
-never widened). `onCreated(result.id)` navigates straight into the planner.
+Front door: `NewSeriesModal.jsx` opens on a **Book / Topical toggle** that picks
+the `kind`:
+
+- **Book** — pick the canonical **Book** (the shared `BookSelect`, which fills
+  genre + passage span), with an optional series title that defaults to the
+  book's name. **The book is the series' identity.** Persists `createSeries({
+  name, year })` then `updateSeries(id, { book_id, canon_category, passage_range })`.
+  `kind` is left at its column **default `'book'`** — so a failed follow-up still
+  reads as a book series (the recoverable state), never a stranded one.
+- **Topical** — name the **theme** (required; there's no book to borrow a name
+  from). Persists `createSeries({ name, year })` then `updateSeries(id, { kind:
+  'topical', big_idea })`, seeding the Big Idea from the theme (refined later on
+  the planner). No book at the series level — each sermon names its own.
+
+Persistence is create-then-update in both cases — the `create-series` INSERT is
+never widened (`kind`/`book_id` ride the follow-up `updateSeries`).
+`onCreated(result.id)` navigates straight into the planner.
 
 Files: `src/components/Planning.jsx`, `SeriesPlanner.jsx` (the three-screen
-workbench), `NewSeriesModal.jsx`, `SeriesPlannerFixture.jsx` (preview fixture,
-`?planner[=schedule|study-guide]` route, default Outline; seeded with the real
-Jesus-of-Luke artifact).
+workbench), `NewSeriesModal.jsx`, `BookSelect.jsx`, `CoveragePanel.jsx`,
+`SeriesPlannerFixture.jsx` (preview fixture, `?planner[=schedule|study-guide]`
+route, `&kind=topical` for the topical seed; default Outline; the book seed is
+the real Jesus-of-Luke artifact, the topical seed is "The Mission of God").
 
 ## 2. AI-free
 
@@ -54,7 +78,10 @@ forbidden pre-Pilot-B stage alias under the `canonical-stage-name` lint rule; th
 human label is "Outline"). A remembered `localStorage` tab id for a removed tab
 (the old `book-study`/`design`/`calendar`/`overview`) falls back to Outline.
 
-- **Outline** (`OutlineTab`) — the book as one live nested outline.
+- **Outline** (`OutlineTab`) — the series as one live outline. Its shape is
+  `kind`-aware (`SeriesPlanner.jsx` branches on `series.kind === 'topical'`).
+
+  **Book series** — the book as one nested outline:
   - *Book node* — the root, **led by the book** (the book is the series' identity).
     A visible **Book details** block holds the **Book** picker (the shared
     `BookSelect` → `book_id`, auto-fills genre + span), the genre override
@@ -78,11 +105,28 @@ human label is "Outline"). A remembered `localStorage` tab id for a removed tab
     focus/flash plumbing). The title field is labeled **Working title** — the rough
     handle the big idea expands on; the final sermon title comes during writing —
     while the book and section levels keep plain "Title". New sermons use the
-    draft-row/commit pattern (§5). "+ Add section" sits under the book. **Every
-    sermon lives under a section — there is no "in a series but in no section"
-    group.** When a series has no sections yet, the Outline shows just
+    draft-row/commit pattern (§5). "+ Add section" sits under the book. **In a book
+    series every sermon lives under a section — there is no "in a series but in no
+    section" group.** When a book series has no sections yet, the Outline shows just
     **"+ Add section"** (the top-down first move). A sermon with no series at all is
     **standalone** and lives in the library, never in the planner.
+
+  **Topical series** — a big idea over a flat sermon list (genuinely **no
+  sections**):
+  - *Big Idea node* — the root: **Theme** (`series.title`), **Big idea**
+    (`series.big_idea`, one line), **Overview** (`series.overview`). No book, no
+    genre, no `passage_range` — a many-book theme has none. (No `CoveragePanel`:
+    it measures % of one book, which a theme doesn't have — hidden whenever
+    `series.kind === 'topical'`.)
+  - *Sermon nodes* — the same `SermonNode` in its `topical` layout: the passage is
+    authored **structurally** as a **Book** picker (`BookSelect` → `sermons.book_id`)
+    + a **chapter:verse** field, composed into the single `passage` string by
+    `src/utils/topicalPassage.js` so book and passage can't disagree. A
+    chapter:verse that won't parse shows an inline **"Couldn't read"** hint (the
+    Coverage panel's unreadable affordance, surfaced per-row since that panel is
+    hidden in topical mode). Sermons carry a pastor-authored order
+    (`sermons.sort_order`) and reorder with ↑/↓ (`moveSermon` rewrites
+    `sort_order`); there is no auto-file and no "+ Add section".
 - **Schedule** (`ScheduleTab`) — **the one place dates live.** Lays each sermon
   on a Sunday; per-row edits autosave through the shared debounced
   `updateSermon` path (`end_date` mirrors the last dated sermon on any change; there
@@ -90,11 +134,13 @@ human label is "Outline"). A remembered `localStorage` tab id for a removed tab
   date**, expandable (▾) to its read-only **big idea + overview** (edited on the
   Outline). "Suggest Sundays" (`getUpcomingSundays`) is one explicit bulk gesture
   that writes every date in list order. The **undated pool sorts in outline
-  reading order** — section, then creation (`seriesSermonOrderBy` with the
-  `ss.sort_order` term in `electron/main.js`, shared with the workspace breadcrumb
-  + study-guide export) — so it walks the book top to bottom. The `CoveragePanel`
-  lives here now. Season labels (`getSeasonForDate`), the pacing strip
-  (`src/utils/pacing.js`), and skip-a-week are kept.
+  reading order** via the one shared `seriesSermonOrderBy` (`electron/main.js`) —
+  dated first, then section order (`ss.sort_order`), then the sermon's own
+  pastor-authored `sort_order` (the topical reorder term), then `created_at` —
+  the same composite the workspace breadcrumb and study-guide export use, so the
+  three never disagree. The `CoveragePanel` lives here now **for book series**
+  (hidden whenever `series.kind === 'topical'`). Season labels (`getSeasonForDate`),
+  the pacing strip (`src/utils/pacing.js`), and skip-a-week are kept.
 - **Study guide** (`StudyGuideTab`) — an editable congregational booklet
   ("mini-commentary"). "Import from outline" gates the empty state → booklet via
   a client-local `localStorage` flag (`sermonforge_planner_guide_built_<seriesId>`)
@@ -130,8 +176,13 @@ between rows can't drop an earlier entity's last keystrokes.
 `tests/contracts/_helpers/test-spine.ts` (the allowlist-sync test enforces it);
 all writes gate through `buildUpdate` in `electron/main.js`. The sermon's
 `big_idea` / `overview` and the guide-local `study_guide_extras` are in
-`SERMON_COLUMNS` (v27); the retired book-study + melodic-line columns left
-`SERIES_COLUMNS` (v27) but remain in the DB as backup.
+`SERMON_COLUMNS`; the retired book-study + melodic-line columns left
+`SERIES_COLUMNS` but remain in the DB as backup. The two later initiatives added
+columns the same create-then-update way — never on the INSERT: `series.kind`
+(v30), `sermons.sort_order` (v30, the topical pastor-authored order),
+`sermons.book_id` (v31, the structured per-sermon book for topical), and
+`sermons.tags` (v32, free-form topic tags). Schema is at **v32**; all four are
+in the three allowlist mirrors.
 
 ## 5. Sermon draft / commit
 
@@ -145,9 +196,11 @@ move to the first remaining section of the series; if it was the last section
 they become **standalone** (`series_id` nulled, back to the library), the same
 release `delete-series` does. **`create-sermon` keeps it too (defensive net):** a
 sermon created with a `series_id` but no `section_id` is auto-filed under that
-series' first section, auto-creating "Section 1" when the series has none. So the
-Outline can't be handed an in-series sermon it would silently drop, whichever
-surface created it. (`NewSermonModal` no longer *creates* in-series sermons — see
+series' first section, auto-creating "Section 1" when the series has none —
+**book series only; the auto-file is gated on `seriesRow.kind !== 'topical'`**, so
+a topical series' sermons stay section-less by design (their absence of sections
+is intentional, not limbo). So the book-series Outline can't be handed an
+in-series sermon it would silently drop, whichever surface created it. (`NewSermonModal` no longer *creates* in-series sermons — see
 the planner ↔ prep doors below — but the guard stays as a net for any other path.) The auto-file is wrapped in a transaction with the sermon INSERT and
 guarded on the series actually existing (a stale `series_id` can't spawn an
 orphan section). A **v28** migration normalized existing data once: section-less
@@ -174,26 +227,48 @@ creates nothing — series sermons are born in the planner, so no duplicates.
 Chain: the StudyGuideTab "Export to Word" → `exportStudyGuide(seriesId)`
 (`src/db/database.js`) → `"series-export-study-guide"` IPC (`electron/preload.js`)
 → handler (`electron/main.js`) → `buildStudyGuideDoc(series, sections, sermons)`.
-The handler fetches series + sections (by `sort_order`) + undeleted sermons (by
-`date`, `created_at`) and builds the booklet: title block → **Introduction**
-(book big idea as an italic lead + overview) → **a part per section** → **a page
-per sermon** (`pageBreakBefore`; passage — title heading, date · season,
-big-idea lead, overview-as-commentary, the `study_guide_extras` additions, then
-`notesLines` blank ruled lines) → unsectioned sermons under **Remaining** → a
-final **Reference** part for `structural_outline`. Heading color from the series
-color. The section grouping (`sectionGroups` / `remainingSermons` / `hasSections`)
-lives in `src/utils/studyGuideModel.js` (mirrored to
+The handler fetches series + sections (by `sort_order`) + undeleted sermons **via
+the shared `seriesSermonOrderBy`** (date-aware, with section order and the topical
+`sort_order` term — the same composite the Schedule and `get-sermons-by-series`
+use, so the booklet order matches the on-screen order) and builds the booklet:
+title block → **Introduction** (big idea as an italic lead + overview) → **a part
+per section** → **a page per sermon** (`pageBreakBefore`; passage — title heading,
+date · season, big-idea lead, overview-as-commentary, the `study_guide_extras`
+additions, then `notesLines` blank ruled lines) → unsectioned sermons under
+**Remaining** → a final **Reference** part for `structural_outline`. Heading color
+from the series color. The section grouping (`sectionGroups` / `remainingSermons` /
+`hasSections`) lives in `src/utils/studyGuideModel.js` (mirrored to
 `electron/studyGuideModel.cjs`) and is shared by the on-screen preview and the
-export, so they can't drift. `study_guide_extras` is parsed fail-soft in the doc
-builder (mirrors the renderer's `parseStudyGuideExtras`).
+export, so they can't drift. For a **topical series** there are no sections, so
+`buildStudyGuideModel` returns `hasSections: false` and every sermon falls into
+the flat page-per-sermon list (no section parts; the Introduction still renders
+from the theme's big idea + overview) — the same mode-agnostic model code drives
+both kinds. `study_guide_extras` is parsed fail-soft in the doc builder (mirrors
+the renderer's `parseStudyGuideExtras`).
 
 Output: `Documents/SermonForge/exports/StudyGuides/<title> — Study Guide.docx`
 (via `app.getPath("documents")`); dir created recursively; filename sanitized;
 a file-busy error ("close it in Word") if the doc is open. Empty parts are
 omitted, so a brand-new series exports a near-empty doc by design.
 
+## 7. Where planner data surfaces beyond the planner (Coverage Initiative)
+
+Two surfaces read the planner's sermon data without the planner being open;
+both are AI-free and **descriptive, never a scorecard**:
+
+- **Series Arc** (`src/utils/arc.js` → `Arc.jsx`) — a **sermon-grained** balance
+  of what's been preached across genres / testaments. Each sermon's effective
+  book is `sermon.book_id ?? series.book_id` (`effectiveBookId`), so a topical
+  series' per-sermon books count individually.
+- **"What I've Preached" home** (`WhatIvePreached.jsx`) — two lenses: **By book**
+  embeds the Arc; **By topic** is `TopicsView.jsx` over `sermons.tags` (authored
+  in the workspace **Topics** row, autocompleting only the pastor's own prior
+  tags via `get-all-tags`). It shows what's been *covered* — no missing-topics
+  list, no deficit.
+
 ## Related
 
-- *what & why / decisions:* [`docs/PROPOSALS/series-planner-revival-charter.md`](../PROPOSALS/series-planner-revival-charter.md)
-- *schema:* `series` + `series_sections` + the v27 `sermons` columns in [`docs/REFERENCE/schema.md`](../REFERENCE/schema.md)
-- *IPC:* the series spine ops + `series-export-study-guide` in [`docs/REFERENCE/ipc-channels.md`](../REFERENCE/ipc-channels.md)
+- *what & why / decisions (planner):* [`docs/PROPOSALS/series-planner-revival-charter.md`](../PROPOSALS/series-planner-revival-charter.md)
+- *what & why / decisions (topical mode + Arc + tags):* [`docs/PROPOSALS/coverage-initiative.md`](../PROPOSALS/coverage-initiative.md)
+- *schema:* `series` (+ `kind`) + `series_sections` + the `sermons` columns through **v32** (`sort_order`, `book_id`, `tags`) in [`docs/REFERENCE/schema.md`](../REFERENCE/schema.md)
+- *IPC:* the series spine ops + `series-export-study-guide` + `get-all-tags` in [`docs/REFERENCE/ipc-channels.md`](../REFERENCE/ipc-channels.md)

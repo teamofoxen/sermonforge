@@ -17,6 +17,8 @@ import { computePacing } from "../utils/pacing";
 import { computeCoverage } from "../utils/coverage";
 import { buildStudyGuideModel } from "../utils/studyGuideModel";
 import { GENRES, bookById, bookSpan } from "../data/canonicalBooks";
+import { composePassage, refFromPassage, repointPassage } from "../utils/topicalPassage";
+import { parsePassageRef } from "../utils/passageRef";
 import BookSelect from "./BookSelect";
 import { formatDate, autoResize, parseLocalDate } from "../utils";
 import { buttonKeydown } from "../utils/buttonKeydown";
@@ -1233,19 +1235,8 @@ function SectionNode({
 // Topical sermons author their passage as a structured Book (`book_id`) + a
 // chapter:verse ref, composed into the single `passage` display string so the
 // book and the passage string can't disagree (no dual source of truth — charter:
-// docs/PROPOSALS/coverage-initiative.md). These convert between the two forms.
-function composePassage(bookId, ref) {
-  const name = (bookById(bookId) || {}).name || "";
-  const r = (ref || "").trim();
-  if (name && r) return `${name} ${r}`;
-  return name || r;
-}
-function refFromPassage(passage, bookId) {
-  const name = (bookById(bookId) || {}).name || "";
-  const p = (passage || "").trim();
-  if (name && p.startsWith(name)) return p.slice(name.length).trim();
-  return p; // no book set yet (e.g. a legacy free-text passage) → the whole string is the ref
-}
+// docs/PROPOSALS/coverage-initiative.md). The compose / extract / re-point
+// helpers live in src/utils/topicalPassage.js.
 
 // One sermon = one passage = one scheduled Sunday. The Outline is pure
 // outlining — no dates live here; scheduling is wholly the Schedule screen's.
@@ -1279,12 +1270,10 @@ function SermonNode({ sermon: p, expanded, onToggle, onField, onCommit, onDelete
   // the single `passage` string, writing book_id + passage together so they can't
   // disagree.
   function onPickBook(newBookId) {
-    // If the current ref still leads with the newly-picked book's name (a legacy
-    // free-text passage that had no book_id), strip it so the name isn't doubled.
-    let ref = refFromPassage(p.passage, p.book_id);
-    const name = (bookById(newBookId) || {}).name || "";
-    if (name && ref.startsWith(name)) ref = ref.slice(name.length).trim();
-    onField(p.id, { book_id: newBookId, passage: composePassage(newBookId, ref) });
+    // repointPassage drops ANY leading book name (the bound one, or a different
+    // book named in a legacy free-text passage) before recomposing under the new
+    // book — so the name is never doubled or concatenated. See topicalPassage.js.
+    onField(p.id, { book_id: newBookId, passage: repointPassage(p.passage, newBookId) });
   }
   function onRefChange(ref) {
     onField(p.id, { passage: composePassage(p.book_id, ref) });
@@ -1306,6 +1295,14 @@ function SermonNode({ sermon: p, expanded, onToggle, onField, onCommit, onDelete
       {commitError && <div style={{ marginTop: "6px" }}><InlineError onDismiss={() => onClearError?.(p.id)}>{commitError}</InlineError></div>}
     </>
   );
+
+  // Topical only: flag a chapter:verse that won't parse ("12:1--3", "12:") so a
+  // broken reference is caught here instead of slipping silently into the booklet
+  // — the Coverage panel that flags these for a book series is hidden for topical.
+  // Only once a book is picked and a ref has actually been typed.
+  const refText = topical ? refFromPassage(p.passage, p.book_id) : "";
+  const refUnreadable =
+    topical && !!p.book_id && refText.trim() !== "" && parsePassageRef(p.passage, p.book_id).error === true;
 
   return (
     <div ref={rowRef} style={{ border: "1px solid var(--parchment-deep)", borderRadius: "var(--radius)", background: "var(--white)", overflow: "hidden" }}>
@@ -1358,11 +1355,16 @@ function SermonNode({ sermon: p, expanded, onToggle, onField, onCommit, onDelete
                   <label className="field-label">Chapter:verse</label>
                   <input
                     className="field-input" style={{ fontFamily: "var(--font-mono)", fontSize: "14px" }}
-                    value={refFromPassage(p.passage, p.book_id)}
+                    value={refText}
                     onChange={(e) => onRefChange(e.target.value)}
                     placeholder="e.g. 12:1-3"
                     onClick={(e) => e.stopPropagation()}
                   />
+                  {refUnreadable && (
+                    <div style={{ marginTop: "5px", fontSize: "12px", color: "var(--crimson-soft)", fontFamily: "var(--font-mono)" }}>
+                      Couldn't read this reference — check the chapter:verse.
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="field-group" style={{ marginBottom: 0 }}>

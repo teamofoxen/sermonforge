@@ -7,11 +7,14 @@ import { computeArc } from "../utils/arc";
 import { parseLocalDate } from "../utils";
 import EmptyState from "./primitives/EmptyState";
 
-// Series Arc — the cross-series planning-retreat view. Reads ALL series and
-// shows them on one timeline (with the empty Sundays between them) plus a
-// deterministic balance read over a trailing window: which of the 7 Dever
-// genres are touched vs missing, the OT:NT split, and how many series are still
-// unclassified. The one view a single-series design can't have. AI-free.
+// Series Arc — the cross-series planning-retreat view, and the "By book" lens of
+// the "What I've Preached" home (embeddable via the `embedded` prop). Reads ALL
+// series and shows them on one timeline (with the empty Sundays between them)
+// plus a deterministic balance read over a trailing window: which of the 7 Dever
+// genres are touched vs missing, the OT:NT split, and how many sermons are still
+// unclassified. The balance is counted PER SERMON — each sermon's effective book
+// is `sermon.book_id ?? series.book_id` (`computeArc`), so a topical series' many
+// books all count. The one view a single-series design can't have. AI-free.
 
 const WINDOW_OPTIONS = [12, 24, 36];
 

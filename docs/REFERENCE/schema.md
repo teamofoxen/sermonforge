@@ -77,7 +77,7 @@ Current schema version: **32**
 | `id` | TEXT PRIMARY KEY | |
 | `series_id` | TEXT | FK to series (NULL for one-off sermons) |
 | `section_id` | TEXT | FK to series_sections (optional) |
-| `sort_order` | INTEGER | Pastor-authored per-sermon order for a **topical** series' flat sermon list (a theme has no book reading order). Nullable — NULL sorts last via `COALESCE` in `seriesSermonOrderBy`; book-series sermons stay NULL and order by their section. Persisted via `updateSermon`, never the create INSERT. The ordering READ is wired in a later build step. (v30) |
+| `sort_order` | INTEGER | Pastor-authored per-sermon order for a **topical** series' flat sermon list (a theme has no book reading order). Nullable — NULL sorts last via `COALESCE` in `seriesSermonOrderBy`; book-series sermons stay NULL and order by their section. Persisted via `updateSermon`, never the create INSERT. The ordering READ is live — every series-sermon fetch (`get-sermons-by-series`, the Schedule, the study-guide export) routes through `seriesSermonOrderBy`. (v30) |
 | `is_one_off` | INTEGER | 1 if standalone sermon, 0 if series sermon |
 | `title` | TEXT | |
 | `passage` | TEXT | Free-text display reference (e.g. `Genesis 12:1-3`). For a **topical** sermon it is composed from `book_id` + a chapter:verse ref entered in the Outline, so the two can't disagree (no dual source of truth). |

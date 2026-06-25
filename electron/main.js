@@ -1326,8 +1326,8 @@ function runMigrations() {
     //     so book-series sermons keep NULL and still order by their section. In
     //     SERMON_COLUMNS, so the reorder control persists via updateSermon; the
     //     create-sermon INSERT is NOT widened (slot draft/commit ruling).
-    //     (The ordering READ is wired in a later build step; this only adds the
-    //     column + allowlist so the write path is ready.)
+    //     (The ordering READ is live in the same release — the COALESCE(sort_order)
+    //     term in seriesSermonOrderBy, consumed by every series-sermon fetch.)
     safeAlter("ALTER TABLE sermons ADD COLUMN sort_order INTEGER DEFAULT NULL");
     dbRun("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '30')");
     version = 30;

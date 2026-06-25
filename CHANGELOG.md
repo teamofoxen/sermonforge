@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-06-25 — Series Planner audit remediation — topical passage hardening + doc-drift fixes
+
+- Extracted topical passage composition to `src/utils/topicalPassage.js` and fixed three flaws: picking a book no longer doubles a mismatched legacy book name, name-stripping respects word boundaries ("Jobs"≠"Job"), and a malformed chapter:verse is caught — 19 new unit tests.
+- Topical sermon rows now show an inline "Couldn't read" hint for an unparseable chapter:verse (the Coverage panel that flags this is hidden for topical).
+- Rewrote `docs/SYSTEMS/series-planner.md` for both Book and Topical modes, the sermon-grained Arc / "What I've Preached" reach, and schema v32.
+- Stamped charter Ruling 6 superseded (per-sermon `book_id` + sermon-grained Arc shipped) with a reciprocal pointer from the Coverage charter.
+- Corrected stale `sort_order`/ordering notes in `ipc-channels.md`, `schema.md`, and the `main.js` v30 comment; refreshed `Arc.jsx`. Verified: eslint 0, 274 tests, sweep + drift PASS.
+
+---
+
 ## 2026-06-25 — Coverage Initiative Phase 4 — the "What I've Preached" two-lens home
 
 - New "What I've Preached" home (the renamed Series Arc sidebar entry) holds two lenses behind tabs: "By book" and "By topic".

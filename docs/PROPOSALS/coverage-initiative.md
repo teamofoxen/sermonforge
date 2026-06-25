@@ -61,7 +61,12 @@ him.
 - **Structured per-sermon book:** topical sermon rows get a real Book picker (reuse
   `BookSelect.jsx`) + a chapter:verse field, **composing** the display passage
   ("Genesis" + "12:1-3" → "Genesis 12:1-3") so `book_id` and the passage string
-  **can't disagree** (no dual source of truth).
+  **can't disagree** (no dual source of truth). **This reverses
+  [`series-planner-revival-charter.md`](series-planner-revival-charter.md)
+  Ruling 6** ("per-sermon book = free text for v1; structured deferred"): both
+  fragilities it cited are resolved — the dual source by composition (here,
+  `src/utils/topicalPassage.js`), and the per-*series* Arc by the sermon-grained
+  rework above. Ruling 6 is stamped superseded in that charter.
 - **Naming (RESOLVED 2026-06-25):** the home is **"What I've Preached"** (pastor-
   decided). "Coverage" was rejected — it collides with the existing per-book
   `CoveragePanel` (% of one book, on the Schedule) and Planning's "Biblical
