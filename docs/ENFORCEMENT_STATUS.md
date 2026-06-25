@@ -1,6 +1,6 @@
 # Enforcement Status
 
-**Last verified:** 2026-06-22 — Series Planner four-movement re-leveling: `melodic_evidence` added to `SERIES_COLUMNS` across all three mirrors (contracts.ts / contracts.cjs / test-spine — allowlist-sync test still gates); schema v26 (additive column + run-once `book_structure`→`structural_outline` fold, `book_structure` retained as backup). Additive, no clause weakened; create-then-update preserved (INSERT not widened).
+**Last verified:** 2026-06-25 — Series Planner section-less-limbo fix: `create-sermon` (`validateAndCommit`) now auto-files a section-less in-series sermon into the series' first section (schema v29 heals existing rows). No clause weakened — State #3's nameless-atom rejection runs first and is unchanged; the change strengthens the Series-Planner no-limbo data-model invariant; the column allowlists are untouched (no new writable columns).
 **Verified against:** [`docs/CORE.md`](CORE.md).
 **History:** see `git log docs/ENFORCEMENT_STATUS.md` and [`CHANGELOG.md`](../CHANGELOG.md). Per-event narrative is intentionally not duplicated here.
 

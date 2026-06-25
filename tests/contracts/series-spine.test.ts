@@ -150,6 +150,50 @@ describe("Series spine: create / cascade / counts / ordering", () => {
     expect(after.overview).toMatch(/central figure/);
   });
 
+  // v29 — no "in a series but in no section" limbo on the CREATE path. The New
+  // Sermon modal sets series_id (auto-selecting the lone in-progress series) but
+  // never section_id; without auto-filing, such a sermon is invisible in the
+  // Outline (which only buckets sermons with a section_id) though it shows in the
+  // Schedule + study guide. create-sermon now files it under a section.
+  it("create-sermon auto-files a section-less in-series sermon under the series' first section", async () => {
+    const seriesId = await mkSeries("Luke");
+    const firstR = await spine()("create-section", { series_id: seriesId, sort_order: 0, title: "Part one" });
+    await spine()("create-section", { series_id: seriesId, sort_order: 1, title: "Part two" });
+    // No section_id passed — the modal's exact shape.
+    const sermonId = await mkSermon({ name: "Through Luke's eyes", series_id: seriesId });
+    const row = await spine()("get-sermon", sermonId);
+    expect(row.section_id).toBe(firstR.value.id); // first by sort_order, not the second section
+  });
+
+  it("create-sermon auto-creates 'Section 1' when a section-less in-series sermon's series has no sections yet", async () => {
+    const seriesId = await mkSeries("Jonah");
+    expect((await spine()("get-sections-by-series", seriesId)).length).toBe(0);
+    const sermonId = await mkSermon({ name: "Running from God", series_id: seriesId });
+    const secs: any[] = await spine()("get-sections-by-series", seriesId);
+    expect(secs.length).toBe(1);
+    expect(secs[0].title).toBe("Section 1");
+    const row = await spine()("get-sermon", sermonId);
+    expect(row.section_id).toBe(secs[0].id);
+  });
+
+  it("create-sermon respects an explicit section_id (planner draft/commit path) and never auto-creates a section", async () => {
+    const seriesId = await mkSeries("Acts");
+    const secR = await spine()("create-section", { series_id: seriesId, sort_order: 0, title: "Only section" });
+    const sermonId = await mkSermon({ name: "Pentecost", series_id: seriesId, section_id: secR.value.id });
+    const row = await spine()("get-sermon", sermonId);
+    expect(row.section_id).toBe(secR.value.id);
+    expect((await spine()("get-sections-by-series", seriesId)).length).toBe(1); // no spurious second section
+  });
+
+  it("create-sermon leaves a standalone (no-series) sermon section-less and spawns no section", async () => {
+    const decoy = await mkSeries("Decoy"); // a series exists but is not referenced
+    const sermonId = await mkSermon({ name: "One-off", is_one_off: 1 }); // no series_id
+    const row = await spine()("get-sermon", sermonId);
+    expect(row.series_id == null).toBe(true);
+    expect(row.section_id == null).toBe(true);
+    expect((await spine()("get-sections-by-series", decoy)).length).toBe(0);
+  });
+
   it("guide-local study_guide_extras persists on the sermon and is not written by create-sermon", async () => {
     const seriesId = await mkSeries("Luke");
     const id = await mkSermon({ name: "Through the eyes of Mary", series_id: seriesId });

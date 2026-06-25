@@ -252,6 +252,26 @@ function applyStructuredUpdate(row: Row, field: string, update: any): string | {
   return rejection("STATE_5_BAD_OP", "State #5", `Unknown structured op: ${update.op}`);
 }
 
+// Mirror of main.js firstSectionIdForSeries: the no-"section-less limbo"
+// invariant — a section-less in-series sermon lands in the series' first section
+// (by sort_order, then created_at), auto-creating "Section 1" when it has none.
+function firstSectionIdForSeries(seriesId: string): string {
+  const existing = [...sections.values()]
+    .filter((s) => s.series_id === seriesId)
+    .sort(
+      (a, b) =>
+        (a.sort_order || 0) - (b.sort_order || 0) ||
+        (a.created_at || "").localeCompare(b.created_at || ""),
+    )[0];
+  if (existing) return existing.id;
+  const id = randomUUID();
+  sections.set(id, {
+    id, series_id: seriesId, title: "Section 1", passage_range: "", big_idea: "", overview: "",
+    sort_order: 0, created_at: new Date().toISOString(),
+  });
+  return id;
+}
+
 // ── validateAndCommit (mirrors main.js) ──────────────────────────────────────
 
 function validateAndCommit(op: string, payload: any) {
@@ -263,8 +283,17 @@ function validateAndCommit(op: string, payload: any) {
           "State Contract #3 violation: no anonymous atoms — a sermon must have a name.");
       }
       const id = randomUUID();
+      const seriesId = payload.series_id || null;
+      let sectionId = payload.section_id || null;
+      // No "in a series but in no section" limbo (mirrors main.js create-sermon):
+      // a section-less in-series sermon is auto-filed under the series' first
+      // section, auto-creating "Section 1" when it has none. Guarded on the
+      // series existing so a stale series_id can't spawn an orphan section.
+      if (seriesId && !sectionId && series.has(seriesId)) {
+        sectionId = firstSectionIdForSeries(seriesId);
+      }
       sermons.set(id, {
-        id, series_id: payload.series_id || null, section_id: payload.section_id || null,
+        id, series_id: seriesId, section_id: sectionId,
         is_one_off: payload.is_one_off ? 1 : 0, title: name,
         passage: payload.passage || "", date: payload.date || "", preacher: payload.preacher || "",
         stage: SERMON_STATUS.InProgress,
@@ -353,9 +382,28 @@ function validateAndCommit(op: string, payload: any) {
       return success();
     }
     case "delete-section": {
-      // Cascade: null out sermons.section_id pointing at this section.
+      // Cascade mirrors production (no section-less limbo): the deleted section's
+      // sermons move to the first remaining same-series section (by sort_order,
+      // then created_at); if it was the LAST section they leave the series
+      // (series_id + section_id nulled), like delete-series.
+      const sec = sections.get(payload);
+      const delSeriesId = sec?.series_id ?? null;
+      const remaining = delSeriesId
+        ? [...sections.values()]
+            .filter((s) => s.series_id === delSeriesId && s.id !== payload)
+            .sort((a, b) =>
+              (a.sort_order ?? 0) - (b.sort_order ?? 0) ||
+              (a.created_at || "").localeCompare(b.created_at || ""))[0]
+        : null;
       for (const sermon of sermons.values()) {
-        if (sermon.section_id === payload) sermon.section_id = null;
+        if (sermon.section_id === payload) {
+          if (remaining) {
+            sermon.section_id = remaining.id;
+          } else {
+            sermon.series_id = null;
+            sermon.section_id = null;
+          }
+        }
       }
       sections.delete(payload);
       return success();
@@ -545,10 +593,7 @@ function spineRead(op: string, payload: any): any {
       return [...sermons.values()]
         .filter((s) => s.series_id === payload && !s.deleted_at)
         .sort(compareBySeriesOrder)
-        .map((s) => {
-          const sec = s.section_id ? sections.get(s.section_id) : null;
-          return { ...s, section_title: sec?.title || null };
-        });
+        .map((s) => ({ ...s }));
     case "get-series-sermon-counts": {
       const counts: Record<string, number> = {};
       for (const s of sermons.values()) {

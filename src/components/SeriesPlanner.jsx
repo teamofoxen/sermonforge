@@ -423,6 +423,7 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
             onSectionsChange={setSections}
             onSermonsChange={setSermons}
             onOpenSermon={onOpenSermon}
+            onSyncEndDate={syncSeriesEndDate}
             runSave={runSave}
           />
         )}
@@ -585,7 +586,7 @@ function formatPacingDate(iso) {
 function OutlineTab({
   series, sections, sermons, seriesId,
   onSeriesField, onSelectBook, onSectionField, onSermonField,
-  onSectionsChange, onSermonsChange, onOpenSermon, runSave,
+  onSectionsChange, onSermonsChange, onOpenSermon, onSyncEndDate, runSave,
 }) {
   const [referenceOpen, setReferenceOpen] = useState(false);
   // Expanded section / sermon ids. Sections default expanded; sermons
@@ -595,6 +596,10 @@ function OutlineTab({
   // Draft sermons — UI-only rows not yet committed to the spine (State #3
   // forbids createSermon({name:""})). Keyed by their section_id grouping.
   const [drafts, setDrafts] = useState([]);
+  // Mirror the latest drafts for async commit re-reads (see commitDraft): the
+  // pastor can keep typing into a draft during its createSermon round-trip.
+  const draftsRef = useRef(drafts);
+  draftsRef.current = drafts;
   const [draftErrors, setDraftErrors] = useState({});
   const inFlightRef = useRef(new Map());
   const [justCreatedSectionId, setJustCreatedSectionId] = useState(null);
@@ -650,6 +655,10 @@ function OutlineTab({
       const [secs, serms] = await Promise.all([getSectionsBySeries(seriesId), getSermonsBySeries(seriesId)]);
       onSectionsChange(secs);
       onSermonsChange(serms);
+    } else if (!target) {
+      // Last section deleted — its sermons left the series (standalone), so the
+      // series end_date must recompute over what remains (usually nothing).
+      onSyncEndDate(sermons.filter((s) => s.section_id !== id));
     }
   }
   async function moveSection(id, direction) {
@@ -696,14 +705,19 @@ function OutlineTab({
           passage: draft.passage || "", date: draft.date || "", is_one_off: 0,
         });
         const newId = result.id;
+        // Re-read the draft as it stands NOW — the pastor may have kept typing big
+        // idea / overview / passage during the createSermon round-trip, so the
+        // snapshot taken before the await is stale. Persist + render the latest.
+        const latest = draftsRef.current.find((d) => d.id === draftId) || draft;
         const followUp = {};
-        if (draft.big_idea?.trim?.()) followUp.big_idea = draft.big_idea;
-        if (draft.overview?.trim?.()) followUp.overview = draft.overview;
+        if (latest.big_idea?.trim?.()) followUp.big_idea = latest.big_idea;
+        if (latest.overview?.trim?.()) followUp.overview = latest.overview;
+        if ((latest.passage || "") !== (draft.passage || "")) followUp.passage = latest.passage || "";
         if (Object.keys(followUp).length) await updateSermon(newId, followUp);
         const realSlot = {
           id: newId, series_id: draft.series_id, section_id: draft.section_id,
-          title: name, passage: draft.passage || "", date: draft.date || "",
-          big_idea: draft.big_idea || "", overview: draft.overview || "",
+          title: name, passage: latest.passage || "", date: latest.date || "",
+          big_idea: latest.big_idea || "", overview: latest.overview || "",
           stage: SERMON_STATUS.InProgress,
         };
         onSermonsChange((prev) => [...prev, realSlot]);
@@ -734,14 +748,20 @@ function OutlineTab({
   async function removeSermonRow(id) {
     if (isDraftId(id)) { setDrafts((prev) => prev.filter((s) => s.id !== id)); clearDraftError(id); return; }
     onSermonsChange((prev) => prev.filter((s) => s.id !== id));
-    await runSave(() => deleteSermon(id));
+    const ok = await runSave(() => deleteSermon(id));
+    // end_date mirrors the LAST dated unit — recompute once this one is gone, or
+    // deleting the latest-dated unit strands a phantom end date on the booklet/Arc.
+    if (ok) onSyncEndDate(sermons.filter((s) => s.id !== id));
   }
 
   // Group committed sermons + drafts by section. Drafts merge in so they render
   // in the right place; downstream tabs read `sermons` directly so drafts never
   // leak past the Outline. There is no section-less group: every series sermon
-  // lives under a section (the v28 migration + the add/delete flows guarantee
-  // it); a sermon with no series is standalone and lives in the library, not here.
+  // lives under a section (the v28/v29 migrations + the create/add/delete flows
+  // guarantee it — create-sermon auto-files a section-less in-series sermon under
+  // the series' first section, so the New Sermon modal can't hand the Outline an
+  // invisible row); a sermon with no series is standalone and lives in the
+  // library, not here.
   const allSermons = [...sermons, ...drafts];
   const bySection = {};
   for (const p of allSermons) {
@@ -1195,18 +1215,15 @@ function ScheduleTab({ series, sermons, calNotes, onSeriesField, onSermonDate, o
     });
   }
 
-  // Date writes go through the parent's single-source handler (persists the date
-  // AND re-mirrors series end_date). The Schedule is the only surface that dates.
-  function handleDate(sermonId, date) {
-    onSermonDate(sermonId, date);
-  }
-
+  // Date writes go through the parent's single-source onSermonDate handler, which
+  // persists the date AND re-mirrors series end_date. The Schedule is the only
+  // surface that dates.
   function skipSunday(sermonId) {
     const entry = sermons.find((s) => s.id === sermonId);
     if (!entry?.date) return;
     const d = new Date(entry.date + "T00:00:00");
     d.setDate(d.getDate() + 7);
-    handleDate(sermonId, toDateString(d));
+    onSermonDate(sermonId, toDateString(d));
   }
 
   // Suggest Sundays — one explicit bulk gesture. Writes every sermon's date in a
@@ -1214,6 +1231,10 @@ function ScheduleTab({ series, sermons, calNotes, onSeriesField, onSermonDate, o
   async function suggestSundays() {
     if (!series.start_date || sermons.length === 0) return;
     setSuggesting(true);
+    // Flush any pending debounced date edit first, or a date the pastor just typed
+    // could fire ~800ms later and revert this bulk assignment on that one row (the
+    // export path guards the same way before it reads the dates).
+    await runRegisteredFlushes();
     const sundays = getUpcomingSundays(series.start_date, sermons.length, excludeDates);
     const dated = sermons.map((s, i) => ({ ...s, date: sundays[i] || s.date || "" }));
     onSermonsChange(dated);
@@ -1301,7 +1322,7 @@ function ScheduleTab({ series, sermons, calNotes, onSeriesField, onSermonDate, o
                     <input
                       type="date" className="field-input" style={{ fontSize: "13px", padding: "6px 10px" }}
                       value={date}
-                      onChange={(e) => handleDate(sermon.id, e.target.value)}
+                      onChange={(e) => onSermonDate(sermon.id, e.target.value)}
                       aria-label={`Date for preaching unit ${idx + 1}`}
                     />
                     {note && <span style={{ fontSize: "11px", color: "var(--crimson)" }}>⚠ {note.label}</span>}
@@ -1459,20 +1480,17 @@ function StudyGuideTab({ series, sections, sermons, seriesId, onSermonExtras, on
           preview renders under the planner's page chrome which already names the
           series. The exported booklet adds the cover; everything else matches. */}
       <div style={{ marginTop: "16px", display: "flex", flexDirection: "column", gap: "16px" }}>
-        {/* Introduction */}
-        <div className="card">
-          <SgPartLabel>Introduction</SgPartLabel>
-          {(series.big_idea?.trim() || series.overview?.trim()) ? (
-            <>
-              {series.big_idea?.trim() && (
-                <p style={{ fontFamily: "var(--font-serif)", fontStyle: "italic", fontSize: "15px", color: "var(--ink)", margin: "0 0 10px", lineHeight: 1.6 }}>{series.big_idea}</p>
-              )}
-              {series.overview?.trim() && <SgBody text={series.overview} />}
-            </>
-          ) : (
-            <SgEmptyHint>Write the book's big idea and overview in <TextButton onClick={() => onNavigate?.("book-outline")} style={{ fontSize: "inherit", padding: 0, verticalAlign: "baseline" }}>Outline</TextButton>.</SgEmptyHint>
-          )}
-        </div>
+        {/* Introduction — gated on content to match the exported .docx, which omits
+            the Introduction part entirely when the book has no big idea/overview. */}
+        {(series.big_idea?.trim() || series.overview?.trim()) && (
+          <div className="card">
+            <SgPartLabel>Introduction</SgPartLabel>
+            {series.big_idea?.trim() && (
+              <p style={{ fontFamily: "var(--font-serif)", fontStyle: "italic", fontSize: "15px", color: "var(--ink)", margin: "0 0 10px", lineHeight: 1.6 }}>{series.big_idea}</p>
+            )}
+            {series.overview?.trim() && <SgBody text={series.overview} />}
+          </div>
+        )}
 
         {sermons.length === 0 && (
           <SgEmptyHint>Add sermons in <TextButton onClick={() => onNavigate?.("book-outline")} style={{ fontSize: "inherit", padding: 0, verticalAlign: "baseline" }}>Outline</TextButton> to build the booklet's pages.</SgEmptyHint>

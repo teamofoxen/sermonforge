@@ -134,10 +134,22 @@ pastor typed either before committing, `commitDraft` follows with an
 `updateSermon`. **`delete-section` keeps the no-limbo invariant:** its sermons
 move to the first remaining section of the series; if it was the last section
 they become **standalone** (`series_id` nulled, back to the library), the same
-release `delete-series` does. A **v28** migration normalized existing data once:
-section-less in-series sermons were placed into a first section (auto-creating
-"Section 1" where a series had none), and sermons whose `series_id` pointed at a
-deleted/missing series became standalone.
+release `delete-series` does. **`create-sermon` keeps it too:** a sermon created
+with a `series_id` but no `section_id` — exactly what `NewSermonModal` does when
+it auto-selects the lone in-progress series, reachable from the Calendar,
+Dashboard, library, and sidebar while planning — is auto-filed under that series'
+first section, auto-creating "Section 1" when the series has none. So the Outline
+can't be handed an in-series sermon it would silently drop, whichever surface
+created it. The auto-file is wrapped in a transaction with the sermon INSERT and
+guarded on the series actually existing (a stale `series_id` can't spawn an
+orphan section). A **v28** migration normalized existing data once: section-less
+in-series sermons were placed into a first section (auto-creating "Section 1"
+where a series had none), and sermons whose `series_id` pointed at a
+deleted/missing series became standalone. **v29** re-ran the same normalize to
+heal any limbo the pre-fix `create-sermon` path had already written (v28 is
+version-gated and does not re-run). The resolve-or-create-first-section step is
+shared by `create-sermon` and both migrations (`firstSectionIdForSeries` in
+`electron/main.js`).
 `onOpenSermon` takes just the sermon id — the planner stands alone for v1.
 
 ## 6. Study Guide export (`.docx`)

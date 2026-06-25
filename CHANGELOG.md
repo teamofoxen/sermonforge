@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-06-25 — Series Planner: close the NewSermonModal section-less limbo
+
+- `create-sermon` now auto-files a section-less in-series sermon into the series' first section (auto-creating "Section 1"), via a shared `firstSectionIdForSeries` helper wrapped in a transaction — so the New Sermon modal can no longer hand the Outline an invisible row, whichever surface created it.
+- Fixes the bug at the single data-layer chokepoint (reaching Calendar, Dashboard, library, and sidebar at once) rather than per-surface or with an Outline "Unsectioned" group, which would have contradicted the no-limbo canon.
+- Added **schema v29** — an idempotent re-run of the v28 normalize that heals any limbo already on disk (v28 is version-gated and won't re-run).
+- Mirrored the logic in the test-spine and added four contract tests (first-section file, auto-create "Section 1", explicit-section pass-through, standalone-no-spawn).
+- eslint 0, 239 tests, sweep PASS; allowlists untouched, no contract clause weakened.
+
+---
+
 ## 2026-06-25 — Series Planner audit remediation (mechanical fixes)
 
 - Corrected the "How this works" modal's Schedule copy, which still claimed dates "show on the Outline" — false since the outlining-only rebuild.

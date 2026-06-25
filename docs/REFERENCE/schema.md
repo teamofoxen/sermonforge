@@ -1,6 +1,6 @@
 # SermonForge — Database Schema Reference
 
-Current schema version: **28**
+Current schema version: **29**
 
 | Version | Bumped for |
 |---------|-----------|
@@ -19,6 +19,7 @@ Current schema version: **28**
 | v26 | Series Planner re-leveling — `melodic_evidence` (nullable JSON) on `series` for the "Hear the line" evidence worksheet; one-time fold of `book_structure` into `structural_outline` (run-once, version-gated). `book_structure` retained as a backup column, not dropped. |
 | v27 | Series Planner content-model rebuild — `big_idea` + `overview` (sermon-level unit) and `study_guide_extras` (nullable JSON: guide-local `{ additions, notesLines }`) on `sermons`; run-once version-gated fold of `study_guide_note` → `overview` where overview is empty. `study_guide_note` retired from the writable set but retained as a backup column. The book-study prompts (`redemptive_context`, `book_background`, `book_argument`), the folded `book_structure`, and the melodic-line worksheet fields (`series_motivation`, `emerging_big_idea`, `melodic_evidence`) were dropped from the writable allowlist (`SERIES_COLUMNS`); their columns are retained as backup. No columns dropped. |
 | v28 | Series Planner — no "in a series but in no section" limbo. **Data-only** (no DDL): section-less in-series sermons placed into the series' first section (auto-creating a `series_sections` "Section 1" where a series had none); sermons whose `series_id` points at a missing/deleted series set to standalone (`series_id` NULL). Run-once, version-gated. Column allowlists / `assertSchemaContract` untouched. |
+| v29 | Series Planner — re-heal the no-"section-less limbo" invariant. **Data-only** (no DDL), idempotent re-run of the v28 normalize: catches in-series sermons left section-less by the pre-fix `create-sermon` path (the New Sermon modal set `series_id` but never `section_id`), placing each into the series' first section (auto-creating "Section 1" where needed) or setting standalone where the series is missing. The `create-sermon` handler now enforces the invariant on write, so no new limbo is created. Column allowlists / `assertSchemaContract` untouched. |
 
 ---
 

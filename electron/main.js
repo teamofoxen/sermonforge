@@ -620,6 +620,27 @@ function safeAlter(sql) {
   }
 }
 
+// No "in a series but in no section" limbo: resolve the section a new (or
+// being-healed) in-series sermon should live under. Returns the series' first
+// section by outline order, auto-creating "Section 1" when the series has none
+// yet. Shared by the create-sermon handler and the v29 heal migration; mirrors
+// the inline v28 normalize + delete-section's first-remaining-section logic.
+// (Declared above runMigrations so both the migration and validateAndCommit can
+// call it; queryOne/dbRun/randomUUID are module-scoped.)
+function firstSectionIdForSeries(seriesId) {
+  const sec = queryOne(
+    "SELECT id FROM series_sections WHERE series_id = ? ORDER BY sort_order ASC, created_at ASC LIMIT 1",
+    [seriesId],
+  );
+  if (sec) return sec.id;
+  const sectionId = randomUUID();
+  dbRun(
+    "INSERT INTO series_sections (id, series_id, title, passage_range, big_idea, overview, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)",
+    [sectionId, seriesId, "Section 1", "", "", "", 0],
+  );
+  return sectionId;
+}
+
 function runMigrations() {
   dbRun(`CREATE TABLE IF NOT EXISTS meta (
     key TEXT PRIMARY KEY,
@@ -1219,6 +1240,12 @@ function runMigrations() {
     //     (a dangling reference) → standalone (series_id NULL).
     // Data-only (no DDL), so the column allowlists / assertSchemaContract are
     // untouched.
+    // NOTE: the resolve-or-create-"Section 1" logic below predates the shared
+    // `firstSectionIdForSeries` helper (added with v29) and is left inline on
+    // purpose — this is shipped, version-gated migration code and must not be
+    // functionally rewritten. The duplication is deliberate, but the
+    // `series_sections` INSERT column list here MUST stay in sync with the
+    // helper's if that table's shape ever changes.
     const v28limbo = queryAll(
       "SELECT id, series_id FROM sermons WHERE series_id IS NOT NULL AND section_id IS NULL AND deleted_at IS NULL"
     );
@@ -1250,6 +1277,31 @@ function runMigrations() {
     }
     dbRun("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '28')");
     version = 28;
+  }
+
+  if (version < 29) {
+    // v29 (Series Planner) — re-heal the no-"section-less limbo" invariant.
+    // v28 normalized once and is version-gated, but the create-sermon path did
+    // NOT enforce the invariant until this build: a sermon created under a
+    // series via the New Sermon modal (which auto-selects the lone in-progress
+    // series) got series_id but no section_id, so it was invisible in the
+    // Outline though it surfaced in the Schedule + study guide. This is an
+    // idempotent re-run of the v28 normalize to catch any such rows already on
+    // disk; the create-sermon handler now prevents new ones. Data-only (no DDL),
+    // column allowlists / assertSchemaContract untouched.
+    const v29limbo = queryAll(
+      "SELECT id, series_id FROM sermons WHERE series_id IS NOT NULL AND section_id IS NULL AND deleted_at IS NULL"
+    );
+    for (const row of v29limbo) {
+      const seriesExists = queryOne("SELECT id FROM series WHERE id = ?", [row.series_id]);
+      if (!seriesExists) {
+        dbRun("UPDATE sermons SET series_id = NULL WHERE id = ?", [row.id]);
+        continue;
+      }
+      dbRun("UPDATE sermons SET section_id = ? WHERE id = ?", [firstSectionIdForSeries(row.series_id), row.id]);
+    }
+    dbRun("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '29')");
+    version = 29;
   }
 
   // True when at least one block actually ran. Lets initDatabase skip the
@@ -1999,7 +2051,7 @@ function spineRead(op, payload) {
       // dated. Keep this ORDER BY in lockstep with computeParentContext and
       // the study-guide export query.
       return queryAll(
-        `SELECT s.*, ss.title as section_title FROM sermons s
+        `SELECT s.* FROM sermons s
          LEFT JOIN series_sections ss ON s.section_id = ss.id
          WHERE s.series_id = ? AND s.deleted_at IS NULL
          ${seriesSermonOrderBy("s.", "ss.sort_order")}`,
@@ -2094,28 +2146,51 @@ function validateAndCommit(op, payload) {
         );
       }
       const id = randomUUID();
+      const seriesId = payload.series_id || null;
+      let sectionId = payload.section_id || null;
       // Canonical position is (current_stage, current_sub_phase). current_step
       // was retired in the trail deletion sweep (Phase B2).
-      dbRun(
-        `INSERT INTO sermons
-           (id, series_id, section_id, is_one_off, title, passage, date, preacher,
-            stage, mpt, mps, observations, outline, manuscript,
-            current_stage, current_sub_phase)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, '', '', '', '[]', '', ?, ?)`,
-        [
-          id,
-          payload.series_id || null,
-          payload.section_id || null,
-          payload.is_one_off ? 1 : 0,
-          name,
-          payload.passage || "",
-          payload.date || "",
-          payload.preacher || "",
-          SERMON_STATUS.InProgress,
-          STAGE.Study,
-          SUB_PHASE.Observe,
-        ],
-      );
+      dbRun("BEGIN");
+      try {
+        // No "in a series but in no section" limbo: a sermon created under a
+        // series must land in a section, or it is invisible in the Outline
+        // (which only buckets sermons that have one). The New Sermon modal sets
+        // series_id (auto-selecting the lone in-progress series) but never
+        // section_id, so without this it manufactured exactly that limbo from
+        // the Calendar / Dashboard / library / sidebar. File it under the
+        // series' first section, auto-creating "Section 1" where the series has
+        // none — mirrors the v28/v29 normalize + delete-section's reattach. The
+        // planner's own draft/commit already passes section_id, so this only
+        // fires for the section-less create paths. Guarded on the series
+        // actually existing so a stale series_id can't spawn an orphan section.
+        if (seriesId && !sectionId && queryOne("SELECT id FROM series WHERE id = ?", [seriesId])) {
+          sectionId = firstSectionIdForSeries(seriesId);
+        }
+        dbRun(
+          `INSERT INTO sermons
+             (id, series_id, section_id, is_one_off, title, passage, date, preacher,
+              stage, mpt, mps, observations, outline, manuscript,
+              current_stage, current_sub_phase)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, '', '', '', '[]', '', ?, ?)`,
+          [
+            id,
+            seriesId,
+            sectionId,
+            payload.is_one_off ? 1 : 0,
+            name,
+            payload.passage || "",
+            payload.date || "",
+            payload.preacher || "",
+            SERMON_STATUS.InProgress,
+            STAGE.Study,
+            SUB_PHASE.Observe,
+          ],
+        );
+        dbRun("COMMIT");
+      } catch (e) {
+        dbRun("ROLLBACK");
+        throw e;
+      }
       indexSermonFts(id);
       return success({ id });
     }
