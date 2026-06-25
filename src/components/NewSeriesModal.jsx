@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { createSeries, updateSeries } from "../core/spine";
-import { BOOKS, GENRES, bookById, bookSpan } from "../data/canonicalBooks";
+import { bookById, bookSpan } from "../data/canonicalBooks";
+import BookSelect from "./BookSelect";
 import mapError from "../utils/mapError";
 import { useModalA11y } from "../utils/useModalA11y";
 import InlineError from "./InlineError";
@@ -79,22 +80,7 @@ export default function NewSeriesModal({ onClose, onCreated }) {
         <div className="modal-body">
           <div className="field-group">
             <label className="field-label" htmlFor="new-series-book">Book</label>
-            <select
-              id="new-series-book"
-              className="field-input"
-              value={bookId}
-              onChange={(e) => setBookId(e.target.value)}
-              autoFocus
-            >
-              <option value="">— Select book —</option>
-              {Object.entries(GENRES).map(([genreKey, genreLabel]) => (
-                <optgroup key={genreKey} label={genreLabel}>
-                  {BOOKS.filter((b) => b.genre === genreKey).map((b) => (
-                    <option key={b.id} value={b.id}>{b.name}</option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
+            <BookSelect id="new-series-book" value={bookId} onChange={(e) => setBookId(e.target.value)} autoFocus />
             <p className="field-caption">
               The book you're preaching through — sets the genre and passage span, both editable later.
               Preaching a theme across several books? Leave this blank and name the series below.

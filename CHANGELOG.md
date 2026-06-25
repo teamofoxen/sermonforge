@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-06-25 — Series Planner: shared BookSelect + reuse formatDate (cleanup)
+
+- Extracted a shared `BookSelect` component so the genre-grouped book picker's option list lives once, used by both the New Series modal and the Outline's Book details (was duplicated by this session's book-first work).
+- Replaced the New Sermon modal's local date formatter with the shared, timezone-safe `formatDate` from utils.
+- Behavior-preserving refactor (net −30 lines); no schema, IPC, or UI change.
+- eslint 0, 239 tests, sweep PASS, preview verified (Outline picker renders identically — 67 options / 7 genre groups — no console errors).
+
+---
+
 ## 2026-06-25 — Series Planner: connect the planner to per-sermon prep
 
 - The New Sermon modal ("Build a sermon") now has two modes: a standalone sermon (title/passage/date), and "From a series" — pick a series and open one of its planned sermons straight into prep.

@@ -16,7 +16,8 @@ import { getSeasonForDate, getUpcomingSundays, addWeek } from "../utils/churchCa
 import { computePacing } from "../utils/pacing";
 import { computeCoverage } from "../utils/coverage";
 import { buildStudyGuideModel } from "../utils/studyGuideModel";
-import { BOOKS, GENRES, bookById, bookSpan } from "../data/canonicalBooks";
+import { GENRES, bookById, bookSpan } from "../data/canonicalBooks";
+import BookSelect from "./BookSelect";
 import { formatDate, autoResize, parseLocalDate } from "../utils";
 import { buttonKeydown } from "../utils/buttonKeydown";
 import DeleteButton from "./DeleteButton";
@@ -812,16 +813,7 @@ function OutlineTab({
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
             <div className="field-group" style={{ marginBottom: 0 }}>
               <label className="field-label" htmlFor="outline-book">Book</label>
-              <select id="outline-book" className="field-input" value={series.book_id || ""} onChange={(e) => onSelectBook(e.target.value)}>
-                <option value="">— Select book —</option>
-                {Object.entries(GENRES).map(([genreKey, genreLabel]) => (
-                  <optgroup key={genreKey} label={genreLabel}>
-                    {BOOKS.filter((b) => b.genre === genreKey).map((b) => (
-                      <option key={b.id} value={b.id}>{b.name}</option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
+              <BookSelect id="outline-book" value={series.book_id || ""} onChange={(e) => onSelectBook(e.target.value)} />
               <div style={{ fontSize: "12px", color: "var(--ink-ghost)", marginTop: "6px" }}>
                 Sets the genre and fills the passage span; both stay editable.
               </div>

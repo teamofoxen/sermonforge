@@ -3,20 +3,12 @@ import { createSermon, getAllSeries, getSermonsBySeries } from "../core/spine";
 import mapError from "../utils/mapError";
 import { useModalA11y } from "../utils/useModalA11y";
 import { buttonKeydown } from "../utils/buttonKeydown";
+import { formatDate } from "../utils";
 import InlineError from "./InlineError";
 import { SERIES_STATUS } from "../core/contracts";
 import PrimaryButton from "./primitives/PrimaryButton";
 import SecondaryButton from "./primitives/SecondaryButton";
 import IconButton from "./primitives/IconButton";
-
-// Readable date for a planned unit row (no Date object, no new dependency).
-function shortDate(iso) {
-  if (!iso) return "Undated";
-  const [y, m, d] = String(iso).split("-");
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const label = months[Number(m) - 1];
-  return label ? `${label} ${Number(d)}, ${y}` : iso;
-}
 
 // Two ways to start work on a sermon:
 //  • "standalone" — forge a brand-new one-off sermon (title / passage / date).
@@ -223,7 +215,7 @@ export default function NewSermonModal({ onClose, onCreated, initialDate = "" })
                               {u.title || "Untitled"}
                             </span>
                             <span style={{ fontSize: "12px", color: "var(--ink-ghost)", whiteSpace: "nowrap" }}>
-                              {shortDate(u.date)}
+                              {u.date ? formatDate(u.date) : "Undated"}
                             </span>
                           </div>
                         ))}
