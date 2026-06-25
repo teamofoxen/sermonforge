@@ -49,18 +49,6 @@ const CANON_OPTIONS = [
   ...Object.entries(GENRES).map(([value, label]) => ({ value, label })),
 ];
 
-const COLOR_OPTIONS = [
-  { value: "gold", label: "Gold" },
-  { value: "crimson", label: "Crimson" },
-  { value: "sage", label: "Sage" },
-  { value: "slate", label: "Slate" },
-];
-
-const STATUS_OPTIONS = [
-  { value: SERIES_STATUS.InProgress, label: SERIES_STATUS_LABELS[SERIES_STATUS.InProgress] },
-  { value: SERIES_STATUS.Complete,   label: SERIES_STATUS_LABELS[SERIES_STATUS.Complete] },
-];
-
 // Study-guide page "additions" — pastor-authored extras stored guide-local on
 // the sermon (study_guide_extras JSON). Adding a 4th type is ONE entry here.
 const ADDITION_TYPES = [
@@ -112,10 +100,6 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
   const [loading, setLoading]   = useState(!_fixture);
   const [loadError, setLoadError] = useState(false);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
-  // When the pastor taps "Schedule" on an Outline sermon, remember which one so
-  // the Schedule screen can scroll to it and flash it — the two screens share one
-  // date field, so the jump lands on the row that owns it.
-  const [scheduleFocusId, setScheduleFocusId] = useState(null);
   // The last failed save's mutation thunk, so the topbar Retry re-runs the real
   // write instead of an empty no-op.
   const lastFailedRef = useRef(null);
@@ -155,13 +139,6 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
   function handleTabChange(tabId) {
     setActiveTab(tabId);
     localStorage.setItem(`sermonforge_planner_tab_${seriesId}`, tabId);
-  }
-
-  // Jump from a sermon to its Schedule row (the "Schedule" button on the
-  // Outline). Remembers the sermon so ScheduleTab can scroll to + flash it.
-  function goToSchedule(sermonId) {
-    setScheduleFocusId(sermonId || null);
-    handleTabChange("schedule");
   }
 
   async function load() {
@@ -443,12 +420,10 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
             onSelectBook={handleSelectBook}
             onSectionField={handleSectionField}
             onSermonField={handleSermonField}
-            onSermonDate={handleSermonDate}
             onSectionsChange={setSections}
             onSermonsChange={setSermons}
             onOpenSermon={onOpenSermon}
             onNavigate={handleTabChange}
-            onGoToSchedule={goToSchedule}
             runSave={runSave}
           />
         )}
@@ -463,8 +438,6 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
             onSyncEndDate={syncSeriesEndDate}
             onSermonsChange={setSermons}
             onNavigate={handleTabChange}
-            focusId={scheduleFocusId}
-            onFocusConsumed={() => setScheduleFocusId(null)}
             runSave={runSave}
           />
         )}
@@ -503,7 +476,7 @@ function CoverageBar({ percent, animate = false }) {
 // proportional bar + plain notes on gaps, overlaps, out-of-order slots, and any
 // unreadable passage refs. Purely informational (src/utils/coverage.js) — never
 // a gate. Clamped to the declared passage_range when it parses.
-function CoveragePanel({ series, sermons }) {
+function CoveragePanel({ series, sermons, onNavigate }) {
   const cov = computeCoverage(series?.book_id, sermons, series?.passage_range);
   const book = bookById(series?.book_id);
 
@@ -514,7 +487,9 @@ function CoveragePanel({ series, sermons }) {
         background: "var(--parchment-warm)", border: "1px dashed var(--parchment-deep)",
         borderRadius: "var(--radius)", fontSize: "12.5px", color: "var(--ink-ghost)",
       }}>
-        Pick a canonical book in <strong>Book details</strong> above to see how your sermons cover it.
+        Pick a canonical book in <strong>Book details</strong> on the{" "}
+        <TextButton onClick={() => onNavigate?.("book-outline")} style={{ fontSize: "inherit", padding: 0, verticalAlign: "baseline" }}>Outline</TextButton>{" "}
+        to see how your preaching units cover it.
       </div>
     );
   }
@@ -611,8 +586,8 @@ function formatPacingDate(iso) {
 // throws on an empty name, State #3). AI-free throughout.
 function OutlineTab({
   series, sections, sermons, seriesId,
-  onSeriesField, onSelectBook, onSectionField, onSermonField, onSermonDate,
-  onSectionsChange, onSermonsChange, onOpenSermon, onNavigate, onGoToSchedule, runSave,
+  onSeriesField, onSelectBook, onSectionField, onSermonField,
+  onSectionsChange, onSermonsChange, onOpenSermon, onNavigate, runSave,
 }) {
   const [referenceOpen, setReferenceOpen] = useState(false);
   // Expanded section / sermon ids. Sections default expanded; sermons
@@ -700,25 +675,6 @@ function OutlineTab({
     }]);
     setExpandedSermons((prev) => new Set(prev).add(id));
   }
-  // The series-level "Add sermon" (when there are no sections yet) — there is no
-  // section-less limbo, so ensure a section exists first (auto-create "Section 1"
-  // you can rename), then add the sermon under it.
-  async function addSermonInNewSection() {
-    let sectionId = [...sections].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))[0]?.id;
-    if (!sectionId) {
-      const ok = await runSave(async () => {
-        const result = await createSection({ series_id: seriesId, title: "Section 1", sort_order: 0 });
-        const updated = await getSectionsBySeries(seriesId);
-        onSectionsChange(updated);
-        if (result?.id) {
-          setCollapsedSections((prev) => { const n = new Set(prev); n.delete(result.id); return n; });
-          sectionId = result.id;
-        }
-      });
-      if (!ok || !sectionId) return;
-    }
-    addSermon(sectionId);
-  }
   function clearDraftError(id) {
     setDraftErrors((prev) => {
       if (!(id in prev)) return prev;
@@ -775,10 +731,6 @@ function OutlineTab({
       setDrafts((prev) => prev.map((s) => (s.id === id ? { ...s, [field]: value } : s)));
       return;
     }
-    // Date is single-source AND drives the series end_date — route it through the
-    // shared date handler so an Outline date edit recomputes end_date too (the
-    // Schedule screen used to be the only surface that did).
-    if (field === "date") { onSermonDate(id, value); return; }
     onSermonField(id, { [field]: value });
   }
   async function removeSermonRow(id) {
@@ -803,7 +755,7 @@ function OutlineTab({
       <div className="page-header" style={{ padding: "0 0 4px" }}>
         <div className="page-title">Outline</div>
         <div className="page-subtitle">
-          Plan the book from the top down in three levels — the book, its sections, and the sermons inside them.
+          Plan the book from the top down in three levels — the book, its sections, and the preaching units inside them.
           Each level holds the same three things: a title and passage range, a one-line big idea, and a short overview.
         </div>
       </div>
@@ -860,40 +812,6 @@ function OutlineTab({
               <label className="field-label" htmlFor="outline-range">Passage Range</label>
               <input id="outline-range" className="field-input" style={{ fontFamily: "var(--font-mono)" }} value={series.passage_range || ""} onChange={(e) => onSeriesField("passage_range", e.target.value)} placeholder="e.g. Luke 1:1–24:53" />
             </div>
-            <div className="field-group" style={{ marginBottom: 0 }}>
-              <label className="field-label" htmlFor="outline-desc">Short Description</label>
-              <input id="outline-desc" className="field-input" value={series.description || ""} onChange={(e) => onSeriesField("description", e.target.value)} placeholder="A tagline for the congregation or your own notes…" />
-            </div>
-            <div className="field-group" style={{ marginBottom: 0 }}>
-              <label className="field-label" htmlFor="outline-color">Color</label>
-              <select id="outline-color" className="field-input" value={series.color || "gold"} onChange={(e) => onSeriesField("color", e.target.value)}>
-                {COLOR_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 80px", gap: "12px" }}>
-              <div className="field-group" style={{ marginBottom: 0 }}>
-                <label className="field-label" htmlFor="outline-status">Status</label>
-                <select id="outline-status" className="field-input" value={series.status || SERIES_STATUS.InProgress} onChange={(e) => onSeriesField("status", e.target.value)}>
-                  {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                </select>
-              </div>
-              <div className="field-group" style={{ marginBottom: 0 }}>
-                <label className="field-label" htmlFor="outline-year">Year</label>
-                <input
-                  id="outline-year" type="number" className="field-input" value={series.year ?? ""}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    if (v === "") { onSeriesField("year", null); return; }
-                    const n = parseInt(v, 10);
-                    if (!Number.isNaN(n)) onSeriesField("year", n);
-                  }}
-                  min="2000" max="2100"
-                />
-              </div>
-            </div>
-          </div>
-          <div style={{ marginTop: "16px" }}>
-            <CoveragePanel series={series} sermons={sermons} />
           </div>
         </div>
 
@@ -940,7 +858,7 @@ function OutlineTab({
       {/* ── SECTION LEVEL — the book's major movements ─────────────────────── */}
       <TierBand step={2} label="Section level">
         Divide the book into its major movements. Give each section a title and passage range, its one-line big idea,
-        and a short overview. Your sermons live inside these sections — that's the next level down.
+        and a short overview. Your preaching units live inside these sections — that's the next level down.
       </TierBand>
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
         {sections.map((section, idx) => (
@@ -965,21 +883,8 @@ function OutlineTab({
             draftErrors={draftErrors}
             onClearDraftError={clearDraftError}
             onOpenSermon={onOpenSermon}
-            onGoToSchedule={onGoToSchedule}
           />
         ))}
-
-        {/* No sections yet — every sermon lives under a section, so adding the
-            first sermon auto-creates "Section 1" (rename it later). A sermon with
-            no series is standalone and lives in the library, never here. */}
-        {sections.length === 0 && (
-          <div className="card" style={{ textAlign: "center", padding: "26px 24px" }}>
-            <p style={{ fontFamily: "var(--font-serif)", color: "var(--ink-soft)", fontSize: "14px", margin: "0 auto 14px", maxWidth: "520px", lineHeight: 1.55 }}>
-              No sermons yet. Add a sermon and we'll start a <strong>Section 1</strong> for it that you can rename — or add a section yourself first.
-            </p>
-            <SecondaryButton size="sm" onClick={addSermonInNewSection}>+ Add sermon</SecondaryButton>
-          </div>
-        )}
 
         <div>
           <SecondaryButton size="sm" onClick={addSection}>+ Add section</SecondaryButton>
@@ -1045,7 +950,7 @@ function SectionNode({
   section, index, total, collapsed, justCreated, sermons, expandedSermons,
   onToggle, onField, onDelete, onMove, onAddSermon, onToggleSermon,
   onSermonRowField, onCommitSermon, onDeleteSermon, draftErrors,
-  onClearDraftError, onOpenSermon, onGoToSchedule,
+  onClearDraftError, onOpenSermon,
 }) {
   const cardRef = useRef(null);
   const titleRef = useRef(null);
@@ -1124,15 +1029,15 @@ function SectionNode({
           <div style={{ borderTop: "1px solid var(--parchment-deep)", paddingTop: "12px", marginLeft: "12px", borderLeft: "2px solid var(--parchment-deep)", paddingLeft: "12px", display: "flex", flexDirection: "column", gap: "8px" }}>
             <div>
               <div style={{ fontFamily: "var(--font-mono)", fontSize: "11px", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--ink-soft)" }}>
-                Sermon level · sermons in this section
+                Sermon level · preaching units in this section
               </div>
               <p className="field-caption" style={{ margin: "2px 0 0" }}>
-                One sermon per passage. Each has its own title, big idea, overview, and date — open it to write it.
+                One preaching unit per passage — its working title, big idea, and overview. Date it on the Schedule; open it to write the sermon.
               </p>
             </div>
             {sermons.length === 0 && (
               <div style={{ padding: "12px", background: "var(--parchment-warm)", borderRadius: "var(--radius)", textAlign: "center", color: "var(--ink-ghost)", fontSize: "13px", fontFamily: "var(--font-serif)" }}>
-                No sermons in this section yet.
+                No preaching units in this section yet.
               </div>
             )}
             {sermons.map((p) => (
@@ -1147,10 +1052,9 @@ function SectionNode({
                 commitError={draftErrors[p.id]}
                 onClearError={onClearDraftError}
                 onOpenSermon={onOpenSermon}
-                onGoToSchedule={onGoToSchedule}
               />
             ))}
-            <SecondaryButton size="sm" onClick={onAddSermon} style={{ alignSelf: "flex-start", marginTop: "2px" }}>+ Add sermon</SecondaryButton>
+            <SecondaryButton size="sm" onClick={onAddSermon} style={{ alignSelf: "flex-start", marginTop: "2px" }}>+ Add preaching unit</SecondaryButton>
           </div>
         </div>
       )}
@@ -1159,10 +1063,11 @@ function SectionNode({
 }
 
 // ── Sermon node ─────────────────────────────────────────────────────────────
-// One sermon = one passage = one scheduled Sunday. Collapsed: passage · title ·
-// date chip · Schedule jump · Open. Expanded: passage · title · big idea ·
-// overview. Draft rows commit on title blur/Enter (State #3 deferral).
-function SermonNode({ sermon: p, expanded, onToggle, onField, onCommit, onDelete, commitError, onClearError, onOpenSermon, onGoToSchedule }) {
+// One preaching unit = one passage = one scheduled Sunday. The Outline is pure
+// outlining — no dates live here; scheduling is wholly the Schedule screen's.
+// Collapsed: passage · working title · Open. Expanded: passage · working title ·
+// big idea · overview. Draft rows commit on title blur/Enter (State #3 deferral).
+function SermonNode({ sermon: p, expanded, onToggle, onField, onCommit, onDelete, commitError, onClearError, onOpenSermon }) {
   const isDraft = !!p._draft;
   const rowRef = useRef(null);
   const titleRef = useRef(null);
@@ -1199,30 +1104,6 @@ function SermonNode({ sermon: p, expanded, onToggle, onField, onCommit, onDelete
         <span style={{ flex: 1, fontSize: "14px", color: p.title ? "var(--ink)" : "var(--ink-ghost)", fontStyle: p.title ? "normal" : "italic" }}>
           {p.title || "Untitled"}
         </span>
-        {/* Date chip — a read-only summary of the single-source sermon date.
-            It's editable here too (expanded, below) and on Schedule — the same
-            field on both surfaces, so they reflect each other live. */}
-        <span
-          style={{
-            fontFamily: "var(--font-mono)", fontSize: "11px", whiteSpace: "nowrap",
-            padding: "2px 8px", borderRadius: "10px",
-            background: p.date ? "var(--parchment-warm)" : "transparent",
-            border: "1px solid var(--parchment-deep)",
-            color: p.date ? "var(--ink-soft)" : "var(--ink-ghost)",
-          }}
-          title={p.date ? "Scheduled date" : "Not scheduled yet"}
-        >
-          {p.date ? formatDate(p.date) : "No date"}
-        </span>
-        {!isDraft && (
-          <TextButton
-            onClick={(e) => { e.stopPropagation(); onGoToSchedule?.(p.id); }}
-            style={{ fontSize: "11px" }}
-            title="Open this sermon on the Schedule screen"
-          >
-            Schedule
-          </TextButton>
-        )}
         {onOpenSermon && (
           <SecondaryButton
             size="sm"
@@ -1252,31 +1133,18 @@ function SermonNode({ sermon: p, expanded, onToggle, onField, onCommit, onDelete
               />
             </div>
             <div className="field-group" style={{ marginBottom: 0 }}>
-              <label className="field-label">Title</label>
+              <label className="field-label">Working title</label>
               <input
                 ref={titleRef} className="field-input" style={{ fontSize: "14px" }}
                 value={p.title || ""}
                 onChange={(e) => onField(p.id, "title", e.target.value)}
                 onBlur={() => { if (isDraft && p.title?.trim()) onCommit?.(p.id); }}
                 onKeyDown={(e) => { if (e.key === "Enter" && isDraft && p.title?.trim()) { e.preventDefault(); onCommit?.(p.id); } }}
-                placeholder="e.g. Through the Eyes of Luke"
+                placeholder="A rough handle for this passage — the big idea expands on it."
                 onClick={(e) => e.stopPropagation()}
               />
               {commitError && <div style={{ marginTop: "6px" }}><InlineError onDismiss={() => onClearError?.(p.id)}>{commitError}</InlineError></div>}
             </div>
-          </div>
-          {/* Date — the SAME single-source field the Schedule screen edits, so
-              the two surfaces reflect each other live. */}
-          <div className="field-group" style={{ marginBottom: 0 }}>
-            <label className="field-label">Date</label>
-            <input
-              type="date" className="field-input"
-              style={{ width: "auto", fontSize: "14px", padding: "8px 12px" }}
-              value={p.date || ""}
-              onChange={(e) => onField(p.id, "date", e.target.value)}
-              onClick={(e) => e.stopPropagation()}
-              aria-label="Scheduled date"
-            />
           </div>
           <div className="field-group" style={{ marginBottom: 0 }}>
             <label className="field-label">Big Idea</label>
@@ -1307,32 +1175,27 @@ function SermonNode({ sermon: p, expanded, onToggle, onField, onCommit, onDelete
 }
 
 // ── Schedule Tab ──────────────────────────────────────────────────────────────
-// Lays each sermon (sermon) on a Sunday. The date is SINGLE-SOURCE on the
-// sermon — edits here reflect live on the Outline date chip and vice versa
-// (no separate snapshot that can drift). Suggest Sundays is one explicit bulk
-// gesture; manual edits autosave like any other field. AI scheduling advisor
-// stays removed (no-direct-ai); the church-calendar engine is preserved verbatim.
-function ScheduleTab({ series, sermons, calNotes, onSeriesField, onSermonDate, onSyncEndDate, onSermonsChange, onNavigate, focusId, onFocusConsumed, runSave }) {
+// Lays each preaching unit on a Sunday. The date is SINGLE-SOURCE on the unit;
+// the Outline carries no dates at all, so this screen wholly owns scheduling.
+// Undated units arrive in outline reading order (section, then creation) from the
+// spine, so the pool — and Suggest Sundays' assignment — follows the book. Suggest
+// Sundays is one explicit bulk gesture; manual edits autosave like any other field.
+// Each row expands to show the unit's big idea + overview (read-only — edited on
+// the Outline). AI scheduling advisor stays removed (no-direct-ai); the
+// church-calendar engine is preserved verbatim.
+function ScheduleTab({ series, sermons, calNotes, onSeriesField, onSermonDate, onSyncEndDate, onSermonsChange, onNavigate, runSave }) {
   const [suggesting, setSuggesting] = useState(false);
   const excludeDates = calNotes.map((n) => n.date);
-  // Scroll-to + flash the row the pastor jumped to from the Outline's
-  // "Schedule" button. The flash fades; the focus id is consumed once.
-  const rowRefs = useRef(new Map());
-  const [flashId, setFlashId] = useState(null);
-  useEffect(() => {
-    if (!focusId) return;
-    const el = rowRefs.current.get(focusId);
-    if (!el) { onFocusConsumed?.(); return; }
-    el.scrollIntoView({ block: "center", behavior: "smooth" });
-    setFlashId(focusId);
-    // Consume the focus from INSIDE the timer, not immediately. Consuming now
-    // would flip focusId id→null, re-run this effect, and its cleanup would
-    // clearTimeout the fade timer mid-flash — leaving the gold ring stuck until
-    // the tab unmounts. Deferring the consume lets the ring actually fade at ~1.6s.
-    const t = setTimeout(() => { setFlashId(null); onFocusConsumed?.(); }, 1600);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusId]);
+  // Per-row expand — reveals the unit's big idea + overview. The Schedule row
+  // itself stays passage + date; the rest lives one click down.
+  const [expandedRows, setExpandedRows] = useState(() => new Set());
+  function toggleRow(id) {
+    setExpandedRows((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
 
   // Date writes go through the parent's single-source handler (persists the date
   // AND re-mirrors series end_date), shared with the Outline date field.
@@ -1366,8 +1229,8 @@ function ScheduleTab({ series, sermons, calNotes, onSeriesField, onSermonDate, o
       <div className="page-header" style={{ padding: "0 0 4px" }}>
         <div className="page-title">Schedule</div>
         <div className="page-subtitle">
-          Lay each sermon on a Sunday. Seasons and your special-date notes ride along so nothing lands where it shouldn't.
-          Dates are saved as you go and show on the Outline.
+          Lay each preaching unit on a Sunday. Seasons and your special-date notes ride along so nothing lands where it shouldn't.
+          Dates save as you go; expand any unit to see its big idea and overview.
         </div>
       </div>
 
@@ -1385,9 +1248,15 @@ function ScheduleTab({ series, sermons, calNotes, onSeriesField, onSermonDate, o
             />
           </div>
           <PrimaryButton size="sm" onClick={suggestSundays} disabled={!series.start_date || sermons.length === 0 || suggesting}>
-            {suggesting ? LOADING_VERB.Saving : `Suggest Sundays (${sermons.length} sermon${sermons.length === 1 ? "" : "s"})`}
+            {suggesting ? LOADING_VERB.Saving : `Suggest Sundays (${sermons.length} unit${sermons.length === 1 ? "" : "s"})`}
           </PrimaryButton>
         </div>
+      </div>
+
+      {/* Coverage moved here from the Outline — it measures how the units cover
+          the book, which is a scheduling-side readout, not outlining. */}
+      <div style={{ marginBottom: "20px" }}>
+        <CoveragePanel series={series} sermons={sermons} onNavigate={onNavigate} />
       </div>
 
       {sermons.length === 0 ? (
@@ -1395,7 +1264,7 @@ function ScheduleTab({ series, sermons, calNotes, onSeriesField, onSermonDate, o
           padding: "32px", background: "var(--parchment-warm)", border: "1px solid var(--parchment-deep)",
           borderRadius: "var(--radius-lg)", textAlign: "center", color: "var(--ink-ghost)", fontSize: "14px",
         }}>
-          Add sermons in{" "}
+          Add preaching units in{" "}
           <TextButton onClick={() => onNavigate?.("book-outline")} style={{ fontSize: "inherit", padding: 0, verticalAlign: "baseline" }}>Outline</TextButton>{" "}
           first.
         </div>
@@ -1405,59 +1274,96 @@ function ScheduleTab({ series, sermons, calNotes, onSeriesField, onSermonDate, o
             const date = sermon.date || "";
             const season = date ? getSeasonForDate(date) : null;
             const note = calNotes.find((n) => n.date === date);
-            const flashing = flashId === sermon.id;
+            const isOpen = expandedRows.has(sermon.id);
+            const hasDetail = !!(sermon.big_idea?.trim() || sermon.overview?.trim());
             return (
               <div
                 key={sermon.id}
-                ref={(el) => { if (el) rowRefs.current.set(sermon.id, el); else rowRefs.current.delete(sermon.id); }}
                 style={{
-                  display: "grid", gridTemplateColumns: "24px 1fr 1fr auto auto",
-                  alignItems: "center", gap: "14px", padding: "12px 16px",
                   background: "var(--white)",
-                  border: flashing ? "1px solid var(--gold)" : "1px solid var(--parchment-deep)",
-                  boxShadow: flashing ? "0 0 0 2px var(--gold-pale)" : "var(--shadow-soft)",
-                  borderRadius: "var(--radius-lg)", transition: "box-shadow 200ms, border-color 200ms",
+                  border: "1px solid var(--parchment-deep)",
+                  boxShadow: "var(--shadow-soft)",
+                  borderRadius: "var(--radius-lg)",
                 }}
               >
-                <span style={{ fontSize: "12px", color: "var(--ink-ghost)", textAlign: "center" }}>{idx + 1}</span>
-                <div>
-                  <div style={{ fontSize: "14px", color: "var(--ink)", fontFamily: "var(--font-serif)", lineHeight: "1.3" }}>
-                    {sermon.title || <span style={{ color: "var(--ink-ghost)", fontStyle: "italic" }}>Untitled</span>}
+                <div style={{
+                  display: "grid", gridTemplateColumns: "24px 1fr 1fr auto auto auto",
+                  alignItems: "center", gap: "14px", padding: "12px 16px",
+                }}>
+                  <span style={{ fontSize: "12px", color: "var(--ink-ghost)", textAlign: "center" }}>{idx + 1}</span>
+                  <div>
+                    <div style={{ fontSize: "14px", color: "var(--ink)", fontFamily: "var(--font-serif)", lineHeight: "1.3" }}>
+                      {sermon.title || <span style={{ color: "var(--ink-ghost)", fontStyle: "italic" }}>Untitled</span>}
+                    </div>
+                    {sermon.passage && (
+                      <div style={{ fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--ink-soft)", marginTop: "3px" }}>{sermon.passage}</div>
+                    )}
                   </div>
-                  {sermon.passage && (
-                    <div style={{ fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--ink-soft)", marginTop: "3px" }}>{sermon.passage}</div>
-                  )}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+                    <input
+                      type="date" className="field-input" style={{ fontSize: "13px", padding: "6px 10px" }}
+                      value={date}
+                      onChange={(e) => handleDate(sermon.id, e.target.value)}
+                      aria-label={`Date for preaching unit ${idx + 1}`}
+                    />
+                    {note && <span style={{ fontSize: "11px", color: "var(--crimson)" }}>⚠ {note.label}</span>}
+                  </div>
+                  <div>
+                    {season && (
+                      <span style={{
+                        fontSize: "11px", padding: "3px 9px", borderRadius: "10px",
+                        background: `color-mix(in srgb, var(${season.token}) 13%, transparent)`,
+                        color: `var(${season.token})`,
+                        border: `1px solid color-mix(in srgb, var(${season.token}) 28%, transparent)`,
+                        whiteSpace: "nowrap",
+                      }}>
+                        {season.shortName}
+                      </span>
+                    )}
+                  </div>
+                  <IconButton
+                    aria-label="Skip one week" className="btn-icon"
+                    onClick={() => skipSunday(sermon.id)}
+                    title="Skip one week" disabled={!date}
+                    style={{ fontSize: "12px", padding: "5px 9px" }}
+                  >
+                    +1wk
+                  </IconButton>
+                  <IconButton
+                    aria-label={isOpen ? "Hide big idea and overview" : "Show big idea and overview"}
+                    className="btn-icon"
+                    onClick={() => toggleRow(sermon.id)}
+                    title={isOpen ? "Hide big idea & overview" : "Show big idea & overview"}
+                    style={{ fontSize: "12px", padding: "5px 9px" }}
+                  >
+                    {isOpen ? "▲" : "▼"}
+                  </IconButton>
                 </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-                  <input
-                    type="date" className="field-input" style={{ fontSize: "13px", padding: "6px 10px" }}
-                    value={date}
-                    onChange={(e) => handleDate(sermon.id, e.target.value)}
-                    aria-label={`Date for sermon ${idx + 1}`}
-                  />
-                  {note && <span style={{ fontSize: "11px", color: "var(--crimson)" }}>⚠ {note.label}</span>}
-                </div>
-                <div>
-                  {season && (
-                    <span style={{
-                      fontSize: "11px", padding: "3px 9px", borderRadius: "10px",
-                      background: `color-mix(in srgb, var(${season.token}) 13%, transparent)`,
-                      color: `var(${season.token})`,
-                      border: `1px solid color-mix(in srgb, var(${season.token}) 28%, transparent)`,
-                      whiteSpace: "nowrap",
-                    }}>
-                      {season.shortName}
-                    </span>
-                  )}
-                </div>
-                <IconButton
-                  aria-label="Skip one week" className="btn-icon"
-                  onClick={() => skipSunday(sermon.id)}
-                  title="Skip one week" disabled={!date}
-                  style={{ fontSize: "12px", padding: "5px 9px" }}
-                >
-                  +1wk
-                </IconButton>
+                {isOpen && (
+                  <div style={{ padding: "12px 16px 14px 54px", borderTop: "1px solid var(--parchment-deep)", display: "flex", flexDirection: "column", gap: "10px" }}>
+                    {hasDetail ? (
+                      <>
+                        {sermon.big_idea?.trim() && (
+                          <div>
+                            <div className="field-label" style={{ marginBottom: "3px" }}>Big idea</div>
+                            <div style={{ fontFamily: "var(--font-serif)", fontSize: "14px", color: "var(--ink)", lineHeight: 1.5 }}>{sermon.big_idea}</div>
+                          </div>
+                        )}
+                        {sermon.overview?.trim() && (
+                          <div>
+                            <div className="field-label" style={{ marginBottom: "3px" }}>Overview</div>
+                            <div style={{ fontFamily: "var(--font-serif)", fontSize: "13.5px", color: "var(--ink-soft)", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{sermon.overview}</div>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div style={{ fontSize: "12.5px", color: "var(--ink-ghost)", fontStyle: "italic" }}>
+                        No big idea or overview yet — add them in the{" "}
+                        <TextButton onClick={() => onNavigate?.("book-outline")} style={{ fontSize: "inherit", padding: 0, verticalAlign: "baseline" }}>Outline</TextButton>.
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })}

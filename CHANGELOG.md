@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-06-25 — Series Planner: Outline is outlining-only; Schedule owns dates
+
+- **Outline** stripped to outlining: removed the per-unit Date field, date chip, and "Schedule" jump (plus their focus/flash plumbing), and the Color / Status / Year / Description editors and Coverage panel from Book details. Those fields persist from create / the Complete action and still drive the Planning list.
+- A preaching unit's title field is relabeled **Working title** (book and section levels keep "Title"); its only actions are now expand and Open.
+- **Schedule** is the one place dates live: each row expands (▾) to its read-only big idea + overview, and the Coverage panel moved here.
+- Undated units now sort in **outline reading order** (section, then creation) via `seriesSermonOrderBy`'s new section term — shared by the planner load, the workspace breadcrumb, and the study-guide export; the test-spine mirror matches exactly.
+- eslint 0, 235 tests, sweep PASS, preview verified.
+
+---
+
 ## 2026-06-24 — Series Planner: no section-less limbo (auto-create Section 1)
 
 - A sermon now lives **either under a section of a series, or standalone** (no series → the library). Removed the "Sermons not yet in a section" holding area; standalone sermons were never shown in the planner and still aren't.

@@ -103,6 +103,22 @@ describe("Series spine: create / cascade / counts / ordering", () => {
     expect(rows.map((r) => r.id)).toEqual([earlier, later, undated]);
   });
 
+  it("get-sermons-by-series orders undated units by outline reading order — section, then creation (working-title rebuild)", async () => {
+    const seriesId = await mkSeries("Reading order");
+    // Two sections created out of display order, to prove sort_order — not
+    // creation time — drives the undated pool.
+    const secondR = await spine()("create-section", { series_id: seriesId, sort_order: 1 });
+    const firstR = await spine()("create-section", { series_id: seriesId, sort_order: 0 });
+    const second = secondR.value.id;
+    const first = firstR.value.id;
+    // The unit in the LATER section is created FIRST.
+    const inSecond = await mkSermon({ name: "In second section", series_id: seriesId, section_id: second, date: "" });
+    const inFirst = await mkSermon({ name: "In first section", series_id: seriesId, section_id: first, date: "" });
+    const rows: any[] = await spine()("get-sermons-by-series", seriesId);
+    // Undated pool walks the outline (section sort_order), not creation order.
+    expect(rows.map((r) => r.id)).toEqual([inFirst, inSecond]);
+  });
+
   it("create-sermon refuses an empty name (State #3) — the draft/commit slot pattern relies on this", async () => {
     const r = await spine()("create-sermon", { name: "" });
     expect(r.ok).toBe(false);

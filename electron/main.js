@@ -1584,14 +1584,20 @@ function buildUpdate(fields, allowedColumns) {
 }
 
 // Shared ORDER BY for sermons within a series: undated slots ('' / NULL) sort
-// AFTER dated ones, then by date, then created_at. One definition so the
-// planner list, the workspace "Sermon N of M" breadcrumb, and the study-guide
-// export stay in lockstep and can't drift (audit M4). `prefix` is a table alias
-// like "s." when the query joins.
-function seriesSermonOrderBy(prefix = "") {
+// AFTER dated ones, then by date. One definition so the planner list, the
+// workspace "Sermon N of M" breadcrumb, and the study-guide export stay in
+// lockstep and can't drift (audit M4). `prefix` is a table alias like "s." when
+// the query joins. `sectionOrderCol` (e.g. "ss.sort_order") puts undated units
+// in OUTLINE READING ORDER — section, then creation — so the Schedule's undated
+// pool and the breadcrumb walk the book top to bottom instead of by raw
+// created_at; dated units still order by date (the section term only breaks
+// date ties). Callers that join sections pass it; the term is a no-op for dated
+// rows, so adding the join never changes dated-only output.
+function seriesSermonOrderBy(prefix = "", sectionOrderCol = null) {
   const d = `${prefix}date`;
   const c = `${prefix}created_at`;
-  return `ORDER BY CASE WHEN ${d} IS NULL OR ${d} = '' THEN 1 ELSE 0 END, ${d} ASC, ${c} ASC`;
+  const sec = sectionOrderCol ? `COALESCE(${sectionOrderCol}, 1000000) ASC, ` : "";
+  return `ORDER BY CASE WHEN ${d} IS NULL OR ${d} = '' THEN 1 ELSE 0 END, ${d} ASC, ${sec}${c} ASC`;
 }
 
 // ── Sermon search indexer (v22) ───────────────────────────────────────────────
@@ -1913,9 +1919,10 @@ function computeParentContext(row) {
   // scheduling doesn't scramble "Sermon N of M" (audit M4) — empty-string
   // dates would otherwise sort first under BINARY collation.
   const siblings = queryAll(
-    `SELECT id FROM sermons
-      WHERE series_id = ? AND deleted_at IS NULL
-      ${seriesSermonOrderBy()}`,
+    `SELECT s.id FROM sermons s
+      LEFT JOIN series_sections ss ON s.section_id = ss.id
+      WHERE s.series_id = ? AND s.deleted_at IS NULL
+      ${seriesSermonOrderBy("s.", "ss.sort_order")}`,
     [row.series_id],
   );
   const idx = siblings.findIndex((s) => s.id === row.id);
@@ -1995,7 +2002,7 @@ function spineRead(op, payload) {
         `SELECT s.*, ss.title as section_title FROM sermons s
          LEFT JOIN series_sections ss ON s.section_id = ss.id
          WHERE s.series_id = ? AND s.deleted_at IS NULL
-         ${seriesSermonOrderBy("s.")}`,
+         ${seriesSermonOrderBy("s.", "ss.sort_order")}`,
         [payload],
       );
     case "get-series-sermon-counts": {
@@ -3114,9 +3121,10 @@ ipcMain.handle("series-export-study-guide", async (_, seriesId) => {
     // the preview. Ordering matches get-sermons-by-series / computeParentContext
     // so undated slots land last (audit M4).
     const sermons = queryAll(
-      `SELECT * FROM sermons
-        WHERE series_id = ? AND deleted_at IS NULL
-        ${seriesSermonOrderBy()}`,
+      `SELECT s.* FROM sermons s
+        LEFT JOIN series_sections ss ON s.section_id = ss.id
+        WHERE s.series_id = ? AND s.deleted_at IS NULL
+        ${seriesSermonOrderBy("s.", "ss.sort_order")}`,
       [seriesId]
     );
 

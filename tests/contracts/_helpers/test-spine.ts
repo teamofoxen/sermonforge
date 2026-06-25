@@ -180,14 +180,23 @@ function shapeSeries(row: Row | undefined) {
   };
 }
 
-// Undated slots ("" / null date) sort AFTER dated ones, then by created_at —
-// mirrors the production CASE-WHEN ordering (audit M4) so partial scheduling
-// doesn't scramble position-in-series.
+// Undated slots ("" / null date) sort AFTER dated ones; dated rows order by date,
+// undated rows by OUTLINE READING ORDER (section sort_order, then created_at) —
+// mirrors production seriesSermonOrderBy with the ss.sort_order term (audit M4 +
+// the working-title rebuild) so partial scheduling and the breadcrumb walk the book.
 function compareBySeriesOrder(a: Row, b: Row) {
+  // Match production seriesSermonOrderBy EXACTLY: undated last, then the same
+  // tail for every row — date, section sort_order, created_at. (For dated rows
+  // the section term only breaks same-date ties; for undated rows date ties so
+  // section drives — outline reading order.)
   const ae = !a.date, be = !b.date;
-  if (ae !== be) return ae ? 1 : -1;
+  if (ae !== be) return ae ? 1 : -1;                 // undated last
   const d = (a.date || "").localeCompare(b.date || "");
-  return d !== 0 ? d : (a.created_at || "").localeCompare(b.created_at || "");
+  if (d !== 0) return d;
+  const ao = (a.section_id && sections.get(a.section_id)?.sort_order) ?? 1_000_000;
+  const bo = (b.section_id && sections.get(b.section_id)?.sort_order) ?? 1_000_000;
+  if (ao !== bo) return (ao as number) - (bo as number);
+  return (a.created_at || "").localeCompare(b.created_at || "");
 }
 
 function computeParentContext(row: Row | undefined) {

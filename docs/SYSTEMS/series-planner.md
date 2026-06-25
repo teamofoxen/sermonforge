@@ -53,31 +53,39 @@ human label is "Outline"). A remembered `localStorage` tab id for a removed tab
   - *Book node* — the root: Title (`series.title`), Big idea (`series.big_idea`),
     Overview (`series.overview`); a collapsible **Book details** disclosure
     holding the canonical book picker (`book_id`, auto-fills genre + span), the
-    genre override (`canon_category`), `passage_range`, `description`, `color`,
-    `status`, `year`, and a read-only `CoveragePanel`
-    (`src/utils/coverage.js`); and a collapsible **Reference** disclosure for the
-    commentary outline (`structural_outline`).
+    genre override (`canon_category`), and `passage_range`; and a collapsible
+    **Reference** disclosure for the commentary outline (`structural_outline`).
+    `color` / `status` / `year` / `description` are **no longer edited in the
+    planner** (they persist from create / the topbar Complete action and still
+    drive the Planning list); the `CoveragePanel` (`src/utils/coverage.js`) moved
+    to the Schedule — the Outline is for outlining, not lifecycle/cosmetics.
   - *Section nodes* (`SectionNode`) — each its own Title · range · Big idea ·
     Overview unit, with reorder (↑/↓, recompacts `sort_order`) and delete, and a
-    nested list of its sermons plus "+ Add sermon".
-  - *Sermon nodes* (`SermonNode`) — each is a sermon: passage · title · big
-    idea · overview, an editable **Date** field (single-source — see Schedule), a
-    read-only date chip in the collapsed header, a **Schedule** jump (scrolls to
-    + flashes that row on the Schedule screen), and **Open** (`onOpenSermon`).
-    New sermons use the draft-row/commit pattern (§5). "+ Add section" sits
-    under the book. **Every sermon lives under a section — there is no
-    "in a series but in no section" group.** When a series has no sections yet,
-    the Outline shows an empty state whose "+ Add sermon" auto-creates a
-    "Section 1" (renameable) and drops the sermon into it. A sermon with no
-    series at all is **standalone** and lives in the library, never in the planner.
-- **Schedule** (`ScheduleTab`) — lays each sermon on a Sunday. The date is
-  **single-source on the sermon**: per-row edits autosave through the shared
-  debounced `updateSermon` path and reflect live on the Outline (and vice versa)
-  — there is no separate `schedule` snapshot. "Suggest Sundays"
-  (`getUpcomingSundays`) is one explicit bulk gesture that writes every date;
-  `end_date` mirrors the last dated sermon on any change. Season labels
-  (`getSeasonForDate`), the pacing strip (`src/utils/pacing.js`), and skip-a-week
-  are kept.
+    nested list of its preaching units plus "+ Add preaching unit".
+  - *Sermon nodes* (`SermonNode`) — each is a preaching unit: passage · **working
+    title** · big idea · overview, and **Open** (`onOpenSermon`). **No dates live
+    on the Outline** — scheduling is wholly the Schedule screen's (the old per-unit
+    Date field, date chip, and "Schedule" jump are gone, along with their
+    focus/flash plumbing). The title field is labeled **Working title** — the rough
+    handle the big idea expands on; the final sermon title comes during writing —
+    while the book and section levels keep plain "Title". New units use the
+    draft-row/commit pattern (§5). "+ Add section" sits under the book. **Every
+    unit lives under a section — there is no "in a series but in no section"
+    group.** When a series has no sections yet, the Outline shows just
+    **"+ Add section"** (the top-down first move). A unit with no series at all is
+    **standalone** and lives in the library, never in the planner.
+- **Schedule** (`ScheduleTab`) — **the one place dates live.** Lays each preaching
+  unit on a Sunday; per-row edits autosave through the shared debounced
+  `updateSermon` path (`end_date` mirrors the last dated unit on any change; there
+  is no separate `schedule` snapshot). Each row is **working title + passage +
+  date**, expandable (▾) to its read-only **big idea + overview** (edited on the
+  Outline). "Suggest Sundays" (`getUpcomingSundays`) is one explicit bulk gesture
+  that writes every date in list order. The **undated pool sorts in outline
+  reading order** — section, then creation (`seriesSermonOrderBy` with the
+  `ss.sort_order` term in `electron/main.js`, shared with the workspace breadcrumb
+  + study-guide export) — so it walks the book top to bottom. The `CoveragePanel`
+  lives here now. Season labels (`getSeasonForDate`), the pacing strip
+  (`src/utils/pacing.js`), and skip-a-week are kept.
 - **Study guide** (`StudyGuideTab`) — an editable congregational booklet
   ("mini-commentary"). "Import from outline" gates the empty state → booklet via
   a client-local `localStorage` flag (`sermonforge_planner_guide_built_<seriesId>`)
