@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-06-25 — Series Planner audit backlog: clear bug-fixes (HIGH-A + 6 more)
+
+- **HIGH-A:** series `end_date` now recomputes when a unit (or the last section) is deleted from the Outline — deleting the latest-dated unit no longer strands a phantom date on the exported booklet cover and the Series Arc.
+- **Suggest Sundays** flushes pending debounced date edits first, so a date the pastor just typed can't fire ~0.8s later and silently revert the bulk assignment on that row.
+- **Draft commit** re-reads the latest draft after the `createSermon` round-trip, so big idea / overview / passage typed while the create is in flight are no longer dropped.
+- **Study-guide preview** gates the Introduction part on content to match the exported `.docx` (which omits an empty Introduction); plus 3 cleanups — dead `section_title` SELECT removed (JOIN kept), the redundant `handleDate` wrapper inlined, and the test-spine `delete-section` mirror now matches production's cascade.
+- These were committed bundled into the section-limbo commit by a parallel task; documenting here. eslint 0, 239 tests, preview verified.
+
+---
+
 ## 2026-06-25 — Series Planner: close the NewSermonModal section-less limbo
 
 - `create-sermon` now auto-files a section-less in-series sermon into the series' first section (auto-creating "Section 1"), via a shared `firstSectionIdForSeries` helper wrapped in a transaction — so the New Sermon modal can no longer hand the Outline an invisible row, whichever surface created it.
