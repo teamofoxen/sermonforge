@@ -130,6 +130,9 @@ const SERMON_COLUMNS = Object.freeze(new Set([
   // ({ additions, notesLines }). All three ride create-then-update — the
   // create-sermon INSERT is never widened (slot draft/commit ruling).
   "big_idea", "overview", "study_guide_extras",
+  // v30 — Topical Series mode (mirrors contracts): pastor-authored per-sermon
+  // order for a topical series' flat sermon list; nullable, create-then-update.
+  "sort_order",
 ]));
 /* eslint-enable sermonforge/canonical-stage-name */
 
@@ -154,6 +157,9 @@ const SERIES_COLUMNS = Object.freeze(new Set([
   "title", "color", "description", "year", "big_idea", "overview",
   "passage_range", "start_date", "end_date", "structural_outline",
   "status", "canon_category", "book_id",
+  // v30 — Topical Series mode (mirrors contracts): explicit planner-mode
+  // discriminator ('book' | 'topical'); persisted via updateSeries.
+  "kind",
 ]));
 
 const SECTION_COLUMNS = Object.freeze(new Set([

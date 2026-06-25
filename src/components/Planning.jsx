@@ -237,8 +237,8 @@ function SeriesCard({ series: s, sermonCount, onOpen, onRequestDelete }) {
         <div style={{ display: "flex", gap: "12px", fontSize: "12px", color: "var(--ink-ghost)" }}>
           <span>{sermonCount} sermon{sermonCount !== 1 ? "s" : ""}</span>
           {s.start_date && <span>{s.start_date.slice(0, 4)}</span>}
-          <span style={{ color: CANON_COLORS[cat] || "var(--ink-ghost)", fontWeight: "500" }}>
-            {CANON_LABELS[cat] || "Unclassified"}
+          <span style={{ color: s.kind === "topical" ? "var(--gold)" : (CANON_COLORS[cat] || "var(--ink-ghost)"), fontWeight: "500" }}>
+            {s.kind === "topical" ? "Topical" : (CANON_LABELS[cat] || "Unclassified")}
           </span>
         </div>
         <SecondaryButton

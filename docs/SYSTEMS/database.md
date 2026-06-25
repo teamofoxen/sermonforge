@@ -51,7 +51,7 @@ no shared statements.
 
 ## Schema Version
 
-Current schema version: **29** (the full migration ledger lives in
+Current schema version: **30** (the full migration ledger lives in
 [`docs/REFERENCE/schema.md`](../REFERENCE/schema.md)).
 
 The version is stored in the `meta` table under key `schema_version`.

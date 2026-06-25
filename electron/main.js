@@ -1304,6 +1304,35 @@ function runMigrations() {
     version = 29;
   }
 
+  if (version < 30) {
+    // v30 (Topical Series mode) — two additive columns for the theme-led
+    // planner mode (charter: docs/PROPOSALS/series-planner-revival-charter.md,
+    // "2026-06-25 — Topical Series mode").
+    //
+    // (a) series.kind: the explicit mode discriminator, 'book' | 'topical'.
+    //     DEFAULT 'book' so every existing series AND every future book series
+    //     reads correctly with NO backfill. It is deliberately NOT inferred
+    //     from book_id being NULL — a book series also has a null book_id
+    //     mid-create (create-then-update writes the name first, the book
+    //     second), so "no book yet" and "topical theme" would be
+    //     indistinguishable. In SERIES_COLUMNS, so it persists via updateSeries;
+    //     the create-series INSERT is NOT widened (do-not-widen-INSERT ruling) —
+    //     a failed follow-up leaves the 'book' default, the recoverable state.
+    safeAlter("ALTER TABLE series ADD COLUMN kind TEXT DEFAULT 'book'");
+    // (b) sermons.sort_order: pastor-authored per-sermon order for a topical
+    //     series' flat sermon list (a theme has no book reading order to lean
+    //     on). Nullable — NULL sorts last via COALESCE in seriesSermonOrderBy,
+    //     the same way the section tiebreak already handles section-less rows,
+    //     so book-series sermons keep NULL and still order by their section. In
+    //     SERMON_COLUMNS, so the reorder control persists via updateSermon; the
+    //     create-sermon INSERT is NOT widened (slot draft/commit ruling).
+    //     (The ordering READ is wired in a later build step; this only adds the
+    //     column + allowlist so the write path is ready.)
+    safeAlter("ALTER TABLE sermons ADD COLUMN sort_order INTEGER DEFAULT NULL");
+    dbRun("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '30')");
+    version = 30;
+  }
+
   // True when at least one block actually ran. Lets initDatabase skip the
   // boot-time flush on a clean boot of an up-to-date DB — so a healthy library
   // is never re-serialized and rotated over its own backup for no reason.
@@ -1645,11 +1674,19 @@ function buildUpdate(fields, allowedColumns) {
 // created_at; dated units still order by date (the section term only breaks
 // date ties). Callers that join sections pass it; the term is a no-op for dated
 // rows, so adding the join never changes dated-only output.
+//
+// Topical Series mode (v30): a per-sermon `sort_order` term sits between the
+// section term and created_at. A topical series has no book reading order, so
+// its undated sermons line up by the pastor's own arrangement (sort_order). The
+// term is COALESCE(..., 1000000) so book-series sermons (sort_order always NULL)
+// are unaffected — they still walk section-then-creation. The sermons table
+// always carries sort_order, so every "s."-prefixed caller can read it.
 function seriesSermonOrderBy(prefix = "", sectionOrderCol = null) {
   const d = `${prefix}date`;
   const c = `${prefix}created_at`;
   const sec = sectionOrderCol ? `COALESCE(${sectionOrderCol}, 1000000) ASC, ` : "";
-  return `ORDER BY CASE WHEN ${d} IS NULL OR ${d} = '' THEN 1 ELSE 0 END, ${d} ASC, ${sec}${c} ASC`;
+  const ord = `COALESCE(${prefix}sort_order, 1000000) ASC, `;
+  return `ORDER BY CASE WHEN ${d} IS NULL OR ${d} = '' THEN 1 ELSE 0 END, ${d} ASC, ${sec}${ord}${c} ASC`;
 }
 
 // ── Sermon search indexer (v22) ───────────────────────────────────────────────
@@ -2163,7 +2200,12 @@ function validateAndCommit(op, payload) {
         // planner's own draft/commit already passes section_id, so this only
         // fires for the section-less create paths. Guarded on the series
         // actually existing so a stale series_id can't spawn an orphan section.
-        if (seriesId && !sectionId && queryOne("SELECT id FROM series WHERE id = ?", [seriesId])) {
+        // Topical series (kind='topical', v30) are section-OPTIONAL: their
+        // sermons live flat under the Big Idea and must NOT be auto-filed into a
+        // section. Only book series enforce the no-section-less-limbo auto-file.
+        // Read kind alongside existence in the one guard query.
+        const seriesRow = seriesId ? queryOne("SELECT id, kind FROM series WHERE id = ?", [seriesId]) : null;
+        if (seriesId && !sectionId && seriesRow && seriesRow.kind !== "topical") {
           sectionId = firstSectionIdForSeries(seriesId);
         }
         dbRun(

@@ -1,6 +1,6 @@
 # Enforcement Status
 
-**Last verified:** 2026-06-25 — Series Planner section-less-limbo fix: `create-sermon` (`validateAndCommit`) now auto-files a section-less in-series sermon into the series' first section (schema v29 heals existing rows). No clause weakened — State #3's nameless-atom rejection runs first and is unchanged; the change strengthens the Series-Planner no-limbo data-model invariant; the column allowlists are untouched (no new writable columns).
+**Last verified:** 2026-06-25 — Topical Series mode (schema v30): `series.kind` + `sermons.sort_order` added to the write-allowlists across all three mirrors (`contracts.ts` / `contracts.cjs` / `test-spine.ts`; allowlist-sync test green), and `create-sermon` (`validateAndCommit`) now skips the no-limbo section auto-file for `kind='topical'` series (their sermons render flat in the topical Outline). No clause weakened — State #3's nameless-atom rejection runs first and is unchanged; create-then-update / do-not-widen-INSERT holds (both columns ride `update*`, neither INSERT widened); the no-section-less-limbo invariant is extended to a legitimate topical-mode section-optional path, not weakened (flat render keeps topical sermons visible).
 **Verified against:** [`docs/CORE.md`](CORE.md).
 **History:** see `git log docs/ENFORCEMENT_STATUS.md` and [`CHANGELOG.md`](../CHANGELOG.md). Per-event narrative is intentionally not duplicated here.
 

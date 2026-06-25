@@ -472,7 +472,7 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
         )}
       </div>
     </div>
-    {showHowItWorks && <SeriesHowItWorksModal onClose={() => setShowHowItWorks(false)} />}
+    {showHowItWorks && <SeriesHowItWorksModal kind={series.kind} onClose={() => setShowHowItWorks(false)} />}
     </>
   );
 }
@@ -690,6 +690,24 @@ function OutlineTab({
     if (!ok) onSectionsChange(await getSectionsBySeries(seriesId));
   }
 
+  // Topical reorder — the pastor-authored sequence over the flat sermon list
+  // (a theme has no book reading order). Only committed sermons carry a
+  // sort_order; reassign it = index and persist. Drafts (no DB row) aren't
+  // reorderable and live at the end until committed. The Schedule + breadcrumb
+  // read the same sort_order via seriesSermonOrderBy, so this one write reorders
+  // everywhere.
+  async function moveSermon(id, direction) {
+    const idx = sermons.findIndex((s) => s.id === id);
+    const newIdx = idx + direction;
+    if (idx < 0 || newIdx < 0 || newIdx >= sermons.length) return;
+    const reordered = [...sermons];
+    [reordered[idx], reordered[newIdx]] = [reordered[newIdx], reordered[idx]];
+    const withOrder = reordered.map((s, i) => ({ ...s, sort_order: i }));
+    onSermonsChange(withOrder);
+    const ok = await runSave(() => Promise.all(withOrder.map((s) => updateSermon(s.id, { sort_order: s.sort_order }))));
+    if (!ok) onSermonsChange(await getSermonsBySeries(seriesId));
+  }
+
   // ── Sermon draft / commit ──────────────────────────────────────────────
   function addSermon(sectionId) {
     const id = `draft-${crypto.randomUUID()}`;
@@ -784,6 +802,106 @@ function OutlineTab({
   const bySection = {};
   for (const p of allSermons) {
     if (p.section_id) (bySection[p.section_id] ||= []).push(p);
+  }
+
+  // ── Topical series — a different page: a Big Idea root + a flat, pastor-ordered
+  // list of sermons (no section tier; passages come from many books). Charter:
+  // series-planner-revival-charter.md "2026-06-25 — Topical Series mode".
+  if (series.kind === "topical") {
+    // Committed sermons arrive in the pastor's order (seriesSermonOrderBy reads
+    // sermons.sort_order for topical); drafts append at the end. Reorder acts on
+    // the committed list only.
+    const rows = [...sermons, ...drafts];
+    return (
+      <div className="page-body" style={{ background: "var(--parchment)" }}>
+        <div className="page-header" style={{ padding: "0 0 4px" }}>
+          <div className="page-title">Outline</div>
+          <div className="page-subtitle">
+            Build the series from one big idea down to its sermons. Name the theme, then gather a sermon
+            for each passage — from any book — that sounds it. Order them into the sequence you'll preach.
+          </div>
+        </div>
+
+        {/* ── BIG IDEA — the root of a topical series ───────────────────────── */}
+        <TierBand step={1} label="Big idea">
+          Start here. Name the theme this series gathers, say it in one line, and write a short overview.
+          Everything below hangs on it.
+        </TierBand>
+        <div className="card" style={{ borderLeft: "3px solid var(--gold)" }}>
+          <div className="field-group">
+            <label className="field-label">Theme</label>
+            <input
+              className="field-input"
+              value={series.title || ""}
+              onChange={(e) => onSeriesField("title", e.target.value)}
+              placeholder="e.g. The Mission of God"
+            />
+            <div style={{ fontSize: "12px", color: "var(--ink-ghost)", marginTop: "6px" }}>
+              The series' name — the single idea it gathers.
+            </div>
+          </div>
+          <div className="field-group">
+            <label className="field-label">Big Idea <span style={{ color: "var(--ink-ghost)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(one line)</span></label>
+            <input
+              className="field-input"
+              value={series.big_idea || ""}
+              onChange={(e) => onSeriesField("big_idea", e.target.value)}
+              placeholder="The single idea this series sounds — in one sentence."
+            />
+          </div>
+          <div className="field-group" style={{ marginBottom: 0 }}>
+            <label className="field-label">Overview <span style={{ color: "var(--ink-ghost)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(a paragraph)</span></label>
+            <textarea
+              className="field-textarea large"
+              value={series.overview || ""}
+              onChange={(e) => onSeriesField("overview", e.target.value)}
+              onInput={(e) => autoResize(e.target)}
+              ref={(el) => autoResize(el)}
+              placeholder="What is this theme, and why this congregation, now? The arc you want the series to travel."
+            />
+          </div>
+        </div>
+
+        {/* ── SERMONS — a flat, pastor-ordered list ──────────────────────────── */}
+        <TierBand step={2} label="Sermons">
+          Gather the passages that sound this theme — one sermon each, drawn from any book (type the book into
+          the passage, e.g. "Genesis 12:1-3"). Put them in the order you'll preach; date them on the Schedule.
+        </TierBand>
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+          {rows.length === 0 ? (
+            <div className="card" style={{ textAlign: "center", padding: "28px 24px" }}>
+              <p style={{ fontFamily: "var(--font-serif)", color: "var(--ink-soft)", fontSize: "14px", margin: "0 auto 14px", maxWidth: "520px", lineHeight: 1.6 }}>
+                No sermons yet. Add the first passage that sounds this theme — its working title, big idea, and
+                overview. You can reorder them any time.
+              </p>
+              <SecondaryButton size="sm" onClick={() => addSermon(null)}>+ Add sermon</SecondaryButton>
+            </div>
+          ) : (
+            <>
+              {rows.map((p, i) => (
+                <SermonNode
+                  key={p.id}
+                  sermon={p}
+                  expanded={expandedSermons.has(p.id)}
+                  onToggle={() => toggleSermon(p.id)}
+                  onField={handleSermonRowField}
+                  onCommit={commitDraft}
+                  onDelete={removeSermonRow}
+                  commitError={draftErrors[p.id]}
+                  onClearError={clearDraftError}
+                  onOpenSermon={onOpenSermon}
+                  topical
+                  index={p._draft ? null : i}
+                  total={sermons.length}
+                  onMove={p._draft ? null : (dir) => moveSermon(p.id, dir)}
+                />
+              ))}
+              <SecondaryButton size="sm" onClick={() => addSermon(null)} style={{ alignSelf: "flex-start", marginTop: "2px" }}>+ Add sermon</SecondaryButton>
+            </>
+          )}
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -1108,10 +1226,11 @@ function SectionNode({
 // outlining — no dates live here; scheduling is wholly the Schedule screen's.
 // Collapsed: passage · working title · Open. Expanded: passage · working title ·
 // big idea · overview. Draft rows commit on title blur/Enter (State #3 deferral).
-function SermonNode({ sermon: p, expanded, onToggle, onField, onCommit, onDelete, commitError, onClearError, onOpenSermon }) {
+function SermonNode({ sermon: p, expanded, onToggle, onField, onCommit, onDelete, commitError, onClearError, onOpenSermon, topical = false, index = null, total = 0, onMove = null }) {
   const isDraft = !!p._draft;
   const rowRef = useRef(null);
   const titleRef = useRef(null);
+  const chevronBtnStyle = { background: "none", border: "none", cursor: "pointer", color: "var(--ink-ghost)", fontSize: "13px", padding: "2px 4px" };
 
   // A freshly-added draft is auto-expanded; reveal + focus it so the add never
   // reads as a no-op below the fold.
@@ -1156,6 +1275,12 @@ function SermonNode({ sermon: p, expanded, onToggle, onField, onCommit, onDelete
             Build this sermon
           </SecondaryButton>
         )}
+        {onMove && index != null && (
+          <div style={{ display: "flex", gap: "2px" }}>
+            {index > 0 && <IconButton aria-label="Move sermon up" onClick={(e) => { e.stopPropagation(); onMove(-1); }} style={chevronBtnStyle} title="Move up">↑</IconButton>}
+            {index < total - 1 && <IconButton aria-label="Move sermon down" onClick={(e) => { e.stopPropagation(); onMove(1); }} style={chevronBtnStyle} title="Move down">↓</IconButton>}
+          </div>
+        )}
         <DeleteButton small onDelete={() => onDelete(p.id)} />
         <span style={{ color: "var(--ink-ghost)", fontSize: "12px" }}>{expanded ? "▲" : "▼"}</span>
       </div>
@@ -1169,7 +1294,7 @@ function SermonNode({ sermon: p, expanded, onToggle, onField, onCommit, onDelete
                 className="field-input" style={{ fontFamily: "var(--font-mono)", fontSize: "14px" }}
                 value={p.passage || ""}
                 onChange={(e) => onField(p.id, "passage", e.target.value)}
-                placeholder="e.g. Luke 1:1-4"
+                placeholder={topical ? "e.g. Genesis 12:1-3" : "e.g. Luke 1:1-4"}
                 onClick={(e) => e.stopPropagation()}
               />
             </div>
@@ -1316,10 +1441,14 @@ function ScheduleTab({ series, sermons, calNotes, onSeriesField, onSermonDate, o
       </div>
 
       {/* Coverage moved here from the Outline — it measures how the sermons cover
-          the book, which is a scheduling-side readout, not outlining. */}
-      <div style={{ marginBottom: "20px" }}>
-        <CoveragePanel series={series} sermons={sermons} onNavigate={onNavigate} />
-      </div>
+          the book, which is a scheduling-side readout, not outlining. Hidden for a
+          topical series: it measures % of ONE book, which a many-book theme has
+          none of (its empty state would wrongly say "pick a canonical book"). */}
+      {series.kind !== "topical" && (
+        <div style={{ marginBottom: "20px" }}>
+          <CoveragePanel series={series} sermons={sermons} onNavigate={onNavigate} />
+        </div>
+      )}
 
       {sermons.length === 0 ? (
         <div style={{
@@ -1445,6 +1574,7 @@ function ScheduleTab({ series, sermons, calNotes, onSeriesField, onSermonDate, o
 // additions/notes (which live in study_guide_extras, untouched by Import).
 // Export to Word renders the booklet (electron/main.js buildStudyGuideDoc).
 function StudyGuideTab({ series, sections, sermons, seriesId, onSermonExtras, onNavigate }) {
+  const isTopical = series.kind === "topical";
   const builtKey = `sermonforge_planner_guide_built_${seriesId}`;
   const [built, setBuilt] = useState(() => !!localStorage.getItem(builtKey));
   const [justRefreshed, setJustRefreshed] = useState(false);
@@ -1482,7 +1612,7 @@ function StudyGuideTab({ series, sections, sermons, seriesId, onSermonExtras, on
       <div className="page-body">
         <div className="page-header" style={{ padding: "0 0 4px" }}>
           <div className="page-title">Study guide</div>
-          <div className="page-subtitle">A congregational booklet built from your outline — an introduction, a part per section, and a page per sermon.</div>
+          <div className="page-subtitle">A congregational booklet built from your outline — an introduction{isTopical ? "" : ", a part per section"}, and a page per sermon.</div>
         </div>
         <div style={{
           marginTop: "20px", padding: "40px 32px", textAlign: "center",
@@ -1492,9 +1622,9 @@ function StudyGuideTab({ series, sections, sermons, seriesId, onSermonExtras, on
             Build your study guide
           </div>
           <p style={{ fontSize: "14px", color: "var(--ink-soft)", maxWidth: "52ch", margin: "0 auto 20px", lineHeight: 1.6 }}>
-            Import your outline to lay it out as a booklet. Your book overview becomes the introduction,
-            each section a part, and each sermon its own page. You can add questions, cross-references, and
-            quotes to any page afterward — re-importing refreshes the text but never touches your additions.
+            Import your outline to lay it out as a booklet. Your {isTopical ? "theme overview" : "book overview"} becomes
+            the introduction{isTopical ? "" : ", each section a part"}, and each sermon its own page. You can add questions,
+            cross-references, and quotes to any page afterward — re-importing refreshes the text but never touches your additions.
           </p>
           <PrimaryButton onClick={importFromOutline}>Import from outline</PrimaryButton>
         </div>
@@ -1725,13 +1855,21 @@ function StudyGuidePage({ sermon, onSermonExtras }) {
 // Pure copy — no AI, no DB. Orients the three screens (Outline · Schedule ·
 // Study guide). Auto-opens once per series (write-only localStorage flag) and
 // stays re-readable forever via the topbar button.
-function SeriesHowItWorksModal({ onClose }) {
+function SeriesHowItWorksModal({ onClose, kind }) {
   const dialogRef = useModalA11y(onClose);
-  const screens = [
+  const isTopical = kind === "topical";
+  const screens = isTopical ? [
+    { name: "Outline", body: "Name the theme this series gathers, then add a sermon for each passage — from any book — that sounds it. Put them in the order you'll preach. Every sermon holds a passage, a working title, a one-line big idea, and a short overview." },
+    { name: "Schedule", body: "Lay each sermon on a Sunday. Liturgical seasons and your special-date notes ride along. Dates save as you go — the Schedule is the one place they live." },
+    { name: "Study guide", body: "Build a congregational booklet from your outline — an introduction and a page per sermon. Add questions, cross-references, and quotes; export to Word." },
+  ] : [
     { name: "Outline", body: "Plan the book from the top down in three labeled levels — Book, Section, and the Sermons inside each section. Every level holds a title and passage range, a one-line big idea, and a short overview." },
     { name: "Schedule", body: "Lay each sermon on a Sunday. Liturgical seasons and your special-date notes ride along. Dates save as you go — the Schedule is the one place they live." },
     { name: "Study guide", body: "Build a congregational booklet from your outline — an introduction, a part per section, and a page per sermon. Add questions, cross-references, and quotes; export to Word." },
   ];
+  const intro = isTopical
+    ? "Gather a theme into one series — a Big Idea, then a sermon for each passage (from any book) that sounds it. A sermon is one passage on one Sunday. Three screens:"
+    : "Plan a book as one nested outline at three levels — Book ▸ Section ▸ Sermon — where every level is the same unit: a title and range, a one-line big idea, and an overview. A sermon is one passage on one Sunday. Three screens:";
   return (
     <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal" style={{ width: "640px" }} ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="series-how-title">
@@ -1741,9 +1879,7 @@ function SeriesHowItWorksModal({ onClose }) {
         </div>
         <div className="modal-body">
           <p style={{ fontSize: "14px", color: "var(--ink-soft)", marginBottom: "20px", fontFamily: "var(--font-serif)", lineHeight: 1.6 }}>
-            Plan a book as one nested outline at three levels — Book ▸ Section ▸ Sermon — where every level
-            is the same unit: a title and range, a one-line big idea, and an overview. A sermon is one passage
-            on one Sunday. Three screens:
+            {intro}
           </p>
           <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
             {screens.map((s, i) => (

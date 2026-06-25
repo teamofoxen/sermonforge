@@ -365,6 +365,11 @@ export const SERMON_COLUMNS: ReadonlySet<string> = Object.freeze(new Set([
   // ({ additions, notesLines }). All three ride create-then-update — the
   // create-sermon INSERT is never widened (slot draft/commit ruling).
   "big_idea", "overview", "study_guide_extras",
+  // v30 — Topical Series mode. Pastor-authored per-sermon order for a topical
+  // series' flat sermon list; nullable (book-series sermons stay NULL and order
+  // by section). Rides create-then-update — the create-sermon INSERT is never
+  // widened.
+  "sort_order",
 ])) as ReadonlySet<string>;
 
 // v27 — Series Planner content-model rebuild retired the four book-study
@@ -378,6 +383,9 @@ export const SERIES_COLUMNS: ReadonlySet<string> = Object.freeze(new Set([
   "title", "color", "description", "year", "big_idea", "overview",
   "passage_range", "start_date", "end_date", "structural_outline",
   "status", "canon_category", "book_id",
+  // v30 — Topical Series mode. Explicit planner-mode discriminator
+  // ('book' | 'topical'); persisted via updateSeries, never the create INSERT.
+  "kind",
 ])) as ReadonlySet<string>;
 
 export const SECTION_COLUMNS: ReadonlySet<string> = Object.freeze(new Set([

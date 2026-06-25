@@ -1,6 +1,6 @@
 # SermonForge — Database Schema Reference
 
-Current schema version: **29**
+Current schema version: **30**
 
 | Version | Bumped for |
 |---------|-----------|
@@ -20,6 +20,7 @@ Current schema version: **29**
 | v27 | Series Planner content-model rebuild — `big_idea` + `overview` (sermon-level unit) and `study_guide_extras` (nullable JSON: guide-local `{ additions, notesLines }`) on `sermons`; run-once version-gated fold of `study_guide_note` → `overview` where overview is empty. `study_guide_note` retired from the writable set but retained as a backup column. The book-study prompts (`redemptive_context`, `book_background`, `book_argument`), the folded `book_structure`, and the melodic-line worksheet fields (`series_motivation`, `emerging_big_idea`, `melodic_evidence`) were dropped from the writable allowlist (`SERIES_COLUMNS`); their columns are retained as backup. No columns dropped. |
 | v28 | Series Planner — no "in a series but in no section" limbo. **Data-only** (no DDL): section-less in-series sermons placed into the series' first section (auto-creating a `series_sections` "Section 1" where a series had none); sermons whose `series_id` points at a missing/deleted series set to standalone (`series_id` NULL). Run-once, version-gated. Column allowlists / `assertSchemaContract` untouched. |
 | v29 | Series Planner — re-heal the no-"section-less limbo" invariant. **Data-only** (no DDL), idempotent re-run of the v28 normalize: catches in-series sermons left section-less by the pre-fix `create-sermon` path (the New Sermon modal set `series_id` but never `section_id`), placing each into the series' first section (auto-creating "Section 1" where needed) or setting standalone where the series is missing. The `create-sermon` handler now enforces the invariant on write, so no new limbo is created. Column allowlists / `assertSchemaContract` untouched. |
+| v30 | Topical Series mode — `kind` (`book \| topical`, DEFAULT `book`) on `series`, the explicit theme-led-vs-book-led planner-mode discriminator (NOT inferred from `book_id` being NULL); `sort_order` (nullable INTEGER) on `sermons`, the pastor-authored per-sermon order for a topical series' flat sermon list. Both additive (no backfill, no columns dropped); both ride create-then-update — added to `SERIES_COLUMNS` / `SERMON_COLUMNS`, never the create INSERT. |
 
 ---
 
@@ -41,6 +42,7 @@ Current schema version: **29**
 | `status` | TEXT | `in_progress \| complete` — two-state lifecycle (v16 collapse). `SERIES_STATUS` in `src/core/contracts.ts`; `create-series` writes `in_progress`. (CREATE TABLE default is a vestigial `'planning'`, always overwritten on insert.) Edited in Outline → Book details. |
 | `canon_category` | TEXT | Dever 7-genre key: `ot_law \| ot_history \| ot_writings \| ot_prophets \| nt_gospels \| nt_pauline \| nt_general`. NULL or `''` = unclassified. Auto-filled from the chosen book, pastor-overridable in Outline → Book details. (v25 switch from legacy `ot \| nt \| wisdom \| prophetic`.) |
 | `book_id` | TEXT | Stable key of the chosen canonical book (e.g. `luke`) from `src/data/canonicalBooks.js`; NULL until a book is picked (Outline → Book details). Only the key is stored — genre, testament, and span are looked up from that bundled module at render. Persisted via `updateSeries`, never the create INSERT. (v25) |
+| `kind` | TEXT | Planner mode discriminator: `book` (default) \| `topical`. A topical series is theme-led (Big Idea ▸ Sermon, passages drawn from many books) rather than book-led; the mode is **explicit**, NOT inferred from `book_id` being NULL (a book series also has a null `book_id` mid-create). DEFAULT `'book'` (no backfill). Persisted via `updateSeries`, never the create INSERT. (v30) |
 | `redemptive_context` | TEXT | **Retired from the writable set (v27).** Was a book-study prompt on the old Understand movement; no longer rendered or written. Retained as a backup column — never dropped or nulled. |
 | `book_background` | TEXT | **Retired from the writable set (v27).** Was a book-study prompt; no longer rendered or written. Backup column. |
 | `book_argument` | TEXT | **Retired from the writable set (v27).** Was a book-study prompt; no longer rendered or written. Backup column. |
@@ -73,6 +75,7 @@ Current schema version: **29**
 | `id` | TEXT PRIMARY KEY | |
 | `series_id` | TEXT | FK to series (NULL for one-off sermons) |
 | `section_id` | TEXT | FK to series_sections (optional) |
+| `sort_order` | INTEGER | Pastor-authored per-sermon order for a **topical** series' flat sermon list (a theme has no book reading order). Nullable — NULL sorts last via `COALESCE` in `seriesSermonOrderBy`; book-series sermons stay NULL and order by their section. Persisted via `updateSermon`, never the create INSERT. The ordering READ is wired in a later build step. (v30) |
 | `is_one_off` | INTEGER | 1 if standalone sermon, 0 if series sermon |
 | `title` | TEXT | |
 | `passage` | TEXT | |

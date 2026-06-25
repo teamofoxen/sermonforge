@@ -3,11 +3,18 @@ import SeriesPlanner from "./SeriesPlanner";
 // Preview-only fixture (mirrors SermonWorkspaceFixture). Mounts the real,
 // AI-free SeriesPlanner against mock data so the workspace-styled planner can be
 // verified in a browser preview without Electron/SQLite. Never used in prod.
-// Route: ?planner  (optionally ?planner=schedule|study-guide; default outline)
 //
-// Seed mirrors the pastor's real artifact (Jesus of Luke), so the preview shows
-// the three-level model on its native shape: Book ▸ Section ▸ Sermon, each
-// level Title + range · Big idea · Overview.
+// Routes:
+//   ?planner                         book series, Outline (default)
+//   ?planner=schedule|study-guide    book series, that tab
+//   ?planner&kind=topical            topical series, Outline
+//   ?planner=schedule&kind=topical   topical series, that tab
+//
+// The BOOK seed mirrors the pastor's real artifact (Jesus of Luke), so the
+// preview shows the three-level model on its native shape: Book ▸ Section ▸
+// Sermon. The TOPICAL seed ("The Mission of God") shows the theme-led shape:
+// a Big Idea root + a flat, pastor-ordered list of sermons whose passages are
+// drawn from many books, with no sections (section_id null).
 
 const SERIES = {
   id: "fixture-series",
@@ -16,6 +23,7 @@ const SERIES = {
   description: "Reintroducing Jesus to people who are familiar with Him.",
   book_id: "luke",
   canon_category: "nt_gospels",
+  kind: "book",
   status: "in_progress",
   year: 2026,
   passage_range: "Luke 1:1–24:53",
@@ -70,15 +78,79 @@ const SERMONS = [
   },
 ];
 
+// ── Topical seed: "The Mission of God" — passages from across the canon, no
+// sections (section_id null), pastor-ordered via sort_order. ────────────────────
+const TOPICAL_SERIES = {
+  id: "fixture-topical",
+  title: "The Mission of God",
+  color: "sage",
+  description: "One thread through the whole canon: God on mission to redeem a people for Himself.",
+  book_id: null,
+  canon_category: "",
+  kind: "topical",
+  status: "in_progress",
+  year: 2026,
+  passage_range: "",
+  start_date: "2026-02-01",
+  end_date: "",
+  big_idea: "From Eden to the New Jerusalem, God pursues a people for Himself — and sends us to join the pursuit.",
+  overview:
+    "Mission is not one program among many; it is the heartbeat of the whole Bible. This series gathers the moments where God's redeeming purpose breaks the surface — promise, exodus, exile, incarnation, commission — so a congregation can see the single arc and find its place in it.",
+  structural_outline: "",
+};
+
+const TOPICAL_SERMONS = [
+  {
+    id: "t-1", series_id: "fixture-topical", section_id: null, sort_order: 0, stage: "in_progress",
+    title: "The Promise to Abraham", passage: "Genesis 12:1-3", date: "2026-02-01",
+    big_idea: "God's mission begins with a promise to bless all nations through one family.",
+    overview:
+      "Before there is a nation, a temple, or a law, there is a promise: through Abraham, all the families of the earth will be blessed. The mission of God is global from its very first word.",
+  },
+  {
+    id: "t-2", series_id: "fixture-topical", section_id: null, sort_order: 1, stage: "in_progress",
+    title: "A Kingdom of Priests", passage: "Exodus 19:3-6", date: "",
+    big_idea: "God rescues a people to represent Him to the watching nations.",
+    overview:
+      "At Sinai, the rescued people learn why they were rescued: to be a kingdom of priests and a holy nation — a people who carry God's presence to the world.",
+  },
+  {
+    id: "t-3", series_id: "fixture-topical", section_id: null, sort_order: 2, stage: "in_progress",
+    title: "A Light to the Nations", passage: "Isaiah 49:6", date: "",
+    big_idea: "The Servant's mission is too large to stop at Israel — it reaches the ends of the earth.",
+    overview:
+      "Through the prophet, God declares that merely restoring Israel is too small a thing; the Servant will be a light to the nations, carrying salvation to the ends of the earth.",
+  },
+  {
+    id: "t-4", series_id: "fixture-topical", section_id: null, sort_order: 3, stage: "in_progress",
+    title: "The Word Made Flesh", passage: "John 1:14", date: "",
+    big_idea: "God's mission takes on flesh — He comes Himself.",
+    overview:
+      "The mission of God is not run by proxy. In Jesus, the sending God becomes the sent One: the Word made flesh, dwelling among us, full of grace and truth.",
+  },
+  {
+    id: "t-5", series_id: "fixture-topical", section_id: null, sort_order: 4, stage: "in_progress",
+    title: "Sent As the Father Sent Me", passage: "Matthew 28:18-20", date: "",
+    big_idea: "The risen King hands His mission to the church.",
+    overview:
+      "The arc lands on us: all authority belongs to the risen Christ, and on that authority He sends His people to make disciples of all nations — the mission of God, now ours.",
+  },
+];
+
 export default function SeriesPlannerFixture() {
-  const tab = new URLSearchParams(window.location.search).get("planner");
-  const activeTab = ["schedule", "study-guide"].includes(tab) ? tab : "book-outline";
+  const params = new URLSearchParams(window.location.search);
+  const tabParam = params.get("planner");
+  const isTopical = params.get("kind") === "topical";
+  const activeTab = ["schedule", "study-guide"].includes(tabParam) ? tabParam : "book-outline";
+  const fixture = isTopical
+    ? { series: TOPICAL_SERIES, sections: [], sermons: TOPICAL_SERMONS, calNotes: [], activeTab }
+    : { series: SERIES, sections: SECTIONS, sermons: SERMONS, calNotes: [], activeTab };
   return (
     <SeriesPlanner
-      seriesId="fixture-series"
+      seriesId={isTopical ? "fixture-topical" : "fixture-series"}
       onBack={() => {}}
       onOpenSermon={() => {}}
-      _fixture={{ series: SERIES, sections: SECTIONS, sermons: SERMONS, calNotes: [], activeTab }}
+      _fixture={fixture}
     />
   );
 }

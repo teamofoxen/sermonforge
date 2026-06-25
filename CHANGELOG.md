@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-06-25 — Topical Series mode — theme-led second planner mode (v1)
+
+- Added a second planner mode: a topical series gathers passages from many books under one Big Idea (theme), alongside the existing book series.
+- Schema v30 — `series.kind` (`book`|`topical`) + `sermons.sort_order` (pastor-authored order); both additive, create-then-update, synced across all three allowlist mirrors.
+- New Series modal gains a Book/Topical toggle; the topical page is a Big Idea root + a flat, reorderable list of sermons (no sections), with `create-sermon` section-optional for topical.
+- Schedule orders topical sermons by the pastor's arrangement (`seriesSermonOrderBy` reads `sort_order`, a no-op for book series); Coverage hidden and Study-guide/How-it-works copy made mode-aware.
+- Verified: eslint 0, 54 contract tests, browser preview (topical Outline/Schedule/Study-guide + book regression); structured per-sermon book deferred.
+
+---
+
 ## 2026-06-25 — docs(charter): authorize Topical Series planner mode
 
 - Added a dated charter ruling authorizing a second, theme-led "Topical Series" planner mode (Big Idea ▸ Sermon) alongside the existing book-led mode.

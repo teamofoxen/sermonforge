@@ -82,6 +82,9 @@ export const SERMON_COLUMNS = new Set([
   // v27 — Series Planner content-model rebuild (mirrors contracts): sermon
   // big idea + overview + guide-local study_guide_extras.
   "big_idea", "overview", "study_guide_extras",
+  // v30 — Topical Series mode (mirrors contracts): pastor-authored per-sermon
+  // order for a topical series' flat sermon list; nullable.
+  "sort_order",
 ]);
 
 // v27 — Series Planner content-model rebuild retired the book-study prompts +
@@ -90,6 +93,9 @@ export const SERIES_COLUMNS = new Set([
   "title", "color", "description", "year", "big_idea", "overview",
   "passage_range", "start_date", "end_date", "structural_outline",
   "status", "canon_category", "book_id",
+  // v30 — Topical Series mode (mirrors contracts): explicit planner-mode
+  // discriminator ('book' | 'topical').
+  "kind",
 ]);
 
 export const SECTION_COLUMNS = new Set([
@@ -196,6 +202,12 @@ function compareBySeriesOrder(a: Row, b: Row) {
   const ao = (a.section_id && sections.get(a.section_id)?.sort_order) ?? 1_000_000;
   const bo = (b.section_id && sections.get(b.section_id)?.sort_order) ?? 1_000_000;
   if (ao !== bo) return (ao as number) - (bo as number);
+  // Pastor-authored per-sermon order (Topical Series mode, v30) — mirrors
+  // production seriesSermonOrderBy's COALESCE(s.sort_order, 1000000) term. NULL
+  // sorts last, so book-series sermons (sort_order undefined) are unaffected.
+  const aso = a.sort_order ?? 1_000_000;
+  const bso = b.sort_order ?? 1_000_000;
+  if (aso !== bso) return (aso as number) - (bso as number);
   return (a.created_at || "").localeCompare(b.created_at || "");
 }
 
@@ -289,7 +301,10 @@ function validateAndCommit(op: string, payload: any) {
       // a section-less in-series sermon is auto-filed under the series' first
       // section, auto-creating "Section 1" when it has none. Guarded on the
       // series existing so a stale series_id can't spawn an orphan section.
-      if (seriesId && !sectionId && series.has(seriesId)) {
+      // EXCEPT topical series (kind='topical', v30) — section-optional, so their
+      // sermons stay flat (never auto-filed), mirroring main.js create-sermon.
+      const seriesRow = series.get(seriesId);
+      if (seriesId && !sectionId && seriesRow && seriesRow.kind !== "topical") {
         sectionId = firstSectionIdForSeries(seriesId);
       }
       sermons.set(id, {
@@ -314,6 +329,9 @@ function validateAndCommit(op: string, payload: any) {
       series.set(id, {
         id, title: name, color: payload.color || "gold",
         status: SERIES_STATUS.InProgress,
+        // Mirrors production: the create-series INSERT relies on the column
+        // DEFAULT 'book'; kind flips to 'topical' via a follow-up update-series.
+        kind: "book",
         year: payload.year || new Date().getFullYear(),
         created_at: new Date().toISOString(),
       });
