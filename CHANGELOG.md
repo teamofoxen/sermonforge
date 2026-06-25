@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-06-25 — Series Planner: connect the planner to per-sermon prep
+
+- The New Sermon modal ("Build a sermon") now has two modes: a standalone sermon (title/passage/date), and "From a series" — pick a series and open one of its planned sermons straight into prep.
+- "From a series" opens existing planned units rather than creating new ones, so the planner stays the single place series sermons are made (no duplicates); opening reuses each launch site's existing close-and-open callback.
+- Each unit in the Series Planner's outline now reads "Build this sermon" instead of "Open," landing you in prep with title/passage/date already set.
+- No schema, IPC, or write-path changes; reads use the existing getSermonsBySeries; eslint 0, 239 tests, sweep PASS, preview verified (both modes + the planner CTA at 1280px).
+
+---
+
 ## 2026-06-25 — Series Planner: the canonical book is the series' identity
 
 - New Series modal is now book-first: pick the canonical book (it fills the genre + passage span), with an optional series title that defaults to the book's name.

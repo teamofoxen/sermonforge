@@ -1158,10 +1158,10 @@ function SermonNode({ sermon: p, expanded, onToggle, onField, onCommit, onDelete
             size="sm"
             onClick={handleOpen}
             disabled={isDraft && !p.title?.trim()}
-            title={isDraft && !p.title?.trim() ? "Type a title first" : "Open this sermon"}
+            title={isDraft && !p.title?.trim() ? "Type a title first" : "Open this sermon to start prepping it"}
             style={{ fontSize: "12px", padding: "3px 10px" }}
           >
-            Open
+            Build this sermon
           </SecondaryButton>
         )}
         <DeleteButton small onDelete={() => onDelete(p.id)} />
