@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-06-25 — Coverage Initiative Phases 1+2 — structured per-sermon book + sermon-grained Series Arc
+
+- Schema v31 — `sermons.book_id` (nullable), the structured per-sermon canonical book for topical series; additive, create-then-update, synced across all three allowlist mirrors + schema/database docs.
+- Topical Outline sermon rows now author the passage with a Book picker + a chapter:verse field that compose the `passage` string, so the book and the passage can't disagree.
+- Series Arc reworked from series-grained to sermon-grained: each sermon counts its effective book (`sermon.book_id ?? series.book_id`), so a topical series shows its full genre spread (rows read "Mixed"/"OT · NT"); with no sermons loaded the model degrades to the old per-series grain.
+- Added the `effectiveBookId` helper, five sermon-grained arc tests, and a topical series to the Arc fixture; updated `Arc.jsx` to load sermons and clarify the balance copy.
+- Verified: eslint 0, 68 unit/contract tests, `/sweep-the-house` PASS, browser preview of both lenses (no console errors).
+
+---
+
 ## 2026-06-25 — Topical Series mode — theme-led second planner mode (v1)
 
 - Added a second planner mode: a topical series gathers passages from many books under one Big Idea (theme), alongside the existing book series.

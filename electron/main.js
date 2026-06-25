@@ -1333,6 +1333,26 @@ function runMigrations() {
     version = 30;
   }
 
+  if (version < 31) {
+    // v31 (Coverage Initiative, Phase 1) — structured per-sermon book for the
+    // topical Series Planner. A topical sermon's book previously lived ONLY in
+    // its free-text `passage` string, so topical series were invisible to the
+    // Series Arc (which counts one book PER SERIES). book_id makes a topical
+    // sermon's book structured + queryable; the Arc reworks to sermon-grain in
+    // Phase 2 (charter: docs/PROPOSALS/coverage-initiative.md).
+    //
+    //   sermons.book_id: the stable canonical-book key (mirrors series.book_id,
+    //   keys into src/data/canonicalBooks.js). Nullable — book-series sermons
+    //   stay NULL and inherit series.book_id via the effective-book helper
+    //   (sermon.book_id ?? series.book_id); only topical sermons carry their
+    //   own. In SERMON_COLUMNS, so the Book picker persists via updateSermon;
+    //   the create-sermon INSERT is NOT widened (slot draft/commit ruling) —
+    //   book_id rides the create-then-update follow-up.
+    safeAlter("ALTER TABLE sermons ADD COLUMN book_id TEXT DEFAULT NULL");
+    dbRun("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '31')");
+    version = 31;
+  }
+
   // True when at least one block actually ran. Lets initDatabase skip the
   // boot-time flush on a clean boot of an up-to-date DB — so a healthy library
   // is never re-serialized and rotated over its own backup for no reason.

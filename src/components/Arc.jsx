@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { getAllSeries, getSeriesSermonCounts } from "../core/spine";
+import { getAllSeries, getAllSermons, getSeriesSermonCounts } from "../core/spine";
 import { GENRES } from "../data/canonicalBooks";
 import { toDateString } from "../utils/churchCalendar";
 import { buttonKeydown } from "../utils/buttonKeydown";
@@ -36,6 +36,7 @@ function formatGap(days) {
 
 export default function Arc({ onOpenPlanner, _fixture }) {
   const [series, setSeries] = useState(_fixture ? _fixture.series || [] : []);
+  const [sermons, setSermons] = useState(_fixture ? _fixture.sermons || [] : []);
   const [counts, setCounts] = useState(_fixture ? _fixture.counts || {} : {});
   const [loading, setLoading] = useState(!_fixture);
   const [windowMonths, setWindowMonths] = useState(24);
@@ -44,8 +45,9 @@ export default function Arc({ onOpenPlanner, _fixture }) {
 
   async function load() {
     try {
-      const [all, c] = await Promise.all([getAllSeries(), getSeriesSermonCounts()]);
+      const [all, serms, c] = await Promise.all([getAllSeries(), getAllSermons(), getSeriesSermonCounts()]);
       setSeries(all);
+      setSermons(serms || []);
       setCounts(c || {});
     } catch (e) {
       console.error("Arc load error:", e);
@@ -62,7 +64,7 @@ export default function Arc({ onOpenPlanner, _fixture }) {
     );
   }
 
-  const arc = computeArc(series, { nowISO: toDateString(new Date()), windowMonths });
+  const arc = computeArc(series, sermons, { nowISO: toDateString(new Date()), windowMonths });
 
   return (
     <>
@@ -109,8 +111,13 @@ export default function Arc({ onOpenPlanner, _fixture }) {
                         </span>
                       </td>
                       <td style={{ padding: "9px 10px", color: "var(--ink-soft)" }}>{r.bookName || "—"}</td>
-                      <td style={{ padding: "9px 10px", color: r.genre ? "var(--ink-soft)" : "var(--ink-ghost)" }}>{r.genreLabel}</td>
-                      <td style={{ padding: "9px 10px", color: "var(--ink-soft)" }}>{r.testament || "—"}</td>
+                      <td
+                        title={r.genres.length > 1 ? r.genres.map((g) => GENRES[g]).join(" · ") : undefined}
+                        style={{ padding: "9px 10px", color: r.genres.length ? "var(--ink-soft)" : "var(--ink-ghost)" }}
+                      >
+                        {r.genreLabel}
+                      </td>
+                      <td style={{ padding: "9px 10px", color: "var(--ink-soft)", whiteSpace: "nowrap" }}>{r.testament || "—"}</td>
                       <td style={{ padding: "9px 10px", color: "var(--ink-soft)", whiteSpace: "nowrap" }}>{formatDateRange(r.startDate, r.endDate)}</td>
                       <td style={{ padding: "9px 10px", textAlign: "right", color: "var(--ink-soft)" }}>{counts[r.id] || 0}</td>
                       <td style={{ padding: "9px 10px", textAlign: "right", color: "var(--ink-ghost)", whiteSpace: "nowrap" }}>{formatGap(r.gapToNextDays)}</td>
@@ -136,7 +143,9 @@ export default function Arc({ onOpenPlanner, _fixture }) {
               </div>
 
               <div style={{ fontSize: "11px", color: "var(--ink-ghost)", marginBottom: "10px" }}>
-                {arc.inWindowCount} series in the last {windowMonths} months · Dever's goal is every genre over ~2 years.
+                {arc.inWindowCount} series · {arc.inWindowSermonCount} sermons in the last {windowMonths} months. The
+                balance below counts each sermon's book, so a topical series shows its full spread. Dever's goal is
+                every genre over ~2 years.
               </div>
 
               {/* 7-genre touched / missing */}
@@ -162,12 +171,12 @@ export default function Arc({ onOpenPlanner, _fixture }) {
 
               {/* Unclassified — whole-list scope (unlike the windowed rows above) */}
               <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderTop: "1px solid var(--parchment-deep)", fontSize: "12.5px", color: "var(--ink-soft)" }}>
-                <span>Unclassified <span style={{ color: "var(--ink-ghost)", fontSize: "11px" }}>(all series)</span></span>
+                <span>Unclassified <span style={{ color: "var(--ink-ghost)", fontSize: "11px" }}>(all sermons)</span></span>
                 <span style={{ fontWeight: 600, color: arc.unclassifiedCount ? "var(--crimson)" : "var(--ink)" }}>{arc.unclassifiedCount}</span>
               </div>
               {arc.unclassifiedCount > 0 && (
                 <div style={{ fontSize: "11px", color: "var(--ink-ghost)", marginTop: "4px" }}>
-                  Open a series and pick its book to classify it.
+                  Pick a book to classify — the series' book, or per sermon in a topical series.
                 </div>
               )}
             </div>

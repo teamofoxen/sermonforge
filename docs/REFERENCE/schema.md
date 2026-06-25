@@ -1,6 +1,6 @@
 # SermonForge — Database Schema Reference
 
-Current schema version: **30**
+Current schema version: **31**
 
 | Version | Bumped for |
 |---------|-----------|
@@ -21,6 +21,7 @@ Current schema version: **30**
 | v28 | Series Planner — no "in a series but in no section" limbo. **Data-only** (no DDL): section-less in-series sermons placed into the series' first section (auto-creating a `series_sections` "Section 1" where a series had none); sermons whose `series_id` points at a missing/deleted series set to standalone (`series_id` NULL). Run-once, version-gated. Column allowlists / `assertSchemaContract` untouched. |
 | v29 | Series Planner — re-heal the no-"section-less limbo" invariant. **Data-only** (no DDL), idempotent re-run of the v28 normalize: catches in-series sermons left section-less by the pre-fix `create-sermon` path (the New Sermon modal set `series_id` but never `section_id`), placing each into the series' first section (auto-creating "Section 1" where needed) or setting standalone where the series is missing. The `create-sermon` handler now enforces the invariant on write, so no new limbo is created. Column allowlists / `assertSchemaContract` untouched. |
 | v30 | Topical Series mode — `kind` (`book \| topical`, DEFAULT `book`) on `series`, the explicit theme-led-vs-book-led planner-mode discriminator (NOT inferred from `book_id` being NULL); `sort_order` (nullable INTEGER) on `sermons`, the pastor-authored per-sermon order for a topical series' flat sermon list. Both additive (no backfill, no columns dropped); both ride create-then-update — added to `SERIES_COLUMNS` / `SERMON_COLUMNS`, never the create INSERT. |
+| v31 | Coverage Initiative (Phase 1) — `book_id` (nullable TEXT) on `sermons`, the structured per-sermon canonical book (mirrors `series.book_id`, keys into `src/data/canonicalBooks.js`). A topical sermon picks its own book per-sermon (composed with a chapter:verse ref into the `passage` string so the two can't disagree); a book-series sermon stays NULL and inherits `series.book_id` via the effective-book helper (`sermon.book_id ?? series.book_id`). Additive (no backfill, no columns dropped); rides create-then-update — added to `SERMON_COLUMNS`, never the create INSERT. Makes topical series visible to the sermon-grained Series Arc (Phase 2). |
 
 ---
 
@@ -78,7 +79,8 @@ Current schema version: **30**
 | `sort_order` | INTEGER | Pastor-authored per-sermon order for a **topical** series' flat sermon list (a theme has no book reading order). Nullable — NULL sorts last via `COALESCE` in `seriesSermonOrderBy`; book-series sermons stay NULL and order by their section. Persisted via `updateSermon`, never the create INSERT. The ordering READ is wired in a later build step. (v30) |
 | `is_one_off` | INTEGER | 1 if standalone sermon, 0 if series sermon |
 | `title` | TEXT | |
-| `passage` | TEXT | |
+| `passage` | TEXT | Free-text display reference (e.g. `Genesis 12:1-3`). For a **topical** sermon it is composed from `book_id` + a chapter:verse ref entered in the Outline, so the two can't disagree (no dual source of truth). |
+| `book_id` | TEXT | Structured per-sermon canonical book key (e.g. `genesis`), mirroring `series.book_id` and keying into `src/data/canonicalBooks.js`. Nullable — only **topical** sermons carry their own (picked per-sermon in the Outline); book-series sermons stay NULL and inherit `series.book_id` via the effective-book helper (`sermon.book_id ?? series.book_id`, `src/utils/arc.js`). Persisted via `updateSermon`, never the create INSERT. (v31) |
 | `date` | TEXT | |
 | `preacher` | TEXT | |
 | `stage` | TEXT | `in_progress \| complete` — two-state lifecycle since the v16 collapse (NOT the old 6-state process position). `SERMON_STATUS` in `src/core/contracts.ts`; `create-sermon` writes `in_progress`; `complete` renders as "Preached". The real process position lives in `current_stage` / `current_sub_phase`. (CREATE TABLE default is a vestigial `'planning'`, always overwritten on insert.) |

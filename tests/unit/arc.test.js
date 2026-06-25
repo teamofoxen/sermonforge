@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { computeArc } from "../../src/utils/arc";
+import { computeArc, effectiveBookId } from "../../src/utils/arc";
 
 // A small cross-series fixture: a recent arc (1 Peter → Daniel → Revelation),
 // one unclassified series, and one old series that falls outside a 24-month
@@ -14,7 +14,7 @@ const SERIES = [
 
 describe("computeArc — rows, sort, gap-to-next", () => {
   it("sorts by start_date and computes gap-to-next in days", () => {
-    const arc = computeArc(SERIES, { nowISO: "2026-01-01", windowMonths: 24 });
+    const arc = computeArc(SERIES, [], { nowISO: "2026-01-01", windowMonths: 24 });
     expect(arc.rows.map((r) => r.id)).toEqual(["s4", "s1", "s5", "s2", "s3"]);
     // s1 ends 2025-01-26, s5 starts 2025-02-02 → 7 days.
     const s1 = arc.rows.find((r) => r.id === "s1");
@@ -24,7 +24,7 @@ describe("computeArc — rows, sort, gap-to-next", () => {
   });
 
   it("resolves book name, genre label, and testament per row", () => {
-    const arc = computeArc(SERIES, { nowISO: "2026-01-01" });
+    const arc = computeArc(SERIES, [], { nowISO: "2026-01-01" });
     const s2 = arc.rows.find((r) => r.id === "s2");
     expect(s2.bookName).toBe("Daniel");
     expect(s2.genreLabel).toBe("OT — Prophets");
@@ -37,7 +37,7 @@ describe("computeArc — rows, sort, gap-to-next", () => {
 
 describe("computeArc — windowed balance", () => {
   it("counts touched vs missing genres and OT:NT in a 24-month window", () => {
-    const arc = computeArc(SERIES, { nowISO: "2026-01-01", windowMonths: 24 });
+    const arc = computeArc(SERIES, [], { nowISO: "2026-01-01", windowMonths: 24 });
     // In-window: s1, s5, s2, s3 (s4 is 2022, outside).
     expect(arc.inWindowCount).toBe(4);
     expect(arc.genresTouched).toEqual(["ot_prophets", "nt_general"]);
@@ -47,7 +47,7 @@ describe("computeArc — windowed balance", () => {
   });
 
   it("the window adjusts: a 6-month window only sees the most recent series", () => {
-    const arc = computeArc(SERIES, { nowISO: "2026-01-01", windowMonths: 6 });
+    const arc = computeArc(SERIES, [], { nowISO: "2026-01-01", windowMonths: 6 });
     // windowStart = 2025-07-01 → only Revelation (2025-09-07) qualifies.
     expect(arc.inWindowCount).toBe(1);
     expect(arc.genresTouched).toEqual(["nt_general"]);
@@ -56,7 +56,7 @@ describe("computeArc — windowed balance", () => {
   });
 
   it("with no 'now' the window spans every dated series", () => {
-    const arc = computeArc(SERIES, {});
+    const arc = computeArc(SERIES, []);
     expect(arc.inWindowCount).toBe(5);
     expect(arc.genresTouched).toEqual(["ot_law", "ot_prophets", "nt_general"]);
   });
@@ -70,6 +70,20 @@ describe("computeArc — fail-soft", () => {
   });
 });
 
+describe("effectiveBookId — a sermon's book, falling back to its series'", () => {
+  it("prefers the sermon's own book_id (topical), else the series' (book-series), else null", () => {
+    // Topical sermon carries its own book.
+    expect(effectiveBookId({ book_id: "john" }, { book_id: "luke" })).toBe("john");
+    // Book-series sermon has none — inherits the series' book. "" and null both fall through.
+    expect(effectiveBookId({ book_id: "" }, { book_id: "luke" })).toBe("luke");
+    expect(effectiveBookId({ book_id: null }, { book_id: "luke" })).toBe("luke");
+    expect(effectiveBookId({}, { book_id: "luke" })).toBe("luke");
+    // Neither set → null (Unclassified on the Arc).
+    expect(effectiveBookId({}, {})).toBeNull();
+    expect(effectiveBookId({ book_id: "john" }, null)).toBe("john");
+  });
+});
+
 describe("computeArc — trailing-window boundary (minusMonths month-overflow clamp)", () => {
   it("clamps a month-end 'now' back to the target month's last day, not forward", () => {
     // now = 2026-03-31, window = 1 month. Naive setMonth(−1) rolls Feb-31 → Mar 3
@@ -79,7 +93,7 @@ describe("computeArc — trailing-window boundary (minusMonths month-overflow cl
       { id: "mar", canon_category: "nt_pauline", book_id: "romans", start_date: "2026-03-10", end_date: "2026-03-20" },
       { id: "feb", canon_category: "ot_law", book_id: "genesis", start_date: "2026-02-15", end_date: "2026-02-20" },
     ];
-    const arc = computeArc(series, { nowISO: "2026-03-31", windowMonths: 1 });
+    const arc = computeArc(series, [], { nowISO: "2026-03-31", windowMonths: 1 });
     expect(arc.windowStart).toBe("2026-02-28");
     expect(arc.inWindowCount).toBe(1);
   });
@@ -90,9 +104,63 @@ describe("computeArc — testament inference is gated on a recognized genre", ()
     const series = [
       { id: "x", canon_category: "ot_apocrypha", book_id: null, start_date: "2025-06-01", end_date: "2025-06-30" },
     ];
-    const arc = computeArc(series, { nowISO: "2026-01-01", windowMonths: 24 });
+    const arc = computeArc(series, [], { nowISO: "2026-01-01", windowMonths: 24 });
     expect(arc.otCount).toBe(0); // NOT inferred from the bogus "ot_" prefix
     expect(arc.ntCount).toBe(0);
     expect(arc.unclassifiedCount).toBe(1);
+  });
+});
+
+describe("computeArc — sermon-grained spread (Coverage Phase 2)", () => {
+  // A book series (Daniel) + a topical series whose sermons range across books.
+  const SERIES = [
+    { id: "bk", title: "Daniel", book_id: "daniel", canon_category: "ot_prophets", kind: "book", start_date: "2025-01-05", end_date: "2025-02-23", year: 2025 },
+    { id: "tp", title: "The Mission of God", book_id: null, canon_category: "", kind: "topical", start_date: "2025-03-02", end_date: "2025-04-06", year: 2025 },
+  ];
+  const SERMONS = [
+    // Book-series sermons carry no own book_id — they inherit the series' book.
+    { id: "bk-1", series_id: "bk" }, { id: "bk-2", series_id: "bk" },
+    // Topical sermons carry their OWN book — across Law, Gospels, Pauline.
+    { id: "tp-1", series_id: "tp", book_id: "genesis" }, // ot_law / OT
+    { id: "tp-2", series_id: "tp", book_id: "luke" },    // nt_gospels / NT
+    { id: "tp-3", series_id: "tp", book_id: "romans" },  // nt_pauline / NT
+    { id: "tp-4", series_id: "tp", book_id: null },      // not yet booked → unclassified
+  ];
+
+  it("a topical series contributes every genre its sermons touch", () => {
+    const arc = computeArc(SERIES, SERMONS, { nowISO: "2026-01-01", windowMonths: 24 });
+    expect(arc.genresTouched).toEqual(["ot_law", "ot_prophets", "nt_gospels", "nt_pauline"]);
+  });
+
+  it("counts OT:NT per sermon, not per series", () => {
+    const arc = computeArc(SERIES, SERMONS, { nowISO: "2026-01-01", windowMonths: 24 });
+    expect(arc.otCount).toBe(3); // 2 Daniel (inherited) + Genesis
+    expect(arc.ntCount).toBe(2); // Luke + Romans
+    expect(arc.inWindowSermonCount).toBe(6);
+  });
+
+  it("a sermon with no effective book is the only unclassified entry", () => {
+    const arc = computeArc(SERIES, SERMONS, { nowISO: "2026-01-01", windowMonths: 24 });
+    expect(arc.unclassifiedCount).toBe(1); // tp-4 only
+  });
+
+  it("the topical row reads Mixed across both testaments; the book row stays single", () => {
+    const arc = computeArc(SERIES, SERMONS, { nowISO: "2026-01-01", windowMonths: 24 });
+    const tp = arc.rows.find((r) => r.id === "tp");
+    expect(tp.genreLabel).toBe("Mixed");
+    expect(tp.genres).toEqual(["ot_law", "nt_gospels", "nt_pauline"]);
+    expect(tp.testament).toBe("OT · NT");
+    expect(tp.bookName).toBeNull();
+    const bk = arc.rows.find((r) => r.id === "bk");
+    expect(bk.genreLabel).toBe("OT — Prophets");
+    expect(bk.testament).toBe("OT");
+    expect(bk.bookName).toBe("Daniel");
+  });
+
+  it("with no sermons loaded, the model degrades to series-grain", () => {
+    const arc = computeArc(SERIES, [], { nowISO: "2026-01-01", windowMonths: 24 });
+    expect(arc.genresTouched).toEqual(["ot_prophets"]); // Daniel only; topical has no book
+    expect(arc.otCount).toBe(1);
+    expect(arc.unclassifiedCount).toBe(1); // the bookless topical series
   });
 });

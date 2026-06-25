@@ -2,27 +2,44 @@ import { bookById, GENRES } from "../data/canonicalBooks";
 import { toDateString } from "./churchCalendar";
 
 // arc — cross-series balance + gaps, the one read a single-series design can't
-// have. Pure arithmetic over ALL series (aggregation, not schema): sort them on
-// a timeline, compute the gap between consecutive series, and over a trailing
-// window report which of the 7 Dever genres are touched vs missing, the OT:NT
-// split, and how many series are still unclassified. AI-free; deterministic.
+// have. Pure arithmetic over ALL series + their sermons (aggregation, not
+// schema): sort the series on a timeline, compute the gap between consecutive
+// series, and over a trailing window report which of the 7 Dever genres are
+// touched vs missing, the OT:NT split, and how many entries are still
+// unclassified. The balance is SERMON-GRAINED (Coverage Initiative, Phase 2):
+// each sermon counts its effective book's genre + testament, so a topical
+// series — many books under one theme — shows its full spread rather than one
+// row. AI-free; deterministic.
 
 const GENRE_KEYS = Object.keys(GENRES);
 
-// Testament from the chosen book if any, else inferred from a RECOGNIZED genre
-// (its ot_* / nt_* prefix), else null (unclassified). Gating on classifiedGenre
-// (not the raw prefix) keeps an unknown ot_*/nt_*-shaped value from counting as
-// both a testament AND unclassified — which would stop the sidebar reconciling.
-function testamentOf(s) {
-  const book = bookById(s.book_id);
-  if (book) return book.testament;
-  const g = classifiedGenre(s);
-  if (g) return g.startsWith("ot_") ? "OT" : "NT";
-  return null;
-}
-
 function classifiedGenre(s) {
   return typeof s.canon_category === "string" && GENRES[s.canon_category] ? s.canon_category : null;
+}
+
+// One classification UNIT's genre + testament. A sermon with its OWN book is a
+// topical pick — genre + testament come straight from that book. An inherited
+// sermon (a book-series sermon, or a not-yet-booked topical sermon) carries the
+// series' classification: its overridable canon_category for genre, the series'
+// book for testament (the genre's ot_/nt_ prefix as the last resort). Gating
+// genre on the recognized canon_category keeps an unknown value from counting
+// as both a genre AND unclassified, which would stop the sidebar reconciling.
+function unitOf(sermon, series) {
+  const ownBook = sermon && sermon.book_id ? bookById(sermon.book_id) : null;
+  if (ownBook) return { genre: ownBook.genre, testament: ownBook.testament };
+  const effBook = bookById(effectiveBookId(sermon, series));
+  const genre = classifiedGenre(series) || (effBook ? effBook.genre : null);
+  const testament = effBook ? effBook.testament : (genre ? (genre.startsWith("ot_") ? "OT" : "NT") : null);
+  return { genre, testament };
+}
+
+// The book a sermon effectively belongs to for canon-balance views. A topical
+// sermon picks its own book per-sermon (`sermon.book_id`); a book-series sermon
+// has none and inherits the series' book (`series.book_id`). "" and null both
+// mean "unset" and fall through; returns null when neither is set. Consumed by
+// the sermon-grained Arc (Coverage Initiative, Phase 2).
+export function effectiveBookId(sermon, series) {
+  return (sermon && sermon.book_id) || (series && series.book_id) || null;
 }
 
 // Whole days from a to b (both "YYYY-MM-DD"), or null if either is missing.
@@ -43,18 +60,40 @@ function minusMonths(iso, months) {
   return toDateString(d);
 }
 
-export function computeArc(series, { nowISO = "", windowMonths = 24 } = {}) {
+export function computeArc(series, sermons = [], { nowISO = "", windowMonths = 24 } = {}) {
+  // Group sermons under their series so each series row can aggregate the
+  // genre / testament SPREAD of its sermons' effective books.
+  const bySeries = new Map();
+  for (const sm of Array.isArray(sermons) ? sermons : []) {
+    if (!sm || !sm.series_id) continue;
+    const list = bySeries.get(sm.series_id);
+    if (list) list.push(sm);
+    else bySeries.set(sm.series_id, [sm]);
+  }
+
   const rows = (series || [])
     .map((s) => {
-      const genre = classifiedGenre(s);
+      const seriesSermons = bySeries.get(s.id) || [];
+      // One classification unit per sermon; a series with no sermons yet is one
+      // synthetic INHERITED unit (its own book), so a planned book series still
+      // classifies and — with no sermons loaded at all — the whole model
+      // degrades cleanly to the old per-series grain.
+      const units = seriesSermons.length
+        ? seriesSermons.map((sm) => unitOf(sm, s))
+        : [unitOf({}, s)];
+      const genreSet = new Set(units.map((u) => u.genre).filter(Boolean));
+      const genres = GENRE_KEYS.filter((k) => genreSet.has(k));
+      const testaments = new Set(units.map((u) => u.testament).filter(Boolean));
       return {
         id: s.id,
         title: s.title || s.name || "Untitled series",
+        units, // internal — stripped from the returned rows below
         bookId: s.book_id || null,
+        // A topical series has no single book; its spread shows in the genre cell.
         bookName: (bookById(s.book_id) || {}).name || null,
-        genre,
-        genreLabel: genre ? GENRES[genre] : "Unclassified",
-        testament: testamentOf(s),
+        genres,
+        genreLabel: genres.length === 0 ? "Unclassified" : genres.length === 1 ? GENRES[genres[0]] : "Mixed",
+        testament: testaments.size === 0 ? null : testaments.size === 1 ? [...testaments][0] : "OT · NT",
         startDate: s.start_date || "",
         endDate: s.end_date || "",
         year: s.year || null,
@@ -79,17 +118,24 @@ export function computeArc(series, { nowISO = "", windowMonths = 24 } = {}) {
   const windowStart = nowISO ? minusMonths(nowISO, windowMonths) : null;
   const inWindow = rows.filter((r) => r.startDate && (!windowStart || r.startDate >= windowStart));
 
-  const touched = new Set(inWindow.map((r) => r.genre).filter(Boolean));
+  // Balance is sermon-grained: every sermon (unit) in an in-window series counts
+  // its effective book's genre + testament, so a topical series contributes its
+  // full spread instead of one row.
+  const inWindowUnits = inWindow.flatMap((r) => r.units);
+  const touched = new Set(inWindowUnits.map((u) => u.genre).filter(Boolean));
   const genresTouched = GENRE_KEYS.filter((k) => touched.has(k));
+  const allUnits = rows.flatMap((r) => r.units);
 
   return {
-    rows,
+    // Strip the internal `units` from the public row shape.
+    rows: rows.map(({ units, ...r }) => r),
     windowStart,
     windowMonths,
     inWindowCount: inWindow.length,
+    inWindowSermonCount: inWindowUnits.length,
     genresTouched,
-    otCount: inWindow.filter((r) => r.testament === "OT").length,
-    ntCount: inWindow.filter((r) => r.testament === "NT").length,
-    unclassifiedCount: rows.filter((r) => !r.genre).length,
+    otCount: inWindowUnits.filter((u) => u.testament === "OT").length,
+    ntCount: inWindowUnits.filter((u) => u.testament === "NT").length,
+    unclassifiedCount: allUnits.filter((u) => !u.genre).length,
   };
 }

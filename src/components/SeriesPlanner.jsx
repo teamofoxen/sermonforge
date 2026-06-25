@@ -713,7 +713,7 @@ function OutlineTab({
     const id = `draft-${crypto.randomUUID()}`;
     setDrafts((prev) => [...prev, {
       id, _draft: true, series_id: seriesId, section_id: sectionId,
-      title: "", passage: "", big_idea: "", overview: "", date: "",
+      title: "", passage: "", book_id: "", big_idea: "", overview: "", date: "",
       stage: SERMON_STATUS.InProgress,
     }]);
     setExpandedSermons((prev) => new Set(prev).add(id));
@@ -749,10 +749,14 @@ function OutlineTab({
         if (latest.big_idea?.trim?.()) followUp.big_idea = latest.big_idea;
         if (latest.overview?.trim?.()) followUp.overview = latest.overview;
         if ((latest.passage || "") !== (draft.passage || "")) followUp.passage = latest.passage || "";
+        // book_id rides the same create-then-update follow-up (the create-sermon
+        // INSERT is never widened) — a topical draft may carry a picked book.
+        if (latest.book_id) followUp.book_id = latest.book_id;
         if (Object.keys(followUp).length) await updateSermon(newId, followUp);
         const realSlot = {
           id: newId, series_id: draft.series_id, section_id: draft.section_id,
           title: name, passage: latest.passage || "", date: latest.date || "",
+          book_id: latest.book_id || null,
           big_idea: latest.big_idea || "", overview: latest.overview || "",
           stage: SERMON_STATUS.InProgress,
         };
@@ -774,12 +778,16 @@ function OutlineTab({
     inFlightRef.current.set(draftId, promise);
     return promise;
   }
-  function handleSermonRowField(id, field, value) {
+  // Accepts either a single (field, value) — the keystroke fields — or an object
+  // of fields, so a topical Book pick can write book_id + the recomposed passage
+  // in one go (and one DB write) without the two ever landing out of step.
+  function handleSermonRowField(id, fieldOrFields, value) {
+    const fields = typeof fieldOrFields === "string" ? { [fieldOrFields]: value } : fieldOrFields;
     if (isDraftId(id)) {
-      setDrafts((prev) => prev.map((s) => (s.id === id ? { ...s, [field]: value } : s)));
+      setDrafts((prev) => prev.map((s) => (s.id === id ? { ...s, ...fields } : s)));
       return;
     }
-    onSermonField(id, { [field]: value });
+    onSermonField(id, fields);
   }
   async function removeSermonRow(id) {
     if (isDraftId(id)) { setDrafts((prev) => prev.filter((s) => s.id !== id)); clearDraftError(id); return; }
@@ -1222,10 +1230,29 @@ function SectionNode({
 }
 
 // ── Sermon node ─────────────────────────────────────────────────────────────
+// Topical sermons author their passage as a structured Book (`book_id`) + a
+// chapter:verse ref, composed into the single `passage` display string so the
+// book and the passage string can't disagree (no dual source of truth — charter:
+// docs/PROPOSALS/coverage-initiative.md). These convert between the two forms.
+function composePassage(bookId, ref) {
+  const name = (bookById(bookId) || {}).name || "";
+  const r = (ref || "").trim();
+  if (name && r) return `${name} ${r}`;
+  return name || r;
+}
+function refFromPassage(passage, bookId) {
+  const name = (bookById(bookId) || {}).name || "";
+  const p = (passage || "").trim();
+  if (name && p.startsWith(name)) return p.slice(name.length).trim();
+  return p; // no book set yet (e.g. a legacy free-text passage) → the whole string is the ref
+}
+
 // One sermon = one passage = one scheduled Sunday. The Outline is pure
 // outlining — no dates live here; scheduling is wholly the Schedule screen's.
 // Collapsed: passage · working title · Open. Expanded: passage · working title ·
 // big idea · overview. Draft rows commit on title blur/Enter (State #3 deferral).
+// Topical rows author the passage structurally (Book picker + chapter:verse);
+// book-series rows keep the single free-text passage field.
 function SermonNode({ sermon: p, expanded, onToggle, onField, onCommit, onDelete, commitError, onClearError, onOpenSermon, topical = false, index = null, total = 0, onMove = null }) {
   const isDraft = !!p._draft;
   const rowRef = useRef(null);
@@ -1247,6 +1274,38 @@ function SermonNode({ sermon: p, expanded, onToggle, onField, onCommit, onDelete
     const id = isDraft ? await onCommit?.(p.id) : p.id;
     if (id) onOpenSermon(id);
   }
+
+  // Topical authoring: the Book picker and the chapter:verse field both recompose
+  // the single `passage` string, writing book_id + passage together so they can't
+  // disagree.
+  function onPickBook(newBookId) {
+    // If the current ref still leads with the newly-picked book's name (a legacy
+    // free-text passage that had no book_id), strip it so the name isn't doubled.
+    let ref = refFromPassage(p.passage, p.book_id);
+    const name = (bookById(newBookId) || {}).name || "";
+    if (name && ref.startsWith(name)) ref = ref.slice(name.length).trim();
+    onField(p.id, { book_id: newBookId, passage: composePassage(newBookId, ref) });
+  }
+  function onRefChange(ref) {
+    onField(p.id, { passage: composePassage(p.book_id, ref) });
+  }
+
+  // The working-title input is identical in both modes (draft-commit behavior +
+  // inline commit error) — share one copy so the two layouts can't drift.
+  const titleField = (
+    <>
+      <input
+        ref={titleRef} className="field-input" style={{ fontSize: "14px" }}
+        value={p.title || ""}
+        onChange={(e) => onField(p.id, "title", e.target.value)}
+        onBlur={() => { if (isDraft && p.title?.trim()) onCommit?.(p.id); }}
+        onKeyDown={(e) => { if (e.key === "Enter" && isDraft && p.title?.trim()) { e.preventDefault(); onCommit?.(p.id); } }}
+        placeholder="A rough handle for this passage — the big idea expands on it."
+        onClick={(e) => e.stopPropagation()}
+      />
+      {commitError && <div style={{ marginTop: "6px" }}><InlineError onDismiss={() => onClearError?.(p.id)}>{commitError}</InlineError></div>}
+    </>
+  );
 
   return (
     <div ref={rowRef} style={{ border: "1px solid var(--parchment-deep)", borderRadius: "var(--radius)", background: "var(--white)", overflow: "hidden" }}>
@@ -1287,31 +1346,48 @@ function SermonNode({ sermon: p, expanded, onToggle, onField, onCommit, onDelete
 
       {expanded && (
         <div style={{ padding: "14px", borderTop: "1px solid var(--parchment-deep)", background: "var(--parchment-warm)", display: "flex", flexDirection: "column", gap: "12px" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-            <div className="field-group" style={{ marginBottom: 0 }}>
-              <label className="field-label">Passage</label>
-              <input
-                className="field-input" style={{ fontFamily: "var(--font-mono)", fontSize: "14px" }}
-                value={p.passage || ""}
-                onChange={(e) => onField(p.id, "passage", e.target.value)}
-                placeholder={topical ? "e.g. Genesis 12:1-3" : "e.g. Luke 1:1-4"}
-                onClick={(e) => e.stopPropagation()}
-              />
+          {topical ? (
+            // Structured Book + chapter:verse compose the passage; title sits full-width below.
+            <>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                <div className="field-group" style={{ marginBottom: 0 }}>
+                  <label className="field-label">Book</label>
+                  <BookSelect value={p.book_id || ""} onChange={(e) => onPickBook(e.target.value)} />
+                </div>
+                <div className="field-group" style={{ marginBottom: 0 }}>
+                  <label className="field-label">Chapter:verse</label>
+                  <input
+                    className="field-input" style={{ fontFamily: "var(--font-mono)", fontSize: "14px" }}
+                    value={refFromPassage(p.passage, p.book_id)}
+                    onChange={(e) => onRefChange(e.target.value)}
+                    placeholder="e.g. 12:1-3"
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                </div>
+              </div>
+              <div className="field-group" style={{ marginBottom: 0 }}>
+                <label className="field-label">Working title</label>
+                {titleField}
+              </div>
+            </>
+          ) : (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+              <div className="field-group" style={{ marginBottom: 0 }}>
+                <label className="field-label">Passage</label>
+                <input
+                  className="field-input" style={{ fontFamily: "var(--font-mono)", fontSize: "14px" }}
+                  value={p.passage || ""}
+                  onChange={(e) => onField(p.id, "passage", e.target.value)}
+                  placeholder="e.g. Luke 1:1-4"
+                  onClick={(e) => e.stopPropagation()}
+                />
+              </div>
+              <div className="field-group" style={{ marginBottom: 0 }}>
+                <label className="field-label">Working title</label>
+                {titleField}
+              </div>
             </div>
-            <div className="field-group" style={{ marginBottom: 0 }}>
-              <label className="field-label">Working title</label>
-              <input
-                ref={titleRef} className="field-input" style={{ fontSize: "14px" }}
-                value={p.title || ""}
-                onChange={(e) => onField(p.id, "title", e.target.value)}
-                onBlur={() => { if (isDraft && p.title?.trim()) onCommit?.(p.id); }}
-                onKeyDown={(e) => { if (e.key === "Enter" && isDraft && p.title?.trim()) { e.preventDefault(); onCommit?.(p.id); } }}
-                placeholder="A rough handle for this passage — the big idea expands on it."
-                onClick={(e) => e.stopPropagation()}
-              />
-              {commitError && <div style={{ marginTop: "6px" }}><InlineError onDismiss={() => onClearError?.(p.id)}>{commitError}</InlineError></div>}
-            </div>
-          </div>
+          )}
           <div className="field-group" style={{ marginBottom: 0 }}>
             <label className="field-label">Big Idea</label>
             <input

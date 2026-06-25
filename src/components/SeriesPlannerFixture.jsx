@@ -102,35 +102,35 @@ const TOPICAL_SERIES = {
 const TOPICAL_SERMONS = [
   {
     id: "t-1", series_id: "fixture-topical", section_id: null, sort_order: 0, stage: "in_progress",
-    title: "The Promise to Abraham", passage: "Genesis 12:1-3", date: "2026-02-01",
+    title: "The Promise to Abraham", passage: "Genesis 12:1-3", book_id: "genesis", date: "2026-02-01",
     big_idea: "God's mission begins with a promise to bless all nations through one family.",
     overview:
       "Before there is a nation, a temple, or a law, there is a promise: through Abraham, all the families of the earth will be blessed. The mission of God is global from its very first word.",
   },
   {
     id: "t-2", series_id: "fixture-topical", section_id: null, sort_order: 1, stage: "in_progress",
-    title: "A Kingdom of Priests", passage: "Exodus 19:3-6", date: "",
+    title: "A Kingdom of Priests", passage: "Exodus 19:3-6", book_id: "exodus", date: "",
     big_idea: "God rescues a people to represent Him to the watching nations.",
     overview:
       "At Sinai, the rescued people learn why they were rescued: to be a kingdom of priests and a holy nation — a people who carry God's presence to the world.",
   },
   {
     id: "t-3", series_id: "fixture-topical", section_id: null, sort_order: 2, stage: "in_progress",
-    title: "A Light to the Nations", passage: "Isaiah 49:6", date: "",
+    title: "A Light to the Nations", passage: "Isaiah 49:6", book_id: "isaiah", date: "",
     big_idea: "The Servant's mission is too large to stop at Israel — it reaches the ends of the earth.",
     overview:
       "Through the prophet, God declares that merely restoring Israel is too small a thing; the Servant will be a light to the nations, carrying salvation to the ends of the earth.",
   },
   {
     id: "t-4", series_id: "fixture-topical", section_id: null, sort_order: 3, stage: "in_progress",
-    title: "The Word Made Flesh", passage: "John 1:14", date: "",
+    title: "The Word Made Flesh", passage: "John 1:14", book_id: "john", date: "",
     big_idea: "God's mission takes on flesh — He comes Himself.",
     overview:
       "The mission of God is not run by proxy. In Jesus, the sending God becomes the sent One: the Word made flesh, dwelling among us, full of grace and truth.",
   },
   {
     id: "t-5", series_id: "fixture-topical", section_id: null, sort_order: 4, stage: "in_progress",
-    title: "Sent As the Father Sent Me", passage: "Matthew 28:18-20", date: "",
+    title: "Sent As the Father Sent Me", passage: "Matthew 28:18-20", book_id: "matthew", date: "",
     big_idea: "The risen King hands His mission to the church.",
     overview:
       "The arc lands on us: all authority belongs to the risen Christ, and on that authority He sends His people to make disciples of all nations — the mission of God, now ours.",

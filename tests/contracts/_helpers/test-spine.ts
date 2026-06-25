@@ -85,6 +85,9 @@ export const SERMON_COLUMNS = new Set([
   // v30 — Topical Series mode (mirrors contracts): pastor-authored per-sermon
   // order for a topical series' flat sermon list; nullable.
   "sort_order",
+  // v31 — Coverage Initiative (Phase 1) (mirrors contracts): structured
+  // per-sermon canonical book for the topical planner; nullable.
+  "book_id",
 ]);
 
 // v27 — Series Planner content-model rebuild retired the book-study prompts +

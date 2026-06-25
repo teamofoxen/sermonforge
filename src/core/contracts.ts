@@ -370,6 +370,12 @@ export const SERMON_COLUMNS: ReadonlySet<string> = Object.freeze(new Set([
   // by section). Rides create-then-update — the create-sermon INSERT is never
   // widened.
   "sort_order",
+  // v31 — Coverage Initiative (Phase 1). Structured per-sermon canonical book
+  // for the topical planner (mirrors series.book_id). Nullable — book-series
+  // sermons stay NULL and inherit series.book_id via the effective-book helper;
+  // only topical sermons carry their own. Rides create-then-update — the
+  // create-sermon INSERT is never widened.
+  "book_id",
 ])) as ReadonlySet<string>;
 
 // v27 — Series Planner content-model rebuild retired the four book-study

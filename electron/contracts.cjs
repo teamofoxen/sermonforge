@@ -133,6 +133,9 @@ const SERMON_COLUMNS = Object.freeze(new Set([
   // v30 — Topical Series mode (mirrors contracts): pastor-authored per-sermon
   // order for a topical series' flat sermon list; nullable, create-then-update.
   "sort_order",
+  // v31 — Coverage Initiative (Phase 1) (mirrors contracts): structured
+  // per-sermon canonical book for the topical planner; nullable.
+  "book_id",
 ]));
 /* eslint-enable sermonforge/canonical-stage-name */
 
