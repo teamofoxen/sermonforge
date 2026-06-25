@@ -1,12 +1,15 @@
 # Coverage Initiative — Charter
 
-**Status:** PROPOSED 2026-06-25 — **not yet built.** The *what & why* + locked
-decisions for a **"Coverage" home** that answers *"what have I been feeding my
-people?"* across two lenses: the canon (the Series Arc, reworked) and topics
-(new, sermon-level tags). Build mechanics land per phase. Baseline: the topical
-Series Planner mode shipped 2026-06-25 (`a6a95f0`, schema **v30** — see
+**Status:** SHIPPED 2026-06-25 — **all phases built + pushed** (`db451dc` Phases
+1+2, `8826d01` Phase 3, `c9e80f2` Phase 4+5). The *what & why* + locked decisions
+for the **"What I've Preached" home** (the renamed Series Arc) that answers *"what
+have I been feeding my people?"* across two lenses the pastor labelled **"By
+book"** (the canon — the Series Arc, reworked sermon-grained) and **"By topic"**
+(new, sermon-level tags). Baseline: the topical Series Planner mode shipped
+2026-06-25 (`a6a95f0`, schema **v30** — see
 [`series-planner-revival-charter.md`](series-planner-revival-charter.md)
-"2026-06-25 — Topical Series mode").
+"2026-06-25 — Topical Series mode"). Schema reached **v32** (`sermons.book_id` v31,
+`sermons.tags` v32).
 
 ## Why
 
@@ -59,10 +62,12 @@ him.
   `BookSelect.jsx`) + a chapter:verse field, **composing** the display passage
   ("Genesis" + "12:1-3" → "Genesis 12:1-3") so `book_id` and the passage string
   **can't disagree** (no dual source of truth).
-- **Naming:** "Coverage" collides with the existing per-book `CoveragePanel` (% of
-  one book, on the Schedule) and Planning's "Biblical Coverage" tally — pick a
-  non-colliding umbrella name WITH the pastor (candidates: "Coverage," "What I've
-  Preached," "The Pulpit's Diet").
+- **Naming (RESOLVED 2026-06-25):** the home is **"What I've Preached"** (pastor-
+  decided). "Coverage" was rejected — it collides with the existing per-book
+  `CoveragePanel` (% of one book, on the Schedule) and Planning's "Biblical
+  Coverage" tally. The two lenses are labelled **"By book"** and **"By topic"**
+  (the Bible is assumed). `VIEW.Arc` is kept as the internal view key for routing
+  stability; only the sidebar label changed ("Series Arc" → "What I've Preached").
 
 ## Data model (additive — use the **v30 migration in `electron/main.js` as the exact template**: `safeAlter` + version bump + 3-mirror allowlist sync + `assertSchemaContract` + schema docs)
 
@@ -81,22 +86,26 @@ him.
 
 ## Phases (commit + verify per phase; ship via `/sweep-the-house` on contract-touching diffs, then `/end-session`)
 
-0. **Charter** — this document. Registered in [`ANCHORS.md`](../ANCHORS.md).
-1. **Structured per-sermon book** — v31 migration; topical sermon row gets
+**ALL PHASES SHIPPED 2026-06-25** — `db451dc` (P1+2), `8826d01` (P3), `c9e80f2`
+(P4+5). Each swept (`/sweep-the-house` PASS) before commit; lint 0, full suite green.
+
+0. ✅ **Charter** — this document. Registered in [`ANCHORS.md`](../ANCHORS.md).
+1. ✅ **Structured per-sermon book** — v31 migration; topical sermon row gets
    `BookSelect` + chapter:verse composing the passage; effective-book helper
    (`sermon.book_id ?? series.book_id`). Verify each topical sermon carries a book.
-2. **Arc → sermon-grain** — extend the Arc's data load to include sermons (book_id,
+2. ✅ **Arc → sermon-grain** — extend the Arc's data load to include sermons (book_id,
    series_id, dates); rework `computeArc` (`src/utils/arc.js`) to count genre/
    testament per *sermon*, aggregating to the series timeline; update `Arc.jsx` +
    `ArcFixture.jsx`. Verify topical series appear with their full genre spread.
-3. **Sermon-level tags** — migration for `sermons.tags`; tag field + existing-tag
+3. ✅ **Sermon-level tags** — migration for `sermons.tags`; tag field + existing-tag
    autocomplete in the sermon workspace; optionally the planner `SermonNode`.
    Verify tags persist + autocomplete across book/topical/standalone sermons.
-4. **Coverage home + Topics lens** — a home holding two lenses: the reworked Arc +
-   a Topics view (all tags → the sermons/series under each; browse, not score).
-   Decide the umbrella name with the pastor. Rework `VIEW.Arc` + the sidebar
-   "Series Arc" entry.
-5. **Verify + ship** — eslint 0, contract tests green, `node --check` on electron,
+4. ✅ **"What I've Preached" home + Topics lens** — a home holding two lenses
+   (`WhatIvePreached.jsx`): the reworked Arc (embedded) + a Topics view
+   (`TopicsView.jsx`; all tags → the sermons under each; browse, not score). Named
+   **"What I've Preached"** with **"By book"** / **"By topic"** lenses (pastor-
+   decided). Reworked `VIEW.Arc` render + relabelled the sidebar "Series Arc" entry.
+5. ✅ **Verify + ship** — eslint 0, contract tests green, `node --check` on electron,
    browser preview of both lenses with a book + a topical series tagged. Legibility
    check (a first-time user, no modal — do they know what the Topics lens shows?).
 
