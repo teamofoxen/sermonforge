@@ -12,7 +12,7 @@ import {
   SERIES_STATUS, SERIES_STATUS_LABELS,
   SERMON_STATUS, LOADING_VERB,
 } from "../core/contracts";
-import { getSeasonForDate, getUpcomingSundays, toDateString } from "../utils/churchCalendar";
+import { getSeasonForDate, getUpcomingSundays, addWeek } from "../utils/churchCalendar";
 import { computePacing } from "../utils/pacing";
 import { computeCoverage } from "../utils/coverage";
 import { buildStudyGuideModel } from "../utils/studyGuideModel";
@@ -1204,6 +1204,8 @@ function SermonNode({ sermon: p, expanded, onToggle, onField, onCommit, onDelete
 function ScheduleTab({ series, sermons, calNotes, onSeriesField, onSermonDate, onSyncEndDate, onSermonsChange, onNavigate, runSave }) {
   const [suggesting, setSuggesting] = useState(false);
   const excludeDates = calNotes.map((n) => n.date);
+  // Suggest Sundays fills ONLY the undated units (preserves hand-set dates).
+  const undatedCount = sermons.filter((s) => !s.date).length;
   // Per-row expand — reveals the unit's big idea + overview. The Schedule row
   // itself stays passage + date; the rest lives one click down.
   const [expandedRows, setExpandedRows] = useState(() => new Set());
@@ -1221,24 +1223,35 @@ function ScheduleTab({ series, sermons, calNotes, onSeriesField, onSermonDate, o
   function skipSunday(sermonId) {
     const entry = sermons.find((s) => s.id === sermonId);
     if (!entry?.date) return;
-    const d = new Date(entry.date + "T00:00:00");
-    d.setDate(d.getDate() + 7);
-    onSermonDate(sermonId, toDateString(d));
+    onSermonDate(sermonId, addWeek(entry.date));
   }
 
-  // Suggest Sundays — one explicit bulk gesture. Writes every sermon's date in a
-  // single round of updates (immediate, not debounced), then syncs end_date.
+  // Suggest Sundays — one explicit bulk gesture that fills ONLY the undated units,
+  // preserving any date the pastor set by hand. The new dates continue after the
+  // last already-scheduled Sunday (or the series start if nothing is dated yet),
+  // skipping the pastor's special-date notes. Immediate writes (not debounced),
+  // then end_date re-syncs.
   async function suggestSundays() {
-    if (!series.start_date || sermons.length === 0) return;
+    const undated = sermons.filter((s) => !s.date);
+    if (!series.start_date || undated.length === 0) return;
     setSuggesting(true);
     // Flush any pending debounced date edit first, or a date the pastor just typed
-    // could fire ~800ms later and revert this bulk assignment on that one row (the
-    // export path guards the same way before it reads the dates).
+    // could fire ~800ms later and revert this assignment (the export path guards
+    // the same way before it reads the dates).
     await runRegisteredFlushes();
-    const sundays = getUpcomingSundays(series.start_date, sermons.length, excludeDates);
-    const dated = sermons.map((s, i) => ({ ...s, date: sundays[i] || s.date || "" }));
+    // Continue after the latest already-scheduled Sunday, but never before the
+    // declared start date.
+    const lastDated = sermons.reduce((max, s) => (s.date && s.date > max ? s.date : max), "");
+    let startFrom = series.start_date;
+    if (lastDated) {
+      const after = addWeek(lastDated);
+      if (after > startFrom) startFrom = after;
+    }
+    const fill = getUpcomingSundays(startFrom, undated.length, excludeDates);
+    const fillById = new Map(undated.map((s, i) => [s.id, fill[i]]));
+    const dated = sermons.map((s) => (fillById.has(s.id) ? { ...s, date: fillById.get(s.id) } : s));
     onSermonsChange(dated);
-    await runSave(() => Promise.all(dated.map((s) => updateSermon(s.id, { date: s.date }))));
+    await runSave(() => Promise.all(undated.map((s, i) => updateSermon(s.id, { date: fill[i] }))));
     onSyncEndDate(dated);
     setSuggesting(false);
   }
@@ -1266,8 +1279,15 @@ function ScheduleTab({ series, sermons, calNotes, onSeriesField, onSermonDate, o
               onChange={(e) => onSeriesField("start_date", e.target.value)}
             />
           </div>
-          <PrimaryButton size="sm" onClick={suggestSundays} disabled={!series.start_date || sermons.length === 0 || suggesting}>
-            {suggesting ? LOADING_VERB.Saving : `Suggest Sundays (${sermons.length} unit${sermons.length === 1 ? "" : "s"})`}
+          <PrimaryButton
+            size="sm"
+            onClick={suggestSundays}
+            disabled={!series.start_date || undatedCount === 0 || suggesting}
+            title="Dates only the units that don't have a date yet, continuing after your last scheduled Sunday"
+          >
+            {suggesting ? LOADING_VERB.Saving
+              : sermons.length > 0 && undatedCount === 0 ? "All units dated"
+              : `Suggest Sundays (${undatedCount} unit${undatedCount === 1 ? "" : "s"})`}
           </PrimaryButton>
         </div>
       </div>

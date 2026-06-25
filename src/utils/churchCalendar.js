@@ -25,6 +25,13 @@ export function fromDateString(str) {
   return new Date(y, m - 1, d);
 }
 
+// Advance a "YYYY-MM-DD" date string by one week (7 days), returning a
+// "YYYY-MM-DD" string. Used wherever the next Sunday after a scheduled one is
+// needed (skip-a-week, the Suggest-Sundays fill start).
+export function addWeek(dateStr) {
+  return toDateString(addDays(fromDateString(dateStr), 7));
+}
+
 // ── Easter (Anonymous Gregorian computus) ─────────────────────────────────────
 
 export function getEaster(year) {

@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-06-25 — Series Planner: Suggest Sundays fills only the undated units
+
+- "Suggest Sundays" now dates only the units that don't have a date, continuing after the last already-scheduled Sunday — dates set by hand are preserved instead of overwritten.
+- The button shows how many it will fill and reads "All units dated" when none remain; the misleading dead `|| s.date` fallback (which looked like it preserved dates) is gone.
+- Extracted a shared `addWeek` date helper (`churchCalendar`) used by both skip-a-week and the fill start, replacing duplicated inline date math.
+- eslint 0, 239 tests, sweep PASS, preview verified at 1280px.
+
+---
+
 ## 2026-06-25 — Series Planner: low-risk fork fixes (modal a11y + layout)
 
 - The **New Sermon** modal now uses the shared `useModalA11y` (focus trap, focus restore, `role="dialog"` + labelled title), matching every sibling modal instead of a hand-rolled Escape listener.
