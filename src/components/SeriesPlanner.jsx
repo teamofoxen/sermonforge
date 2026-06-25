@@ -275,10 +275,10 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
     if (last !== (series?.end_date || "")) handleSeriesField("end_date", last);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [series?.end_date]);
-  // Single-source date write shared by BOTH the Outline date field and the
-  // Schedule screen: persist the date through the same debounced path, then
-  // re-mirror end_date. Previously only the Schedule screen recomputed end_date,
-  // so re-dating from the Outline left a stale date range in the exported booklet.
+  // Single-source date write for the Schedule screen — the one place dates live
+  // (the Outline carries none since the outlining-only rebuild). Persist the date
+  // through the shared debounced path, then re-mirror series end_date so the
+  // exported booklet's date range always tracks the last dated unit.
   const handleSermonDate = useCallback((id, date) => {
     handleSermonField(id, { date });
     syncSeriesEndDate(sermons.map((s) => (s.id === id ? { ...s, date } : s)));
@@ -423,7 +423,6 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
             onSectionsChange={setSections}
             onSermonsChange={setSermons}
             onOpenSermon={onOpenSermon}
-            onNavigate={handleTabChange}
             runSave={runSave}
           />
         )}
@@ -432,7 +431,6 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
             series={series}
             sermons={sermons}
             calNotes={calNotes}
-            seriesId={seriesId}
             onSeriesField={handleSeriesField}
             onSermonDate={handleSermonDate}
             onSyncEndDate={syncSeriesEndDate}
@@ -587,7 +585,7 @@ function formatPacingDate(iso) {
 function OutlineTab({
   series, sections, sermons, seriesId,
   onSeriesField, onSelectBook, onSectionField, onSermonField,
-  onSectionsChange, onSermonsChange, onOpenSermon, onNavigate, runSave,
+  onSectionsChange, onSermonsChange, onOpenSermon, runSave,
 }) {
   const [referenceOpen, setReferenceOpen] = useState(false);
   // Expanded section / sermon ids. Sections default expanded; sermons
@@ -1198,7 +1196,7 @@ function ScheduleTab({ series, sermons, calNotes, onSeriesField, onSermonDate, o
   }
 
   // Date writes go through the parent's single-source handler (persists the date
-  // AND re-mirrors series end_date), shared with the Outline date field.
+  // AND re-mirrors series end_date). The Schedule is the only surface that dates.
   function handleDate(sermonId, date) {
     onSermonDate(sermonId, date);
   }
@@ -1331,6 +1329,7 @@ function ScheduleTab({ series, sermons, calNotes, onSeriesField, onSermonDate, o
                   </IconButton>
                   <IconButton
                     aria-label={isOpen ? "Hide big idea and overview" : "Show big idea and overview"}
+                    aria-expanded={isOpen}
                     className="btn-icon"
                     onClick={() => toggleRow(sermon.id)}
                     title={isOpen ? "Hide big idea & overview" : "Show big idea & overview"}
@@ -1669,7 +1668,7 @@ function SeriesHowItWorksModal({ onClose }) {
   const dialogRef = useModalA11y(onClose);
   const screens = [
     { name: "Outline", body: "Plan the book from the top down in three labeled levels — Book, Section, and the Sermons inside each section. Every level holds a title and passage range, a one-line big idea, and a short overview." },
-    { name: "Schedule", body: "Lay each sermon on a Sunday. Liturgical seasons and your special-date notes ride along. Dates save as you go and show on the Outline." },
+    { name: "Schedule", body: "Lay each sermon on a Sunday. Liturgical seasons and your special-date notes ride along. Dates save as you go — the Schedule is the one place they live." },
     { name: "Study guide", body: "Build a congregational booklet from your outline — an introduction, a part per section, and a page per sermon. Add questions, cross-references, and quotes; export to Word." },
   ];
   return (

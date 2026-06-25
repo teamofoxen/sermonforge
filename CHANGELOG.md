@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-06-25 — Series Planner audit remediation (mechanical fixes)
+
+- Corrected the "How this works" modal's Schedule copy, which still claimed dates "show on the Outline" — false since the outlining-only rebuild.
+- Added `aria-expanded` to the Schedule row expand toggle, bringing it to parity with the planner's three other disclosure controls.
+- Removed two dead prop-passes left by the rebuild: `onNavigate` to `OutlineTab` and `seriesId` to `ScheduleTab`.
+- Rewrote two stale comments that still referenced the removed Outline date field.
+- From an autonomous multi-agent audit; behavior-preserving only. 17 judgment-class findings (incl. 2 HIGH) deferred to the pastor. eslint 0, 235 tests, sweep PASS, preview verified.
+
+---
+
 ## 2026-06-25 — Series Planner: Outline is outlining-only; Schedule owns dates
 
 - **Outline** stripped to outlining: removed the per-unit Date field, date chip, and "Schedule" jump (plus their focus/flash plumbing), and the Color / Status / Year / Description editors and Coverage panel from Book details. Those fields persist from create / the Complete action and still drive the Planning list.
