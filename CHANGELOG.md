@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-06-25 — Series Planner: new-series guidance + drafts survive tab switches
+
+- A brand-new series now opens the Outline with a guidance card explaining sections (plus the "+ Add section" CTA) instead of a bare button — keeps the top-down, section-first model while teaching the first step.
+- An unfinished, not-yet-titled preaching unit (big idea/overview typed, no title) survives switching tabs: its draft state moved up to the always-mounted planner. It's cleared on a series change so a stale draft can't leak across series.
+- eslint 0, 239 tests, sweep PASS, preview verified (draft survives Outline→Schedule→Outline; guidance card at 0 sections).
+
+---
+
 ## 2026-06-25 — docs: MEMORY.md index-hygiene note in CLAUDE.md
 
 - Added an "Index hygiene" note to CLAUDE.md's Memory section: every `MEMORY.md` entry stays a one-line pointer, and per-session updates go in the topic file instead of being appended to the index line.

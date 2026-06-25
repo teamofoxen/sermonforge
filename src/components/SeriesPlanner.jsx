@@ -100,6 +100,13 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
   const [loading, setLoading]   = useState(!_fixture);
   const [loadError, setLoadError] = useState(false);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
+  // Outline draft state lives HERE, not inside OutlineTab, so an unfinished,
+  // not-yet-titled unit isn't wiped when the pastor switches tabs — OutlineTab
+  // unmounts on tab change, but the parent stays mounted. expandedSermons rides
+  // along so a draft stays open across the switch too.
+  const [drafts, setDrafts] = useState([]);
+  const [draftErrors, setDraftErrors] = useState({});
+  const [expandedSermons, setExpandedSermons] = useState(() => new Set());
   // The last failed save's mutation thunk, so the topbar Retry re-runs the real
   // write instead of an empty no-op.
   const lastFailedRef = useRef(null);
@@ -107,6 +114,12 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
   useEffect(() => {
     if (_fixture) return; // preview fixture — no DB reads
     load();
+    // Drafts / expanded state are per-series — clear them when the series changes
+    // so a stale draft from a previous series can't render against this one (these
+    // now live on the always-mounted parent, so they don't reset on their own).
+    setDrafts([]);
+    setDraftErrors({});
+    setExpandedSermons(new Set());
     const saved = localStorage.getItem(`sermonforge_planner_tab_${seriesId}`);
     // A remembered id for a since-removed tab (the old book-study / design /
     // calendar / overview) must not stick — fall back to Outline.
@@ -424,6 +437,12 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
             onSermonsChange={setSermons}
             onOpenSermon={onOpenSermon}
             onSyncEndDate={syncSeriesEndDate}
+            drafts={drafts}
+            setDrafts={setDrafts}
+            draftErrors={draftErrors}
+            setDraftErrors={setDraftErrors}
+            expandedSermons={expandedSermons}
+            setExpandedSermons={setExpandedSermons}
             runSave={runSave}
           />
         )}
@@ -586,21 +605,19 @@ function formatPacingDate(iso) {
 function OutlineTab({
   series, sections, sermons, seriesId,
   onSeriesField, onSelectBook, onSectionField, onSermonField,
-  onSectionsChange, onSermonsChange, onOpenSermon, onSyncEndDate, runSave,
+  onSectionsChange, onSermonsChange, onOpenSermon, onSyncEndDate,
+  drafts, setDrafts, draftErrors, setDraftErrors, expandedSermons, setExpandedSermons,
+  runSave,
 }) {
   const [referenceOpen, setReferenceOpen] = useState(false);
-  // Expanded section / sermon ids. Sections default expanded; sermons
-  // default collapsed (one-line rows the pastor expands to edit).
+  // Sections default expanded; collapse state is OutlineTab-local (resets on a
+  // tab switch — fine). drafts / draftErrors / expandedSermons are lifted to the
+  // parent so an unfinished, not-yet-titled draft survives a tab switch.
   const [collapsedSections, setCollapsedSections] = useState(() => new Set());
-  const [expandedSermons, setExpandedSermons] = useState(() => new Set());
-  // Draft sermons — UI-only rows not yet committed to the spine (State #3
-  // forbids createSermon({name:""})). Keyed by their section_id grouping.
-  const [drafts, setDrafts] = useState([]);
   // Mirror the latest drafts for async commit re-reads (see commitDraft): the
   // pastor can keep typing into a draft during its createSermon round-trip.
   const draftsRef = useRef(drafts);
   draftsRef.current = drafts;
-  const [draftErrors, setDraftErrors] = useState({});
   const inFlightRef = useRef(new Map());
   const [justCreatedSectionId, setJustCreatedSectionId] = useState(null);
 
@@ -904,9 +921,19 @@ function OutlineTab({
           />
         ))}
 
-        <div>
-          <SecondaryButton size="sm" onClick={addSection}>+ Add section</SecondaryButton>
-        </div>
+        {sections.length === 0 ? (
+          <div className="card" style={{ textAlign: "center", padding: "28px 24px" }}>
+            <p style={{ fontFamily: "var(--font-serif)", color: "var(--ink-soft)", fontSize: "14px", margin: "0 auto 14px", maxWidth: "520px", lineHeight: 1.6 }}>
+              No sections yet. Start by dividing the book into its major movements — each section holds a title and
+              passage range, a one-line big idea, and the preaching units inside it. Add your first section to begin.
+            </p>
+            <SecondaryButton size="sm" onClick={addSection}>+ Add section</SecondaryButton>
+          </div>
+        ) : (
+          <div>
+            <SecondaryButton size="sm" onClick={addSection}>+ Add section</SecondaryButton>
+          </div>
+        )}
       </div>
     </div>
   );
