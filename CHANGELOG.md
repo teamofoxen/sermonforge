@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-06-25 — Series Planner: one name for the scheduled unit ("sermon")
+
+- The planner now says "sermon" everywhere in its three tabs, replacing a four-way mix of "preaching unit", "unit", and "slot" (tier band, "+ Add sermon", Suggest Sundays, coverage notes, date labels).
+- Two stale "calendar" labels (the delete-series and new-series modals) now read "schedule", the current dating tab.
+- Copy and code comments only across SeriesPlanner.jsx, Planning.jsx, NewSeriesModal.jsx — no logic, schema, or IPC changes.
+- Left intact: the standalone Calendar feature, the global New Sermon modal, the "N sermons" series card, and code identifiers.
+- eslint 0, 239 tests, sweep PASS, preview verified at 1280px.
+
+---
+
 ## 2026-06-25 — Series Planner: new-series guidance + drafts survive tab switches
 
 - A brand-new series now opens the Outline with a guidance card explaining sections (plus the "+ Add section" CTA) instead of a bare button — keeps the top-down, section-first model while teaching the first step.

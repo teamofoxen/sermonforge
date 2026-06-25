@@ -71,7 +71,7 @@ export default function NewSeriesModal({ onClose, onCreated }) {
             />
             <p className="field-caption">
               The book or theme you're preaching through. You'll shape the
-              passages, sections, and calendar once it's created.
+              passages, sections, and schedule once it's created.
             </p>
           </div>
 

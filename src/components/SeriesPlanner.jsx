@@ -101,7 +101,7 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
   const [loadError, setLoadError] = useState(false);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
   // Outline draft state lives HERE, not inside OutlineTab, so an unfinished,
-  // not-yet-titled unit isn't wiped when the pastor switches tabs — OutlineTab
+  // not-yet-titled sermon isn't wiped when the pastor switches tabs — OutlineTab
   // unmounts on tab change, but the parent stays mounted. expandedSermons rides
   // along so a draft stays open across the switch too.
   const [drafts, setDrafts] = useState([]);
@@ -291,7 +291,7 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
   // Single-source date write for the Schedule screen — the one place dates live
   // (the Outline carries none since the outlining-only rebuild). Persist the date
   // through the shared debounced path, then re-mirror series end_date so the
-  // exported booklet's date range always tracks the last dated unit.
+  // exported booklet's date range always tracks the last dated sermon.
   const handleSermonDate = useCallback((id, date) => {
     handleSermonField(id, { date });
     syncSeriesEndDate(sermons.map((s) => (s.id === id ? { ...s, date } : s)));
@@ -491,7 +491,7 @@ function CoverageBar({ percent, animate = false }) {
 }
 
 // A read-only picture of how the sermons partition the series' book: a
-// proportional bar + plain notes on gaps, overlaps, out-of-order slots, and any
+// proportional bar + plain notes on gaps, overlaps, out-of-order sermons, and any
 // unreadable passage refs. Purely informational (src/utils/coverage.js) — never
 // a gate. Clamped to the declared passage_range when it parses.
 function CoveragePanel({ series, sermons, onNavigate }) {
@@ -507,21 +507,21 @@ function CoveragePanel({ series, sermons, onNavigate }) {
       }}>
         Pick a canonical book in <strong>Book details</strong> on the{" "}
         <TextButton onClick={() => onNavigate?.("book-outline")} style={{ fontSize: "inherit", padding: 0, verticalAlign: "baseline" }}>Outline</TextButton>{" "}
-        to see how your preaching units cover it.
+        to see how your sermons cover it.
       </div>
     );
   }
 
   const notes = [];
   if (cov.gaps.length) notes.push({ key: "gaps", label: "Uncovered", text: cov.gaps.join(", ") });
-  if (cov.overlaps.length) notes.push({ key: "overlaps", label: "Overlap", text: cov.overlaps.map((o) => `slots ${o.a} & ${o.b}`).join(", ") });
-  if (cov.outOfOrder.length) notes.push({ key: "order", label: "Out of order", text: cov.outOfOrder.map((n) => `slot ${n}`).join(", ") });
+  if (cov.overlaps.length) notes.push({ key: "overlaps", label: "Overlap", text: cov.overlaps.map((o) => `sermons ${o.a} & ${o.b}`).join(", ") });
+  if (cov.outOfOrder.length) notes.push({ key: "order", label: "Out of order", text: cov.outOfOrder.map((n) => `sermon ${n}`).join(", ") });
   if (cov.unreadable.length) {
     notes.push({
       key: "unreadable", label: "Couldn't read",
       text: cov.unreadable.map((n) => {
         const p = sermons[n - 1] && sermons[n - 1].passage;
-        return p ? `slot ${n} ("${p}")` : `slot ${n}`;
+        return p ? `sermon ${n} ("${p}")` : `sermon ${n}`;
       }).join(", "),
     });
   }
@@ -552,7 +552,7 @@ function CoveragePanel({ series, sermons, onNavigate }) {
   );
 }
 
-// A compact, read-only mirror of the series' shape — slot count, approximate
+// A compact, read-only mirror of the series' shape — sermon count, approximate
 // weeks/months, projected end date, a neutral length band, liturgical seasons,
 // and any special-date notes the run spans. Pure arithmetic (src/utils/pacing.js).
 function PacingStrip({ sermons, series, calNotes }) {
@@ -766,8 +766,8 @@ function OutlineTab({
     if (isDraftId(id)) { setDrafts((prev) => prev.filter((s) => s.id !== id)); clearDraftError(id); return; }
     onSermonsChange((prev) => prev.filter((s) => s.id !== id));
     const ok = await runSave(() => deleteSermon(id));
-    // end_date mirrors the LAST dated unit — recompute once this one is gone, or
-    // deleting the latest-dated unit strands a phantom end date on the booklet/Arc.
+    // end_date mirrors the LAST dated sermon — recompute once this one is gone, or
+    // deleting the latest-dated sermon strands a phantom end date on the booklet/Arc.
     if (ok) onSyncEndDate(sermons.filter((s) => s.id !== id));
   }
 
@@ -790,7 +790,7 @@ function OutlineTab({
       <div className="page-header" style={{ padding: "0 0 4px" }}>
         <div className="page-title">Outline</div>
         <div className="page-subtitle">
-          Plan the book from the top down in three levels — the book, its sections, and the preaching units inside them.
+          Plan the book from the top down in three levels — the book, its sections, and the sermons inside them.
           Each level holds the same three things: a title and passage range, a one-line big idea, and a short overview.
         </div>
       </div>
@@ -893,7 +893,7 @@ function OutlineTab({
       {/* ── SECTION LEVEL — the book's major movements ─────────────────────── */}
       <TierBand step={2} label="Section level">
         Divide the book into its major movements. Give each section a title and passage range, its one-line big idea,
-        and a short overview. Your preaching units live inside these sections — that's the next level down.
+        and a short overview. Your sermons live inside these sections — that's the next level down.
       </TierBand>
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
         {sections.map((section, idx) => (
@@ -925,7 +925,7 @@ function OutlineTab({
           <div className="card" style={{ textAlign: "center", padding: "28px 24px" }}>
             <p style={{ fontFamily: "var(--font-serif)", color: "var(--ink-soft)", fontSize: "14px", margin: "0 auto 14px", maxWidth: "520px", lineHeight: 1.6 }}>
               No sections yet. Start by dividing the book into its major movements — each section holds a title and
-              passage range, a one-line big idea, and the preaching units inside it. Add your first section to begin.
+              passage range, a one-line big idea, and the sermons inside it. Add your first section to begin.
             </p>
             <SecondaryButton size="sm" onClick={addSection}>+ Add section</SecondaryButton>
           </div>
@@ -1074,15 +1074,15 @@ function SectionNode({
           <div style={{ borderTop: "1px solid var(--parchment-deep)", paddingTop: "12px", marginLeft: "12px", borderLeft: "2px solid var(--parchment-deep)", paddingLeft: "12px", display: "flex", flexDirection: "column", gap: "8px" }}>
             <div>
               <div style={{ fontFamily: "var(--font-mono)", fontSize: "11px", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--ink-soft)" }}>
-                Sermon level · preaching units in this section
+                Sermon level · sermons in this section
               </div>
               <p className="field-caption" style={{ margin: "2px 0 0" }}>
-                One preaching unit per passage — its working title, big idea, and overview. Date it on the Schedule; open it to write the sermon.
+                One sermon per passage — its working title, big idea, and overview. Date it on the Schedule; open it to write the sermon.
               </p>
             </div>
             {sermons.length === 0 && (
               <div style={{ padding: "12px", background: "var(--parchment-warm)", borderRadius: "var(--radius)", textAlign: "center", color: "var(--ink-ghost)", fontSize: "13px", fontFamily: "var(--font-serif)" }}>
-                No preaching units in this section yet.
+                No sermons in this section yet.
               </div>
             )}
             {sermons.map((p) => (
@@ -1099,7 +1099,7 @@ function SectionNode({
                 onOpenSermon={onOpenSermon}
               />
             ))}
-            <SecondaryButton size="sm" onClick={onAddSermon} style={{ alignSelf: "flex-start", marginTop: "2px" }}>+ Add preaching unit</SecondaryButton>
+            <SecondaryButton size="sm" onClick={onAddSermon} style={{ alignSelf: "flex-start", marginTop: "2px" }}>+ Add sermon</SecondaryButton>
           </div>
         </div>
       )}
@@ -1108,7 +1108,7 @@ function SectionNode({
 }
 
 // ── Sermon node ─────────────────────────────────────────────────────────────
-// One preaching unit = one passage = one scheduled Sunday. The Outline is pure
+// One sermon = one passage = one scheduled Sunday. The Outline is pure
 // outlining — no dates live here; scheduling is wholly the Schedule screen's.
 // Collapsed: passage · working title · Open. Expanded: passage · working title ·
 // big idea · overview. Draft rows commit on title blur/Enter (State #3 deferral).
@@ -1220,20 +1220,20 @@ function SermonNode({ sermon: p, expanded, onToggle, onField, onCommit, onDelete
 }
 
 // ── Schedule Tab ──────────────────────────────────────────────────────────────
-// Lays each preaching unit on a Sunday. The date is SINGLE-SOURCE on the unit;
+// Lays each sermon on a Sunday. The date is SINGLE-SOURCE on the sermon;
 // the Outline carries no dates at all, so this screen wholly owns scheduling.
-// Undated units arrive in outline reading order (section, then creation) from the
+// Undated sermons arrive in outline reading order (section, then creation) from the
 // spine, so the pool — and Suggest Sundays' assignment — follows the book. Suggest
 // Sundays is one explicit bulk gesture; manual edits autosave like any other field.
-// Each row expands to show the unit's big idea + overview (read-only — edited on
+// Each row expands to show the sermon's big idea + overview (read-only — edited on
 // the Outline). AI scheduling advisor stays removed (no-direct-ai); the
 // church-calendar engine is preserved verbatim.
 function ScheduleTab({ series, sermons, calNotes, onSeriesField, onSermonDate, onSyncEndDate, onSermonsChange, onNavigate, runSave }) {
   const [suggesting, setSuggesting] = useState(false);
   const excludeDates = calNotes.map((n) => n.date);
-  // Suggest Sundays fills ONLY the undated units (preserves hand-set dates).
+  // Suggest Sundays fills ONLY the undated sermons (preserves hand-set dates).
   const undatedCount = sermons.filter((s) => !s.date).length;
-  // Per-row expand — reveals the unit's big idea + overview. The Schedule row
+  // Per-row expand — reveals the sermon's big idea + overview. The Schedule row
   // itself stays passage + date; the rest lives one click down.
   const [expandedRows, setExpandedRows] = useState(() => new Set());
   function toggleRow(id) {
@@ -1253,7 +1253,7 @@ function ScheduleTab({ series, sermons, calNotes, onSeriesField, onSermonDate, o
     onSermonDate(sermonId, addWeek(entry.date));
   }
 
-  // Suggest Sundays — one explicit bulk gesture that fills ONLY the undated units,
+  // Suggest Sundays — one explicit bulk gesture that fills ONLY the undated sermons,
   // preserving any date the pastor set by hand. The new dates continue after the
   // last already-scheduled Sunday (or the series start if nothing is dated yet),
   // skipping the pastor's special-date notes. Immediate writes (not debounced),
@@ -1288,8 +1288,8 @@ function ScheduleTab({ series, sermons, calNotes, onSeriesField, onSermonDate, o
       <div className="page-header" style={{ padding: "0 0 4px" }}>
         <div className="page-title">Schedule</div>
         <div className="page-subtitle">
-          Lay each preaching unit on a Sunday. Seasons and your special-date notes ride along so nothing lands where it shouldn't.
-          Dates save as you go; expand any unit to see its big idea and overview.
+          Lay each sermon on a Sunday. Seasons and your special-date notes ride along so nothing lands where it shouldn't.
+          Dates save as you go; expand any sermon to see its big idea and overview.
         </div>
       </div>
 
@@ -1310,16 +1310,16 @@ function ScheduleTab({ series, sermons, calNotes, onSeriesField, onSermonDate, o
             size="sm"
             onClick={suggestSundays}
             disabled={!series.start_date || undatedCount === 0 || suggesting}
-            title="Dates only the units that don't have a date yet, continuing after your last scheduled Sunday"
+            title="Dates only the sermons that don't have a date yet, continuing after your last scheduled Sunday"
           >
             {suggesting ? LOADING_VERB.Saving
-              : sermons.length > 0 && undatedCount === 0 ? "All units dated"
-              : `Suggest Sundays (${undatedCount} unit${undatedCount === 1 ? "" : "s"})`}
+              : sermons.length > 0 && undatedCount === 0 ? "All sermons dated"
+              : `Suggest Sundays (${undatedCount} sermon${undatedCount === 1 ? "" : "s"})`}
           </PrimaryButton>
         </div>
       </div>
 
-      {/* Coverage moved here from the Outline — it measures how the units cover
+      {/* Coverage moved here from the Outline — it measures how the sermons cover
           the book, which is a scheduling-side readout, not outlining. */}
       <div style={{ marginBottom: "20px" }}>
         <CoveragePanel series={series} sermons={sermons} onNavigate={onNavigate} />
@@ -1330,7 +1330,7 @@ function ScheduleTab({ series, sermons, calNotes, onSeriesField, onSermonDate, o
           padding: "32px", background: "var(--parchment-warm)", border: "1px solid var(--parchment-deep)",
           borderRadius: "var(--radius-lg)", textAlign: "center", color: "var(--ink-ghost)", fontSize: "14px",
         }}>
-          Add preaching units in{" "}
+          Add sermons in{" "}
           <TextButton onClick={() => onNavigate?.("book-outline")} style={{ fontSize: "inherit", padding: 0, verticalAlign: "baseline" }}>Outline</TextButton>{" "}
           first.
         </div>
@@ -1370,7 +1370,7 @@ function ScheduleTab({ series, sermons, calNotes, onSeriesField, onSermonDate, o
                       type="date" className="field-input" style={{ fontSize: "13px", padding: "6px 10px" }}
                       value={date}
                       onChange={(e) => onSermonDate(sermon.id, e.target.value)}
-                      aria-label={`Date for preaching unit ${idx + 1}`}
+                      aria-label={`Date for sermon ${idx + 1}`}
                     />
                     {note && <span style={{ fontSize: "11px", color: "var(--crimson)" }}>⚠ {note.label}</span>}
                   </div>
