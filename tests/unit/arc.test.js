@@ -164,3 +164,58 @@ describe("computeArc — sermon-grained spread (Coverage Phase 2)", () => {
     expect(arc.unclassifiedCount).toBe(1); // the bookless topical series
   });
 });
+
+describe("computeArc — standalone / one-off sermons (Coverage: By book lens)", () => {
+  const SERIES = [
+    { id: "bk", title: "Daniel", book_id: "daniel", canon_category: "ot_prophets", kind: "book", start_date: "2025-01-05", end_date: "2025-02-23", year: 2025 },
+  ];
+  const SERMONS = [
+    { id: "bk-1", series_id: "bk" },
+    // One-off sermons — no series. Two share a book (Jonah), one is a lone NT
+    // book (Philippians), one carries no book at all.
+    { id: "o1", series_id: null, book_id: "jonah", date: "2025-07-13" },
+    { id: "o2", series_id: null, book_id: "jonah", date: "2025-07-20" },
+    { id: "o3", series_id: null, book_id: "philippians", date: "2025-08-03" },
+    { id: "o4", series_id: null, book_id: null, date: "2025-08-17" },
+  ];
+
+  it("groups one-off sermons by book into oneOffRows, off the series timeline", () => {
+    const arc = computeArc(SERIES, SERMONS, { nowISO: "2026-01-01", windowMonths: 24 });
+    // The series timeline holds only series — one-offs never appear there.
+    expect(arc.rows.map((r) => r.id)).toEqual(["bk"]);
+    const jonah = arc.oneOffRows.find((r) => r.bookId === "jonah");
+    expect(jonah.count).toBe(2);
+    expect(jonah.bookName).toBe("Jonah");
+    expect(jonah.testament).toBe("OT");
+    // The no-book bucket sorts last and reads as unclassified.
+    const last = arc.oneOffRows[arc.oneOffRows.length - 1];
+    expect(last.bookId).toBeNull();
+    expect(last.genreLabel).toBe("Unclassified");
+  });
+
+  it("counts one-off sermons in the balance (genres, OT:NT, sermon count)", () => {
+    const arc = computeArc(SERIES, SERMONS, { nowISO: "2026-01-01", windowMonths: 24 });
+    expect(arc.genresTouched).toContain("ot_prophets"); // Daniel + Jonah
+    expect(arc.genresTouched).toContain("nt_pauline");  // Philippians
+    expect(arc.otCount).toBe(3); // 1 Daniel (inherited) + 2 Jonah
+    expect(arc.ntCount).toBe(1); // Philippians
+    expect(arc.inWindowSermonCount).toBe(5); // 1 series sermon + 4 one-offs
+    expect(arc.unclassifiedCount).toBe(1);   // the bookless one-off
+  });
+
+  it("windows one-off sermons by their own date, independent of any series", () => {
+    // 6-month window from 2026-01-01 → windowStart 2025-07-01. The four one-offs
+    // (Jul–Aug 2025) are in; the Daniel series (Jan 2025) drops out.
+    const arc = computeArc(SERIES, SERMONS, { nowISO: "2026-01-01", windowMonths: 6 });
+    expect(arc.inWindowCount).toBe(0); // no series in the last 6 months
+    expect(arc.inWindowSermonCount).toBe(4); // the four one-offs
+    expect(arc.otCount).toBe(2); // 2 Jonah (Daniel is out of window)
+    expect(arc.ntCount).toBe(1); // Philippians
+  });
+
+  it("no one-off sermons → an empty oneOffRows list, balance unchanged", () => {
+    const arc = computeArc(SERIES, [{ id: "bk-1", series_id: "bk" }], { nowISO: "2026-01-01", windowMonths: 24 });
+    expect(arc.oneOffRows).toEqual([]);
+    expect(arc.inWindowSermonCount).toBe(1);
+  });
+});

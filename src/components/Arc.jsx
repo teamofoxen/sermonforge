@@ -82,16 +82,18 @@ export default function Arc({ onOpenPlanner, _fixture, embedded = false }) {
       )}
 
       <div className="page-body">
-        {series.length === 0 ? (
+        {arc.rows.length === 0 && arc.oneOffRows.length === 0 ? (
           <EmptyState
             icon="🗺️"
             title="No series yet"
-            description="Once you've planned a few series, this view shows them on one timeline with a balance read across the canon."
+            description="Once you've planned a few series — or built a standalone sermon — this view shows them on one timeline with a balance read across the canon."
           />
         ) : (
           <div style={{ display: "flex", gap: "24px", alignItems: "flex-start", flexWrap: "wrap" }}>
-            {/* Timeline table */}
-            <div className="card" style={{ flex: "1 1 520px", minWidth: 0, overflowX: "auto" }}>
+            <div style={{ flex: "1 1 520px", minWidth: 0, display: "flex", flexDirection: "column", gap: "24px" }}>
+            {/* Series timeline table */}
+            {arc.rows.length > 0 && (
+            <div className="card" style={{ minWidth: 0, overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
                 <thead>
                   <tr style={{ textAlign: "left", color: "var(--ink-ghost)", fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
@@ -133,6 +135,49 @@ export default function Arc({ onOpenPlanner, _fixture, embedded = false }) {
                   ))}
                 </tbody>
               </table>
+            </div>
+            )}
+
+            {/* Standalone (one-off) sermons — grouped by book. Off the series
+                timeline (a one-off has no span or gap-to-next), but their books
+                are counted in the Balance just like every series sermon. */}
+            {arc.oneOffRows.length > 0 && (
+              <div className="card" style={{ minWidth: 0, overflowX: "auto" }}>
+                <div className="card-header" style={{ marginBottom: "8px" }}>
+                  <h2 className="card-title">Standalone sermons</h2>
+                </div>
+                <p style={{ fontSize: "11px", color: "var(--ink-ghost)", marginBottom: "10px" }}>
+                  One-off sermons preached outside any series, grouped by book — they count in the balance.
+                </p>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+                  <thead>
+                    <tr style={{ textAlign: "left", color: "var(--ink-ghost)", fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                      <th style={{ padding: "6px 10px" }}>Book</th>
+                      <th style={{ padding: "6px 10px" }}>Genre</th>
+                      <th style={{ padding: "6px 10px" }}>Testament</th>
+                      <th style={{ padding: "6px 10px", textAlign: "right" }}>Sermons</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {arc.oneOffRows.map((r) => (
+                      <tr key={r.id} style={{ borderTop: "1px solid var(--parchment-deep)" }}>
+                        <td style={{ padding: "9px 10px", fontFamily: "var(--font-serif)", color: r.bookName ? "var(--ink)" : "var(--ink-ghost)", fontStyle: r.bookName ? "normal" : "italic" }}>
+                          {r.bookName || "No book"}
+                        </td>
+                        <td
+                          title={r.genres.length > 1 ? r.genres.map((g) => GENRES[g]).join(" · ") : undefined}
+                          style={{ padding: "9px 10px", color: r.genres.length ? "var(--ink-soft)" : "var(--ink-ghost)" }}
+                        >
+                          {r.genreLabel}
+                        </td>
+                        <td style={{ padding: "9px 10px", color: "var(--ink-soft)", whiteSpace: "nowrap" }}>{r.testament || "—"}</td>
+                        <td style={{ padding: "9px 10px", textAlign: "right", color: "var(--ink-soft)" }}>{r.count}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
             </div>
 
             {/* Balance sidebar */}

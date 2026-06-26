@@ -14,7 +14,7 @@ import { toDateString } from "./churchCalendar";
 const GENRE_KEYS = Object.keys(GENRES);
 
 function classifiedGenre(s) {
-  return typeof s.canon_category === "string" && GENRES[s.canon_category] ? s.canon_category : null;
+  return s && typeof s.canon_category === "string" && GENRES[s.canon_category] ? s.canon_category : null;
 }
 
 // One classification UNIT's genre + testament. A sermon with its OWN book is a
@@ -62,10 +62,15 @@ function minusMonths(iso, months) {
 
 export function computeArc(series, sermons = [], { nowISO = "", windowMonths = 24 } = {}) {
   // Group sermons under their series so each series row can aggregate the
-  // genre / testament SPREAD of its sermons' effective books.
+  // genre / testament SPREAD of its sermons' effective books. Standalone sermons
+  // (no series_id) collect separately — they're the "By book" lens's one-off
+  // entries (Coverage Initiative), so a sermon preached outside any series still
+  // gets its book tracked instead of vanishing from the canon balance.
   const bySeries = new Map();
+  const oneOff = [];
   for (const sm of Array.isArray(sermons) ? sermons : []) {
-    if (!sm || !sm.series_id) continue;
+    if (!sm) continue;
+    if (!sm.series_id) { oneOff.push(sm); continue; }
     const list = bySeries.get(sm.series_id);
     if (list) list.push(sm);
     else bySeries.set(sm.series_id, [sm]);
@@ -113,26 +118,73 @@ export function computeArc(series, sermons = [], { nowISO = "", windowMonths = 2
     rows[i].gapToNextDays = next ? daysBetween(rows[i].endDate, next.startDate) : null;
   }
 
+  // One-off / standalone sermons grouped BY their own book. Each book with one-off
+  // sermons is one row in a SEPARATE list — a one-off has no series span or
+  // gap-to-next, so it doesn't belong on the series timeline, but its book must
+  // still count. A one-off with no book picked collects under a single "no book"
+  // row and counts as unclassified — a nudge to classify it.
+  const oneOffBuckets = new Map();
+  for (const sm of oneOff) {
+    const key = sm.book_id || "__none__";
+    const list = oneOffBuckets.get(key);
+    if (list) list.push(sm);
+    else oneOffBuckets.set(key, [sm]);
+  }
+  const oneOffRows = [...oneOffBuckets.entries()]
+    .map(([key, group]) => {
+      const book = key === "__none__" ? null : bookById(key);
+      // Each one-off sermon is its own classification unit (no series to inherit
+      // from); carry its date so the balance can window it per-sermon.
+      const units = group.map((sm) => ({ ...unitOf(sm, null), date: sm.date || "" }));
+      const genreSet = new Set(units.map((u) => u.genre).filter(Boolean));
+      const genres = GENRE_KEYS.filter((k) => genreSet.has(k));
+      const testaments = new Set(units.map((u) => u.testament).filter(Boolean));
+      const dates = group.map((sm) => sm.date).filter(Boolean).sort();
+      return {
+        id: `oneoff:${key}`,
+        bookId: book ? book.id : null,
+        bookName: book ? book.name : null,
+        title: book ? book.name : "No book",
+        units,
+        genres,
+        genreLabel: genres.length === 0 ? "Unclassified" : genres.length === 1 ? GENRES[genres[0]] : "Mixed",
+        testament: testaments.size === 0 ? null : testaments.size === 1 ? [...testaments][0] : "OT · NT",
+        count: group.length,
+        startDate: dates[0] || "",
+        endDate: dates[dates.length - 1] || "",
+      };
+    })
+    .sort((a, b) => {
+      // Classified books first (alpha by name); the no-book bucket last.
+      if (!a.bookId && b.bookId) return 1;
+      if (a.bookId && !b.bookId) return -1;
+      return (a.title || "").localeCompare(b.title || "");
+    });
+
   // Trailing window: series starting on/after (now − windowMonths). With no
   // nowISO the window is the whole list (every dated series).
   const windowStart = nowISO ? minusMonths(nowISO, windowMonths) : null;
   const inWindow = rows.filter((r) => r.startDate && (!windowStart || r.startDate >= windowStart));
 
-  // Balance is sermon-grained: every sermon (unit) in an in-window series counts
-  // its effective book's genre + testament, so a topical series contributes its
-  // full spread instead of one row.
-  const inWindowUnits = inWindow.flatMap((r) => r.units);
+  // Balance is sermon-grained over ONE combined pool: every sermon in an in-window
+  // series (series windowed wholesale by start_date) plus every one-off sermon
+  // whose OWN date falls in the window. So a topical series shows its full spread
+  // AND a standalone sermon's book counts toward the genre / testament balance.
+  const oneOffUnits = oneOffRows.flatMap((r) => r.units);
+  const inWindowOneOffUnits = oneOffUnits.filter((u) => u.date && (!windowStart || u.date >= windowStart));
+  const inWindowUnits = [...inWindow.flatMap((r) => r.units), ...inWindowOneOffUnits];
   const touched = new Set(inWindowUnits.map((u) => u.genre).filter(Boolean));
   const genresTouched = GENRE_KEYS.filter((k) => touched.has(k));
-  const allUnits = rows.flatMap((r) => r.units);
+  const allUnits = [...rows.flatMap((r) => r.units), ...oneOffUnits];
 
   return {
-    // Strip the internal `units` from the public row shape.
+    // Strip the internal `units` from the public row shapes.
     rows: rows.map(({ units, ...r }) => r),
+    oneOffRows: oneOffRows.map(({ units, ...r }) => r),
     windowStart,
     windowMonths,
-    inWindowCount: inWindow.length,
-    inWindowSermonCount: inWindowUnits.length,
+    inWindowCount: inWindow.length, // series only — one-offs aren't series
+    inWindowSermonCount: inWindowUnits.length, // includes in-window one-offs
     genresTouched,
     otCount: inWindowUnits.filter((u) => u.testament === "OT").length,
     ntCount: inWindowUnits.filter((u) => u.testament === "NT").length,

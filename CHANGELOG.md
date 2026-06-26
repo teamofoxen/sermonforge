@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-06-26 — Standalone sermons: passage-led modal (book tracked) + surfaced in the By-book lens
+
+- NewSermonModal's standalone mode now leads with the shared `BookSelect` + a chapter:verse field that compose the passage (like the topical planner rows), so a one-off sermon's `book_id` is captured and book/passage can't disagree.
+- Dropped the required title field — a title is a late-prep act, so a standalone sermon is born named by its passage (State #3 satisfied) and titled later in the workspace; `book_id` rides a create-then-update follow-up.
+- `computeArc` now folds standalone (no-series) sermons into the "By book" lens: grouped by book in a new "Standalone sermons" card off the timeline, and counted in the Balance with per-sermon date windowing.
+- Hardened `classifiedGenre` for a null series (the one-off path); `ArcFixture` seeds one-off sermons for the `?arc` / `?preached` previews.
+- Verified: eslint 0, 278 tests (+4 arc), `?arc` preview shows the card + correct balance, no console errors.
+
+---
+
 ## 2026-06-25 — Series Planner audit remediation — topical passage hardening + doc-drift fixes
 
 - Extracted topical passage composition to `src/utils/topicalPassage.js` and fixed three flaws: picking a book no longer doubles a mismatched legacy book name, name-stripping respects word boundaries ("Jobs"≠"Job"), and a malformed chapter:verse is caught — 19 new unit tests.

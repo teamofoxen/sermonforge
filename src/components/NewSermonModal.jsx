@@ -1,5 +1,9 @@
-import { useState, useEffect, useRef } from "react";
-import { createSermon, getAllSeries, getSermonsBySeries } from "../core/spine";
+import { useState, useEffect } from "react";
+import { createSermon, updateSermon, getAllSeries, getSermonsBySeries } from "../core/spine";
+import { bookById } from "../data/canonicalBooks";
+import { composePassage, refFromPassage, repointPassage } from "../utils/topicalPassage";
+import { parsePassageRef } from "../utils/passageRef";
+import BookSelect from "./BookSelect";
 import mapError from "../utils/mapError";
 import { useModalA11y } from "../utils/useModalA11y";
 import { buttonKeydown } from "../utils/buttonKeydown";
@@ -11,7 +15,11 @@ import SecondaryButton from "./primitives/SecondaryButton";
 import IconButton from "./primitives/IconButton";
 
 // Two ways to start work on a sermon:
-//  • "standalone" — forge a brand-new one-off sermon (title / passage / date).
+//  • "standalone" — forge a brand-new one-off sermon. It's anchored on the
+//    PASSAGE, not a title: pick the Book (the tracked book_id, mirroring the New
+//    Series book picker) + a chapter:verse, set the Sunday. No title is asked —
+//    a sermon's title is a late-prep act, so a standalone sermon is born named by
+//    its passage and titled later in the workspace.
 //  • "series" — open a sermon already PLANNED in the Series Planner. Those units
 //    are real sermon rows; clicking one OPENS it for prep. Nothing is created
 //    here, so the planner stays the single place series sermons are born — no
@@ -23,8 +31,13 @@ import IconButton from "./primitives/IconButton";
 export default function NewSermonModal({ onClose, onCreated, initialDate = "" }) {
   const [mode, setMode] = useState("standalone");
 
-  // Standalone fields.
-  const [title, setTitle] = useState("");
+  // Standalone fields. The passage is authored STRUCTURALLY — a Book picker + a
+  // chapter:verse ref compose the single `passage` string (composePassage),
+  // exactly like the Series Planner's topical sermon rows, so book_id and passage
+  // can't disagree. There is no title field on purpose (see the header comment):
+  // State Contract #3 ("no anonymous atoms") is still satisfied because the
+  // composed passage becomes the sermon's name.
+  const [bookId, setBookId] = useState("");
   const [passage, setPassage] = useState("");
   const [date, setDate] = useState(initialDate);
 
@@ -37,7 +50,6 @@ export default function NewSermonModal({ onClose, onCreated, initialDate = "" })
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
-  const titleRef = useRef(null);
 
   // Load series once; pre-select when exactly one is in progress so "From a
   // series" lands on the obvious one.
@@ -65,22 +77,47 @@ export default function NewSermonModal({ onClose, onCreated, initialDate = "" })
   }, [mode, seriesId]);
 
   // Escape + focus trap + focus restore + dialog ARIA — same as every sibling
-  // overlay. Respects the title input's autoFocus in standalone mode.
+  // overlay. Respects the book select's autoFocus in standalone mode.
   const dialogRef = useModalA11y(onClose);
+
+  // Structured passage authoring (mirrors the topical sermon rows): the Book and
+  // the chapter:verse field both recompose the single `passage` string, so book_id
+  // and passage can never drift apart. repointPassage drops ANY leading book name
+  // before recomposing, so re-picking a book never doubles the name.
+  function onPickBook(newBookId) {
+    setBookId(newBookId);
+    setPassage((prev) => repointPassage(prev, newBookId));
+  }
+  function onRefChange(ref) {
+    setPassage(composePassage(bookId, ref));
+  }
+  const refText = refFromPassage(passage, bookId);
+  const refUnreadable =
+    !!bookId && refText.trim() !== "" && parsePassageRef(passage, bookId).error === true;
 
   async function handleForge() {
     if (saving) return;
-    if (!title.trim()) {
-      setError("Give the sermon a title first — everything else can wait.");
-      titleRef.current?.focus();
+    if (!bookId) {
+      setError("Pick the book you're preaching — the passage names the sermon until you title it in prep.");
       return;
     }
     setSaving(true);
     setError(null);
     try {
       // Standalone only: a one-off sermon, no series. Series sermons are planned
-      // in the Series Planner and OPENED here — never created in this modal.
-      const result = await createSermon({ name: title, passage, date, series_id: null, is_one_off: 1 });
+      // in the Series Planner and OPENED here — never created in this modal. The
+      // composed passage IS the sermon's name (State #3) — the real title comes
+      // later, in the workspace. book_id rides a create-then-update follow-up (the
+      // create-sermon INSERT is never widened), mirroring the planner's commitDraft;
+      // a failed book write is recoverable in the workspace, so it never strands
+      // the pastor on an error with a half-made sermon.
+      const name = passage.trim() || bookById(bookId)?.name || "";
+      const result = await createSermon({ name, passage, date, series_id: null, is_one_off: 1 });
+      try {
+        await updateSermon(result.id, { book_id: bookId });
+      } catch (bookErr) {
+        console.error("standalone sermon book_id write failed (recoverable in workspace):", bookErr);
+      }
       onCreated(result.id);
     } catch (e) {
       console.error(e);
@@ -128,25 +165,28 @@ export default function NewSermonModal({ onClose, onCreated, initialDate = "" })
           {mode === "standalone" ? (
             <>
               <div className="field-group">
-                <label className="field-label">Title *</label>
-                <input
-                  ref={titleRef}
-                  className="field-input"
-                  placeholder="Sermon title…"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  autoFocus
-                />
+                <label className="field-label" htmlFor="new-sermon-book">Book *</label>
+                <BookSelect id="new-sermon-book" value={bookId} onChange={(e) => onPickBook(e.target.value)} autoFocus />
               </div>
 
               <div className="field-group">
-                <label className="field-label">Passage</label>
+                <label className="field-label">Chapter:verse</label>
                 <input
                   className="field-input"
-                  placeholder="e.g. Romans 8:1-17"
-                  value={passage}
-                  onChange={(e) => setPassage(e.target.value)}
+                  style={{ fontFamily: "var(--font-mono)" }}
+                  placeholder="e.g. 8:1-17"
+                  value={refText}
+                  onChange={(e) => onRefChange(e.target.value)}
                 />
+                {refUnreadable && (
+                  <div style={{ marginTop: "5px", fontSize: "12px", color: "var(--crimson-soft)", fontFamily: "var(--font-mono)" }}>
+                    Couldn't read this reference — check the chapter:verse.
+                  </div>
+                )}
+                <p className="field-caption">
+                  The book and chapter:verse are the passage you're preaching. You'll
+                  give the sermon its title later, in prep — for now the passage names it.
+                </p>
               </div>
 
               <div className="field-group">

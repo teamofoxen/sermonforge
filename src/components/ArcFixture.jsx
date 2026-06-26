@@ -28,6 +28,13 @@ const SERMONS = [
   { id: "a5-1", series_id: "a5", book_id: "genesis", passage: "Genesis 12:1-3", title: "The Promise to Abraham" },
   { id: "a5-2", series_id: "a5", book_id: "luke", passage: "Luke 4:16-21", title: "The Year of the Lord's Favor" },
   { id: "a5-3", series_id: "a5", book_id: "romans", passage: "Romans 10:11-15", title: "Beautiful Feet" },
+  // Standalone / one-off sermons — no series. Grouped by their own book in the
+  // "Standalone sermons" list and counted in the balance by their own date. The
+  // last one carries no book → the "No book" row (unclassified nudge).
+  { id: "o1", series_id: null, book_id: "jonah", passage: "Jonah 1:1-17", date: "2025-07-13" },
+  { id: "o2", series_id: null, book_id: "jonah", passage: "Jonah 2:1-10", date: "2025-07-20" },
+  { id: "o3", series_id: null, book_id: "philippians", passage: "Philippians 4:4-9", date: "2025-08-03" },
+  { id: "o4", series_id: null, book_id: null, passage: "Generosity (topical)", date: "2025-08-17" },
 ];
 
 // Slots column mirrors getSeriesSermonCounts — keep it equal to the sermon rows.
