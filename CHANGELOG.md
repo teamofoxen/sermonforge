@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-06-26 — Sermon workspace: doors get a return path + the top-bar Back names its destination
+
+- The writing surface's "upstream not built" doors (e.g. "Lay out the passage's structure") now stash where you came from and show a gold "↩ Return to [field]" banner, so the one-way jump the doors' own copy promised ("come back") finally has a way back.
+- The return banner clears the moment you navigate any other way (chevron / map / handoff / finish), so a stale link never lingers.
+- Top-bar Back relabeled "Back" → "Back to dashboard" so it's not mistaken for an in-walk back; both changes strengthen CORE Surface Contract #5.
+- New `onDoorJump` / `returnTo` / `onReturn` wiring on `SermonWritingSurface`; the fixture mirrors it for the `?surface=writing&field=ccs&units=0` preview.
+- Verified: eslint 0, 278 tests, browser preview (door → banner → return → clear-on-nav), no console errors.
+
+---
+
 ## 2026-06-26 — Standalone sermons: passage-led modal (book tracked) + surfaced in the By-book lens
 
 - NewSermonModal's standalone mode now leads with the shared `BookSelect` + a chapter:verse field that compose the passage (like the topical planner rows), so a one-off sermon's `book_id` is captured and book/passage can't disagree.

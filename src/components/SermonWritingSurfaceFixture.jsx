@@ -422,6 +422,8 @@ export default function SermonWritingSurfaceFixture() {
   const [answers, setAnswers] = useState(readInitialAnswers);
   const [thoughtUnits, setThoughtUnits] = useState(readInitialThoughtUnits);
   const [mapOpen, setMapOpen] = useState(false);
+  // Mirrors production: a door jump stashes its origin for the return banner.
+  const [returnTo, setReturnTo] = useState(null);
   const [startLandingOpen, setStartLandingOpen] = useState(readShowStartLanding);
   const [handoffOpen, setHandoffOpen] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -490,9 +492,29 @@ export default function SermonWritingSurfaceFixture() {
   );
 
   const handleJump = useCallback((next) => {
+    setReturnTo(null);
     setPosition(next);
     setMapOpen(false);
     setHandoffOpen(false);
+  }, []);
+
+  // Ordinary navigation (chevron / reference pane) clears any pending return.
+  const handlePositionChange = useCallback((next) => {
+    setReturnTo(null);
+    setPosition(next);
+  }, []);
+
+  // A door jump stashes where it came from; the return banner brings it back.
+  const handleDoorJump = useCallback((next, origin) => {
+    setReturnTo(origin);
+    setPosition(next);
+  }, []);
+
+  const handleReturn = useCallback(() => {
+    setReturnTo((origin) => {
+      if (origin) setPosition(origin);
+      return null;
+    });
   }, []);
 
   const sermonShape = useMemo(
@@ -519,7 +541,10 @@ export default function SermonWritingSurfaceFixture() {
         onAnswerChange={handleAnswerChange}
         onUnitColumnChange={handleUnitColumnChange}
         onCanvasChange={handleCanvasChange}
-        onPositionChange={setPosition}
+        onPositionChange={handlePositionChange}
+        onDoorJump={handleDoorJump}
+        returnTo={returnTo}
+        onReturn={handleReturn}
         onOpenMap={() => setMapOpen(true)}
       />
       {mapOpen && (

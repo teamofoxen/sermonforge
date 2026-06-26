@@ -332,6 +332,9 @@ export default function SermonWritingSurface({
   onFunctionalElementChange,
   onManuscriptChange,
   onPositionChange,
+  onDoorJump,
+  returnTo,
+  onReturn,
   beforePositionChange,
   onOpenMap,
   onOpenNotebook,
@@ -364,8 +367,8 @@ export default function SermonWritingSurface({
     return () => clearTimeout(t);
   }, [highlightQuestion, onHighlightDone]);
 
-  // Wrap onPositionChange so every internal position-change site (chevron,
-  // unmet-state door) awaits beforePositionChange first. Production wires
+  // Wrap onPositionChange so every ordinary position-change site (chevron,
+  // reference-pane jump) awaits beforePositionChange first. Production wires
   // beforePositionChange to flush pending debounced saves so the preacher's
   // draft survives the jump (spec open question 3). Fixture passes no
   // beforePositionChange, so the await resolves immediately.
@@ -375,6 +378,20 @@ export default function SermonWritingSurface({
       onPositionChange?.(next);
     },
     [beforePositionChange, onPositionChange]
+  );
+
+  // Door jump (the "upstream not built yet" buttons — "Lay out the passage's
+  // structure", "Build the outline"). Unlike a chevron step, a door flings the
+  // pastor to a far field they'll want to come BACK from, so it carries the
+  // current position as the origin. The workspace stashes it and renders the
+  // return banner; ordinary navigation clears it. Honors the "come back" the
+  // door copy promises (the gap the pastor reported: doors were one-way).
+  const handleDoorJump = useCallback(
+    async (next) => {
+      if (beforePositionChange) await beforePositionChange();
+      onDoorJump?.(next, { stage, subPhase, fieldKey });
+    },
+    [beforePositionChange, onDoorJump, stage, subPhase, fieldKey]
   );
 
   const advance = useCallback(async () => {
@@ -431,6 +448,12 @@ export default function SermonWritingSurface({
   const placeLine =
     stage === subPhase ? stage : `${stage} · ${REGION_DISPLAY[subPhase] ?? subPhase}`;
 
+  // Label for the return banner — the name of the field the pastor jumped FROM
+  // via a door. findField resolves every WALK_ORDER field (all door origins);
+  // the fallback covers any unexpected position so the banner never goes blank.
+  const returnField = returnTo ? findField(returnTo.stage, returnTo.subPhase, returnTo.fieldKey) : null;
+  const returnLabel = returnField?.label || "where you were";
+
   const renderQuestion = (q) => {
     if (q.kind === "cumulative-synthesis-table") {
       return (
@@ -438,7 +461,7 @@ export default function SermonWritingSurface({
           question={q}
           thoughtUnits={thoughtUnits}
           onUnitColumnChange={onUnitColumnChange}
-          onPositionChange={handleInternalPositionChange}
+          onPositionChange={handleDoorJump}
         />
       );
     }
@@ -470,7 +493,7 @@ export default function SermonWritingSurface({
           points={outlinePoints}
           functionalElements={functionalElements}
           onChange={onFunctionalElementChange}
-          onPositionChange={handleInternalPositionChange}
+          onPositionChange={handleDoorJump}
         />
       );
     }
@@ -481,7 +504,7 @@ export default function SermonWritingSurface({
           points={outlinePoints}
           manuscript={manuscript}
           onChange={onManuscriptChange}
-          onPositionChange={handleInternalPositionChange}
+          onPositionChange={handleDoorJump}
         />
       );
     }
@@ -534,6 +557,16 @@ export default function SermonWritingSurface({
       )}
       <main className="sws-writing">
         <div className="sws-field">
+          {returnTo && (
+            <IconButton
+              type="button"
+              className="sws-return"
+              onClick={onReturn}
+              aria-label={`Return to ${returnLabel}`}
+            >
+              ↩ Return to {returnLabel}
+            </IconButton>
+          )}
           <div className="sws-place">{placeLine}</div>
           {(() => {
             const frame = regionFrameFor(stage, subPhase, fieldKey);

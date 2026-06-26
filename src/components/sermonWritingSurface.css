@@ -53,6 +53,37 @@
   margin-bottom: 18px;
 }
 
+/* Return banner — the breadcrumb back from a "door" jump (e.g. clicking "Lay
+   out the passage's structure" from a synthesis table). A door sends the pastor
+   to another field; this names the field they came from and takes them straight
+   back, honoring the "come back" the door copy already promises. Deliberately
+   distinct from .sws-back (walk-prev, one step in the ordering) and the topbar
+   Back (exit to dashboard) — Surface Contract #5: every re-entry names where it
+   goes. Gold pill so it reads as a contextual return, not generic navigation. */
+.sws-return {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold);
+  background: var(--gold-pale);
+  border: 1px solid var(--gold-pale);
+  border-radius: var(--radius);
+  padding: 7px 14px;
+  margin-bottom: 20px;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.sws-return:hover {
+  background: var(--white);
+  border-color: var(--gold);
+}
+
 .sws-field-hint {
   font-family: var(--font-serif);
   font-style: italic;

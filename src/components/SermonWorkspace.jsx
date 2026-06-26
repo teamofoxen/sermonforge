@@ -92,6 +92,13 @@ export default function SermonWorkspace({
   // Phase 3). Loaded once on mount; empty in fixture mode (no disk).
   const [allTags, setAllTags] = useState([]);
   const [mapOpen, setMapOpen] = useState(false);
+  // Origin position a "door" jump came from (e.g. clicking "Lay out the
+  // passage's structure" from a synthesis table). Set on a door jump, surfaced
+  // as the writing surface's return banner, and cleared the moment the pastor
+  // navigates any other way (chevron / map / handoff / finish) — so a stale
+  // return link never lingers once they've moved on. Session-local, never
+  // persisted: it's wayfinding for the current detour, not sermon state.
+  const [returnTo, setReturnTo] = useState(null);
   // Question the last map jump targeted — the writing surface scrolls to it
   // and flashes it once, then clears this via onHighlightDone.
   const [jumpHighlight, setJumpHighlight] = useState(null);
@@ -397,8 +404,27 @@ export default function SermonWorkspace({
 
   const handlePositionChange = useCallback(async (next) => {
     await beforePositionChange();
+    setReturnTo(null); // ordinary navigation — any pending door-return is stale
     writePositionAndThresholds(next);
   }, [beforePositionChange, writePositionAndThresholds]);
+
+  // A door jump records where the pastor came from so the writing surface can
+  // offer a return. The doors used to be one-way (the gap the pastor reported:
+  // their copy says "come back" but nothing brought you back).
+  const handleDoorJump = useCallback(async (next, origin) => {
+    await beforePositionChange();
+    setReturnTo(origin);
+    writePositionAndThresholds(next);
+  }, [beforePositionChange, writePositionAndThresholds]);
+
+  // Return banner click — jump back to the stashed origin and consume it.
+  const handleReturn = useCallback(async () => {
+    const dest = returnTo;
+    if (!dest) return;
+    await beforePositionChange();
+    setReturnTo(null);
+    writePositionAndThresholds(dest);
+  }, [returnTo, beforePositionChange, writePositionAndThresholds]);
 
   const handleAnswerChange = useCallback((fieldKey, questionKey, envelope) => {
     if (!sermon) return;
@@ -515,6 +541,7 @@ export default function SermonWorkspace({
   // reads stage/subPhase/fieldKey, and questionKey drives the landing flash.
   const handleMapJump = useCallback(async (next) => {
     await beforePositionChange();
+    setReturnTo(null); // navigated via the map — any pending door-return is stale
     writePositionAndThresholds(next);
     setJumpHighlight(next.questionKey ?? null);
     setMapOpen(false);
@@ -538,6 +565,7 @@ export default function SermonWorkspace({
   const handleHandoffJump = useCallback(async (next) => {
     if (!sermon) return;
     await beforePositionChange();
+    setReturnTo(null); // left via the handoff — any pending door-return is stale
     writePositionAndThresholds(next, {}, {
       suppressTeachingSeen: rereadThreshold !== THRESHOLD_ID.StudyToAnchorHandoff,
     });
@@ -582,6 +610,7 @@ export default function SermonWorkspace({
   // the finish screen so the pastor lands on the field they chose.
   const handleFinishJump = useCallback(async (next) => {
     await beforePositionChange();
+    setReturnTo(null); // jumped from the finish screen — pending door-return is stale
     writePositionAndThresholds(next);
     setFinishOpen(false);
   }, [beforePositionChange, writePositionAndThresholds]);
@@ -687,10 +716,14 @@ export default function SermonWorkspace({
             save indicator, delete. Stage tabs are gone. */}
         <div className="topbar">
           <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1, minWidth: 0 }}>
+            {/* The only top-bar nav: it LEAVES the sermon for the dashboard,
+                so it names that destination (Surface Contract #5 — every
+                re-entry is predictable). Previously a bare "Back", which read
+                as an in-walk back and confused where it led. */}
             <BackButton
               variant="icon"
               onClick={onClose}
-              title="Back"
+              title="Back to dashboard"
               className="btn-icon"
               style={{ flexShrink: 0 }}
             />
@@ -869,6 +902,9 @@ export default function SermonWorkspace({
             onFunctionalElementChange={handleFunctionalElementChange}
             onManuscriptChange={handleManuscriptChange}
             onPositionChange={handlePositionChange}
+            onDoorJump={handleDoorJump}
+            returnTo={returnTo}
+            onReturn={handleReturn}
             beforePositionChange={beforePositionChange}
             onOpenMap={() => setMapOpen(true)}
             onOpenNotebook={() => {
