@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-06-27 — Bible lookup window: book→chapter picker, decoupled from the sermon passage
+
+- Added a "📖 Look up a passage" launcher in the workspace passage bar that opens a standalone, draggable Bible window (PassagePopup `browser` mode) — independent of the sermon's passage, usable for the before/after fields or any lookup.
+- The window navigates by a book list (hover/focus a book reveals its chapters) → click a chapter → loads that chapter's ESV with section headings; header shows the reference, "‹ Choose another passage" returns to the picker.
+- Removed the confusing "← click to see passage" hint from the passage bar.
+- Reverted the side-pane "Show surrounding context" toggle and the before/after question notes from earlier today (replaced by this window); kept the `headings` IPC plumbing the window uses.
+
+---
+
 ## 2026-06-27 — Reference pane: surrounding-context view (full chapters around the preaching range, with headings)
 
 - Renamed the passage toggle "Show surrounding chapter" → "Show surrounding context"; it now opens the full chapter before the preaching range's start through the full chapter after its end (e.g. Ecclesiastes 5:8-6:12 → Ecclesiastes 4-7), so a unit that straddles a chapter line shows both seams.

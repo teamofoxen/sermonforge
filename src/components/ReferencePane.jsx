@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { BOOKS } from "../data/canonicalBooks";
 import { useEsvPassage } from "../utils/useEsvPassage";
 import { RECOVERY, PassageRecovery } from "./PassagePopup";
 import EsvKeyModal from "./EsvKeyModal";
@@ -121,52 +120,8 @@ function OutlineRefItem({ points, onJump, defaultOpen = true }) {
   );
 }
 
-// The "surrounding chapters" window: the full chapter BEFORE the passage's
-// first chapter through the full chapter AFTER its last — because a literary
-// unit often straddles a chapter line (e.g. Ecclesiastes 5:8-6:12 is one unit),
-// so opening only its own chapters wouldn't show the seams on either side.
-//   "Ecclesiastes 5:8-6:12" → "Ecclesiastes 4-7"
-//   "John 3:16-21"          → "John 2-4"
-//   "Psalm 23"              → "Psalm 22-24"
-// Top end is clamped to the book's last chapter when the book name is
-// recognized; an unrecognized / abbreviated name skips the clamp and lets the
-// ESV API resolve an over-range top chapter to whatever exists. Returns null
-// when the reference can't be parsed.
-function surroundingRef(passage) {
-  if (!passage) return null;
-  const norm = passage.trim().replace(/[–—−]/g, "-");
-  const m = norm.match(/^(.+?)\s+(\d.*)$/);
-  if (!m) return null;
-  const book = m[1].trim();
-  const [startPart, endPart] = m[2].split("-").map((s) => s.trim());
-  const startChap = parseInt(startPart, 10);
-  if (!Number.isInteger(startChap)) return null;
-  let endChap = startChap;
-  if (endPart) {
-    if (endPart.includes(":")) {
-      endChap = parseInt(endPart, 10);          // "6:12" → end chapter 6
-    } else if (startPart.includes(":")) {
-      endChap = startChap;                        // "3:16-21" → after-dash is a verse
-    } else {
-      endChap = parseInt(endPart, 10);          // "5-6" → end chapter 6
-    }
-  }
-  if (!Number.isInteger(endChap)) endChap = startChap;
-
-  const rec = BOOKS.find((b) => b.name.toLowerCase() === book.toLowerCase());
-  const lastChapter = rec ? rec.chapters : Infinity;
-  const from = Math.max(1, Math.min(startChap - 1, lastChapter));
-  const to = Math.min(endChap + 1, lastChapter);
-  if (to <= from) return `${book} ${from}`;
-  return `${book} ${from}-${to}`;
-}
-
 function PassageView({ passage }) {
-  const [showChapter, setShowChapter] = useState(false);
-  const windowRef = surroundingRef(passage);
-  const surrounding = showChapter && !!windowRef;
-  const effectiveRef = surrounding ? windowRef : (passage || "");
-  const { data, loading, refresh } = useEsvPassage(effectiveRef, { headings: surrounding });
+  const { data, loading, refresh } = useEsvPassage(passage || "");
   const [keyModalOpen, setKeyModalOpen] = useState(false);
 
   if (!passage) {
@@ -183,15 +138,6 @@ function PassageView({ passage }) {
 
   return (
     <>
-      {windowRef && (
-        <TextButton
-          size="sm"
-          className="refpane-chapter-toggle"
-          onClick={() => setShowChapter((v) => !v)}
-        >
-          {showChapter ? `My passage (${passage})` : "Show surrounding context"}
-        </TextButton>
-      )}
       {loading && <p className="refpane-note">Fetching ESV…</p>}
       {!loading && data?.fetchError && (
         <PassageRecovery

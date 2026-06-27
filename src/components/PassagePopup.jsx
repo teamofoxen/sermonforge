@@ -1,9 +1,55 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import ReactDOM from "react-dom";
 import { useEsvPassage } from "../utils/useEsvPassage";
+import { BOOKS } from "../data/canonicalBooks";
 import IconButton from "./primitives/IconButton";
 import SecondaryButton from "./primitives/SecondaryButton";
+import { TextButton } from "./primitives/TextButton";
 import EsvKeyModal from "./EsvKeyModal";
+
+// BiblePicker — the friendly "look up any passage" navigator: a list of the
+// 66 books on the left; hovering (or focusing) a book reveals its chapters as
+// a number grid on the right; clicking a chapter picks it. No typed references,
+// no exact-format guessing. Two stable panes (no flyout/jank). Chapter-level
+// granularity is the right altitude for "let me read around this" — verse
+// precision isn't needed here.
+function BiblePicker({ onPick }) {
+  const [activeBook, setActiveBook] = useState(BOOKS[0]);
+  return (
+    <div className="bible-picker">
+      <ul className="bible-picker-books">
+        {BOOKS.map((b) => (
+          <li key={b.id}>
+            <IconButton
+              aria-label={b.name}
+              className={"bible-picker-book" + (activeBook?.id === b.id ? " is-active" : "")}
+              onMouseEnter={() => setActiveBook(b)}
+              onFocus={() => setActiveBook(b)}
+              onClick={() => setActiveBook(b)}
+            >
+              {b.name}
+            </IconButton>
+          </li>
+        ))}
+      </ul>
+      <div className="bible-picker-chapters">
+        <div className="bible-picker-chapters-head">{activeBook?.name}</div>
+        <div className="bible-picker-chapter-grid">
+          {Array.from({ length: activeBook?.chapters ?? 0 }, (_, i) => i + 1).map((ch) => (
+            <IconButton
+              key={ch}
+              aria-label={`${activeBook.name} chapter ${ch}`}
+              className="bible-picker-chapter"
+              onClick={() => onPick(`${activeBook.name} ${ch}`)}
+            >
+              {ch}
+            </IconButton>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /**
  * PassagePopup — floating ESV scripture panel.
@@ -29,10 +75,22 @@ import EsvKeyModal from "./EsvKeyModal";
  * claiming modality would misinform screen readers). Focus moves to the
  * close button on open and is restored to the triggering element on close.
  */
-export default function PassagePopup({ passage, isOpen, onClose, initialPosition }) {
+export default function PassagePopup({ passage, isOpen, onClose, initialPosition, browser = false }) {
+  // Browser mode ("look up a passage"): the popup manages its own reference,
+  // decoupled from the sermon's passage. The picker drives selectedRef; the
+  // sermon passage is never touched. Headings on (the reading view benefits
+  // from Crossway's section markers). Non-browser mode shows the fixed
+  // `passage` prop exactly as before.
+  const [selectedRef, setSelectedRef] = useState(null);
+  const [pickerOpen, setPickerOpen] = useState(true);
+  const effectivePassage = browser ? selectedRef : passage;
+
   // The fetch + cache logic lives in useEsvPassage. Empty reference parks
   // the hook; closing the popup releases the in-flight state.
-  const { data, loading, refresh } = useEsvPassage(isOpen ? passage : "");
+  const { data, loading, refresh } = useEsvPassage(
+    isOpen ? (effectivePassage || "") : "",
+    { headings: browser }
+  );
   const closeRef = useRef(null);
   const triggerRef = useRef(null);
   const popupRef = useRef(null);
@@ -55,9 +113,15 @@ export default function PassagePopup({ passage, isOpen, onClose, initialPosition
   useEffect(() => {
     if (isOpen && !prevIsOpenRef.current) {
       setPosition(null);
+      // A fresh open of the lookup window starts back at the picker so the
+      // preacher always lands on "choose a passage," not last session's text.
+      if (browser) {
+        setSelectedRef(null);
+        setPickerOpen(true);
+      }
     }
     prevIsOpenRef.current = isOpen;
-  }, [isOpen]);
+  }, [isOpen, browser]);
 
   // Focus management — capture the active element on open, focus the
   // close button, restore focus on close.
@@ -144,12 +208,14 @@ export default function PassagePopup({ passage, isOpen, onClose, initialPosition
     positionStyle = { left: initialPosition.left, top: initialPosition.top, right: "auto" };
   }
 
+  const headerRef = browser ? (selectedRef || "Look up a passage") : (passage || "Passage");
+
   return ReactDOM.createPortal(
     <div
       ref={popupRef}
-      className="passage-popup"
+      className={"passage-popup" + (browser ? " is-browser" : "")}
       role="dialog"
-      aria-label={passage ? `Scripture passage: ${passage}` : "Scripture passage"}
+      aria-label={browser ? "Look up a Bible passage" : (passage ? `Scripture passage: ${passage}` : "Scripture passage")}
       style={positionStyle}
       onKeyDown={(e) => {
         // When the key modal is nested open, Escape belongs to the modal
@@ -166,7 +232,7 @@ export default function PassagePopup({ passage, isOpen, onClose, initialPosition
         onMouseDown={onHeaderMouseDown}
         style={{ cursor: dragging ? "grabbing" : "grab" }}
       >
-        <span className="passage-popup-ref">{passage || "Passage"}</span>
+        <span className="passage-popup-ref">{headerRef}</span>
         <IconButton
           ref={closeRef}
           className="passage-popup-close"
@@ -175,11 +241,30 @@ export default function PassagePopup({ passage, isOpen, onClose, initialPosition
         >✕</IconButton>
       </div>
 
-      {loading && (
+      {/* Browser-mode navigator — when a chapter is showing, a quiet link back
+          to the picker so the preacher can jump elsewhere without reopening. */}
+      {browser && !pickerOpen && (
+        <div className="passage-popup-nav">
+          <TextButton size="sm" onClick={() => setPickerOpen(true)}>
+            ‹ Choose another passage
+          </TextButton>
+        </div>
+      )}
+
+      {browser && pickerOpen && (
+        <BiblePicker
+          onPick={(ref) => {
+            setSelectedRef(ref);
+            setPickerOpen(false);
+          }}
+        />
+      )}
+
+      {!(browser && pickerOpen) && loading && (
         <div className="passage-popup-loading">Fetching ESV…</div>
       )}
 
-      {!loading && data?.fetchError && (
+      {!(browser && pickerOpen) && !loading && data?.fetchError && (
         <PassageRecovery
           copy="Something went wrong loading the passage. Try again — if it keeps happening, close and reopen SermonForge."
           actionLabel="Try again"
@@ -187,7 +272,7 @@ export default function PassagePopup({ passage, isOpen, onClose, initialPosition
         />
       )}
 
-      {!loading && !data?.fetchError && (
+      {!(browser && pickerOpen) && !loading && !data?.fetchError && (
         esvState === "ok" ? (
           <div className="passage-popup-columns">
             <PassageColumn label="ESV" text={data?.esv} />
@@ -208,7 +293,7 @@ export default function PassagePopup({ passage, isOpen, onClose, initialPosition
       {/* Crossway attribution — required with displayed ESV text (short
           form per api.esv.org conditions; the full notice lives on the
           About screen). */}
-      {!loading && !data?.fetchError && data?.esv && (
+      {!(browser && pickerOpen) && !loading && !data?.fetchError && data?.esv && (
         <div className="passage-popup-copyright">
           ESV® Bible © 2001 by Crossway, a publishing ministry of Good News
           Publishers. Used by permission.

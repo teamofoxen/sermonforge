@@ -423,11 +423,14 @@ body {
   outline: none;
   border-color: var(--gold);
 }
-.passage-bar-hint {
+/* "Look up a passage" — the standalone Bible-window launcher; sits to the
+   right of the sermon-passage box, visually separate so it never reads as
+   editing the preaching text. */
+.passage-lookup-launch {
+  margin-left: auto;
   font-family: 'IBM Plex Serif', serif;
-  font-style: italic;
   font-size: 13px;
-  color: var(--ink-ghost);
+  color: var(--ink-soft);
 }
 .topbar-title {
   font-family: 'IBM Plex Serif', serif;
@@ -1801,6 +1804,93 @@ button {
   flex-direction: column;
   resize: both;
   min-height: 160px;
+}
+
+/* Lookup ("browse the Bible") mode is wider — the picker needs room for the
+   book list + chapter grid side by side. */
+.passage-popup.is-browser {
+  width: 460px;
+  max-width: 92vw;
+  min-width: 360px;
+}
+
+.passage-popup-nav {
+  padding: 8px 16px 0;
+  flex-shrink: 0;
+}
+
+/* BiblePicker — two stable panes: book list (left) + chapter grid (right). */
+.bible-picker {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.bible-picker-books {
+  flex: 0 0 44%;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  overflow-y: auto;
+  border-right: 1px solid var(--parchment-deep);
+}
+
+.bible-picker-book {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 5px 10px;
+  font-family: 'IBM Plex Serif', serif;
+  font-size: 13px;
+  color: var(--ink-mid);
+  cursor: pointer;
+  border-radius: var(--radius);
+}
+.bible-picker-book:hover,
+.bible-picker-book.is-active {
+  background: var(--parchment-warm);
+  color: var(--ink);
+}
+
+.bible-picker-chapters {
+  flex: 1;
+  padding: 10px 12px;
+  overflow-y: auto;
+}
+
+.bible-picker-chapters-head {
+  font-family: 'IBM Plex Serif', serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 10px;
+}
+
+.bible-picker-chapter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(34px, 1fr));
+  gap: 6px;
+}
+
+.bible-picker-chapter {
+  background: var(--white);
+  border: 1px solid var(--parchment-deep);
+  border-radius: var(--radius);
+  padding: 6px 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--ink-mid);
+  cursor: pointer;
+}
+.bible-picker-chapter:hover {
+  background: var(--gold-bright);
+  color: var(--white);
+  border-color: var(--gold-bright);
 }
 
 .passage-popup-header {

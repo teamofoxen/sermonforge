@@ -112,8 +112,8 @@ receives: passage string (e.g. "Galatians 1:1-10"), opts? { headings?: boolean }
 returns:  { esv, esvPending, esvState, esvError? }
 ```
 Fetches passage text via the Crossway ESV API. `opts.headings` (default
-false) includes Crossway's section headings — used by the reference pane's
-"surrounding chapters" view so the literary/pericope seams show; cached
+false) includes Crossway's section headings — used by the Bible lookup window
+(PassagePopup browser mode) so the literary/pericope seams show; cached
 separately from the headings-off fetch. `esvState` is the
 structured code the popup renders plain English from:
 `"ok"` (text in `esv` — possibly empty for an unrecognized reference) ·

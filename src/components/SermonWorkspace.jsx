@@ -53,6 +53,7 @@ import DeleteButton from "./DeleteButton";
 import SecondaryButton from "./primitives/SecondaryButton";
 import IconButton from "./primitives/IconButton";
 import BackButton from "./primitives/BackButton";
+import { TextButton } from "./primitives/TextButton";
 
 // Stage → notebook JSON column. Pre-restructure column names preserved:
 // notebook_blueprint serves the Assembly stage; the column was named
@@ -80,6 +81,7 @@ export default function SermonWorkspace({
   const [sermon, setSermon] = useState(_fixtureSermon ?? null);
   const [loading, setLoading] = useState(!_fixtureSermon);
   const [showPassage, setShowPassage] = useState(false);
+  const [showLookup, setShowLookup] = useState(false);
   const [editingPassage, setEditingPassage] = useState(false);
   const [passageDraft, setPassageDraft] = useState("");
   const [editingTitle, setEditingTitle] = useState(false);
@@ -867,9 +869,14 @@ export default function SermonWorkspace({
                 </IconButton>
               </>
             )}
-            {sermon.passage && !editingPassage && (
-              <span className="passage-bar-hint">← click to see passage</span>
-            )}
+            <TextButton
+              size="sm"
+              className="passage-lookup-launch"
+              onClick={() => setShowLookup(true)}
+              title="Open a Bible window to read any passage"
+            >
+              📖 Look up a passage
+            </TextButton>
           </div>
           {/* Topics — sermon-level tags (Coverage Initiative, Phase 3). Optional;
               browse-what-you've-preached, never a scorecard. */}
@@ -994,6 +1001,11 @@ export default function SermonWorkspace({
         isOpen={showPassage}
         onClose={() => setShowPassage(false)}
         initialPosition={popupAnchor}
+      />
+      <PassagePopup
+        browser
+        isOpen={showLookup}
+        onClose={() => setShowLookup(false)}
       />
     </>
   );

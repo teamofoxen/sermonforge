@@ -79,8 +79,8 @@ export const OBSERVE_FIELDS = [
       ],
     },
     questions: [
-      { key: "before",             prompt: "What happened before this passage?", note: 'Click "Show surrounding context" above the sermon text to open the surrounding passages.' },
-      { key: "after",              prompt: "What happens after?",                note: 'Click "Show surrounding context" above the sermon text to open the surrounding passages.' },
+      { key: "before",             prompt: "What happened before this passage?" },
+      { key: "after",              prompt: "What happens after?" },
       { key: "impact",             prompt: "Do those answers impact what's happening in this passage? If so, how?" },
     ],
   },
