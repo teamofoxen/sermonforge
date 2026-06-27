@@ -80,10 +80,7 @@ export default function SermonWorkspace({
 }) {
   const [sermon, setSermon] = useState(_fixtureSermon ?? null);
   const [loading, setLoading] = useState(!_fixtureSermon);
-  const [showPassage, setShowPassage] = useState(false);
   const [showLookup, setShowLookup] = useState(false);
-  const [editingPassage, setEditingPassage] = useState(false);
-  const [passageDraft, setPassageDraft] = useState("");
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState("");
   const [saveState, setSaveState] = useState(INITIAL_SAVE_STATE);
@@ -115,11 +112,7 @@ export default function SermonWorkspace({
   const [finishOpen, setFinishOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [exportNote, setExportNote] = useState(null);
-  // Anchor captured at click time so the main PassagePopup opens directly
-  // below the workspace passage box rather than at the CSS-default top-right.
-  const [popupAnchor, setPopupAnchor] = useState(null);
   const sermonRef = useRef(_fixtureSermon ?? null);
-  const passageBoxRef = useRef(null);
   // Search-result navigation hint, captured once at mount (App clears the
   // source state on open and on close; the ref guards against re-applying
   // on a re-run of the load effect).
@@ -273,19 +266,6 @@ export default function SermonWorkspace({
   // so the writing-surface passage column + PassagePopup refresh on save.
   // Empty/whitespace input is treated as cancel so a user can't accidentally
   // clear the affordance by hitting Enter on an empty field.
-  const startEditPassage = useCallback(() => {
-    setPassageDraft(sermonRef.current?.passage || "");
-    setEditingPassage(true);
-  }, []);
-  const commitPassageEdit = useCallback(() => {
-    const next = passageDraft.trim();
-    const current = sermonRef.current?.passage || "";
-    if (next && next !== current) handleUpdate({ passage: next });
-    setEditingPassage(false);
-  }, [passageDraft, handleUpdate]);
-  const cancelPassageEdit = useCallback(() => {
-    setEditingPassage(false);
-  }, []);
 
   // Title edit — mirrors the passage pattern. The title was previously
   // writable only at creation and then frozen while the passage beside it
@@ -316,18 +296,6 @@ export default function SermonWorkspace({
     setEditingTitle(false);
   }, []);
 
-  // Popup anchoring — the PassagePopup opens at the position captured from
-  // the passage box's bounding rect at click time, so it lands directly
-  // below the trigger rather than at the CSS-default top-right. The popup
-  // is then draggable from there.
-  const openMainPassagePopup = useCallback(() => {
-    const el = passageBoxRef.current;
-    if (el) {
-      const r = el.getBoundingClientRect();
-      setPopupAnchor({ left: Math.round(r.left), top: Math.round(r.bottom + 8) });
-    }
-    setShowPassage(true);
-  }, []);
 
   // beforePositionChange — async; flushes any pending debounced save
   // BEFORE the position settles. The chain is: position-change trigger
@@ -822,60 +790,18 @@ export default function SermonWorkspace({
           </div>
         </div>
 
-        {/* Workspace passage bar — replaces the deleted .sws-passage drawer.
-            Row 1: passage box (click to popup, pencil to edit) + hint label.
-            Row 2: search input for an arbitrary passage lookup. */}
+        {/* Workspace passage bar. Row 1: the standalone Bible lookup launcher
+            (decoupled from the sermon's preaching passage, which is set in the
+            sermon modal). Row 2: sermon topics. */}
         <div className="workspace-passage-bar">
           <div className="workspace-passage-row">
-            {editingPassage ? (
-              <input
-                className="passage-ref-edit"
-                type="text"
-                value={passageDraft}
-                onChange={(e) => setPassageDraft(e.target.value)}
-                onBlur={commitPassageEdit}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") { e.preventDefault(); commitPassageEdit(); }
-                  else if (e.key === "Escape") { e.preventDefault(); cancelPassageEdit(); }
-                }}
-                placeholder="e.g. Romans 8:1-17"
-                aria-label="Edit passage"
-                autoFocus
-              />
-            ) : (
-              <>
-                {sermon.passage ? (
-                  <span
-                    ref={passageBoxRef}
-                    className="passage-ref"
-                    onClick={openMainPassagePopup}
-                    title="Show ESV text"
-                  >{sermon.passage}</span>
-                ) : (
-                  <span
-                    ref={passageBoxRef}
-                    className="passage-ref is-empty"
-                    onClick={startEditPassage}
-                    title="Set passage"
-                  >Set passage</span>
-                )}
-                <IconButton
-                  className="passage-ref-edit-toggle"
-                  aria-label="Edit passage"
-                  title="Edit passage"
-                  onClick={startEditPassage}
-                >
-                  ✎
-                </IconButton>
-              </>
-            )}
             <TextButton
               size="sm"
               className="passage-lookup-launch"
               onClick={() => setShowLookup(true)}
               title="Open a Bible window to read any passage"
             >
-              📖 Look up a passage
+              📖 Passage lookup
             </TextButton>
           </div>
           {/* Topics — sermon-level tags (Coverage Initiative, Phase 3). Optional;
@@ -996,12 +922,6 @@ export default function SermonWorkspace({
           onClose={() => setNotebookOpen(false)}
         />
       )}
-      <PassagePopup
-        passage={sermon?.passage}
-        isOpen={showPassage}
-        onClose={() => setShowPassage(false)}
-        initialPosition={popupAnchor}
-      />
       <PassagePopup
         browser
         isOpen={showLookup}

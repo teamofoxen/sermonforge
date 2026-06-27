@@ -7,14 +7,40 @@ import SecondaryButton from "./primitives/SecondaryButton";
 import { TextButton } from "./primitives/TextButton";
 import EsvKeyModal from "./EsvKeyModal";
 
-// BiblePicker — the friendly "look up any passage" navigator: a list of the
-// 66 books on the left; hovering (or focusing) a book reveals its chapters as
-// a number grid on the right; clicking a chapter picks it. No typed references,
-// no exact-format guessing. Two stable panes (no flyout/jank). Chapter-level
-// granularity is the right altitude for "let me read around this" — verse
-// precision isn't needed here.
+// BiblePicker — the friendly "look up any passage" navigator. No typed
+// references, no exact-format guessing. Three steps, all click/hover:
+//   1. Book   — the list on the left (hover/focus reveals that book's chapters)
+//   2. Chapter — the number grid on the right
+//   3. Verses — a verse grid (from canonicalBooks' chapterVerses count); pick
+//      "Whole chapter", a single verse, or click a start then an end for a range
+// onPick receives a ready ESV reference string ("Ecclesiastes 5:8-13", "John 3",
+// "Psalm 23:1").
 function BiblePicker({ onPick }) {
   const [activeBook, setActiveBook] = useState(BOOKS[0]);
+  const [chapter, setChapter] = useState(null);
+  const [rangeStart, setRangeStart] = useState(null);
+
+  const pickBook = (b) => {
+    setActiveBook(b);
+    setChapter(null);
+    setRangeStart(null);
+  };
+  const pickChapter = (ch) => {
+    setChapter(ch);
+    setRangeStart(null);
+  };
+  const pickVerse = (v) => {
+    if (rangeStart == null) {
+      setRangeStart(v);
+      return;
+    }
+    const lo = Math.min(rangeStart, v);
+    const hi = Math.max(rangeStart, v);
+    onPick(lo === hi ? `${activeBook.name} ${chapter}:${lo}` : `${activeBook.name} ${chapter}:${lo}-${hi}`);
+  };
+
+  const verseCount = chapter ? (activeBook?.chapterVerses?.[chapter - 1] ?? 0) : 0;
+
   return (
     <div className="bible-picker">
       <ul className="bible-picker-books">
@@ -25,27 +51,61 @@ function BiblePicker({ onPick }) {
               className={"bible-picker-book" + (activeBook?.id === b.id ? " is-active" : "")}
               onMouseEnter={() => setActiveBook(b)}
               onFocus={() => setActiveBook(b)}
-              onClick={() => setActiveBook(b)}
+              onClick={() => pickBook(b)}
             >
               {b.name}
             </IconButton>
           </li>
         ))}
       </ul>
-      <div className="bible-picker-chapters">
-        <div className="bible-picker-chapters-head">{activeBook?.name}</div>
-        <div className="bible-picker-chapter-grid">
-          {Array.from({ length: activeBook?.chapters ?? 0 }, (_, i) => i + 1).map((ch) => (
+      <div className="bible-picker-detail">
+        {chapter == null ? (
+          <>
+            <div className="bible-picker-head">{activeBook?.name} — chapter</div>
+            <div className="bible-picker-grid">
+              {Array.from({ length: activeBook?.chapters ?? 0 }, (_, i) => i + 1).map((ch) => (
+                <IconButton
+                  key={ch}
+                  aria-label={`${activeBook.name} chapter ${ch}`}
+                  className="bible-picker-num"
+                  onClick={() => pickChapter(ch)}
+                >
+                  {ch}
+                </IconButton>
+              ))}
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="bible-picker-head">
+              <IconButton
+                aria-label="Back to chapters"
+                className="bible-picker-back"
+                onClick={() => setChapter(null)}
+              >‹</IconButton>
+              {activeBook?.name} {chapter} — {rangeStart == null ? "verse" : `from v${rangeStart}, pick the end`}
+            </div>
             <IconButton
-              key={ch}
-              aria-label={`${activeBook.name} chapter ${ch}`}
-              className="bible-picker-chapter"
-              onClick={() => onPick(`${activeBook.name} ${ch}`)}
+              aria-label={`Whole chapter — ${activeBook.name} ${chapter}`}
+              className="bible-picker-whole"
+              onClick={() => onPick(`${activeBook.name} ${chapter}`)}
             >
-              {ch}
+              Whole chapter
             </IconButton>
-          ))}
-        </div>
+            <div className="bible-picker-grid">
+              {Array.from({ length: verseCount }, (_, i) => i + 1).map((v) => (
+                <IconButton
+                  key={v}
+                  aria-label={`${activeBook.name} ${chapter} verse ${v}`}
+                  className={"bible-picker-num" + (rangeStart === v ? " is-active" : "")}
+                  onClick={() => pickVerse(v)}
+                >
+                  {v}
+                </IconButton>
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -208,7 +268,7 @@ export default function PassagePopup({ passage, isOpen, onClose, initialPosition
     positionStyle = { left: initialPosition.left, top: initialPosition.top, right: "auto" };
   }
 
-  const headerRef = browser ? (selectedRef || "Look up a passage") : (passage || "Passage");
+  const headerRef = browser ? (selectedRef || "Passage lookup") : (passage || "Passage");
 
   return ReactDOM.createPortal(
     <div

@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-06-27 — Passage lookup: top-left standalone Bible window (book → chapter → verses), decoupled from the sermon passage
+
+- The workspace top-left is now a single "📖 Passage lookup" launcher; removed the sermon-passage chip, the edit pencil, and the redundant right-side button.
+- The lookup window navigates by book → chapter → verses (whole chapter, single verse, or click start-then-end for a range), driven by canonicalBooks' per-chapter verse counts; loads with section headings.
+- It never touches the sermon's preaching passage — that is set in the sermon modal now and still shows in the reference pane; removed the workspace's passage view/edit/popup machinery.
+- Cleaned up the orphaned `.passage-ref*` / `passage-bar-hint` styles.
+
+---
+
 ## 2026-06-27 — Bible lookup window: book→chapter picker, decoupled from the sermon passage
 
 - Added a "📖 Look up a passage" launcher in the workspace passage bar that opens a standalone, draggable Bible window (PassagePopup `browser` mode) — independent of the sermon's passage, usable for the before/after fields or any lookup.
