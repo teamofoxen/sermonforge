@@ -29,7 +29,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   exportManuscript: (data) => ipcRenderer.invoke("sermon-export-manuscript", data),
 
   // ── Bible passage ─────────────────────────────────────────────────────────
-  fetchPassage: (passage) => ipcRenderer.invoke('passage-fetch', passage),
+  fetchPassage: (passage, opts) => ipcRenderer.invoke('passage-fetch', passage, opts),
 
   // ── API key setup ─────────────────────────────────────────────────────────
   getApiKeyStatus: () => ipcRenderer.invoke("app-get-key-status"),

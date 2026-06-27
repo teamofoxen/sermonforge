@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-06-27 — Reference pane: surrounding-context view (full chapters around the preaching range, with headings)
+
+- Renamed the passage toggle "Show surrounding chapter" → "Show surrounding context"; it now opens the full chapter before the preaching range's start through the full chapter after its end (e.g. Ecclesiastes 5:8-6:12 → Ecclesiastes 4-7), so a unit that straddles a chapter line shows both seams.
+- The surrounding view includes Crossway's section headings (pericope markers); threaded an optional `headings` flag through the passage-fetch IPC chain (database → preload → main), cached separately from the tight passage view.
+- Added an instructional note beside the Observe before/after questions pointing the preacher at the "Show surrounding context" toggle.
+- Folded in a pre-existing Observe overview edit: the paragraph now points ahead to the seven observation fields instead of the floor/ceiling phrasing.
+
+---
+
 ## 2026-06-27 — Reference pane: "Show surrounding chapter" toggle on the passage panel
 
 - Added a "Show surrounding chapter" link at the top of the passage panel whenever the passage has verse numbers (e.g. "Ecclesiastes 5:8-6:12").

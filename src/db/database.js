@@ -60,7 +60,10 @@ export const getTheologyChunks      = (ids, maxChars = 600) => api.getTheologyCh
 export const searchSermons = (query, limit = 50) => api.searchSermons(query, limit);
 
 // ── Bible passage viewer ──────────────────────────────────────────────────
-export const fetchPassage = (passage) => api.fetchPassage(passage);
+// opts.headings (default false) asks the main process to include Crossway's
+// editorial section headings — used by the reference pane's "surrounding
+// chapters" view so the literary seams (pericope divisions) are visible.
+export const fetchPassage = (passage, opts) => api.fetchPassage(passage, opts);
 
 // ── Export ────────────────────────────────────────────────────────────────────
 export const exportStudyGuide = (seriesId) => api.exportStudyGuide(seriesId);

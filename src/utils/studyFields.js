@@ -75,12 +75,12 @@ export const OBSERVE_FIELDS = [
     overview: {
       title: "Observe — don't stop at the obvious",
       paragraphs: [
-        "Observe is the 'Captain Obvious' phase — read, reread, and note what the text plainly says, before any commentary. Bring Merida's posture: he tells students to make twenty-five observations on a passage; they're sure it's impossible, then find it isn't. You won't count to twenty-five here, but don't stop at the first few things you notice — the obvious is the floor, not the ceiling. The labor of looking is itself the formation.",
+        "Observe is the 'Captain Obvious' phase — read, reread, and note what the text plainly says, before any commentary. Bring Merida's posture: he tells students to make twenty-five observations on a passage; they're sure it's impossible, then find it isn't. You won't count to twenty-five here — you'll make your observations in the next seven fields.",
       ],
     },
     questions: [
-      { key: "before",             prompt: "What happened before this passage?" },
-      { key: "after",              prompt: "What happens after?" },
+      { key: "before",             prompt: "What happened before this passage?", note: 'Click "Show surrounding context" above the sermon text to open the surrounding passages.' },
+      { key: "after",              prompt: "What happens after?",                note: 'Click "Show surrounding context" above the sermon text to open the surrounding passages.' },
       { key: "impact",             prompt: "Do those answers impact what's happening in this passage? If so, how?" },
     ],
   },

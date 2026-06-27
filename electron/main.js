@@ -3763,13 +3763,17 @@ function passageToOsisId(passage) {
 // no renderer surface shows them verbatim anymore. esvPending stays
 // populated with its legacy meaning (true when no usable key) so any
 // stale consumer keeps working.
-ipcMain.handle('passage-fetch', async (_, passage) => {
+ipcMain.handle('passage-fetch', async (_, passage, opts) => {
+  // Crossway section headings — off for the tight preaching-text view, on for
+  // the reference pane's "surrounding chapters" view (the headings mark the
+  // pericope seams). Cached separately so the two views never collide.
+  const headings = !!(opts && opts.headings);
   const result = { esv: null, esvPending: false, esvState: "ok" };
 
   // Cache first — a hit skips the per-call key load (fs read + decrypt in
   // packaged builds) and keeps already-fetched passages rendering even
   // through a keystore hiccup.
-  const cacheKey = `esv|${passage}`;
+  const cacheKey = `esv|${headings ? 'h' : 'p'}|${passage}`;
   if (_passageCache.has(cacheKey)) {
     result.esv = _passageCache.get(cacheKey);
     return result;
@@ -3783,7 +3787,7 @@ ipcMain.handle('passage-fetch', async (_, passage) => {
   }
 
   const url = `https://api.esv.org/v3/passage/text/?q=${encodeURIComponent(passage)}` +
-    `&include-headings=false&include-footnotes=false&include-verse-numbers=true` +
+    `&include-headings=${headings ? 'true' : 'false'}&include-footnotes=false&include-verse-numbers=true` +
     `&include-short-copyright=false&include-passage-references=false`;
   let res;
   try {

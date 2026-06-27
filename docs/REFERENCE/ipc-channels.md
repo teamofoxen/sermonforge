@@ -108,10 +108,13 @@ Upserts a value in the `settings` table. Triggers a debounced `saveDb()`.
 
 ### `"passage-fetch"`
 ```
-receives: passage string (e.g. "Galatians 1:1-10")
+receives: passage string (e.g. "Galatians 1:1-10"), opts? { headings?: boolean }
 returns:  { esv, esvPending, esvState, esvError? }
 ```
-Fetches passage text via the Crossway ESV API. `esvState` is the
+Fetches passage text via the Crossway ESV API. `opts.headings` (default
+false) includes Crossway's section headings — used by the reference pane's
+"surrounding chapters" view so the literary/pericope seams show; cached
+separately from the headings-off fetch. `esvState` is the
 structured code the popup renders plain English from:
 `"ok"` (text in `esv` — possibly empty for an unrecognized reference) ·
 `"no-key"` (never saved) · `"key-unreadable"` (key file exists but

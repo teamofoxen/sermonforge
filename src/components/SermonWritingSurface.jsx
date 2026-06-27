@@ -44,12 +44,15 @@ function AutoGrowTextarea({ value, onChange, disabled, ariaLabel, placeholder })
 // as data loss even though the envelope kept the text. The `na && !naAllowed`
 // branch keeps the undo reachable for any legacy flag on a now-suppressed
 // question.
-function PromptBlock({ prompt, answer, naAllowed, onValueChange, onToggleNA }) {
+function PromptBlock({ prompt, note, answer, naAllowed, onValueChange, onToggleNA }) {
   const value = answer?.value ?? "";
   const na = answer?.na === true;
   return (
     <div className="sws-prompt-block">
-      <div className="sws-prompt">{prompt}</div>
+      <div className="sws-prompt-row">
+        <div className="sws-prompt">{prompt}</div>
+        {note && <div className="sws-prompt-note">{note}</div>}
+      </div>
       <AutoGrowTextarea
         value={value}
         onChange={onValueChange}
@@ -524,6 +527,7 @@ export default function SermonWritingSurface({
     return (
       <PromptBlock
         prompt={q.prompt}
+        note={q.note}
         naAllowed={q.naAllowed === true}
         answer={answers[q.key]}
         onValueChange={(v) =>

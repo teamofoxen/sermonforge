@@ -266,12 +266,31 @@
   margin-bottom: 0;
 }
 
+.sws-prompt-row {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+}
+
 .sws-prompt {
   font-family: var(--font-serif);
   font-size: 17px;
   line-height: 1.55;
   color: var(--ink);
   margin-bottom: 14px;
+}
+
+/* Instructional note to the right of the prompt (e.g. the before/after
+   questions point the preacher at the "Show surrounding context" toggle).
+   Quiet mono so it reads as guidance, not part of the question. */
+.sws-prompt-note {
+  flex: 0 1 auto;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  font-style: normal;
+  max-width: 38%;
 }
 
 .sws-textarea {

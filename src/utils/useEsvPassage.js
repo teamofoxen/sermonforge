@@ -16,7 +16,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { fetchPassage } from "../db/database";
 
-export function useEsvPassage(reference) {
+export function useEsvPassage(reference, opts) {
+  const headings = !!(opts && opts.headings);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -30,7 +31,7 @@ export function useEsvPassage(reference) {
     let cancelled = false;
     setLoading(true);
     setData(null);
-    fetchPassage(reference)
+    fetchPassage(reference, { headings })
       .then((res) => {
         if (cancelled) return;
         setData(res);
@@ -44,7 +45,7 @@ export function useEsvPassage(reference) {
     return () => {
       cancelled = true;
     };
-  }, [reference, refreshKey]);
+  }, [reference, refreshKey, headings]);
 
   const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
 
