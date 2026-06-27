@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-06-27 — Reference pane: "Show surrounding chapter" toggle on the passage panel
+
+- Added a "Show surrounding chapter" link at the top of the passage panel whenever the passage has verse numbers (e.g. "Ecclesiastes 5:8-6:12").
+- Clicking it swaps the ESV panel from the specific pericope to the full chapter(s), so questions like "What happened before this passage?" can be answered without leaving the app.
+- "My passage" link toggles back; ESV chapter is cached so subsequent toggles are instant.
+- Toggle hidden automatically when the passage is already set to a whole chapter.
+
+---
+
 ## 2026-06-26 — Sermon workspace: doors get a return path + the top-bar Back names its destination
 
 - The writing surface's "upstream not built" doors (e.g. "Lay out the passage's structure") now stash where you came from and show a gold "↩ Return to [field]" banner, so the one-way jump the doors' own copy promised ("come back") finally has a way back.

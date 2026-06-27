@@ -120,8 +120,23 @@ function OutlineRefItem({ points, onJump, defaultOpen = true }) {
   );
 }
 
+// Strip verse numbers from a passage reference to get the chapter(s).
+// "John 3:16-21" → "John 3"   "Matt 5:1-7:29" → "Matt 5-7"
+// Returns null when the reference has no verse numbers (already chapter-level).
+function chapterRef(passage) {
+  if (!passage) return null;
+  const m = passage.match(/^(.+?)\s+(\d+):(\d+)(?:-(\d+):\d+)?/);
+  if (!m) return null;
+  const [, book, startChap, , endChap] = m;
+  if (endChap && endChap !== startChap) return `${book} ${startChap}-${endChap}`;
+  return `${book} ${startChap}`;
+}
+
 function PassageView({ passage }) {
-  const { data, loading, refresh } = useEsvPassage(passage || "");
+  const [showChapter, setShowChapter] = useState(false);
+  const chapRef = chapterRef(passage);
+  const effectiveRef = showChapter && chapRef ? chapRef : (passage || "");
+  const { data, loading, refresh } = useEsvPassage(effectiveRef);
   const [keyModalOpen, setKeyModalOpen] = useState(false);
 
   if (!passage) {
@@ -138,6 +153,15 @@ function PassageView({ passage }) {
 
   return (
     <>
+      {chapRef && (
+        <TextButton
+          size="sm"
+          className="refpane-chapter-toggle"
+          onClick={() => setShowChapter((v) => !v)}
+        >
+          {showChapter ? `My passage (${passage})` : "Show surrounding chapter"}
+        </TextButton>
+      )}
       {loading && <p className="refpane-note">Fetching ESV…</p>}
       {!loading && data?.fetchError && (
         <PassageRecovery
