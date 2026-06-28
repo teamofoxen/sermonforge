@@ -17,6 +17,35 @@ const TESTAMENTS = [
   { key: "NT", label: "New Testament" },
 ];
 
+// Resolve a passage reference to its book record + starting chapter, or null
+// if the book name isn't recognized. Tolerates verse ranges ("Ecclesiastes
+// 5:8-13") by reading only the leading "Book chapter".
+function resolveChapter(ref) {
+  if (!ref) return null;
+  const m = ref.match(/^(.+?)\s+(\d+)/);
+  if (!m) return null;
+  const book = BOOKS.find((b) => b.name.toLowerCase() === m[1].trim().toLowerCase());
+  if (!book) return null;
+  const chapter = parseInt(m[2], 10);
+  if (!Number.isInteger(chapter) || chapter < 1 || chapter > book.chapters) return null;
+  return { book, chapter };
+}
+
+// Step one chapter in `dir` (-1 / +1), rolling across book boundaries in
+// canonical order. Returns a whole-chapter reference string, or null at the
+// canon's edges (before Genesis 1 / after Revelation 22).
+function stepChapter(ref, dir) {
+  const cur = resolveChapter(ref);
+  if (!cur) return null;
+  const { book, chapter } = cur;
+  const target = chapter + dir;
+  if (target >= 1 && target <= book.chapters) return `${book.name} ${target}`;
+  const idx = BOOKS.findIndex((b) => b.id === book.id);
+  const nb = BOOKS[idx + dir];
+  if (!nb) return null;
+  return dir < 0 ? `${nb.name} ${nb.chapters}` : `${nb.name} 1`;
+}
+
 export default function PassageLookup() {
   const [open, setOpen] = useState(false);
   const [testament, setTestament] = useState("OT");
@@ -24,7 +53,9 @@ export default function PassageLookup() {
   const [chapter, setChapter] = useState(null);
   const [rangeStart, setRangeStart] = useState(null);
   const [pickedRef, setPickedRef] = useState(null);
+  const [anchor, setAnchor] = useState(null);
   const rootRef = useRef(null);
+  const boxRef = useRef(null);
 
   // Close the dropdown on an outside click (the reading window is a separate
   // portal and stays open on its own).
@@ -50,6 +81,13 @@ export default function PassageLookup() {
     setRangeStart(null);
   };
   const finalize = (ref) => {
+    // Open the reading window anchored just below the lookup box (top-left),
+    // where the preacher is already looking — not the CSS-default top-right.
+    const el = boxRef.current;
+    if (el) {
+      const r = el.getBoundingClientRect();
+      setAnchor({ left: Math.round(r.left), top: Math.round(r.bottom + 8) });
+    }
     setPickedRef(ref);
     setOpen(false);
   };
@@ -69,6 +107,7 @@ export default function PassageLookup() {
   return (
     <div className="passage-lookup" ref={rootRef}>
       <IconButton
+        ref={boxRef}
         aria-label="Passage lookup"
         aria-expanded={open}
         className="passage-lookup-box"
@@ -170,7 +209,11 @@ export default function PassageLookup() {
         passage={pickedRef}
         isOpen={!!pickedRef}
         headings
+        initialPosition={anchor}
         onClose={() => setPickedRef(null)}
+        prevRef={stepChapter(pickedRef, -1)}
+        nextRef={stepChapter(pickedRef, 1)}
+        onNavigate={setPickedRef}
       />
     </div>
   );

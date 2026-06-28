@@ -29,7 +29,7 @@ import EsvKeyModal from "./EsvKeyModal";
  * claiming modality would misinform screen readers). Focus moves to the
  * close button on open and is restored to the triggering element on close.
  */
-export default function PassagePopup({ passage, isOpen, onClose, initialPosition, headings = false }) {
+export default function PassagePopup({ passage, isOpen, onClose, initialPosition, headings = false, prevRef = null, nextRef = null, onNavigate }) {
   // The fetch + cache logic lives in useEsvPassage. Empty reference parks
   // the hook; closing the popup releases the in-flight state. `headings`
   // (used by the Passage lookup reader) includes Crossway's section markers.
@@ -175,6 +175,28 @@ export default function PassagePopup({ passage, isOpen, onClose, initialPosition
           aria-label="Close passage popup"
         >✕</IconButton>
       </div>
+
+      {/* Read straight through — step a chapter at a time across book
+          boundaries without reopening the picker. Disabled at the canon's
+          edges (parent passes null). */}
+      {onNavigate && (prevRef || nextRef) && (
+        <div className="passage-popup-nav">
+          <IconButton
+            className="passage-popup-navbtn"
+            aria-label={prevRef ? `Previous chapter — ${prevRef}` : "Previous chapter"}
+            title={prevRef || ""}
+            onClick={() => prevRef && onNavigate(prevRef)}
+            disabled={!prevRef}
+          >‹ Previous</IconButton>
+          <IconButton
+            className="passage-popup-navbtn"
+            aria-label={nextRef ? `Next chapter — ${nextRef}` : "Next chapter"}
+            title={nextRef || ""}
+            onClick={() => nextRef && onNavigate(nextRef)}
+            disabled={!nextRef}
+          >Next ›</IconButton>
+        </div>
+      )}
 
       {loading && (
         <div className="passage-popup-loading">Fetching ESV…</div>

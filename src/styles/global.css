@@ -1682,6 +1682,33 @@ button {
   min-height: 160px;
 }
 
+.passage-popup-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 16px 0;
+  flex-shrink: 0;
+}
+.passage-popup-navbtn {
+  background: var(--white);
+  border: 1px solid var(--parchment-deep);
+  border-radius: var(--radius);
+  padding: 4px 12px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--ink-mid);
+  cursor: pointer;
+}
+.passage-popup-navbtn:hover:not(:disabled) {
+  background: var(--gold-bright);
+  color: var(--white);
+  border-color: var(--gold-bright);
+}
+.passage-popup-navbtn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
 .passage-popup-header {
   display: flex;
   align-items: center;

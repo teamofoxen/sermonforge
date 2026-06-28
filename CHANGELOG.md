@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-06-27 — Passage lookup reader: opens top-left + previous/next chapter navigation
+
+- The reading window now opens anchored just below the Passage lookup box (top-left, where you're working) instead of the CSS-default top-right.
+- Added "‹ Previous" / "Next ›" chapter buttons to the reader: steps one chapter at a time, rolls across book boundaries in canonical order, disabled at Genesis 1 and Revelation 22, and reloads in place without moving the window.
+- Chapter stepping tolerates verse-range refs (e.g. Ecclesiastes 5:8-13 → next → Ecclesiastes 6).
+
+---
+
 ## 2026-06-27 — Passage lookup as an ESV-style dropdown box; sermon title/passage shown read-only
 
 - Rebuilt the workspace Passage lookup as a box-with-caret dropdown (ESV.org style): Old/New Testament tab → book → chapter → verse (whole chapter, single verse, or start-then-end range), opening a draggable reading window with section headings; new `PassageLookup.jsx` + `passageLookup.css`.
