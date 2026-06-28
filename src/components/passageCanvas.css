@@ -14,7 +14,6 @@
   display: flex;
   align-items: flex-start;
   padding-right: 18px;
-  transition: padding-left 120ms ease;
 }
 
 .pc-row--main {
@@ -25,8 +24,24 @@
   padding-top: 2px;
 }
 
+/* Static verse-number rail. Prepopulated and pinned to the left margin so the
+   structure (carried by the indented text) stands out. Blank on every
+   continuation/indented row — a number marks only where a verse begins. */
+.pc-gutter {
+  flex-shrink: 0;
+  width: 2em;
+  padding-top: 7px;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--ink-ghost);
+  user-select: none;
+}
+
 .pc-input {
   flex: 1;
+  min-width: 0;
   font-family: var(--font-serif);
   font-size: 16px;
   line-height: 1.6;
@@ -39,6 +54,7 @@
   box-sizing: border-box;
   white-space: pre-wrap;
   word-wrap: break-word;
+  transition: margin-left 120ms ease;
 }
 
 .pc-input:focus {

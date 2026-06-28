@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import "./passageCanvas.css";
 
 const MAX_DEPTH = 5;
@@ -14,9 +14,18 @@ function emptyRow(depth = 0) {
   return { id: newId(), text: "", depth };
 }
 
-function ensureSeed(rows) {
-  if (Array.isArray(rows) && rows.length > 0) return rows;
-  return [emptyRow(0)];
+// Build the seed: one row per verse, pinned to the left margin (depth 0) with
+// its verse number anchored on the row and text empty. The pastor types into
+// these named rows; rows added later by Enter carry NO verse, so the gutter
+// blanks out beneath each verse-start and the left rail reads as verse seams,
+// not a line count. Returns null when there's nothing to seed (no range /
+// cross-chapter) so the caller falls back to a single empty row. Verse numbers
+// are prepopulated, not the text — typing by hand stays the discipline.
+function buildSeedRows(seedSig) {
+  if (!seedSig) return null;
+  const verses = seedSig.split(",").map((n) => parseInt(n, 10)).filter(Number.isInteger);
+  if (verses.length === 0) return null;
+  return verses.map((v) => ({ id: newId(), text: "", depth: 0, verse: v }));
 }
 
 function CanvasRow({ row, onChange, onKey, onPaste, registerRef }) {
@@ -31,14 +40,19 @@ function CanvasRow({ row, onChange, onKey, onPaste, registerRef }) {
     el.style.height = "auto";
     el.style.height = el.scrollHeight + "px";
   }, [row.text]);
+  // The verse number lives in a fixed left gutter; the depth indent rides on
+  // the text alone, so the numbers stay flush-left while the structure indents.
   return (
     <div
       className={"pc-row" + (row.depth === 0 ? " pc-row--main" : " pc-row--modifier")}
-      style={{ paddingLeft: row.depth * INDENT_PX }}
     >
+      <span className="pc-gutter" aria-hidden="true">
+        {typeof row.verse === "number" ? row.verse : ""}
+      </span>
       <textarea
         ref={ref}
         className="pc-input"
+        style={{ marginLeft: row.depth * INDENT_PX }}
         value={row.text}
         onChange={(e) => onChange(row.id, e.target.value)}
         onKeyDown={(e) => onKey(e, row.id)}
@@ -46,15 +60,23 @@ function CanvasRow({ row, onChange, onKey, onPaste, registerRef }) {
         rows={1}
         spellCheck
         aria-label={
-          row.depth === 0 ? "Main row" : `Modifier row, depth ${row.depth}`
+          (typeof row.verse === "number" ? `Verse ${row.verse}, ` : "") +
+          (row.depth === 0 ? "main row" : `modifier row, depth ${row.depth}`)
         }
       />
     </div>
   );
 }
 
-export default function PassageCanvas({ rows, onChange }) {
-  const safeRows = ensureSeed(rows);
+export default function PassageCanvas({ rows, onChange, seedVerses }) {
+  // Seed signature drives a STABLE memo — without it, regenerating row ids
+  // every render would churn React keys and steal focus mid-type. The seed is
+  // a display default only: it isn't written until the pastor's first
+  // keystroke emits the array (verse fields ride along on the row spreads).
+  const seedSig = Array.isArray(seedVerses) ? seedVerses.join(",") : "";
+  const seedRows = useMemo(() => buildSeedRows(seedSig) || [emptyRow(0)], [seedSig]);
+  const hasRows = Array.isArray(rows) && rows.length > 0;
+  const safeRows = hasRows ? rows : seedRows;
   const refs = useRef(new Map());
   const focusNextRef = useRef(null);
   // One transient hint slot — any silent refusal (blocked paste, indent

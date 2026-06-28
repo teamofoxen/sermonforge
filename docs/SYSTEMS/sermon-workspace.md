@@ -370,8 +370,12 @@ Possible Implications removed 2026-06-15, Phase 2.)
 - **Field 3 (Divisions / Thought Units)** — `indented-canvas` kind (the live kind
   string in [`studyFields.js`](../../src/utils/studyFields.js); "unified-canvas" survives
   only in older comments / test narration as the name of the era-2 rework, not as a kind);
-  the [`IndentedSentenceCanvas`](../../src/components/IndentedSentenceCanvas.jsx)
-  component mounts inside the writing surface. Canvas rows produce the
+  the [`PassageCanvas`](../../src/components/PassageCanvas.jsx)
+  component mounts inside the writing surface. Its left gutter prepopulates the
+  passage's verse numbers for single-chapter ranges (`versesForSingleChapterRange`
+  in [`passageRef.js`](../../src/utils/passageRef.js)) — a deterministic lookup,
+  not the verse text, which the pastor still types by hand. A number marks only
+  where a verse begins; continuation/indented rows carry none. Canvas rows produce the
   canonical `thought_units` array via `deriveThoughtUnitsFromCanvas` on every
   save (depth-0 rows are the thought units per era-2-primacy ruling 8).
   Phases 2/3/4 all read from this array.
@@ -616,7 +620,7 @@ Triggered by Show Text from the writing-surface chrome.
   in dev if you miss this, but only if you exercise the save path. The
   `assertSchemaContract()` startup check validates the live DB against the
   allowlist.
-- **Field-level editors** (`IndentedSentenceCanvas`, `SynthesisTable`) mount
+- **Field-level editors** (`PassageCanvas`, `SynthesisTable`) mount
   inside the writing surface unchanged from pre-rebuild; the data shapes
   they read/write are documented above per stage.
 - **`FeedbackFlag` is dormant post-sweep.** The component at

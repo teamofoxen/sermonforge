@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { findField, nextField, prevField, regionFrameFor, REGION_DISPLAY } from "../utils/walkOrder";
 import { createOutlinePoint } from "../utils";
+import { versesForSingleChapterRange } from "../utils/passageRef";
 import PassageCanvas from "./PassageCanvas";
 import ReferencePane from "./ReferencePane";
 import FieldTeaching from "./FieldTeaching";
@@ -467,11 +468,16 @@ export default function SermonWritingSurface({
     }
     if (q.kind === "indented-canvas") {
       const rows = answers[q.key]?.value;
+      // Prepopulate the gutter with the passage's verse numbers (single-chapter
+      // ranges only; cross-chapter / unparseable yields [] → blank canvas).
+      // Deterministic lookup off the reference — no ESV fetch, no AI.
+      const seedVerses = versesForSingleChapterRange(reference?.passage, null);
       return (
         <div className="sws-prompt-block">
           <div className="sws-prompt">{q.prompt}</div>
           <PassageCanvas
             rows={Array.isArray(rows) ? rows : []}
+            seedVerses={seedVerses}
             onChange={(next) => onCanvasChange?.(field.key, q.key, next)}
           />
         </div>

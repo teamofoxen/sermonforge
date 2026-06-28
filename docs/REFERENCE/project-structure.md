@@ -177,7 +177,6 @@ SermonForge/
         ├── SermonStartLanding.jsx   — D2c: sermon-start threshold (.ssl-overlay); fires on NULL last_touched_position
         ├── StudyAnchorHandoff.jsx   — D2c: Study → Anchor stage-boundary threshold (.sah-overlay); reads the four Study named outcomes; actively surfaces missing required outcomes with "go write it" doors
         ├── WorkspaceNotebookDrawer.jsx — D2d: workspace-level notebook overlay; column-by-stage dispatch (notebook_study / notebook_blueprint / notebook_manuscript)
-        ├── IndentedSentenceCanvas.jsx — Phase 1 Field 3 unified-canvas
         ├── SynthesisTable.jsx       — Cumulative thought-unit table (Phases 2/3/4)
         ├── PassageCanvas.jsx        — Writing-surface passage column primitive (consumes useEsvPassage)
         ├── PassagePopup.jsx         — Floating ESV scripture viewer (portal to document.body)

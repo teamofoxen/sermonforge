@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-06-27 — Divisions canvas: prepopulated verse-number gutter; remove dead IndentedSentenceCanvas
+
+- The Divisions structure canvas now prepopulates verse numbers in a static left gutter for single-chapter passages (deterministic lookup via new `versesForSingleChapterRange`); the pastor still types the text by hand.
+- A number marks only where a verse begins — continuation/indented rows keep a blank gutter, and the indent now rides on the text so the numbers stay pinned left.
+- Removed the orphaned `IndentedSentenceCanvas` component, its test, its `.indented-canvas-*` CSS, plus the now-unused `generateRowId` and `.paraphrase-blocks` dead CSS (the live canvas is `PassageCanvas`).
+- Struck the confusing "rewrite each main sentence in your own words" line from the Divisions overview — that in-voice work lives downstream in Interpret's Meaning column.
+
+---
+
 ## 2026-06-27 — Passage lookup reader: opens top-left + previous/next chapter navigation
 
 - The reading window now opens anchored just below the Passage lookup box (top-left, where you're working) instead of the CSS-default top-right.

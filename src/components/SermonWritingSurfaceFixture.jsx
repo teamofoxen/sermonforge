@@ -536,6 +536,7 @@ export default function SermonWritingSurfaceFixture() {
         stage={position.stage}
         subPhase={position.subPhase}
         fieldKey={position.fieldKey}
+        reference={{ passage: "Romans 8:1-4", outcomes: studyOutcomes, mpt: "", mps: "" }}
         fieldAnswers={fieldAnswers}
         thoughtUnits={thoughtUnits}
         onAnswerChange={handleAnswerChange}

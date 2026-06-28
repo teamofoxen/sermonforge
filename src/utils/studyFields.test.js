@@ -31,7 +31,6 @@ import {
   setQuestionAnswer,
   setQuestionNA,
   getQuestionAnswer,
-  generateRowId,
   deriveThoughtUnitsFromCanvas,
   setDivisionsCanvas,
   OBSERVE_FIELDS,
@@ -189,20 +188,6 @@ const UNIFIED_CANVAS_FIXTURE = [
 // `flattenAnswerValue — unified-canvas shape` describe deleted in Chunk 1
 // (2026-05-18) — tested inline-paraphrase + thought_unit_end rendering paths
 // that the Field 3 unified-canvas rework retired (era-2-primacy ruling 8).
-
-describe("generateRowId", () => {
-  it("returns a non-empty string id", () => {
-    const id = generateRowId();
-    expect(typeof id).toBe("string");
-    expect(id.length).toBeGreaterThan(0);
-  });
-
-  it("returns a unique id on each call", () => {
-    const ids = new Set();
-    for (let i = 0; i < 50; i++) ids.add(generateRowId());
-    expect(ids.size).toBe(50);
-  });
-});
 
 describe("deriveThoughtUnitsFromCanvas", () => {
   it("returns [] for empty / non-array input", () => {

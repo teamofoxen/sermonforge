@@ -102,7 +102,7 @@ export const OBSERVE_FIELDS = [
     overview: {
       title: "Divisions / Thought Units",
       paragraphs: [
-        "Lay the passage out so the structure shows. Rewrite each main sentence in your own words. Find the thought units that anchor it. The bones are already there — your job is to make them visible.",
+        "Lay the passage out so the structure shows. This is the first step toward a sermon outline.",
       ],
     },
     // Phase 4 Sprint 2 (2026-05-05): the three legacy questions
@@ -597,17 +597,6 @@ export function getPrimaryAnswer(fieldData, fieldKey) {
 // cumulative columns survive insert/delete/reorder by matching on
 // `_canvas_row_id`, with a positional `after_line` fallback for legacy data
 // that predates the unification.
-
-// Generate a stable per-row id. crypto.randomUUID() is the production source;
-// the fallback exists only to keep tests honest in environments without it.
-export function generateRowId() {
-  if (typeof globalThis !== "undefined"
-      && globalThis.crypto
-      && typeof globalThis.crypto.randomUUID === "function") {
-    return globalThis.crypto.randomUUID();
-  }
-  return "row-" + Math.random().toString(36).slice(2) + "-" + Date.now().toString(36);
-}
 
 // Derive the thought_units array from an indented-canvas array. Per ruling 8:
 // every depth-0 row with non-empty text is a thought unit; childless mains

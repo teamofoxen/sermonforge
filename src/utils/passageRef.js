@@ -124,3 +124,21 @@ export function parsePassageRef(raw, bookId) {
     ? { startCh, startV, endCh, endV: null, verseUnknown: true }
     : { startCh, startV, endCh, endV };
 }
+
+// Enumerate the verse numbers a SINGLE-CHAPTER range covers, for pre-seeding
+// the structure canvas's left-margin gutter. Pure data — a deterministic
+// lookup off the parsed reference, no ESV fetch and no AI (the verse numbers
+// for a range are a formula, not a generation). Single chapter only:
+// cross-chapter ranges need per-chapter verse counts that aren't available at
+// the writing-surface seam, so they (and anything unparseable / verse-unknown)
+// return [] and the caller falls back to a blank canvas. NEVER throws.
+export function versesForSingleChapterRange(raw, bookId) {
+  const r = parsePassageRef(raw, bookId);
+  if (!r || r.error || r.verseUnknown) return [];
+  if (r.startCh !== r.endCh) return [];
+  if (!Number.isInteger(r.startV) || !Number.isInteger(r.endV)) return [];
+  if (r.endV < r.startV) return [];
+  const out = [];
+  for (let v = r.startV; v <= r.endV; v++) out.push(v);
+  return out;
+}
