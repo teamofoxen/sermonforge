@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-06-27 — Divisions verse gutter: seed on a blank canvas + cross-chapter ranges
+
+- The verse-number gutter now seeds whenever the Divisions canvas has no typed text, not only when the row array is empty — so clearing the field re-fills the numbered rail (and a sermon begun before the feature can surface it this way).
+- Cross-chapter passages now seed: the gutter rolls across the chapter boundary using canonicalBooks verse counts, labeling "chapter:verse" at the seam (Ecclesiastes 5:8-6:12 → 5:8 … 20, 6:1 … 12) and bare verses between.
+- Replaced `versesForSingleChapterRange` with `verseLabelsForRange` (string labels) and widened the gutter to fit the chapter-prefixed labels.
+
+---
+
 ## 2026-06-27 — Divisions canvas: prepopulated verse-number gutter; remove dead IndentedSentenceCanvas
 
 - The Divisions structure canvas now prepopulates verse numbers in a static left gutter for single-chapter passages (deterministic lookup via new `versesForSingleChapterRange`); the pastor still types the text by hand.

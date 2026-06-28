@@ -29,7 +29,7 @@
    continuation/indented row — a number marks only where a verse begins. */
 .pc-gutter {
   flex-shrink: 0;
-  width: 2em;
+  width: 2.9em;
   padding-top: 7px;
   text-align: right;
   font-family: var(--font-mono);

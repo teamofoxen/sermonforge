@@ -15,17 +15,18 @@ function emptyRow(depth = 0) {
 }
 
 // Build the seed: one row per verse, pinned to the left margin (depth 0) with
-// its verse number anchored on the row and text empty. The pastor types into
-// these named rows; rows added later by Enter carry NO verse, so the gutter
-// blanks out beneath each verse-start and the left rail reads as verse seams,
-// not a line count. Returns null when there's nothing to seed (no range /
-// cross-chapter) so the caller falls back to a single empty row. Verse numbers
-// are prepopulated, not the text — typing by hand stays the discipline.
+// its gutter label anchored on the row and text empty. Labels are strings —
+// bare verse ("8") within a chapter, "chapter:verse" ("5:8", "6:1") at a
+// cross-chapter seam. The pastor types into these named rows; rows added later
+// by Enter carry NO verse, so the gutter blanks out beneath each verse-start
+// and the left rail reads as verse seams, not a line count. Returns null when
+// there's nothing to seed so the caller falls back to a single empty row.
+// Verse labels are prepopulated, not the text — typing by hand stays the discipline.
 function buildSeedRows(seedSig) {
   if (!seedSig) return null;
-  const verses = seedSig.split(",").map((n) => parseInt(n, 10)).filter(Number.isInteger);
-  if (verses.length === 0) return null;
-  return verses.map((v) => ({ id: newId(), text: "", depth: 0, verse: v }));
+  const labels = seedSig.split(",").filter(Boolean);
+  if (labels.length === 0) return null;
+  return labels.map((label) => ({ id: newId(), text: "", depth: 0, verse: label }));
 }
 
 function CanvasRow({ row, onChange, onKey, onPaste, registerRef }) {
@@ -47,7 +48,7 @@ function CanvasRow({ row, onChange, onKey, onPaste, registerRef }) {
       className={"pc-row" + (row.depth === 0 ? " pc-row--main" : " pc-row--modifier")}
     >
       <span className="pc-gutter" aria-hidden="true">
-        {typeof row.verse === "number" ? row.verse : ""}
+        {row.verse ? row.verse : ""}
       </span>
       <textarea
         ref={ref}
@@ -60,7 +61,7 @@ function CanvasRow({ row, onChange, onKey, onPaste, registerRef }) {
         rows={1}
         spellCheck
         aria-label={
-          (typeof row.verse === "number" ? `Verse ${row.verse}, ` : "") +
+          (row.verse ? `Verse ${row.verse}, ` : "") +
           (row.depth === 0 ? "main row" : `modifier row, depth ${row.depth}`)
         }
       />
@@ -75,8 +76,14 @@ export default function PassageCanvas({ rows, onChange, seedVerses }) {
   // keystroke emits the array (verse fields ride along on the row spreads).
   const seedSig = Array.isArray(seedVerses) ? seedVerses.join(",") : "";
   const seedRows = useMemo(() => buildSeedRows(seedSig) || [emptyRow(0)], [seedSig]);
-  const hasRows = Array.isArray(rows) && rows.length > 0;
-  const safeRows = hasRows ? rows : seedRows;
+  // Seed fills a BLANK canvas, where blank means "no typed text" — an empty row
+  // array OR rows that exist but carry no text. Clearing every line therefore
+  // re-seeds the numbered rail (what a preacher expects when starting the field
+  // over, and the path that surfaces the gutter on a sermon begun before it
+  // existed). Once any line has text, the pastor's own rows win.
+  const hasText = Array.isArray(rows)
+    && rows.some((r) => r && typeof r.text === "string" && r.text.trim() !== "");
+  const safeRows = hasText ? rows : seedRows;
   const refs = useRef(new Map());
   const focusNextRef = useRef(null);
   // One transient hint slot — any silent refusal (blocked paste, indent

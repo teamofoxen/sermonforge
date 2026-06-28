@@ -1,4 +1,4 @@
-import { bookById } from "../data/canonicalBooks";
+import { BOOKS, bookById } from "../data/canonicalBooks";
 
 // passageRef — parse a slot's passage string into a normalized chapter:verse
 // range WITHIN a known book. The series already knows its book, so this does
@@ -125,20 +125,55 @@ export function parsePassageRef(raw, bookId) {
     : { startCh, startV, endCh, endV };
 }
 
-// Enumerate the verse numbers a SINGLE-CHAPTER range covers, for pre-seeding
-// the structure canvas's left-margin gutter. Pure data — a deterministic
-// lookup off the parsed reference, no ESV fetch and no AI (the verse numbers
-// for a range are a formula, not a generation). Single chapter only:
-// cross-chapter ranges need per-chapter verse counts that aren't available at
-// the writing-surface seam, so they (and anything unparseable / verse-unknown)
-// return [] and the caller falls back to a blank canvas. NEVER throws.
-export function versesForSingleChapterRange(raw, bookId) {
-  const r = parsePassageRef(raw, bookId);
+// Resolve the book record from the leading name in a passage string
+// ("Ecclesiastes 5:8-6:12" → the Ecclesiastes record), mirroring
+// PassageLookup's resolver. Returns null if the name isn't one of the 66.
+// Used to pull per-chapter verse counts for cross-chapter enumeration.
+function bookFromPassageName(raw) {
+  if (typeof raw !== "string") return null;
+  const m = raw.trim().match(/^(.+?)\s+\d/);
+  if (!m) return null;
+  const name = m[1].trim().toLowerCase();
+  return BOOKS.find((b) => b.name.toLowerCase() === name) || null;
+}
+
+// Gutter labels for a passage range, for pre-seeding the structure canvas's
+// left-margin rail. Pure data — a deterministic lookup off the parsed
+// reference + the static verse counts, no ESV fetch and no AI (verse numbers
+// for a range are a formula, not a generation). NEVER throws.
+//
+//   Single-chapter range → bare verse numbers: ["8","9","10"].
+//   Cross-chapter range  → chapter shown on the first row and wherever it
+//     changes, bare verse otherwise: Eccl 5:8-6:12 →
+//     ["5:8","9",…,"20","6:1","2",…,"12"]. This needs the book's per-chapter
+//     verse counts, resolved from the leading book name (or an explicit
+//     bookId); without them it returns [] and the caller falls back to a
+//     blank canvas.
+//   Unparseable / whole-chapter-with-unknown-book → [].
+export function verseLabelsForRange(raw, bookId) {
+  const book = bookById(bookId) || bookFromPassageName(raw);
+  const r = parsePassageRef(raw, book ? book.id : bookId);
   if (!r || r.error || r.verseUnknown) return [];
-  if (r.startCh !== r.endCh) return [];
   if (!Number.isInteger(r.startV) || !Number.isInteger(r.endV)) return [];
-  if (r.endV < r.startV) return [];
+
+  // Single chapter — bare verse numbers, no book data needed.
+  if (r.startCh === r.endCh) {
+    if (r.endV < r.startV) return [];
+    const out = [];
+    for (let v = r.startV; v <= r.endV; v++) out.push(String(v));
+    return out;
+  }
+
+  // Cross-chapter — needs per-chapter verse counts to know where each ends.
+  if (!book || !Array.isArray(book.chapterVerses)) return [];
   const out = [];
-  for (let v = r.startV; v <= r.endV; v++) out.push(v);
+  for (let ch = r.startCh; ch <= r.endCh; ch++) {
+    const firstV = ch === r.startCh ? r.startV : 1;
+    const lastV = ch === r.endCh ? r.endV : book.chapterVerses[ch - 1];
+    if (!Number.isInteger(lastV)) return [];
+    for (let v = firstV; v <= lastV; v++) {
+      out.push(v === firstV ? `${ch}:${v}` : String(v));
+    }
+  }
   return out;
 }

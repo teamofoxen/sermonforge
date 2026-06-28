@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parsePassageRef, versesForSingleChapterRange } from "../../src/utils/passageRef";
+import { parsePassageRef, verseLabelsForRange } from "../../src/utils/passageRef";
 
 // The passage parser is the load-bearing, risk-carrying piece of the coverage
 // engine, so it gets a thorough table. Luke (24 ch; ch1=80, ch2=52, ch4=44,
@@ -131,30 +131,49 @@ describe("parsePassageRef — malformed inputs never throw, return { error: true
   });
 });
 
-describe("versesForSingleChapterRange — gutter seed for the structure canvas", () => {
-  it("enumerates a same-chapter range inclusively (the Eccl 5:8-10 case)", () => {
-    expect(versesForSingleChapterRange("Ecclesiastes 5:8-10", null)).toEqual([8, 9, 10]);
+describe("verseLabelsForRange — gutter seed for the structure canvas", () => {
+  it("enumerates a same-chapter range as bare verse strings (the Eccl 5:8-10 case)", () => {
+    expect(verseLabelsForRange("Ecclesiastes 5:8-10", null)).toEqual(["8", "9", "10"]);
   });
   it("returns a single-element list for a one-verse passage", () => {
-    expect(versesForSingleChapterRange("2:9", "luke")).toEqual([9]);
+    expect(verseLabelsForRange("2:9", "luke")).toEqual(["9"]);
   });
-  it("works without book data when verses are explicit (no fetch needed)", () => {
-    expect(versesForSingleChapterRange("3:5-9", null)).toEqual([5, 6, 7, 8, 9]);
+  it("works without book data when verses are explicit and same-chapter", () => {
+    expect(verseLabelsForRange("3:5-9", null)).toEqual(["5", "6", "7", "8", "9"]);
   });
   it("enumerates a whole chapter when book data bounds it", () => {
     // Jonah 2 has 10 verses.
-    expect(versesForSingleChapterRange("2", "jonah")).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(verseLabelsForRange("2", "jonah"))
+      .toEqual(["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"]);
   });
-  it("returns [] for a cross-chapter range (caller falls back to a blank canvas)", () => {
-    expect(versesForSingleChapterRange("1:1-4:13", "luke")).toEqual([]);
+
+  it("spans chapters, labeling the chapter only at the seam (Eccl 5:8-6:12)", () => {
+    // Ecclesiastes 5 has 20 verses; the range runs 5:8–20 then 6:1–12.
+    const labels = verseLabelsForRange("Ecclesiastes 5:8-6:12", null);
+    expect(labels[0]).toBe("5:8");
+    expect(labels[labels.length - 1]).toBe("12");
+    expect(labels.includes("6:1")).toBe(true);
+    // Only two chapter-prefixed labels: the first row and the 6:1 seam.
+    expect(labels.filter((l) => l.includes(":"))).toEqual(["5:8", "6:1"]);
+    expect(labels.length).toBe(25); // 13 (5:8–20) + 12 (6:1–12)
   });
+  it("spans chapters with an explicit bookId (Jonah 1:15-2:3)", () => {
+    // Jonah 1 has 17 verses.
+    expect(verseLabelsForRange("Jonah 1:15-2:3", "jonah"))
+      .toEqual(["1:15", "16", "17", "2:1", "2", "3"]);
+  });
+  it("returns [] for a cross-chapter range whose book can't be resolved", () => {
+    // No leading book name and no bookId → no per-chapter counts to span with.
+    expect(verseLabelsForRange("1:1-4:13", null)).toEqual([]);
+  });
+
   it("returns [] for a whole-chapter range with no book data (verseUnknown)", () => {
-    expect(versesForSingleChapterRange("2", null)).toEqual([]);
+    expect(verseLabelsForRange("2", null)).toEqual([]);
   });
   it("returns [] for unparseable / empty / non-string input (never throws)", () => {
-    expect(versesForSingleChapterRange("", null)).toEqual([]);
-    expect(versesForSingleChapterRange("Romans", "romans")).toEqual([]);
-    expect(versesForSingleChapterRange(null, null)).toEqual([]);
-    expect(versesForSingleChapterRange(undefined, null)).toEqual([]);
+    expect(verseLabelsForRange("", null)).toEqual([]);
+    expect(verseLabelsForRange("Romans", "romans")).toEqual([]);
+    expect(verseLabelsForRange(null, null)).toEqual([]);
+    expect(verseLabelsForRange(undefined, null)).toEqual([]);
   });
 });
