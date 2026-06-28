@@ -61,7 +61,9 @@ describe("Process Contract #4: PC follows the text (text speaks first)", () => {
 
     // The render must succeed without throwing — no "PC is required" gate.
     expect(result?.container).toBeTruthy();
-    // The sermon title is rendered, indicating workspace mount succeeded.
-    expect(result!.container.textContent || "").toContain("Brand new sermon");
+    // The workspace mounted at Observe — proven by the Observe region rendering
+    // (the sermon title is no longer shown in the workspace top bar, so the
+    // place line / first Observe field is the stable mount signal).
+    expect(result!.container.textContent || "").toContain("Observe");
   });
 });

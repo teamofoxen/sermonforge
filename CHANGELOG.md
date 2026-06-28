@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-06-27 — Passage lookup as an ESV-style dropdown box; sermon title/passage shown read-only
+
+- Rebuilt the workspace Passage lookup as a box-with-caret dropdown (ESV.org style): Old/New Testament tab → book → chapter → verse (whole chapter, single verse, or start-then-end range), opening a draggable reading window with section headings; new `PassageLookup.jsx` + `passageLookup.css`.
+- Simplified `PassagePopup` back to a display-only reader with a `headings` prop (picker logic moved into PassageLookup).
+- Removed all inline editing of the sermon title/passage from the workspace (set in the sermon modal): top-bar title display + pencil gone, passage now shown as a read-only label above the reference-pane text.
+- Re-anchored the Process #4 shell test to the Observe region (the removed title was its old mount signal); cleaned up the orphaned title/picker CSS.
+
+---
+
 ## 2026-06-27 — Passage lookup: top-left standalone Bible window (book → chapter → verses), decoupled from the sermon passage
 
 - The workspace top-left is now a single "📖 Passage lookup" launcher; removed the sermon-passage chip, the edit pencil, and the redundant right-side button.

@@ -127,7 +127,7 @@ function PassageView({ passage }) {
   if (!passage) {
     return (
       <p className="refpane-note">
-        Set a passage in the bar above and the ESV text appears here.
+        This sermon doesn&apos;t have a passage set.
       </p>
     );
   }
@@ -138,6 +138,8 @@ function PassageView({ passage }) {
 
   return (
     <>
+      {/* The sermon's preaching passage, labeled above its text. */}
+      <div className="refpane-passage-ref">{passage}</div>
       {loading && <p className="refpane-note">Fetching ESV…</p>}
       {!loading && data?.fetchError && (
         <PassageRecovery

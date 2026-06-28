@@ -48,12 +48,11 @@ import SermonStartLanding from "./SermonStartLanding";
 import StudyAnchorHandoff from "./StudyAnchorHandoff";
 import WorkspaceNotebookDrawer from "./WorkspaceNotebookDrawer";
 import FeedbackFlag from "./FeedbackFlag";
-import PassagePopup from "./PassagePopup";
 import DeleteButton from "./DeleteButton";
 import SecondaryButton from "./primitives/SecondaryButton";
 import IconButton from "./primitives/IconButton";
 import BackButton from "./primitives/BackButton";
-import { TextButton } from "./primitives/TextButton";
+import PassageLookup from "./PassageLookup";
 
 // Stage → notebook JSON column. Pre-restructure column names preserved:
 // notebook_blueprint serves the Assembly stage; the column was named
@@ -80,9 +79,6 @@ export default function SermonWorkspace({
 }) {
   const [sermon, setSermon] = useState(_fixtureSermon ?? null);
   const [loading, setLoading] = useState(!_fixtureSermon);
-  const [showLookup, setShowLookup] = useState(false);
-  const [editingTitle, setEditingTitle] = useState(false);
-  const [titleDraft, setTitleDraft] = useState("");
   const [saveState, setSaveState] = useState(INITIAL_SAVE_STATE);
   const { saving, saveError, lastSavedAt } = saveState;
   const [siblingIds, setSiblingIds] = useState([]);
@@ -260,42 +256,11 @@ export default function SermonWorkspace({
     setAllTags((prev) => dedupeTags([...prev, ...nextTags]).sort((a, b) => a.localeCompare(b)));
   }, [handleUpdate]);
 
-  // Passage edit — small inline editor next to the topbar passage ref.
-  // Commits via handleUpdate so the existing autosave path persists the
-  // new reference; useEsvPassage re-fetches when sermon.passage changes,
-  // so the writing-surface passage column + PassagePopup refresh on save.
-  // Empty/whitespace input is treated as cancel so a user can't accidentally
-  // clear the affordance by hitting Enter on an empty field.
-
-  // Title edit — mirrors the passage pattern. The title was previously
-  // writable only at creation and then frozen while the passage beside it
-  // was editable. State #3 (as amended): a sermon can never become
-  // nameless from the UI, and the refusal is SPOKEN — an explicit
-  // Enter-with-empty keeps the editor open and says so (titleRefused
-  // drives the placeholder); blur-with-empty reverts to the existing
-  // title, which is itself visible feedback. Persistence rides
-  // handleUpdate → update-sermon, which re-indexes search on every write.
-  const [titleRefused, setTitleRefused] = useState(false);
-  const startEditTitle = useCallback(() => {
-    setTitleDraft(sermonRef.current?.title || "");
-    setTitleRefused(false);
-    setEditingTitle(true);
-  }, []);
-  const commitTitleEdit = useCallback((explicit = false) => {
-    const next = titleDraft.trim();
-    const current = sermonRef.current?.title || "";
-    if (!next && explicit) {
-      // Spoken refusal: stay in the editor, name what's missing.
-      setTitleRefused(true);
-      return;
-    }
-    if (next && next !== current) handleUpdate({ title: next });
-    setEditingTitle(false);
-  }, [titleDraft, handleUpdate]);
-  const cancelTitleEdit = useCallback(() => {
-    setEditingTitle(false);
-  }, []);
-
+  // Sermon title + passage are set in the sermon modal and shown read-only in
+  // the workspace (title in the top bar, passage above the reference-pane text).
+  // No inline edit here — State #3 ("a sermon must have a name") is satisfied at
+  // creation and can't be undone from this surface. Looking up other passages
+  // is the Passage lookup's job, decoupled from the sermon.
 
   // beforePositionChange — async; flushes any pending debounced save
   // BEFORE the position settles. The chain is: position-change trigger
@@ -719,34 +684,6 @@ export default function SermonWorkspace({
                   );
                 })()}
               </div>
-              {editingTitle ? (
-                <input
-                  className="topbar-title-input"
-                  type="text"
-                  value={titleDraft}
-                  onChange={(e) => setTitleDraft(e.target.value)}
-                  onBlur={() => commitTitleEdit(false)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") { e.preventDefault(); commitTitleEdit(true); }
-                    else if (e.key === "Escape") { e.preventDefault(); cancelTitleEdit(); }
-                  }}
-                  placeholder={titleRefused ? "A sermon needs a name" : "Sermon title"}
-                  aria-label="Rename sermon"
-                  autoFocus
-                />
-              ) : (
-                <div className="topbar-title-row">
-                  <div className="topbar-title">{sermon.title}</div>
-                  <IconButton
-                    className="topbar-title-edit-toggle"
-                    aria-label="Rename sermon"
-                    title="Rename sermon"
-                    onClick={startEditTitle}
-                  >
-                    ✎
-                  </IconButton>
-                </div>
-              )}
             </div>
           </div>
 
@@ -795,14 +732,7 @@ export default function SermonWorkspace({
             sermon modal). Row 2: sermon topics. */}
         <div className="workspace-passage-bar">
           <div className="workspace-passage-row">
-            <TextButton
-              size="sm"
-              className="passage-lookup-launch"
-              onClick={() => setShowLookup(true)}
-              title="Open a Bible window to read any passage"
-            >
-              📖 Passage lookup
-            </TextButton>
+            <PassageLookup />
           </div>
           {/* Topics — sermon-level tags (Coverage Initiative, Phase 3). Optional;
               browse-what-you've-preached, never a scorecard. */}
@@ -922,11 +852,6 @@ export default function SermonWorkspace({
           onClose={() => setNotebookOpen(false)}
         />
       )}
-      <PassagePopup
-        browser
-        isOpen={showLookup}
-        onClose={() => setShowLookup(false)}
-      />
     </>
   );
 }

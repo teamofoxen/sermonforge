@@ -105,6 +105,15 @@
   padding: 14px 16px 24px;
 }
 
+.refpane-passage-ref {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 10px;
+}
+
 .refpane-passage-text {
   margin: 0;
   font-family: var(--font-serif);
