@@ -29,7 +29,7 @@ function buildSeedRows(seedSig) {
   return labels.map((label) => ({ id: newId(), text: "", depth: 0, verse: label }));
 }
 
-function CanvasRow({ row, onChange, onKey, onPaste, registerRef }) {
+function CanvasRow({ row, onChange, onVerseChange, onKey, onPaste, registerRef }) {
   const ref = useRef(null);
   useEffect(() => {
     registerRef(row.id, ref.current);
@@ -43,13 +43,20 @@ function CanvasRow({ row, onChange, onKey, onPaste, registerRef }) {
   }, [row.text]);
   // The verse number lives in a fixed left gutter; the depth indent rides on
   // the text alone, so the numbers stay flush-left while the structure indents.
+  // The gutter is an editable cell — prefilled, but the pastor can correct any
+  // number the auto-fill got wrong.
   return (
     <div
       className={"pc-row" + (row.depth === 0 ? " pc-row--main" : " pc-row--modifier")}
     >
-      <span className="pc-gutter" aria-hidden="true">
-        {row.verse ? row.verse : ""}
-      </span>
+      <input
+        className="pc-gutter"
+        type="text"
+        value={row.verse == null ? "" : String(row.verse)}
+        onChange={(e) => onVerseChange(row.id, e.target.value)}
+        aria-label="Verse number"
+        title="Verse number — click to correct"
+      />
       <textarea
         ref={ref}
         className="pc-input"
@@ -76,14 +83,21 @@ export default function PassageCanvas({ rows, onChange, seedVerses }) {
   // keystroke emits the array (verse fields ride along on the row spreads).
   const seedSig = Array.isArray(seedVerses) ? seedVerses.join(",") : "";
   const seedRows = useMemo(() => buildSeedRows(seedSig) || [emptyRow(0)], [seedSig]);
-  // Seed fills a BLANK canvas, where blank means "no typed text" — an empty row
-  // array OR rows that exist but carry no text. Clearing every line therefore
-  // re-seeds the numbered rail (what a preacher expects when starting the field
-  // over, and the path that surfaces the gutter on a sermon begun before it
-  // existed). Once any line has text, the pastor's own rows win.
-  const hasText = Array.isArray(rows)
-    && rows.some((r) => r && typeof r.text === "string" && r.text.trim() !== "");
-  const safeRows = hasText ? rows : seedRows;
+  // Seed fills a BLANK canvas, where blank means "no typed text AND no verse
+  // label" — an empty row array OR old rows that predate the gutter. Clearing
+  // every line re-seeds the numbered rail (what a preacher expects starting the
+  // field over, and the path that surfaces the gutter on a sermon begun before
+  // it existed). Once any line has text OR a hand-set/persisted verse label, the
+  // pastor's own rows win — so an edited gutter sticks instead of being re-
+  // derived from the seed.
+  const hasContent = Array.isArray(rows)
+    && rows.some((r) => {
+      if (!r || typeof r !== "object") return false;
+      const text = typeof r.text === "string" ? r.text.trim() : "";
+      const verse = r.verse == null ? "" : String(r.verse).trim();
+      return text !== "" || verse !== "";
+    });
+  const safeRows = hasContent ? rows : seedRows;
   const refs = useRef(new Map());
   const focusNextRef = useRef(null);
   // One transient hint slot — any silent refusal (blocked paste, indent
@@ -134,6 +148,20 @@ export default function PassageCanvas({ rows, onChange, seedVerses }) {
       onChange(next);
     },
     [onChange]
+  );
+
+  // The gutter is a verse-number cell: prefilled from the passage, but the
+  // pastor owns it. Auto-numbering free-form structure can't stay perfectly
+  // aligned (only the preacher knows where a verse truly begins), so any drift
+  // is theirs to correct in one edit. Keep the value to verse-label characters
+  // (digits, colon, hyphen) so a stray keystroke can't drop sermon text in.
+  const handleVerseChange = useCallback(
+    (id, value) => {
+      const cleaned = value.replace(/[^0-9:-]/g, "").slice(0, 6);
+      const next = safeRows.map((r) => (r.id === id ? { ...r, verse: cleaned } : r));
+      setRows(next);
+    },
+    [safeRows, setRows]
   );
 
   const handleTextChange = useCallback(
@@ -255,6 +283,7 @@ export default function PassageCanvas({ rows, onChange, seedVerses }) {
           key={row.id}
           row={row}
           onChange={handleTextChange}
+          onVerseChange={handleVerseChange}
           onKey={handleKey}
           onPaste={handlePaste}
           registerRef={registerRef}

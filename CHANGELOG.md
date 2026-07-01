@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-07-01 — Divisions verse gutter: pastor-editable verse numbers
+
+- The verse-number gutter is now an editable field, not a read-only label — the pastor can click any auto-filled number and fix where the auto-fill misjudged a verse boundary.
+- The gutter accepts only verse-label characters (digits, colon, hyphen; six max), so a stray keystroke can't drop sermon text into the numbered rail.
+- The blank-canvas re-seed guard now counts a hand-set or saved verse label as content, so an edited gutter sticks instead of being re-derived from the seed.
+
+---
+
 ## 2026-06-27 — Divisions verse gutter: seed on a blank canvas + cross-chapter ranges
 
 - The verse-number gutter now seeds whenever the Divisions canvas has no typed text, not only when the row array is empty — so clearing the field re-fills the numbered rail (and a sermon begun before the feature can surface it this way).

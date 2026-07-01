@@ -27,16 +27,34 @@
 /* Static verse-number rail. Prepopulated and pinned to the left margin so the
    structure (carried by the indented text) stands out. Blank on every
    continuation/indented row — a number marks only where a verse begins. */
+/* Editable verse-number cell — styled to read as the ghost label it replaces,
+   but it's a real input the pastor can click into and correct. */
 .pc-gutter {
   flex-shrink: 0;
   width: 2.9em;
-  padding-top: 7px;
+  padding: 7px 2px 0 0;
+  margin: 0;
   text-align: right;
   font-family: var(--font-mono);
   font-size: 12px;
   line-height: 1.6;
   color: var(--ink-ghost);
-  user-select: none;
+  background: transparent;
+  border: none;
+  outline: none;
+  box-sizing: border-box;
+  appearance: none;
+  cursor: text;
+}
+
+.pc-gutter:hover {
+  color: var(--ink-mid);
+}
+
+.pc-gutter:focus {
+  color: var(--ink);
+  background: var(--parchment-warm);
+  border-radius: 3px;
 }
 
 .pc-input {
