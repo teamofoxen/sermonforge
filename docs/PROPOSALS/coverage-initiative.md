@@ -1,5 +1,7 @@
 # Coverage Initiative — Charter
 
+> **⛔ HISTORICAL RECORD — build fully shipped 2026-06-25; stamped 2026-07-01 (C8 charter-stamping check).** The live authority for the "What I've Preached" home is the code at HEAD (`WhatIvePreached.jsx`, `Arc.jsx`, `TopicsView.jsx`, `src/utils/{arc,coverage,tags,topicalPassage}.js`) with schema facts in [`docs/REFERENCE/schema.md`](../REFERENCE/schema.md). This document is the frozen development record of the initiative's what & why and locked decisions; it is **not a working guide and no longer binds.** Where this doc and the live docs differ, the live docs win.
+
 **Status:** SHIPPED 2026-06-25 — **all phases built + pushed** (`db451dc` Phases
 1+2, `8826d01` Phase 3, `c9e80f2` Phase 4+5). The *what & why* + locked decisions
 for the **"What I've Preached" home** (the renamed Series Arc) that answers *"what

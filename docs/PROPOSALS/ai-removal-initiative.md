@@ -1,5 +1,7 @@
 # AI Removal Initiative (ARI) — Charter
 
+> **⛔ HISTORICAL RECORD — build fully shipped 2026-05-09; stamped 2026-07-01 (C8 charter-stamping check).** The live authority for the no-AI reality is [`docs/CORE.md`](../CORE.md) — Process #5 ("No AI substitution") and the Non-Negotiable Architectural Boundaries. This document is the frozen development record of how AI was removed; it is **not a working guide and no longer binds.** The "Drafted / Pre-execution" status line below is itself frozen pre-execution wording — every ARI phase shipped 2026-05-09. Where this doc and CORE differ, CORE wins.
+
 > **Status:** Drafted 2026-05-09. Pre-execution. Phase 0 (Series Planner gate) shipped 2026-05-09 in advance of this charter and is folded in for completeness.
 
 > **Audience:** The lone developer of SermonForge. Plain language; technical specifics where they matter.

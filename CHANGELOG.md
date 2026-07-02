@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-07-01 — Charter stamping: shipped charters get historicized automatically
+
+- New standing rule: a charter gets its ⛔ HISTORICAL RECORD stamp the day its build ships — live-dressed shipped plans were where today's drift sweep found its staleness; banner-stamped docs had none.
+- drift-check.sh gained C8, an advisory that flags PROPOSALS docs whose status reads SHIPPED with no remaining-work marker and no stamp; /end-session gained STEP 1.5 telling the session how to act on it (stamp + move the ANCHORS entry).
+- Stamped three: the Series Planner revival charter and Coverage Initiative charter (moved to ANCHORS Historical record), plus the ARI charter — caught by C8 itself, its status head still said "Pre-execution" from May despite shipping fully on 2026-05-09.
+- Verified both directions: C8 flagged all three before stamping, reports none after; drift-check PASS.
+
+---
+
 ## 2026-07-01 — Fonts self-hosted; drift-sweep tail items closed
 
 - The app's three typefaces (IBM Plex Serif/Sans, JetBrains Mono) now ship inside the app (`src/styles/fonts/`, ~1 MB woff2) instead of loading from Google Fonts — the last non-essential network call is gone and typography renders correctly offline; verified zero external font requests in preview.

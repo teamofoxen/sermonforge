@@ -1,5 +1,7 @@
 # Series Planner Revival — Charter
 
+> **⛔ HISTORICAL RECORD — build fully shipped 2026-06-25; stamped 2026-07-01 (C8 charter-stamping check).** The live authority for the Series Planner is [`docs/SYSTEMS/series-planner.md`](../SYSTEMS/series-planner.md) (mechanics) and the code at HEAD. This document is the frozen development record of the planner's what & why — the rulings, supersessions, and build phases that produced the shipped three-screen + Topical shape; it is **not a working guide and no longer binds.** Where this doc and the live docs differ, the live docs win — do not rebuild from here.
+
 **Status:** SHIPPED — revived 2026-06-21, re-leveled to four movements 2026-06-22 (`3330f35`), guided-spine flow added 2026-06-24, then the **content-model rebuild shipped 2026-06-24** (three screens — Outline · Schedule · Study guide — superseding the four-movement workbench and the melodic-line model), and **Topical Series mode shipped 2026-06-25** (schema v30, extending — not superseding — the content-model rebuild). Current shape: [`docs/SYSTEMS/series-planner.md`](../SYSTEMS/series-planner.md).
 
 ## 2026-06-24 — Content-model rebuild: the planner becomes the pastor's real series document

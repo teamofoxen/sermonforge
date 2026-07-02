@@ -219,6 +219,31 @@ else
   echo "none (or only historical retention notice)"
 fi
 
+# C8 — shipped-but-unstamped charters. A PROPOSALS doc whose status reads
+# SHIPPED with no remaining-work marker should carry the ⛔ HISTORICAL RECORD
+# stamp (2026-07-01 ruling: charters get stamped the day their build ships —
+# stamped docs can't drift; today's 98-finding sweep proved live-dressed ones
+# do). ADVISORY only — the stamping judgment stays with the session;
+# /end-session STEP 1.5 acts on this output. A doc with genuinely remaining
+# work suppresses the advisory by saying so in its status head.
+echo ""
+echo "=== C8: shipped-but-unstamped charters (advisory) ==="
+UNSTAMPED=""
+for f in "$DOCS_DIR"/PROPOSALS/*.md; do
+  head_txt=$(head -12 "$f")
+  echo "$head_txt" | grep -q "HISTORICAL RECORD" && continue
+  echo "$head_txt" | grep -qiE "status.*shipped" || continue
+  echo "$head_txt" | grep -qiE "\bremaining\b|\bpending\b|\bactive\b|in progress|not yet|open ruling|deferred" && continue
+  UNSTAMPED="${UNSTAMPED}  ${f}"$'\n'
+done
+if [[ -n "$UNSTAMPED" ]]; then
+  echo "ADVISORY: shipped charters missing the HISTORICAL RECORD stamp:"
+  printf '%s' "$UNSTAMPED"
+  echo "→ /end-session STEP 1.5: stamp them + move their ANCHORS.md entry to Historical record"
+else
+  echo "none"
+fi
+
 echo ""
 echo "=========================================="
 if [[ $FAIL -eq 0 ]]; then

@@ -16,6 +16,25 @@ Preflight covers: clean-tree check, drift-check (broken refs / stale skill menti
 
 If preflight emits a sweep-trigger advisory and `/sweep-the-house` has not been run this session, run it. STATUS = FAIL stops; WARN asks; PASS continues.
 
+## STEP 1.5 — STAMP SHIPPED CHARTERS (when the C8 advisory fires)
+
+Drift-check's C8 lists `docs/PROPOSALS/` docs whose status head reads SHIPPED with
+no remaining-work marker and no `⛔ HISTORICAL RECORD` stamp. A shipped charter
+still dressed as a live plan is drift waiting to happen (the 2026-07-01 sweep found
+98 stale claims in live-dressed docs; the banner-stamped ones had zero). For each
+doc C8 names:
+
+1. Insert the house stamp as the first blockquote after the title:
+   `> **⛔ HISTORICAL RECORD — build fully shipped <ship date>; stamped <today> (C8 charter-stamping check).** The live authority is <mechanics doc and/or code at HEAD>. This document is the frozen development record of the what & why; it is **not a working guide and no longer binds.** Where it and the live docs differ, the live docs win.`
+   Banner-only — do not rewrite the body (pastor-ruled pattern from Re-Foundation step 5).
+2. If the doc is listed under **Live anchors** in `docs/ANCHORS.md`, move its entry
+   to **Historical record** (noting the live authority it hands off to).
+3. Include the stamp + ANCHORS move in this session's commit.
+
+If the initiative genuinely has remaining work, do NOT stamp — instead fix its
+status head to say so (e.g. "SHIPPED phases 1–3; remaining: X"); a remaining-work
+marker is what suppresses C8. Never suppress by deleting the word SHIPPED.
+
 ## STEP 2 — UPDATE ENFORCEMENT_STATUS (only if contracts changed)
 
 If the session edited any of:
