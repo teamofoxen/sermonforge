@@ -94,11 +94,6 @@ export const onUpdaterStatus  = (callback) => api.onUpdaterStatus(callback);
 export const getSchemaVersion = () => api.getSchemaVersion();
 export const getAppVersion    = () => api.getAppVersion();
 
-// ── Disk-write health ─────────────────────────────────────────────────────────
-export const onDbWriteError = (callback) => api.onDbWriteError(callback);
-export const onDbWriteOk    = (callback) => api.onDbWriteOk(callback);
-export const flushDb        = () => api.flushDb();
-
 // ── Close-time edit flush ─────────────────────────────────────────────────────
 // main asks the renderer to flush debounced edits before close/quit; the
 // renderer acks with the nonce. See src/utils/closeFlush.js for the registry.

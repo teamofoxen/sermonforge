@@ -1,6 +1,6 @@
 # Workspace Re-Foundation Initiative — working board
 
-> **Status: PHASE 1 COMPLETE — steps 1–5 shipped (1–3 2026-06-14; 4–5 2026-06-15); the canon is LIVE. Phase 2 (the Merida question surgery) is the remaining work.** Chartered
+> **Status: PHASE 1 COMPLETE — steps 1–5 shipped (1–3 2026-06-14; 4–5 2026-06-15); the canon is LIVE. Phase 2 items 1–5 (the rulable-now Merida question surgery) SHIPPED 2026-06-15/16 (commits `ab5c87c`, `2029747`, `c07139e`) — Study is now 23 fields (7/7/5/4), CORE Process #4 amended. Remaining Phase 2 work: the OEM walk (deep items) + the scheduled per-cell N/A code build; independently, the infra-doc pass below.** Chartered
 > 2026-06-13 at the end of a long design conversation. This is the doc the work runs from.
 > It has two coupled jobs: (1) **consolidate the scattered document authority** into a
 > clean structure, and (2) **re-examine the contracts + the Study/Anchor question set
@@ -13,8 +13,9 @@
 > `docs/CORE-CHANGELOG.md`); step 4 thinned `sermon-workspace.md` to mechanics + cross-refs
 > (walk what/why → canon); step 5 historicized the nine old initiative docs, registered
 > WORKSPACE-CANON on ANCHORS, and **lifted its DRAFT banner — the canon is now LIVE**, with
-> CORE Process #6 re-pointed to it. **Phase 1 is complete; the next action is Phase 2 — the
-> Merida question surgery against the live canon.**
+> CORE Process #6 re-pointed to it. **Phase 1 is complete; Phase 2's rulable-now items (1–5)
+> shipped 2026-06-15/16 — see the dated Phase-2 progress entries below. Remaining: the OEM
+> walk + the per-cell N/A build.**
 > Rescoped from the former `merida-fidelity-initiative.md` (its
 > Merida findings are preserved below as the Phase-2 input).
 
@@ -147,7 +148,9 @@ docs are the drift. Across all 11 sources, adversarial verification found **zero
 of a "dead" thing still wired in the production tree (`src/` + `electron/`). Phase 1 is
 overwhelmingly **documentation reconciliation, not code surgery.** Stable, CORE-canonical
 counts that do not move: **3 stages · 8 sub-phases · 8 named outcomes · 8 composite
-gates · 25 Study fields.**
+gates.** *(Updated 2026-07-01: Study was 25 fields at the time this line was written;
+Phase 2 item 5 (2026-06-16, `c07139e`) cut Possible Implications + Genre, so Study is
+now **23 fields** (7/7/5/4) — see CORE.md and the Study field set line below.)*
 
 ### Scope rulings — what is actually WORKSPACE-CANON
 
@@ -178,7 +181,7 @@ the traced authority belongs elsewhere and must NOT be pulled into canon.
 - **Workspace chrome** (round 2) — Back/Next, "Stage · Region" place line, map "You are here", the gold "Finish sermon →" door replacing the dead grey disabled Next, "Read again" doors. Ratified into CORE Process #1/#2/#3 + Surface #4 by the UX batch. `[CANON]`
 
 **Study & Assembly content**
-- **Study field set** — 25 fields (8/8/5/4), exact match to CORE. Field 3 (Divisions) is now ONE `indented-canvas` question (legacy 3-question shape + ParaphraseBlocks retired). SFDI doc still lists dead sub-shapes + per-question keys that don't exist (live key is `'primary'`). `[CANON]`
+- **Study field set** — 23 fields (7/7/5/4) as of Phase 2 item 5 (2026-06-16, `c07139e`; was 25/8-8-5-4 when this line was first drafted). Field 3 (Divisions) is now ONE `indented-canvas` question (legacy 3-question shape + ParaphraseBlocks retired). SFDI doc still lists dead sub-shapes + per-question keys that don't exist (live key is `'primary'`). `[CANON]`
 - **Cumulative thought-unit table** — closed at 4 columns (text + meaning + christ_connection + implication), not the 6 SADI committed to. SADI doc still says 6. `[CANON]`
 - **Anchor/Frame fields** — MPT/MPS + Intro/Conclusion definitions live; the SpotlightWorksheet render layer is deleted (ReferencePane carries the pedagogy); flat mpt/mps auto-sync for Word export. SADI doc/memory still name StudyTab/SpotlightWorksheet/AI buttons. `[CANON]`
 - **OEM (Outline/Equip/Manuscript) DRAFT defs** — the "No field found" gap is CLOSED (wired, commit `059bfce`); DRAFT pedagogy, not preacher-walked. Stale: `SermonWritingSurface.jsx:396-403` comment + invisible-system spec still assert the gap; memory `project_oem_field_defs` is stale. `[CANON — DRAFT caveat]`
@@ -219,7 +222,7 @@ the traced authority belongs elsewhere and must NOT be pulled into canon.
 ### Cleanup worklists (for steps 2–5 — NOT step 1)
 
 - **A. Canon-bound doc cruft (highest value):** the SADI working doc (0 saturation mentions; StudyTab / SpotlightWorksheet / AI / 6-column fossils), `workspace-trail-charter.md` (the whole dead trail as "live"), the SPRD doc (`ThroughlineRail` "shipped"). WORKSPACE-CANON should supersede these wholesale.
-- **B. Separate infrastructure-doc pass (do NOT fold into canon):** present-tense `sql.js` / `saveDb` references in `SYSTEMS/ipc.md:78,80`, `REFERENCE/ipc-channels.md:65,72,102`, `REFERENCE/project-structure.md:73,105`; a schema-version disagreement at `SYSTEMS/database.md:54` (says v14; code + `schema.md` say v24); and `REFERENCE/schema.md:89-91` still calls the 3 legacy PC columns "retained defensively, no longer read" (stale — code struck them; the same correction step 4 applied to CORE-CHANGELOG, flagged by the step-4 verify pass). *(`SYSTEMS/sermon-workspace.md:545` `saveDb` — DONE in step 4.)*
+- **B. Separate infrastructure-doc pass — DONE 2026-07-01 (doc drift sweep):** the present-tense `sql.js` / `saveDb` references in `SYSTEMS/ipc.md`, `REFERENCE/ipc-channels.md`, `REFERENCE/project-structure.md` are corrected; `SYSTEMS/database.md`'s schema-version line and `REFERENCE/schema.md`'s legacy-PC-columns line were already accurate at HEAD by the time of the sweep (both read v32 / "removed", not the stale v14 / "retained defensively" this item originally flagged). *(`SYSTEMS/sermon-workspace.md:545` `saveDb` — DONE in step 4.)*
 - **C. CORE slimming:** ~12 dated 2026-06-10 amendment-history parentheticals (identity, persona, Test Q5, Process #1/#2/#3, Mutation #4, Surface #4) + the pre-invisible-system retired-framing blocks quoted inside Process #1/#2/#3 → move to a changelog so CORE reads like law.
 - **D. Memory housekeeping:** mark `project_oem_field_defs` superseded by `059bfce`; mark `project_invisible_system_state` stale on the "composites uncalled / surfacing in progress" line.
 

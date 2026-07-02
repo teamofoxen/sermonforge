@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect, Component, lazy, Suspense } from "react";
-import { getApiKeyStatus, onDbWriteError, onDbWriteOk, flushDb, getSermonColumns, onFlushEdits, flushEditsDone, setUiTheme } from "./db/database";
+import { getApiKeyStatus, getSermonColumns, onFlushEdits, flushEditsDone, setUiTheme } from "./db/database";
 import { runRegisteredFlushes } from "./utils/closeFlush";
-import mapError from "./utils/mapError";
 import { SERMON_COLUMNS } from "./constants/sermonColumns";
 import { VIEW } from "./core/contracts";
 import SetupScreen from "./components/SetupScreen";
@@ -9,7 +8,6 @@ import Sidebar from "./components/Sidebar";
 import Dashboard from "./components/Dashboard";
 import OneDriveWarning from "./components/OneDriveWarning";
 import PrimaryButton from "./components/primitives/PrimaryButton";
-import SecondaryButton from "./components/primitives/SecondaryButton";
 
 const SermonList = lazy(() => import("./components/SermonList"));
 const Calendar = lazy(() => import("./components/Calendar"));
@@ -223,33 +221,6 @@ function AppInner() {
     }
   }, []);
 
-  // Persistent disk-write banner. main emits "db-write-error" only after two
-  // consecutive flushDb failures, so a single transient OneDrive/AV lock that
-  // self-recovers on the next debounced write does not pop a banner.
-  const [writeError, setWriteError] = useState(null);
-  const [retrying, setRetrying] = useState(false);
-
-  useEffect(() => {
-    // The event payload is the raw fs/SQLite message from main — translate it
-    // before it reaches the banner (Mutation #5: errors speak in one voice).
-    const unsubError = onDbWriteError((msg) => setWriteError(mapError(msg || "", "save")));
-    const unsubOk = onDbWriteOk(() => setWriteError(null));
-    return () => { unsubError?.(); unsubOk?.(); };
-  }, []);
-
-  const handleRetryFlush = useCallback(async () => {
-    setRetrying(true);
-    try {
-      const result = await flushDb();
-      if (result?.ok) setWriteError(null);
-      else if (result?.error) setWriteError(mapError(result.error, "save"));
-    } catch (e) {
-      setWriteError(mapError(e, "save"));
-    } finally {
-      setRetrying(false);
-    }
-  }, []);
-
   // Invisible-system writing-surface preview. ?surface=writing bypasses the
   // dashboard, sidebar, and DB so the surface can be iterated in a browser
   // preview against fixture data without the real workspace shell.
@@ -341,31 +312,6 @@ function AppInner() {
   return (
     <ErrorBoundary>
     <OneDriveWarning />
-    {writeError && (
-      <div className="write-error-banner" role="alert">
-        <div className="write-error-banner-text">
-          <strong>Last save did not reach disk.</strong>
-          <span className="write-error-banner-detail">{writeError}</span>
-        </div>
-        <div className="write-error-banner-actions">
-          <PrimaryButton
-            size="sm"
-            onClick={handleRetryFlush}
-            disabled={retrying}
-          >
-            {retrying ? "Saving…" : "Retry"}
-          </PrimaryButton>
-          <SecondaryButton
-            size="sm"
-            onClick={() => setWriteError(null)}
-            disabled={retrying}
-            title="Dismiss without retrying"
-          >
-            Dismiss
-          </SecondaryButton>
-        </div>
-      </div>
-    )}
     <div className="app-shell">
       {!isOwnChrome && (
         <Sidebar

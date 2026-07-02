@@ -1,6 +1,6 @@
 # Series Planner Revival — Charter
 
-**Status:** SHIPPED then UNDER REBUILD — revived 2026-06-21, re-leveled to four movements 2026-06-22 (`3330f35`), guided-spine flow added 2026-06-24. **⚠ CONTENT-MODEL REBUILD ruled 2026-06-24 — see the next section; it supersedes the four-movement workbench and the melodic-line model.** **➕ TOPICAL SERIES mode authorized 2026-06-25 — a second, theme-led planner mode that extends (does not supersede) the content-model rebuild; see the 2026-06-25 ruling below.** Current shape (until the rebuild lands): [`docs/SYSTEMS/series-planner.md`](../SYSTEMS/series-planner.md).
+**Status:** SHIPPED — revived 2026-06-21, re-leveled to four movements 2026-06-22 (`3330f35`), guided-spine flow added 2026-06-24, then the **content-model rebuild shipped 2026-06-24** (three screens — Outline · Schedule · Study guide — superseding the four-movement workbench and the melodic-line model), and **Topical Series mode shipped 2026-06-25** (schema v30, extending — not superseding — the content-model rebuild). Current shape: [`docs/SYSTEMS/series-planner.md`](../SYSTEMS/series-planner.md).
 
 ## 2026-06-24 — Content-model rebuild: the planner becomes the pastor's real series document
 
@@ -41,7 +41,8 @@
    > **⚠ SUPERSEDED 2026-06-25 by the Coverage Initiative** ([`coverage-initiative.md`](coverage-initiative.md)). The deferred follow-on was built. `sermons.book_id` shipped (v31), and the dual-source fragility was designed out rather than accepted: `book_id` + chapter:verse **compose** the single `passage` string (`src/utils/topicalPassage.js`), so they can't disagree. The Arc was reworked to count **per sermon** (`effectiveBookId = sermon.book_id ?? series.book_id`), so a topical series' per-sermon books now appear on the canon-balance views. Only this ruling's "free text for v1 / structured deferred" deferral is overturned; the rest of the charter stands.
 7. **AI-free, restated for the new surface.** The theme and every per-sermon passage are pastor-authored — **no** "suggest passages for this theme," no scheduling advisor. Built AI-free by construction (`sermonforge/no-direct-ai`).
 
-**Build (later).** Schema (`series.kind` + `sermons.sort_order`, v30, both `contracts` mirrors + the allowlist-sync test) → the topical front door + page → the pastor-authored Schedule order (and the five order consumers) → verify the Study Guide flows through unchanged. The mechanics doc `docs/SYSTEMS/series-planner.md` is rewritten as part of this build. **No code written yet — this ruling authorizes the build.**
+**Build.** Schema (`series.kind` + `sermons.sort_order`, v30, both `contracts` mirrors + the allowlist-sync test) → the topical front door + page → the pastor-authored Schedule order (and the five order consumers) → verify the Study Guide flows through unchanged. The mechanics doc `docs/SYSTEMS/series-planner.md` is rewritten as part of this build.
+> **⚠ SHIPPED 2026-06-25 (commit `a6a95f0`).** All of the above landed: the v30 migration, `kind` in the `SERIES_COLUMNS` writable set, the New Series modal's Book/Topical choice, the topical flat pastor-ordered sermon list with move controls in `SeriesPlanner.jsx`, and `seriesSermonOrderBy` covering the pastor-order term. Extended 2026-06-25 by the Coverage Initiative's `sermons.book_id` (v31, ruling 6 above).
 
 ## Decision
 
@@ -96,6 +97,12 @@ a from-scratch build.
   empty name (State Contract #3), so a slot stays UI-only until its first non-empty title.
 - **`onOpenSermon`: drop the 3rd (seriesId) arg for v1** — the planner stands alone;
   return is via the sidebar / Planning list. Revisit only if return-to-this-series is asked for.
+  > **⚠ PARTIALLY SUPERSEDED 2026-06-21 (audit M5, commit `a04fce5`).** Return-to-this-series
+  > was asked for and built: opening a sermon from the planner records
+  > `{ view: VIEW.SeriesPlanner, seriesId }` in `App` state, and workspace Back returns
+  > directly to that planner — no longer via the sidebar / Planning list. The mechanical
+  > half still holds unchanged: `onOpenSermon(id)` itself still carries no 3rd argument;
+  > the series id rides `App` state, not a function argument.
 - **Nav:** `VIEW.Planning` = the list/picker (sidebar-reachable); `VIEW.SeriesPlanner` =
   planner-with-id, reached only via `openPlanner(id)`.
 
@@ -103,11 +110,13 @@ a from-scratch build.
 
 Re-skin to the invisible-system idiom; any AI-era "book-understanding feeds the sermon
 walk" pipeline; return-to-planner after opening a slot.
+> **⚠ SUPERSEDED 2026-06-21 (audit M5, commit `a04fce5`)** — return-to-planner shipped;
+> see the `onOpenSermon` ruling above. The re-skin and AI-era-pipeline exclusions still hold.
 
 > **Update 2026-06-22:** the planner was re-leveled to **four movements** (a structural
 > reshape — see the supersession note above), which goes beyond v1's "keep the 5-tab
-> bones." It is not a full invisible-system re-skin; the AI-era pipeline and
-> return-to-planner remain out of scope.
+> bones." It is not a full invisible-system re-skin; the AI-era pipeline remains out of
+> scope. (Return-to-planner: see the 2026-06-21 supersession note above — it shipped.)
 
 > **Update 2026-06-24:** a "guided spine" of sermon-walk *connective tissue* (seam frames,
 > a per-movement forward affordance, a topbar place-line, an Overview arc-rail map +

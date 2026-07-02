@@ -25,7 +25,8 @@
    without also adding a migration.
 3. Always verify `npm start` works after changes.
 4. Never mark an issue as fixed without verifying it actually works.
-5. This is a Windows app on OneDrive — always use `path.join()`, never hardcode path separators.
+5. This app ships cross-platform — Windows NSIS installer + notarized macOS DMG (since
+   v1.1.0) — always use `path.join()`, never hardcode path separators.
 6. Installers are built by `/release` (rewritten 2026-06-10 — the old rule
    demanded `npm run build` after every change set, a pre-distribution-era
    habit). A local `npm run build` is required only when the change touches
@@ -100,9 +101,12 @@ variables. Never hardcode these values anywhere else.
 - Loaded from Google Fonts via `src/styles/typography.css`. Tokens: `--font-serif`, `--font-mono`, `--font-sans`.
 
 **Layout:**
-- Sidebar: 260px, `var(--ink)` background, gold gradient right border
+- Sidebar: 260px, `var(--sidebar-bg)` background (dark in both themes; `--ink` is a
+  foreground token that flips light in dark mode — never use it as the sidebar background),
+  gold gradient right border via `.sidebar::after`
 - Content area: `var(--parchment)` background
-- Topbar: white background, soft shadow
+- Topbar: always-dark bar (`#1a1410`, deeper in dark theme), 1px black bottom border with a
+  gold-gradient seam via `.topbar::after` — no shadow
 
 **Component rules:**
 - `btn-primary`: `var(--gold)` background, white text

@@ -137,8 +137,16 @@ Chrome:
 - **Passage column** (left) — consumes the canonical `useEsvPassage` hook (one
   ESV fetch path, shared with PassagePopup). Collapsible to a `‹` button.
 - **Prompts + answers** (right) — every question in the current field rendered
-  stacked; each carries an N/A toggle per the per-question N/A flag in the
-  envelope shape.
+  stacked; the N/A toggle renders only on questions whose field def declares
+  `naAllowed: true` — currently `intro.redemptive_note` and `mps.gospel_check`
+  (`PromptBlock` shows the toggle when `naAllowed || na`, the `na`-only branch
+  existing solely so a legacy flag on a non-allowlisted question can be
+  undone). The gating flag lives in the field defs, not the envelope shape —
+  the envelope carries only the per-answer `na` state. Enforcement is
+  three-deep: field-def flag, composite gate, and a write-path guard that
+  drops `na` for non-allowlisted questions. The wider Study-question and
+  per-thought-unit-cell N/A is a ruled target (`WORKSPACE-CANON.md` §5) not
+  yet built.
 - **Chrome buttons** (bottom) — notebook summon (a quiet mono text link near
   the save indicator, per the D2d option-i ruling), the chevron-next
   (`.sws-forward`), and the map summon (`.sws-map-summon`).
@@ -371,10 +379,14 @@ Possible Implications removed 2026-06-15, Phase 2.)
   string in [`studyFields.js`](../../src/utils/studyFields.js); "unified-canvas" survives
   only in older comments / test narration as the name of the era-2 rework, not as a kind);
   the [`PassageCanvas`](../../src/components/PassageCanvas.jsx)
-  component mounts inside the writing surface. Its left gutter prepopulates the
-  passage's verse numbers for single-chapter ranges (`versesForSingleChapterRange`
-  in [`passageRef.js`](../../src/utils/passageRef.js)) — a deterministic lookup,
-  not the verse text, which the pastor still types by hand. A number marks only
+  component mounts inside the writing surface. Its left gutter is pre-seeded by
+  `verseLabelsForRange(raw, bookId)` in [`passageRef.js`](../../src/utils/passageRef.js)
+  — a deterministic lookup, not the verse text, which the pastor still types by hand.
+  It handles both single-chapter ranges (bare verse numbers) and cross-chapter ranges
+  (chapter shown on the first row and at each chapter seam, e.g. Eccl 5:8–6:12 →
+  `5:8, 9, …, 20, 6:1, …, 12`); an unresolvable reference falls back to a blank canvas.
+  The gutter is also pastor-editable — pre-filled, but correctable
+  (`PassageCanvas.jsx`; commits `15d4356` → `3334079` → `4fcc112`). A number marks only
   where a verse begins; continuation/indented rows carry none. Canvas rows produce the
   canonical `thought_units` array via `deriveThoughtUnitsFromCanvas` on every
   save (depth-0 rows are the thought units per era-2-primacy ruling 8).
@@ -555,12 +567,15 @@ truth, no envelope/flat-column desync. Named outcome: Manuscript.
 
 ---
 
-## PassagePopup (Show Text)
+## PassagePopup
 
-Component: [`src/components/PassagePopup.jsx`](../../src/components/PassagePopup.jsx).
-
-The wider passage popout (vs the writing-surface's inline passage column).
-Triggered by Show Text from the writing-surface chrome.
+Component: [`src/components/PassagePopup.jsx`](../../src/components/PassagePopup.jsx),
+opened by [`PassageLookup`](../../src/components/PassageLookup.jsx) — an ESV.org-style
+Bible reference picker (Testament tab ▸ book ▸ chapter ▸ verse/range dropdown) mounted
+in the `SermonWorkspace` top bar. It is a standalone lookup decoupled from the sermon's
+preaching passage; picking a reference opens this draggable/resizable reading window
+with ESV text, section headings, and Previous/Next chapter navigation. There is no
+"Show Text" affordance in the writing-surface chrome.
 
 - Rendered via React portal to `document.body`
 - Fetches via the canonical `useEsvPassage` hook in
@@ -584,13 +599,17 @@ Triggered by Show Text from the writing-surface chrome.
 4. `sermonRef.current` updated.
 5. `debouncedSave()` scheduled (800ms debounce).
 6. On fire: `persistUpdate()` reads `sermonRef.current` (full current state).
-7. `updateSermon(id, fields)` IPC → `electron/main.js` `apply-mutation`
-   handler.
+7. `updateSermon(id, fields)` dispatches the `update-sermon` spine op →
+   `electron/main.js` `case "update-sermon"` handler. (`apply-mutation` is a
+   separate spine op — a single-field typed `user_input` mutation — that this
+   multi-field workspace save path never touches.)
 8. `buildUpdate()` validates against the `SERMON_COLUMNS` allowlist.
 9. The SQL UPDATE commits durably as it runs — better-sqlite3 in WAL mode, with no
-   serialize-and-rotate pipeline and no disk-write debounce. (`flushDb()` survives only
-   as a WAL checkpoint for the banner's Retry path — it is not a debounced disk write,
-   and the old `saveDb()` 500ms debounce no longer exists; see CORE Absolute Invariants
+   serialize-and-rotate pipeline and no disk-write debounce. A failed write throws at
+   the handler and surfaces here through `persistMutation`'s save state. (`flushDb()`
+   survives only as an internal main-process WAL checkpoint — quit path + boot-time
+   backup; the old `saveDb()` 500ms debounce no longer exists, and the dead disk-write
+   banner + `db-flush` channel were removed 2026-07-01; see CORE Absolute Invariants
    and [`electron/main.js`](../../electron/main.js).)
 
 **Position-write side path (D2c):**
@@ -615,24 +634,28 @@ Triggered by Show Text from the writing-surface chrome.
 - **Adding columns to `sermons`** requires updating `SERMON_COLUMNS` in
   *both* [`electron/contracts.cjs`](../../electron/contracts.cjs) and
   [`src/core/contracts.ts`](../../src/core/contracts.ts) — the two allowlists
-  mirror each other (34 entries each as of v24; `delivery_notes` / `timing_notes`
-  were struck from the writable set in the v24 migration). `buildUpdate()` throws
+  mirror each other (39 entries each as of v32; `delivery_notes` / `timing_notes`
+  were struck from the writable set in the v24 migration, and the writable set has
+  since gained `big_idea`, `overview`, `study_guide_extras` (v27), `sort_order` (v30),
+  `book_id` (v31), and `tags` (v32)). `buildUpdate()` throws
   in dev if you miss this, but only if you exercise the save path. The
   `assertSchemaContract()` startup check validates the live DB against the
   allowlist.
 - **Field-level editors** (`PassageCanvas`, `SynthesisTable`) mount
   inside the writing surface unchanged from pre-rebuild; the data shapes
   they read/write are documented above per stage.
-- **`FeedbackFlag` is dormant post-sweep.** The component at
+- **`FeedbackFlag` is live-mounted.** The component at
   [`src/components/FeedbackFlag.jsx`](../../src/components/FeedbackFlag.jsx)
   is BTI Phase 1 infrastructure (the Tier 1 in-app flag affordance). Its
   pre-sweep mount points (StudyTab + ManuscriptTab + AIPanel + ProposalPanel
   + SeriesPlanner + DeliveryTab + OutlineTab) were all on surfaces deleted
-  across ARI, Workspace Restructure, and the trail deletion sweep — leaving
-  the component with no current mount. Re-wiring is BTI Phase 2+ work, not
-  trail-sweep work; the component is kept (BTI owns the re-mount, not the
-  delete decision). See `memory/project_bti_state.md` for the BTI app-
-  readiness audit follow-up.
+  across ARI, Workspace Restructure, and the trail deletion sweep, but the
+  2026-05-18 hygiene scan re-wired it onto the unified writing surface: it
+  mounts from `SermonWorkspace.jsx` (top-right chrome cluster, gated on
+  `!_fixtureSermon` so fixture clicks stay out of BTI telemetry) with a
+  per-stage `surface` label and field-level `step`, and separately from
+  `SeriesPlanner.jsx`'s topbar (`surface="series-planner"`). No re-mount
+  work is pending.
 
 ---
 

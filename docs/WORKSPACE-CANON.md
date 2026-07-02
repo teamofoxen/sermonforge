@@ -404,9 +404,11 @@ Recorded so canon is honest about what is *not* yet frozen:
    prompts and lenient checks may tighten after the OEM content walk.
 3. **Two provisional named-outcome names** — "Sermon Outline" and "Sermon Body" (RW1) were
    never SFDI/SADI-ratified.
-4. **The Merida flags** (all **[+] / [◆] / [⚠] / [✂]** above) — Phase-2 surgery input.
-   Lowest-cost-first order is set in the working board's Phase 2 section; the headline is
-   MPS → fallen-condition-focus (the biggest drift).
+4. **The Merida flags** (remaining **[◆] / [⚠] / [✂]** above) — Phase-2 surgery input.
+   The rulable-now batch (items 1–5, including the headline MPS → fallen-condition-focus
+   drift) shipped 2026-06-15/16 (commits `ab5c87c`, `2029747`, `c07139e`) — those tags have
+   been updated to **[M]**/historicized in place above. What remains open is the OEM-deferred
+   / deep items (per the working board's Phase 2 section).
 
 ---
 

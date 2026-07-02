@@ -7,7 +7,7 @@ See `docs/SYSTEMS/ipc.md` for architecture and boundary rules.
 
 ## Database Operations
 
-All sermon and series state routes through the `"spine"` channel. Named per-operation `db-get*` channels for sermons/series (`db-getRecentSermons`, `db-getRecentSeries`, `db-loadSampleSermon`) no longer exist — they are spine ops now. (`db-loadTourSermon` was renamed to `db-loadSampleSermon` in the tour-cleanup phase, 2026-05-17; `db-removeTourSermon` retired in the same phase — the sample-sermon path is self-cleaning via delete-then-insert.) Settings, calendar notes, memory, and schema queries remain as named channels. No raw SQL is accepted from the renderer.
+All sermon and series state routes through the `"spine"` channel. Named per-operation `db-get*` channels for sermons/series (`db-getRecentSermons`, `db-getRecentSeries`, `db-loadSampleSermon`) no longer exist — they are spine ops now. (`db-loadTourSermon` was renamed to `db-loadSampleSermon` in the tour-cleanup phase, 2026-05-17; `db-removeTourSermon` retired in the same phase — the sample-sermon path is self-cleaning via delete-then-insert.) Settings, calendar notes, schema, and sermon full-text search remain as named channels. No raw SQL is accepted from the renderer.
 
 ### `"spine"`
 ```
@@ -30,6 +30,7 @@ Single channel for all sermon, series, and section state. Operations dispatch to
 | `get-sermons-by-series` | seriesId string | sermons in series, ordered by the shared `seriesSermonOrderBy` (dated first, then section order, then per-sermon `sort_order`, then `created_at`) — same order as the Schedule + study-guide export |
 | `get-sections-by-series` | seriesId string | sections in series, sort_order ASC |
 | `get-all-tags` | — | distinct sorted topic tags across all live sermons (own-tag autocomplete + Topics lens; v32) |
+| `get-series-sermon-counts` | — | `{ [seriesId]: count }` map of undeleted sermons grouped by `series_id` — one grouped read for the Planning list's per-series counts, replacing an N+1 fan-out of `get-sermons-by-series` |
 
 **Write ops** (all go through `validateAndCommit`; contract violations return `{ ok: false, code, clause, message }`):
 
@@ -45,9 +46,9 @@ Single channel for all sermon, series, and section state. Operations dispatch to
 | `create-section` | `{ series_id, title, sort_order? }` | — |
 | `update-section` | `{ id, ...fields }` | — |
 | `delete-section` | sectionId string | — |
-| `transition-state` | `{ sermonId, to, kind }` where `to` is a `Stage` or `SubPhase` enum value and `kind` is `"stage" \| "sub_phase"` | Position writer. (Phase G 2026-05-18: `evidence` + `direction` payload fields retired alongside the wall-layer rejections — Process #1 forward-to-prior + Process #2 empty-evidence — that consumed them. Process #1 + #2 rearticulated in CORE 2026-05-18: monotonic-in-expectation + completeness contract. Workspace Restructure 2026-05-10: legacy `kind: "step"` retired; legacy `to: "Blueprint" \| "Frame"` coerced to `Assembly` server-side.) |
-| `apply-mutation` | `{ sermonId, field, value, proposalId? }` | Mutation #1 + #2 enforcement |
-| `load-sample-sermon` | — | Seeds or refreshes the sample-sermon record (delete-then-insert; consumed by Dashboard's "Open a sample sermon" button) |
+| `transition-state` | `{ sermonId, to, kind }` where `to` is a `Stage` or `SubPhase` enum value and `kind` is `"stage" \| "sub_phase"` | Plain position writer — writes `to` exactly as given, no server-side coercion. (Phase G 2026-05-18: `evidence` + `direction` payload fields retired alongside the wall-layer rejections — Process #1 forward-to-prior + Process #2 empty-evidence — that consumed them. Process #1 + #2 rearticulated in CORE 2026-05-18: monotonic-in-expectation + completeness contract. Workspace Restructure 2026-05-10: legacy `kind: "step"` retired; the legacy `to: "Blueprint" \| "Frame"` → `Assembly` read/write coercion that followed was itself later deleted in the Invisible System rebuild — `current_stage` is read straight through, and no production data carries the pre-restructure values.) |
+| `apply-mutation` | `{ kind: "user_input", sermonId, field, value }` | `kind` must be `"user_input"` — the only kind since `MUTATION_KIND` was collapsed in ARI Phase 9. `value` is a string for simple fields or a typed `StructuredFieldUpdate` for structured fields (State #5 shape check). Mutation #1 enforcement. No `proposalId` — that token exists only in the AI-simulation test helper, not in the main-process handler. |
+| `load-sample-sermon` | `{ fresh?: true }` (optional) | Default (no payload / `fresh` falsy): returns the existing sample sermon as-is if one exists — `{ sermonId, created: false }` — preserving the pastor's sandbox edits; seeds only when none exists. With `fresh: true` (Dashboard's "Start the sample fresh" action): delete-then-insert reseed of every `sample-%` sermon/series row. |
 
 ---
 
@@ -63,14 +64,14 @@ Returns all calendar notes ordered by date ASC.
 receives: { date: string, type?: string, label?: string, notes?: string }
 returns:  id string (UUID)
 ```
-Inserts a calendar note. `type` defaults to `"special"`. Triggers `saveDb()`.
+Inserts a calendar note. `type` defaults to `"special"`.
 
 ### `"db-deleteCalendarNote"`
 ```
 receives: id string
 returns:  undefined
 ```
-Deletes a calendar note by id. Triggers `saveDb()`.
+Deletes a calendar note by id.
 
 ### `"db-getSchemaVersion"`
 ```
@@ -78,15 +79,6 @@ receives: nothing
 returns:  { version: string }
 ```
 Reads `schema_version` from the `meta` table.
-
-### `"db-flush"`
-```
-receives: nothing
-returns:  { ok: true } | { ok: false, error: string } | { ok: true, skipped: true }
-```
-Manual flush of `sermonforge.db` to disk. Wired to the `db-write-error`
-banner's "Retry" button; calling directly is also safe. Atomic via
-`<dbPath>.tmp` + rename; rotates the prior good blob to `<dbPath>.bak`.
 
 ### `"db-getSetting"`
 ```
@@ -100,7 +92,23 @@ Reads a value from the `settings` table.
 receives: { key: string, value: string }
 returns:  true
 ```
-Upserts a value in the `settings` table. Triggers a debounced `saveDb()`.
+Upserts a value in the `settings` table.
+
+### `"db-searchSermons"`
+```
+receives: { query: string, limit?: number }
+returns:  array of sermon search hits (up to `limit`, default 50)
+```
+Full-text search over `sermon_search` (LIKE-based, v22 — see
+`docs/REFERENCE/schema.md`). Exposed to the renderer as
+`electronAPI.searchSermons` (`electron/preload.js`).
+
+---
+
+All writes above (and every spine write) commit as a durable, journaled
+better-sqlite3 transaction the instant the IPC handler returns — see
+`docs/SYSTEMS/ipc.md` Spine Call Path. There is no `saveDb()` and no
+main-process debounce.
 
 ---
 
@@ -135,9 +143,10 @@ cross-chapter range, and whole chapter formats.
 ### `"theology-status"`
 ```
 receives: nothing
-returns:  { available: bool }
+returns:  { available: bool, semantic: bool }
 ```
-Whether `theology.db` is present and loaded.
+`available` — whether `theology.db` is present and loaded. `semantic` —
+whether `sqlite-vec` vector search is usable (see the Note below).
 
 ### `"theology-search"`
 ```
@@ -209,11 +218,14 @@ receives: { title, passage, date, mpt, mps,
             introduction:{opener,scripture_reading,expectation},
             transitions, conclusion:{response},
             outline:[{id,text}], functionalElements }
-returns:  { success: true, filepath: string }
+returns:  { success: true, filepath: string, opened: bool }
         | { success: false, error: string }
 ```
 Builds a `.docx` of the manuscript prose: title block (title, passage, date, MPT, MPS) → divider → Introduction → per-point sections (transition, point heading, scripture, explanation, application, illustration) → conclusion transition → Conclusion.
-Saves to `Documents/SermonForge/exports/Manuscripts/[title] — Manuscript.docx`, then opens it via `shell.openPath`.
+Saves to `Documents/SermonForge/exports/Manuscripts/[title] — Manuscript.docx`,
+then attempts `shell.openPath`. If nothing handles `.docx` (openPath returns
+a non-empty error string), `opened` is `false` and the handler falls back to
+`shell.showItemInFolder` so the renderer can still show the file's location.
 
 ---
 
@@ -314,7 +326,10 @@ installer runs.
 ### `"app-get-startup-warning"`
 ```
 receives: nothing
-returns:  null | { kind: "onedrive" | "onedrive-first-run", path: string }
+returns:  null
+        | { kind: "onedrive" | "onedrive-first-run", path: string }
+        | { kind: "db_corrupt_quarantined" | "db_recovered_backup" | "db_migrated",
+            message: string, path?: string }
 ```
 Pull-pattern delivery of one-shot startup warnings. Main holds a QUEUE
 (`_pendingStartupWarnings`) populated by `initDatabase` (recovery kinds:
@@ -340,16 +355,29 @@ OneDrive sync away from it.
 ### `"app-get-sermon-columns"`
 ```
 receives: nothing
-returns:  string[]
+returns:  { columns: string[] }
 ```
-Returns the main-process `SERMON_COLUMNS` allowlist. The renderer-side
-mirror in `src/core/contracts.ts` is asserted against this on App mount;
-a mismatch fails fast rather than letting `buildUpdate()` silently drop
-unknown fields.
+Returns the main-process `SERMON_COLUMNS` allowlist wrapped in a `columns`
+key. The renderer reads `res.columns` and asserts it against the
+renderer-side mirror (`src/core/contracts.ts`, re-exported via
+`src/constants/sermonColumns.js`) on App mount; a mismatch fails fast
+rather than letting `buildUpdate()` silently drop unknown fields.
 
 ---
 
 ## BTI Telemetry + Feedback
+
+### `"report-renderer-error"`
+```
+receives: { label: string, detail: string }
+returns:  { ok: true }
+```
+Logs `"[renderer] {label}"` to `app.log` (`detail` capped at 2000 chars) and,
+when telemetry is enabled, emits the `crash` telemetry event (error string
+capped at 500 chars). Never throws. Exposed as
+`electronAPI.reportRendererError(label, detail)`; called fire-and-forget by
+the global window error hooks in `src/main.jsx` and the React ErrorBoundary
+in `src/App.jsx`.
 
 ### `"telemetry-emit"`
 ```
@@ -367,34 +395,42 @@ when the user has the telemetry toggle off. Event vocabulary lives in
 receives: bool
 returns:  { ok: true }
 ```
-Toggles the BTI telemetry preference. Persists to the `bti_telemetry_enabled`
-setting and short-circuits the bus + transport when off.
+Flips the main-process bus's in-memory enabled flag (`telemetryBus.setEnabled`),
+which short-circuits `emit()`/`flush()` when off, and emits the deferred
+first-run `app-open` event when turned on. **This channel persists nothing** —
+durable persistence of the `bti_telemetry_enabled` setting is a separate
+renderer responsibility (`SetupScreen.jsx` writes it via `db-setSetting`
+before calling this channel); a caller that toggles telemetry must do both,
+or the preference is lost on restart.
 
 ### `"bti-feedback-submit"`
 ```
 receives: { kind: "flag" | "form", payload: object }
-returns:  { ok: true } | { ok: false, error: string }
+returns:  { ok: true }
+        | { ok: false, reason: "disabled" | "bad-kind" | "no-transport" | "threw" }
+        | { ok: false }
 ```
-Submits a Tier 1 flag or Tier 2 form to the BTI Cloudflare Worker. On
-failure the main-process bus persists locally and retries on the next
-periodic flush. Payload shape per `docs/PROPOSALS/bti-build-mvp.md`.
+Submits a Tier 1 flag or Tier 2 form to the BTI Cloudflare Worker. There is
+no `error` field on any return shape. The bare `{ ok: false }` case is a
+failed network POST — the item is persisted to the immediate retry queue
+and resent on the next periodic flush. Payload shape per
+`docs/PROPOSALS/bti-build-mvp.md`.
 
 ---
 
 ## Events (one-way, main → renderer)
 
-Subscribed to via `onDbWriteError` and `onDbWriteOk` (see `electron/preload.js`).
-Each subscriber returns an unsubscribe function.
+Subscribers are exposed via `electron/preload.js`; each returns an
+unsubscribe function.
 
-### `"db-write-error"`
-Payload: `string` (error message). Emitted by `flushDb` only on the **second
-consecutive** failure — a single transient OneDrive/AV lock that self-recovers
-on the next debounced write does not pop a banner. App.jsx renders a persistent
-top-of-window banner with a "Retry" button (calls `db-flush`) on receipt.
-
-### `"db-write-ok"`
-Payload: none. Emitted by `flushDb` after a successful write that follows at
-least one failure. Renderer dismisses the banner on receipt.
+> **Removed 2026-07-01:** the `db-write-error` / `db-write-ok` push events and
+> the `db-flush` manual-checkpoint channel. Main never emitted the events after
+> the better-sqlite3 driver swap — a failed write throws at its own IPC handler
+> and surfaces to the caller — so the App.jsx disk-write banner they fed could
+> never appear. The events, the banner, and the channel were deleted together;
+> save failures surface via `persistMutation` → save state in the workspace.
+> The main-process internal WAL checkpoint (`flushDb()`, quit path + boot-time
+> backup) is unaffected.
 
 ### `"app-flush-edits"`
 Payload: `string` (nonce). Sent by `flushRendererEdits` in `electron/main.js`

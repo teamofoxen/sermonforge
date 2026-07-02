@@ -2513,11 +2513,13 @@ button {
   margin-top: 4px;
 }
 
-/* ── Disk-write error banner ─────────────────────────────────────────────── */
-/* Persistent bar pinned to the top of the viewport when the database fails to write
-   sermonforge.db twice in a row. Sits above the app-shell so the pastor sees
-   it whatever view they're in. Do not auto-dismiss — only the renderer's
-   db-write-ok subscriber or the pastor's Dismiss click clears it. */
+/* ── Startup warning banner (OneDriveWarning.jsx) ────────────────────────── */
+/* Persistent bar pinned to the top of the viewport. Originally built for the
+   retired disk-write error banner (deleted 2026-07-01 — main never emitted its
+   events post-driver-swap); RETAINED because OneDriveWarning.jsx renders all
+   three of its startup-warning states with these classes: the OneDrive nag
+   (sage/gold inline overrides) and the DB corruption-recovery alert (this
+   default crimson look). Do not delete without re-styling OneDriveWarning. */
 .write-error-banner {
   position: fixed;
   top: 0;

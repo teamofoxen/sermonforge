@@ -16,9 +16,12 @@ and most of the hand-rolled durability code that previously lived in
 - **`sermonforge.db` → better-sqlite3, WAL journal mode.** Every spine write is
   a durable SQLite commit the moment its IPC handler returns. A hard kill
   mid-session loses nothing committed — the WAL replays on the next open
-  (verified live with SIGKILL on 2026-06-10). `flushDb()` survives as a WAL
-  checkpoint (`wal_checkpoint(TRUNCATE)`); the `db-flush` IPC contract is
-  unchanged. The main DB never loads extensions.
+  (verified live with SIGKILL on 2026-06-10). `flushDb()` survives as an
+  internal main-process WAL checkpoint (`wal_checkpoint(TRUNCATE)`) used by
+  the quit path and the boot-time backup. (The `db-flush` IPC channel and the
+  renderer's disk-write banner plumbing were removed 2026-07-01 — main never
+  emitted the banner's events post-swap; a failed write throws at its own
+  handler and surfaces to the caller.) The main DB never loads extensions.
 - **`theology.db` → better-sqlite3 + sqlite-vec.** The theology corpus loads
   the `sqlite-vec` extension for vector semantic search. Native modules must be
   rebuilt for Electron's ABI after install:
@@ -74,9 +77,12 @@ Read via IPC `"db-getSchemaVersion"`.
   while the column was permanently missing — `safeAlter` makes that impossible.
 - A per-launch `assertSchemaContract()` runs after `runMigrations()` and verifies
   every column in `SERMON_COLUMNS` / `SERIES_COLUMNS` is present in the live
-  schema. On mismatch it logs an ERROR via `electron/logger.js` (visible in
-  `app.log` and attached to feedback submissions) and the next launch retries
-  the schema-contract migration (see v14 below).
+  schema. On mismatch it logs an ERROR via `electron/logger.js`, visible only in
+  the local `app.log` — nothing attaches log content to feedback submissions
+  (that legacy path was removed in the public-launch hardening pass). It does
+  not throw, and it does not retry: the v14 reconciliation block below only
+  runs when `schema_version < 14`, so a live contract violation past v14
+  requires a new migration, not a next-launch retry.
 - **v14 — schema-contract reconciliation.** Re-applies every additive ALTER
   from v2 / v4 / v6 / v7 / v8 / v9 / v12 idempotently. The backstop for any
   install where a prior swallowed-catch caused a column to go missing while
@@ -152,16 +158,26 @@ Resolved by `electron/config.js` via `app.getPath("userData")` plus a `data` /
   falls back to `.bak`; if both fail the corrupt original is renamed to
   `<dbPath>.corrupt-<ts>` and a fresh DB is created — pastor data is never
   silently overwritten.
-- `ai-log.jsonl` (audit log), `app.log` (crash log), and `sf-anthropic.enc` /
-  `sf-esv.enc` (safeStorage keys) live at the **userData root**, not under
-  `data/`, so they persist across the dev/prod data-folder split.
+- `sf-esv.enc` (the ESV safeStorage key — the only key SermonForge stores;
+  Anthropic-key handling was removed with ARI, so `sf-anthropic.enc` and
+  `ai-log.jsonl` do not exist), `ui-prefs.json`, and `tester-id.txt` live at
+  the **userData root**, not under `data/`, so they persist across the
+  dev/prod data-folder split. `app.log` does **not** live at the userData
+  root — it lives under `logs/` (`logs-dev/` in dev; `electron/config.js`
+  `paths.logs`), so it is dev/prod-split too.
 
-Exports are written to `Documents\SermonForge\exports\` and (Study Guides,
-Feedback) to `~/OneDrive/SermonForge/...` when OneDrive is present.
+Exports are written to `Documents\SermonForge\exports\` — study guides to the
+`StudyGuides\` subfolder, manuscripts to `Manuscripts\`. There is no OneDrive
+export path. Feedback is not a file export at all: FeedbackForm/FeedbackFlag
+route through the `bti-feedback-submit` IPC channel to the BTI Cloudflare
+Worker (see `docs/SYSTEMS/ipc.md`); a failed submission persists only to a
+local telemetry retry queue.
 
-OneDrive is **not** used for the application databases. OneDrive is used only
-for the user's own backup choices for exported files. The app runs correctly
-without OneDrive.
+OneDrive is **not** used for the application databases, and no export path
+writes to OneDrive. OneDrive appears only (a) as a legacy DB-migration source
+location, and (b) as an active startup warning when the user's data folder
+sits inside a synced OneDrive root (`maybeWarnOneDrive`,
+`src/components/OneDriveWarning.jsx`). The app runs correctly without OneDrive.
 
 **OneDrive risk note.** `app.getPath("userData")` resolves to `%APPDATA%\Roaming`,
 which is normally not synced. Enterprise GPOs or roaming-profile setups can
@@ -184,7 +200,7 @@ the miss immediately in development — but only if you actually exercise the sa
 
 ## Key Design Notes
 
-- **Sermon slots** are real `sermons` records with `stage='planning'`. There is no separate
+- **Sermon slots** are real `sermons` records with `stage='in_progress'`. There is no separate
   planning-slots table.
 - **Calendar notes and metadata** are in separate tables.
   See `docs/REFERENCE/schema.md` for all table definitions.

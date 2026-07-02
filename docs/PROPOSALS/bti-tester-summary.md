@@ -48,7 +48,7 @@ A few months of using SermonForge for real sermon prep — your normal weekly pr
 
 There are three ways to give feedback, designed for three different amounts of time:
 
-**A flag button — thirty seconds.** Inside the app, on each tab where you're authoring something — Study, Blueprint, Manuscript — there's a small flag button. If something feels off in the moment — a question put a word in your mouth, the flow nudged you somewhere you wouldn't have gone, a field felt heavier than it should — click it. You can leave a one-line note or just click and move on. Even a flag with no note tells me where to look. Use it freely. I'd rather get a hundred half-formed flags than ten polished ones.
+**A flag button — thirty seconds.** Inside the app, wherever you're authoring something — the workspace's Study, Assembly, and Manuscript stages, and the Series Planner — there's a small flag button. If something feels off in the moment — a question put a word in your mouth, the flow nudged you somewhere you wouldn't have gone, a field felt heavier than it should — click it. You can leave a one-line note or just click and move on. Even a flag with no note tells me where to look. Use it freely. I'd rather get a hundred half-formed flags than ten polished ones.
 
 **A longer feedback form — five minutes.** A pop-out you can open from the sidebar when you have five minutes and want to say more. A handful of named dimensions (structural overreach, workflow-fit, question quality, trust, friction, voice and frame, and a few others), free-text answers, fill in what you have time for. Good for the things that don't fit a flag — patterns you noticed across the week, things that have been bothering you but you couldn't put your finger on.
 
@@ -58,7 +58,7 @@ There are three ways to give feedback, designed for three different amounts of t
 
 ## What I'm capturing in the background
 
-Because I trust you and you trust me, I'm planning to capture some technical signals about how you use the app — how often you open it, which tabs hold your attention, where the tour drops you off, whether sermons get started and finished or abandoned mid-prep. This is the part of the program where I can ask for more than I'd ever ask of a public user.
+Because I trust you and you trust me, I'm planning to capture some technical signals about how you use the app — how often you open it, which parts of the app hold your attention, whether sermons get started and finished or abandoned mid-prep. This is the part of the program where I can ask for more than I'd ever ask of a public user.
 
 It all goes to me, on systems I control. No third-party analytics, no public dashboards. **Sermon content is never captured** — not your manuscript, not your outline, not your notebook, nothing you typed into any field. Only metadata about your interactions and whatever you choose to send via flags or forms. A separate short doc explains exactly what's captured and what isn't — please read it before you install. If anything in it feels uncomfortable, tell me and we'll change it.
 
@@ -111,7 +111,7 @@ When you're ready:
 1. Read the short ["what we capture" doc](../REFERENCE/privacy.md) I'll send alongside this one.
 2. Tell me you're in (or not — both fine).
 3. If you opted in for the writing exercises, I'll send you the first short passage to draft against, *before* you install the app.
-4. Install the app, set it up, take a look around. There'll be a short tour.
+4. Install the app, set it up, take a look around. There's a sample sermon on the dashboard you can poke through to get a feel for the walk before your own prep starts.
 5. Use it for your normal sermon prep. Flag what you notice. Send a longer form when you have something to say. We'll do our first check-in conversation a few weeks in.
 
 If anything in this letter doesn't sit right — the asks, the data, the writing exercises, the time commitment — please push back before you commit. I'd rather lose a tester at this stage than have you in the cohort with reservations.

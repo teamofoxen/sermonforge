@@ -80,22 +80,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getStartupWarning: () => ipcRenderer.invoke("app-get-startup-warning"),
   openDataFolder: () => ipcRenderer.invoke("app-open-data-folder"),
 
-  // ── Disk-write health ─────────────────────────────────────────────────────
-  // Subscriber for the persistent banner. main emits "db-write-error" only on
-  // the second consecutive flushDb failure; emits "db-write-ok" once writes recover.
-  onDbWriteError: (callback) => {
-    const handler = (event, message) => callback(message);
-    ipcRenderer.on("db-write-error", handler);
-    return () => ipcRenderer.removeListener("db-write-error", handler);
-  },
-  onDbWriteOk: (callback) => {
-    const handler = () => callback();
-    ipcRenderer.on("db-write-ok", handler);
-    return () => ipcRenderer.removeListener("db-write-ok", handler);
-  },
-  // Manual flush — banner's "Retry" button.
-  flushDb: () => ipcRenderer.invoke("db-flush"),
-
   // ── Close-time edit flush ─────────────────────────────────────────────────
   // main asks the renderer to flush debounced edits before the window closes
   // or the app quits (flushRendererEdits in electron/main.js). The renderer

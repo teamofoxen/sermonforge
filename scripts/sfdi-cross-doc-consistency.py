@@ -101,11 +101,17 @@ results.append(("C2 — Canonical vocabulary present in SFDI + workspace", "FAIL
 
 
 # ---------------------------------------------------------------------------
-# C3 — Per-phase field counts (8, 8, 5, 4) consistent
+# C3 — Per-phase field counts consistent (frozen SFDI 8/8/5/4 · live 7/7/5/4)
 # Updated 2026-05-05: Background field retired (Phase 1 9 → 8); Genre field
 # added to Interpret (Phase 2 7 → 8). CHANGELOG and historical SPRD strings
 # from the original 9 → 7 reshape are still present in those docs as past
 # entries; we no longer require them as canonical, only forbid stale counts.
+# Updated 2026-07-01: the SFDI doc is a frozen historical record and keeps its
+# 8/8/5/4 field-order headers, but the LIVE workspace doc tracks the code at
+# HEAD, which is 7/7/5/4 (23 fields) since the Re-Foundation Phase-2 Merida
+# surgery (2026-06-15/16, c07139e — Possible Implications and Genre cut). The
+# workspace patterns below assert the live shape; the SFDI check above them
+# asserts the frozen record's internal shape. They are expected to differ.
 # ---------------------------------------------------------------------------
 c3 = []
 sfdi = content["SFDI"]
@@ -118,8 +124,8 @@ ws_text = content["workspace"]
 # Newline-tolerant: workspace doc wraps long sentences, so "N-field" and "shape"
 # may sit on adjacent lines.
 ws_checks = [
-    (r"Phase 1[\s\S]{0,400}8-field\s+shape", "Phase 1 = 8"),
-    (r"Phase 2[\s\S]{0,400}8-field\s+shape", "Phase 2 = 8"),
+    (r"Phase 1[\s\S]{0,400}7-field\s+shape", "Phase 1 = 7 (live)"),
+    (r"Phase 2[\s\S]{0,400}7-field\s+shape", "Phase 2 = 7 (live)"),
     (r"Phase 3[\s\S]{0,400}5-field\s+shape", "Phase 3 = 5"),
     (r"Phase 4[\s\S]{0,400}4-field\s+shape", "Phase 4 = 4"),
 ]
@@ -145,7 +151,7 @@ for cstr in ["Phase 1 Observe: 8", "Phase 2 Interpret: 8", "Phase 3 RT: 5", "Pha
     if cstr not in sm:
         c3.append(f"state_memory: missing per-phase count '{cstr}'")
 
-results.append(("C3 — Per-phase field counts (8, 8, 5, 4) consistent", "FAIL" if c3 else "PASS", c3, []))
+results.append(("C3 — Per-phase field counts consistent (frozen SFDI 8/8/5/4 · live workspace 7/7/5/4)", "FAIL" if c3 else "PASS", c3, []))
 
 
 # ---------------------------------------------------------------------------

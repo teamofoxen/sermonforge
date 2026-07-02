@@ -20,10 +20,12 @@ every item. Items marked **(Win + Mac)** must run on both platforms.
 2. **Sample sermon** — Dashboard → "Open a sample sermon": lands inside the
    Manuscript (no sermon-start overlay), content visible. Type something,
    reopen the sample — the edit survived. "Start the sample fresh" resets it.
-3. **New sermon + walk** — create a sermon (empty-title click answers
-   instead of a dead button), Begin through the start overlay, type into a
-   field, use Back and Next, open the Map (header + counts + you-are-here),
-   jump to a question — it scrolls to and flashes that question.
+3. **New sermon + walk** — create a sermon (no title field by design; click
+   Forge with no Book picked — an inline error answers instead of a dead
+   button; pick a Book + chapter:verse, Forge), Begin through the start
+   overlay, type into a field, use Back and Next, open the Map (header +
+   counts + you-are-here), jump to a question — it scrolls to and flashes
+   that question.
 4. **Close-flush** — type a sentence and close the window within a second:
    relaunch shows the sentence. Repeat with quit (Alt-F4 / Cmd-Q).
 5. **Notebook** — open the notebook drawer, type, switch notebook tabs
@@ -50,7 +52,7 @@ every item. Items marked **(Win + Mac)** must run on both platforms.
     the splash paint dark from the first frame (no light flash).
 12. **Migration** — launch this build over a copy of a previous-version
     library: no migration errors in `app.log`, sermons intact, schema
-    version reads 24 (or current), search works.
+    version reads 32 (or current), search works.
 13. **Passage popup** — with a valid key: passage text + Crossway line
     render. With no key: the popup offers "Add ESV key" and saving a key
     in-place loads the passage without closing anything.

@@ -105,7 +105,7 @@ Three tiers for tester voice, plus a layer of automated signals running undernea
 
 ### Tier 1 — In-app flag (thirty seconds)
 
-A small, persistent flag affordance at every workspace tab where the pastor authors structured content — Study, Blueprint, and Manuscript. Clicking it captures the moment: which surface, which sermon, which step, plus an optional one-line note. The pastor can send blank.
+A small, persistent flag affordance on the unified writing surface, present across all three authoring stages — Study, Assembly, and Manuscript (one mount in `SermonWorkspace.jsx`, with a per-stage surface label and field-level step; the workspace no longer has per-stage tabs, and "Blueprint" is retired vocabulary) — plus a second mount on the Series Planner topbar. Clicking it captures the moment: which surface, which sermon, which step, plus an optional one-line note. The pastor can send blank.
 
 This tier is the heart of the system. It captures the moment of friction *as it happens*, not after the pastor has rationalized it away. A flag without a note still tells the developer where to look.
 
@@ -141,7 +141,7 @@ Running underneath all three tiers. The cohort is high-trust, so beta telemetry 
 
 Two separate decisions sit on top of this list: which signals to capture (Q3) and how to interpret each one once captured (Q3b). Q3b is not optional and not downstream of Q3 — short time-on-field could equally mean "the question landed and the pastor knew the answer immediately" or "the pastor wrote the obvious answer and moved on." Each retained signal needs both rulings, separately, before it tells the developer anything about a failure mode.
 
-*Pre-ARI, this layer included `ai-press`, `ai-proposal`, AI accept-rate, time-on-field-before-AI-press, AI panel time vs. study work time, edit distance between AI proposal and saved field, AI calls per sermon, and context tier composition. All of those are gone — there is no AI to press. The `ai-press` and `ai-proposal` event constants are still defined in `electron/telemetry/events.js` but nothing emits them; cleanup of the event registry is a small follow-up item.*
+*Pre-ARI, this layer included `ai-press`, `ai-proposal`, AI accept-rate, time-on-field-before-AI-press, AI panel time vs. study work time, edit distance between AI proposal and saved field, AI calls per sermon, and context tier composition. All of those are gone — there is no AI to press. The `ai-press` and `ai-proposal` event constants were removed from `electron/telemetry/events.js` in Phase 1.5 (closed 2026-05-09); the registry now carries exactly the six events listed above. (Wiring status as of 2026-07-01: only `app-open` and `crash` have live emitters; `panel-time` / `field-time` / `sermon-create` / `sermon-finish` are registered but not yet emitted anywhere — wiring them is Phase 2 work if early cohort signal demands it.)*
 
 Production builds will scale this back to a smaller set; the production scaledown is named at the end of this document.
 
@@ -150,7 +150,7 @@ Production builds will scale this back to a smaller set; the production scaledow
 Two telemetry signals would directly serve the post-ARI Anchor 1 (structural overreach) but are not currently captured. Both are Phase 1.5 / Phase 2 candidates for Q3:
 
 - **`structured-field-write`** vs. **`notebook-write`** balance — does the pastor only fill the structured fields the system asks for, or do they also write beside, in their own words, in the notebook? A tester whose notebook stays empty across weeks is producing only the answers the questions imply. Behavioral signal for theological-overreach risk that the writing-sample method below is the deeper test of.
-- **`step-progression`** — entry into each sub-phase / step. Combined with `field-time`, surfaces whether testers walk the throughline as designed or skip and abandon. SPRD's 8+8+5+4 phase shape is structurally locked, but behavioral abandonment is still a workflow-fit failure mode worth seeing.
+- **`step-progression`** — entry into each sub-phase / step. Combined with `field-time`, surfaces whether testers walk the throughline as designed or skip and abandon. The Study walk's structural shape is locked (7+7+5+4 = 23 fields since the 2026-06-15 Phase-2 Merida surgery; originally SPRD's 8+8+5+4), but behavioral abandonment is still a workflow-fit failure mode worth seeing.
 
 Neither signal exists today. Add them via Q3 if early Tier 1/Tier 2 feedback suggests they'd be load-bearing.
 
@@ -170,7 +170,7 @@ A concrete method, designed to surface drift even when the pastor cannot:
 
 **Cross-reading by the developer.** The three samples are read together, not against each other on content but on *shape*: vocabulary range, theological moves the pastor makes by reflex, the structural arc of an exegetical paragraph, the points at which a tester who used to bring up X now brings up Y. The signal is shift, not quality. Three samples with the same fingerprint say the system did not displace the pastor's voice. Three samples with a fading fingerprint — vocabulary narrowing, structural moves homogenizing, theological emphases drifting toward whatever frame the question grammar most readily admits — say something is being displaced.
 
-**Hypothesis shift, post-ARI.** Pre-ARI, this method was hunting for AI-driven voice drift. With AI removed, the method now hunts for *question-driven* voice drift: whether the prewritten question sequences in Study (SPRD's 8+8+5+4) and SADI's MPT/MPS flow shape the pastor's reflexes over weeks of use, even though every word of output is theirs. Same instrument, different hypothesis. The instrument is *more* important post-ARI, not less, because if drift exists it has to come from the only remaining authorship structure: the question flow.
+**Hypothesis shift, post-ARI.** Pre-ARI, this method was hunting for AI-driven voice drift. With AI removed, the method now hunts for *question-driven* voice drift: whether the prewritten question sequences in Study (7+7+5+4 = 23 fields at HEAD; originally SPRD's 8+8+5+4) and SADI's MPT/MPS flow shape the pastor's reflexes over weeks of use, even though every word of output is theirs. Same instrument, different hypothesis. The instrument is *more* important post-ARI, not less, because if drift exists it has to come from the only remaining authorship structure: the question flow.
 
 **Opt-in.** This is a real burden. Three writing exercises on top of the rest of the program is a meaningful ask. Make it opt-in, surfaced explicitly in the tester-facing summary, with the cohort told that opting in is the deepest help they can give but that not opting in does not mean a lesser tester. Expect roughly a third to half of the cohort to participate; that's enough sample for the cross-reading to do useful work.
 
@@ -187,7 +187,7 @@ The pop-out form (Tier 2) and the async interview (Tier 3) both work against a c
 3. **Question quality** — relevance to the passage, depth, tone, theological soundness, whether each question forces real thinking or just collects an answer.
 4. **Trust** — would you put a real upcoming sermon in this, or only a throwaway? Did anything happen this week that changed your trust level?
 5. **Friction and surprise** — what slowed you down? What got in the way? What did you expect to be there and wasn't?
-6. **Onboarding and first-run** — the tour, the setup screen, the first sermon. (This dimension fades after the tester's first few sessions.)
+6. **Onboarding and first-run** — the setup screen, the sample sermon, the first sermon. (The guided tour was deleted in the 2026-05-17 tour cleanup; the sample sermon is the look-around surface. This dimension fades after the tester's first few sessions.)
 7. **Reliability and weirdness** — crashes, save concerns, anything that made you nervous about your data.
 8. **Performance and feel** — did the app feel responsive? Did the question flow feel paced right — fast enough to be fluid, slow enough to be considered?
 9. **Voice and frame** — does the system's structure feel aligned with your theological frame? Has your own voice in your sermons drifted over the weeks of use? (This is the felt-layer question; the writing-sample method is the deeper test.)
@@ -195,7 +195,7 @@ The pop-out form (Tier 2) and the async interview (Tier 3) both work against a c
 
 Dimensions 1 and 2 co-lead. Every other dimension is read against both — a question-quality complaint that's also a structural-overreach complaint reads differently than a pure quality complaint, and a friction complaint that's also a workflow-fit complaint reads differently than a one-off frustration.
 
-*Pre-ARI dimension #3 was "AI response quality" and #9 was "Voice and frame" specifically about AI's theological frame. Both have been recast. The `FeedbackForm.jsx` dimensions list still uses the pre-ARI labels; updating it to match this section is a small follow-up code item.*
+*Pre-ARI dimension #3 was "AI response quality" and #9 was "Voice and frame" specifically about AI's theological frame. Both have been recast, and `FeedbackForm.jsx` was updated to match this section in Phase 1.5 (closed 2026-05-09) — its ten stored dimension ids mirror the list above, with pastor-facing labels.*
 
 ---
 
@@ -278,9 +278,9 @@ Closing the program well — naming what was learned, naming what stays in produ
 
 Decisions to work through together as the program scopes. Some genuinely gate Phase 2; others are better settled by the work itself or by early cohort signal. The list is the agenda, not a checklist.
 
-- **Q1 — In-app feedback UI surface.** *Settled (post-ARI):* Flag button mounts at all three workspace authorship tabs — Study, Blueprint, and Manuscript. Pop-out form trigger: sidebar "Send feedback…" entry, modal in-process.
+- **Q1 — In-app feedback UI surface.** *Settled (post-ARI; re-settled post-invisible-system):* Flag button is one mount on the unified writing surface, covering all three authoring stages — Study, Assembly, and Manuscript — plus a second mount on the Series Planner topbar. (The workspace no longer has per-stage tabs; "Blueprint" is retired vocabulary.) Pop-out form trigger: sidebar "Send feedback…" entry, modal in-process.
 - **Q2 — Feedback transport.** *Settled:* Cloudflare Worker + D1 endpoint. Live.
-- **Q3 — Telemetry event list.** *Mostly settled:* the seven events under Layer 0 above are captured. `ai-press` and `ai-proposal` are defined but unused — cleanup pending. Two new candidate signals (`structured-field-write` / `notebook-write` balance and `step-progression`) deferred to Phase 1.5 if early signal demands them.
+- **Q3 — Telemetry event list.** *Mostly settled:* the six events under Layer 0 above are the registered vocabulary (`ai-press` / `ai-proposal` were removed in Phase 1.5 — no cleanup pending). As of 2026-07-01 only `app-open` and `crash` have live emitters; wiring the other four is Phase 2 work if early signal demands it. Two new candidate signals (`structured-field-write` / `notebook-write` balance and `step-progression`) similarly deferred.
 - **Q3b — Telemetry interpretation rulings.** Each retained signal needs an interpretation rule named separately, before the signal arrives. Open per signal.
 - **Q4 — Telemetry transport.** *Settled:* same Cloudflare Worker endpoint, batched, retries on offline.
 - **Q5 — Beta build channel.** *Retired 2026-05-07.* Production IS the beta.
@@ -293,10 +293,10 @@ Decisions to work through together as the program scopes. Some genuinely gate Ph
 
 ## Dependencies on other in-flight work
 
-- **AI Clarity & Constraint** — closed 2026-05-01 / 2026-05-02; archived at `docs/ARCHIVE/ai-clarity-and-constraint.md`. Superseded by ARI: ACC's proposal pattern, differentiated error messages, "What I can see" panel, and centralized AI calls were the *constrain AI* path. ARI took the *remove AI* path. ACC's residue worth testing in BTI is what it normalized about the rest of the system — the audit log, the keystore, the structured save flow.
+- **AI Clarity & Constraint** — closed 2026-05-01 / 2026-05-02; archived at `docs/ARCHIVE/ai-clarity-and-constraint.md`. Superseded by ARI: ACC's proposal pattern, differentiated error messages, "What I can see" panel, and centralized AI calls were the *constrain AI* path. ARI took the *remove AI* path. ACC's residue worth testing in BTI is what it normalized about the rest of the system — the keystore and the structured save flow. (The AI-call audit log was itself removed with ARI; no audit log exists at HEAD.)
 - **SFDI** — closed 2026-05-05; the Study throughline is structural and Process Contract #6 is binding. BTI tests whether the throughline actually deepens the work for a pastor who didn't build it: do the four named outcomes feel earned, does each sub-phase boundary's handoff actually carry, does Field 3's unified canvas read as one canvas question rather than three stapled worksheets.
-- **SADI** — closed 2026-05-05; MPT/MPS plumbed as `SpotlightWorksheet` fields with the v19 `main_point_pair` envelope and a composite gate at the Step 2 → Step 3 boundary. BTI tests whether MPT and MPS feel earned by the Study throughline rather than reached-for at the top of the workspace, whether the gate's "satisfied another way" semantic on MPS Q2 reads as a real escape valve rather than a workaround.
-- **SPRD** — closed; the 8+8+5+4 phase shape is locked. BTI's behavioral telemetry (Layer 0) tests whether testers actually move through the four phases or skip / abandon them; the friction dimension surfaces the felt experience of the phase walk.
+- **SADI** — closed 2026-05-05; MPT/MPS plumbed with the v19 `main_point_pair` envelope. (The `SpotlightWorksheet` render layer and the Step 2 → Step 3 blocking gate were both later deleted — at HEAD the fields render via `MAIN_POINT_PAIR_FIELDS` under Assembly/Anchor on the unified writing surface, and the composite checks survive as non-blocking completeness reasons feeding the Finish screen.) BTI tests whether MPT and MPS feel earned by the Study throughline rather than reached-for at the top of the workspace, and whether the "satisfied another way" N/A semantic on MPS Q2 — which survives intact as a per-question affordance — reads as a real escape valve rather than a workaround.
+- **SPRD** — closed; the four-sub-phase structure it locked holds (the field counts have since moved: 7+7+5+4 = 23 fields at HEAD after the 2026-06-15 Phase-2 Merida surgery, originally 8+8+5+4). BTI's behavioral telemetry (Layer 0) tests whether testers actually move through the four phases or skip / abandon them; the friction dimension surfaces the felt experience of the phase walk.
 - **Mac distribution** — closed 2026-05-07; v1.0.0 signed + notarized macOS DMG + signed Windows NSIS shipped. BTI inherits both signed installers as the production build.
 - **ARI** — closed 2026-05-09 (charter at `docs/PROPOSALS/ai-removal-initiative.md`). BTI is the validation pass on the ARI-shaped product. Open ARI design questions (D1 outline-question sequence, D2 synthesis-question wording, D5 theology corpus) may sharpen against early cohort feedback — BTI's "Sharpens or unblocks something already in motion" routing bucket picks them up.
 

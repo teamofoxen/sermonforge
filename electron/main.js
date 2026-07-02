@@ -528,10 +528,13 @@ async function initDatabase() {
 }
 
 // With better-sqlite3 every write commits durably as it happens — there is no
-// serialize-and-rotate pipeline and no debounce window. flushDb survives as a
-// WAL checkpoint so its callers (the banner's Retry button via "db-flush", and
-// any belt-and-braces flush sites) keep a meaningful, honest contract: after
-// it resolves ok, everything committed is folded into the main DB file.
+// serialize-and-rotate pipeline and no debounce window. flushDb survives as an
+// internal WAL checkpoint (quit path + boot-time backup): after it resolves ok,
+// everything committed is folded into the main DB file. (The "db-flush" IPC
+// channel and the renderer's db-write-error/db-write-ok banner plumbing were
+// removed 2026-07-01 — main never emitted those events after the driver swap,
+// a failed write throws at its own IPC handler and surfaces to the caller via
+// persistMutation, so the push banner could never appear.)
 function flushDb() {
   if (!db || !dbPath) return { ok: true, skipped: true };
   try {
@@ -3514,10 +3517,6 @@ ipcMain.handle("db-getSchemaVersion", () => {
   const row = queryOne("SELECT value FROM meta WHERE key = 'schema_version'");
   return { version: row ? row.value : "unknown" };
 });
-
-// Manual flush — called by the write-error banner's "Retry" button. Returns the
-// flushDb result shape so the renderer can either dismiss the banner or keep it.
-ipcMain.handle("db-flush", async () => flushDb());
 
 ipcMain.handle("app-get-version", () => {
   return { version: app.getVersion() };

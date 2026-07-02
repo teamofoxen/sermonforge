@@ -50,7 +50,7 @@ import { tryParse } from "../utils";
 
 // ── Phase 1: Observe ─────────────────────────────────────────────────────────
 //
-// 8 fields. Outside-in arc through the first three fields:
+// 7 fields. Outside-in arc through the first three fields:
 //   Context → Surface Questions → Divisions / Thought Units
 // Then the lens cluster reads against Field 3's spine:
 //   Main Characters → Commands and Declarations → Big Ideas

@@ -7,8 +7,18 @@
 
 ---
 
+## Authority Preamble
+
+- **2026-07-01 (doc drift sweep):** corrected the banner, which still described the original
+  monolithic `CLAUDE_original.md` as retained for historical reference — the file was deleted
+  2026-04-14 (commit `498e511`); the banner now points to git history instead of a dead file.
+
 ## Project Identity
 
+- **2026-07-01 (doc drift sweep):** "with a Calendar that assigns sermons to Sundays"
+  corrected to "with a Schedule screen that assigns…" — the planner's three screens are
+  Outline · Schedule · Study guide; "Calendar" is the canonical name of a separate top-level
+  view (State Contract #5: one name per concept).
 - **2026-06-21 (Series Planner revival, audit remediation):** the "the Series Planner is a
   stub until that work gets its own charter" clause was retired — the charter now exists
   (`docs/PROPOSALS/series-planner-revival-charter.md`) and the AI-free planner + church-calendar
@@ -27,6 +37,17 @@
   smallest honest calendar form: clicking a day opens New Sermon with that date pre-filled.
   The planning room + reference features remain a named roadmap direction, not the shipped
   identity; the Series Planner is a stub until that work gets its own charter.
+
+## Non-Negotiable Boundaries — No AI (outbound-call enumeration)
+
+- **2026-07-01 (doc drift sweep):** the outbound-call enumeration corrected from "two
+  other outbound calls" to **three** — the drift sweep surfaced that the renderer's CSS
+  loads the app's typefaces from Google Fonts on start (`src/styles/typography.css`
+  `@import`), a fourth network destination alongside ESV / GitHub Releases / BTI. It
+  carries no app or sermon data (a standard font request), is not telemetry-toggle
+  governed, and was previously undisclosed; `docs/REFERENCE/privacy.md` now discloses
+  it, and self-hosting the fonts (removing the call entirely) is named as a candidate
+  improvement.
 
 ## Canonical Vocabulary — Stage
 
@@ -58,6 +79,14 @@
   *(Corrected 2026-06-15, Re-Foundation step 4: the original step-3 wording said the columns
   were "retained defensively for legacy data and are no longer read"; the code at HEAD has
   them struck — zero readers, zero writers — so "removed" is the accurate disposition.)*
+
+## Canonical Vocabulary — Throughline
+
+- **2026-07-01 (doc drift sweep):** the MPT/MPS expansion corrected from "Main Preaching
+  Thought / Main Preaching Statement" to the canonical **Main Point of the Text / Main
+  Point of the Sermon** — the sole expansion the code uses (`sadiAnchorFields.js`,
+  `sermonState.js`, `ReferencePane.jsx`, `utils.js`) and the one the rest of CORE already
+  used ("Main Point Pair (MPT + MPS)").
 
 ## Process #1 — Movement is monotonic in expectation
 
@@ -167,6 +196,17 @@
 
 - **2026-06-10:** sermonforge.db moved from sql.js to better-sqlite3 — durable journaled
   commits, WAL mode, no serialize-per-write pipeline.
+
+## Non-Negotiable Boundaries — The userData path is permanent
+
+- **2026-07-01 (doc drift sweep):** the legacy-DB resolver description corrected. The clause
+  said `migrateLegacyDb` (located "in `electron/main.js`") "finds the most recent candidate
+  with real content"; the code (`electron/dbMigration.js`) deliberately picks the candidate
+  with the **most content rows**, mtime breaking ties only among equal-row candidates —
+  recency-wins is the exact bug behind the 2026-05-02 near-data-loss (a 1-sermon dev DB
+  out-mtiming a 10-sermon real library). Because CORE outranks code, the row-count rule and
+  its rationale now live in the clause itself, so a future session cannot "align code to doc"
+  back into the regression.
 
 ## Absolute Invariants — Database writes commit at the IPC handler
 

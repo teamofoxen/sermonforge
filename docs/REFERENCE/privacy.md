@@ -6,13 +6,19 @@
 
 SermonForge is single-user software that runs on your machine. Your sermons live in a SQLite database on your computer, and **your sermon content never leaves it.**
 
-Three things talk to the network, and only these three:
+Four things talk to the network, and only these four:
 
 - **Crossway ESV API** — when you load a passage, to fetch its text. Only the reference is sent (e.g. `John 3:16`), never your writing.
 - **GitHub Releases** — a quiet version check on launch so the app can keep itself up to date. No personal data and no sermon data — just "is there a newer version." This runs regardless of the telemetry toggle below.
 - **BTI telemetry** — one developer-controlled channel of interaction *metadata* (never sermon content), opt-out, covered in detail below.
+- **Google Fonts** — the app's typefaces load from Google's font service
+  (`fonts.googleapis.com` / `fonts.gstatic.com`) when the app starts. This is a
+  standard font request — it carries no sermon data and nothing the app knows
+  about you; like any web request it exposes your IP address to the font
+  server. It is not governed by the telemetry toggle. (Bundling the fonts with
+  the app so this request disappears entirely is a candidate improvement.)
 
-This document covers all three.
+This document covers all four.
 
 ---
 
@@ -21,7 +27,7 @@ This document covers all three.
 - **Sermons.** Every word you write — manuscript, outline, study notes, notebook entries. Stored in a local SQLite file under your app data folder.
 - **Series notes.** Same.
 - **ESV API key.** Encrypted via the OS keystore (Windows DPAPI, macOS Keychain). Sent only to Crossway when you load a passage.
-- **Crash log.** A local log file (`app.log` in your app data folder) records errors. This is for local debugging only and never leaves your machine on its own — only the last 50 lines are attached when the telemetry channel reports a crash event (see below).
+- **Crash log.** A local log file (`app.log` in your app data folder) records errors. It is for local debugging only and **never leaves your machine** — no part of it is attached to anything. When the telemetry channel reports a crash event (see below), that event carries only a short error message (capped at 500 characters), not log-file contents.
 
 These are not part of the telemetry channel. They are not toggleable because they don't transmit on their own.
 
@@ -50,18 +56,27 @@ This is the part the toggle in the setup screen controls. Default-on; one click 
 
 ### What is captured
 
-**Behavioral events.** Small JSON records of what you do in the app:
+**Behavioral events.** Small JSON records of what you do in the app. Two are
+actually sent today:
 
 - `app-open` — when you launch the app, with the version and platform.
-- `panel-time` / `field-time` — how long a panel or field has focus, recorded in summary form (no keystrokes).
+- `crash` — when the app hits an unexpected error, with a short error message (capped at 500 characters; no sermon content, no log file attached).
+
+Four more event types are registered in the app's event vocabulary but are
+**not currently emitted anywhere** — nothing in the app sends them today. They
+are disclosed here so that if they are ever wired up, this document already
+names them:
+
+- `panel-time` / `field-time` — how long a panel or field has focus, in summary form (no keystrokes).
 - `sermon-create` / `sermon-finish` — sermon-level lifecycle markers, with the sermon's database ID.
-- `crash` — when the app hits an unexpected error, with a short error message (no sermon content, no log file attached).
 
 These are **metadata about your interactions, not the content of your work.** None of them carry sermon text, study text, notebook text, or your typing.
 
-**Flag clicks.** When you click the small flag button at a workspace tab and choose to send:
+**Flag clicks.** When you click the small flag button — it lives on the
+workspace writing surface (in all three stages) and on the Series Planner's
+top bar — and choose to send:
 
-- The surface (Study, Assembly, Manuscript), the active sub-phase, the sermon ID.
+- The surface (which stage's writing surface, or the Series Planner), your position in the walk (stage / sub-phase / field), and the sermon ID where one applies (the planner flag carries no sermon ID).
 - Your one-line note (if you typed one).
 
 **Form submissions.** When you open "Send feedback…" from the sidebar and submit:
@@ -82,7 +97,7 @@ A Cloudflare Worker controlled by the developer. The data lands in a Cloudflare 
 
 ### Identifier
 
-A random opaque UUID is generated on first run and stored on your machine. The developer sees this ID, not any personal information. If you uninstall and reinstall, you get a new ID.
+A random opaque UUID is generated on first run and stored on your machine (a small `tester-id.txt` in the app's data folder). The developer sees this ID, not any personal information. The ID survives uninstalling and reinstalling — the uninstaller deliberately leaves your app data (including your sermons) in place. You get a new ID only if you delete the app-data folder (or that file) yourself.
 
 ### Retention
 
@@ -90,7 +105,7 @@ Until the structured beta cohort program closes. After that, the data set is tri
 
 ### Toggle off semantics
 
-If you turn the toggle off in the setup screen, **no BTI telemetry leaves your device.** The two other network calls are not governed by this toggle: the Crossway passage fetch still runs when you load a passage, and the launch-time GitHub version check still runs — neither carries sermon content. The local `app.log` also still exists on your machine for debugging purposes; that is not affected by the toggle.
+If you turn the toggle off in the setup screen, **no BTI telemetry leaves your device.** The three other network calls are not governed by this toggle: the Crossway passage fetch still runs when you load a passage, the launch-time GitHub version check still runs, and the fonts still load from Google's font service — none of these carries sermon content. The local `app.log` also still exists on your machine for debugging purposes; that is not affected by the toggle.
 
 If you want to turn it back on later, the same toggle will live in a Settings panel in a later version of the app. Until then, contact the developer to flip it via the database.
 
@@ -105,4 +120,4 @@ If anything in the app contradicts this document, the document is the source of 
 
 ---
 
-*Last revised: 2026-05-09 (post-ARI rewrite). Pre-ARI version disclosed AI exchanges with Anthropic and an optional AI-exchange include on flag clicks; both removed when AI was removed from the product.*
+*Last revised: 2026-07-01 (doc drift sweep truth-up: Google Fonts disclosed as the fourth network destination; crash events carry a short error string, never log-file lines; only `app-open` and `crash` actually emit today, the other four event types are registered-but-unwired; the tester ID survives reinstall; flag-button surfaces updated). Prior revision 2026-05-09 (post-ARI rewrite) — the pre-ARI version disclosed AI exchanges with Anthropic and an optional AI-exchange include on flag clicks; both removed when AI was removed from the product.*

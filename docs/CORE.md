@@ -3,8 +3,8 @@
 > **Authority:** This document, together with `docs/RULES.md` and the `docs/SYSTEMS/*` files, defines
 > the system. All constraints here are binding. If code diverges from these rules, the code is wrong
 > unless explicitly justified. Dated amendment history lives in [`docs/CORE-CHANGELOG.md`](CORE-CHANGELOG.md)
-> so these clauses read as current law. `CLAUDE_original.md` is the original monolithic version — retained
-> for historical reference only; do not use it as a working guide.
+> so these clauses read as current law. (The original monolithic `CLAUDE_original.md` was deleted
+> 2026-04-14, commit `498e511`; the pre-split text lives only in git history.)
 
 ---
 
@@ -26,8 +26,8 @@ All tooling decisions must prioritize simplicity.
 **The sermon is the primary unit of the shipped product; the series is carried
 context.** A sermon may belong to a series and carries that membership as
 first-class state. The Series Planner — a distinct macro/architect surface for
-shaping a book or season across many sermons, with a Calendar that assigns
-sermons to Sundays and a congregational study-guide export — shipped AI-free
+shaping a book or season across many sermons, with a Schedule screen that
+assigns sermons to Sundays and a congregational study-guide export — shipped AI-free
 under its own charter (`docs/PROPOSALS/series-planner-revival-charter.md`,
 2026-06-21); it stands alongside the sermon workspace without displacing the
 sermon as the primary unit. Top-level reference features remain a named roadmap
@@ -112,7 +112,7 @@ these names. (See State Contract clause 5: *one name per concept*.)
 - **Throughline** — the line of deepening exegetical work that runs through a
   sub-phase's fields and across sub-phase boundaries, producing the named
   outcomes that compose into a preaching foundation strong enough to support
-  the Main Preaching Thought (MPT) and Main Preaching Statement (MPS).
+  the Main Point of the Text (MPT) and Main Point of the Sermon (MPS).
 - **Pastoral Context (PC)** — the third voice in the Implications three-way
   conversation. That PC is *driven by the text, not the reverse* is the law
   (Process Contract #4). The mechanics — which field PC lives in, its
@@ -336,9 +336,11 @@ either reshapes to pass, or it does not ship.
 - **No AI.** SermonForge contains no AI surfaces (ARI, 2026-05-09). The Anthropic SDK,
   IPC `"ai-message"` channel, system prompts, and context pipeline have been removed.
   ESV passage fetching (Crossway API) is the only outbound call that carries
-  sermon-derived input. Two other outbound calls exist and carry no sermon content:
-  the auto-updater's launch-time GitHub Releases version check, and (unless the pastor
-  opts out) BTI interaction *metadata* to a developer-run Cloudflare endpoint. The
+  sermon-derived input. Three other outbound calls exist and carry no sermon content:
+  the auto-updater's launch-time GitHub Releases version check, (unless the pastor
+  opts out) BTI interaction *metadata* to a developer-run Cloudflare endpoint, and
+  the renderer's Google Fonts typeface load on start (a standard font request; no
+  app data — self-hosting the fonts to remove it is a named candidate improvement). The
   local-first guarantee is about sermon *content* — that never leaves the machine. See
   `docs/REFERENCE/privacy.md`.
 - **No raw SQL in the renderer.** All database operations go through named IPC channels handled
@@ -360,9 +362,13 @@ either reshapes to pass, or it does not ship.
 
 - **The userData path is permanent.** Once a `sermonforge.db` location has shipped in any
   release, that path stays in `legacyDbPaths` (in `electron/config.js`) forever. New active
-  paths may be introduced; old ones are never abandoned. The DB resolver in
-  `electron/main.js` (`migrateLegacyDb`) walks `legacyDbPaths` whenever the active path is
-  empty, finds the most recent candidate with real content, and copies it forward. A commit
+  paths may be introduced; old ones are never abandoned. The DB resolver (`migrateLegacyDb`
+  in `electron/dbMigration.js`, invoked from `electron/main.js`) walks `legacyDbPaths`
+  whenever the active path is empty, picks the candidate with the **most content rows**
+  (sermons + series; file mtime breaks ties only between equal-row candidates), and copies
+  — never moves — it forward. Most-rows, not most-recent, is the law: recency-wins is the
+  exact bug behind the 2026-05-02 near-data-loss (a 1-sermon dev DB with a newer mtime
+  beating a 10-sermon real library). A commit
   that changes the active path without adding the previous path to `legacyDbPaths` in the
   same diff is wrong. Removing or reordering entries in `legacyDbPaths` orphans user data on
   every machine that still has a DB at that location and is forbidden.

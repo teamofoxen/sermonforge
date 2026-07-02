@@ -29,11 +29,6 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Write build-time .env
-        shell: bash
-        run: |
-          echo "GITHUB_FEEDBACK_TOKEN=${{ secrets.FEEDBACK_TOKEN }}" > .env
-
       - name: Build Vite
         run: npx vite build
 
@@ -66,10 +61,6 @@ jobs:
 
       - name: Install dependencies
         run: npm install
-
-      - name: Write build-time .env
-        run: |
-          echo "GITHUB_FEEDBACK_TOKEN=${{ secrets.FEEDBACK_TOKEN }}" > .env
 
       - name: Generate macOS .icns from designer iconset
         run: |

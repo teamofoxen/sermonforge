@@ -39,6 +39,11 @@
 > hasAnyAnswer (Phases A + F). Schema: legacy_evidence_cutoff meta-row
 > machinery (Phase G — orphaned meta row remains in deployed DBs). None of
 > them exist in the current tree.
+>
+> **Refreshed 2026-07-01 (doc drift sweep):** the file tree, tech-stack table,
+> and environment block below were regenerated against a fresh filesystem
+> listing — the 2026-05-18 tree had drifted (missing ~26 files added since,
+> stale OneDrive/GitHub-token claims, the retired sql.js row).
 
 ---
 
@@ -52,15 +57,19 @@ OneDrive path:      C:\Users\rossa\OneDrive
 Project root:       C:\Projects\SermonForge
 Database file:      %APPDATA%\sermonforge\data\sermonforge.db
 Build output:       C:\Projects\SermonForgeBuilds\
-Study guides:       %USERPROFILE%\OneDrive\SermonForge\StudyGuides\
+Study guide exports: %USERPROFILE%\Documents\SermonForge\exports\StudyGuides\
 Manuscript exports: %USERPROFILE%\Documents\SermonForge\exports\Manuscripts\
-Feedback files:     %USERPROFILE%\OneDrive\SermonForge\Feedback\
 ```
 
 The userData path is resolved by `electron/config.js`. ARI removed
-`ANTHROPIC_API_KEY`; the only remaining env-driven secret is `ESV_API_KEY`
-(optional, used by `passage-fetch`). For BTI testers, `GITHUB_FEEDBACK_TOKEN`
-is wired into the build via CI.
+`ANTHROPIC_API_KEY`; the only env-driven secret the app actually consumes is
+`ESV_API_KEY` (optional, used by `passage-fetch`). `GITHUB_FEEDBACK_TOKEN` is
+fully retired: its only consumer, the legacy GitHub-posting feedback handler,
+was removed in the public-launch hardening pass, and the vestigial CI step
+that still wrote it into a build-time `.env` was removed 2026-07-01 — live
+feedback goes through the BTI Cloudflare Worker instead (see
+`docs/SYSTEMS/ipc.md`). The `FEEDBACK_TOKEN` repo secret itself can be
+deleted from GitHub settings at leisure.
 
 ---
 
@@ -71,8 +80,8 @@ is wired into the build via CI.
 | Electron | 31 | Desktop shell |
 | React | 18 | UI framework |
 | Vite | 5 | Dev server and bundler (config: `vite.config.mjs`, ESM) |
-| sql.js | — | SQLite compiled to WASM (sermonforge.db; not better-sqlite3 — see `docs/SYSTEMS/database.md`) |
-| better-sqlite3 + sqlite-vec | — | Native sqlite for theology.db (FTS4 + vec0) |
+| better-sqlite3 | ^12.9.0 | Native SQLite for both databases — `sermonforge.db` (WAL, writes durable at the IPC handler) and `theology.db` — see `docs/SYSTEMS/database.md` |
+| sqlite-vec | — | vec0 vector-search extension, loaded only for `theology.db` (FTS4 + vec0 hybrid search) |
 | @xenova/transformers | — | Local MiniLM-L6-v2 embedder for theology semantic search |
 | docx | — | Word document generation (.docx export) |
 | electron-updater | — | Auto-update from GitHub Releases |
@@ -95,23 +104,28 @@ SermonForge/
 ├── vite.config.mjs        — Vite configuration (ESM; base: "./" required for Electron)
 ├── tsconfig.json          — TypeScript compilation rules (used by .ts/.tsx files in src/)
 ├── index.html             — Electron renderer entry point
-├── .env                   — ESV_API_KEY, GITHUB_FEEDBACK_TOKEN (never commit)
+├── .env                   — ESV_API_KEY (never commit)
 ├── docs/
 │   ├── CORE.md            — authority, identity, invariants, architectural boundaries
+│   ├── CORE-CHANGELOG.md  — dated amendment history for CORE.md clauses
 │   ├── RULES.md           — development rules, guardrails, design system, git workflow
 │   ├── ANCHORS.md         — list of anchor documents
 │   ├── ENFORCEMENT_STATUS.md — per-clause enforcement table
+│   ├── WORKSPACE-CANON.md — the sermon walk's what & why (stages, fields, named outcomes, completeness policy, Merida fidelity)
 │   ├── SYSTEMS/
 │   │   ├── sermon-workspace.md  — writing surface + map + threshold overlays + notebook drawer + save flow + completeness contract
-│   │   ├── database.md          — sql.js, migrations, debounces, SERMON_COLUMNS
+│   │   ├── database.md          — better-sqlite3 runtime, boot/backup, migrations, save-debounce policy, SERMON_COLUMNS
+│   │   ├── series-planner.md    — Series Planner mechanics (three screens, schema, files)
 │   │   └── ipc.md               — IPC architecture, boundaries, channel naming
 │   ├── REFERENCE/
 │   │   ├── schema.md            — full database table definitions
 │   │   ├── ipc-channels.md      — all IPC channel specifications
 │   │   ├── privacy.md           — what the app sends, what it doesn't
-│   │   └── project-structure.md — this file
+│   │   ├── project-structure.md — this file
+│   │   └── release-smoke.md     — manual smoke checklist for `/release`
 │   ├── PROPOSALS/         — active charters, design briefs, in-flight initiatives
-│   └── ARCHIVE/           — closed initiatives (ACC, study-phase-implementation, etc.)
+│   ├── ARCHIVE/           — closed initiatives (ACC, study-phase-implementation, etc.)
+│   └── handoff/            — spent per-session handoff notes from completed initiative steps
 ├── electron/
 │   ├── main.js            — Electron main process, all IPC handlers, DB init, migrations
 │   ├── preload.js         — contextBridge API exposed to renderer (window.electronAPI)
@@ -120,6 +134,9 @@ SermonForge/
 │   ├── logger.js          — app.log writer; captures uncaughtException
 │   ├── loading.html       — splash/loading view shown during main-process boot
 │   ├── updater.js         — electron-updater wiring (auto-update from GitHub Releases)
+│   ├── menu.js             — pastor-shaped application menu (buildApplicationMenu)
+│   ├── support.js          — SUPPORT_EMAIL constant (main-controlled, mirrored at src/constants/support.js)
+│   ├── studyGuideModel.cjs — main-process mirror of src/utils/studyGuideModel.js for the study-guide .docx export
 │   ├── sampleData.js      — sample-sermon seed for the Dashboard "Open a sample sermon" button (renamed from tourData.js in the tour-cleanup phase, 2026-05-17)
 │   ├── contracts.cjs      — main-process mirror of src/core/contracts.ts (SERMON_COLUMNS etc.)
 │   ├── dbMigration.js     — runMigrations() helpers
@@ -138,28 +155,44 @@ SermonForge/
     │                        getOutline / getFunctionalElements / parseManuscript readers
     ├── styles/
     │   ├── global.css     — full design system, all CSS variables
-    │   └── typography.css — Google Fonts loaders for IBM Plex Serif/Mono/Sans + JetBrains Mono
+    │   └── typography.css — Google Fonts loader for IBM Plex Serif/Sans + JetBrains Mono
     ├── core/
     │   ├── contracts.ts   — STAGE/SUB_PHASE/VIEW enums, SERMON_COLUMNS, MutationKind (STEP enum retired with src/constants/steps.js in post-sweep audit Chunk 3, 2026-05-18)
     │   └── spine.ts       — single sermon/series state surface (the only path)
     ├── db/
     │   └── database.js    — IPC-backed wrapper functions for non-spine channels
     ├── constants/
-    │   └── sermonColumns.js — re-export of SERMON_COLUMNS from core/contracts.ts
+    │   ├── sermonColumns.js — re-export of SERMON_COLUMNS from core/contracts.ts
+    │   └── support.js       — SUPPORT_EMAIL constant, mirrors electron/support.js
     ├── contexts/          — React context providers (empty post-sweep — TourContext was the sole occupant; deleted in tour-cleanup phase 2026-05-17. Directory kept for when the next context provider lands)
-    ├── data/              — static data (currently `downstream-browsers.json.md` only)
+    ├── data/              — static reference data: canonicalBooks.js (the 66-book KJV dataset — Series Planner book picker, pacing, coverage, Arc, passage-reference utilities) + downstream-browsers.json.md
     ├── datasets/          — bundled study + dashboard rotation datasets (churchHistory, preacherQuotes, preachingVerses)
     ├── utils/
     │   ├── churchCalendar.js   — liturgical season engine (ESM; cannot be imported from main.js)
-    │   ├── studyFields.js      — Study field defs (OBSERVE_FIELDS, INTERPRET_FIELDS, REDEMPTIVE_FIELDS, IMPLICATIONS_FIELDS)
+    │   ├── studyFields.js      — Study field defs (OBSERVE_FIELDS, INTERPRET_FIELDS, REDEMPTIVE_FIELDS, IMPLICATIONS_FIELDS — 7+7+5+4, 23 total)
     │   ├── sadiAnchorFields.js — SADI Step 2 MAIN_POINT_PAIR_FIELDS
     │   ├── sermonFrameFields.js — SADI Step 5 SERMON_FRAME_FIELDS
+    │   ├── sermonOutlineFields.js   — Assembly/Outline field defs
+    │   ├── sermonEquipFields.js     — Assembly/Equip field defs (Functional Elements)
+    │   ├── sermonManuscriptFields.js — Manuscript stage field defs
     │   ├── studyAdvancement.js — 8 composite gate functions (completeness contract); hasContent helper. Post-Phase-F (2026-05-17): wall layer deleted (evaluateAdvance + check*Threshold wrappers + evidence builders + formatters).
     │   ├── walkOrder.js        — D2c: canonical WALK_ORDER + QUESTION_WALK_ORDER + nextField traversal; single sequence the writing surface and the map both consume
     │   ├── sermonState.js      — D2a: derivation helpers (deriveCurrentPositionFromSermon, deriveQuestionStatesFromSermon, deriveStudyOutcomesFromSermon, deriveStudyUnfinishedFromSermon, THRESHOLD_ID, hasSeenThreshold, nextThresholdsSeen, STAGE_SUBPHASE_TO_COLUMN, serializePosition)
     │   ├── useEsvPassage.js    — D2b: canonical ESV fetch + cache hook; consumed by PassagePopup and the writing-surface passage column
+    │   ├── passageRef.js       — parsePassageRef + verseLabelsForRange (writing-surface verse gutter)
     │   ├── searchHints.js      — hint copy for the cross-references search surfaces
-    │   └── hooks.js            — shared React hooks (useDebounce)
+    │   ├── hooks.js            — shared React hooks (useDebounce)
+    │   ├── useModalA11y.js     — shared modal focus-trap / Escape-to-close hook
+    │   ├── buttonKeydown.js    — shared Enter/Space keydown handler for non-<button> clickables
+    │   ├── closeFlush.js       — registers renderer flushers for window-close / quit / reload
+    │   ├── mapError.js         — error → plain-English copy for the map / one error vocabulary
+    │   ├── arc.js               — Arc (By-book coverage) derivation helpers
+    │   ├── coverage.js          — Series Planner coverage-panel computation
+    │   ├── pacing.js            — Series Planner pacing computation
+    │   ├── studyGuideModel.js   — builds the study-guide export model (mirrored to electron/studyGuideModel.cjs)
+    │   ├── tags.js              — sermon Topics tag helpers
+    │   ├── topicalPassage.js    — Topical-series passage composition (Book + ch:verse)
+    │   └── (+ 3 *.test.js files: mapError, studyFields, sermonCompleteness)
     └── components/
         ├── Sidebar.jsx
         ├── Dashboard.jsx
@@ -169,6 +202,7 @@ SermonForge/
         ├── Calendar.jsx
         ├── CompletedSermons.jsx
         ├── Archive.jsx              — legacy Archive surface; CompletedSermons is the canonical re-entry
+        ├── DeletedSermonStub.jsx    — soft-delete tombstone stub (v24 Undo)
         ├── SermonWorkspace.jsx      — workspace mount: loads sermon, derives position + threshold-flag state, composes writing surface + map + overlays + notebook + passage popup. Post-D2c rewrite (2026-05-17)
         ├── SermonWorkspaceFixture.jsx — D2c: three workspace scenarios (empty / populated / at-handoff) for preview verification
         ├── SermonWritingSurface.jsx — D2c: the writing surface (one field at a time + passage column + chevron-next + map summon + notebook summon + beforePositionChange flush chain)
@@ -176,6 +210,10 @@ SermonForge/
         ├── SermonMap.jsx            — D2c: the summoned map; vertical question list with answered / partial / unanswered weighting via deriveQuestionStatesFromSermon
         ├── SermonStartLanding.jsx   — D2c: sermon-start threshold (.ssl-overlay); fires on NULL last_touched_position
         ├── StudyAnchorHandoff.jsx   — D2c: Study → Anchor stage-boundary threshold (.sah-overlay); reads the four Study named outcomes; actively surfaces missing required outcomes with "go write it" doors
+        ├── SermonFinish.jsx         — completion threshold (.sfin-overlay): artifact review + Export to Word + Mark as preached
+        ├── ReferencePane.jsx        — writing-surface reference/passage pane (defaults to the passage; MPT/MPS review)
+        ├── FieldTeaching.jsx        — per-question ambient teaching copy renderer
+        ├── PassageLookup.jsx        — ESV.org-style Bible reference picker (Testament ▸ book ▸ chapter ▸ verse); opens PassagePopup
         ├── WorkspaceNotebookDrawer.jsx — D2d: workspace-level notebook overlay; column-by-stage dispatch (notebook_study / notebook_blueprint / notebook_manuscript)
         ├── SynthesisTable.jsx       — Cumulative thought-unit table (Phases 2/3/4)
         ├── PassageCanvas.jsx        — Writing-surface passage column primitive (consumes useEsvPassage)
@@ -186,13 +224,20 @@ SermonForge/
         ├── SeriesPlanner.jsx        — three-screen series planner (Outline · Schedule · Study guide); top-down book understanding at Book ▸ Section ▸ Sermon, where each sermon is a row in the sermons table; ends in the Study Guide .docx export; reached via openPlanner(id) (VIEW.SeriesPlanner). AI-free
         ├── SeriesPlannerFixture.jsx — preview fixture for SeriesPlanner (?planner route)
         ├── NewSeriesModal.jsx       — create-series front door (name / year / color)
+        ├── BookSelect.jsx           — canonical 66-book picker (Series Planner, topical composition)
+        ├── Arc.jsx                  — "What I've Preached" By-book coverage view
+        ├── ArcFixture.jsx           — preview fixture for Arc
+        ├── WhatIvePreached.jsx      — two-lens coverage home (By book = embedded Arc, By topic = TopicsView)
+        ├── WhatIvePreachedFixture.jsx — preview fixture for WhatIvePreached
+        ├── TopicsView.jsx           — By-topic coverage master/detail (sermon `tags`)
+        ├── TagInput.jsx             — sermon Topics field, own-tag `<datalist>` autocomplete
         ├── SetupScreen.jsx          — First-run setup (ESV key + telemetry preference)
         ├── OneDriveWarning.jsx
         ├── SearchResultSnippet.jsx
-        ├── DeleteButton.jsx         — Two-step confirm (re-exported from primitives/)
+        ├── DeleteButton.jsx         — Two-step confirm shim (re-exports primitives/DeleteButton.jsx; new code should import the primitive directly)
         ├── InlineError.jsx
         ├── Logo.jsx
-        ├── FeedbackFlag.jsx         — BTI Tier 1 in-app flag affordance. Dormant post-sweep (all pre-sweep mount surfaces deleted); re-mount is BTI Phase 2+ work
+        ├── FeedbackFlag.jsx         — BTI Tier 1 in-app flag affordance. Live-mounted on SermonWorkspace (per writing-surface stage) and the SeriesPlanner topbar
         ├── FeedbackForm.jsx         — BTI Tier 2 form (sidebar entry → self-contained modal)
         └── primitives/
             ├── PrimaryButton.tsx
@@ -202,8 +247,10 @@ SermonForge/
             ├── BackButton.tsx
             ├── EmptyState.tsx
             ├── LoadingState.tsx
-            └── DeleteButton.jsx
+            ├── KeyInput.jsx         — shared key-entry input (EsvKeyModal, SetupScreen)
+            └── DeleteButton.jsx     — the canonical two-step inline confirm
 
-    Each component above has a co-located `componentName.css` (or `.module.css`
-    for Logo). CSS files omitted from this tree for brevity.
+    A minority of components have a co-located `componentName.css` (or
+    `.module.css` for Logo) — 11 at present, plus Logo.module.css. All other
+    component styles live in `src/styles/global.css`.
 ```

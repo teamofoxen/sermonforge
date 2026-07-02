@@ -99,20 +99,20 @@ Current schema version: **32**
 | `delivery_notes` | TEXT | Dead column — Delivery stage struck in v24; removed from the writable allowlist, retained in the DB |
 | `timing_notes` | TEXT | Dead column — same as `delivery_notes` |
 | `post_sermon` | TEXT | |
-| `functional_elements` | TEXT | JSON object `{0:{explanation,application,illustration},...}` — keyed by outline point UUID |
+| `functional_elements` | TEXT | JSON object `{<outlinePointId>:{scripture,explanation,application,illustration},...}` — keyed by outline-point UUID (`createOutlinePoint`). Legacy pre-v5-migration records used numeric keys (`{0:...}`); `getFunctionalElements` warns on those as pre-migration. |
 | `checklist` | TEXT | JSON object keyed by item label `{label:bool,...}` |
 | `topic_theme` | — | **REMOVED** in the trail deletion sweep (Phase B1): not in `CREATE TABLE`, not in the v14 backfill, not in `SERMON_COLUMNS`. Old DBs may keep it as an orphan column; new DBs never get it, and nothing reads/writes it. PC's substance moved to Phase 4 Field 3 (`implications.pastoral_context`). |
 | `audience_assumptions` | — | **REMOVED** in the trail deletion sweep (Phase B1): not in `CREATE TABLE`, not in the v14 backfill, not in `SERMON_COLUMNS`. Old DBs may keep it as an orphan column; new DBs never get it. |
 | `background_noise` | — | **REMOVED** in the trail deletion sweep (Phase B1): not in `CREATE TABLE`, not in the v14 backfill, not in `SERMON_COLUMNS`. Old DBs may keep it as an orphan column; new DBs never get it. |
 | `study_guide_note` | TEXT | **Retired from the writable set (v27).** Was a short congregation-orienting note; its content was folded into the sermon `overview` (run-once, where overview was empty). Retained as a backup column — never dropped or nulled. |
-| `preaching_blocks` | TEXT | CMC (Contour-Mapped Compression) without-notes output; added v8 migration |
-| `manuscript_delivery` | TEXT | AI-formatted delivery manuscript; added v9 migration |
-| `last_tune_up` | TEXT | JSON `{content, ts}` snapshot of the most recent Final Tune-Up response; added v12 migration |
+| `preaching_blocks` | TEXT | Dead column — wrote by the retired AI "CMC (Contour-Mapped Compression) without-notes" feature, removed in ARI; added v8 migration, retained in the DB and `SERMON_COLUMNS` allowlist defensively (migration ALTER + seed-to-`""` only; no UI or export reads/writes it) |
+| `manuscript_delivery` | TEXT | Dead column — wrote by the retired AI delivery-manuscript-formatting feature, removed in ARI; added v9 migration, retained defensively (same disposition as `preaching_blocks`) |
+| `last_tune_up` | TEXT | Dead column — wrote by the retired AI "Final Tune-Up" feature, removed in ARI; JSON `{content, ts}` shape; added v12 migration, retained defensively (same disposition as `preaching_blocks`) |
 | `current_stage` | TEXT | Canonical process position — stage; spine layer; added v17 migration |
 | `current_sub_phase` | TEXT | Canonical process position — sub-phase; spine layer. Spans Study sub-phases (Observe / Interpret / RedemptiveThread / Implications) AND Assembly sub-phases (Anchor / Outline / Equip / Frame) post-workspace-restructure 2026-05-10. Added v17 migration. |
 | `sermon_frame` | TEXT | JSON envelope for Intro / Conclusion per SADI ratification; same per-question shape as the four Exegesis sub-phase columns; added v18 migration (originally SPRD C3 — STAGE.Frame elevation; post-workspace-restructure 2026-05-10 the data feeds Assembly's Frame sub-phase). |
 | `main_point_pair` | TEXT | JSON envelope for MPT (2 questions: `draft`, `tighten`) and MPS (3 questions: `translate`, `gospel_check`, `tighten`); SADI Step 2 plumbing; added v19 migration. The flat `mpt` / `mps` columns are kept defensively and auto-synced from the `tighten` answers on write. |
-| `notebook_study` | TEXT | Per-stage free-form pastor notebook surfaced via the trail's bottom-slide `NotebookDrawer` in Study (WTC DW8); added v20 migration (ARI Phase 3). |
+| `notebook_study` | TEXT | Per-stage free-form pastor notebook surfaced via the bottom-slide `WorkspaceNotebookDrawer` overlay (`src/components/WorkspaceNotebookDrawer.jsx`, rendered directly by `SermonWorkspace`) in Study; added v20 migration (ARI Phase 3). The trail UI that originally hosted it (WTC DW8's `NotebookDrawer`) was deleted in the Invisible System rebuild. |
 | `notebook_blueprint` | TEXT | Per-stage free-form pastor notebook surfaced in Assembly (column name preserved from pre-restructure schema). Added v20 migration. |
 | `notebook_manuscript` | TEXT | Per-stage free-form pastor notebook surfaced in the Manuscript writing room. Added v20 migration. |
 | `last_study_subphase` | TEXT | Pastor's last position within Study (one of `Observe \| Interpret \| RedemptiveThread \| Implications`). Restored on re-entry to Study so tabbing across stages preserves the within-stage cursor. Added v21 migration; replaces the per-sermon `sermonforge_*_subphase_*` localStorage scatter that was fragile across resets and seed-replacement flows. |

@@ -657,9 +657,6 @@ export function installTestSpine(): void {
   const explicit: Record<string, any> = {
     spine: dispatch,
     getApiKeyStatus: async () => ({ configured: true }),
-    onDbWriteError: () => () => {},
-    onDbWriteOk: () => () => {},
-    flushDb: async () => ({ ok: true }),
     getSermonColumns: async () => ({ columns: [...SERMON_COLUMNS] }),
     getStartupWarning: async () => null,
     getTheologyStatus: async () => ({ available: false, semantic: false }),

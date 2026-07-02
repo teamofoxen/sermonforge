@@ -58,7 +58,9 @@ never widened (`kind`/`book_id` ride the follow-up `updateSeries`).
 `onCreated(result.id)` navigates straight into the planner.
 
 Files: `src/components/Planning.jsx`, `SeriesPlanner.jsx` (the three-screen
-workbench), `NewSeriesModal.jsx`, `BookSelect.jsx`, `CoveragePanel.jsx`,
+workbench — `CoveragePanel` is an in-file component of `SeriesPlanner.jsx`,
+not a separate file), `NewSeriesModal.jsx`, `BookSelect.jsx`,
+`src/utils/coverage.js` (the coverage computation),
 `SeriesPlannerFixture.jsx` (preview fixture, `?planner[=schedule|study-guide]`
 route, `&kind=topical` for the topical seed; default Outline; the book seed is
 the real Jesus-of-Luke artifact, the topical seed is "The Mission of God").

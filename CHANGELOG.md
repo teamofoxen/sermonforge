@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-07-01 — Doc drift sweep: 98 corrections, dead disk-write banner deleted
+
+- An adversarially verified drift sweep fixed 98 false present-tense claims across 19 binding/live docs plus CLAUDE.md — headline corrections: CORE's legacy-DB resolver now states the row-count-wins rule (recency-wins was the 2026-05-02 data-loss bug), RULES' layout spec matches the shipped dark topbar, and privacy.md/CORE now disclose Google Fonts as the fourth outbound network destination.
+- privacy.md and both BTI cohort docs trued up: crash events carry a ≤500-char error string (never log lines), only `app-open`/`crash` actually emit, the tester ID survives reinstall, and the tester letter no longer promises the deleted tour or the retired Blueprint tab.
+- Deleted the dead disk-write banner stack (App.jsx banner + `db-write-error`/`db-write-ok` events + `db-flush` channel) — main never emitted the events post-driver-swap; save failures surface via `persistMutation` save state; the shared `.write-error-banner*` CSS stays (OneDriveWarning renders with it).
+- `sfdi-cross-doc-consistency.py` C3 now asserts frozen SFDI 8/8/5/4 and live 7/7/5/4 separately (both validators exit 0 again); a stale "8 fields" comment fixed in studyFields.js.
+- CI no longer writes the vestigial `GITHUB_FEEDBACK_TOKEN` into a build-time `.env`; the repo secret is deletable.
+
+---
+
 ## 2026-07-01 — Divisions verse gutter: pastor-editable verse numbers
 
 - The verse-number gutter is now an editable field, not a read-only label — the pastor can click any auto-filled number and fix where the auto-fill misjudged a verse boundary.
