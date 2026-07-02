@@ -28,23 +28,26 @@ import { randomUUID } from "node:crypto";
 // .ts directly would pull in browser-side IPC bridge code; safer to mirror
 // the small set the spine handler needs.
 // Workspace Restructure (2026-05-10) — Stage collapses to three (Blueprint
-// + Frame retired); Step layer retires; SubPhase extends with Assembly's
-// Anchor / Outline / Equip / Frame.
+// + Frame retired); Step layer retires.
 // "Delivery" struck in the v24 migration session (2026-06-10).
+// OEM walk (2026-07-02) — decide/write boundary: Assembly = Anchor/Outline;
+// Manuscript = Body/IntroTransitionsConclusion (Equip moved, Frame collapsed;
+// v33 rewrites legacy positions). Mirrors contracts.
 export const STAGE = { Study: "Study", Assembly: "Assembly", Manuscript: "Manuscript" } as const;
 export const STAGE_SEQUENCE = ["Study", "Assembly", "Manuscript"] as const;
 export const SUB_PHASE = {
   Observe: "Observe", Interpret: "Interpret", RedemptiveThread: "RedemptiveThread", Implications: "Implications",
-  Anchor: "Anchor", Outline: "Outline", Equip: "Equip", Frame: "Frame",
+  Anchor: "Anchor", Outline: "Outline", Body: "Body", IntroTransitionsConclusion: "IntroTransitionsConclusion",
 } as const;
 export const STUDY_SUB_PHASE_SEQUENCE = ["Observe", "Interpret", "RedemptiveThread", "Implications"] as const;
-export const ASSEMBLY_SUB_PHASE_SEQUENCE = ["Anchor", "Outline", "Equip", "Frame"] as const;
+export const ASSEMBLY_SUB_PHASE_SEQUENCE = ["Anchor", "Outline"] as const;
+export const MANUSCRIPT_SUB_PHASE_SEQUENCE = ["Body", "IntroTransitionsConclusion"] as const;
 export const SUB_PHASE_CANONICAL_SEQUENCE = [
-  ...STUDY_SUB_PHASE_SEQUENCE, ...ASSEMBLY_SUB_PHASE_SEQUENCE,
+  ...STUDY_SUB_PHASE_SEQUENCE, ...ASSEMBLY_SUB_PHASE_SEQUENCE, ...MANUSCRIPT_SUB_PHASE_SEQUENCE,
 ] as const;
 export const SUB_PHASE_STAGE: Record<string, string> = {
   Observe: "Study", Interpret: "Study", RedemptiveThread: "Study", Implications: "Study",
-  Anchor: "Assembly", Outline: "Assembly", Equip: "Assembly", Frame: "Assembly",
+  Anchor: "Assembly", Outline: "Assembly", Body: "Manuscript", IntroTransitionsConclusion: "Manuscript",
 };
 function coerceLegacyStage(stage: string | null | undefined): string {
   if (stage === "Blueprint" || stage === "Frame") return STAGE.Assembly;
@@ -68,8 +71,9 @@ export const SERMON_COLUMNS = new Set([
   // current_step removed in the trail deletion sweep (Phase B2) — mirrors
   // SERMON_COLUMNS in contracts.
   "current_stage", "current_sub_phase",
-  // v21 — per-stage sub-phase memory (mirrors contracts).
-  "last_study_subphase", "last_assembly_subphase",
+  // v21 — per-stage sub-phase memory (mirrors contracts); v33 adds the
+  // Manuscript slot.
+  "last_study_subphase", "last_assembly_subphase", "last_manuscript_subphase",
   // v18 — SPRD C3 Sermon Frame.
   "sermon_frame",
   // v19 — SADI Step 2 Main Point Pair.
@@ -550,7 +554,7 @@ function validateAndCommit(op: string, payload: any) {
         outline: "[]", functional_elements: "{}", observations: "", created_at: new Date().toISOString(),
         // Production seeds the sample to land on the first Manuscript field
         // with both entry thresholds pre-seen.
-        last_touched_position: "Manuscript/Manuscript/introduction",
+        last_touched_position: "Manuscript/IntroTransitionsConclusion/introduction",
         thresholds_seen: JSON.stringify(["sermon-start", "study-to-anchor-handoff"]),
       });
       return success({ sermonId: id, created: true });

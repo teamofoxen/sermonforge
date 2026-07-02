@@ -13,8 +13,11 @@
 'use strict';
 
 // Three-stage sermon arc: Study → Assembly → Manuscript. Assembly carries
-// four sub-phases (Anchor / Outline / Equip / Frame). Legacy "Blueprint" /
-// "Frame" current_stage values are coerced to "Assembly" on read in the spine.
+// two sub-phases (Anchor / Outline); Manuscript carries two (Body /
+// IntroTransitionsConclusion) — the decide/write boundary (OEM walk,
+// 2026-07-02; v33 rewrites legacy Equip/Frame positions). Legacy
+// "Blueprint" / "Frame" current_stage values are coerced to "Assembly"
+// on read in the spine.
 const STAGE = Object.freeze({
   Study: "Study",
   Assembly: "Assembly",
@@ -33,8 +36,8 @@ const SUB_PHASE = Object.freeze({
   Implications: "Implications",
   Anchor: "Anchor",
   Outline: "Outline",
-  Equip: "Equip",
-  Frame: "Frame",
+  Body: "Body",
+  IntroTransitionsConclusion: "IntroTransitionsConclusion",
 });
 
 const STUDY_SUB_PHASE_SEQUENCE = Object.freeze([
@@ -42,12 +45,17 @@ const STUDY_SUB_PHASE_SEQUENCE = Object.freeze([
 ]);
 
 const ASSEMBLY_SUB_PHASE_SEQUENCE = Object.freeze([
-  "Anchor", "Outline", "Equip", "Frame",
+  "Anchor", "Outline",
+]);
+
+const MANUSCRIPT_SUB_PHASE_SEQUENCE = Object.freeze([
+  "Body", "IntroTransitionsConclusion",
 ]);
 
 const SUB_PHASE_CANONICAL_SEQUENCE = Object.freeze([
   ...STUDY_SUB_PHASE_SEQUENCE,
   ...ASSEMBLY_SUB_PHASE_SEQUENCE,
+  ...MANUSCRIPT_SUB_PHASE_SEQUENCE,
 ]);
 
 const SUB_PHASE_STAGE = Object.freeze({
@@ -57,8 +65,8 @@ const SUB_PHASE_STAGE = Object.freeze({
   Implications: "Study",
   Anchor: "Assembly",
   Outline: "Assembly",
-  Equip: "Assembly",
-  Frame: "Assembly",
+  Body: "Manuscript",
+  IntroTransitionsConclusion: "Manuscript",
 });
 
 const SERMON_STATUS = Object.freeze({
@@ -110,7 +118,9 @@ const SERMON_COLUMNS = Object.freeze(new Set([
   "current_stage", "current_sub_phase",
   // v21 — per-stage sub-phase memory; renderer derives initial sub-phase
   // from these so tabbing across stages restores per-stage position.
-  "last_study_subphase", "last_assembly_subphase",
+  // v33 adds the Manuscript slot (the stage gained sub-phases in the OEM
+  // restructure).
+  "last_study_subphase", "last_assembly_subphase", "last_manuscript_subphase",
   // v18 — SPRD C3 Sermon Frame.
   "sermon_frame",
   // v19 — SADI Step 2 Main Point Pair.
@@ -149,7 +159,11 @@ const SPINE_ONLY_COLUMNS = Object.freeze(new Set([
   // current_step removed in the trail deletion sweep (Phase B2) — see
   // SERMON_COLUMNS comment above.
   "current_stage", "current_sub_phase",
-  "last_study_subphase", "last_assembly_subphase",
+  // All three per-stage memory columns are spine-written; keeping them out of
+  // the renderer's write set is what stops a stale in-memory copy from
+  // clobbering the spine's fresh position write. v33 added the Manuscript one
+  // alongside its Study/Assembly siblings (OEM restructure, 2026-07-02).
+  "last_study_subphase", "last_assembly_subphase", "last_manuscript_subphase",
 ]));
 
 // v27 — Series Planner content-model rebuild retired the four book-study
@@ -204,6 +218,7 @@ module.exports = {
   SUB_PHASE_CANONICAL_SEQUENCE,
   STUDY_SUB_PHASE_SEQUENCE,
   ASSEMBLY_SUB_PHASE_SEQUENCE,
+  MANUSCRIPT_SUB_PHASE_SEQUENCE,
   SUB_PHASE_STAGE,
   SERMON_STATUS,
   SERIES_STATUS,

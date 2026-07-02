@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-07-02 — OEM walk: the Frame → Manuscript collapse (decide/write boundary)
+
+- The pastor walked the Outline/Body/Manuscript stages and ruled the stage boundary as decide-then-write: Study understands → Assembly (Anchor, Outline) decides → Manuscript (Body, then Intro/Transitions/Conclusion) writes; Equip moved into Manuscript as Body, the Frame sub-phase retired and its seven moves transplanted into the door fields (each door prompt now asks the decision and the preached words together). Schema v33 migrates every legacy position.
+- Named outcomes 8→7, completeness composites 8→6 (Intro/Conclusion retired), Conclusion split into summation + response; the three lenient Outline/Body/Manuscript checks ratified lenient; CORE, CORE-CHANGELOG, WORKSPACE-CANON, ENFORCEMENT_STATUS, and sermon-workspace.md amended in lockstep.
+- Merida content landed as posture+prompt (no new fields): the affections layer in the Christ-Connection forge (the pastor's own "safe place for sinners, dangerous place for sin" text), and the necessary/probable/possible gradient + idols-of-the-heart + two-brothers + word-to-the-unconverted in Body's Application prompt.
+- The reference pane now carries Pastoral Context, the CCS, and the assembled body into the Body and door regions; the Finish screen opens with a beholding moment (CCS + MPS read back under "testify to Christ — and show him better?") and closes with a "pray yourself hot" export send-off.
+- Three-agent adversarial review caught and fixed three bugs before commit (the transplanted redemptive note never exported; it printed even when marked N/A; `last_manuscript_subphase` missing from `SPINE_ONLY_COLUMNS`); sweep-the-house PASS, lint clean, 262 tests green.
+
 ## 2026-07-01 — OEM walk prep audit + dead-code cleanup
 
 - Ultracode audit (8 agents) verified every pastor-facing string in the Outline/Equip/Manuscript draft stages against code at HEAD; the "overview teaching blocks render nowhere" finding from 2026-06-09 is stale — they render live via FieldTeaching.jsx. Walk prep packet + 8-item decision agenda written to `oem-walk-packet-2026-07-01.md`.

@@ -201,10 +201,11 @@ function OutlineBuilder({ question, points, onChange }) {
   );
 }
 
-// Assembly/Equip — iterates the outline points (built in Outline) and renders
-// the four functional elements under each, written to the native
-// `functional_elements` column keyed by point id. Mirrors the
-// CumulativeSynthesisTable's "upstream not built yet" door.
+// Manuscript/Body — iterates the outline points (built in Assembly/Outline)
+// and renders the four functional elements under each, written to the native
+// `functional_elements` column keyed by point id. The cells ARE the
+// manuscript body (OEM ruling). Mirrors the CumulativeSynthesisTable's
+// "upstream not built yet" door.
 function FunctionalElementsEditor({ question, points, functionalElements, onChange, onPositionChange }) {
   const list = Array.isArray(points) ? points : [];
   const elements = question.elements || [];
@@ -416,14 +417,13 @@ export default function SermonWritingSurface({
   }, [stage, subPhase, fieldKey, handleInternalPositionChange]);
 
   if (!field) {
-    // Defensive fallback for a state the current code paths cannot produce:
-    // chevron-next + map both consume WALK_ORDER, which skips Assembly/Outline
-    // + Assembly/Equip + Manuscript (OEM field-def gap, Path A). If a position
+    // Defensive fallback for a state the current code paths cannot produce —
+    // every region has field defs since the OEM build (2026-06-09) and the
+    // v33 migration rewrites legacy Equip/Frame positions. If a position
     // ever lands here (corrupted last_touched_position, future bug), give the
     // pastor a humane explanation + the workspace-level Back button as the
     // escape — within-surface nav chrome is deliberately not rendered (no
-    // current field to navigate from, branch dies entirely when OEM field-def
-    // extraction lands). Post-sweep audit L2, 2026-05-18.
+    // current field to navigate from). Post-sweep audit L2, 2026-05-18.
     return (
       <div className="sws-shell">
         <div className="sws-writing">
@@ -516,14 +516,36 @@ export default function SermonWritingSurface({
     }
     if (q.kind === "manuscript-prose") {
       const v = manuscript?.[q.section]?.[q.key] ?? "";
+      // N/A sidecar for native-column prose — the manuscript column stores
+      // plain strings, so the flag lives beside the key as "<key>_na". Only
+      // the transplanted introduction.redemptive_note declares naAllowed
+      // (strict SADI "satisfied another way" semantics); the toggle mirrors
+      // PromptBlock's voice exactly (one error/one N/A vocabulary).
+      const na = manuscript?.[q.section]?.[`${q.key}_na`] === true;
+      const naAllowed = q.naAllowed === true;
       return (
         <div className="sws-prompt-block">
           <div className="sws-prompt">{q.prompt}</div>
           <AutoGrowTextarea
             value={v}
             onChange={(val) => onManuscriptChange?.(q.section, q.key, val)}
+            disabled={na}
             ariaLabel={q.prompt}
           />
+          {(naAllowed || na) && (
+            <IconButton
+              type="button"
+              className={"sws-na-toggle" + (na ? " is-on" : "")}
+              onClick={() => onManuscriptChange?.(q.section, `${q.key}_na`, !na)}
+              aria-label="not applicable"
+            >
+              {na
+                ? String(v).trim()
+                  ? "not applicable · undo — your words are kept"
+                  : "not applicable · undo"
+                : "not applicable"}
+            </IconButton>
+          )}
         </div>
       );
     }
@@ -558,6 +580,8 @@ export default function SermonWritingSurface({
           mpt={reference.mpt}
           mps={reference.mps}
           outlinePoints={outlinePoints}
+          functionalElements={functionalElements}
+          pastoralContext={reference.pastoralContext}
           onJump={handleInternalPositionChange}
         />
       )}

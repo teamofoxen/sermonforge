@@ -27,8 +27,6 @@ import {
   checkField8Composite,
   checkPhase4Field4Composite,
   checkField5Composite,
-  checkIntroComposite,
-  checkConclusionComposite,
   checkMPTComposite,
   checkMPSComposite,
 } from "./studyAdvancement";
@@ -46,11 +44,11 @@ export const STAGE_SUBPHASE_TO_COLUMN = Object.freeze({
   "Assembly/Anchor":         "main_point_pair",
   // eslint-disable-next-line sermonforge/canonical-stage-name -- DB column name, not a stage status
   "Assembly/Outline":        "outline",
-  "Assembly/Equip":          "functional_elements",
-  "Assembly/Frame":          "sermon_frame",
-  // Manuscript stage has no sub-phase; walkOrder tags it with the stage name
-  // as the sub-phase slot, so the composite key is "Manuscript/Manuscript".
-  "Manuscript/Manuscript":   "manuscript",
+  // OEM restructure (2026-07-02): Equip moved into Manuscript as Body; the
+  // Frame sub-phase collapsed into the doors (its sermon_frame column stays
+  // on disk as legacy data but is no longer a walk destination).
+  "Manuscript/Body":         "functional_elements",
+  "Manuscript/IntroTransitionsConclusion": "manuscript",
 });
 
 function columnFor(stage, subPhase) {
@@ -163,6 +161,11 @@ export function deriveQuestionStatesFromSermon(sermon) {
       const points = outlinePoints;
       const fes = functionalElements;
       const elementKeys = (entry.elements || []).map((e) => e.key);
+      // OEM Equip ruling (2026-07-02): the map's math obeys the teaching —
+      // a point is fully equipped when its Scripture, Explanation, and
+      // Application are written; Illustration never gates "answered"
+      // (it still counts toward "partial" and the preview).
+      const gatingKeys = elementKeys.filter((k) => k !== "illustration");
       if (points.length === 0 || elementKeys.length === 0) {
         out[id] = { state: "unanswered" };
         continue;
@@ -179,14 +182,26 @@ export function deriveQuestionStatesFromSermon(sermon) {
           }
         }
       }
-      const totalCells = points.length * elementKeys.length;
+      const everyPointGated = points.every((pt) => {
+        const fe = fes[pt.id] || {};
+        return gatingKeys.every((k) => String(fe[k] ?? "").trim() !== "");
+      });
       if (filledCells === 0) out[id] = { state: "unanswered" };
-      else if (filledCells === totalCells) out[id] = { state: "answered", preview: firstPreview };
+      else if (everyPointGated) out[id] = { state: "answered", preview: firstPreview };
       else out[id] = { state: "partial", preview: firstPreview };
       continue;
     }
     if (entry.kind === "manuscript-prose") {
       const ms = manuscriptData;
+      // N/A sidecar for native-column prose (the manuscript column stores
+      // plain strings, not {value,na} envelopes): "<key>_na": true beside
+      // the key. Only the allowlisted door question (introduction.
+      // redemptive_note, strict "satisfied another way" semantics carried
+      // through the Frame transplant) ever writes it.
+      if (ms?.[entry.section]?.[`${entry.questionKey}_na`] === true) {
+        out[id] = { state: "answered", preview: "(not applicable)" };
+        continue;
+      }
       const v = String(ms?.[entry.section]?.[entry.questionKey] ?? "").trim();
       out[id] = v
         ? { state: "answered", preview: v, fullValue: v }
@@ -280,21 +295,23 @@ export function deriveStudyUnfinishedFromSermon(sermon) {
 
 // ── Sermon completeness — the workspace-wide "is this sermon done" answer ──
 //
-// CORE Process Contract #2 names the eight composite gates in
+// CORE Process Contract #2 names the six composite gates in
 // studyAdvancement.js as the completeness contract; this derivation is their
-// designed consumer (wired 2026-06-10). It returns one entry per load-bearing
-// artifact, in walk order, each with a pastor-facing reason when incomplete
-// and a jump position so the finish screen can offer "go write it".
+// designed consumer (wired 2026-06-10; re-based 2026-07-02 when the Frame
+// collapse retired the Intro/Conclusion composites). It returns one entry per
+// load-bearing artifact, in walk order, each with a pastor-facing reason when
+// incomplete and a jump position so the finish screen can offer "go write it".
 //
-// Outline / Sermon Body / Manuscript have no SADI-ratified composites — they
-// use LENIENT presence checks by explicit ruling (2026-06-10 decision batch:
-// honest without nagging; tighten later if the OEM content walk decides to).
+// Outline / Sermon Body / Manuscript use LENIENT presence checks — RATIFIED
+// lenient by the OEM walk (2026-07-02, agenda item 7): honest without
+// nagging. The doors check = an opener answer + the Conclusion response;
+// transitions are deliberately never counted (explicit ruling — preachable
+// without written bridges; the map still tracks them honestly).
 // This list is consumed by SermonFinish; it never blocks anything
 // (Process #1: no walls — the answer informs, navigation stays free).
 export function deriveSermonCompleteness(sermon) {
   const obsData = parseStructuredField(sermon?.observations);
   const mppData = parseStructuredField(sermon?.main_point_pair);
-  const frameData = parseStructuredField(sermon?.sermon_frame);
   const outlinePoints = getOutline(sermon);
   const functionalElements = getFunctionalElements(sermon);
   const manuscriptData = parseManuscript(sermon?.manuscript);
@@ -315,17 +332,14 @@ export function deriveSermonCompleteness(sermon) {
     ? "Build the outline first — the Sermon Body grows under its points."
     : bodyHasAny
       ? null
-      : "Give at least one outline point its substance in Equip.";
+      : "Give at least one outline point its substance in Body.";
 
-  // Lenient: at least one Introduction answer + the Conclusion response.
-  const msIntro = manuscriptData?.introduction || {};
-  const msIntroAny = ["opener", "scripture_reading", "expectation"].some((k) =>
-    String(msIntro[k] ?? "").trim()
-  );
+  // Lenient (ruled, item 7): an opener answer + the Conclusion response.
+  const msOpener = String(manuscriptData?.introduction?.opener ?? "").trim();
   const msConclusion = String(manuscriptData?.conclusion?.response ?? "").trim();
-  const manuscriptReason = msIntroAny && msConclusion
+  const manuscriptReason = msOpener && msConclusion
     ? null
-    : "Write the manuscript — at least the opening and the closing response.";
+    : "Write the manuscript — at least the opener and the closing response.";
 
   const artifacts = [
     { key: "observation_set",        label: "Observation Set",             reason: checkField3Composite(obsData),        jump: { stage: STAGE.Study, subPhase: "Observe", fieldKey: "divisions" } },
@@ -336,10 +350,8 @@ export function deriveSermonCompleteness(sermon) {
     { key: "mps",                    label: "Main Point of the Sermon",    reason: checkMPSComposite(mppData),           jump: { stage: STAGE.Assembly, subPhase: "Anchor", fieldKey: "mps" } },
     // eslint-disable-next-line sermonforge/canonical-stage-name -- field key, not a stage status
     { key: "outline",                label: "Sermon Outline",              reason: outlineReason,                        jump: { stage: STAGE.Assembly, subPhase: "Outline", fieldKey: "outline" } },
-    { key: "body",                   label: "Sermon Body",                 reason: bodyReason,                           jump: { stage: STAGE.Assembly, subPhase: "Equip", fieldKey: "equip" } },
-    { key: "intro",                  label: "Sermon Frame — Introduction", reason: checkIntroComposite(frameData),       jump: { stage: STAGE.Assembly, subPhase: "Frame", fieldKey: "intro" } },
-    { key: "conclusion",             label: "Sermon Frame — Conclusion",   reason: checkConclusionComposite(frameData),  jump: { stage: STAGE.Assembly, subPhase: "Frame", fieldKey: "conclusion" } },
-    { key: "manuscript",             label: "Manuscript",                  reason: manuscriptReason,                     jump: { stage: STAGE.Manuscript, subPhase: STAGE.Manuscript, fieldKey: "introduction" } },
+    { key: "body",                   label: "Sermon Body",                 reason: bodyReason,                           jump: { stage: STAGE.Manuscript, subPhase: "Body", fieldKey: "equip" } },
+    { key: "manuscript",             label: "Manuscript",                  reason: manuscriptReason,                     jump: { stage: STAGE.Manuscript, subPhase: "IntroTransitionsConclusion", fieldKey: "introduction" } },
   ].map((a) => ({ ...a, complete: a.reason == null }));
 
   return { artifacts, allComplete: artifacts.every((a) => a.complete) };

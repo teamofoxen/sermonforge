@@ -1373,6 +1373,51 @@ function runMigrations() {
     version = 32;
   }
 
+  if (version < 33) {
+    // v33 (OEM restructure, 2026-07-02) — the decide/write boundary. Equip
+    // moved from Assembly into Manuscript as the Body sub-phase; the Frame
+    // sub-phase collapsed into the Manuscript door fields. This migration
+    // (a) gives Manuscript its per-stage memory column, and (b) rewrites
+    // every legacy position value so in-flight sermons land at the ruled
+    // shape's equivalent spot — a one-time rewrite, not a permanent read
+    // coercion (rulings of record: oem-walk-rulings-2026-07-01.md).
+    //
+    // Position mapping: Assembly/Equip → Manuscript/Body (same field);
+    // Assembly/Frame → Manuscript doors (intro → introduction; conclusion
+    // keeps its key). Old "Manuscript/Manuscript/<field>" composites (the
+    // stage had no sub-phase) → "Manuscript/IntroTransitionsConclusion/".
+    // last_assembly_subphase Equip/Frame values fall back to Outline (the
+    // last sub-phase still in Assembly). thresholds_seen field-overview ids
+    // are deliberately NOT rewritten — a stale id just re-opens that field's
+    // teaching once, and the reworded teaching deserves the re-show.
+    safeAlter("ALTER TABLE sermons ADD COLUMN last_manuscript_subphase TEXT");
+    dbRun(`UPDATE sermons SET last_manuscript_subphase = 'Body'
+             WHERE last_manuscript_subphase IS NULL
+               AND current_sub_phase IN ('Equip')`);
+    dbRun(`UPDATE sermons SET last_manuscript_subphase = 'IntroTransitionsConclusion'
+             WHERE last_manuscript_subphase IS NULL
+               AND (current_sub_phase = 'Frame' OR current_stage = 'Manuscript')`);
+    dbRun(`UPDATE sermons SET current_stage = 'Manuscript', current_sub_phase = 'Body'
+             WHERE current_sub_phase = 'Equip'`);
+    dbRun(`UPDATE sermons SET current_stage = 'Manuscript', current_sub_phase = 'IntroTransitionsConclusion'
+             WHERE current_sub_phase = 'Frame'`);
+    dbRun(`UPDATE sermons SET current_sub_phase = 'IntroTransitionsConclusion'
+             WHERE current_stage = 'Manuscript'
+               AND (current_sub_phase IS NULL OR current_sub_phase = 'Manuscript')`);
+    dbRun(`UPDATE sermons SET last_assembly_subphase = 'Outline'
+             WHERE last_assembly_subphase IN ('Equip', 'Frame')`);
+    dbRun(`UPDATE sermons SET last_touched_position = REPLACE(last_touched_position, 'Assembly/Equip/', 'Manuscript/Body/')
+             WHERE last_touched_position LIKE 'Assembly/Equip/%'`);
+    dbRun(`UPDATE sermons SET last_touched_position = 'Manuscript/IntroTransitionsConclusion/introduction'
+             WHERE last_touched_position LIKE 'Assembly/Frame/intro%'`);
+    dbRun(`UPDATE sermons SET last_touched_position = 'Manuscript/IntroTransitionsConclusion/conclusion'
+             WHERE last_touched_position LIKE 'Assembly/Frame/conclusion%'`);
+    dbRun(`UPDATE sermons SET last_touched_position = REPLACE(last_touched_position, 'Manuscript/Manuscript/', 'Manuscript/IntroTransitionsConclusion/')
+             WHERE last_touched_position LIKE 'Manuscript/Manuscript/%'`);
+    dbRun("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '33')");
+    version = 33;
+  }
+
   // True when at least one block actually ran. Lets initDatabase skip the
   // boot-time flush on a clean boot of an up-to-date DB — so a healthy library
   // is never re-serialized and rotated over its own backup for no reason.
@@ -2519,6 +2564,9 @@ function validateAndCommit(op, payload) {
         let lastCol = null;
         if (to === STAGE.Study) { subDefault = SUB_PHASE.Observe; lastCol = "last_study_subphase"; }
         else if (to === STAGE.Assembly) { subDefault = SUB_PHASE.Anchor; lastCol = "last_assembly_subphase"; }
+        // v33 (OEM restructure): Manuscript gained sub-phases (Body → the
+        // doors); it gets the same per-stage memory as the other two.
+        else if (to === STAGE.Manuscript) { subDefault = SUB_PHASE.Body; lastCol = "last_manuscript_subphase"; }
         if (lastCol) {
           dbRun(
             `UPDATE sermons SET current_stage = ?,
@@ -2543,6 +2591,7 @@ function validateAndCommit(op, payload) {
         let lastCol = null;
         if (targetStage === STAGE.Study) lastCol = "last_study_subphase";
         else if (targetStage === STAGE.Assembly) lastCol = "last_assembly_subphase";
+        else if (targetStage === STAGE.Manuscript) lastCol = "last_manuscript_subphase";
         const crossStage = targetStage && targetStage !== currentStage;
         if (crossStage && lastCol) {
           dbRun(
@@ -2658,9 +2707,9 @@ function validateAndCommit(op, payload) {
             manuscript, delivery_notes, timing_notes,
             study_guide_note, big_idea, overview, sermon_frame,
             current_stage, current_sub_phase,
-            last_study_subphase, last_assembly_subphase,
+            last_study_subphase, last_assembly_subphase, last_manuscript_subphase,
             last_touched_position, thresholds_seen
-          ) VALUES (?,?,0,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+          ) VALUES (?,?,0,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
           [
             sermon.id, sermon.series_id, sermon.title, sermon.passage, sermon.date, sermon.stage,
             sermon.mpt, sermon.mps,
@@ -2673,7 +2722,7 @@ function validateAndCommit(op, payload) {
             // Per-stage memory: sample sermon always resets to the first
             // sub-phase of each stage so re-opens land at the beginning,
             // regardless of where the pastor wandered last time.
-            SUB_PHASE.Observe, SUB_PHASE.Anchor,
+            SUB_PHASE.Observe, SUB_PHASE.Anchor, SUB_PHASE.Body,
             // Landing state (first Manuscript field, thresholds pre-seen)
             // is seed content — authored in sampleData.js with the rest.
             sermon.last_touched_position, sermon.thresholds_seen,
@@ -3431,6 +3480,16 @@ ipcMain.handle("sermon-export-manuscript", async (_, payload) => {
     if (introduction.opener)            children.push(prosePara(introduction.opener));
     if (introduction.scripture_reading) children.push(prosePara(introduction.scripture_reading));
     if (introduction.expectation)       children.push(prosePara(introduction.expectation));
+    // redemptive_note — the transplanted Frame Q4, now manuscript prose (OEM
+    // walk, 2026-07-02): the gospel anchor at the front door, in preached
+    // words. Prints last in the intro, after the expectation, per the field-def
+    // order. (Was missed when the Conclusion split's export was added.) The
+    // `_na` guard is required: the surface KEEPS the text when N/A'd ("your
+    // words are kept"), so a note the pastor marked not-applicable must not
+    // print — same sidecar flag the map + write path honor.
+    if (introduction.redemptive_note && !introduction.redemptive_note_na) {
+      children.push(prosePara(introduction.redemptive_note));
+    }
 
     // Per-point sections
     outline.forEach((pt, i) => {
@@ -3462,12 +3521,15 @@ ipcMain.handle("sermon-export-manuscript", async (_, payload) => {
     const ct = transitionPara(transitions.conclusion);
     if (ct) children.push(ct);
 
-    // Conclusion
+    // Conclusion — summation first, then the response (the OEM two-prompt
+    // split, 2026-07-02; both null-guarded so older sermons without a
+    // summation export unchanged).
     children.push(new Paragraph({
       heading: HeadingLevel.HEADING_2,
       spacing: { before: 200, after: 120 },
       children: [new TextRun({ text: "Conclusion", bold: true })],
     }));
+    if (conclusion.summation) children.push(prosePara(conclusion.summation));
     if (conclusion.response) children.push(prosePara(conclusion.response));
 
     const doc = new Document({

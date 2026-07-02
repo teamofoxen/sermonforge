@@ -8,19 +8,27 @@ import "./sermonFinish.css";
 // SermonFinish — the sermon-completion threshold (CORE Process #3).
 //
 // The end of the walk is the biggest threshold there is: the work is done (or
-// nearly), and the deliverable has to leave the app. This screen answers the
-// Saturday-night question — "is this sermon done?" — by rendering
-// deriveSermonCompleteness (the eight CORE composites plus the lenient
-// Outline/Body/Manuscript presence checks), and carries the two actions that
-// belong to the moment: Export to Word, and Mark as preached.
+// nearly), and the deliverable has to leave the app. Since the OEM walk
+// (2026-07-02, agenda item 1) the screen opens with the BEHOLDING MOMENT —
+// the Christ-Connection Statement and MPS rendered back, read-only, under
+// Goldsworthy's question completed by the pastor's affections layer: did this
+// sermon testify to Christ, and does it show him to be better? Completion is
+// the means of the screen, not its point — the tool's last word is "behold,"
+// not "done." Then the Saturday-night answer: deriveSermonCompleteness (the
+// six CORE composites plus the ratified-lenient Outline/Body/Manuscript
+// checks), and the two actions that belong to the moment: Export to Word
+// (carrying the "pray yourself hot" send-off at the manuscript-to-pulpit
+// seam), and Mark as preached.
 //
 // Deliberately NOT one-shot: it opens from the "Finish sermon →" button (and
 // can be reopened forever), holds no thresholds_seen state, and never blocks —
 // every incomplete artifact is an invitation with a "go write it" jump, not a
-// wall (Process #1).
+// wall (Process #1). The beholding moment is a return, never a gate: no
+// input, nothing to check off (the mechanization trap refused).
 
 export default function SermonFinish({
   completeness,
+  beholding,
   status,
   onJump,
   onExport,
@@ -51,6 +59,22 @@ export default function SermonFinish({
   return (
     <div className="sfin-overlay" role="dialog" aria-label="Finish sermon">
       <article className="sfin-card">
+        {(beholding?.ccs || beholding?.mps) && (
+          <section className="sfin-beholding">
+            <p className="sfin-beholding-question">
+              Did this sermon testify to Christ — and does it show him to be
+              better? Read your Statement once more. This is what your people
+              should walk away beholding.
+            </p>
+            {beholding?.ccs && (
+              <p className="sfin-beholding-text">{beholding.ccs}</p>
+            )}
+            {beholding?.mps && (
+              <p className="sfin-beholding-text sfin-beholding-mps">{beholding.mps}</p>
+            )}
+          </section>
+        )}
+
         <p className="sfin-frame">{frame}</p>
 
         <h2 className="sfin-section-label">The work of the walk</h2>
@@ -91,6 +115,10 @@ export default function SermonFinish({
           )}
         </div>
         {exportNote && <p className="sfin-export-note">{exportNote}</p>}
+        <p className="sfin-sendoff">
+          The page is ready when it&apos;s written. The preacher is ready when
+          he&apos;s prayed — Merida&apos;s charge: pray yourself hot.
+        </p>
 
         <TextButton
           className="sfin-dismiss"

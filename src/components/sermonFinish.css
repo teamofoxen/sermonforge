@@ -30,6 +30,50 @@
   margin: 0 0 56px;
 }
 
+/* The beholding moment (OEM item 1) — the CCS + MPS rendered back under the
+   completed Goldsworthy question. Same quiet register as the rest of the
+   screen; read-only, no controls, deliberately first. */
+.sfin-beholding {
+  margin: 0 0 56px;
+  padding-bottom: 32px;
+  border-bottom: 1px solid var(--rule, rgba(0, 0, 0, 0.12));
+}
+
+.sfin-beholding-question {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  font-weight: 500;
+  line-height: 1.8;
+  margin: 0 0 18px;
+}
+
+.sfin-beholding-text {
+  font-family: var(--font-serif);
+  font-size: 17px;
+  line-height: 1.6;
+  color: var(--ink);
+  margin: 0 0 14px;
+}
+
+.sfin-beholding-mps {
+  color: var(--ink-mid);
+  font-style: italic;
+  margin-bottom: 0;
+}
+
+/* The send-off at the manuscript-to-pulpit seam (OEM item 1). */
+.sfin-sendoff {
+  font-family: var(--font-serif);
+  font-size: 14px;
+  font-style: italic;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  margin: 14px 0 0;
+}
+
 .sfin-section-label {
   font-family: var(--font-mono);
   font-size: 11px;

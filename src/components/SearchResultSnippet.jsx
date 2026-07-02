@@ -17,13 +17,16 @@ const COLUMN_LABELS = {
   main_point_pair:     "ANCHOR · MAIN POINT PAIR",
   outline:             "OUTLINE",
   manuscript:          "MANUSCRIPT",
-  sermon_frame:        "FRAME · INTRO / CONCLUSION",
+  // sermon_frame is a legacy column post-Frame-collapse (2026-07-02): old
+  // sermons' frame answers still index; matches land at the Manuscript doors.
+  sermon_frame:        "MANUSCRIPT · INTRO / CONCLUSION (LEGACY FRAME)",
   notebook_study:      "STUDY NOTEBOOK",
   notebook_blueprint:  "ASSEMBLY NOTEBOOK",
   notebook_manuscript: "MANUSCRIPT NOTEBOOK",
   // v24 — functional_elements (the sermon body) replaced the struck
-  // delivery_notes / timing_notes index columns.
-  functional_elements: "EQUIP · SERMON BODY",
+  // delivery_notes / timing_notes index columns. Region renamed Body in the
+  // OEM restructure (2026-07-02).
+  functional_elements: "BODY · SERMON BODY",
 };
 
 export default function SearchResultSnippet({ matchedColumn, snippet }) {

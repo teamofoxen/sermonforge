@@ -55,8 +55,10 @@ wrong, not the principle.
 
 *Scope: Clarity through Constraint is the **tool's** telos — what the software's
 job is. It does not name or displace the **sermon's** telos, which Merida names as
-adoration and beholding Christ; that belongs to the preacher and lives off the
-surface. The Principle measures the tool, not the sermon.*
+adoration and beholding Christ; that belongs to the preacher. The tool may turn
+the preacher toward it — the CCS forge's affections questions and the Finish
+screen's beholding moment (OEM walk, 2026-07-02) — but it never measures it.
+The Principle measures the tool, not the sermon.*
 
 ### Hierarchy
 
@@ -82,9 +84,12 @@ these names. (See State Contract clause 5: *one name per concept*.)
   stages (retired; `current_stage` is read straight through with no legacy
   coercion — history in the changelog).
 - **Sub-phase** — within Study: Observe, Interpret, Redemptive Thread,
-  Implications. Within Assembly: Anchor, Outline, Equip, Frame. Tracked as
-  `current_sub_phase`; field-level last-touched is `last_touched_position`.
-  (The retired within-Study Step layer: history in the changelog.)
+  Implications. Within Assembly: Anchor, Outline. Within Manuscript: Body,
+  then Intro, Transitions, Conclusion. Tracked as `current_sub_phase`;
+  field-level last-touched is `last_touched_position`. (OEM walk, 2026-07-02:
+  Equip moved into Manuscript as Body, and the Frame sub-phase collapsed into
+  the Manuscript door fields — Assembly decides, Manuscript writes. The
+  retired within-Study Step layer: history in the changelog.)
 - **Boundary** — the transition point between two adjacent values at the same
   level. *Stage boundary* (e.g., Study → Assembly, Assembly → Manuscript).
   *Sub-phase boundary* (e.g., Observe → Interpret inside Study, Anchor →
@@ -105,8 +110,11 @@ these names. (See State Contract clause 5: *one name per concept*.)
   *Study sub-phases:* Observation Set (Observe), Interpretation Set
   (Interpret), Christ-Connection Statement (Redemptive Thread), Implications
   Synthesis (Implications). *Assembly sub-phases:* Main Point Pair (Anchor),
-  Sermon Outline (Outline), Sermon Body (Equip), Sermon Frame (Frame). One
-  named outcome per sub-phase.
+  Sermon Outline (Outline). *Manuscript:* Sermon Body (Body); the terminal
+  Intro, Transitions, Conclusion sub-phase produces the Manuscript itself
+  rather than a separate named outcome. Seven named outcomes in all. (The
+  Sermon Frame outcome retired 2026-07-02 — its seven moves transplanted into
+  the Manuscript door fields; history in the changelog.)
 - **Handoff** — what passes from one sub-phase's named outcome into the
   opening of the next sub-phase.
 - **Throughline** — the line of deepening exegetical work that runs through a
@@ -127,10 +135,11 @@ these names. (See State Contract clause 5: *one name per concept*.)
    without a series (one-off preaching); when it has one, the series is its
    primary parent context.
 2. **Every sermon has a canonical position in the process.** A sermon is at
-   exactly one stage (Study → Assembly → Manuscript), and within Study or
-   Assembly at one sub-phase (Study: Observe → Interpret → Redemptive Thread
-   → Implications; Assembly: Anchor → Outline → Equip → Frame). Position is
-   queryable from any surface that touches the sermon.
+   exactly one stage (Study → Assembly → Manuscript), and within its stage at
+   one sub-phase (Study: Observe → Interpret → Redemptive Thread →
+   Implications; Assembly: Anchor → Outline; Manuscript: Body → Intro,
+   Transitions, Conclusion). Position is queryable from any surface that
+   touches the sermon.
 3. **No anonymous atoms.** A sermon must have a name. A series must have a
    name. The system refuses to admit a nameless atom into canonical state.
    A refusal is spoken, not silent — the surface names what is missing
@@ -164,27 +173,32 @@ these names. (See State Contract clause 5: *one name per concept*.)
 2. **A sermon is complete when its load-bearing artifacts exist.** The four
    Study named outcomes (Observation Set, Interpretation Set, Christ-
    Connection Statement, Implications Synthesis), the Main Point Pair (MPT
-   + MPS), the Sermon Frame (Intro + Conclusion), and the Manuscript are
-   the artifacts the work produces. A sermon is not done until they exist;
-   that is the contract. Completeness per load-bearing field is checked by
-   the composite gate functions in `src/utils/studyAdvancement.js`
-   (`checkField3Composite`, `checkField8Composite`,
-   `checkPhase4Field4Composite`, `checkField5Composite`,
-   `checkIntroComposite`, `checkConclusionComposite`, `checkMPTComposite`,
-   `checkMPSComposite`) — these are the foundation of the completeness
-   contract. The workspace-wide "is the sermon done" answer is wired
-   (2026-06-10): `deriveSermonCompleteness` in `src/utils/sermonState.js`
-   consumes all eight composites — plus deliberately LENIENT presence
-   checks for the Sermon Outline, Sermon Body, and Manuscript, which have
-   no SADI-ratified composites yet (the OEM content walk may tighten them)
-   — and the SermonFinish screen renders the result at the end of the walk
-   with per-artifact "go write it" jumps, Export to Word, and Mark as
-   preached. The answer informs; it never blocks (Process #1 holds — no
-   walls). Completeness is also visible continuously at lower weight via
-   the map's per-question shading (`deriveQuestionStatesFromSermon`) and at
-   the Study → Anchor handoff (`deriveStudyOutcomesFromSermon`,
-   `deriveStudyUnfinishedFromSermon`). The eight composites are CORE-canonical.
-   (History: `docs/CORE-CHANGELOG.md`.)
+   + MPS), and the Manuscript — whose door fields carry the transplanted
+   Frame moves (hook, bridge, expectations, redemptive note; summation,
+   response) — are the artifacts the work produces. A sermon is not done
+   until they exist; that is the contract. Completeness per load-bearing
+   field is checked by the composite gate functions in
+   `src/utils/studyAdvancement.js` (`checkField3Composite`,
+   `checkField8Composite`, `checkPhase4Field4Composite`,
+   `checkField5Composite`, `checkMPTComposite`, `checkMPSComposite`) —
+   these are the foundation of the completeness contract. The
+   workspace-wide "is the sermon done" answer is wired (2026-06-10):
+   `deriveSermonCompleteness` in `src/utils/sermonState.js` consumes all
+   six composites — plus deliberately LENIENT presence checks for the
+   Sermon Outline, Sermon Body, and Manuscript (the doors check = an
+   opener answer + the response; transitions are deliberately never
+   counted, though the map still tracks them honestly). The lenient
+   checks were ratified lenient by the OEM walk (2026-07-02) — leniency
+   is now the ruled bar, not a placeholder. The SermonFinish screen
+   renders the result at the end of the walk with per-artifact "go write
+   it" jumps, Export to Word, and Mark as preached. The answer informs;
+   it never blocks (Process #1 holds — no walls). Completeness is also
+   visible continuously at lower weight via the map's per-question
+   shading (`deriveQuestionStatesFromSermon`) and at the Study → Anchor
+   handoff (`deriveStudyOutcomesFromSermon`,
+   `deriveStudyUnfinishedFromSermon`). The six composites are
+   CORE-canonical. (The Intro/Conclusion composites retired with the
+   Frame collapse, 2026-07-02; history: `docs/CORE-CHANGELOG.md`.)
 3. **Movement is visible at thresholds, not narrated continuously.** Major
    transitions — sermon start, the Study → Anchor handoff, and sermon
    completion — surface as discrete landing screens (`.ssl-overlay`,
@@ -236,12 +250,13 @@ these names. (See State Contract clause 5: *one name per concept*.)
    `docs/PROPOSALS/sermon-anchor-definition-initiative.md`) are the frozen
    development records that produced the Study content (23 fields, four named
    outcomes, four handoffs) and the Anchor/Frame content (four anchor fields,
-   two named outcomes); the `scripts/sfdi-*-consistency.py` validators continue
-   to check those frozen records for internal consistency. (Honesty: Assembly's
-   Outline and Equip sub-phases and the Manuscript stage carry DRAFT definitions
-   in the canon — Merida-grounded but not yet preacher-walked; until an OEM
-   content walk completes, this contract is testable in full only for Study and
-   Anchor/Frame.)
+   two named outcomes — the Frame moves now live on in the Manuscript door
+   fields per the 2026-07-02 transplant); the `scripts/sfdi-*-consistency.py`
+   validators continue to check those frozen records for internal consistency.
+   (The OEM walk, 2026-07-02, completed the remaining regions: Outline, Body,
+   and the Manuscript doors are preacher-walked and ratified — rulings of
+   record in `oem-walk-rulings-2026-07-01.md`. This contract is now testable
+   in full across the whole walk.)
 
    (Saturation amendment, 2026-06-10 — pastor's ruling: the throughline is
    forward-compiling, but it is NOT closed to the text. Two commitments hold.

@@ -24,12 +24,15 @@ const HINT_MAP = {
   main_point_pair:     { stage: "Assembly", subPhase: "Anchor" },
   outline:             { stage: "Assembly", subPhase: "Outline" },
   // v24 — functional_elements (the sermon body) replaced the struck
-  // delivery_notes / timing_notes columns in the search index.
-  functional_elements: { stage: "Assembly", subPhase: "Equip" },
-  sermon_frame:        { stage: "Assembly", subPhase: "Frame" },
+  // delivery_notes / timing_notes columns in the search index. Moved to
+  // Manuscript/Body in the OEM restructure (2026-07-02).
+  functional_elements: { stage: "Manuscript", subPhase: "Body" },
+  // Legacy column post-Frame-collapse: old frame answers still index;
+  // matches land at the doors (the transplanted questions' home).
+  sermon_frame:        { stage: "Manuscript", subPhase: "IntroTransitionsConclusion" },
 
-  // Manuscript surfaces — all land in the writing room.
-  manuscript:          { stage: "Manuscript" },
+  // Manuscript prose — lands at the doors.
+  manuscript:          { stage: "Manuscript", subPhase: "IntroTransitionsConclusion" },
 
   // Notebooks — open the drawer on the matching stage's trail.
   notebook_study:      { stage: "Study",     openNotebook: true },

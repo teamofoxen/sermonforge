@@ -201,45 +201,14 @@ export function checkField5Composite(sermon) {
   return null;
 }
 
-// Sermon Frame Intro composite. Per SADI Step 5 ratification: Intro requires
-// Q1+Q2+Q3 non-empty (no N/A) and Q4 (redemptive_note) non-empty or N/A
-// (the "satisfied another way" carve-out for redemptive hooks).
-export function checkIntroComposite(frameData) {
-  if (!frameData || typeof frameData !== "object") {
-    return "Write the Introduction answers in Frame.";
-  }
-  const fieldKey = "intro";
-  const required = ["hook", "bridge_to_text", "expectations"];
-  for (const qKey of required) {
-    if (!isQuestionAnswered(frameData, fieldKey, qKey)) {
-      return `Write the Intro ${qKey.replace(/_/g, " ")} answer.`;
-    }
-  }
-  if (!isQuestionAnswered(frameData, fieldKey, "redemptive_note")) {
-    return "Write the Intro redemptive note (or mark it not applicable if the hook itself was redemptive).";
-  }
-  return null;
-}
-
-// Sermon Frame Conclusion composite. Per SADI Step 5 ratification (closing_posture
-// Q4 removed 2026-06-15, Phase-2 Merida surgery): Conclusion requires Q1+Q2+Q3
-// (summate, land_call, gospel_empower) all non-empty (no N/A path).
-export function checkConclusionComposite(frameData) {
-  if (!frameData || typeof frameData !== "object") {
-    return "Write the Conclusion answers in Frame.";
-  }
-  const fieldKey = "conclusion";
-  const required = ["summate", "land_call", "gospel_empower"];
-  for (const qKey of required) {
-    // Conclusion is no-N/A across the board — N/A doesn't satisfy these.
-    const answered = !isQuestionNA(frameData, fieldKey, qKey)
-      && hasContent(getQuestionAnswer(frameData, fieldKey, qKey));
-    if (!answered) {
-      return `Write the Conclusion ${qKey.replace(/_/g, " ")} answer.`;
-    }
-  }
-  return null;
-}
+// checkIntroComposite / checkConclusionComposite retired 2026-07-02 with the
+// Frame collapse (OEM walk, agenda item 8): the Sermon Frame stage and its
+// two completeness artifacts are gone; the transplanted door questions are
+// covered by the ratified-lenient Manuscript check in sermonState.js
+// (an opener answer + the Conclusion response — agenda item 7). The
+// redemptive_note's strict "satisfied another way" N/A semantic moved with
+// its key to the Manuscript doors (introduction.redemptive_note_na sidecar).
+// CORE Process #2 now names SIX composites; see docs/CORE-CHANGELOG.md.
 
 // MPT composite. Per SADI ratification: MPT Q1 (draft) and Q2 (tighten) both
 // non-empty, neither N/A-able.

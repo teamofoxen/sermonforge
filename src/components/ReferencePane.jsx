@@ -19,10 +19,14 @@ import "./referencePane.css";
 //   Anchor / MPS   → MPT + Christ-Connection Statement
 //                    (the gospel-check's comparison pair)
 //   Outline        → MPT + MPS
-//   Equip          → MPT + MPS + outline points
-//   Frame          → MPT + MPS
-//   Manuscript     → MPT + MPS + outline (NOT the Study outcomes —
-//                    they're already baked into Assembly's outputs)
+//   Body           → MPT + MPS + outline + Pastoral Context + CCS
+//                    (OEM rulings 1–2: the Application prompt sends the
+//                    pastor to "the room you named" and invokes the CCS as
+//                    the moralism guard — both must be on screen)
+//   Doors (Intro, Transitions, Conclusion)
+//                  → MPT + MPS + the assembled body + Pastoral Context + CCS
+//                    (the pastor's ruling: the body work exports into the
+//                    doors screen as context for all three fields)
 //
 // The header switch ("Passage / Your work") starts on Passage everywhere and
 // resets to Passage on region change; the pastor can flip to his work any
@@ -70,6 +74,68 @@ function RefItem({ label, text, jump, onJump, defaultOpen = true }) {
           <div className="refpane-item-empty">
             <span>not yet written</span>
             {jump && onJump && (
+              <TextButton size="sm" onClick={() => onJump(jump)}>
+                go write it
+              </TextButton>
+            )}
+          </div>
+        )
+      )}
+    </section>
+  );
+}
+
+// The assembled body — every outline point with the prose written under it
+// in Body, reading the way the Word export reads (scripture, then the three
+// prose cells run together). The doors write against this (OEM ruling: the
+// pastor asked for the body as context for intro/transitions/conclusion).
+function BodyRefItem({ points, functionalElements, onJump, defaultOpen = true }) {
+  const [open, setOpen] = useState(defaultOpen);
+  const list = (Array.isArray(points) ? points : []).filter(
+    (p) => p && String(p.text ?? "").trim()
+  );
+  const fes = functionalElements || {};
+  const jump = { stage: "Manuscript", subPhase: "Body", fieldKey: "equip" };
+  const hasAny = list.some((p) => {
+    const fe = fes[p.id] || {};
+    return ["scripture", "explanation", "application", "illustration"].some(
+      (k) => String(fe[k] ?? "").trim()
+    );
+  });
+  return (
+    <section className="refpane-item">
+      <TextButton
+        size="sm"
+        className="refpane-item-label"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+      >
+        Sermon Body {open ? "▾" : "▸"}
+      </TextButton>
+      {open && (
+        hasAny ? (
+          <div className="refpane-body-prose">
+            {list.map((p, i) => {
+              const fe = fes[p.id] || {};
+              const scripture = String(fe.scripture ?? "").trim();
+              const prose = ["explanation", "application", "illustration"]
+                .map((k) => String(fe[k] ?? "").trim())
+                .filter(Boolean);
+              return (
+                <div key={p.id ?? i} className="refpane-body-point">
+                  <p className="refpane-item-text"><strong>{`${i + 1}. ${String(p.text).trim()}`}</strong></p>
+                  {scripture && <p className="refpane-item-text"><em>{scripture}</em></p>}
+                  {prose.map((t, j) => (
+                    <p key={j} className="refpane-item-text">{t}</p>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="refpane-item-empty">
+            <span>not yet written</span>
+            {onJump && (
               <TextButton size="sm" onClick={() => onJump(jump)}>
                 go write it
               </TextButton>
@@ -197,6 +263,8 @@ export default function ReferencePane({
   mpt,
   mps,
   outlinePoints,
+  functionalElements,
+  pastoralContext,
   onJump,
 }) {
   const [collapsed, setCollapsed] = useState(readInitialCollapsed);
@@ -288,6 +356,21 @@ export default function ReferencePane({
   );
   const outlineItem = <OutlineRefItem key={`${ctx}:outline-item`} points={outlinePoints} onJump={onJump} />;
 
+  // Pastoral Context — the named room (prodigal AND older brother) + the
+  // cost and the gift. Rides in Body + doors per the OEM item-2 ruling.
+  const pcItem = (
+    <RefItem
+      key={`${ctx}:pastoral-context`}
+      label="Pastoral Context — your room"
+      text={pastoralContext}
+      jump={{ stage: "Study", subPhase: "Implications", fieldKey: "pastoral_context" }}
+      onJump={onJump}
+      defaultOpen={false}
+    />
+  );
+  // The CCS as the standing moralism guard (collapsed — one flip away).
+  const ccsGuardItem = itemFromOutcome("christ_connection_statement", false);
+
   // Per-region work-mode contents — the ratified table.
   let workItems;
   if (stage === "Study") {
@@ -298,10 +381,25 @@ export default function ReferencePane({
       fieldKey === "mps"
         ? [mptItem, itemFromOutcome("christ_connection_statement", true)]
         : studyOutcomeItems();
-  } else if (subPhase === "Equip" || stage === "Manuscript") {
-    workItems = [mptItem, mpsItem, outlineItem];
+  } else if (subPhase === "Body") {
+    workItems = [mptItem, mpsItem, outlineItem, pcItem, ccsGuardItem];
+  } else if (stage === "Manuscript") {
+    // The doors: the assembled body replaces the bare outline (its point
+    // titles are the body's headings), the room + guard ride along.
+    workItems = [
+      mptItem,
+      mpsItem,
+      <BodyRefItem
+        key={`${ctx}:body-item`}
+        points={outlinePoints}
+        functionalElements={functionalElements}
+        onJump={onJump}
+      />,
+      pcItem,
+      ccsGuardItem,
+    ];
   } else {
-    // Outline + Frame.
+    // Outline.
     workItems = [mptItem, mpsItem];
   }
 

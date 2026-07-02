@@ -13,8 +13,9 @@
 //     ...
 //   }
 //
-// Step 5 (Sermon Frame) lives in `sermon_frame`, shaped per
-// src/utils/sermonFrameFields.js (intro / conclusion).
+// The doors (intro / transitions / conclusion) live in `manuscript`, shaped
+// per src/utils/sermonManuscriptFields.js — the merged decision+prose
+// surface since the Frame collapse (OEM walk, 2026-07-02).
 //
 // The throughline pattern is canonical: observations.divisions.thought_units
 // holds a single cumulative array. Each row carries thought_unit_summary +
@@ -91,11 +92,12 @@ const sermon = {
   stage: SERMON_STATUS.InProgress,
 
   // Landing state — the sample opens inside the finished work (the first
-  // Manuscript field) with both entry thresholds pre-seen, so the curious
+  // door field) with both entry thresholds pre-seen, so the curious
   // pastor lands on writing, not the sermon-start overlay. Threshold ids
   // mirror THRESHOLD_ID in src/utils/sermonState.js; the position string is
-  // the canonical slash-composite (Manuscript doubles as its own sub-phase).
-  last_touched_position: `${STAGE.Manuscript}/${STAGE.Manuscript}/introduction`,
+  // the canonical slash-composite (Manuscript's doors sub-phase, per the
+  // OEM restructure).
+  last_touched_position: `${STAGE.Manuscript}/IntroTransitionsConclusion/introduction`,
   thresholds_seen: JSON.stringify(["sermon-start", "study-to-anchor-handoff"]),
   mpt: "Paul taught that those justified by faith already stand in unshakeable peace with God, and therefore can endure suffering as a chain that produces a hope which does not put them to shame — because that hope rests on God's love already poured into their hearts by the Spirit.",
   mps: "The hope that holds in suffering is not something you build — it is anchored in a love that has already been poured into you.",
@@ -339,106 +341,70 @@ const sermon = {
 
   functional_elements: JSON.stringify({
     [OP.p1]: {
+      scripture: "Romans 5:1-2 — 'Therefore, since we have been justified by faith, we have peace with God through our Lord Jesus Christ. Through him we have also obtained access by faith into this grace in which we stand, and we rejoice in hope of the glory of God.'",
       explanation: "Paul opens with three claims that name what is already settled: we HAVE peace, we HAVE OBTAINED access, we STAND. The form matters. Peace with God is not a feeling to be cultivated — it is a settled state already achieved through Christ's mediation. Access is not a privilege to be earned — it has been obtained, full stop. The standing is not a posture you assume each morning — it is the ground beneath your feet whether you notice it or not. Paul's pastoral logic: what's true comes before what to do. Before he tells the Roman church to do anything (and he will, in chapter 6), he tells them what is already true.",
       application: "Most of us spend our Christian life trying to climb back to peace we already have. We treat the gospel as the front door we walked through years ago and then act as if every day's faithfulness is what keeps us inside. Paul says: stop. The peace is had. The access is obtained. The standing is settled. The work this week is not to earn the floor — it is to notice you are already standing on it. What would it look like, this Monday morning, to walk into your office knowing your standing with God is not at stake in the meeting you're about to have?",
       illustration: "Tim Keller, in his last sermons before he died, returned again and again to this image: the gospel is not the diving board you jumped off years ago; it is the water you are now in. You don't jump again every Sunday. You swim in what is already true. Paul's settled-state claims are exactly that — the water you are already in.",
     },
     [OP.p2]: {
+      scripture: "Romans 5:3-4 — 'Not only that, but we rejoice in our sufferings, knowing that suffering produces endurance, and endurance produces character, and character produces hope.'",
       explanation: "Verse 3 begins with the most disorienting sentence in the passage: 'we rejoice in our sufferings.' But notice — Paul uses the same word he just used in verse 2 for rejoicing in the hope of glory. This is not a different rejoicing. It is the SAME rejoicing, now applied to suffering itself. Paul refuses to let pain become the deepest word about the believer's life. And then he names the chain — suffering produces endurance, endurance produces character, character produces hope. It is a chain — each link is the cause of the next. There are no shortcuts. The hope you long for is the very thing produced at the end of the chain you are dreading.",
       application: "Most of us, in suffering, do one of two things. We deny the pain — slap a Bible verse on it and call it victorious. Or we let the pain become the deepest reality — the thing we wake up to, the thing we name our life by. Paul will not let us do either. He says: the pain is real (he calls it suffering, not 'opportunity'), and yet the rejoicing is the same. Whatever you are walking through this week — the diagnosis, the prodigal child, the marriage that feels far from where you hoped — Paul is telling you that you do not have to choose between pretending it doesn't hurt and letting it have the final word. There is a third option. The chain is doing real work, even when you cannot see it.",
       illustration: "Joni Eareckson Tada, paralysed at seventeen and now in her seventies: 'Suffering is the textbook that teaches me who I really am, and what I am most prone to. Through it I have come to understand a love deeper than I imagined — but only by walking the chain Paul names here.' She is one of the clearest living witnesses I know to this verse. Not because she did it perfectly. Because she let the chain do its work.",
     },
     [OP.p3]: {
+      scripture: "Romans 5:5 — 'and hope does not put us to shame, because God's love has been poured into our hearts through the Holy Spirit who has been given to us.'",
       explanation: "And then verse 5: 'hope does not put us to shame, because God's love has been poured into our hearts through the Holy Spirit who has been given to us.' Watch what Paul does here. He has just built a chain — suffering produces endurance, endurance character, character hope. You might expect him to ground hope's reliability in your endurance: 'and because you've endured, your hope will hold.' But he does not. He grounds it somewhere else entirely. The hope holds because of a love already poured in. The verb is in a settled, completed form — has been poured. A finished action by another. You did not pour it; the Spirit did. And he poured it not in instalments but fully, once for all. The anchor of your hope is not your grip on God. It is God's love already inside you.",
       application: "If you have been trying to hold onto God in your suffering — gripping harder, praying more, summoning faith you do not feel — verse 5 is the most liberating sentence in the New Testament. The hope does not rest on your grip. It rests on the love already poured in. Your job is not to manufacture the anchor. Your job is to remember that Someone Else has already set it. This week, when the chest tightens and the question rises and the prayer feels dry — you do not need a stronger faith. You need to remember whose love is already in you.",
       illustration: "There is a moment in Pilgrim's Progress where Christian, beaten down in the Slough of Despond, cries out that he cannot get out. And Help — that's the character's name — comes and pulls him out, and Christian asks, 'Why is the way so bad?' And Help answers: 'It is not because God did not put steps in. It is because you forgot to look down.' The steps are there. The love is poured. The Spirit has been given. Look down. You are already standing on it.",
     },
   }),
 
-  manuscript: `There is a kind of exhaustion that only Christians know.
+  // The manuscript column carries the door shape (the OEM merge, 2026-07-02):
+  // the opener + bridge were split from the old full-prose manuscript; the
+  // expectation / redemptive note / summation texts came home from the
+  // retired sermon_frame seed — under the merged doors, the decisions ARE
+  // the preached words. The body's prose lives in the functional_elements
+  // cells above (the cells ARE the manuscript body); the Word export
+  // assembles them under their points, transitions in between.
+  manuscript: JSON.stringify({
+    introduction: {
+      opener: `There is a kind of exhaustion that only Christians know.
 
 It is not the exhaustion of the world — the burnout of work, the weariness of carrying too much. It is something quieter. It is the exhaustion of trying to keep yourself in a place you suspect you do not deserve to be. The exhaustion of hearing every Sunday that the gospel is good news, and walking into Monday afraid that this week, finally, you will run out of whatever it is that keeps God patient with you.
 
-If that is you — even partly, even on your bad days — Romans 5 is for you.
-
-Paul is writing to a church he has never met. He has spent four chapters arguing that God justifies the ungodly. That faith, not works, is how anyone is right with God. That Abraham, the founder of the people, was counted righteous before he had done a single religious thing. By the end of chapter 4, the gospel has been stated. The argument is built. The doctrine is laid down.
+If that is you — even partly, even on your bad days — Romans 5 is for you.`,
+      scripture_reading: `Paul is writing to a church he has never met. He has spent four chapters arguing that God justifies the ungodly. That faith, not works, is how anyone is right with God. That Abraham, the founder of the people, was counted righteous before he had done a single religious thing. By the end of chapter 4, the gospel has been stated. The argument is built. The doctrine is laid down.
 
 And then chapter 5 begins with one word: therefore.
 
-This is the most important word in the passage. Paul is saying: now that the doctrine is built, let me tell you what it does. Let me tell you what it is like to wake up tomorrow morning in a life that has actually been changed by what I have just said.
-
-Watch what he does. Verse 1: "Therefore, having been justified by faith, we have peace with God through our Lord Jesus Christ." Three words I want you to notice. We HAVE peace. Verse 2: we HAVE OBTAINED access. We STAND in this grace.
-
-The verbs are doing something. They name what is already settled. Peace is not something you are going to get. Peace is something you have. Access is not a privilege you might one day earn. Access has been obtained. The standing is not a posture you assume each morning when you remember God again. The standing is the ground beneath your feet whether you noticed it this morning or not.
-
-This is the floor.
-
-I want you to feel the strangeness of this. Most of us spend our Christian life trying to climb back to peace we already have. We treat the gospel like a diving board we jumped off years ago, and we act as if every day's faithfulness is what keeps us in the water. But Paul says — and this is going to take the whole sermon to land — the water is what you are already in. You do not jump again. You swim in what is already true.
-
-That is the floor. Now watch what he does next.
-
-Verse 3. "Not only that, but we rejoice in our sufferings."
-
-Now, this is the sentence that makes everyone in this room either suspicious or angry, depending on the kind of week you have had. Because none of us, in our actual lives, rejoice in suffering. We endure it. We pray our way through it. We white-knuckle our way out of it. But rejoice? The cancer diagnosis. The marriage that has gone cold. The child who will not return your calls. The prayer life that has gone bone dry. We do not rejoice in those things.
-
-But notice what Paul has done. He uses the same word here that he used in verse 2 for rejoicing in the hope of glory. This is not a different kind of rejoicing. It is the SAME rejoicing, now turned toward suffering itself.
-
-Paul is doing something here that I want you to watch carefully, because it is going to land in your week. He is refusing to let pain become the deepest word about your life.
-
-He is not denying the pain. The word he uses is suffering, not "opportunity." He is not asking you to pretend. But he is also not letting suffering have the final word over a life that has already been claimed by the gospel.
-
-And then he tells you why. Verses 3 and 4: "knowing that suffering produces endurance, and endurance produces character, and character produces hope."
-
-It is a chain — each link causes the next. Suffering, in God's hands, is doing real work. It is producing endurance. The endurance is producing character. The character is producing hope. And there are no shortcuts. The hope you long for — the deep, unshakeable hope you wish you had on your worst days — is the very thing produced at the end of the chain you are dreading.
-
-I have to be honest with you here. This is the hardest sentence in the sermon to preach, because what Paul is saying is that the slow path is the only path. There is no faster way to become the person of hope you long to be than to walk the road you are walking. The God who is forming hope in you is using the very thing you wish he would take away.
-
-This is hard.
-
-But now watch what Paul does in verse 5. Because if he stopped at verse 4, this would be a sermon about your endurance. And if it were a sermon about your endurance, half of you would walk out of here more defeated than when you came in.
-
-Verse 5. "And hope does not put us to shame, because God's love has been poured into our hearts through the Holy Spirit who has been given to us."
-
-I want you to listen to that sentence as if you have never heard it before.
-
-Paul has just built a chain. Suffering. Endurance. Character. Hope. You might expect him to ground hope's reliability in your endurance. "And because you have endured, your hope will hold." That is what most preachers would do.
-
-He does not.
-
-He grounds the hope somewhere else entirely. The hope holds because of a love already poured in. The verb form is settled and finished. The action is by another, complete. You did not pour the love. The Spirit did. And he did not pour it in instalments. He poured it fully. Once. For all.
-
-This means — and I want you to feel this — the anchor of your hope is not your grip on God.
-
-It is God's love already inside you.
-
-If you have been trying to hold onto God in your suffering — gripping harder, praying more, summoning faith you do not feel — verse 5 is the most liberating sentence in the New Testament. The hope does not rest on your grip. It rests on the love already poured in.
-
-Your job is not to manufacture the anchor.
-
-Your job is to remember that Someone Else has already set it.
-
-So here is where I want to land. This week, when the chest tightens and the question rises and the prayer feels dry — you do not need a stronger faith. You do not need to climb back into a peace you already have. You do not need to manufacture the hope. You need to remember whose love is already in you.
+This is the most important word in the passage. Paul is saying: now that the doctrine is built, let me tell you what it does. Let me tell you what it is like to wake up tomorrow morning in a life that has actually been changed by what I have just said.`,
+      expectation: `I'm going to ask you to do something hard this morning. I'm going to ask you to stop trying to climb back to a peace you already have. To stop manufacturing hope you cannot sustain. And to receive what is already true: that the gospel is not the front door of Christian life — it is the floor you are already standing on, and the love is already poured in.`,
+      redemptive_note: `The reason that call is good news and not another burden is this: the work has already been done. The peace is had. The access is obtained. The Spirit is given. The love is poured. You are not being asked to summon what is not there. You are being asked to receive what Christ has already secured and the Spirit has already poured in.`,
+    },
+    transitions: {
+      [OP.p1]: "So look at what Paul says is already yours. Verse 1.",
+      [OP.p2]: "That is the floor. Now watch what he does next.",
+      [OP.p3]: "But now watch what Paul does in verse 5. Because if he stopped at verse 4, this would be a sermon about your endurance — and half of you would walk out of here more defeated than when you came in.",
+      conclusion: "So here is where I want to land.",
+    },
+    conclusion: {
+      summation: `Three verbs in verse 1 declare what is already settled. The same word for rejoicing turns in verse 3 toward suffering itself. The chain of suffering–endurance–character–hope does its slow productive work in verse 3-4. And verse 5 anchors the whole thing not in your endurance but in a love already poured in by the Spirit. The whole passage is one declaration: you stand on this; you can rejoice in suffering because of this; the hope holds because of this.`,
+      response: `This week, when the chest tightens and the question rises and the prayer feels dry — you do not need a stronger faith. You do not need to climb back into a peace you already have. You do not need to manufacture the hope. You need to remember whose love is already in you.
 
 Stop trying to keep yourself in a place you do not deserve to be. The standing is settled. The access is obtained. The peace is had. The Spirit is given. The love is poured. And the God who has done all of that is not waiting to be impressed by your endurance. He is already at work, by his Spirit, in your interior life, anchoring a hope that will hold when nothing else does.
 
 Come with empty hands. The gift is already in them.`,
+    },
+  }),
 
   delivery_notes: "Pace this sermon slowly — the settled-state verbs of v.1-2 need to land before any application. Read vv.1-5 aloud at the start, slowly, before the first point. Don't rush past 'we have peace.' Stay there. The congregation needs to feel the strangeness of the declaration before the chain in vv.3-4 makes sense. At the close, do not push for a response — the passage itself is a declaration, not an exhortation. Let the declaration do its work. Watch for the moment in v.5 — slow there. The hope-anchor is the heart of the sermon; if any sentence lands, it must be that one.",
   timing_notes: "Opening (the exhaustion that only Christians know): 4 min. Reading + 'therefore' + the settled-state verbs of v.1-2 (Point 1 explanation): 8 min. Application + Keller illustration: 4 min. Pivot to v.3 + the chain: 6 min. Joni Eareckson Tada illustration: 3 min. Verse 5 — the anchor (Point 3): 8 min. Pilgrim's Progress illustration + close: 5 min. Total: ~38 min.",
 
-  sermon_frame: JSON.stringify({
-    intro: {
-      hook: { value: "There is a kind of exhaustion that only Christians know. It is not the exhaustion of work or of carrying too much. It is the quiet exhaustion of trying to keep yourself in a place you suspect you do not deserve to be — of walking into every Monday afraid that this week, finally, you will run out of whatever it is that keeps God patient with you.", na: false },
-      bridge_to_text: { value: "Romans 5 begins with one word: 'therefore.' Paul has spent four chapters arguing that God justifies the ungodly — that faith, not works, is how anyone is right with God. And now he turns to what that doctrine actually does in a real life under pressure. The MPT: Paul tells the justified what is already true of them, and grounds their hope in a love already poured in. The MPS: the hope that holds in suffering is not something you build — it is anchored in a love that has already been poured into you.", na: false },
-      expectations: { value: "I'm going to ask you to do something hard this morning. I'm going to ask you to stop trying to climb back to a peace you already have. To stop manufacturing hope you cannot sustain. And to receive what is already true: that the gospel is not the front door of Christian life — it is the floor you are already standing on, and the love is already poured in.", na: false },
-      redemptive_note: { value: "The reason that call is good news and not another burden is this: the work has already been done. The peace is had. The access is obtained. The Spirit is given. The love is poured. You are not being asked to summon what is not there. You are being asked to receive what Christ has already secured and the Spirit has already poured in.", na: false },
-    },
-    conclusion: {
-      summate: { value: "Three verbs in verse 1 declare what is already settled. The same word for rejoicing turns in verse 3 toward suffering itself. The chain of suffering–endurance–character–hope does its slow productive work in verse 3-4. And verse 5 anchors the whole thing not in your endurance but in a love already poured in by the Spirit. The whole passage is one declaration: you stand on this; you can rejoice in suffering because of this; the hope holds because of this.", na: false },
-      land_call: { value: "So here is the call this passage lays on us: this week, when the chest tightens and the question rises and the prayer feels dry — do not try harder to hold onto God. Remember whose love is already holding you. Stop trying to keep yourself in a place you already stand. The work is to receive what is already true.", na: false },
-      gospel_empower: { value: "And what makes that call good news is that Christ has done the work — every gift named in this passage flows 'through our Lord Jesus Christ.' The peace, the access, the standing, the love poured. You do not have to manufacture the anchor; he already set it. You do not have to summon hope; the Spirit has already poured the love in. The call to receive is itself enabled by the One who gave.", na: false },
-    },
-  }),
+  // sermon_frame is a legacy column post-Frame-collapse (2026-07-02): the
+  // seed's frame texts moved into the manuscript door keys above (the
+  // transplant). A fresh sample carries no legacy data.
+  sermon_frame: "",
 };
 
 // ── Export ─────────────────────────────────────────────────────────────────────

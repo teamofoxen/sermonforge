@@ -16,6 +16,18 @@
 > record the doc's provenance across the three sweeps that produced the
 > current shape.
 
+> **OEM restructure (2026-07-02) — the decide/write boundary.** Equip moved
+> from Assembly into Manuscript as the **Body** sub-phase; the **Frame**
+> sub-phase collapsed into the Manuscript door fields (its seven moves
+> transplanted — each door prompt now asks the decision AND the preached words
+> together). Assembly = Anchor, Outline (decide); Manuscript = Body, then
+> Intro/Transitions/Conclusion (write). Schema v33 rewrites legacy positions;
+> the `sermon_frame` column persists as legacy data (existing sermons' frame
+> answers stay on disk and searchable, but the walk no longer renders them —
+> pastor-ruled 2026-07-02). Rulings of record:
+> [`oem-walk-rulings-2026-07-01.md`](../../oem-walk-rulings-2026-07-01.md);
+> the walk's what & why is [`WORKSPACE-CANON.md`](../WORKSPACE-CANON.md).
+
 > Rewritten post-ARI (2026-05-09). All AI surfaces are gone.
 >
 > **Post-workspace-restructure (2026-05-10):** Workspace collapsed from
@@ -134,19 +146,37 @@ rendering mechanism.
 
 Chrome:
 
-- **Passage column** (left) — consumes the canonical `useEsvPassage` hook (one
-  ESV fetch path, shared with PassagePopup). Collapsible to a `‹` button.
+- **Reference pane** (left) — [`ReferencePane.jsx`](../../src/components/ReferencePane.jsx).
+  Defaults to the ESV **passage** in every region (consuming the canonical
+  `useEsvPassage` hook, one fetch path shared with PassagePopup); collapsible to
+  an "Open Bible" button. A **"Your work"** tab is one flip away, whose contents
+  are the per-region substrate the current work builds against — the ratified
+  table in the component header. Post-OEM (2026-07-02) the writing regions carry:
+  **Body** → MPT + MPS + Sermon Outline + **Pastoral Context** (the named room)
+  + **CCS** (the moralism guard the Application prompt invokes); **doors** →
+  MPT + MPS + the **assembled body** (`BodyRefItem` — each point with its prose,
+  the way the export reads) + Pastoral Context + CCS. These passengers are ruled
+  by OEM items 1–2 ("no coordinates the screen doesn't show"): the Body/doors
+  prompts point the pastor at his room and his Statement, so the pane must show
+  them. `SermonWorkspace` derives PC from `implications.pastoral_context` and
+  threads it + `functionalElements` into the pane.
 - **Prompts + answers** (right) — every question in the current field rendered
   stacked; the N/A toggle renders only on questions whose field def declares
-  `naAllowed: true` — currently `intro.redemptive_note` and `mps.gospel_check`
+  `naAllowed: true`. On the envelope columns that is `mps.gospel_check`
   (`PromptBlock` shows the toggle when `naAllowed || na`, the `na`-only branch
   existing solely so a legacy flag on a non-allowlisted question can be
   undone). The gating flag lives in the field defs, not the envelope shape —
   the envelope carries only the per-answer `na` state. Enforcement is
-  three-deep: field-def flag, composite gate, and a write-path guard that
-  drops `na` for non-allowlisted questions. The wider Study-question and
-  per-thought-unit-cell N/A is a ruled target (`WORKSPACE-CANON.md` §5) not
-  yet built.
+  three-deep: field-def flag, surface toggle, and a write-path guard in
+  `handleAnswerChange` that drops `na` for non-allowlisted questions.
+  **The door `introduction.redemptive_note` also carries N/A** (its strict
+  SADI "satisfied another way" semantic moved with it in the Frame transplant),
+  but on the native `manuscript` column, which stores plain strings, not
+  `{value, na}` envelopes — so its flag is a **sidecar key** (`redemptive_note_na`
+  beside the value), rendered by the `manuscript-prose` branch of the surface
+  and guarded in `handleManuscriptChange` (same three-deep shape; only that one
+  section+key pair is accepted). The wider Study-question and per-thought-unit-
+  cell N/A is a ruled target (`WORKSPACE-CANON.md` §5) not yet built.
 - **Chrome buttons** (bottom) — notebook summon (a quiet mono text link near
   the save indicator, per the D2d option-i ruling), the chevron-next
   (`.sws-forward`), and the map summon (`.sws-map-summon`).
@@ -176,8 +206,10 @@ Component: [`src/components/SermonMap.jsx`](../../src/components/SermonMap.jsx).
 Summoned via the writing-surface chrome's `.sws-map-summon` button. Renders a
 vertical list of every question in `QUESTION_WALK_ORDER` (derived from
 `WALK_ORDER`), grouped by region in walk order: Observe → Interpret →
-Redemptive Thread → Implications → Anchor → Outline → Equip → Frame →
-Manuscript.
+Redemptive Thread → Implications → Anchor → Outline → Body → Intro, Transitions,
+Conclusion. (Body's per-question "answered" gates on Scripture + Explanation +
+Application per outline point; Illustration counts toward "partial" and the
+preview but never gates — the OEM Equip ruling.)
 
 Per-question state by visual weight:
 
@@ -308,8 +340,9 @@ State derivations live in
 ## The completeness contract
 
 Per CORE [Process Contract #2](../CORE.md) (rearticulated 2026-05-18 in
-Phase G): a sermon is complete when its load-bearing artifacts exist. The
-foundation is the eight composite gate functions in
+Phase G; re-based 2026-07-02 by the Frame collapse): a sermon is complete when
+its load-bearing artifacts exist. The foundation is the six composite gate
+functions in
 [`src/utils/studyAdvancement.js`](../../src/utils/studyAdvancement.js), one
 per load-bearing field:
 
@@ -321,23 +354,29 @@ per load-bearing field:
 | `checkPhase4Field4Composite` | Implications Field 4 — Implications Synthesis |
 | `checkMPTComposite` | Assembly/Anchor — MPT (Main Point Pair part 1) |
 | `checkMPSComposite` | Assembly/Anchor — MPS (Main Point Pair part 2) |
-| `checkIntroComposite` | Assembly/Frame — Sermon Frame Intro |
-| `checkConclusionComposite` | Assembly/Frame — Sermon Frame Conclusion |
 
-**8 composites, matching the count Phase F kept** when the wall layer was
-deleted. If this count ever fails to reconcile against the live
-`studyAdvancement.js` file, either this table or F's record is wrong and the
-inconsistency must be surfaced, not silently absorbed.
+**6 composites** since the OEM walk (2026-07-02) retired `checkIntroComposite`
+and `checkConclusionComposite` with the Frame stage — the transplanted door
+questions are now covered by the ratified-lenient Manuscript check below. If
+this count ever fails to reconcile against the live `studyAdvancement.js` file,
+either this table is wrong and the inconsistency must be surfaced, not silently
+absorbed.
 
 The composites are **wired into the workspace-wide "is the sermon done" answer**
 (2026-06-10): `deriveSermonCompleteness(sermon)` in
-[`src/utils/sermonState.js`](../../src/utils/sermonState.js) consumes all eight — plus
-three deliberately lenient presence checks for Sermon Outline / Sermon Body / Manuscript,
-which have no ratified composite yet — and returns the per-artifact roll-up.
+[`src/utils/sermonState.js`](../../src/utils/sermonState.js) consumes all six — plus
+three deliberately lenient presence checks for Sermon Outline / Sermon Body / Manuscript
+(**ratified lenient** at the OEM walk, item 7 — no longer placeholders) — and returns
+the per-artifact roll-up (**nine artifacts**: four Study outcomes, MPT + MPS, Outline,
+Body, Manuscript). The lenient Manuscript check = an `opener` answer **and** the
+Conclusion `response`; **transitions are deliberately never counted** (a sermon is
+preachable without written bridges; the map still tracks them honestly).
 `SermonWorkspace.jsx` calls it for the Finish flow, and
-[`SermonFinish.jsx`](../../src/components/SermonFinish.jsx) renders the result: the
-artifact review with per-artifact "go write it" jumps, Export to Word, and
-Mark-as-preached. At lower weight, the map-weight derivation
+[`SermonFinish.jsx`](../../src/components/SermonFinish.jsx) renders the result: **the
+beholding moment** (the CCS + MPS read back under "did this sermon testify to Christ —
+and does it show him to be better?", OEM item 1), then the artifact review with
+per-artifact "go write it" jumps, Export to Word (carrying the "pray yourself hot"
+send-off), and Mark-as-preached. At lower weight, the map-weight derivation
 (`deriveQuestionStatesFromSermon`) is the continuous surface, and the Study → Anchor
 handoff surfaces the four Study named outcomes. The answer **informs, never blocks**
 (CORE Process #1 — no walls). The completeness *policy* these composites implement —
@@ -348,10 +387,10 @@ The advancement gates that used to fire at sub-phase boundaries (the seven
 `check*Threshold` wrappers in `studyAdvancement.js`) were deleted in Phase F
 of the trail deletion sweep. Phases that had a load-bearing-field composite
 kept their check intact (Interpret Field 8, Redemptive Thread Field 5,
-Implications Field 4, Anchor MPT + MPS, Frame Intro + Conclusion). Boundaries
-that relied on inline checks died entirely (Observe Field 7 Obvious Point,
-Observe Field 8 Possible Implications, Outline → Equip outline-points-present,
-Equip → Frame empty-evidence baseline). Per-stage detail below.
+Implications Field 4, Anchor MPT + MPS). Boundaries that relied on inline checks
+died entirely (Observe Field 7 Obvious Point, Observe Field 8 Possible
+Implications, Outline → Equip outline-points-present, Equip → Frame
+empty-evidence baseline). Per-stage detail below.
 
 ---
 
@@ -454,8 +493,10 @@ Possible Implications removed 2026-06-15, Phase 2.)
 ## Assembly stage data
 
 > *What* each Assembly field asks and *why*, with the Merida-fidelity tags, is
-> [WORKSPACE-CANON §3](../WORKSPACE-CANON.md). Anchor and Frame are SADI-walked; Outline
-> and Equip are DRAFT pedagogy (not yet preacher-walked). This section is the mechanics.
+> [WORKSPACE-CANON §3](../WORKSPACE-CANON.md). Since the OEM walk (2026-07-02) Assembly
+> holds two sub-phases — **Anchor** and **Outline** — both preacher-walked. Equip moved
+> to Manuscript as Body, and Frame collapsed into the Manuscript doors (both below under
+> Manuscript stage data). This section is the mechanics.
 
 ### Anchor (MPT + MPS) → `sermons.main_point_pair` (JSON v19 envelope)
 
@@ -496,74 +537,82 @@ Named outcome: Sermon Outline.
   advancement gate's "every outline point has non-empty text" check was removed
   with the deleted `checkOutlineToEquipThreshold` wrapper in Phase F; the draft
   field def does not re-add one. If a future walk needs an "all outline points
-  named" check, it adds one then.
-
-### Equip → `sermons.functional_elements` (JSON)
-
-`SERMON_EQUIP_FIELDS` in
-[`src/utils/sermonEquipFields.js`](../../src/utils/sermonEquipFields.js) —
-DRAFT pedagogy (2026-06-09, Merida Step 4). One field (`equip`) carrying a
-single `functional-elements` question: the writing surface iterates the outline
-points and renders the four elements (Scripture / Explanation / Application /
-Illustration) under each, writing the native `functional_elements` column keyed
-by point id, via `serializeFunctionalElements`. When no outline points exist
-yet, the editor shows a door back to Outline.
-
-Named outcome: Sermon Body.
-
-- **No completeness composite survives this boundary.** The Equip → Frame
-  transition never had more than an empty-evidence baseline pre-F; the draft
-  field def does not add one.
-
-### Frame (Intro + Conclusion) → `sermons.sermon_frame` (JSON v18 envelope)
-
-`SERMON_FRAME_FIELDS` in
-[`src/utils/sermonFrameFields.js`](../../src/utils/sermonFrameFields.js) —
-SADI Step 5. Two fields:
-
-- **Intro** — 4 questions (`hook`, `bridge_to_text`, `expectations`,
-  `redemptive_note`). Q1-Q3 non-empty, no N/A. Q4 non-empty or explicit N/A
-  per the SADI carve-out for cases where the hook itself was redemptive.
-- **Conclusion** — 3 questions (`summate`, `land_call`, `gospel_empower`). All
-  non-empty, no N/A. (`closing_posture` Q4 was removed 2026-06-15 in the Phase-2
-  Merida surgery.)
-
-Named outcome: Sermon Frame.
-
-**Completeness foundations:** `checkIntroComposite` + `checkConclusionComposite`.
-The advancement gate at the Frame → Manuscript boundary (the deleted
-`checkSermonFrameToManuscriptThreshold` wrapper) called both composites;
-both survived Phase F.
+  named" check, it adds one then. Outline is the last Assembly sub-phase — the
+  next field crosses the Assembly → Manuscript boundary (decide → write).
 
 ---
 
 ## Manuscript stage data
 
-> *What* the Manuscript fields ask and *why* (DRAFT pedagogy) is
-> [WORKSPACE-CANON §4](../WORKSPACE-CANON.md). This section is the mechanics.
+> *What* the Manuscript fields ask and *why* is
+> [WORKSPACE-CANON §4](../WORKSPACE-CANON.md). Since the OEM walk (2026-07-02) Manuscript
+> holds two sub-phases: **Body** (the former Assembly/Equip, moved) and **Intro,
+> Transitions, Conclusion** (the doors, carrying the transplanted Frame moves). All
+> preacher-walked. This section is the mechanics.
+
+### Body → `sermons.functional_elements` (JSON)
+
+`SERMON_EQUIP_FIELDS` in
+[`src/utils/sermonEquipFields.js`](../../src/utils/sermonEquipFields.js) —
+the field def keeps its `equip` key + `SERMON_EQUIP_FIELDS` export name (renaming
+storage keys would strip stored positions for nothing); its pastor-facing label is
+**Body**. One field carrying a single `functional-elements` question: the writing
+surface iterates the outline points and renders the four elements (Scripture /
+Explanation / Application / Illustration) under each, writing the native
+`functional_elements` column keyed by point id, via `serializeFunctionalElements`.
+When no outline points exist yet, the editor shows a door back to Outline. The cells
+ARE the manuscript body (OEM ruling — cell clarity, not extra structure, is what makes
+the body flow; the doors and the Word export read straight from these cells).
+
+Named outcome: Sermon Body. Walk position: `Manuscript/Body/equip`.
+
+- **No completeness composite** — the lenient Sermon Body presence check
+  (≥1 element under any point) lives in `deriveSermonCompleteness`. The map's
+  per-question "answered" gate is Scripture + Explanation + Application per point
+  (Illustration never gates — OEM Equip ruling).
+
+### Intro, Transitions, Conclusion (the doors) → `sermons.manuscript` (JSON)
 
 `SERMON_MANUSCRIPT_FIELDS` in
 [`src/utils/sermonManuscriptFields.js`](../../src/utils/sermonManuscriptFields.js)
-— DRAFT pedagogy (2026-06-09, Merida Step 5 + "writing the message"). The
-Manuscript stage has no sub-phase; walkOrder tags its fields with the stage name
-as the sub-phase slot (`Manuscript/Manuscript/<field>`). Three fields:
+— preacher-walked, carrying the transplanted Frame moves (each door prompt asks the
+decision and the preached words together). walkOrder tags these fields
+`Manuscript/IntroTransitionsConclusion/<field>`. Three fields:
 
-- **Introduction** — 3 `manuscript-prose` questions (`opener`,
-  `scripture_reading`, `expectation`) → `manuscript.introduction`.
+- **Introduction** — 4 `manuscript-prose` questions (`opener`, `scripture_reading`,
+  `expectation`, `redemptive_note`) → `manuscript.introduction`. `redemptive_note`
+  is the transplanted Frame Q4 and the one N/A-able door question (sidecar flag
+  `redemptive_note_na`, strict "satisfied another way" semantic — see the writing
+  surface's N/A note above).
 - **Transitions** — one `manuscript-transitions` question: a bridge into each
   outline point plus the bridge into the conclusion → `manuscript.transitions`
-  keyed by point id. Shows a door to Outline when no points exist.
-- **Conclusion** — 1 `manuscript-prose` question (`response`) →
-  `manuscript.conclusion`.
+  keyed by point id. Shows a door to Outline when no points exist. Genuinely new
+  prose, not a transplant.
+- **Conclusion** — 2 `manuscript-prose` questions (`summation`, then `response`) →
+  `manuscript.conclusion`. The OEM two-prompt split of the old single response box
+  (Frame's `summate` → `summation`; `land_call` + `gospel_empower` → `response`).
 
 These write the native `manuscript` JSON column the Word export reads via
 `parseManuscript` (`{introduction, transitions, conclusion}`) — one source of
-truth, no envelope/flat-column desync. Named outcome: Manuscript.
+truth, no envelope/flat-column desync. Named outcome: the Manuscript itself (the
+terminal doors sub-phase produces no separate named outcome).
 
 - **Export to Word** — dispatches `sermon-export-manuscript` IPC. Main builds a
-  `.docx` to `Documents/SermonForge/exports/Manuscripts/` and opens it.
+  `.docx` to `Documents/SermonForge/exports/Manuscripts/` and opens it. The body's
+  four cells assemble under their points (Scripture italic-gray, then Explanation /
+  Application / Illustration as unlabeled prose — OEM ruling: the manuscript page
+  reads as prose, not a worksheet); the Conclusion prints `summation` then `response`.
   Manuscript is the terminal prep stage; no Delivery tab.
-- The Manuscript stage never had an advancement gate pre-F.
+- **No advancement gate** — the lenient Manuscript check (opener + response) lives in
+  `deriveSermonCompleteness`.
+
+### Legacy `sermon_frame` column
+
+The v18 `sermon_frame` column persists post-collapse: existing sermons' Intro/Conclusion
+answers stay on disk and remain in the search index (surfaced as "MANUSCRIPT · INTRO /
+CONCLUSION (LEGACY FRAME)"), but the walk no longer renders them — the door fields read
+the `manuscript` column only (pastor-ruled 2026-07-02: leave on disk, no one-time
+surfacing). The v33 migration rewrites in-flight `Assembly/Frame` positions to the doors.
 
 ---
 
@@ -634,12 +683,14 @@ with ESV text, section headings, and Previous/Next chapter navigation. There is 
 - **Adding columns to `sermons`** requires updating `SERMON_COLUMNS` in
   *both* [`electron/contracts.cjs`](../../electron/contracts.cjs) and
   [`src/core/contracts.ts`](../../src/core/contracts.ts) — the two allowlists
-  mirror each other (39 entries each as of v32; `delivery_notes` / `timing_notes`
+  mirror each other (and the third mirror, `tests/contracts/_helpers/test-spine.ts`,
+  is test-asserted in sync). `delivery_notes` / `timing_notes`
   were struck from the writable set in the v24 migration, and the writable set has
   since gained `big_idea`, `overview`, `study_guide_extras` (v27), `sort_order` (v30),
-  `book_id` (v31), and `tags` (v32)). `buildUpdate()` throws
-  in dev if you miss this, but only if you exercise the save path. The
-  `assertSchemaContract()` startup check validates the live DB against the
+  `book_id` (v31), `tags` (v32), and `last_manuscript_subphase` (v33 — Manuscript's
+  per-stage sub-phase memory, added when the OEM restructure gave the stage sub-phases).
+  `buildUpdate()` throws in dev if you miss this, but only if you exercise the save
+  path. The `assertSchemaContract()` startup check validates the live DB against the
   allowlist.
 - **Field-level editors** (`PassageCanvas`, `SynthesisTable`) mount
   inside the writing surface unchanged from pre-rebuild; the data shapes

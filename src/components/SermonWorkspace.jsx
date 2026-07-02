@@ -369,15 +369,15 @@ export default function SermonWorkspace({
     const parsed = parseStructuredField(sermon[col]);
     let next = setQuestionAnswer(parsed, fieldKey, questionKey, envelope?.value ?? "");
     // N/A allowlist (UX-overhaul Gate-0 ruling, 2026-06-10): only questions
-    // that declare naAllowed may carry na:true — exactly
-    // intro.redemptive_note and mps.gospel_check. The two-question scope
-    // matches SADI for the anchor fields; for Study it CONFLICTS with
-    // SFDI's broader N/A escape valve — that conflict is surfaced in the
-    // SFDI doc's pending-ruling banner (2026-06-10), not silently resolved
-    // here. The UI hides the toggle everywhere else; this write-path guard
-    // means no future caller can set a forbidden flag either (an N/A'd
-    // mpt/mps tighten would silently blank the flat columns the Word
-    // export reads). Clearing na is always allowed.
+    // that declare naAllowed may carry na:true. On the envelope columns that
+    // is exactly mps.gospel_check (the door redemptive_note moved to the
+    // native manuscript column in the Frame transplant, 2026-07-02 — its
+    // guard lives in handleManuscriptChange). The broader Study/per-cell
+    // grants were RULED 2026-06-14 (Re-Foundation exam 1) and await their
+    // scheduled code build. The UI hides the toggle everywhere else; this
+    // write-path guard means no future caller can set a forbidden flag
+    // either (an N/A'd mpt/mps tighten would silently blank the flat
+    // columns the Word export reads). Clearing na is always allowed.
     let na = envelope?.na === true;
     if (na) {
       const fieldDef = findField(pos.stage, pos.subPhase, fieldKey);
@@ -430,7 +430,7 @@ export default function SermonWorkspace({
     handleUpdate({ observations: JSON.stringify(next) });
   }, [sermon, handleUpdate]);
 
-  // ── Assembly/Outline, Assembly/Equip, Manuscript write paths ──────────
+  // ── Assembly/Outline, Manuscript/Body, Manuscript doors write paths ───
   // These three stages don't use the question-envelope shape. They write the
   // native `outline` / `functional_elements` / `manuscript` JSON columns the
   // Word export already reads — one source of truth, no MPT/MPS-style desync.
@@ -448,6 +448,14 @@ export default function SermonWorkspace({
 
   const handleManuscriptChange = useCallback((section, key, value) => {
     if (!sermon) return;
+    // Write-path N/A guard (T19 parity for the native manuscript column):
+    // "_na" sidecar keys are accepted only for the allowlisted door question
+    // — introduction.redemptive_note, whose strict SADI "satisfied another
+    // way" semantics moved here in the Frame transplant (2026-07-02). No
+    // future caller can set a forbidden flag through this path.
+    if (key.endsWith("_na") && !(section === "introduction" && key === "redemptive_note_na")) {
+      return;
+    }
     const ms = parseManuscript(sermon.manuscript);
     const next = { ...ms, [section]: { ...(ms[section] || {}), [key]: value } };
     handleUpdate({ manuscript: JSON.stringify(next) });
@@ -591,13 +599,20 @@ export default function SermonWorkspace({
 
   // Reference-pane substrate. MPT/MPS read from the v19 envelope's tighten
   // answers (the live write target), never the flat columns. Outcomes are
-  // the same derivation the handoff overlay renders.
+  // the same derivation the handoff overlay renders. Pastoral Context rides
+  // along for the Body + doors regions (OEM ruling, item 2: the prompts
+  // send the pastor to "the room you named," so the pane must show it —
+  // no coordinates the screen doesn't show).
   const mainPointPair = parseStructuredField(sermon.main_point_pair);
+  const implicationsData = parseStructuredField(sermon.implications);
+  const pcRoom = String(getQuestionAnswer(implicationsData, "pastoral_context", "room_specifics") ?? "").trim();
+  const pcCostGift = String(getQuestionAnswer(implicationsData, "pastoral_context", "cost_and_gift") ?? "").trim();
   const reference = {
     passage: sermon.passage || "",
     outcomes: studyOutcomes,
     mpt: String(getQuestionAnswer(mainPointPair, "mpt", "tighten") ?? "").trim(),
     mps: String(getQuestionAnswer(mainPointPair, "mps", "tighten") ?? "").trim(),
+    pastoralContext: [pcRoom, pcCostGift].filter(Boolean).join("\n\n"),
   };
 
   // Field-level answer access for the writing surface — extract
@@ -812,6 +827,13 @@ export default function SermonWorkspace({
       {finishOpen && (
         <SermonFinish
           completeness={completeness}
+          // The beholding moment (OEM item 1): the CCS statement + tightened
+          // MPS rendered back read-only. Reads the same substrate the pane
+          // carries — the outcome derivation and the v19 envelope.
+          beholding={{
+            ccs: String(studyOutcomes.find((o) => o.fieldKey === "christ_connection_statement")?.text ?? "").trim(),
+            mps: reference.mps,
+          }}
           status={sermon.stage}
           onJump={handleFinishJump}
           onExport={handleExport}

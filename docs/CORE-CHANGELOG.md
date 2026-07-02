@@ -50,6 +50,16 @@
   enumeration stays at "two other outbound calls," with the fonts episode noted
   parenthetically.
 
+## The Principle — scope note
+
+- **OEM walk, 2026-07-02:** "lives off the surface" refined. The sermon's telos
+  (adoration, beholding Christ) still belongs to the preacher and is never measured,
+  but the tool now deliberately turns the preacher toward it twice: the CCS forge's
+  affections questions (the pastor's own text — "a safe place for sinners and a
+  dangerous place for sin") and the Finish screen's beholding moment with the
+  "pray yourself hot" send-off at export. Turning-toward is not measuring; the
+  Principle's scope is unchanged.
+
 ## Canonical Vocabulary — Stage
 
 - **v24 migration session, 2026-06-10:** "Delivery" struck from the Stage vocabulary; its
@@ -67,6 +77,20 @@
   Outline / FunctionalElements) retired; Study became one stage with four sub-phases.
 - **Invisible-System trail deletion sweep, Phase B2:** the `current_step` column retired;
   field-level last-touched moved to `last_touched_position`.
+- **OEM walk, 2026-07-02:** the decide/write split became the stage boundary. Equip moved
+  from Assembly into Manuscript as the **Body** sub-phase, and the **Frame** sub-phase was
+  collapsed — its seven moves transplanted into the Manuscript door fields, each prompt
+  asking the decision and the preached words together at full SADI richness. Assembly =
+  Anchor, Outline (decide); Manuscript = Body, then Intro, Transitions, Conclusion (write).
+  Rulings of record: `oem-walk-rulings-2026-07-01.md` (agenda item 8 + the confirmed walk
+  shape).
+
+## Canonical Vocabulary — Named outcome
+
+- **OEM walk, 2026-07-02:** the Sermon Frame outcome retired with the Frame collapse;
+  Sermon Body now belongs to the Manuscript Body sub-phase. Eight named outcomes → seven.
+  The same walk ratified "Sermon Outline" and "Sermon Body" as names (agenda item 5) —
+  they had been provisional first-draft names from Workspace Restructure RW1.
 
 ## Canonical Vocabulary — Pastoral Context
 
@@ -88,6 +112,12 @@
   Point of the Sermon** — the sole expansion the code uses (`sadiAnchorFields.js`,
   `sermonState.js`, `ReferencePane.jsx`, `utils.js`) and the one the rest of CORE already
   used ("Main Point Pair (MPT + MPS)").
+
+## State #2 — Canonical position
+
+- **OEM walk, 2026-07-02:** the position model gained Manuscript sub-phases (Body →
+  Intro, Transitions, Conclusion) and lost Assembly's Equip and Frame — see Canonical
+  Vocabulary — Sub-phase above for the restructure record.
 
 ## Process #1 — Movement is monotonic in expectation
 
@@ -112,6 +142,12 @@
   deliberately kept became CORE-canonical.
 - **2026-06-10:** the workspace-wide "is the sermon done" answer was wired
   (`deriveSermonCompleteness` + the SermonFinish screen).
+- **OEM walk, 2026-07-02:** the Intro/Conclusion composites (`checkIntroComposite` /
+  `checkConclusionComposite`) retired with the Frame collapse — eight CORE-canonical
+  composites → six. The three lenient presence checks (Sermon Outline, Sermon Body,
+  Manuscript) were RATIFIED lenient (agenda item 7): the doors check = an opener answer +
+  the response; transitions deliberately never counted (the map still tracks them
+  honestly). Leniency is now the ruled bar, not a placeholder awaiting the walk.
 
 ## Process #3 — Movement visible at thresholds
 
@@ -159,6 +195,10 @@
   walk fed the pastor only his own summaries forward from the Study→Anchor seam onward,
   producing an "equation" feel at the load-bearing moments; the amendment restores the text
   to those moments. (The amendment's live commitments remain in the clause.)
+- **OEM walk, 2026-07-02:** the honesty parenthetical closed — Outline, Body, and the
+  Manuscript doors are preacher-walked and ratified, so the contract is testable in full
+  across the whole walk. The Frame moves live on inside the Manuscript door fields
+  (the transplant, agenda item 8); SADI remains the frozen record that produced them.
 
 ## Mutation #1 — User typing always wins
 

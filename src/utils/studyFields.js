@@ -314,6 +314,7 @@ export const REDEMPTIVE_FIELDS = [
         "One more move closes Redemptive Thread. Take what you've worked out and say it. For each thought unit — how does it point to Christ? Find its weight in him? Get its answer from him?",
         "Then, the whole passage. One paragraph. The Christ-Connection Statement. How does the whole passage point to Christ — and how is Christ the hero of it?",
         "Goldsworthy's evaluation question lives here: did this sermon testify to Christ? The Statement is what makes that answer yes. Implications opens against it. The Christological substance you articulate here gives Implications its weight.",
+        "A sermon can testify to Christ on paper; the aim is that Christ testifies to the people. How does Jesus, through this passage, become a safe place for sinners and a dangerous place for sin? How does this passage expose the paltry nature of sin in the light of the superiority of Christ? How does it lead us to obey Jesus not out of fleshly fear but simply because he is better?",
       ],
     },
     questions: [
@@ -338,7 +339,7 @@ export const REDEMPTIVE_FIELDS = [
       },
       {
         key: "statement",
-        prompt: "One paragraph. How does the whole passage point to Christ — and how is Christ the hero of it? This is the Christ-Connection Statement. Implications opens against it.",
+        prompt: "One paragraph. How does the whole passage point to Christ — and how is Christ the hero of it? What does it show him to be better than — more beautiful, more worthy? Write it so a listener could not only see Christ, but want him. This is the Christ-Connection Statement. Implications opens against it.",
       },
     ],
   },
@@ -423,7 +424,7 @@ export const IMPLICATIONS_FIELDS = [
       title: "Personal Implications — and how firmly the text holds them",
       paragraphs: [
         "The second of three voices: what the text ASKS of the hearer — to follow, forsake, receive, and settle into. Name these from the text, not from your own hobby-horses.",
-        "As you name each, weigh how firmly the text holds it. Merida (after Robinson) grades them: necessary — the text demands it, and you can preach it 'thus saith the Lord'; probable — strongly suggested; possible — defensible, but don't preach a possible as if it were a command. More heresy is preached in application than in exegesis; this gradient is the guard. (You'll grade your actual sermon applications fully in Equip later — here, just hold each implication against it.)",
+        "As you name each, weigh how firmly the text holds it. Merida (after Robinson) grades them: necessary — the text demands it, and you can preach it 'thus saith the Lord'; probable — strongly suggested; possible — defensible, but don't preach a possible as if it were a command. More heresy is preached in application than in exegesis; this gradient is the guard. (You'll grade your actual sermon applications fully in the Body stage later — here, just hold each implication against it.)",
       ],
     },
     questions: [

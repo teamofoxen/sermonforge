@@ -26,11 +26,13 @@
 // question as unanswered even after the preacher has filled every row.
 // Per-question-kind dispatch is load-bearing for correct map state.
 //
-// Field defs now exist for every stage: Study (4 sub-phases), Assembly Anchor
-// (MPT/MPS), Assembly Outline, Assembly Equip, Assembly Frame (Intro/Conclusion),
-// and the Manuscript stage. Outline/Equip/Manuscript carry DRAFT pedagogy
-// (2026-06-09) — authorable and Merida-grounded, but not yet preacher-walked
-// like SFDI (Study) / SADI (Anchor + Frame).
+// Field defs exist for every stage, all preacher-walked (OEM walk,
+// 2026-07-02): Study (4 sub-phases), Assembly Anchor (MPT/MPS) + Outline,
+// and the Manuscript stage's two sub-phases — Body (the equip field-def,
+// moved from Assembly: the cells ARE the manuscript body) and Intro,
+// Transitions, Conclusion (the doors, carrying the collapsed Frame's seven
+// moves). Assembly decides; Manuscript writes. Rulings of record:
+// oem-walk-rulings-2026-07-01.md.
 
 import { STAGE, SUB_PHASE } from "../core/contracts";
 import {
@@ -42,7 +44,6 @@ import {
 import { MAIN_POINT_PAIR_FIELDS } from "./sadiAnchorFields";
 import { SERMON_OUTLINE_FIELDS } from "./sermonOutlineFields";
 import { SERMON_EQUIP_FIELDS } from "./sermonEquipFields";
-import { SERMON_FRAME_FIELDS } from "./sermonFrameFields";
 import { SERMON_MANUSCRIPT_FIELDS } from "./sermonManuscriptFields";
 
 // TRACKED DEBT — legacy single-prompt field shape.
@@ -75,12 +76,9 @@ export const WALK_ORDER = Object.freeze([
   ...tag(STAGE.Study, SUB_PHASE.Implications, IMPLICATIONS_FIELDS),
   ...tag(STAGE.Assembly, SUB_PHASE.Anchor, MAIN_POINT_PAIR_FIELDS),
   ...tag(STAGE.Assembly, SUB_PHASE.Outline, SERMON_OUTLINE_FIELDS),
-  ...tag(STAGE.Assembly, SUB_PHASE.Equip, SERMON_EQUIP_FIELDS),
-  ...tag(STAGE.Assembly, SUB_PHASE.Frame, SERMON_FRAME_FIELDS),
-  // Manuscript stage has no sub-phase; tag with the stage name as the
-  // sub-phase slot so position serialization ("Manuscript/Manuscript/<field>")
-  // round-trips through the same three-part composite as every other field.
-  ...tag(STAGE.Manuscript, STAGE.Manuscript, SERMON_MANUSCRIPT_FIELDS),
+  // The Assembly → Manuscript stage boundary sits here: decide → write.
+  ...tag(STAGE.Manuscript, SUB_PHASE.Body, SERMON_EQUIP_FIELDS),
+  ...tag(STAGE.Manuscript, SUB_PHASE.IntroTransitionsConclusion, SERMON_MANUSCRIPT_FIELDS),
 ]);
 
 export const QUESTION_WALK_ORDER = Object.freeze(
@@ -119,8 +117,7 @@ export function findField(stage, subPhase, fieldKey) {
 // First field of a stage (or of a region when subPhase is given). Search
 // navigation lands here: a hint built from a matched search column names a
 // stage/region, not a field, and the walk's first field of that region is
-// the honest landing. Manuscript hints carry no subPhase and resolve to
-// the first Manuscript field (walkOrder tags it Manuscript/Manuscript).
+// the honest landing.
 export function firstFieldFor(stage, subPhase) {
   return (
     WALK_ORDER.find(
@@ -162,9 +159,10 @@ const REGION_NAMED_OUTCOME = {
   Implications: "Implications Synthesis",
   Anchor: "Main Point Pair",
   Outline: "Sermon Outline",
-  Equip: "Sermon Body",
-  Frame: "Sermon Frame",
-  Manuscript: "Manuscript",
+  Body: "Sermon Body",
+  // The doors' artifact is the Manuscript itself — the terminal sub-phase
+  // produces no separate named outcome (canon §1).
+  IntroTransitionsConclusion: "Manuscript",
 };
 
 // Exported: the writing surface's static place line ("Study · Interpret")
@@ -176,9 +174,8 @@ export const REGION_DISPLAY = {
   Implications: "Implications",
   Anchor: "Anchor",
   Outline: "Outline",
-  Equip: "Equip",
-  Frame: "Frame",
-  Manuscript: "Manuscript",
+  Body: "Body",
+  IntroTransitionsConclusion: "Intro, Transitions, Conclusion",
 };
 
 // Per-boundary frame overrides. Implications → Anchor is the biggest
@@ -189,8 +186,13 @@ export const REGION_DISPLAY = {
 // the handoff's own frame line permanently — one voice, two surfaces —
 // because Anchor opens against all four Study outcomes, not just the
 // Implications Synthesis the default template would name.
+// The doors override exists for grammar only: the region's display name is
+// a three-item list, so the default "X opens," template would read as a
+// number-agreement error.
 const FRAME_OVERRIDES = {
   "Implications:Anchor": "Anchor opens, against your Study work.",
+  "Body:IntroTransitionsConclusion":
+    "Intro, Transitions, Conclusion open, against the Sermon Body.",
 };
 
 // arcSummary — derived from WALK_ORDER. Each entry: one stage with its

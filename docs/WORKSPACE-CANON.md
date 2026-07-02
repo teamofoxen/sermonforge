@@ -11,11 +11,12 @@
 > **What "live" binds, and what it doesn't.** This canon binds the walk's *current shape* — the
 > stages, sub-phases, fields, named outcomes, and completeness policy. It was drafted from the
 > Phase-1 net-truth map + the code at HEAD and verified by a 15-agent ultracode pass (0 blockers)
-> before ratification. The Merida tags (`[M] / [+] / [◆] / [⚠] / [✂]`) and the §7 open-seams are
-> **Phase-2 input**: Phase 1 cut nothing, and the Phase-2 Merida question surgery will edit this
-> live doc (CORE Process #6 permits the pedagogical content — question number, wording, named-
-> outcome text — to evolve; the structural integrity does not). The DRAFT regions (Outline, Equip,
-> Manuscript) are authorable but not yet preacher-walked — see §1 "Maturity of each region."
+> before ratification. The Merida tags (`[M] / [+] / [◆] / [⚠] / [✂]`) and the §7 open-seams were
+> **Phase-2 input**; the Phase-2 surgery (2026-06-15/16) and the **OEM walk (2026-07-02,
+> rulings of record: `oem-walk-rulings-2026-07-01.md`) have now edited this live doc** — every
+> region is preacher-walked and ratified, and the same walk ruled the Frame → Manuscript
+> collapse (Assembly decides; Manuscript writes). The structural sweep that lands the collapse
+> in code rides the same commit series as this amendment — see §7.
 
 ---
 
@@ -61,12 +62,15 @@ are **Phase-2 input only; nothing is cut or reworded in Phase 1.**
 
 ### Maturity of each region
 
-- **SFDI-walked** (Study) / **SADI-walked** (Anchor, Frame) — content-design-walked with
-  the pastor; ratified.
-- **DRAFT** (Outline, Equip, Manuscript) — drafted 2026-06-09 from the Merida source,
-  *authorable and Merida-grounded but not yet preacher-walked.* Their pedagogy is a
-  strong first draft pending an OEM content walk; their completeness uses lenient checks
-  (below), not ratified composites.
+- **SFDI-walked** (Study) / **SADI-walked** (Anchor) — content-design-walked with the
+  pastor; ratified.
+- **OEM-walked** (Outline, Body, the Manuscript doors) — drafted 2026-06-09 from the
+  Merida source, then **preacher-walked and ratified in the OEM walk (2026-07-02)**.
+  The same walk collapsed the SADI-walked Frame sub-phase into the Manuscript door
+  fields (the transplant — each door prompt asks the decision and the preached words
+  together, at full SADI richness); SADI remains the frozen record of the transplanted
+  moves. Outline/Body/Manuscript completeness stays lenient **by ruling**, no longer
+  as a placeholder (§5).
 
 ---
 
@@ -90,11 +94,11 @@ the binding force lives in CORE.
 
 ## 1. The shape of the whole walk
 
-**Three stages · eight sub-phases · eight sub-phase named outcomes · 23 Study fields + 9
-Assembly/Manuscript fields (32 total).** The preacher sees the whole arc from first entry;
-forward is the natural direction, but every question is reachable from the map at any time.
-(The code's `REGION_NAMED_OUTCOME` also carries a ninth entry, "Manuscript," for the
-terminal stage; the eight *sub-phase* outcomes are the artifacts a throughline produces.)
+**Three stages · eight sub-phases · seven named outcomes · 23 Study fields + 7
+Assembly/Manuscript fields (30 total).** The stage boundary carries the walk's deepest
+distinction (OEM walk, 2026-07-02): **Study understands, Assembly decides, Manuscript
+writes.** The preacher sees the whole arc from first entry; forward is the natural
+direction, but every question is reachable from the map at any time.
 
 | Stage | Sub-phase | Named outcome | Maturity |
 |---|---|---|---|
@@ -103,15 +107,16 @@ terminal stage; the eight *sub-phase* outcomes are the artifacts a throughline p
 | | Redemptive Thread | Christ-Connection Statement | SFDI |
 | | Implications | Implications Synthesis | SFDI |
 | **Assembly** | Anchor | Main Point Pair (MPT + MPS) | SADI |
-| | Outline | Sermon Outline | DRAFT |
-| | Equip | Sermon Body | DRAFT |
-| | Frame | Sermon Frame (Intro + Conclusion) | SADI |
-| **Manuscript** | *(no sub-phase)* | Manuscript | DRAFT |
+| | Outline | Sermon Outline | OEM |
+| **Manuscript** | Body | Sermon Body | OEM |
+| | Intro, Transitions, Conclusion | *(the Manuscript itself — terminal)* | OEM + the Frame transplant |
 
-**One named outcome per sub-phase.** Each sub-phase runs a throughline through its fields
-and produces exactly one named artifact, which the next sub-phase opens against. Two of
-the eight names — **Sermon Outline** and **Sermon Body** — are first-draft (RW1, not
-SFDI/SADI-ratified); treat them as provisional until the OEM walk.
+**One named outcome per sub-phase** — except the terminal doors sub-phase, whose artifact
+is the Manuscript itself. Each sub-phase runs a throughline through its fields and produces
+its named artifact, which the next sub-phase opens against. **"Sermon Outline" and "Sermon
+Body" were ratified as names by the OEM walk** (they had been provisional RW1 first-drafts).
+The **Sermon Frame** outcome retired 2026-07-02: its seven moves live on inside the door
+fields (§4.2), each prompt asking the decision and the preached words together.
 
 ### How movement works
 
@@ -126,13 +131,19 @@ SFDI/SADI-ratified); treat them as provisional until the OEM walk.
   Within-stage movement is silent. A static **"Stage · Region"** place line and a map
   **"You are here"** state *where*, never *that movement happened*.
 - **The text stays present.** The reference pane defaults to the **passage** in every
-  region (Study and Assembly alike); it never flips away on its own. The preacher's own
+  region of every stage; it never flips away on its own. The preacher's own
   work is one tab-flip away on a "Your work" tab.
 - **Completeness informs, never blocks.** "Is the sermon done?" has an answer (§5), shown
   at the Finish screen and at lower weight on the map. It never gates movement. The map
   renders three per-question states — answered, **partial** (some rows/points/cells of a
-  multi-part question filled), unanswered — at low weight; the eight composites and three
+  multi-part question filled), unanswered — at low weight; the six composites and three
   lenient checks (§5) are the artifact-level roll-up of those signals.
+- **The room and the guard ride along.** In the stages where the sermon is aimed at
+  people — Body and the doors — the reference pane's "Your work" tab carries the
+  **Pastoral Context room** (the prompts send the preacher to "the room you named") and
+  the **Christ-Connection Statement** (the moralism guard the copy invokes), alongside
+  the Main Point Pair, the Sermon Outline, and the assembled body prose. Ruled at the
+  OEM walk (items 1–2): no prompt points at coordinates the screen doesn't show.
 
 ### How questions are shaped and stored
 
@@ -140,14 +151,16 @@ A field holds one or more **questions**, and a question has a **kind** that dete
 what it *is* to the preacher and how it is stored. Seven kinds, in two storage families:
 
 - **Question-envelope kinds** — stored as `{value, na}` envelopes inside the sub-phase's
-  JSON column (Study, Anchor, Frame): the default **text-prompt**; the **indented-canvas**
+  JSON column (Study, Anchor): the default **text-prompt**; the **indented-canvas**
   (Observe's Divisions); and the **cumulative-synthesis-table** (the three per-unit tables).
   The cumulative table is the one kind whose state derives from the shared thought-unit
   array (`observations.divisions.thought_units`), not from its own column.
 - **Native-column kinds** — written to the native JSON columns the Word export reads, *not*
   the envelope shape: **outline-builder** (Outline → `outline[]`), **functional-elements**
-  (Equip → `functional_elements{}`, four sub-elements per point), **manuscript-prose** and
-  **manuscript-transitions** (Manuscript → `manuscript{}`).
+  (Body → `functional_elements{}`, four sub-elements per point), **manuscript-prose** and
+  **manuscript-transitions** (the doors → `manuscript{}`). The door `redemptive_note`
+  carries N/A semantics on a native-column kind — its persistence mechanism is part of the
+  scheduled N/A build (§7).
 
 A field shown below with a single "Asks" cell carries one question keyed **`primary`** whose
 prompt is the field's hint (the legacy single-prompt shape, normalized at the walk-order
@@ -213,7 +226,18 @@ anti-allegory disciplines live here ("don't insert Christ where he isn't; the te
 | How the Passage Points to Christ (`passage_points_to_christ`) | The four mechanisms: biblical theme / promise / type / predictive | **[M, near-verbatim]** |
 | How the Gospel Makes This Possible (`gospel_makes_possible`) | What the text demands, and how the gospel makes *that* possible (the anti-moralism move) | **[M]** |
 | Our Need and God's Character (`need_and_character`) | Human need for Christ; the character of the God who provides | **[M]** |
-| Christ-Connection Statement (`christ_connection_statement`) | **`christ_per_unit`**: Christ-connection beside each thought unit. **`statement`**: how the whole passage points to Christ and how he is its hero — *the Statement.* | statement **[M / + named-outcome]**; christ_per_unit **[⚠ / ◆ — mandatory every-row gate is in tension with "some thought units carry no direct Christ-connection, and that's fine"]** |
+| Christ-Connection Statement (`christ_connection_statement`) | **`christ_per_unit`**: Christ-connection beside each thought unit. **`statement`**: how the whole passage points to Christ, how he is its hero, and **what it shows him to be better than — more beautiful, more worthy — written so a listener could not only see Christ but want him** — *the Statement.* | statement **[M / + named-outcome / + affections layer, OEM 2026-07-02]**; christ_per_unit **[⚠ / ◆ — resolved by the per-cell N/A ruling (§5); the tag stays until the code build ships]** |
+
+**The affections layer** *(OEM walk, 2026-07-02 — pastor-authored, the deepest ruling of the
+walk).* The CCS teaching closes with the pastor's own text, extending Goldsworthy's evaluation
+question past testimony-on-paper: *"A sermon can testify to Christ on paper; the aim is that
+Christ testifies to the people. How does Jesus, through this passage, become a safe place for
+sinners and a dangerous place for sin? How does this passage expose the paltry nature of sin in
+the light of the superiority of Christ? How does it lead us to obey Jesus not out of fleshly
+fear but simply because he is better?"* The layer rides in teaching and prompts only — posture
+and prompt, never a per-unit grade or a checkbox (the mechanization trap refused again). Its
+downstream echoes: the Body application prompt's expulsive idols clause (§4.1) and the Finish
+screen's beholding moment (§6).
 
 ### 2.4 Implications → **Implications Synthesis**
 
@@ -223,7 +247,7 @@ The three-voice conversation — what the text **teaches**, what it **asks**, th
 | Field (`key`) | Asks | Merida |
 |---|---|---|
 | Theological Significance (`theological_significance`) | 5 questions: about God / ourselves / Christ / timeless principles / particular doctrines | **[M, exact]** |
-| Personal Implications (`personal_implications`) | 4 verb-slots: Follow / Forsake / Receive / Settle | **[M (Study side) — the necessary / probable / possible authority gradient is now taught here as ambient framing (2026-06-15, Phase 2), no per-row quota; the FULL application gradient lands in Equip at the OEM walk (§3.3)]** |
+| Personal Implications (`personal_implications`) | 4 verb-slots: Follow / Forsake / Receive / Settle | **[M (Study side) — the necessary / probable / possible authority gradient is taught here as ambient framing (2026-06-15, Phase 2), no per-row quota; the FULL gradient LANDED in Body at the OEM walk (2026-07-02, §4.1): it now lives in the Application cell's prompt at the moment of writing]** |
 | Pastoral Context (`pastoral_context`) | **`room_specifics`**: who in the room the text speaks into — named as the prodigal AND the older brother, not a generic "everyone." **`cost_and_gift`**: for those people, the cost and the gift | **[+ — the third voice]**; **[M — two-brothers restored 2026-06-15 (Phase 2): `room_specifics` now names the prodigal AND the older brother; the prior prompt listed generic groups but lacked that axis]** |
 | Implications Synthesis (`implications_synthesis`) | **`implication_per_unit`**: integrated implication beside each thought unit. **`synthesis`**: the whole passage — teach + ask + land — in one voice. *The Implications Synthesis.* | synthesis **[+ / ◆ named outcome]**; implication_per_unit **[◆ — the least-Merida of the per-unit tables]** |
 
@@ -251,58 +275,63 @@ the reference pane (the marinate beat continues here).
 
 *Ruled 2026-06-15 (Phase 2):* the sermon **title** stays dropped — Merida makes it an optional third stage, and every sermon already carries a name (CORE State Contract clause 3); Chapell's **3 AM test** is restored as a crispness self-check folded into MPS `tighten` (not a new field). **[✂ title = ratified drop · 3 AM test = M, restored as a check]**
 
-### 3.2 Outline → **Sermon Outline** *(DRAFT)*
+### 3.2 Outline → **Sermon Outline** *(OEM-walked)*
 
 | Field (`key`) | Asks | Merida |
 |---|---|---|
-| Outline (`outline`) | **`points`** — lay out the body's movements, one per movement of the text; each a sentence your people would use, building to a climax, echoing the MPS | **[M, free list]** — carries Merida's three traps (clever/imposed/predictable outlines) in its teaching |
+| Outline (`outline`) | **`points`** — lay out the body's movements, one per movement of the text; each a sentence your people would use, building to a climax, echoing the MPS | **[M, free list]** — carries Merida's three traps (clever/imposed/predictable outlines) in its teaching. Ratified as-is, zero edits (OEM Stage 1). |
 
-### 3.3 Equip → **Sermon Body** *(DRAFT)*
-
-| Field (`key`) | Asks | Merida |
-|---|---|---|
-| Equip (`equip`) | **`elements`** — under each outline point, the four functional elements: **Scripture · Explanation · Application · Illustration** (every point needs explanation + application; Scripture grounds; illustration serves) | hierarchy **[M]**; application **[M / ⚠ — Merida's application battery is thinner here: missing the idols-of-the-heart probe, the two-brothers address, the necessary / probable / possible authority gradient (taught ambiently in Study §2.4; the full discipline belongs here), and explicit evangelistic address]** |
-
-### 3.4 Frame → **Sermon Frame** *(SADI-walked)*
-
-The entry and the exit, authored as decisions (the prose is written in Manuscript). Two
-fields. The redemptive note / gospel-empower carry the anti-moralism guard to the doors.
-
-| Field (`key`) | Questions | Merida |
-|---|---|---|
-| Intro (`intro`) | **`hook`** — grab attention from where the listener is; **`bridge_to_text`** — hook into the text + MPT/MPS; **`expectations`** — what the sermon will ask; **`redemptive_note`** — the gospel-shape that makes the call good news *(N/A-able — see §5)* | 4 moves **[M]** |
-| Conclusion (`conclusion`) | **`summate`** — gather the arc into one landing (not a recap); **`land_call`** — the call, from MPS, made concrete; **`gospel_empower`** — from the Christ-Connection Statement | 3 moves **[M]** |
+Assembly ends here — everything after the Sermon Outline is writing, and writing is
+Manuscript's job (the decide/write boundary, OEM item 8).
 
 ---
 
-## 4. Manuscript *(DRAFT)*
+## 4. Manuscript *(OEM-walked; carries the Frame transplant)*
 
-The writing stage: the built body (Outline + Equip) and the Frame's decisions become
-preaching prose. Intro and Conclusion are written near-last — they frame what already
-exists. No sub-phase. Three fields.
+The writing stage, in two sub-phases: **Body** (the sermon's substance, written under the
+outline points) and **Intro, Transitions, Conclusion** (the doors, written last against the
+finished body — "prepared near-last" preserved). The pastor's governing articulation
+(OEM Stage 3): *"MPS flows to main points flows to functional elements. If upstream is done
+well, there shouldn't be an issue"* — the body is written in the Body cells and nowhere
+else; cell clarity, not extra structure, is what makes the manuscript flow.
+
+### 4.1 Body → **Sermon Body** *(OEM-walked; formerly Assembly/Equip)*
+
+| Field (`key`) | Asks | Merida |
+|---|---|---|
+| Equip (`equip`) | **`elements`** — under each outline point, the four functional elements: **Scripture · Explanation · Application · Illustration**. Every point needs its Scripture, its explanation, and its application; illustration serves them, and only where it fits naturally. Each cell is written as the words the preacher will actually preach — the cells ARE the manuscript body. | hierarchy **[M]**; application **[M — the battery completed at the OEM walk (items 3–4): the necessary/probable/possible gradient now lives in the Application prompt at the moment of writing; the idols-of-the-heart probe takes the expulsive form ("name the idol this point confronts, and show Christ better"); the prompt sends the preacher to the Pastoral Context room (prodigal AND older brother); the word to the unconverted is taught as posture ("where the text gives it"), never a per-point quota]** |
+
+### 4.2 Intro, Transitions, Conclusion — the doors *(OEM-walked + the Frame transplant)*
+
+Three fields, written last. The Frame stage's seven moves live here (transplant, OEM item
+8): each door prompt asks the **decision and the preached words together**, at full SADI
+richness, and — because the body now exists — speaks about *your* points, not a body in
+the abstract. The redemptive note and gospel-empowerment carry the anti-moralism guard to
+the doors.
 
 | Field (`key`) | Questions | Merida |
 |---|---|---|
-| Introduction (`introduction`) | **`opener`** (the hook, written to preach — skippable for a part-two/dense text per Merida); **`scripture_reading`** (bridge into the text + MPT/MPS); **`expectation`** (what the sermon will ask) | **[M / + — re-asks the Frame Intro decisions as prose]** |
-| Transitions (`transitions`) | **`transitions`** — one bridge into each point and one into the conclusion; brief, inconspicuous, varied; reiterate the MPS lightly | **[M]** *(the board groups it under [M/+] with Intro/Conclusion; refined to [M] here — Transitions is genuinely new prose, not a Frame re-ask)* |
-| Conclusion (`conclusion`) | **`response`** — the summation (fresh words, not a recap) + the response (from MPS, gospel-empowered from the Christ-Connection Statement), carried to the chosen closing posture | **[M / + ]** |
+| Introduction (`introduction`) | **`opener`** — choose the hook and write it to preach (skippable for a part-two/dense text per Merida); **`scripture_reading`** — the bridge into the text, landing MPT/MPS; **`expectation`** — what the body will actually ask, named before it begins; **`redemptive_note`** — the gospel anchor at the front door *(N/A-able, strict "satisfied another way" — see §5)* | 4 moves **[M — the Frame Intro moves, transplanted]** |
+| Transitions (`transitions`) | **`transitions`** — one bridge into each point and one into the conclusion; brief, inconspicuous, varied; reiterate the MPS lightly | **[M]** — genuinely new prose, not a transplant |
+| Conclusion (`conclusion`) | **`summation`** — gather what the points have built into one landing, fresh words, not a recap; **`response`** — the call from the MPS made concrete for the named room, gospel-empowered from the Christ-Connection Statement | 3 moves in 2 prompts **[M — summate → summation; land_call + gospel_empower → response]** |
 
-*Phase-2 structural note:* the **Frame → Manuscript split doubles the count** — Frame
-decides Intro/Conclusion moves, Manuscript re-asks them as prose. Whether that's the right
-shape, or a doubling to consolidate, is a Phase-2 question **[⚠]**.
+*The doubling, resolved:* the old Frame → Manuscript split asked the Intro/Conclusion
+twice — decisions in Assembly/Frame, prose in Manuscript. The OEM walk ruled the collapse
+(item 8): one door surface, at the end, decision and words together. The **[⚠]** structural
+note this section used to carry is discharged.
 
 ---
 
 ## 5. The completeness policy
 
-"Is the sermon done?" is answered by **eleven load-bearing artifacts**: the four Study named
+"Is the sermon done?" is answered by **nine load-bearing artifacts**: the four Study named
 outcomes, the Main Point Pair as its two halves (MPT + MPS), the Sermon Outline, the Sermon
-Body, the Sermon Frame as its two halves (Introduction + Conclusion), and the Manuscript.
-(Two single named outcomes each split into two completeness artifacts; Outline and Body each
-count once.) The answer **informs, never blocks** (Process #1: no walls). It is shown at the
-Finish screen with per-artifact "go write it" jumps, and at lower weight on the map.
+Body, and the Manuscript. (The Sermon Frame's two completeness halves retired with the Frame
+collapse, 2026-07-02 — their substance is checked inside the Manuscript's doors check below.)
+The answer **informs, never blocks** (Process #1: no walls). It is shown at the Finish screen
+with per-artifact "go write it" jumps, and at lower weight on the map.
 
-### The eight composites *(ratified — SFDI / SADI)*
+### The six composites *(ratified — SFDI / SADI)*
 
 An artifact is complete when its composite returns no reason:
 
@@ -314,21 +343,27 @@ An artifact is complete when its composite returns no reason:
 | Implications Synthesis | **Every** thought unit has an Implication **and** the Synthesis paragraph is written. |
 | Main Point of the Text | `draft` and `tighten` both written. |
 | Main Point of the Sermon | `translate` and `tighten` written; `gospel_check` written **or** marked N/A. |
-| Sermon Frame — Introduction | `hook`, `bridge_to_text`, `expectations` written; `redemptive_note` written **or** marked N/A. |
-| Sermon Frame — Conclusion | All three written; no N/A path. |
+
+*(The Intro/Conclusion composites — `checkIntroComposite` / `checkConclusionComposite` —
+retired with the Frame collapse; the doors are covered by the ratified-lenient Manuscript
+check below.)*
 
 *One asymmetry to note:* the Observation Set is the only outcome whose **surfaced artifact**
 and **done-check** live in different fields — the Study → Anchor handoff renders the **Obvious
 Point** as the Observation Set, while its completeness gate checks the **Divisions canvas**.
 
-### The three lenient checks *(DRAFT — not ratified composites)*
+### The three lenient checks *(RATIFIED lenient — OEM walk, item 7)*
 
 Outline, Body, and Manuscript use deliberately lenient presence checks — "honest without
-nagging," tighten later if the OEM walk decides to:
+nagging." The OEM walk ruled this the right bar, not a placeholder:
 
 - **Sermon Outline** — ≥1 outline point with text.
-- **Sermon Body** — ≥1 functional element written under any point.
-- **Manuscript** — ≥1 Introduction answer **and** the Conclusion response.
+- **Sermon Body** — ≥1 functional element written under any point. (The *map's* per-question
+  honesty is separate and stricter, per the OEM Equip ruling: a point reads "answered" when
+  its Scripture + Explanation + Application are filled; Illustration never gates.)
+- **Manuscript** — an `opener` answer **and** the Conclusion `response`. **Transitions are
+  deliberately never counted** (explicit ruling: a sermon is preachable without written
+  bridges; the map still tracks them honestly).
 
 ### The N/A policy *(ruled 2026-06-14 — Re-Foundation Phase 1, examination 1)*
 
@@ -340,12 +375,15 @@ nagging," tighten later if the OEM walk decides to:
    1) that the completeness signal must never reward manufacturing a connection the text
    doesn't carry. So N/A means "the text genuinely doesn't carry this" or "satisfied another
    way" — an *active* gesture, never a silent skip — and it counts toward complete. It is
-   available on: (a) the two anchor questions `mps.gospel_check` and `intro.redemptive_note`;
-   (b) the **declared Study questions** SFDI grants it (Observe Where/When; Cross-
-   References/Commentary; Redemptive Thread's four-ways; Implications Fields 1–2); and (c)
-   **per thought-unit cell** on the three cumulative tables (Meaning / Christ-Connection /
-   Implication) — a unit marked "nothing here" satisfies its column. The named-outcome
-   paragraphs in rule 1 are excluded throughout.
+   available on: (a) the two granted non-Study questions — `mps.gospel_check`, and the
+   Manuscript door `introduction.redemptive_note` (the grant moved with the key in the
+   Frame transplant, 2026-07-02, keeping its strict "satisfied another way" semantic; note
+   it now lives on a native-column kind, so its persistence mechanism is part of the
+   scheduled build); (b) the **declared Study questions** SFDI grants it (Observe
+   Where/When; Cross-References/Commentary; Redemptive Thread's four-ways; Implications
+   Fields 1–2); and (c) **per thought-unit cell** on the three cumulative tables (Meaning /
+   Christ-Connection / Implication) — a unit marked "nothing here" satisfies its column.
+   The named-outcome paragraphs in rule 1 are excluded throughout.
 3. **Enforcement and timing.** N/A is enforced three-deep (field-def flag · UI toggle ·
    write-path guard). **At HEAD the shipped code still allows N/A on only the two anchor
    questions** — restoring the Study-question and per-cell gesture (the SFDI grants and a
@@ -381,34 +419,45 @@ Each sub-phase opens against the prior named outcome. The boundary frame is gene
 the walk order — **"X opens, against the Y"** — naming the substrate the new region builds
 on, with no claim that the prior region is *closed* (free navigation means it may not be).
 
-- **Within Study and within Assembly:** the first field of each new sub-phase carries the
-  one-line frame (e.g. *"Interpret opens, against the Observation Set."*).
+- **Within each stage:** the first field of each new sub-phase carries the one-line frame
+  (e.g. *"Interpret opens, against the Observation Set."*). Across the ruled shape:
+  Outline opens against the Main Point Pair; **Body opens against the Sermon Outline**
+  (this is now also the Assembly → Manuscript stage boundary — decide → write); the
+  **doors open against the Sermon Body**.
 - **Study → Anchor (the big seam):** a discrete handoff landing screen, re-readable, which
   **renders the passage** (the marinate return-to-text) and frames the forge as opening
   **against all four Study outcomes**, not only the Implications Synthesis:
   *"Anchor opens, against your Study work."*
-- **Sermon completion:** the Finish threshold — the artifact review (§5), Export to Word,
-  and Mark as preached. Summoned, never automatic; re-openable forever.
+- **Sermon completion:** the Finish threshold — opened by the **beholding moment** (OEM
+  item 1: the Christ-Connection Statement and MPS rendered back, read-only, under *"Did
+  this sermon testify to Christ — and does it show him to be better?"*), then the artifact
+  review (§5) with "go write it" jumps, Export to Word carrying the **"pray yourself hot"
+  send-off** at the manuscript-to-pulpit seam, and Mark as preached. Summoned, never
+  automatic; re-openable forever. Completion is the means of the screen, not its point.
 
 ---
 
-## 7. Open seams (what Phase 2 settles)
+## 7. Open seams (what remains after the OEM walk)
 
-Recorded so canon is honest about what is *not* yet frozen:
+Recorded so canon is honest about what is *not* yet frozen. The OEM walk (2026-07-02)
+closed the old seams 2–4: the DRAFT pedagogy is preacher-walked and ratified, the two
+provisional names are ratified, and the OEM-deferred Merida items (adoration telos,
+construction-stage congregation, the application battery) are all ruled — rulings of
+record in `oem-walk-rulings-2026-07-01.md`. What remains:
 
-1. **The N/A code build** — the N/A *policy* is ruled and lives in §5 (an honest "doesn't
-   apply" counts as done; the named-outcome paragraphs stay no-N/A). The shipped app still
-   enforces the two-question allowlist, so restoring the per-question / per-cell gesture is a
-   scheduled code change — not a Phase-2 Merida question.
-2. **DRAFT pedagogy** — Outline / Equip / Manuscript are not preacher-walked; their
-   prompts and lenient checks may tighten after the OEM content walk.
-3. **Two provisional named-outcome names** — "Sermon Outline" and "Sermon Body" (RW1) were
-   never SFDI/SADI-ratified.
-4. **The Merida flags** (remaining **[◆] / [⚠] / [✂]** above) — Phase-2 surgery input.
-   The rulable-now batch (items 1–5, including the headline MPS → fallen-condition-focus
-   drift) shipped 2026-06-15/16 (commits `ab5c87c`, `2029747`, `c07139e`) — those tags have
-   been updated to **[M]**/historicized in place above. What remains open is the OEM-deferred
-   / deep items (per the working board's Phase 2 section).
+1. **The structural sweep (in flight, same commit series as this amendment).** The walk's
+   ruled shape — the Frame collapse, Equip → Manuscript/Body, the pane passengers (PC +
+   CCS + assembled body), the Finish beholding moment + send-off, the map-math and
+   doors-check updates, the N/A allowlist key move — is authored in the field defs and in
+   this canon but not yet landed in the walk-order/derivation code. Until the sweep lands,
+   the running app still walks the old shape; canon and code reconcile at commit. The
+   sweep checklist lives in the rulings log.
+2. **The N/A code build** — the N/A *policy* is ruled (§5); the app still enforces the
+   two-question allowlist in the old keys. The build now also owes the door
+   `redemptive_note` a persistence mechanism (native-column kind — no `{value, na}`
+   envelope to carry the flag).
+3. **The remaining Merida flags** (**[◆]** on the per-unit tables) — policy-resolved by
+   the per-cell N/A ruling; the tags historicize when the build in seam 2 ships.
 
 ---
 
@@ -423,3 +472,9 @@ Recorded so canon is honest about what is *not* yet frozen:
 - Merida tags from the merida-intent audit (`project_merida_intent_audit`) + the working
   board's Merida provenance map.
 - **Verified by a 15-agent ultracode pass (0 blockers) and ratified 2026-06-15 (Re-Foundation Phase 1 step 5).**
+- **Amended 2026-07-02 (the OEM walk):** all regions preacher-walked; the Frame → Manuscript
+  collapse + the Body move (decide/write stage boundary); the affections layer (§2.3); the
+  completed application battery (§4.1); the door transplant (§4.2); completeness re-based to
+  six composites + three ratified-lenient checks (§5); the beholding moment + send-off (§6).
+  Rulings of record: `oem-walk-rulings-2026-07-01.md`. CORE amended the same day
+  (see `CORE-CHANGELOG.md`).

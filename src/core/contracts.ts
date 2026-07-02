@@ -43,10 +43,13 @@
 // from Phase 1 served no caller post-restructure.
 
 // ── State Contract #2 — Stage (within-process position) ──────────────────────
-// The sermon-prep arc is three stages: Study (deepen into the text),
-// Assembly (build the sermon), Manuscript (write it). Each stage carries
+// The sermon-prep arc is three stages: Study (understand the text),
+// Assembly (decide the sermon), Manuscript (write it). Each stage carries
 // its own sub-phase sequence (Study: 4 Exegesis sub-phases; Assembly:
-// Anchor / Outline / Equip / Frame; Manuscript: none).
+// Anchor / Outline; Manuscript: Body / IntroTransitionsConclusion).
+// The decide/write split IS the Assembly → Manuscript boundary (OEM walk,
+// 2026-07-02: Equip moved into Manuscript as Body; the Frame sub-phase
+// collapsed into the Manuscript door fields; v33 rewrites legacy positions).
 //
 // Legacy values: `Blueprint` and `Frame` (from a prior 4-stage shape) are
 // coerced to `Assembly` on read in the spine. `Delivery` was struck from
@@ -73,15 +76,17 @@ export const STAGE_LABELS: Readonly<Record<Stage, string>> = Object.freeze({
 });
 
 // ── Process Contract #4 — SubPhase (within-Stage progression) ────────────────
-// SubPhase spans two stages:
-//   Study sub-phases:    Observe → Interpret → RedemptiveThread → Implications
-//   Assembly sub-phases: Anchor → Outline → Equip → Frame
-// Each four-sub-phase shape mirrors the other; the trail renders both with
-// the same switchback geometry. The Stage value disambiguates which set
-// applies.
+// SubPhase spans all three stages:
+//   Study sub-phases:      Observe → Interpret → RedemptiveThread → Implications
+//   Assembly sub-phases:   Anchor → Outline
+//   Manuscript sub-phases: Body → IntroTransitionsConclusion
+// The Stage value disambiguates which set applies. The stored value
+// "IntroTransitionsConclusion" is identifier-shaped for position composites;
+// its display name is the pastor's literal "Intro, Transitions, Conclusion"
+// (SUB_PHASE_LABELS below).
 export type SubPhase =
   | "Observe" | "Interpret" | "RedemptiveThread" | "Implications"
-  | "Anchor" | "Outline" | "Equip" | "Frame";
+  | "Anchor" | "Outline" | "Body" | "IntroTransitionsConclusion";
 
 export const SUB_PHASE = {
   Observe: "Observe",
@@ -90,8 +95,8 @@ export const SUB_PHASE = {
   Implications: "Implications",
   Anchor: "Anchor",
   Outline: "Outline",
-  Equip: "Equip",
-  Frame: "Frame",
+  Body: "Body",
+  IntroTransitionsConclusion: "IntroTransitionsConclusion",
 } as const satisfies Record<SubPhase, SubPhase>;
 
 // Sub-phase sequence per stage. The spine uses these to map kind="sub_phase"
@@ -104,14 +109,19 @@ export const STUDY_SUB_PHASE_SEQUENCE: readonly SubPhase[] = Object.freeze([
 ]);
 
 export const ASSEMBLY_SUB_PHASE_SEQUENCE: readonly SubPhase[] = Object.freeze([
-  "Anchor", "Outline", "Equip", "Frame",
+  "Anchor", "Outline",
 ]);
 
-// Combined canonical sequence — Study sub-phases first, then Assembly. Used
+export const MANUSCRIPT_SUB_PHASE_SEQUENCE: readonly SubPhase[] = Object.freeze([
+  "Body", "IntroTransitionsConclusion",
+]);
+
+// Combined canonical sequence — Study, then Assembly, then Manuscript. Used
 // by validators that need a single ordered list across the whole spine.
 export const SUB_PHASE_CANONICAL_SEQUENCE: readonly SubPhase[] = Object.freeze([
   ...STUDY_SUB_PHASE_SEQUENCE,
   ...ASSEMBLY_SUB_PHASE_SEQUENCE,
+  ...MANUSCRIPT_SUB_PHASE_SEQUENCE,
 ]);
 
 export const SUB_PHASE_LABELS: Readonly<Record<SubPhase, string>> = Object.freeze({
@@ -121,8 +131,8 @@ export const SUB_PHASE_LABELS: Readonly<Record<SubPhase, string>> = Object.freez
   Implications: "Implications",
   Anchor: "Anchor",
   Outline: "Outline",
-  Equip: "Equip",
-  Frame: "Frame",
+  Body: "Body",
+  IntroTransitionsConclusion: "Intro, Transitions, Conclusion",
 });
 
 // Maps each SubPhase back to its parent Stage. The spine uses this to know
@@ -134,8 +144,8 @@ export const SUB_PHASE_STAGE: Readonly<Record<SubPhase, Stage>> = Object.freeze(
   Implications: "Study",
   Anchor: "Assembly",
   Outline: "Assembly",
-  Equip: "Assembly",
-  Frame: "Assembly",
+  Body: "Manuscript",
+  IntroTransitionsConclusion: "Manuscript",
 });
 
 // ── Lifecycle status — sermons + series ──────────────────────────────────────
@@ -339,7 +349,9 @@ export const SERMON_COLUMNS: ReadonlySet<string> = Object.freeze(new Set([
   "current_stage", "current_sub_phase",
   // v21 — per-stage sub-phase memory; renderer derives initial sub-phase
   // from these so tabbing across stages restores per-stage position.
-  "last_study_subphase", "last_assembly_subphase",
+  // v33 adds the Manuscript slot (the stage gained sub-phases in the OEM
+  // restructure).
+  "last_study_subphase", "last_assembly_subphase", "last_manuscript_subphase",
   // v18 — Sermon Frame JSON column (SPRD C3, 2026-05-04). Holds Intro +
   // Conclusion field-data per the SADI Step 5 ratification, in the same
   // envelope shape as the four Exegesis sub-phase columns.
@@ -414,7 +426,11 @@ export const SPINE_ONLY_COLUMNS: ReadonlySet<string> = Object.freeze(new Set([
   // current_step removed in the trail deletion sweep (Phase B2) — see
   // SERMON_COLUMNS comment above.
   "current_stage", "current_sub_phase",
-  "last_study_subphase", "last_assembly_subphase",
+  // All three per-stage memory columns are spine-written; keeping them out of
+  // the renderer's write set is what stops a stale in-memory copy from
+  // clobbering the spine's fresh position write. v33 added the Manuscript one
+  // alongside its Study/Assembly siblings (OEM restructure, 2026-07-02).
+  "last_study_subphase", "last_assembly_subphase", "last_manuscript_subphase",
 ])) as ReadonlySet<string>;
 
 export function pickSermonColumns(obj: Record<string, unknown> | null | undefined): Record<string, unknown> {

@@ -37,10 +37,8 @@ function completeSermon() {
       mpt: { draft: "d", tighten: "God shepherded David." },
       mps: { translate: "t", gospel_check: "checked", tighten: "God shepherds you." },
     }),
-    sermon_frame: env({
-      intro: { hook: "h", bridge_to_text: "b", expectations: "e", redemptive_note: "r" },
-      conclusion: { summate: "s", land_call: "l", gospel_empower: "g" },
-    }),
+    // sermon_frame retired from the walk (Frame collapse, 2026-07-02) — the
+    // door questions live in the manuscript column below.
     outline: JSON.stringify([{ id: "p1", text: "Point one" }]),
     functional_elements: JSON.stringify({ p1: { explanation: "because" } }),
     manuscript: JSON.stringify({
@@ -55,7 +53,10 @@ describe("deriveSermonCompleteness — the workspace-wide done answer (Process #
   it("an empty sermon is incomplete on every artifact, with a reason and a jump for each", () => {
     const { artifacts, allComplete } = deriveSermonCompleteness({});
     expect(allComplete).toBe(false);
-    expect(artifacts).toHaveLength(11);
+    // Nine artifacts since the Frame collapse (2026-07-02): four Study
+    // outcomes, MPT + MPS, Outline, Body, Manuscript. The Frame's two
+    // completeness halves retired; the doors ride the Manuscript check.
+    expect(artifacts).toHaveLength(9);
     for (const a of artifacts) {
       expect(a.complete).toBe(false);
       expect(typeof a.reason).toBe("string");
