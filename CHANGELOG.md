@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-07-02 — Workspace architecture audit + governance plan; Track A/Gate 1 drift & dead-code cleanup
+
+- Added the sermon-workspace architecture-fragility audit (7-lens, adversarially verified — mostly latent, 0 High) and a gated Track A–E remediation governance plan under `docs/AUDITS/`.
+- Track A cleanup: deleted zero-caller dead code — `checkField3Composite` + `canvasHasMainWithModifier` and the dead public `fieldQuestions` normalizer.
+- Replaced hard-coded search-hint stage/sub-phase literals with the canonical `STAGE`/`SUB_PHASE` enums; trimmed inert `current_stage`/`current_sub_phase` from the FTS result payload.
+- Corrected stale docs/comments: schema v32→v33 (+ `last_manuscript_subphase` row), Blueprint/Frame coercion comments, composite-count comments, "one field at a time".
+- No sermon-walk / completion-policy / navigation / persistence / shell / UX behavior change; lint 0, tests 297/297, spine-integrity OK, drift-check PASS.
+
+---
+
 ## 2026-07-02 — Workspace audit remediation closed: rulings shipped, W4 fixed, doc drift resolved
 
 - Content rulings shipped: field-level walk vocabulary, gospel-grounding split, scholar names removed from pastor-facing copy, and the terminal Sermon Title field (never persists empty).

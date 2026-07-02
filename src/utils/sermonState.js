@@ -18,10 +18,11 @@
 // wrapper. Only the surviving composites (`checkField8Composite`,
 // `checkPhase4Field4Composite`, `checkField5Composite`, `checkMPTComposite`,
 // `checkMPSComposite`) and `hasContent` from studyAdvancement.js are touched.
-// `checkField3Composite` is deliberately NOT used here — the Observation Set
-// artifact uses the lenient Obvious Point check instead (M2 ruling,
-// 2026-07-02: Finish must agree with the handoff/pane/map, which all treat
-// the Obvious Point text alone as sufficient).
+// The Observation Set artifact uses the lenient Obvious Point check (M2
+// ruling, 2026-07-02: Finish must agree with the handoff/pane/map, which all
+// treat the Obvious Point text alone as sufficient). The former Divisions
+// composite that once checked it was dropped from the roll-up then and
+// removed 2026-07-02 (Track A).
 
 import { STAGE } from "../core/contracts";
 import { QUESTION_WALK_ORDER, WALK_ORDER, questionId } from "./walkOrder";
@@ -330,8 +331,8 @@ export function deriveStudyUnfinishedFromSermon(sermon) {
 // Intro/Conclusion composites). As of the M2 audit ruling (2026-07-02) this
 // derivation consumes FIVE composites (`checkField8Composite`,
 // `checkPhase4Field4Composite`, `checkField5Composite`, `checkMPTComposite`,
-// `checkMPSComposite`) — `checkField3Composite` was dropped in favor of the
-// lenient Observation Set check below, so Finish agrees with the Study→
+// `checkMPSComposite`) — the former Divisions composite was dropped in favor
+// of the lenient Observation Set check below, so Finish agrees with the Study→
 // Anchor handoff, the reference pane, and the sermon map instead of
 // contradicting them. (CORE Process #2 was amended to the five-composite
 // wording on 2026-07-02 — the M2 ruling is now the law's own text.)
@@ -379,8 +380,8 @@ export function deriveSermonCompleteness(sermon) {
   // way everywhere else in the app — the Study→Anchor handoff, the reference
   // pane's "Your work" tab, and the sermon map's Divisions row all treat the
   // Obvious Point text as sufficient (see STUDY_NAMED_OUTCOMES above, which
-  // drives all three). Finish previously asked more via checkField3Composite
-  // (an indented canvas modifier), which produced a contradictory verdict at
+  // drives all three). Finish previously asked more via a stricter Divisions
+  // composite (an indented canvas modifier), which produced a contradictory verdict at
   // the walk's final review. Match the lenient check instead.
   const obviousPoint = getQuestionAnswer(obsData, "obvious_point", "primary");
   const observationSetReason = hasContent(obviousPoint)

@@ -104,8 +104,9 @@ describe("deriveSermonCompleteness — the workspace-wide done answer (Process #
   it("Observation Set is complete on the Obvious Point alone (M2 ruling, 2026-07-02) — no canvas modifier required", () => {
     const s = completeSermon();
     // Flush-left canvas: a main sentence with no indented modifier under it.
-    // This fails the old checkField3Composite (canvasHasMainWithModifier),
-    // but the Study→Anchor handoff, the reference pane, and the sermon map
+    // This would fail the old Divisions composite (a main sentence needing an
+    // indented modifier, removed 2026-07-02), but the Study→Anchor handoff,
+    // the reference pane, and the sermon map
     // all treat the Obvious Point text alone as sufficient — Finish must
     // agree with them now instead of contradicting them at the final review.
     s.observations = env({

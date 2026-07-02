@@ -21,23 +21,19 @@
 //   - `canonicalSubPhase` + `subPhaseToIndex` — sub-phase index lookups the
 //     deleted wall + the E-deleted tab files needed.
 //
-// What survives (and why): eight composite gates that ask "is this load-
+// What survives (and why): five composite gates that ask "is this load-
 // bearing field complete?" against the per-question-kind dispatch. Per the
 // invisible-system spec's "The contract that survives" + Phase F entry,
 // these gates are the surviving completeness contract — they stop blocking
 // movement and instead feed the workspace-wide "is the sermon done" answer.
 // Since 2026-06-10 that answer is wired: `deriveSermonCompleteness` in
-// sermonState.js consumes all eight and the SermonFinish screen renders the
+// sermonState.js consumes all five and the SermonFinish screen renders the
 // result. The reason strings below are pastor-facing copy on that screen —
 // keep them in plain vocabulary (no internal field numbers, no wall-era
 // "before advancing" phrasing).
 //
 // `hasContent` is exported because `sermonState.js` consumes it for map
 // state derivation (text-prompt per-question completeness check).
-// `checkField3Composite` is exported because it was meant as a public
-// completeness API for the Divisions field — the question "is Divisions
-// complete?" is one the map's state derivation and any future completeness
-// audit will legitimately ask.
 
 import {
   parseStructuredField,
@@ -76,46 +72,10 @@ function isQuestionAnswered(data, fieldKey, questionKey) {
   return hasContent(getQuestionAnswer(data, fieldKey, questionKey));
 }
 
-// True if the canvas value carries at least one main sentence (depth=0) that
-// has at least one indented modifier (depth>0) under it before the next
-// main sentence. Works against both the legacy canvas array and the unified-
-// canvas array — both carry `text` + `depth` at the row level.
-function canvasHasMainWithModifier(canvas) {
-  if (!Array.isArray(canvas) || canvas.length === 0) return false;
-  let inMain = false;
-  for (const row of canvas) {
-    if (!row || typeof row !== "object") continue;
-    const depth = Number.isInteger(row.depth) && row.depth >= 0 ? row.depth : 0;
-    const text = typeof row.text === "string" ? row.text.trim() : "";
-    if (!text) continue;
-    if (depth === 0) {
-      inMain = true;
-    } else if (inMain && depth > 0) {
-      return true;
-    }
-  }
-  return false;
-}
-
-// Field 3 (Divisions / Thought Units) composite. Returns null when complete
-// or a pastor-facing reason string when not. Per ruling 8 the single check
-// is canvas-has-main-with-modifier — paraphrase + thought-unit-end markers
-// are retired with the unified canvas, so the structural shape (at least
-// one indented modifier under at least one main sentence) is what carries
-// the completeness signal. The N/A short-circuit below honors LEGACY data
-// only: since the T19 N/A allowlist (2026-06-10) no UI or write path can
-// set na on the canvas question. Whether Study-side N/A returns is the
-// pending SFDI ruling (see the SFDI doc's 2026-06-10 banner); the
-// short-circuit stays so any stored flag remains honest either way.
-export function checkField3Composite(data) {
-  const fieldKey = "divisions";
-  if (isQuestionNA(data, fieldKey, "canvas")) return null;
-  const canvas = getQuestionAnswer(data, fieldKey, "canvas");
-  if (!canvasHasMainWithModifier(canvas)) {
-    return "Lay out the passage — at least one main sentence with an indented modifier under it.";
-  }
-  return null;
-}
+// (checkField3Composite + its private helper canvasHasMainWithModifier were
+// removed 2026-07-02, Track A: the Observation Set completeness bar became the
+// lenient Obvious Point check at the M2 audit ruling, after which this
+// Divisions composite had zero live callers. History: docs/CORE-CHANGELOG.md.)
 
 // Field 8 (Interpretation Synthesis) composite. Q1 satisfied when every
 // thought-unit row in `observations.divisions.thought_units` has a non-empty
@@ -202,7 +162,7 @@ export function checkField5Composite(sermon) {
 // (an opener answer + the Conclusion response — agenda item 7). The
 // redemptive_note's strict "satisfied another way" N/A semantic moved with
 // its key to the Manuscript doors (introduction.redemptive_note_na sidecar).
-// CORE Process #2 now names SIX composites; see docs/CORE-CHANGELOG.md.
+// CORE Process #2 now names FIVE composites; see docs/CORE-CHANGELOG.md.
 
 // MPT composite. Per SADI ratification: MPT Q1 (draft) and Q2 (tighten) both
 // non-empty, neither N/A-able.

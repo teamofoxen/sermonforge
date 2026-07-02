@@ -168,6 +168,12 @@
   Observation Set (`STUDY_NAMED_OUTCOMES`), and Finish contradicting all three at the
   walk's final review was the bug. The clause was amended to the five-composite wording
   on 2026-07-02 (post-audit remediation session).
+- **Architecture-audit Track A, 2026-07-02:** `checkField3Composite` (and its private
+  helper `canvasHasMainWithModifier`) was **deleted** from `src/utils/studyAdvancement.js`.
+  It had been left exported-but-unused by the M2 ruling above; the architecture-fragility
+  audit flagged the dead export + stale rationale comment as a reintroduction hazard
+  (re-wiring it would re-open the false-completion asymmetry M2 closed). Zero production
+  callers at deletion. No behaviour change — the five-composite roll-up is unaffected.
 
 ## Process #3 — Movement visible at thresholds
 

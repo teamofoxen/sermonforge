@@ -16,8 +16,9 @@
 // two sub-phases (Anchor / Outline); Manuscript carries two (Body /
 // IntroTransitionsConclusion) — the decide/write boundary (OEM walk,
 // 2026-07-02; v33 rewrites legacy Equip/Frame positions). Legacy
-// "Blueprint" / "Frame" current_stage values are coerced to "Assembly"
-// on read in the spine.
+// "Blueprint" / "Frame" current_stage values are no longer admitted or
+// coerced — read straight through since the coercion was removed in the
+// trail deletion sweep (Phase B3); no production data carries them.
 const STAGE = Object.freeze({
   Study: "Study",
   Assembly: "Assembly",

@@ -144,7 +144,7 @@ PC content lives entirely in `implications.pastoral_context`.
 
 Component: [`src/components/SermonWritingSurface.jsx`](../../src/components/SermonWritingSurface.jsx).
 
-The writing surface is the field-walking surface — one question at a time, with
+The writing surface is the field-walking surface — one field at a time, with
 the passage on one side and the pastor's writing on the other. The field
 sequence is the canonical `WALK_ORDER` exported from
 [`src/utils/walkOrder.js`](../../src/utils/walkOrder.js); the chevron-next
@@ -380,9 +380,9 @@ per load-bearing field:
 roll-up: the Study → Anchor handoff, the reference pane, and the sermon map
 already treated the Obvious Point text as the Observation Set, so Finish
 asking more via the old Divisions-canvas composite was an asymmetry, not a
-stricter standard. `checkField3Composite` still exists in
-`studyAdvancement.js` (still exported), but has zero live callers as of this
-change — a candidate for removal, not yet acted on. This is in addition to
+stricter standard. `checkField3Composite` (and its private helper
+`canvasHasMainWithModifier`) was **removed** 2026-07-02 (Track A) once it had
+zero live callers after the M2 ruling. This is in addition to
 the OEM walk (same day) retiring `checkIntroComposite` and
 `checkConclusionComposite` with the Frame stage — the transplanted door
 questions are now covered by the ratified-lenient Manuscript check below. If
@@ -473,10 +473,10 @@ Possible Implications removed 2026-06-15, Phase 2.)
   labels). Composition is 1:1 and order-preserving with the stored array —
   `handleUnitColumnChange` writes cumulative cells by index against the raw
   column, and the enrichment never reaches storage.
-- **Completeness foundation:** `checkField3Composite` still exists in
-  `studyAdvancement.js` but has zero live callers as of the M2 audit ruling
-  (2026-07-02) — Observation Set completeness now runs on the lenient Obvious
-  Point check (Field 7) instead, [documented above](#the-completeness-contract).
+- **Completeness foundation:** `checkField3Composite` was **removed** from
+  `studyAdvancement.js` (2026-07-02, Track A) after the M2 audit ruling left it
+  with zero live callers — Observation Set completeness now runs on the lenient
+  Obvious Point check (Field 7) instead, [documented above](#the-completeness-contract).
   The advancement-gate checks for Field 7 and the former Field 8 (Possible
   Implications, removed 2026-06-15) were inline in the deleted
   `checkObserveToInterpretThreshold` wrapper and were removed entirely in

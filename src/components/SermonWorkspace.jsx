@@ -715,9 +715,11 @@ export default function SermonWorkspace({
   const manuscript = parseManuscript(sermon.manuscript);
 
   // Threshold flags. Sermon-start fires when its id is NOT in
-  // thresholds_seen. Study→Anchor handoff fires when the preacher has
-  // landed on the first Anchor field, sermon-start has been seen, and
-  // the handoff itself has not been seen.
+  // thresholds_seen. Study→Anchor handoff fires on first (unacknowledged)
+  // entry into the Anchor region — the subPhase check matches either Anchor
+  // field (mpt or mps), which is intended: it orients any first arrival at
+  // Anchor. Guarded by sermon-start having been seen and the handoff itself
+  // not yet seen (hasSeenThreshold prevents any re-show).
   const showSermonStart = !hasSeenThreshold(sermon, THRESHOLD_ID.SermonStart);
   const showHandoff =
     !showSermonStart &&

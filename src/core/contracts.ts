@@ -51,8 +51,10 @@
 // 2026-07-02: Equip moved into Manuscript as Body; the Frame sub-phase
 // collapsed into the Manuscript door fields; v33 rewrites legacy positions).
 //
-// Legacy values: `Blueprint` and `Frame` (from a prior 4-stage shape) are
-// coerced to `Assembly` on read in the spine. `Delivery` was struck from
+// Legacy values: `Blueprint` and `Frame` (from a prior 4-stage shape) are no
+// longer admitted or coerced — `current_stage` is read straight through since
+// the coercion was removed in the trail deletion sweep (Phase B3); no
+// production data carries them. `Delivery` was struck from
 // the vocabulary entirely in the v24 migration session (2026-06-10) — its
 // ARI Phase 7 "stays admissible for legacy data" tolerance retired with no
 // production sermons in existence; Manuscript is the terminal stage, with

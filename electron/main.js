@@ -1964,7 +1964,6 @@ function searchSermonsFts(rawQuery, limit = 50) {
     const rows = queryAll(
       `SELECT
          s.id, s.title, s.passage, s.series_id, s.stage, s.date,
-         s.current_stage, s.current_sub_phase,
          sr.title AS series_title,
          ${colNames.map((c) => `ss.${c} AS ${c}`).join(", ")}
        FROM sermon_search ss
@@ -1988,8 +1987,6 @@ function searchSermonsFts(rawQuery, limit = 50) {
         series_title: r.series_title,
         stage: r.stage,
         date: r.date,
-        current_stage: r.current_stage,
-        current_sub_phase: r.current_sub_phase,
         matchedColumn: column,
         snippet,
       };
