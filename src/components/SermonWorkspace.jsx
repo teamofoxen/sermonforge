@@ -405,7 +405,13 @@ export default function SermonWorkspace({
     // Per-unit cumulative columns write into observations.divisions.
     // thought_units — the canonical cross-phase array. The writing
     // surface doesn't care which phase's column is being updated; the
-    // array IS the storage.
+    // array IS the storage. columnKey may be a value column (meaning /
+    // christ_connection / implication) or its per-cell N/A sidecar
+    // (`<column>_na`) — both write generically. INVARIANT: this path has no
+    // naAllowed guard because per-cell N/A is granted on EVERY cumulative-
+    // table cell unconditionally (canon §5 2c) — there is no forbidden target.
+    // If a non-N/A-able editable column is ever added to a cumulative table,
+    // add a guard here (as handleAnswerChange / handleManuscriptChange do).
     if (!sermon) return;
     const parsed = parseStructuredField(sermon.observations);
     const existing = parsed?.divisions?.thought_units?.value;

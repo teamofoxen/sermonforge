@@ -1,6 +1,6 @@
 # Workspace Re-Foundation Initiative — working board
 
-> **Status: PHASE 1 COMPLETE — steps 1–5 shipped (1–3 2026-06-14; 4–5 2026-06-15); the canon is LIVE. Phase 2 items 1–5 (the rulable-now Merida question surgery) SHIPPED 2026-06-15/16 (commits `ab5c87c`, `2029747`, `c07139e`) — Study is now 23 fields (7/7/5/4), CORE Process #4 amended. Remaining Phase 2 work: the OEM walk (deep items) + the scheduled per-cell N/A code build; independently, the infra-doc pass below.** Chartered
+> **Status: ESSENTIALLY COMPLETE — Phase 1 shipped (2026-06-14/15, canon LIVE); Phase 2 rulable items 1–5 shipped (2026-06-15/16); the OEM walk + Frame→Manuscript collapse shipped 2026-07-02 (`oem-walk-rulings-2026-07-01.md`); the ruled N/A code build (Study grants 2b + per-cell cumulative-table N/A 2c) shipped 2026-07-02. Remaining: only the independent infra-doc pass below (present-tense sql.js/saveDb cruft, schema-version drift) + trivial doc-cleanup (historicize the §2 [◆] tags in canon). No code or rulings outstanding.** Chartered
 > 2026-06-13 at the end of a long design conversation. This is the doc the work runs from.
 > It has two coupled jobs: (1) **consolidate the scattered document authority** into a
 > clean structure, and (2) **re-examine the contracts + the Study/Anchor question set
@@ -13,9 +13,9 @@
 > `docs/CORE-CHANGELOG.md`); step 4 thinned `sermon-workspace.md` to mechanics + cross-refs
 > (walk what/why → canon); step 5 historicized the nine old initiative docs, registered
 > WORKSPACE-CANON on ANCHORS, and **lifted its DRAFT banner — the canon is now LIVE**, with
-> CORE Process #6 re-pointed to it. **Phase 1 is complete; Phase 2's rulable-now items (1–5)
-> shipped 2026-06-15/16 — see the dated Phase-2 progress entries below. Remaining: the OEM
-> walk + the per-cell N/A build.**
+> CORE Process #6 re-pointed to it. **Phase 1 complete; Phase 2's rulable-now items (1–5)
+> shipped 2026-06-15/16; the OEM walk + the N/A code build both shipped 2026-07-02 — see the
+> dated progress entries below. Remaining: only the independent infra-doc pass.**
 > Rescoped from the former `merida-fidelity-initiative.md` (its
 > Merida findings are preserved below as the Phase-2 input).
 

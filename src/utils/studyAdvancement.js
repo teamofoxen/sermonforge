@@ -43,6 +43,7 @@ import {
   parseStructuredField,
   getQuestionAnswer,
   isQuestionNA,
+  cumulativeCellSatisfied,
 } from "./studyFields";
 
 // hasContent — true content-presence check. Recognizes the three answer
@@ -131,11 +132,9 @@ export function checkField8Composite(sermon) {
   if (!Array.isArray(thoughtUnits) || thoughtUnits.length === 0) {
     return "Name at least one thought unit on the Divisions canvas in Observe.";
   }
-  const allHaveMeaning = thoughtUnits.every(
-    (row) => row && typeof row.meaning === "string" && row.meaning.trim()
-  );
+  const allHaveMeaning = thoughtUnits.every((row) => cumulativeCellSatisfied(row, "meaning"));
   if (!allHaveMeaning) {
-    return "Write a Meaning entry beside every thought unit.";
+    return "Write a Meaning entry beside every thought unit (or mark it not applicable).";
   }
 
   if (!isQuestionAnswered(intData, "interpretation_synthesis", "meaning_whole")) {
@@ -158,11 +157,9 @@ export function checkPhase4Field4Composite(sermon) {
   if (!Array.isArray(thoughtUnits) || thoughtUnits.length === 0) {
     return "Name at least one thought unit on the Divisions canvas in Observe.";
   }
-  const allHaveImplication = thoughtUnits.every(
-    (row) => row && typeof row.implication === "string" && row.implication.trim()
-  );
+  const allHaveImplication = thoughtUnits.every((row) => cumulativeCellSatisfied(row, "implication"));
   if (!allHaveImplication) {
-    return "Write an Implication entry beside every thought unit.";
+    return "Write an Implication entry beside every thought unit (or mark it not applicable).";
   }
 
   if (!isQuestionAnswered(impData, "implications_synthesis", "synthesis")) {
@@ -186,12 +183,9 @@ export function checkField5Composite(sermon) {
   if (!Array.isArray(thoughtUnits) || thoughtUnits.length === 0) {
     return "Name at least one thought unit on the Divisions canvas in Observe.";
   }
-  const allHaveChristConnection = thoughtUnits.every(
-    (row) =>
-      row && typeof row.christ_connection === "string" && row.christ_connection.trim()
-  );
+  const allHaveChristConnection = thoughtUnits.every((row) => cumulativeCellSatisfied(row, "christ_connection"));
   if (!allHaveChristConnection) {
-    return "Write a Christ-Connection entry beside every thought unit.";
+    return "Write a Christ-Connection entry beside every thought unit (or mark it not applicable).";
   }
 
   if (!isQuestionAnswered(redData, "christ_connection_statement", "statement")) {

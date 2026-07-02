@@ -88,9 +88,11 @@ export const OBSERVE_FIELDS = [
     key: "surface_questions",
     label: "Surface Questions",
     hint: "Stand on the surface and report basic situational facts.",
+    // N/A grants (canon §5, SFDI): Where + When may be N/A on passages that
+    // genuinely carry neither (epistles); How is not N/A-able.
     questions: [
-      { key: "where", prompt: "Where does this take place?" },
-      { key: "when",  prompt: "When does this take place?" },
+      { key: "where", prompt: "Where does this take place?", naAllowed: true },
+      { key: "when",  prompt: "When does this take place?", naAllowed: true },
       { key: "how",   prompt: "What's happening, in order? Walk the events or movement of the passage step by step." },
     ],
   },
@@ -170,8 +172,11 @@ export const INTERPRET_FIELDS = [
   { key: "recurring_ideas",         label: "Recurring Ideas",         hint: "What ideas, words, or themes recur within this passage? For each, name what the recurrence is signaling about what the author is hammering home." },
   { key: "character_purpose",       label: "Character Purpose",       hint: "For each character you named in Observe, what are they saying, doing, or thinking — and why? What is the author signaling through their action?" },
   { key: "contrasts",               label: "Contrasts",               hint: "What contrasts has the author built into the passage? Name each — what's set against what — and say in your own words what each contrast is doing." },
-  { key: "cross_refs",              label: "Cross-References",        hint: "For the key ideas, themes, and moves you've already named in this passage, where else does Scripture speak to them? Move outward in concentric circles — same book, same author, same testament, wider canon. For each, name what it adds." },
-  { key: "commentary",              label: "Commentary Notes",        hint: "Now — last, to check, not to start — what do the commentaries say? Note insights that sharpen, confirm, or correct what you've worked out. Note where you disagree, and why." },
+  // N/A grants (canon §5, SFDI): Cross-References + Commentary Notes may be
+  // field-level N/A when the pastor genuinely has no access (rare). Field-level
+  // naAllowed rides onto the synthesized primary question via normalizeField.
+  { key: "cross_refs",              label: "Cross-References", naAllowed: true, hint: "For the key ideas, themes, and moves you've already named in this passage, where else does Scripture speak to them? Move outward in concentric circles — same book, same author, same testament, wider canon. For each, name what it adds." },
+  { key: "commentary",              label: "Commentary Notes", naAllowed: true, hint: "Now — last, to check, not to start — what do the commentaries say? Note insights that sharpen, confirm, or correct what you've worked out. Note where you disagree, and why." },
   {
     key: "interpretation_synthesis",
     label: "Interpretation Synthesis",
@@ -282,11 +287,14 @@ export const REDEMPTIVE_FIELDS = [
         "Some passages carry all four. Some carry one. Some carry none of these directly — and that's fine. Where the text genuinely doesn't carry that kind of pointing, say so in the answer and move on. Don't insert Christ where he isn't. The text leads.",
       ],
     },
+    // N/A grants (canon §5, SFDI): the four pointing-mechanisms are genre-
+    // uneven — some passages carry all four, some none. Each may be N/A where
+    // the text genuinely doesn't carry that kind of pointing ("don't force").
     questions: [
-      { key: "biblical_theme", prompt: "Does the passage carry a biblical theme that points to Christ? (Kingdom, presence of God, sacrificial system, covenants, Word of God, etc.)" },
-      { key: "promise",        prompt: "Does the passage hold or echo a promise of God that points to Christ?" },
-      { key: "type",           prompt: "Is there a type of Christ here? A pattern, linguistic correspondence, or interbiblical theme that finds escalation in Christ? (Adam, Melchizedek, Moses, David, etc.)" },
-      { key: "predictive",     prompt: "Is the passage predictive of Christ — coming, death, return?" },
+      { key: "biblical_theme", prompt: "Does the passage carry a biblical theme that points to Christ? (Kingdom, presence of God, sacrificial system, covenants, Word of God, etc.)", naAllowed: true },
+      { key: "promise",        prompt: "Does the passage hold or echo a promise of God that points to Christ?", naAllowed: true },
+      { key: "type",           prompt: "Is there a type of Christ here? A pattern, linguistic correspondence, or interbiblical theme that finds escalation in Christ? (Adam, Melchizedek, Moses, David, etc.)", naAllowed: true },
+      { key: "predictive",     prompt: "Is the passage predictive of Christ — coming, death, return?", naAllowed: true },
     ],
   },
   {
@@ -408,12 +416,15 @@ export const IMPLICATIONS_FIELDS = [
         "Personal Implications follows. Then Pastoral Context. Then Synthesis. The order matters: doctrine grounds the personal call, and the personal call grounds the room-specific landing.",
       ],
     },
+    // N/A grants (canon §5, SFDI Implications Field 1): each doctrinal question
+    // may be N/A where the text genuinely doesn't carry that teaching (e.g. a
+    // passage that doesn't address Christ's person directly).
     questions: [
-      { key: "about_god",       prompt: "What does this text teach about God?" },
-      { key: "about_ourselves", prompt: "What does it teach about ourselves?" },
-      { key: "about_christ",    prompt: "What does it teach about Christ — his person, his work, his nature?" },
-      { key: "timeless",        prompt: "What principles in this text are timeless for us?" },
-      { key: "doctrines",       prompt: "What does the passage teach about particular doctrines?" },
+      { key: "about_god",       prompt: "What does this text teach about God?", naAllowed: true },
+      { key: "about_ourselves", prompt: "What does it teach about ourselves?", naAllowed: true },
+      { key: "about_christ",    prompt: "What does it teach about Christ — his person, his work, his nature?", naAllowed: true },
+      { key: "timeless",        prompt: "What principles in this text are timeless for us?", naAllowed: true },
+      { key: "doctrines",       prompt: "What does the passage teach about particular doctrines?", naAllowed: true },
     ],
   },
   {
@@ -427,11 +438,14 @@ export const IMPLICATIONS_FIELDS = [
         "As you name each, weigh how firmly the text holds it. Merida (after Robinson) grades them: necessary — the text demands it, and you can preach it 'thus saith the Lord'; probable — strongly suggested; possible — defensible, but don't preach a possible as if it were a command. More heresy is preached in application than in exegesis; this gradient is the guard. (You'll grade your actual sermon applications fully in the Body stage later — here, just hold each implication against it.)",
       ],
     },
+    // N/A grants (canon §5, SFDI Implications Field 2): each verb-slot may be
+    // N/A where the text genuinely makes no such call (not every passage calls
+    // the hearer to follow AND forsake AND receive AND settle).
     questions: [
-      { key: "follow",  prompt: "What does the text call the hearer to do or follow? (Examples to imitate, commands to keep.)" },
-      { key: "forsake", prompt: "What does the text warn against? (Errors to avoid, sins to forsake.)" },
-      { key: "receive", prompt: "What does the text invite the hearer to receive? (Gospel promises to claim, fresh thoughts about God to gain.)" },
-      { key: "settle",  prompt: "What does the text ask the hearer to settle into? (Truths or doctrines to explore, convictions to live by.)" },
+      { key: "follow",  prompt: "What does the text call the hearer to do or follow? (Examples to imitate, commands to keep.)", naAllowed: true },
+      { key: "forsake", prompt: "What does the text warn against? (Errors to avoid, sins to forsake.)", naAllowed: true },
+      { key: "receive", prompt: "What does the text invite the hearer to receive? (Gospel promises to claim, fresh thoughts about God to gain.)", naAllowed: true },
+      { key: "settle",  prompt: "What does the text ask the hearer to settle into? (Truths or doctrines to explore, convictions to live by.)", naAllowed: true },
     ],
   },
   {
@@ -497,6 +511,20 @@ export const IMPLICATIONS_FIELDS = [
 // evidence text; `SynthesisTable` reads them to detect rows that carry
 // cross-phase work before allowing a destructive delete.
 export const CUMULATIVE_COLUMN_KEYS = Object.freeze(["meaning", "christ_connection", "implication"]);
+
+// A per-thought-unit cumulative cell (Meaning / Christ-Connection / Implication)
+// is SATISFIED when it has text OR the pastor marked it N/A per-cell — the
+// honest "nothing here" gesture (ruled 2026-06-14, canon §5 rule 2c). The flag
+// is a `<column>_na: true` sidecar on the thought-unit row (the same shape the
+// manuscript redemptive_note uses; the rows are plain objects, not {value,na}
+// envelopes). The whole-passage synthesis paragraphs stay no-N/A (rule 1) —
+// they're separate text-prompt questions, not table cells.
+export function cumulativeCellSatisfied(row, columnKey) {
+  if (!row || typeof row !== "object") return false;
+  const v = row[columnKey];
+  if (typeof v === "string" && v.trim()) return true;
+  return row[`${columnKey}_na`] === true;
+}
 
 // Default question key used until a field's SFDI question sequence lands.
 export const DEFAULT_QUESTION_KEY = "primary";
@@ -624,6 +652,12 @@ export function deriveThoughtUnitsFromCanvas(canvas, existingThoughtUnits = []) 
     for (const key of CUMULATIVE_COLUMN_KEYS) {
       if (prior && typeof prior[key] === "string" && prior[key].trim()) {
         derived[key] = prior[key];
+      }
+      // Preserve the per-cell N/A flag across canvas re-derivation — the honest
+      // "nothing here" gesture must survive a canvas edit, exactly as the cell's
+      // text does (merged by _canvas_row_id).
+      if (prior && prior[`${key}_na`] === true) {
+        derived[`${key}_na`] = true;
       }
     }
     out.push(derived);

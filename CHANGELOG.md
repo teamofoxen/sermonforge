@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-07-02 — N/A code build: Study-question grants + per-cell cumulative-table N/A
+
+- Built the ruled-but-unbuilt N/A policy (canon §5, ruled 2026-06-14): declared Study questions may now be marked "nothing here / doesn't apply" and count as done — Observe Where/When, Cross-References/Commentary (field-level), Redemptive Thread's four ways, and Implications Fields 1–2.
+- Per thought-unit *cell* on the three cumulative tables (Meaning / Christ-Connection / Implication) may be marked N/A via a `<column>_na` sidecar on the row; the three composites, the map, and the handoff's unfinished list all honor it, and it is preserved across canvas re-derivation.
+- The grant list is bound to the canon's (narrower-than-SFDI) named set to avoid weakening the completeness signal; widening to the fuller SFDI set is a future pastor decision, not drift.
+- `normalizeField` now propagates a field-level `naAllowed` onto a single-question field's synthesized question; the named-outcome paragraphs stay no-N/A.
+- Focused adversarial review returned SOUND (no bugs); added `sermonNaPolicy.test.js` (8 tests) covering the grant list, per-cell honoring, and canvas preservation; lint clean, 276 tests green.
+
 ## 2026-07-02 — OEM-walk quality cleanup (reuse + altitude, no behavior change)
 
 - The manuscript-prose N/A block now reuses the existing `PromptBlock` component instead of re-implementing it, and the three reference-pane items (RefItem / OutlineRefItem / BodyRefItem) share a single extracted `RefSection` collapsible shell.

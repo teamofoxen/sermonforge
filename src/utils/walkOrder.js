@@ -61,7 +61,11 @@ function normalizeField(field) {
   return {
     ...field,
     hint: undefined,
-    questions: [{ key: "primary", prompt: field.hint || field.label }],
+    // A single-question ("primary") field may declare N/A at the FIELD level
+    // (SFDI's field-level N/A escape valve, 2026-05-03); propagate it onto the
+    // synthesized question so the toggle + write guard see it just like the
+    // per-question naAllowed on multi-question fields.
+    questions: [{ key: "primary", prompt: field.hint || field.label, naAllowed: field.naAllowed === true }],
   };
 }
 

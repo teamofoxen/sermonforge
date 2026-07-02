@@ -31,6 +31,7 @@ import {
   checkMPSComposite,
 } from "./studyAdvancement";
 import { getOutline, getFunctionalElements, parseManuscript, bodyHasSubstance } from "../utils";
+import { cumulativeCellSatisfied } from "./studyFields";
 
 // Stage + sub-phase → the sermon-record JSON column that holds that
 // region's field data. The single source of stage→column mapping for the
@@ -98,24 +99,25 @@ export function deriveQuestionStatesFromSermon(sermon) {
         out[id] = { state: "unanswered" };
         continue;
       }
-      const filled = thoughtUnits.filter((u) => {
-        const v = u?.[editableKey];
-        return v != null && String(v).trim() !== "";
-      });
+      // A cell counts as filled when it has text OR is marked N/A per-cell
+      // (canon §5 rule 2c). The preview + full text prefer real text and show
+      // "(not applicable)" for N/A'd cells.
+      const filled = thoughtUnits.filter((u) => cumulativeCellSatisfied(u, editableKey));
+      const cellDisplay = (u) =>
+        u?.[`${editableKey}_na`] === true ? "(not applicable)" : String(u?.[editableKey] ?? "");
+      const firstText =
+        thoughtUnits.map((u) => String(u?.[editableKey] ?? "").trim()).find(Boolean)
+        || "(not applicable)";
       if (filled.length === 0) {
         out[id] = { state: "unanswered" };
       } else if (filled.length === thoughtUnits.length) {
-        const sample = String(filled[0][editableKey]);
-        const full = thoughtUnits
-          .map((u) => String(u[editableKey] ?? ""))
-          .join("\n\n");
-        out[id] = { state: "answered", preview: sample, fullValue: full };
+        const full = thoughtUnits.map(cellDisplay).join("\n\n");
+        out[id] = { state: "answered", preview: firstText, fullValue: full };
       } else {
-        const sample = String(filled[0][editableKey]);
         const full = thoughtUnits
-          .map((u, i) => `Unit ${i + 1}: ${u[editableKey] ?? "—"}`)
+          .map((u, i) => `Unit ${i + 1}: ${cellDisplay(u) || "—"}`)
           .join("\n\n");
-        out[id] = { state: "partial", preview: sample, fullValue: full };
+        out[id] = { state: "partial", preview: firstText, fullValue: full };
       }
       continue;
     }
@@ -280,9 +282,8 @@ export function deriveStudyUnfinishedFromSermon(sermon) {
         const editable = q.columns?.find((c) => !c.readOnly)?.key;
         if (!editable) return false;
         if (thoughtUnits.length === 0) return true;
-        return thoughtUnits.some(
-          (u) => !String(u?.[editable] ?? "").trim()
-        );
+        // Unfinished only if a cell is neither written nor N/A'd (canon §5 2c).
+        return thoughtUnits.some((u) => !cumulativeCellSatisfied(u, editable));
       }
       if (q.kind === "indented-canvas") {
         const canvas = q.fieldKey === "divisions" ? readDivisionsCanvas(sermon) : null;

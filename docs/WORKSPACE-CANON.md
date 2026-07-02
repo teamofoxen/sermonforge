@@ -385,10 +385,15 @@ nagging." The OEM walk ruled this the right bar, not a placeholder:
    Christ-Connection / Implication) — a unit marked "nothing here" satisfies its column.
    The named-outcome paragraphs in rule 1 are excluded throughout.
 3. **Enforcement and timing.** N/A is enforced three-deep (field-def flag · UI toggle ·
-   write-path guard). **At HEAD the shipped code still allows N/A on only the two anchor
-   questions** — restoring the Study-question and per-cell gesture (the SFDI grants and a
-   per-cell table toggle) is a scoped code change tracked separately, not yet built. This
-   section states the *ruled target*; the code follows behind it.
+   write-path guard). **BUILT 2026-07-02.** The Study-question grants (2b) carry `naAllowed`
+   on the field defs (field-level for the two single-question fields, propagated by
+   `walkOrder.normalizeField`); the per-cell gesture (2c) rides a `<column>_na` sidecar on
+   each thought-unit row, honored by the three composites (`cumulativeCellSatisfied`), the
+   map, and the handoff's unfinished list, and preserved across canvas re-derivation.
+   *(Scope note: the grant list above is implemented exactly as this canon names it; the
+   frozen SFDI doc granted N/A on a broader set of Observe/Interpret fields — this canon,
+   as the live authority, is the narrower binding list. Widening to the full SFDI set is a
+   future pastor ruling, not drift.)*
 
 > **✅ RULED 2026-06-14.** The pastor settled this (examination 1): *extend* the honest-absence
 > gesture to Study (above), not amend SFDI down to two questions. The SFDI "PENDING PASTOR
@@ -403,13 +408,12 @@ The Interpretation / Christ-Connection / Implications composites require an entr
 thought unit — a per-row exhaustiveness the cumulative table makes structural. This was the
 clause most in tension with Merida (whose method allows that some thought units legitimately
 carry no direct Christ-connection — the app's own Redemptive Thread teaching says so).
-**Resolved by the examination-1 ruling:** a unit may be marked "nothing here" per cell and
-still count complete (N/A policy rule 2c above), so the gate no longer forces a manufactured
-entry on a unit the text leaves bare. The whole-passage synthesis paragraph still must be
-written (rule 1). The per-cell toggle's build is scheduled; until it ships the code still
-requires a filled cell, so this records the ruled target. The **[◆]** tags in §2 remain as
-Phase-2 *Merida-fidelity* annotations on the questions themselves — a separate matter from
-this completeness ruling.
+**Resolved by the examination-1 ruling, BUILT 2026-07-02:** a unit may be marked "nothing
+here" per cell (the `<column>_na` sidecar) and still count complete (N/A policy rule 2c
+above), so the gate no longer forces a manufactured entry on a unit the text leaves bare.
+The whole-passage synthesis paragraph still must be written (rule 1 — the composites keep
+checking it, no N/A). The **[◆]** tags in §2 remain as Phase-2 *Merida-fidelity* annotations
+on the questions themselves — a separate matter from this completeness ruling.
 
 ---
 
@@ -443,21 +447,21 @@ Recorded so canon is honest about what is *not* yet frozen. The OEM walk (2026-0
 closed the old seams 2–4: the DRAFT pedagogy is preacher-walked and ratified, the two
 provisional names are ratified, and the OEM-deferred Merida items (adoration telos,
 construction-stage congregation, the application battery) are all ruled — rulings of
-record in `oem-walk-rulings-2026-07-01.md`. What remains:
+record in `oem-walk-rulings-2026-07-01.md`. The two remaining code seams then **shipped**:
 
-1. **The structural sweep (in flight, same commit series as this amendment).** The walk's
-   ruled shape — the Frame collapse, Equip → Manuscript/Body, the pane passengers (PC +
-   CCS + assembled body), the Finish beholding moment + send-off, the map-math and
-   doors-check updates, the N/A allowlist key move — is authored in the field defs and in
-   this canon but not yet landed in the walk-order/derivation code. Until the sweep lands,
-   the running app still walks the old shape; canon and code reconcile at commit. The
-   sweep checklist lives in the rulings log.
-2. **The N/A code build** — the N/A *policy* is ruled (§5); the app still enforces the
-   two-question allowlist in the old keys. The build now also owes the door
-   `redemptive_note` a persistence mechanism (native-column kind — no `{value, na}`
-   envelope to carry the flag).
-3. **The remaining Merida flags** (**[◆]** on the per-unit tables) — policy-resolved by
-   the per-cell N/A ruling; the tags historicize when the build in seam 2 ships.
+1. ✅ **The structural sweep — SHIPPED 2026-07-02** (the Frame collapse, Equip →
+   Manuscript/Body, the pane passengers, the Finish beholding moment + send-off, the
+   map-math + doors-check updates, the redemptive_note `_na` sidecar). Canon and code
+   are reconciled; the running app walks the ruled shape.
+2. ✅ **The N/A code build — SHIPPED 2026-07-02.** Both halves landed: the Study-question
+   grants (2b) and the per-cell N/A on the three cumulative tables (2c), enforced
+   three-deep and preserved across canvas re-derivation (§5 rule 3). The door
+   `redemptive_note` N/A shipped earlier the same day with the transplant (sidecar). What
+   remains genuinely open here is only a **pastor decision, not code**: whether to widen
+   the Study grant list to the fuller SFDI set (this canon binds the narrower list — §5).
+3. **The remaining Merida flags** (**[◆]** on the §2 per-unit tables) — policy-resolved by
+   the per-cell N/A ruling now that the build shipped; historicizing those tag annotations
+   in the §2 tables is a trivial doc-cleanup follow-up, not a code or policy matter.
 
 ---
 
@@ -478,3 +482,6 @@ record in `oem-walk-rulings-2026-07-01.md`. What remains:
   six composites + three ratified-lenient checks (§5); the beholding moment + send-off (§6).
   Rulings of record: `oem-walk-rulings-2026-07-01.md`. CORE amended the same day
   (see `CORE-CHANGELOG.md`).
+- **N/A code build SHIPPED 2026-07-02 (§5, §7):** the ruled N/A policy is now enforced in
+  code — the Study-question grants (2b) and per-cell cumulative-table N/A (2c), with the
+  grant list bound to this canon's (narrower-than-SFDI) named set.

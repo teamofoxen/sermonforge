@@ -118,33 +118,57 @@ function CumulativeSynthesisTable({
         </div>
       ) : (
         <div className="sws-per-unit">
-          {units.map((unit, idx) => (
-            <article key={unit.id ?? idx} className="sws-unit-row">
-              {priorColumns.map((col) => {
-                const v = unit[col.key];
-                const isEmpty = v == null || v === "";
-                return (
-                  <div key={col.key} className="sws-unit-prior">
-                    <div className="sws-unit-label">{col.label}</div>
-                    <div className={"sws-unit-value" + (isEmpty ? " is-empty" : "")}>
-                      {isEmpty ? "—" : v}
+          {units.map((unit, idx) => {
+            // Per-cell N/A (canon §5 2c): the pastor may mark a single thought
+            // unit's cell "nothing here" — an active gesture that counts as
+            // done. The flag rides beside the value as `<column>_na`; the text
+            // is kept (dimmed) so unmarking recovers it. Mirrors PromptBlock's
+            // voice — one N/A vocabulary across the app.
+            const cellText = String(unit[editableColumn.key] ?? "");
+            const na = unit[`${editableColumn.key}_na`] === true;
+            return (
+              <article key={unit.id ?? idx} className="sws-unit-row">
+                {priorColumns.map((col) => {
+                  const v = unit[col.key];
+                  const isEmpty = v == null || v === "";
+                  return (
+                    <div key={col.key} className="sws-unit-prior">
+                      <div className="sws-unit-label">{col.label}</div>
+                      <div className={"sws-unit-value" + (isEmpty ? " is-empty" : "")}>
+                        {isEmpty ? "—" : v}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-              <div className="sws-unit-editable">
-                <div className="sws-unit-label is-active">{editableColumn.label}</div>
-                <AutoGrowTextarea
-                  value={unit[editableColumn.key] ?? ""}
-                  onChange={(v) =>
-                    onUnitColumnChange?.(question.key, idx, editableColumn.key, v)
-                  }
-                  ariaLabel={`Row ${idx + 1} ${editableColumn.label}`}
-                  placeholder={editableColumn.placeholder}
-                />
-              </div>
-            </article>
-          ))}
+                  );
+                })}
+                <div className="sws-unit-editable">
+                  <div className="sws-unit-label is-active">{editableColumn.label}</div>
+                  <AutoGrowTextarea
+                    value={cellText}
+                    onChange={(v) =>
+                      onUnitColumnChange?.(question.key, idx, editableColumn.key, v)
+                    }
+                    disabled={na}
+                    ariaLabel={`Row ${idx + 1} ${editableColumn.label}`}
+                    placeholder={editableColumn.placeholder}
+                  />
+                  <IconButton
+                    type="button"
+                    className={"sws-na-toggle" + (na ? " is-on" : "")}
+                    onClick={() =>
+                      onUnitColumnChange?.(question.key, idx, `${editableColumn.key}_na`, !na)
+                    }
+                    aria-label="not applicable"
+                  >
+                    {na
+                      ? cellText.trim()
+                        ? "not applicable · undo — your words are kept"
+                        : "not applicable · undo"
+                      : "not applicable"}
+                  </IconButton>
+                </div>
+              </article>
+            );
+          })}
         </div>
       )}
     </div>
