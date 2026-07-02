@@ -111,6 +111,65 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
+.pc-row-wrap {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Inline confirm for a structural gesture (indent / merge) that would drop a
+   line's already-typed Meaning / Christ-Connection / Implication work out of
+   the cumulative tables — Mutation #4's two-step floor for row-level
+   destruction, right where the gesture happened. */
+.pc-risk-banner {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 2px 10px 8px 10px;
+  padding: 8px 12px;
+  background: var(--parchment-warm);
+  border: 1px solid var(--crimson);
+  border-radius: var(--radius);
+}
+
+.pc-risk-message {
+  flex: 1;
+  min-width: 220px;
+  font-family: var(--font-serif);
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.pc-risk-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Compound selectors (scoped under .pc-risk-actions) so these reliably win
+   over SecondaryButton's shared .btn-ghost base regardless of stylesheet
+   load order — both are otherwise single-class rules of equal specificity. */
+.pc-risk-actions .pc-risk-keep,
+.pc-risk-actions .pc-risk-confirm {
+  font-family: var(--font-serif);
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.pc-risk-actions .pc-risk-keep {
+  background: transparent;
+  color: var(--ink-ghost);
+  border: 1px solid var(--parchment-deep);
+}
+
+.pc-risk-actions .pc-risk-confirm {
+  background: var(--crimson);
+  color: white;
+  border: none;
+}
+
 /* Standing keyboard legend — the indent gesture is otherwise invisible. */
 .pc-legend {
   margin-top: 10px;

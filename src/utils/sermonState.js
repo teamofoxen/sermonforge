@@ -15,15 +15,19 @@
 // Hard commitment (Phase D2): nothing in this file imports or calls
 // `evaluateAdvance`, `formatAdvanceRejection`, `formatTabRejection`,
 // `buildSubPhaseEvidence`, `buildStageEvidence`, or any `check*Threshold`
-// wrapper. Only the surviving composites (`checkField3Composite`) and
-// `hasContent` from studyAdvancement.js are touched.
+// wrapper. Only the surviving composites (`checkField8Composite`,
+// `checkPhase4Field4Composite`, `checkField5Composite`, `checkMPTComposite`,
+// `checkMPSComposite`) and `hasContent` from studyAdvancement.js are touched.
+// `checkField3Composite` is deliberately NOT used here — the Observation Set
+// artifact uses the lenient Obvious Point check instead (M2 ruling,
+// 2026-07-02: Finish must agree with the handoff/pane/map, which all treat
+// the Obvious Point text alone as sufficient).
 
 import { STAGE } from "../core/contracts";
 import { QUESTION_WALK_ORDER, WALK_ORDER, questionId } from "./walkOrder";
 import { parseStructuredField, getQuestionAnswer } from "./studyFields";
 import {
   hasContent,
-  checkField3Composite,
   checkField8Composite,
   checkPhase4Field4Composite,
   checkField5Composite,
@@ -302,18 +306,28 @@ export function deriveStudyUnfinishedFromSermon(sermon) {
 
 // ── Sermon completeness — the workspace-wide "is this sermon done" answer ──
 //
-// CORE Process Contract #2 names the six composite gates in
-// studyAdvancement.js as the completeness contract; this derivation is their
-// designed consumer (wired 2026-06-10; re-based 2026-07-02 when the Frame
-// collapse retired the Intro/Conclusion composites). It returns one entry per
-// load-bearing artifact, in walk order, each with a pastor-facing reason when
-// incomplete and a jump position so the finish screen can offer "go write it".
+// CORE Process Contract #2 names the composite gates in studyAdvancement.js
+// as the completeness contract; this derivation is their designed consumer
+// (wired 2026-06-10; re-based 2026-07-02 when the Frame collapse retired the
+// Intro/Conclusion composites). As of the M2 audit ruling (2026-07-02) this
+// derivation consumes FIVE composites (`checkField8Composite`,
+// `checkPhase4Field4Composite`, `checkField5Composite`, `checkMPTComposite`,
+// `checkMPSComposite`) — `checkField3Composite` was dropped in favor of the
+// lenient Observation Set check below, so Finish agrees with the Study→
+// Anchor handoff, the reference pane, and the sermon map instead of
+// contradicting them. (CORE.md's "consumes all six composites" line is now
+// stale and pending an `/anchor-update` pass — out of scope here.)
+// It returns one entry per load-bearing artifact, in walk order, each with a
+// pastor-facing reason when incomplete and a jump position so the finish
+// screen can offer "go write it".
 //
-// Outline / Sermon Body / Manuscript use LENIENT presence checks — RATIFIED
-// lenient by the OEM walk (2026-07-02, agenda item 7): honest without
-// nagging. The doors check = an opener answer + the Conclusion response;
-// transitions are deliberately never counted (explicit ruling — preachable
-// without written bridges; the map still tracks them honestly).
+// Observation Set / Outline / Sermon Body / Manuscript all use LENIENT
+// presence checks. Outline/Body/Manuscript were RATIFIED lenient by the OEM
+// walk (2026-07-02, agenda item 7): honest without nagging. The doors check
+// = an opener answer + the Conclusion response; transitions are deliberately
+// never counted (explicit ruling — preachable without written bridges; the
+// map still tracks them honestly). Observation Set joined the lenient group
+// per the M2 ruling above.
 // This list is consumed by SermonFinish; it never blocks anything
 // (Process #1: no walls — the answer informs, navigation stays free).
 export function deriveSermonCompleteness(sermon) {
@@ -343,8 +357,20 @@ export function deriveSermonCompleteness(sermon) {
     ? null
     : "Write the manuscript — at least the opener and the closing response.";
 
+  // Lenient (M2 ruling, 2026-07-02): the Observation Set is "done" the same
+  // way everywhere else in the app — the Study→Anchor handoff, the reference
+  // pane's "Your work" tab, and the sermon map's Divisions row all treat the
+  // Obvious Point text as sufficient (see STUDY_NAMED_OUTCOMES above, which
+  // drives all three). Finish previously asked more via checkField3Composite
+  // (an indented canvas modifier), which produced a contradictory verdict at
+  // the walk's final review. Match the lenient check instead.
+  const obviousPoint = getQuestionAnswer(obsData, "obvious_point", "primary");
+  const observationSetReason = hasContent(obviousPoint)
+    ? null
+    : "Write the Obvious Point — the plain-sense point of the passage.";
+
   const artifacts = [
-    { key: "observation_set",        label: "Observation Set",             reason: checkField3Composite(obsData),        jump: { stage: STAGE.Study, subPhase: "Observe", fieldKey: "divisions" } },
+    { key: "observation_set",        label: "Observation Set",             reason: observationSetReason,                 jump: { stage: STAGE.Study, subPhase: "Observe", fieldKey: "obvious_point" } },
     { key: "interpretation_set",     label: "Interpretation Set",          reason: checkField8Composite(sermon),         jump: { stage: STAGE.Study, subPhase: "Interpret", fieldKey: "interpretation_synthesis" } },
     { key: "christ_connection",      label: "Christ-Connection Statement", reason: checkField5Composite(sermon),         jump: { stage: STAGE.Study, subPhase: "RedemptiveThread", fieldKey: "christ_connection_statement" } },
     { key: "implications_synthesis", label: "Implications Synthesis",      reason: checkPhase4Field4Composite(sermon),   jump: { stage: STAGE.Study, subPhase: "Implications", fieldKey: "implications_synthesis" } },

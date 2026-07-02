@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import SecondaryButton from "./primitives/SecondaryButton";
 import "./passageCanvas.css";
 
 const MAX_DEPTH = 5;
@@ -29,7 +30,7 @@ function buildSeedRows(seedSig) {
   return labels.map((label) => ({ id: newId(), text: "", depth: 0, verse: label }));
 }
 
-function CanvasRow({ row, onChange, onVerseChange, onKey, onPaste, registerRef }) {
+function CanvasRow({ row, onChange, onVerseChange, onKey, onPaste, registerRef, risk, onRiskConfirm, onRiskCancel }) {
   const ref = useRef(null);
   useEffect(() => {
     registerRef(row.id, ref.current);
@@ -46,37 +47,60 @@ function CanvasRow({ row, onChange, onVerseChange, onKey, onPaste, registerRef }
   // The gutter is an editable cell — prefilled, but the pastor can correct any
   // number the auto-fill got wrong.
   return (
-    <div
-      className={"pc-row" + (row.depth === 0 ? " pc-row--main" : " pc-row--modifier")}
-    >
-      <input
-        className="pc-gutter"
-        type="text"
-        value={row.verse == null ? "" : String(row.verse)}
-        onChange={(e) => onVerseChange(row.id, e.target.value)}
-        aria-label="Verse number"
-        title="Verse number — click to correct"
-      />
-      <textarea
-        ref={ref}
-        className="pc-input"
-        style={{ marginLeft: row.depth * INDENT_PX }}
-        value={row.text}
-        onChange={(e) => onChange(row.id, e.target.value)}
-        onKeyDown={(e) => onKey(e, row.id)}
-        onPaste={onPaste}
-        rows={1}
-        spellCheck
-        aria-label={
-          (row.verse ? `Verse ${row.verse}, ` : "") +
-          (row.depth === 0 ? "main row" : `modifier row, depth ${row.depth}`)
-        }
-      />
+    <div className="pc-row-wrap">
+      <div
+        className={"pc-row" + (row.depth === 0 ? " pc-row--main" : " pc-row--modifier")}
+      >
+        <input
+          className="pc-gutter"
+          type="text"
+          value={row.verse == null ? "" : String(row.verse)}
+          onChange={(e) => onVerseChange(row.id, e.target.value)}
+          aria-label="Verse number"
+          title="Verse number — click to correct"
+        />
+        <textarea
+          ref={ref}
+          className="pc-input"
+          style={{ marginLeft: row.depth * INDENT_PX }}
+          value={row.text}
+          onChange={(e) => onChange(row.id, e.target.value)}
+          onKeyDown={(e) => onKey(e, row.id)}
+          onPaste={onPaste}
+          rows={1}
+          spellCheck
+          aria-label={
+            (row.verse ? `Verse ${row.verse}, ` : "") +
+            (row.depth === 0 ? "main row" : `modifier row, depth ${row.depth}`)
+          }
+        />
+      </div>
+      {/* Mutation #4's two-step floor for row-level destruction, right where
+          the gesture happened — Tab-indent and Backspace-merge are the two
+          canvas moves that drop a row's Meaning/Christ-Connection/Implication
+          work with no Delete button in sight. */}
+      {risk && (
+        <div className="pc-risk-banner" role="alertdialog" aria-live="assertive">
+          <span className="pc-risk-message">{risk.message}</span>
+          <span className="pc-risk-actions">
+            <SecondaryButton size="sm" className="pc-risk-keep" onClick={onRiskCancel}>
+              Keep as its own line
+            </SecondaryButton>
+            <SecondaryButton size="sm" className="pc-risk-confirm" onClick={onRiskConfirm}>
+              {risk.kind === "indent" ? "Indent anyway" : "Merge anyway"}
+            </SecondaryButton>
+          </span>
+        </div>
+      )}
     </div>
   );
 }
 
-export default function PassageCanvas({ rows, onChange, seedVerses }) {
+// Stable empty default — a fresh Set() literal in the signature would churn
+// on every render and defeat memoization downstream.
+const EMPTY_ROW_ID_SET = new Set();
+
+export default function PassageCanvas({ rows, onChange, seedVerses, rowIdsWithWork = EMPTY_ROW_ID_SET }) {
   // Seed signature drives a STABLE memo — without it, regenerating row ids
   // every render would churn React keys and steal focus mid-type. The seed is
   // a display default only: it isn't written until the pastor's first
@@ -104,6 +128,13 @@ export default function PassageCanvas({ rows, onChange, seedVerses }) {
   // at the depth limit) explains itself here instead of doing nothing.
   const [hint, setHint] = useState(null);
   const hintTimer = useRef(null);
+
+  // A structural gesture (Tab-indent out of depth 0, or a Backspace-merge
+  // that removes a row) is paused here, not applied, when the row carries
+  // cumulative synthesis work — the row-scoped confirm banner in CanvasRow
+  // is what lets it proceed. Shape: { kind: "indent" | "merge", id,
+  // nextDepth?, focusPos?, message }.
+  const [pendingRisk, setPendingRisk] = useState(null);
 
   useEffect(() => () => {
     if (hintTimer.current) clearTimeout(hintTimer.current);
@@ -150,6 +181,50 @@ export default function PassageCanvas({ rows, onChange, seedVerses }) {
     [onChange]
   );
 
+  // Applies an indent/outdent by id, computed fresh against whatever
+  // `safeRows` is at call time — used both for the no-risk immediate path
+  // and for a confirmed pending risk, so a confirm can never replay a stale
+  // snapshot over rows edited while the banner was showing.
+  const applyIndentChange = useCallback(
+    (id, nextDepth, focusPos) => {
+      const next = safeRows.map((r) => (r.id === id ? { ...r, depth: nextDepth } : r));
+      setRows(next, { id, pos: focusPos });
+    },
+    [safeRows, setRows]
+  );
+
+  // Applies a Backspace-merge by id, recomputing the target index fresh
+  // against current `safeRows`. If the row is already gone (or nothing is
+  // above it), it's a no-op — there's nothing left to merge.
+  const applyMergeChange = useCallback(
+    (id) => {
+      const idx = safeRows.findIndex((r) => r.id === id);
+      if (idx <= 0) return;
+      const prev = safeRows[idx - 1];
+      const row = safeRows[idx];
+      const mergedText = prev.text + row.text;
+      const mergePos = prev.text.length;
+      const next = [
+        ...safeRows.slice(0, idx - 1),
+        { ...prev, text: mergedText },
+        ...safeRows.slice(idx + 1),
+      ];
+      setRows(next, { id: prev.id, pos: mergePos });
+    },
+    [safeRows, setRows]
+  );
+
+  const confirmPendingRisk = useCallback(() => {
+    setPendingRisk((risk) => {
+      if (!risk) return null;
+      if (risk.kind === "indent") applyIndentChange(risk.id, risk.nextDepth, risk.focusPos);
+      else if (risk.kind === "merge") applyMergeChange(risk.id);
+      return null;
+    });
+  }, [applyIndentChange, applyMergeChange]);
+
+  const cancelPendingRisk = useCallback(() => setPendingRisk(null), []);
+
   // The gutter is a verse-number cell: prefilled from the passage, but the
   // pastor owns it. Auto-numbering free-form structure can't stay perfectly
   // aligned (only the preacher knows where a verse truly begins), so any drift
@@ -160,6 +235,7 @@ export default function PassageCanvas({ rows, onChange, seedVerses }) {
       const cleaned = value.replace(/[^0-9:-]/g, "").slice(0, 6);
       const next = safeRows.map((r) => (r.id === id ? { ...r, verse: cleaned } : r));
       setRows(next);
+      setPendingRisk((risk) => (risk && risk.id === id ? null : risk));
     },
     [safeRows, setRows]
   );
@@ -168,6 +244,10 @@ export default function PassageCanvas({ rows, onChange, seedVerses }) {
     (id, value) => {
       const next = safeRows.map((r) => (r.id === id ? { ...r, text: value } : r));
       setRows(next);
+      // A stale confirm banner for a row the pastor is back to typing in
+      // no longer matches what Tab/Backspace would do to it — drop it
+      // rather than let it linger with a decision from a moment ago.
+      setPendingRisk((risk) => (risk && risk.id === id ? null : risk));
     },
     [safeRows, setRows]
   );
@@ -188,10 +268,24 @@ export default function PassageCanvas({ rows, onChange, seedVerses }) {
           if (delta > 0) showHint("That's as deep as the indent goes.");
           return;
         }
-        const next = safeRows.map((r) =>
-          r.id === id ? { ...r, depth: nextDepth } : r
-        );
-        setRows(next, { id, pos: el.selectionStart });
+        // Indenting a thought unit (depth 0 → 1+) drops it out of the
+        // cumulative tables. If it already carries typed synthesis work,
+        // pause and ask instead of silently taking those words with it —
+        // outdenting back toward depth 0 never loses anything, so it's
+        // never gated.
+        const leavingThoughtUnit = row.depth === 0 && nextDepth > 0;
+        if (leavingThoughtUnit && rowIdsWithWork.has(id)) {
+          setPendingRisk({
+            kind: "indent",
+            id,
+            nextDepth,
+            focusPos: el.selectionStart,
+            message:
+              "This line has Meaning, Christ-Connection, or Implication notes attached. Indenting it will remove it from those tables.",
+          });
+          return;
+        }
+        applyIndentChange(id, nextDepth, el.selectionStart);
         return;
       }
 
@@ -226,15 +320,21 @@ export default function PassageCanvas({ rows, onChange, seedVerses }) {
         }
         if (idx > 0) {
           e.preventDefault();
-          const prev = safeRows[idx - 1];
-          const mergedText = prev.text + row.text;
-          const mergePos = prev.text.length;
-          const next = [
-            ...safeRows.slice(0, idx - 1),
-            { ...prev, text: mergedText },
-            ...safeRows.slice(idx + 1),
-          ];
-          setRows(next, { id: prev.id, pos: mergePos });
+          // Merging removes this row from the canvas entirely. If it
+          // carries typed synthesis work, pause and ask — the row above
+          // absorbing its text is fine, but its Meaning/Christ-Connection/
+          // Implication notes have nowhere left to live once the row is
+          // gone.
+          if (rowIdsWithWork.has(id)) {
+            setPendingRisk({
+              kind: "merge",
+              id,
+              message:
+                "This line has Meaning, Christ-Connection, or Implication notes attached. Merging it into the line above will remove it from those tables.",
+            });
+            return;
+          }
+          applyMergeChange(id);
           return;
         }
       }
@@ -273,7 +373,7 @@ export default function PassageCanvas({ rows, onChange, seedVerses }) {
         }
       }
     },
-    [safeRows, setRows]
+    [safeRows, setRows, rowIdsWithWork, applyIndentChange, applyMergeChange]
   );
 
   return (
@@ -287,6 +387,9 @@ export default function PassageCanvas({ rows, onChange, seedVerses }) {
           onKey={handleKey}
           onPaste={handlePaste}
           registerRef={registerRef}
+          risk={pendingRisk && pendingRisk.id === row.id ? pendingRisk : null}
+          onRiskConfirm={confirmPendingRisk}
+          onRiskCancel={cancelPendingRisk}
         />
       ))}
       {hint && (

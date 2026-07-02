@@ -79,6 +79,11 @@ export const SERMON_MANUSCRIPT_FIELDS = [
         // moves from sermon_frame intro.redemptive_note to this key in the
         // structural sweep.
         naAllowed: true,
+        // UX audit 2026-07-02 (L5): override the toggle's generic default
+        // copy so the stricter ruled meaning survives under deadline
+        // pressure — see the naLabel note above PromptBlock in
+        // SermonWritingSurface.jsx.
+        naLabel: "not applicable — this hook wasn't redemptive.",
       },
     ],
   },

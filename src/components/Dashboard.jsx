@@ -9,6 +9,8 @@ import PrimaryButton from "./primitives/PrimaryButton";
 import SecondaryButton from "./primitives/SecondaryButton";
 import TextButton from "./primitives/TextButton";
 import DeleteButton from "./primitives/DeleteButton";
+import InlineError from "./InlineError";
+import mapError from "../utils/mapError";
 import { formatDate } from "../utils";
 
 function ArrowRightIcon() {
@@ -20,9 +22,10 @@ function ArrowRightIcon() {
   );
 }
 
-export default function Dashboard({ onOpenSermon, onNavigate }) {
+export default function Dashboard({ onOpenSermon, onNavigate, deletedSermonNotice, onClearDeletedSermonNotice }) {
   const [showNewModal, setShowNewModal] = useState(false);
   const [loadingSample, setLoadingSample] = useState(false);
+  const [sampleError, setSampleError] = useState(null);
   const [inProgress, setInProgress] = useState([]);
   // Preached count — finished work must stay findable from the front door
   // (State #6 in spirit): one quiet row, not a stats surface (the locked
@@ -70,6 +73,15 @@ export default function Dashboard({ onOpenSermon, onNavigate }) {
     });
   }
 
+  // Undo for a workspace-originated delete (audit M3). deletedSermonNotice
+  // is data the just-closed SermonWorkspace handed App.jsx — it can't be
+  // recovered from deletedIds because this Dashboard instance remounted
+  // fresh on close and never fetched the (now-tombstoned) sermon itself.
+  async function handleUndoWorkspaceDelete(id) {
+    await restoreSermon(id);
+    onClearDeletedSermonNotice?.();
+  }
+
   // Return-day reminders resolve in ONE click, right here. The row swaps to a
   // settled note instead of vanishing, so the act is visible (Mutation #3
   // spirit: lifecycle events are events, not silent disappearances).
@@ -84,6 +96,7 @@ export default function Dashboard({ onOpenSermon, onNavigate }) {
   async function openSampleSermon(fresh = false) {
     if (loadingSample) return;
     setLoadingSample(true);
+    setSampleError(null);
     try {
       const result = await loadSampleSermon({ fresh });
       if (result?.sermonId && onOpenSermon) {
@@ -91,6 +104,7 @@ export default function Dashboard({ onOpenSermon, onNavigate }) {
       }
     } catch (e) {
       console.error("Failed to open sample sermon:", e);
+      setSampleError(mapError(e, "sample"));
     } finally {
       setLoadingSample(false);
     }
@@ -121,7 +135,7 @@ export default function Dashboard({ onOpenSermon, onNavigate }) {
                 Build a sermon.
               </h2>
               <p className="tile-blurb">
-                From text to manuscript — exegesis, big idea, outline, delivery.
+                Study the passage, shape the main point, and write the sermon.
               </p>
               <div className="tile-actions">
                 <PrimaryButton
@@ -148,6 +162,8 @@ export default function Dashboard({ onOpenSermon, onNavigate }) {
               deletedIds={deletedIds}
               preachedCount={preachedCount}
               onOpenPreached={onNavigate ? () => onNavigate(VIEW.CompletedSermons) : undefined}
+              deletedSermonNotice={deletedSermonNotice}
+              onUndoWorkspaceDelete={handleUndoWorkspaceDelete}
             />
 
             {/* EXPLORE — orientation paths for new pastors. */}
@@ -163,16 +179,23 @@ export default function Dashboard({ onOpenSermon, onNavigate }) {
                   onClick={() => openSampleSermon()}
                 />
                 {/* The sample is a sandbox — opening it again returns it as
-                    the pastor left it. This is the explicit reset. */}
+                    the pastor left it. Resetting it is destructive (any
+                    typing left in the sample is discarded), so it goes
+                    through the app's canonical two-step confirm rather
+                    than firing on a single click. */}
                 <div className="dash-row-aux">
-                  <TextButton
-                    size="sm"
-                    disabled={loadingSample}
-                    onClick={() => openSampleSermon(true)}
-                  >
-                    Start the sample fresh
-                  </TextButton>
+                  <DeleteButton
+                    small
+                    label="Start the sample fresh"
+                    confirmLabel="Start the sample fresh? Any typing you left in the sample sermon will be gone."
+                    onDelete={() => openSampleSermon(true)}
+                  />
                 </div>
+                {sampleError && (
+                  <InlineError onDismiss={() => setSampleError(null)}>
+                    {sampleError}
+                  </InlineError>
+                )}
               </div>
             </div>
           </div>
@@ -211,7 +234,7 @@ export default function Dashboard({ onOpenSermon, onNavigate }) {
 // When the preacher has nothing in flight, the tile renders an empty-state
 // pointing back to the hero "Build a sermon" tile.
 
-function ResumeWorkTile({ overdue, upcoming, onOpenSermon, onDeleteSermon, onUndoDelete, onMarkPreached, preachedIds, deletedIds, preachedCount, onOpenPreached }) {
+function ResumeWorkTile({ overdue, upcoming, onOpenSermon, onDeleteSermon, onUndoDelete, onMarkPreached, preachedIds, deletedIds, preachedCount, onOpenPreached, deletedSermonNotice, onUndoWorkspaceDelete }) {
   const isEmpty = overdue.length === 0 && upcoming.length === 0;
 
   // One quiet row — finished work stays findable from the front door
@@ -234,6 +257,21 @@ function ResumeWorkTile({ overdue, upcoming, onOpenSermon, onDeleteSermon, onUnd
     </div>
   ) : null;
 
+  // Workspace-originated delete (audit M3): renders the same settled
+  // "Deleted · Undo" row list-originated deletes get, reusing ResumeRow's
+  // deleted-state markup exactly. Leads the list — it's the pastor's most
+  // recent action — and must show even when the tile is otherwise empty
+  // (the sermon just left "in flight," which is exactly why it's not in
+  // overdue/upcoming any more).
+  const deletedNoticeRow = deletedSermonNotice ? (
+    <ResumeRow
+      key={`deleted-notice-${deletedSermonNotice.id}`}
+      sermon={deletedSermonNotice}
+      onUndoDelete={onUndoWorkspaceDelete}
+      deleted
+    />
+  ) : null;
+
   return (
     <div className="dash-tile tile-secondary">
       <div className="tile-eyebrow">Resume&nbsp;work</div>
@@ -241,13 +279,21 @@ function ResumeWorkTile({ overdue, upcoming, onOpenSermon, onDeleteSermon, onUnd
 
       {isEmpty ? (
         <>
-          <p className="tile-blurb" style={{ marginTop: "8px" }}>
-            Nothing in flight. Start a sermon when you're ready.
-          </p>
-          {preachedRow && <div className="dash-rows">{preachedRow}</div>}
+          {!deletedNoticeRow && (
+            <p className="tile-blurb" style={{ marginTop: "8px" }}>
+              Nothing in flight. Start a sermon when you're ready.
+            </p>
+          )}
+          {(deletedNoticeRow || preachedRow) && (
+            <div className="dash-rows">
+              {deletedNoticeRow}
+              {preachedRow}
+            </div>
+          )}
         </>
       ) : (
         <div className="dash-rows">
+          {deletedNoticeRow}
           {overdue.map((s) => (
             <ResumeRow
               key={s.id}

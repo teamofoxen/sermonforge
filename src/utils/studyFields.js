@@ -467,7 +467,7 @@ export const IMPLICATIONS_FIELDS = [
         "You've named what the text teaches (Theological Significance), what it asks (Personal Implications), and the specific room it's landing in (Pastoral Context). Three voices.",
         "One more move closes Implications — and closes the Study work. Take what you've worked out and integrate it. For each thought unit — what does it ask of THIS hearer in THIS room? Drawing on the three voices.",
         "Then, the whole passage. One paragraph. The Implications Synthesis. What does the text teach, what does it ask, and how does it land for the people in this room — all in one voice. Not three sections. One synthesis.",
-        "Now marinate. Before you move to the Main Point, step back and read the passage through once more — slowly, the way you read it at the start. Let it sit on you. The Main Point should rise from the text, not only from your notes. The passage stays open in the reference pane beside you by default; your Implications Synthesis and the other three named outcomes are a flip away on its 'Your work' tab. The foundation has been earned — let the text breathe on you before you forge.",
+        "Now marinate. Before you move to the Main Point, step back and read the passage through once more — slowly, the way you read it at the start. Let it sit on you. The Main Point should rise from the text, not only from your notes. The passage is on the reference pane by default (open the pane's 'Open Bible' tab if it's collapsed); your Implications Synthesis and the other three named outcomes are a flip away on its 'Your work' tab. The foundation has been earned — let the text breathe on you before you forge.",
       ],
     },
     questions: [
@@ -620,12 +620,26 @@ export function getPrimaryAnswer(fieldData, fieldKey) {
 // `_canvas_row_id`, with a positional `after_line` fallback for legacy data
 // that predates the unification.
 
+// True when a prior thought-unit entry carries typed synthesis work (text or
+// a per-cell N/A mark) in any cumulative column — the signal that dropping
+// this row would be input-wiping destruction under Mutation #4, not a no-op.
+function hasCumulativeWork(entry) {
+  if (!entry || typeof entry !== "object") return false;
+  return CUMULATIVE_COLUMN_KEYS.some(
+    (key) => (typeof entry[key] === "string" && entry[key].trim() !== "") || entry[`${key}_na`] === true
+  );
+}
+
 // Derive the thought_units array from an indented-canvas array. Per ruling 8:
 // every depth-0 row with non-empty text is a thought unit; childless mains
-// still count; empty-text mains are skipped (no phantom units). Cumulative
-// columns (`meaning`, `christ_connection`, `implication`) merge by
-// `_canvas_row_id` only — the legacy after_line positional fallback is
-// retired with the unified canvas. Output row shape:
+// still count; empty-text mains are skipped (no phantom units) UNLESS a prior
+// entry for that same row already carries cumulative synthesis work — a line
+// typed empty (Enter-split at position 0, a cleared line) is still on screen,
+// so the Meaning/Christ-Connection/Implication work already attached to it
+// must not vanish (Mutation #4: destruction with no Delete button is still
+// destruction). Cumulative columns merge by `_canvas_row_id` only — the
+// legacy after_line positional fallback is retired with the unified canvas.
+// Output row shape:
 //   { thought_unit_text, _canvas_row_id, ...cumulative }
 export function deriveThoughtUnitsFromCanvas(canvas, existingThoughtUnits = []) {
   if (!Array.isArray(canvas) || canvas.length === 0) return [];
@@ -641,12 +655,12 @@ export function deriveThoughtUnitsFromCanvas(canvas, existingThoughtUnits = []) 
     if (!row || typeof row !== "object") continue;
     const depth = Number.isInteger(row.depth) && row.depth >= 0 ? row.depth : 0;
     if (depth !== 0) continue;
-    const text = typeof row.text === "string" ? row.text.trim() : "";
-    if (!text) continue;
     const rowId = typeof row.id === "string" ? row.id : "";
     const prior = rowId ? byRowId.get(rowId) : null;
+    const text = typeof row.text === "string" ? row.text.trim() : "";
+    if (!text && !hasCumulativeWork(prior)) continue;
     const derived = {
-      thought_unit_text: text,
+      thought_unit_text: text || (prior?.thought_unit_text ?? ""),
       _canvas_row_id: rowId,
     };
     for (const key of CUMULATIVE_COLUMN_KEYS) {
@@ -663,6 +677,23 @@ export function deriveThoughtUnitsFromCanvas(canvas, existingThoughtUnits = []) 
     out.push(derived);
   }
   return out;
+}
+
+// Which canvas row ids currently carry cumulative synthesis work. The canvas
+// UI consults this before applying a gesture that would drop a row out of
+// the depth-0 set entirely (indent, or a Backspace merge that removes the
+// row from the array) — those two cases can't be auto-preserved the way an
+// emptied-but-still-present row can, so the UI gates them on a confirm
+// instead (Mutation #4's two-step floor for row-level destruction).
+export function canvasRowIdsWithCumulativeWork(thoughtUnits) {
+  const ids = new Set();
+  if (!Array.isArray(thoughtUnits)) return ids;
+  for (const e of thoughtUnits) {
+    if (e && typeof e === "object" && typeof e._canvas_row_id === "string" && e._canvas_row_id && hasCumulativeWork(e)) {
+      ids.add(e._canvas_row_id);
+    }
+  }
+  return ids;
 }
 
 // Write an indented-canvas value to the `divisions` field, materializing the

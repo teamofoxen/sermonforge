@@ -100,4 +100,24 @@ describe("deriveSermonCompleteness — the workspace-wide done answer (Process #
     const { artifacts } = deriveSermonCompleteness(s);
     expect(artifacts.find((a) => a.key === "manuscript").complete).toBe(false);
   });
+
+  it("Observation Set is complete on the Obvious Point alone (M2 ruling, 2026-07-02) — no canvas modifier required", () => {
+    const s = completeSermon();
+    // Flush-left canvas: a main sentence with no indented modifier under it.
+    // This fails the old checkField3Composite (canvasHasMainWithModifier),
+    // but the Study→Anchor handoff, the reference pane, and the sermon map
+    // all treat the Obvious Point text alone as sufficient — Finish must
+    // agree with them now instead of contradicting them at the final review.
+    s.observations = env({
+      divisions: {
+        canvas: { value: [{ text: "Main sentence", depth: 0 }], na: false },
+        thought_units: { value: [UNIT], na: false },
+      },
+      obvious_point: { primary: "Plain-sense point." },
+    });
+    const { artifacts } = deriveSermonCompleteness(s);
+    const observationSet = artifacts.find((a) => a.key === "observation_set");
+    expect(observationSet.complete).toBe(true);
+    expect(observationSet.jump.fieldKey).toBe("obvious_point");
+  });
 });

@@ -2,8 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import ReactDOM from "react-dom";
 import { useEsvPassage } from "../utils/useEsvPassage";
 import IconButton from "./primitives/IconButton";
-import SecondaryButton from "./primitives/SecondaryButton";
-import EsvKeyModal from "./EsvKeyModal";
+import { usePassageRecovery } from "./EsvRecovery";
 
 /**
  * PassagePopup — floating ESV scripture panel.
@@ -34,12 +33,14 @@ export default function PassagePopup({ passage, isOpen, onClose, initialPosition
   // the hook; closing the popup releases the in-flight state. `headings`
   // (used by the Passage lookup reader) includes Crossway's section markers.
   const { data, loading, refresh } = useEsvPassage(isOpen ? (passage || "") : "", { headings });
+  // Key recovery happens where the pain is: the modal opens from inside
+  // the popup, and a save re-runs the fetch without closing anything. Shared
+  // with the reference pane and the Study→Anchor handoff — see EsvRecovery.jsx.
+  // A hook, so it must run unconditionally, before the !isOpen early return.
+  const { esvState, fetchErrorNode, recoveryNode, keyModalNode, keyModalOpen } = usePassageRecovery(data, refresh);
   const closeRef = useRef(null);
   const triggerRef = useRef(null);
   const popupRef = useRef(null);
-  // Key recovery happens where the pain is: the modal opens from inside
-  // the popup, and a save re-runs the fetch without closing anything.
-  const [keyModalOpen, setKeyModalOpen] = useState(false);
 
   // position === null means "use initialPosition (or CSS default)."
   // The user dragging the popup writes into position; reopening snaps back
@@ -129,12 +130,6 @@ export default function PassagePopup({ passage, isOpen, onClose, initialPosition
 
   if (!isOpen) return null;
 
-  // Structured state from passage-fetch; legacy-field fallback keeps the
-  // popup sane against a stale/stubbed main process.
-  const rawState = data?.esvState
-    ?? (data?.esvPending ? "no-key" : data?.esvError ? "error" : "ok");
-  const esvState = rawState === "ok" || RECOVERY[rawState] ? rawState : "error";
-
   // Inline style precedence: dragged position > initialPosition > CSS default.
   // `right: auto` is required so our left+top override the CSS-default
   // `right: 20px` (which would otherwise compete and push the popup).
@@ -202,30 +197,14 @@ export default function PassagePopup({ passage, isOpen, onClose, initialPosition
         <div className="passage-popup-loading">Fetching ESV…</div>
       )}
 
-      {!loading && data?.fetchError && (
-        <PassageRecovery
-          copy="Something went wrong loading the passage. Try again — if it keeps happening, close and reopen SermonForge."
-          actionLabel="Try again"
-          onAction={refresh}
-        />
-      )}
+      {!loading && data?.fetchError && fetchErrorNode}
 
       {!loading && !data?.fetchError && (
         esvState === "ok" ? (
           <div className="passage-popup-columns">
             <PassageColumn label="ESV" text={data?.esv} />
           </div>
-        ) : (
-          <PassageRecovery
-            copy={RECOVERY[esvState].copy}
-            actionLabel={RECOVERY[esvState].action}
-            onAction={
-              RECOVERY[esvState].kind === "key"
-                ? () => setKeyModalOpen(true)
-                : refresh
-            }
-          />
-        )
+        ) : recoveryNode
       )}
 
       {/* Crossway attribution — required with displayed ESV text (short
@@ -240,65 +219,11 @@ export default function PassagePopup({ passage, isOpen, onClose, initialPosition
 
       {/* Nested key recovery — EsvKeyModal renders position:fixed at a
           higher z-index than the popup; closing it (saved or cancelled)
-          re-runs the fetch so a fixed key loads in place. */}
-      {keyModalOpen && (
-        <EsvKeyModal
-          onClose={() => {
-            setKeyModalOpen(false);
-            refresh();
-          }}
-        />
-      )}
+          re-runs the fetch so a fixed key loads in place. Shared wiring —
+          see EsvRecovery.jsx. */}
+      {keyModalNode}
     </div>,
     document.body
-  );
-}
-
-// Per-state plain English + one action. The structured esvState codes from
-// passage-fetch render here — raw "ESV API HTTP 401" / "fetch failed"
-// strings never reach the pastor. Exported: the ReferencePane's passage
-// view shares the same states and copy (one voice, two surfaces).
-export const RECOVERY = {
-  "no-key": {
-    copy: "Seeing the Bible text here takes a free ESV key from Crossway — add it once and every passage will load.",
-    action: "Add ESV key",
-    kind: "key",
-  },
-  "key-unreadable": {
-    copy: "Your saved ESV key couldn't be read back from Windows. Re-entering it once will fix this.",
-    action: "Update ESV key",
-    kind: "key",
-  },
-  "bad-key": {
-    copy: "The ESV key saved on this computer wasn't accepted — it may have been mistyped or expired. Re-enter it and the passage will load.",
-    action: "Update ESV key",
-    kind: "key",
-  },
-  "offline": {
-    copy: "Couldn't reach the ESV servers. Check your internet connection.",
-    action: "Try again",
-    kind: "retry",
-  },
-  "rate-limited": {
-    copy: "The ESV servers are busy right now. Try again in a minute.",
-    action: "Try again",
-    kind: "retry",
-  },
-  "error": {
-    copy: "The ESV servers are busy right now. Try again in a minute.",
-    action: "Try again",
-    kind: "retry",
-  },
-};
-
-export function PassageRecovery({ copy, actionLabel, onAction }) {
-  return (
-    <div className="passage-popup-recovery">
-      <p className="passage-popup-recovery-copy">{copy}</p>
-      <SecondaryButton size="sm" onClick={onAction}>
-        {actionLabel}
-      </SecondaryButton>
-    </div>
   );
 }
 

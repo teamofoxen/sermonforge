@@ -60,6 +60,24 @@
   margin: 0;
 }
 
+/* No-passage / empty-return note — same voice as ReferencePane's
+   .refpane-note and the popup's inline notes (one recovery voice). */
+.sah-passage-note {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--ink-ghost);
+  margin: 0;
+}
+
+/* PassageRecovery is reused from the popup, where it carries its own 20px
+   padding — the marinate section is already spaced, so trim the compounding
+   inset (same fix ReferencePane applies). */
+.sah-marinate .passage-popup-recovery {
+  padding: 0;
+}
+
 .sah-passage-text {
   font-family: var(--font-serif);
   font-size: 15px;

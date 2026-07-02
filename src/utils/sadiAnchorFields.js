@@ -43,7 +43,7 @@ export const MAIN_POINT_PAIR_FIELDS = [
       {
         key: "draft",
         prompt:
-          "With the passage open beside you, read it through once more — then draw from your Implications Synthesis and the four named outcomes to draft what this text was saying to its original audience. Past tense. Author-intended. As many sentences as you need to get the substance right — tightening is next.",
+          "Read the passage through once more (open the reference pane's 'Your work' tab if it's collapsed) — then draw from your Implications Synthesis and the four named outcomes to draft what this text was saying to its original audience. Past tense. Author-intended. As many sentences as you need to get the substance right — tightening is next.",
       },
       {
         key: "tighten",
@@ -59,7 +59,7 @@ export const MAIN_POINT_PAIR_FIELDS = [
     overview: {
       title: "MPS",
       paragraphs: [
-        "Your MPT is in the reference pane on the 'Your work' tab — what the text meant, in past tense. MPS turns that into the present: what the text means for *us today*. Present or future tense.",
+        "Your MPT is on the reference pane's 'Your work' tab (open the pane if it's collapsed) — what the text meant, in past tense. MPS turns that into the present: what the text means for *us today*. Present or future tense.",
         "Three moves: translate the MPT into the present — starting from why your people need this (the fallen condition, and the grace this text holds out for it), then aimed at that need in present or future tense; check it against the Christ-Connection Statement to make sure the call rests on what Christ has done, not what the listener has to muster; tighten to one sentence.",
         "The Christ-Connection Statement is your moralism guard. The gospel-check reads your draft alongside it — if the call slips into 'try harder' or 'be better,' you rewrite. The tighten folds your draft's substance and the gospel-check's gospel-power into one sentence.",
       ],
@@ -68,16 +68,21 @@ export const MAIN_POINT_PAIR_FIELDS = [
       {
         key: "translate",
         prompt:
-          "Your MPT is in the reference pane on the 'Your work' tab. Before you change the tense, name why your people need this text: what is the fallen condition — the human problem — this passage speaks to? What do your hearers share with its original audience? And what grace does this text hold out for that condition? Then turn the MPT from past into present or future, aimed at that need and that grace — so the call rests on what God gives, not just what we must do. As many sentences as you need to get the substance right — the gospel-check and tightening come next.",
+          "Your MPT is on the reference pane's 'Your work' tab (open the pane if it's collapsed). Before you change the tense, name why your people need this text: what is the fallen condition — the human problem — this passage speaks to? What do your hearers share with its original audience? And what grace does this text hold out for that condition? Then turn the MPT from past into present or future, aimed at that need and that grace — so the call rests on what God gives, not just what we must do. As many sentences as you need to get the substance right — the gospel-check and tightening come next.",
       },
       {
         key: "gospel_check",
         prompt:
-          "Your first draft is right above you. Flip the reference pane to 'Your work' and set your Christ-Connection Statement beside it. Read them side by side. Does the call in your draft rest on what Christ has done, or has it slipped into 'try harder' or 'be better'? If it has, name the drift and rewrite until the gospel-power is visible.",
+          "Your first draft is right above you. Open the reference pane's 'Your work' tab (if it's collapsed) and set your Christ-Connection Statement beside it. Read them side by side. Does the call in your draft rest on what Christ has done, or has it slipped into 'try harder' or 'be better'? If it has, name the drift and rewrite until the gospel-power is visible.",
         // SADI: the only N/A-able MPS question — strict "satisfied another
         // way" semantic (the moralism check was run upstream against the
         // Christ-Connection Statement); N/A is not "skip."
         naAllowed: true,
+        // UX audit 2026-07-02 (L5): override the toggle's generic default
+        // copy so the stricter ruled meaning survives under deadline
+        // pressure — see the naLabel note above PromptBlock in
+        // SermonWritingSurface.jsx.
+        naLabel: "not applicable — satisfied earlier in the sermon",
       },
       {
         key: "tighten",

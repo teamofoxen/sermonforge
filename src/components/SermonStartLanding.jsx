@@ -26,7 +26,14 @@ export default function SermonStartLanding({ onBegin }) {
 
   useEffect(() => {
     const onKey = (e) => {
-      if (e.key === "Enter" || e.key === "Escape") onBegin?.();
+      // Escape is the deliberate "get me out" gesture (matches
+      // SermonFinish's unscoped, never-consumable pattern). Enter is
+      // deliberately NOT handled here: a focused native <button>
+      // (PrimaryButton) already activates on Enter on its own, and handling
+      // it again at the window level would let a stray/repeat Enter dismiss
+      // the overlay no matter what has focus — on first visit that
+      // permanently consumes the threshold before the pastor has read it.
+      if (e.key === "Escape") onBegin?.();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);

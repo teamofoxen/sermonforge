@@ -74,6 +74,7 @@ const NOTEBOOK_COLUMN_BY_STAGE = Object.freeze({
 export default function SermonWorkspace({
   sermonId,
   onClose,
+  onDeleted,
   onOpenSermon,
   navHint,
   _fixtureSermon,
@@ -257,11 +258,12 @@ export default function SermonWorkspace({
     setAllTags((prev) => dedupeTags([...prev, ...nextTags]).sort((a, b) => a.localeCompare(b)));
   }, [handleUpdate]);
 
-  // Sermon title + passage are set in the sermon modal and shown read-only in
-  // the workspace (title in the top bar, passage above the reference-pane text).
-  // No inline edit here — State #3 ("a sermon must have a name") is satisfied at
-  // creation and can't be undone from this surface. Looking up other passages
-  // is the Passage lookup's job, decoupled from the sermon.
+  // Sermon passage is set in the sermon modal and shown read-only in the
+  // workspace (topbar identity for standalone sermons, and above the
+  // reference-pane text). There is no sermon title anywhere in this surface.
+  // No inline edit here — State #3 ("a sermon must have a name") is satisfied
+  // at creation and can't be undone from this surface. Looking up other
+  // passages is the Passage lookup's job, decoupled from the sermon.
 
   // beforePositionChange — async; flushes any pending debounced save
   // BEFORE the position settles. The chain is: position-change trigger
@@ -565,9 +567,25 @@ export default function SermonWorkspace({
     setFinishOpen(false);
   }, [beforePositionChange, writePositionAndThresholds]);
 
+  // Whole-sermon delete (audit M3). Soft delete under the hood (tombstone +
+  // restoreSermon), but until now the workspace-originated path never
+  // surfaced the "Deleted · Undo" affordance the list surfaces already show
+  // (Dashboard's deletedIds/ResumeRow) — to the pastor the sermon just
+  // vanished. onDeleted (when supplied) carries a display summary up to
+  // App.jsx, which routes to the Dashboard and hands it to that same
+  // deleted-row rendering. Falls back to a plain close if onDeleted isn't
+  // wired (e.g. a future non-App host).
   async function handleDelete() {
     await deleteSermon(sermonId);
-    onClose();
+    if (onDeleted) {
+      onDeleted({
+        id: sermonId,
+        title: sermon?.passage || "Untitled",
+        passage: sermon?.passage || "",
+      });
+    } else {
+      onClose();
+    }
   }
 
   if (loading) {
@@ -621,6 +639,13 @@ export default function SermonWorkspace({
     mps: String(getQuestionAnswer(mainPointPair, "mps", "tighten") ?? "").trim(),
     pastoralContext: [pcRoom, pcCostGift].filter(Boolean).join("\n\n"),
   };
+  // Shared identity label — the composed passage reference, same substrate
+  // as the reference pane heading above. There is no sermon title (removed
+  // as a workspace affordance; State #3 is satisfied at creation, not here),
+  // so passage is the only identifying text available. Used for both the
+  // topbar identity display (M7, standalone sermons only) and the delete
+  // confirm copy (M3).
+  const passageLabel = reference.passage;
 
   // Field-level answer access for the writing surface — extract
   // fieldAnswers for the current position's field from the sermon's
@@ -669,23 +694,30 @@ export default function SermonWorkspace({
   return (
     <>
       <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
-        {/* Top bar — back, series breadcrumb, passage ref, sermon title,
-            save indicator, delete. Stage tabs are gone. */}
+        {/* Top bar — back, series breadcrumb or passage identity, save
+            indicator, export, delete. There is no sermon title anywhere
+            (removed as a workspace affordance; title editing must not be
+            reintroduced — State #3 is satisfied at creation). Stage tabs
+            are gone. */}
         <div className="topbar">
           <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1, minWidth: 0 }}>
-            {/* The only top-bar nav: it LEAVES the sermon for the dashboard,
-                so it names that destination (Surface Contract #5 — every
-                re-entry is predictable). Previously a bare "Back", which read
-                as an in-walk back and confused where it led. */}
-            <BackButton
-              variant="icon"
-              onClick={onClose}
-              title="Back to dashboard"
-              className="btn-icon"
-              style={{ flexShrink: 0 }}
-            />
+            {/* The only top-bar nav: it LEAVES the sermon for the dashboard
+                (or the series planner, for a planner-opened sermon) — the
+                labeled variant names that destination as visible text, not
+                just a tooltip (Surface Contract #5 — every re-entry is
+                predictable; audit M5). The primitive supplies "← Back"; a
+                fixed "Back to dashboard" would be wrong for the
+                planner-return case. */}
+            <BackButton onClick={onClose} style={{ flexShrink: 0 }} />
             <div className="topbar-left">
               <div className="topbar-series">
+                {/* Standalone sermons (no series) get no breadcrumb above —
+                    show the passage reference here instead so the workspace
+                    always names what's open (audit M7). Series sermons keep
+                    the existing series-title + "Sermon N of M" breadcrumb;
+                    that already names the sermon (its position in the
+                    series), so the passage isn't duplicated here too. */}
+                {!sermon.series_title && passageLabel && <span>{passageLabel}</span>}
                 {sermon.series_title && <span>{sermon.series_title}</span>}
                 {seriesIdx >= 0 && (() => {
                   const total = siblingIds.length;
@@ -745,7 +777,14 @@ export default function SermonWorkspace({
                 Saved
               </span>
             )}
-            <DeleteButton onDelete={handleDelete} />
+            <DeleteButton
+              onDelete={handleDelete}
+              confirmLabel={
+                passageLabel
+                  ? `Delete this sermon on ${passageLabel}?`
+                  : "Delete this sermon?"
+              }
+            />
           </div>
         </div>
 

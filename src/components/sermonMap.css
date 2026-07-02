@@ -182,14 +182,28 @@
 }
 
 .sm-stage-break {
-  height: 1px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
   margin: 28px 0;
-  background: linear-gradient(
-    to right,
-    transparent,
-    var(--parchment-deep),
-    transparent
-  );
+}
+
+.sm-stage-break::before,
+.sm-stage-break::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--parchment-deep);
+}
+
+.sm-stage-label {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  font-weight: 600;
 }
 
 .sm-row {

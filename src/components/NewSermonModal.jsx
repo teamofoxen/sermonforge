@@ -18,8 +18,8 @@ import IconButton from "./primitives/IconButton";
 //  • "standalone" — forge a brand-new one-off sermon. It's anchored on the
 //    PASSAGE, not a title: pick the Book (the tracked book_id, mirroring the New
 //    Series book picker) + a chapter:verse, set the Sunday. No title is asked —
-//    a sermon's title is a late-prep act, so a standalone sermon is born named by
-//    its passage and titled later in the workspace.
+//    the workspace has no titling moment for a standalone sermon, so it stays
+//    named by its passage permanently, by design.
 //  • "series" — open a sermon already PLANNED in the Series Planner. Those units
 //    are real sermon rows; clicking one OPENS it for prep. Nothing is created
 //    here, so the planner stays the single place series sermons are born — no
@@ -98,7 +98,7 @@ export default function NewSermonModal({ onClose, onCreated, initialDate = "" })
   async function handleForge() {
     if (saving) return;
     if (!bookId) {
-      setError("Pick the book you're preaching — the passage names the sermon until you title it in prep.");
+      setError("Pick the book you're preaching — the passage names the sermon.");
       return;
     }
     setSaving(true);
@@ -106,8 +106,8 @@ export default function NewSermonModal({ onClose, onCreated, initialDate = "" })
     try {
       // Standalone only: a one-off sermon, no series. Series sermons are planned
       // in the Series Planner and OPENED here — never created in this modal. The
-      // composed passage IS the sermon's name (State #3) — the real title comes
-      // later, in the workspace. book_id rides a create-then-update follow-up (the
+      // composed passage IS the sermon's name (State #3) — permanently, there's
+      // no later titling moment. book_id rides a create-then-update follow-up (the
       // create-sermon INSERT is never widened), mirroring the planner's commitDraft;
       // a failed book write is recoverable in the workspace, so it never strands
       // the pastor on an error with a half-made sermon.
@@ -184,8 +184,8 @@ export default function NewSermonModal({ onClose, onCreated, initialDate = "" })
                   </div>
                 )}
                 <p className="field-caption">
-                  The book and chapter:verse are the passage you're preaching. You'll
-                  give the sermon its title later, in prep — for now the passage names it.
+                  The book and chapter:verse are the passage you're preaching —
+                  the passage names the sermon, and that's how it stays named.
                 </p>
               </div>
 

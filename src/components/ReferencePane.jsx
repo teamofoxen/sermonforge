@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useEsvPassage } from "../utils/useEsvPassage";
-import { RECOVERY, PassageRecovery } from "./PassagePopup";
-import EsvKeyModal from "./EsvKeyModal";
+import { usePassageRecovery } from "./EsvRecovery";
 import { TextButton } from "./primitives/TextButton";
 import IconButton from "./primitives/IconButton";
 import { bodyHasSubstance } from "../utils";
@@ -160,7 +159,10 @@ function OutlineRefItem({ points, onJump, defaultOpen = true }) {
 
 function PassageView({ passage }) {
   const { data, loading, refresh } = useEsvPassage(passage || "");
-  const [keyModalOpen, setKeyModalOpen] = useState(false);
+  // Shared with the passage-lookup popup and the Study→Anchor handoff — see
+  // EsvRecovery.jsx. A hook, so it runs unconditionally, before the
+  // !passage early return below.
+  const { esvState, fetchErrorNode, recoveryNode, keyModalNode } = usePassageRecovery(data, refresh);
 
   if (!passage) {
     return (
@@ -170,22 +172,12 @@ function PassageView({ passage }) {
     );
   }
 
-  const rawState = data?.esvState
-    ?? (data?.esvPending ? "no-key" : data?.esvError ? "error" : "ok");
-  const esvState = rawState === "ok" || RECOVERY[rawState] ? rawState : "error";
-
   return (
     <>
       {/* The sermon's preaching passage, labeled above its text. */}
       <div className="refpane-passage-ref">{passage}</div>
       {loading && <p className="refpane-note">Fetching ESV…</p>}
-      {!loading && data?.fetchError && (
-        <PassageRecovery
-          copy="Something went wrong loading the passage. Try again — if it keeps happening, close and reopen SermonForge."
-          actionLabel="Try again"
-          onAction={refresh}
-        />
-      )}
+      {!loading && data?.fetchError && fetchErrorNode}
       {!loading && !data?.fetchError && (
         esvState === "ok" ? (
           data?.esv ? (
@@ -202,26 +194,9 @@ function PassageView({ passage }) {
               book name and verse numbers.
             </p>
           )
-        ) : (
-          <PassageRecovery
-            copy={RECOVERY[esvState].copy}
-            actionLabel={RECOVERY[esvState].action}
-            onAction={
-              RECOVERY[esvState].kind === "key"
-                ? () => setKeyModalOpen(true)
-                : refresh
-            }
-          />
-        )
+        ) : recoveryNode
       )}
-      {keyModalOpen && (
-        <EsvKeyModal
-          onClose={() => {
-            setKeyModalOpen(false);
-            refresh();
-          }}
-        />
-      )}
+      {keyModalNode}
     </>
   );
 }

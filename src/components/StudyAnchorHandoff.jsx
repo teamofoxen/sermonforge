@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useEsvPassage } from "../utils/useEsvPassage";
+import { usePassageRecovery } from "./EsvRecovery";
 import IconButton from "./primitives/IconButton";
 import "./studyAnchorHandoff.css";
 
@@ -44,14 +45,26 @@ export default function StudyAnchorHandoff({ passage, outcomes, unfinished, onJu
   // The passage rides onto the handoff itself (2026-06-10 saturation ruling):
   // before forging the Main Point, the last thing the pastor sees is the text,
   // not just his own summaries. Shares the cached ESV fetch with the pane/popup.
-  const { data: passageData, loading: passageLoading } = useEsvPassage(passage || "");
+  const { data: passageData, loading: passageLoading, refresh: refreshPassage } = useEsvPassage(passage || "");
+  // Shared with PassagePopup/ReferencePane — see EsvRecovery.jsx.
+  const { esvState: passageState, fetchErrorNode, recoveryNode, keyModalNode, keyModalOpen } = usePassageRecovery(passageData, refreshPassage);
   useEffect(() => {
     const onKey = (e) => {
-      if (e.key === "Escape" || e.key === "Enter") onClose?.();
+      // Escape is the deliberate "get me out" gesture (matches
+      // SermonFinish's unscoped, never-consumable pattern) — but not while
+      // the nested key modal owns it, or one Escape would close both layers
+      // and, on a first visit, silently consume the threshold along with it.
+      if (e.key === "Escape" && !keyModalOpen) onClose?.();
+      // Enter is deliberately NOT handled here. A focused native <button>
+      // (IconButton/PrimaryButton) already activates on Enter on its own;
+      // handling it again at the window level double-fires on the dismiss
+      // button and — worse — lets a stray/repeat Enter dismiss the overlay
+      // no matter what has focus, which on first visit can permanently
+      // consume the "read it once more" threshold before it's been read.
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [onClose, keyModalOpen]);
 
   return (
     <div className="sah-overlay" role="dialog" aria-label="Study to Anchor handoff">
@@ -65,17 +78,33 @@ export default function StudyAnchorHandoff({ passage, outcomes, unfinished, onJu
             read it at the start. Let it sit on you. The Main Point you're about
             to forge should rise from the text, not only from your notes.
           </p>
+          {!passage && (
+            <p className="sah-passage-note">
+              This sermon doesn&apos;t have a passage set.
+            </p>
+          )}
           {passage && passageLoading && (
             <p className="sah-passage-loading">Loading the passage</p>
           )}
-          {passage && !passageLoading && passageData?.esv && (
-            <>
-              <p className="sah-passage-text">{passageData.esv}</p>
-              <p className="sah-passage-copyright">
-                ESV® Bible © 2001 by Crossway. Used by permission.
-              </p>
-            </>
+          {passage && !passageLoading && passageData?.fetchError && fetchErrorNode}
+          {passage && !passageLoading && !passageData?.fetchError && (
+            passageState === "ok" ? (
+              passageData?.esv ? (
+                <>
+                  <p className="sah-passage-text">{passageData.esv}</p>
+                  <p className="sah-passage-copyright">
+                    ESV® Bible © 2001 by Crossway. Used by permission.
+                  </p>
+                </>
+              ) : (
+                <p className="sah-passage-note">
+                  The ESV didn't return anything for this reference — check the
+                  book name and verse numbers.
+                </p>
+              )
+            ) : recoveryNode
           )}
+          {keyModalNode}
         </section>
 
         <h2 className="sah-section-label">What you produced in Study</h2>

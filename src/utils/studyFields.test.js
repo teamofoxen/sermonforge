@@ -32,6 +32,7 @@ import {
   setQuestionNA,
   getQuestionAnswer,
   deriveThoughtUnitsFromCanvas,
+  canvasRowIdsWithCumulativeWork,
   setDivisionsCanvas,
   OBSERVE_FIELDS,
   INTERPRET_FIELDS,
@@ -217,6 +218,65 @@ describe("deriveThoughtUnitsFromCanvas", () => {
       expect(r.christ_connection).toBeUndefined();
       expect(r.implication).toBeUndefined();
     }
+  });
+
+  // Audit finding H2 (2026-07-02, ux-audit-report-2026-07-02.md): a depth-0
+  // row typed empty (Enter-split at position 0, or a cleared line) used to
+  // drop out of the derived array entirely, silently taking its typed
+  // Meaning / Christ-Connection / Implication cells with it. A row that's
+  // still on screen, just blank right now, must keep its prior work.
+  it("keeps an emptied depth-0 row's cumulative work instead of dropping it", () => {
+    const existing = [
+      { thought_unit_text: "And you were dead", _canvas_row_id: "row-1", meaning: "We were spiritually dead." },
+      { thought_unit_text: "But God", _canvas_row_id: "row-4", christ_connection: "Grace intervenes." },
+    ];
+    const emptiedCanvas = UNIFIED_CANVAS_FIXTURE.map((r) =>
+      r.id === "row-1" ? { ...r, text: "" } : r
+    );
+    const out = deriveThoughtUnitsFromCanvas(emptiedCanvas, existing);
+    const row1 = out.find((r) => r._canvas_row_id === "row-1");
+    expect(row1).toBeDefined();
+    expect(row1.meaning).toBe("We were spiritually dead.");
+    // The label falls back to the last known text so the table row isn't blank.
+    expect(row1.thought_unit_text).toBe("And you were dead");
+  });
+
+  it("still skips an empty depth-0 row with no prior cumulative work — no phantom units", () => {
+    const emptiedCanvas = UNIFIED_CANVAS_FIXTURE.map((r) =>
+      r.id === "row-1" ? { ...r, text: "" } : r
+    );
+    const out = deriveThoughtUnitsFromCanvas(emptiedCanvas, []);
+    expect(out.find((r) => r._canvas_row_id === "row-1")).toBeUndefined();
+  });
+
+  it("still drops a depth-0 row that leaves the canvas (e.g. a Backspace merge) even if it had work — nothing to key it to", () => {
+    const existing = [
+      { thought_unit_text: "And you were dead", _canvas_row_id: "row-1", meaning: "We were spiritually dead." },
+    ];
+    const withoutRow1 = UNIFIED_CANVAS_FIXTURE.filter((r) => r.id !== "row-1");
+    const out = deriveThoughtUnitsFromCanvas(withoutRow1, existing);
+    expect(out.find((r) => r._canvas_row_id === "row-1")).toBeUndefined();
+  });
+});
+
+describe("canvasRowIdsWithCumulativeWork", () => {
+  it("returns an empty set for non-array input", () => {
+    expect(canvasRowIdsWithCumulativeWork(null).size).toBe(0);
+    expect(canvasRowIdsWithCumulativeWork(undefined).size).toBe(0);
+  });
+
+  it("flags only rows carrying text or a per-cell N/A in a cumulative column", () => {
+    const thoughtUnits = [
+      { _canvas_row_id: "row-1", meaning: "We were spiritually dead." },
+      { _canvas_row_id: "row-2", meaning: "" },
+      { _canvas_row_id: "row-3", implication_na: true },
+      { _canvas_row_id: "row-4" },
+    ];
+    const ids = canvasRowIdsWithCumulativeWork(thoughtUnits);
+    expect(ids.has("row-1")).toBe(true);
+    expect(ids.has("row-2")).toBe(false);
+    expect(ids.has("row-3")).toBe(true);
+    expect(ids.has("row-4")).toBe(false);
   });
 });
 

@@ -167,11 +167,23 @@ function AppInner() {
   // when a sermon is opened from the planner so Back returns to the series
   // instead of the Dashboard (audit M5).
   const [workspaceReturn, setWorkspaceReturn] = useState(null);
+  // Workspace-originated delete (audit M3): the just-deleted sermon's display
+  // summary, carried across the close-then-remount so Dashboard can render the
+  // same "Deleted · Undo" row list-originated deletes already show. Dashboard
+  // itself remounts on close (key={refreshKey}) and refetches from disk — by
+  // then the sermon is tombstoned and absent from that fetch, so the notice
+  // must travel as data, not as an id Dashboard could re-look-up.
+  const [deletedSermonNotice, setDeletedSermonNotice] = useState(null);
 
   const openSermon = useCallback((id, hint = null) => {
     setOpenSermonId(id);
     setOpenSermonHint(hint);
     setCurrentView(VIEW.Workspace);
+    // The delete notice is only for the dashboard the pastor lands on right
+    // after a delete — opening any sermon (this one included) means he's
+    // moved on, so a stale "Deleted · Undo" must not resurface on a later,
+    // unrelated Dashboard visit.
+    setDeletedSermonNotice(null);
   }, []);
 
   // Series Planner entry. The Planning list calls openPlanner(id) to open one
@@ -182,6 +194,7 @@ function AppInner() {
   const openPlanner = useCallback((id) => {
     setPlannerSeriesId(id);
     setCurrentView(VIEW.SeriesPlanner);
+    setDeletedSermonNotice(null); // moved on — see openSermon
   }, []);
 
   // Opening a slot FROM the planner remembers the series so Back returns there
@@ -206,6 +219,22 @@ function AppInner() {
     setCurrentView(VIEW.Dashboard);
   }, [workspaceReturn]);
 
+  // Close path for a workspace-originated delete (audit M3). Unlike an
+  // ordinary Back, a delete always routes to the Dashboard — even for a
+  // planner-opened sermon — because the "Deleted · Undo" notice only lives
+  // there; honoring workspaceReturn here would make the affordance
+  // unreachable for planner-opened sermons.
+  const closeWorkspaceAfterDelete = useCallback((notice) => {
+    setOpenSermonId(null);
+    setOpenSermonHint(null);
+    setWorkspaceReturn(null);
+    setDeletedSermonNotice(notice);
+    setRefreshKey(k => k + 1);
+    setCurrentView(VIEW.Dashboard);
+  }, []);
+
+  const clearDeletedSermonNotice = useCallback(() => setDeletedSermonNotice(null), []);
+
   const navigate = useCallback((view) => {
     setCurrentView(view);
     if (view !== VIEW.Workspace) {
@@ -218,6 +247,13 @@ function AppInner() {
     // list re-picks (and a bare sidebar click can't land on a stale planner).
     if (view !== VIEW.SeriesPlanner) {
       setPlannerSeriesId(null);
+    }
+    // A sidebar/menu navigation away from the Dashboard is also "moved on" —
+    // see openSermon's comment. Without this, a delete notice shown once
+    // could resurface on a later, unrelated Dashboard visit reached via
+    // Sermons/Calendar/etc. and back.
+    if (view !== VIEW.Dashboard) {
+      setDeletedSermonNotice(null);
     }
   }, []);
 
@@ -332,6 +368,8 @@ function AppInner() {
             key={refreshKey}
             onOpenSermon={openSermon}
             onNavigate={navigate}
+            deletedSermonNotice={deletedSermonNotice}
+            onClearDeletedSermonNotice={clearDeletedSermonNotice}
           />
         )}
         {currentView === VIEW.Sermons && (
@@ -369,6 +407,7 @@ function AppInner() {
             key={openSermonId}
             sermonId={openSermonId}
             onClose={closeWorkspace}
+            onDeleted={closeWorkspaceAfterDelete}
             onOpenSermon={openSermon}
             navHint={openSermonHint}
           />

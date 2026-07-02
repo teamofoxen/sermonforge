@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { QUESTION_WALK_ORDER, questionId, findField, REGION_DISPLAY } from "../utils/walkOrder";
 import { THRESHOLD_ID } from "../utils/sermonState";
+import { STAGE_LABELS } from "../core/contracts";
 import TextButton from "./primitives/TextButton";
 import IconButton from "./primitives/IconButton";
 import "./sermonMap.css";
@@ -16,7 +17,7 @@ function buildGroups(questions) {
   let currentField = null;
   for (const q of questions) {
     if (q.stage !== currentStage) {
-      if (currentStage !== null) out.push({ kind: "stage-break" });
+      if (currentStage !== null) out.push({ kind: "stage-break", stage: q.stage });
       currentStage = q.stage;
       currentRegion = null;
       currentField = null;
@@ -189,7 +190,11 @@ export default function SermonMap({
           <div className="sm-list">
             {groups.map((g, i) => {
               if (g.kind === "stage-break") {
-                return <div key={`break-${i}`} className="sm-stage-break" aria-hidden="true" />;
+                return (
+                  <div key={`break-${i}`} className="sm-stage-break">
+                    <span className="sm-stage-label">{STAGE_LABELS[g.stage] ?? g.stage}</span>
+                  </div>
+                );
               }
               if (g.kind === "region") {
                 const count = regionCounts[`${g.stage}/${g.subPhase}`];

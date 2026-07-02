@@ -2,10 +2,12 @@ import { useCallback, useEffect, useRef } from "react";
 import { findField, nextField, prevField, regionFrameFor, REGION_DISPLAY } from "../utils/walkOrder";
 import { createOutlinePoint } from "../utils";
 import { verseLabelsForRange } from "../utils/passageRef";
+import { canvasRowIdsWithCumulativeWork } from "../utils/studyFields";
 import PassageCanvas from "./PassageCanvas";
 import ReferencePane from "./ReferencePane";
 import FieldTeaching from "./FieldTeaching";
 import IconButton from "./primitives/IconButton";
+import DeleteButton from "./primitives/DeleteButton";
 import "./sermonWritingSurface.css";
 
 // The Assembly/Outline writing position. "outline" is the canonical sub-phase
@@ -45,7 +47,16 @@ function AutoGrowTextarea({ value, onChange, disabled, ariaLabel, placeholder })
 // as data loss even though the envelope kept the text. The `na && !naAllowed`
 // branch keeps the undo reachable for any legacy flag on a now-suppressed
 // question.
-function PromptBlock({ prompt, answer, naAllowed, onValueChange, onToggleNA }) {
+//
+// naLabel (L5, UX audit 2026-07-02): mps.gospel_check and the door
+// redemptive_note carry a RULED, STRICTER N/A meaning ("satisfied another
+// way upstream") than the Study-question grants' self-explanatory meaning
+// ("the text genuinely doesn't carry this"). The bare "not applicable" label
+// reads as a generic skip under deadline pressure. When a question's field
+// def sets `naLabel`, it overrides the toggle's off-state copy; every other
+// naAllowed question keeps the default generic label. Copy-only — no change
+// to N/A semantics, storage, or the grant list.
+function PromptBlock({ prompt, answer, naAllowed, naLabel, onValueChange, onToggleNA }) {
   const value = answer?.value ?? "";
   const na = answer?.na === true;
   return (
@@ -68,7 +79,7 @@ function PromptBlock({ prompt, answer, naAllowed, onValueChange, onToggleNA }) {
             ? value.trim()
               ? "not applicable · undo — your words are kept"
               : "not applicable · undo"
-            : "not applicable"}
+            : naLabel || "not applicable"}
         </IconButton>
       )}
     </div>
@@ -131,11 +142,19 @@ function CumulativeSynthesisTable({
                 {priorColumns.map((col) => {
                   const v = unit[col.key];
                   const isEmpty = v == null || v === "";
+                  // Per-cell N/A (canon §5 2c) applies to prior/read-only
+                  // columns too — a cell the pastor marked "not applicable"
+                  // upstream must render that way here, not as a bare dash
+                  // (looks untouched) or as his kept-but-disowned words
+                  // (looks like a settled answer). Matches sermonState.js's
+                  // cellDisplay "(not applicable)" copy — one N/A vocabulary
+                  // across the app.
+                  const colNA = unit[`${col.key}_na`] === true;
                   return (
                     <div key={col.key} className="sws-unit-prior">
                       <div className="sws-unit-label">{col.label}</div>
-                      <div className={"sws-unit-value" + (isEmpty ? " is-empty" : "")}>
-                        {isEmpty ? "—" : v}
+                      <div className={"sws-unit-value" + (isEmpty && !colNA ? " is-empty" : "")}>
+                        {colNA ? "(not applicable)" : isEmpty ? "—" : v}
                       </div>
                     </div>
                   );
@@ -211,7 +230,13 @@ function OutlineBuilder({ question, points, onChange }) {
                 <div className="sws-outline-point-actions">
                   <IconButton type="button" className="sws-na-toggle" onClick={() => movePoint(idx, -1)} disabled={idx === 0} aria-label="Move point up">↑ up</IconButton>
                   <IconButton type="button" className="sws-na-toggle" onClick={() => movePoint(idx, 1)} disabled={idx === list.length - 1} aria-label="Move point down">↓ down</IconButton>
-                  <IconButton type="button" className="sws-na-toggle" onClick={() => removePoint(pt.id)} aria-label="Remove point">remove</IconButton>
+                  <DeleteButton
+                    small
+                    label="remove"
+                    ariaLabel={`Remove point ${idx + 1}`}
+                    confirmLabel="Remove this point — and any Scripture, Explanation, Application, or Illustration written for it?"
+                    onDelete={() => removePoint(pt.id)}
+                  />
                 </div>
               </div>
             </article>
@@ -503,6 +528,7 @@ export default function SermonWritingSurface({
             rows={Array.isArray(rows) ? rows : []}
             seedVerses={seedVerses}
             onChange={(next) => onCanvasChange?.(field.key, q.key, next)}
+            rowIdsWithWork={canvasRowIdsWithCumulativeWork(thoughtUnits)}
           />
         </div>
       );
@@ -551,6 +577,7 @@ export default function SermonWritingSurface({
           prompt={q.prompt}
           answer={{ value: v, na }}
           naAllowed={q.naAllowed === true}
+          naLabel={q.naLabel}
           onValueChange={(val) => onManuscriptChange?.(q.section, q.key, val)}
           onToggleNA={() => onManuscriptChange?.(q.section, `${q.key}_na`, !na)}
         />
@@ -559,6 +586,7 @@ export default function SermonWritingSurface({
     return (
       <PromptBlock
         prompt={q.prompt}
+        naLabel={q.naLabel}
         naAllowed={q.naAllowed === true}
         answer={answers[q.key]}
         onValueChange={(v) =>

@@ -2,6 +2,13 @@
 
 ---
 
+## 2026-07-02 — Workspace UX audit (CORE × Pastor's Charter): executed, remediated, verified
+
+- Ran the chartered workspace UX audit (ground truth → rendered walk → five lens sweeps → adversarial verification) to 16 confirmed findings, 2 High; report at `ux-audit-report-2026-07-02.md`.
+- Remediated all 16: confirm-gated outline-point removal and canvas-edit data loss (live-fire tested in preview), a missing ESV-failure voice on the Study→Anchor handoff, a Finish-vs-rest-of-app completeness contradiction, labeled Back, topbar sermon identity, map stage labels, and stale-copy fixes.
+- Extracted `src/components/EsvRecovery.jsx` to de-duplicate ESV-recovery logic across the reference pane, passage popup, and handoff — the mandatory `/simplify` pass's one real finding.
+- 282/282 tests pass, lint clean, `/sweep-the-house` → PASS; no contract weakened, no IPC/schema changes.
+
 ## 2026-07-02 — Pastor's Charter: extraction, fidelity audit, revised draft (placement open)
 
 - Synthesized the five pastoral convictions beneath docs/CORE.md; analysis-only session — no code or docs changed.
