@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-07-02 — Workspace architecture Track B/Gate 2: invariant tests pin the seams
+
+- Added 7 invariant-test files: completion-consistency across map/handoff/Finish (with the M2 regression pin), question-kind parity across field defs / renderer / state derivation, and a retired-composite/vocabulary tripwire.
+- Added load-failure-vs-not-found, resume-position (+ spine-only write guard), and standing-prohibition guards (no gates / AI authorship / movement narration).
+- Fixed the stale AI-mutation tests: rewrote `mutation-1` / `process-5` onto the real one-kind path and removed the fixture's dead `ai_proposal` / `ai_apply` branches to match production.
+- Corrected the `ENFORCEMENT_STATUS.md` Mutation #1 row and added a mutation-kind parity test.
+- Suite 297 → 326; no production code changed; lint 0, spine-integrity OK, drift-check PASS.
+
+---
+
 ## 2026-07-02 — Workspace architecture audit + governance plan; Track A/Gate 1 drift & dead-code cleanup
 
 - Added the sermon-workspace architecture-fragility audit (7-lens, adversarially verified — mostly latent, 0 High) and a gated Track A–E remediation governance plan under `docs/AUDITS/`.

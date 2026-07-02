@@ -55,7 +55,9 @@ function coerceLegacyStage(stage: string | null | undefined): string {
 }
 export const SERMON_STATUS = { InProgress: "in_progress", Complete: "complete" } as const;
 export const SERIES_STATUS = { InProgress: "in_progress", Complete: "complete" } as const;
-export const MUTATION_KIND = { UserInput: "user_input", AiProposal: "ai_proposal", AiApply: "ai_apply" } as const;
+// ARI Phase 9 — collapsed to `user_input` only. Mirrors MUTATION_KIND in
+// src/core/contracts.ts / electron/contracts.cjs (both { UserInput } only).
+export const MUTATION_KIND = { UserInput: "user_input" } as const;
 
 export const SERMON_COLUMNS = new Set([
   "title", "passage", "date", "preacher", "stage", "mpt", "mps",
@@ -137,7 +139,9 @@ type Row = Record<string, any>;
 const sermons = new Map<string, Row>();
 const series = new Map<string, Row>();
 const sections = new Map<string, Row>();
-const proposals = new Map<string, { sermonId: string; field: string; value: any; isStructured: boolean }>();
+// `proposals` map removed 2026-07-02 (Track B, B4) — the ai_proposal/ai_apply
+// cycle it backed is gone from production (ARI Phase 9); the fixture no longer
+// carries it.
 // `legacyEvidenceCutoff` mirror deleted in Phase G (2026-05-18) — see
 // shapeSermon below for the matching `legacy:` field removal.
 
@@ -145,7 +149,6 @@ function reset() {
   sermons.clear();
   series.clear();
   sections.clear();
-  proposals.clear();
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -498,47 +501,13 @@ function validateAndCommit(op: string, payload: any) {
         row[field] = serialized;
         return success();
       }
-      if (kind === MUTATION_KIND.AiProposal) {
-        const prior = row[field];
-        const priorEmpty = prior == null ||
-          (typeof prior === "string" && (prior.trim() === "" || prior === "[]" || prior === "{}"));
-        if (priorEmpty) {
-          return rejection("PROCESS_5_AI_NO_USER_EVIDENCE", "Process #5",
-            "Process Contract #5 violation: AI augments, never substitutes — proposals require prior user evidence in the field.");
-        }
-        if (isStructured && typeof payload.value === "string")
-          return rejection("STATE_5_STRUCTURED_FIELD_STRING", "State #5",
-            `'${field}' is a structured field; pass a typed update shape.`);
-        if (!isStructured && typeof payload.value !== "string")
-          return rejection("STATE_5_SIMPLE_FIELD_STRUCTURED", "State #5",
-            `'${field}' is a simple field; value must be a string.`);
-        const proposalId = randomUUID();
-        proposals.set(proposalId, { sermonId, field, value: payload.value, isStructured });
-        return success({ proposalId });
-      }
-      if (kind === MUTATION_KIND.AiApply) {
-        const { proposalId } = payload;
-        if (!proposalId || !proposals.has(proposalId)) {
-          return rejection("MUTATION_1_AI_APPLY_WITHOUT_PROPOSAL", "Mutation #1",
-            "Mutation Contract #1 violation: user typing wins; ai_apply requires a referenced proposalId from a prior ai_proposal.");
-        }
-        const p = proposals.get(proposalId)!;
-        if (p.sermonId !== sermonId || p.field !== field) {
-          return rejection("MUTATION_1_PROPOSAL_MISMATCH", "Mutation #1",
-            "Mutation Contract #1 violation: proposalId references a different sermon/field than the apply call.");
-        }
-        let serialized: any;
-        if (p.isStructured) {
-          const r = applyStructuredUpdate(row, field, p.value);
-          if (typeof r === "object" && (r as any).ok === false) return r as any;
-          serialized = r;
-        } else {
-          serialized = p.value;
-        }
-        row[field] = serialized;
-        proposals.delete(proposalId);
-        return success();
-      }
+      // ai_proposal / ai_apply branches removed 2026-07-02 (Track B, B4) to
+      // restore fixture-vs-production parity. ARI Phase 9 collapsed the spine
+      // to `user_input` only; production electron/main.js `apply-mutation`
+      // rejects every non-user_input kind with BAD_KIND (main.js apply-mutation
+      // case). The fixture used to keep the removed proposal/apply cycle alive,
+      // so mutation-1 / process-5 passed green against dead branches. It now
+      // mirrors production: any AI kind falls through to BAD_KIND below.
       return rejection("BAD_KIND", "Mutation", `Unknown mutation kind: ${kind}`);
     }
     case "load-sample-sermon": {
@@ -721,8 +690,4 @@ export function insertSeriesRow(row: Partial<Row>): string {
 
 export function getSermonRow(id: string): Row | undefined {
   return sermons.get(id);
-}
-
-export function listProposals(): Map<string, any> {
-  return proposals;
 }

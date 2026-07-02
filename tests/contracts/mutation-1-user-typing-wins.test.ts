@@ -3,107 +3,69 @@ import {
   installTestSpine,
   resetTestSpine,
   insertSermonRow,
-  STAGE,
+  getSermonRow,
 } from "./_helpers/test-spine";
 
-// Mutation Contract #1 (docs/CORE.md):
-//   "User typing always wins by default. The system does not overwrite
-//   user-typed content without explicit, per-occurrence consent. 'Draft,'
-//   'Suggest,' 'Populate' are *proposals*, never *replacements*."
+// Mutation Contract #1 (docs/CORE.md, ARI Phase 9 rearticulation):
+//   "User typing always wins by default. All sermon content is pastor-typed.
+//   There are no system-driven writes to sermon fields outside the pastor's
+//   keystrokes."
 //
-// Structural enforcement: applyMutation with kind=ai_apply requires a
-// proposalId from a prior ai_proposal. Any ai_apply that references a
-// proposalId not in the proposals map is a Mutation #1 violation — the
-// only way to commit AI-sourced content is via a real, pre-recorded proposal.
+// Enforcement is now structural-by-absence: MutationKind collapsed to
+// `user_input` only, so the spine has NO path for a system actor to write a
+// sermon field. This test drives the REAL production path (electron/main.js
+// `apply-mutation`): user_input commits; every other kind is BAD_KIND'd.
 //
-// The carryover note explicitly says: tests should construct a proposalId
-// that's never been registered, NOT one that's expired (TTL is a separate
-// concern out of scope for this pass).
+// (Rewritten 2026-07-02, Track B/B4. The prior file drove the deleted
+// ai_proposal/ai_apply proposal-then-apply cycle and only passed because the
+// test fixture still carried those dead branches — finding M. The fixture now
+// mirrors production; this test asserts the live one-kind path.)
 
-describe("Mutation Contract #1: user typing wins", () => {
+describe("Mutation Contract #1: user typing wins — no system actor writes sermon fields", () => {
   beforeEach(() => {
     installTestSpine();
     resetTestSpine();
   });
 
-  it("ai_apply with a proposalId that was never registered rejects with Mutation #1", async () => {
-    const sermonId = insertSermonRow({
-      title: "Test",
-      current_stage: STAGE.Study,
-      mpt: "User typed this MPT.",
+  it("a user_input mutation commits the pastor's typed content", async () => {
+    const sermonId = insertSermonRow({ title: "Test", mpt: "" });
+    const bridge = (globalThis as any).electronAPI.spine;
+    const result = await bridge("apply-mutation", {
+      kind: "user_input",
+      sermonId,
+      field: "mpt",
+      value: "The pastor typed this MPT.",
     });
+    expect(result.ok).toBe(true);
+    expect(getSermonRow(sermonId)!.mpt).toBe("The pastor typed this MPT.");
+  });
+
+  it("ai_apply — a system-write kind — is refused with BAD_KIND, and the pastor's content is untouched", async () => {
+    const sermonId = insertSermonRow({ title: "Test", mpt: "User-written MPT." });
     const bridge = (globalThis as any).electronAPI.spine;
     const result = await bridge("apply-mutation", {
       kind: "ai_apply",
       sermonId,
       field: "mpt",
-      proposalId: "nonexistent-proposal-id-never-registered",
+      proposalId: "anything",
+      value: "System-written MPT.",
     });
     expect(result.ok).toBe(false);
-    expect(result.clause).toBe("Mutation #1");
-    expect(result.code).toBe("MUTATION_1_AI_APPLY_WITHOUT_PROPOSAL");
-    expect(result.message).toMatch(/user typing wins/i);
+    expect(result.code).toBe("BAD_KIND");
+    expect(getSermonRow(sermonId)!.mpt).toBe("User-written MPT.");
   });
 
-  it("ai_apply with a proposalId that targets a different sermon/field rejects with Mutation #1", async () => {
-    const sermonA = insertSermonRow({ title: "Sermon A", mpt: "A's MPT" });
-    const sermonB = insertSermonRow({ title: "Sermon B", mpt: "B's MPT" });
+  it("ai_proposal is refused too — the proposal/apply cycle no longer exists (ARI Phase 9)", async () => {
+    const sermonId = insertSermonRow({ title: "Test", mpt: "User-written MPT." });
     const bridge = (globalThis as any).electronAPI.spine;
-
-    // Register a proposal against sermon A's MPT field.
-    const proposed = await bridge("apply-mutation", {
-      kind: "ai_proposal",
-      sermonId: sermonA,
-      field: "mpt",
-      value: "AI suggestion for A's MPT",
-    });
-    expect(proposed.ok).toBe(true);
-
-    // Try to ai_apply that proposal to sermon B — mismatch.
     const result = await bridge("apply-mutation", {
-      kind: "ai_apply",
-      sermonId: sermonB,
-      field: "mpt",
-      proposalId: proposed.value.proposalId,
-    });
-    expect(result.ok).toBe(false);
-    expect(result.clause).toBe("Mutation #1");
-    expect(result.code).toBe("MUTATION_1_PROPOSAL_MISMATCH");
-  });
-
-  it("ai_apply with a valid proposalId commits the proposal to the user's field", async () => {
-    const sermonId = insertSermonRow({
-      title: "Test",
-      mpt: "User-written MPT.",
-    });
-    const bridge = (globalThis as any).electronAPI.spine;
-
-    const proposed = await bridge("apply-mutation", {
       kind: "ai_proposal",
       sermonId,
       field: "mpt",
-      value: "AI-rewritten MPT.",
+      value: "AI suggestion for the MPT.",
     });
-    expect(proposed.ok).toBe(true);
-    const proposalId = proposed.value.proposalId;
-
-    const applied = await bridge("apply-mutation", {
-      kind: "ai_apply",
-      sermonId,
-      field: "mpt",
-      proposalId,
-    });
-    expect(applied.ok).toBe(true);
-
-    // Sanity: the field was updated, AND the proposal is consumed
-    // (a second apply with the same proposalId would now fail).
-    const reapply = await bridge("apply-mutation", {
-      kind: "ai_apply",
-      sermonId,
-      field: "mpt",
-      proposalId,
-    });
-    expect(reapply.ok).toBe(false);
-    expect(reapply.clause).toBe("Mutation #1");
+    expect(result.ok).toBe(false);
+    expect(result.code).toBe("BAD_KIND");
+    expect(getSermonRow(sermonId)!.mpt).toBe("User-written MPT.");
   });
 });
