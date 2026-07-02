@@ -82,6 +82,11 @@ export default function SermonWorkspace({
 }) {
   const [sermon, setSermon] = useState(_fixtureSermon ?? null);
   const [loading, setLoading] = useState(!_fixtureSermon);
+  // W4: a load failure must not read as "sermon is gone" (CORE Mutation
+  // #3/#5 — failures are visible and retryable). loadNonce is bumped by the
+  // Retry button to re-run the load effect below.
+  const [loadError, setLoadError] = useState(false);
+  const [loadNonce, setLoadNonce] = useState(0);
   const [saveState, setSaveState] = useState(INITIAL_SAVE_STATE);
   const { saving, saveError, lastSavedAt } = saveState;
   const [siblingIds, setSiblingIds] = useState([]);
@@ -131,6 +136,7 @@ export default function SermonWorkspace({
       return undefined;
     }
     let cancelled = false;
+    setLoadError(false);
     async function load() {
       try {
         const data = await getSermon(sermonId);
@@ -192,13 +198,14 @@ export default function SermonWorkspace({
         setSiblingIds(Array.isArray(siblings) ? siblings.map((s) => s.id) : []);
       } catch (e) {
         console.error("SermonWorkspace load error:", e);
+        if (!cancelled) setLoadError(true);
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
     load();
     return () => { cancelled = true; };
-  }, [sermonId, _fixtureSermon]);
+  }, [sermonId, _fixtureSermon, loadNonce]);
 
   // Load the pastor's existing tags once for the autocomplete (skipped in
   // fixture mode — no disk). Best-effort: a failure just means no suggestions.
@@ -261,10 +268,12 @@ export default function SermonWorkspace({
 
   // Sermon passage is set in the sermon modal and shown read-only in the
   // workspace (topbar identity for standalone sermons, and above the
-  // reference-pane text). There is no sermon title anywhere in this surface.
-  // No inline edit here — State #3 ("a sermon must have a name") is satisfied
-  // at creation and can't be undone from this surface. Looking up other
-  // passages is the Passage lookup's job, decoupled from the sermon.
+  // reference-pane text). The topbar chrome carries no sermon title — but
+  // since 2026-07-02 the title IS correctable inside the walk, at the
+  // terminal Sermon Title field (ruled: the title is written last, with the
+  // doors; handleTitleChange below). State #3 ("a sermon must have a name")
+  // is satisfied at creation and can't be undone from this surface. Looking
+  // up other passages is the Passage lookup's job, decoupled from the sermon.
 
   // beforePositionChange — async; flushes any pending debounced save
   // BEFORE the position settles. The chain is: position-change trigger
@@ -456,6 +465,18 @@ export default function SermonWorkspace({
     handleUpdate({ functional_elements: serializeFunctionalElements(next) });
   }, [sermon, handleUpdate]);
 
+  // Sermon Title write path (ruled 2026-07-02: the walk's terminal Title
+  // field is the workspace's one title affordance — the topbar chrome still
+  // carries none). State #3 guard: an empty name is never persisted; the
+  // editor keeps the draft local and speaks the refusal inline, and the
+  // stored name survives until a real replacement arrives.
+  const handleTitleChange = useCallback((value) => {
+    if (!sermon) return;
+    const v = String(value ?? "").trim();
+    if (!v) return;
+    handleUpdate({ title: v });
+  }, [sermon, handleUpdate]);
+
   const handleManuscriptChange = useCallback((section, key, value) => {
     if (!sermon) return;
     // Write-path N/A guard (T19 parity for the native manuscript column):
@@ -597,6 +618,26 @@ export default function SermonWorkspace({
     );
   }
 
+  // W4: distinguish a load failure (retryable, sermon likely still on disk)
+  // from a genuinely absent id (the honest "Sermon not found." below).
+  if (loadError) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
+        <div>
+          <p style={{ color: "var(--ink-ghost)" }}>
+            Something went wrong loading this sermon. Your work is safe on disk — this is a loading problem, not a lost sermon.
+          </p>
+          <div style={{ display: "flex", gap: "8px" }}>
+            <SecondaryButton onClick={() => { setLoading(true); setLoadNonce((n) => n + 1); }}>
+              Retry
+            </SecondaryButton>
+            <BackButton onClick={onClose} />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!sermon) {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}>
@@ -641,11 +682,11 @@ export default function SermonWorkspace({
     pastoralContext: [pcRoom, pcCostGift].filter(Boolean).join("\n\n"),
   };
   // Shared identity label — the composed passage reference, same substrate
-  // as the reference pane heading above. There is no sermon title (removed
-  // as a workspace affordance; State #3 is satisfied at creation, not here),
-  // so passage is the only identifying text available. Used for both the
-  // topbar identity display (M7, standalone sermons only) and the delete
-  // confirm copy (M3).
+  // as the reference pane heading above. The topbar carries no sermon title
+  // (title editing lives in the walk's terminal Sermon Title field since
+  // 2026-07-02, not in the chrome), so passage is the identifying text here.
+  // Used for both the topbar identity display (M7, standalone sermons only)
+  // and the delete confirm copy (M3).
   const passageLabel = reference.passage;
 
   // Field-level answer access for the writing surface — extract
@@ -704,10 +745,10 @@ export default function SermonWorkspace({
     <>
       <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
         {/* Top bar — back, series breadcrumb or passage identity, save
-            indicator, export, delete. There is no sermon title anywhere
-            (removed as a workspace affordance; title editing must not be
-            reintroduced — State #3 is satisfied at creation). Stage tabs
-            are gone. */}
+            indicator, export, delete. The chrome carries no sermon title —
+            title editing lives in the walk itself (the terminal Sermon Title
+            field, ruled 2026-07-02: named last, with the doors) and must not
+            return to the topbar. Stage tabs are gone. */}
         <div className="topbar">
           <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1, minWidth: 0 }}>
             {/* The only top-bar nav: it LEAVES the sermon for the dashboard
@@ -834,6 +875,8 @@ export default function SermonWorkspace({
             onOutlineChange={handleOutlineChange}
             onFunctionalElementChange={handleFunctionalElementChange}
             onManuscriptChange={handleManuscriptChange}
+            sermonTitle={sermon.title}
+            onTitleChange={handleTitleChange}
             onPositionChange={handlePositionChange}
             onDoorJump={handleDoorJump}
             returnTo={returnTo}

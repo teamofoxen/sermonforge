@@ -75,13 +75,13 @@ export const OBSERVE_FIELDS = [
     overview: {
       title: "Observe — don't stop at the obvious",
       paragraphs: [
-        "Observe is the 'Captain Obvious' phase — read, reread, and note what the text plainly says, before any commentary. Bring Merida's posture: he tells students to make twenty-five observations on a passage; they're sure it's impossible, then find it isn't. You won't count to twenty-five here — you'll make your observations in the next seven fields.",
+        "Observe is the 'Captain Obvious' phase — read, reread, and note what the text plainly says, before any commentary. One seasoned preacher tells his students to make twenty-five observations on a passage; they're sure it's impossible, then find it isn't. You won't count to twenty-five here — you'll make your observations in the next seven fields.",
       ],
     },
     questions: [
-      { key: "before",             prompt: "What happened before this passage?" },
-      { key: "after",              prompt: "What happens after?" },
-      { key: "impact",             prompt: "Do those answers impact what's happening in this passage? If so, how?" },
+      { key: "before",             mapLabel: "What happened before",     prompt: "What happened before this passage?" },
+      { key: "after",              mapLabel: "What happens after",       prompt: "What happens after?" },
+      { key: "impact",             mapLabel: "Impact on this passage",   prompt: "Do those answers impact what's happening in this passage? If so, how?" },
     ],
   },
   {
@@ -91,9 +91,9 @@ export const OBSERVE_FIELDS = [
     // N/A grants (canon §5, SFDI): Where + When may be N/A on passages that
     // genuinely carry neither (epistles); How is not N/A-able.
     questions: [
-      { key: "where", prompt: "Where does this take place?", naAllowed: true },
-      { key: "when",  prompt: "When does this take place?", naAllowed: true },
-      { key: "how",   prompt: "What's happening, in order? Walk the events or movement of the passage step by step." },
+      { key: "where", mapLabel: "Where", prompt: "Where does this take place?", naAllowed: true },
+      { key: "when",  mapLabel: "When",  prompt: "When does this take place?", naAllowed: true },
+      { key: "how",   mapLabel: "What's happening, in order", prompt: "What's happening, in order? Walk the events or movement of the passage step by step." },
     ],
   },
   {
@@ -117,6 +117,7 @@ export const OBSERVE_FIELDS = [
       {
         key: "canvas",
         kind: "indented-canvas",
+        mapLabel: "Lay out the passage's structure",
         prompt: "Type the passage by hand. Push each main statement to the left margin. Indent supporting words and phrases beneath what they support. When two statements run in parallel, line them up at the same level so the structure shows.",
       },
     ],
@@ -165,8 +166,8 @@ export const INTERPRET_FIELDS = [
     label: "Deeper Context",
     hint: "Observe's Context field placed the passage in its book. Now go deeper — what unresolved questions does the passage still raise, and how does it fit the book's larger argument?",
     questions: [
-      { key: "unresolved",     prompt: "What questions about this passage are still unresolved after Observe — and what can you answer about them now?" },
-      { key: "book_argument",  prompt: "How does this passage fit the book's overall argument? What does the author intend across the whole that bears on this passage?" },
+      { key: "unresolved",     mapLabel: "Unresolved questions",           prompt: "What questions about this passage are still unresolved after Observe — and what can you answer about them now?" },
+      { key: "book_argument",  mapLabel: "Fit in the book's argument",     prompt: "How does this passage fit the book's overall argument? What does the author intend across the whole that bears on this passage?" },
     ],
   },
   { key: "recurring_ideas",         label: "Recurring Ideas",         hint: "What ideas, words, or themes recur within this passage? For each, name what the recurrence is signaling about what the author is hammering home." },
@@ -193,6 +194,7 @@ export const INTERPRET_FIELDS = [
       {
         key: "meaning_per_unit",
         kind: "cumulative-synthesis-table",
+        mapLabel: "Meaning per thought unit",
         prompt: "Beside each thought unit you named in Observe, write what it MEANS in your own voice. One or two sentences each. Not what it says — what the author is conveying through it.",
         // The cumulative thought-unit list is canonical in Phase 1's
         // observations.divisions.thought_units. Phase 2 reads + writes the
@@ -210,6 +212,7 @@ export const INTERPRET_FIELDS = [
       },
       {
         key: "meaning_whole",
+        mapLabel: "The Interpretation Set — whole-passage meaning",
         prompt: "One paragraph. The whole passage's meaning, in your own voice. What is the author saying through this passage about reality? This is the Interpretation Set. Redemptive Thread opens against it.",
       },
     ],
@@ -271,44 +274,52 @@ export const REDEMPTIVE_FIELDS = [
       ],
     },
     questions: [
-      { key: "position",      prompt: "Where does this text stand in relation to Christ — before, after, or transitional? For OT passages, where does the New Testament pick this up?" },
-      { key: "direct_speech", prompt: "Does this text speak directly of Christ? If so, how?" },
+      { key: "position",      mapLabel: "Where it stands relative to Christ", prompt: "Where does this text stand in relation to Christ — before, after, or transitional? For OT passages, where does the New Testament pick this up? (If nothing picks it up directly, say so — that's a real answer.)" },
+      { key: "direct_speech", mapLabel: "Does it speak directly of Christ",   prompt: "Does this text speak directly of Christ? If so, how? (A plain 'no' is a real answer for many passages — write it and move on.)" },
     ],
   },
   {
     key: "passage_points_to_christ",
     label: "How the Passage Points to Christ",
-    hint: "Trace the four kinds of Christological pointing the text may carry — biblical theme, promise, type, and predictive prophecy.",
+    hint: "Look for how the text points to Christ — four ways: a theme, a promise, a pattern, or a prophecy.",
     overview: {
       title: "How the Passage Points to Christ",
       paragraphs: [
-        "You've positioned the text against Christ. Now look for how it points to him. Four distinct ways: biblical theme, promise, type, and predictive prophecy.",
-        "A biblical theme is a recurring motif in Scripture that finds its weight in Christ (kingdom, presence, sacrifice, covenant, Word). A promise is an explicit word from God that finds its yes-and-amen in Christ. A type is a pattern or person that prefigures Christ — Adam, Melchizedek, Moses, David — with thematic correspondence and escalation (Christ is the better one). Predictive prophecy explicitly foretells Christ's coming, death, or return.",
-        "Some passages carry all four. Some carry one. Some carry none of these directly — and that's fine. Where the text genuinely doesn't carry that kind of pointing, say so in the answer and move on. Don't insert Christ where he isn't. The text leads.",
+        "You've placed the text in relation to Christ. Now look for how it points to him. Scripture does this four ways: a theme, a promise, a pattern, or a prophecy.",
+        "A theme is a thread that runs through Scripture and finds its full weight in Christ — kingdom, sacrifice, covenant, the presence of God. A promise is a word from God that comes true in Christ. A pattern (the old word is 'type') is a person or a shape of events that Christ later fills out and exceeds — Adam, Melchizedek, Moses, David. A prophecy foretells Christ directly — his coming, his death, his return.",
+        "Some passages carry all four. Some carry one. Some carry none directly — and that's fine. Where the text doesn't carry one, say so and move on. Don't insert Christ where he isn't. The text leads.",
       ],
     },
     // N/A grants (canon §5, SFDI): the four pointing-mechanisms are genre-
     // uneven — some passages carry all four, some none. Each may be N/A where
     // the text genuinely doesn't carry that kind of pointing ("don't force").
     questions: [
-      { key: "biblical_theme", prompt: "Does the passage carry a biblical theme that points to Christ? (Kingdom, presence of God, sacrificial system, covenants, Word of God, etc.)", naAllowed: true },
-      { key: "promise",        prompt: "Does the passage hold or echo a promise of God that points to Christ?", naAllowed: true },
-      { key: "type",           prompt: "Is there a type of Christ here? A pattern, linguistic correspondence, or interbiblical theme that finds escalation in Christ? (Adam, Melchizedek, Moses, David, etc.)", naAllowed: true },
-      { key: "predictive",     prompt: "Is the passage predictive of Christ — coming, death, return?", naAllowed: true },
+      { key: "biblical_theme", mapLabel: "Theme",          prompt: "Does the passage carry a theme that finds its weight in Christ? (Kingdom, the presence of God, sacrifice, covenant, the Word of God…)", naAllowed: true },
+      { key: "promise",        mapLabel: "Promise",        prompt: "Does the passage hold or echo a promise of God that comes true in Christ?", naAllowed: true },
+      { key: "type",           mapLabel: "Pattern (type)", prompt: "Is there a pattern here that Christ later fills out and exceeds — a person, an office, a shape of events? (Adam, Melchizedek, Moses, David…)", naAllowed: true },
+      { key: "predictive",     mapLabel: "Prophecy",       prompt: "Does the passage foretell Christ directly — his coming, his death, his return?", naAllowed: true },
     ],
   },
   {
     key: "gospel_makes_possible",
     label: "How the Gospel Makes This Possible",
-    hint: "What is this passage calling the hearer to do, be, or trust? Then: how does the gospel make THAT possible? (Access to God, the indwelling Spirit, continual forgiveness, union with Christ.) The anti-moralism move — every demand the text makes rests on what Christ has already secured.",
+    hint: "The anti-moralism move — name the call of the text, then ground it in what Christ has already secured.",
+    // Two moves, two questions (audit ruling 2026-07-02: the old single
+    // synthesized prompt blurred diagnosis and gospel grounding). The first
+    // keeps the legacy `primary` key so any answer written under the old
+    // one-prompt shape stays visible under the question it best fits.
+    questions: [
+      { key: "primary",           mapLabel: "The call of the text",              prompt: "What is this passage calling the hearer to do, be, or trust?" },
+      { key: "enabled_by_gospel", mapLabel: "How the gospel makes it possible",  prompt: "How does the gospel make that possible? (Access to God, the indwelling Spirit, continual forgiveness, union with Christ.) Every demand the text makes rests on what Christ has already secured — say how." },
+    ],
   },
   {
     key: "need_and_character",
     label: "Our Need and God's Character",
     hint: "Pair what the text shows about human need for Christ with what it shows about God's character.",
     questions: [
-      { key: "human_need",    prompt: "How does this passage show mankind's need for Christ?" },
-      { key: "god_character", prompt: "How does this passage reveal the nature of the God who provides redemption?" },
+      { key: "human_need",    mapLabel: "Our need for Christ", prompt: "How does this passage show mankind's need for Christ?" },
+      { key: "god_character", mapLabel: "God's character",     prompt: "How does this passage reveal the nature of the God who provides redemption?" },
     ],
   },
   {
@@ -318,17 +329,16 @@ export const REDEMPTIVE_FIELDS = [
     overview: {
       title: "Christ-Connection Statement",
       paragraphs: [
-        "You've positioned the text against Christ, traced how it points, grounded the gospel's enabling power, and named human need with God's character. The redemptive work is done.",
-        "One more move closes Redemptive Thread. Take what you've worked out and say it. For each thought unit — how does it point to Christ? Find its weight in him? Get its answer from him?",
-        "Then, the whole passage. One paragraph. The Christ-Connection Statement. How does the whole passage point to Christ — and how is Christ the hero of it?",
-        "Goldsworthy's evaluation question lives here: did this sermon testify to Christ? The Statement is what makes that answer yes. Implications opens against it. The Christological substance you articulate here gives Implications its weight.",
-        "A sermon can testify to Christ on paper; the aim is that Christ testifies to the people. How does Jesus, through this passage, become a safe place for sinners and a dangerous place for sin? How does this passage expose the paltry nature of sin in the light of the superiority of Christ? How does it lead us to obey Jesus not out of fleshly fear but simply because he is better?",
+        "You've placed the text in relation to Christ, traced how it points to him, grounded the gospel's enabling power, and named human need alongside God's character. One move closes Redemptive Thread: say it.",
+        "For each thought unit — how does it point to Christ, find its weight in him, or get its answer from him? Then the whole passage, one paragraph: the Christ-Connection Statement. Implications opens against it.",
+        "The evaluation question lives here: did this sermon testify to Christ? And more than on paper — how does Jesus, through this passage, become a safe place for sinners and a dangerous place for sin? How does it lead us to obey him not out of fear, but because he is better?",
       ],
     },
     questions: [
       {
         key: "christ_per_unit",
         kind: "cumulative-synthesis-table",
+        mapLabel: "Christ-Connection per thought unit",
         prompt: "Beside each thought unit (with its Meaning from Interpret), write the Christ-connection. How does this thought unit point to Christ, find its weight in him, or get its answer from him?",
         // Phase 3 extends the same canonical thought-unit array in
         // observations.divisions.thought_units with a third writable column
@@ -347,6 +357,7 @@ export const REDEMPTIVE_FIELDS = [
       },
       {
         key: "statement",
+        mapLabel: "The Christ-Connection Statement",
         prompt: "One paragraph. How does the whole passage point to Christ — and how is Christ the hero of it? What does it show him to be better than — more beautiful, more worthy? Write it so a listener could not only see Christ, but want him. This is the Christ-Connection Statement. Implications opens against it.",
       },
     ],
@@ -411,20 +422,19 @@ export const IMPLICATIONS_FIELDS = [
     overview: {
       title: "Implications — The Three-Voice Conversation",
       paragraphs: [
-        "Implications closes the Study work, integrating three voices: what the text TEACHES (Theological Significance), what the text ASKS of the hearer (Personal Implications), and the SPECIFIC ROOM the text is landing in (Pastoral Context). Each voice gets its own field; the Implications Synthesis at the end weaves them together in your own voice.",
-        "Theological Significance comes first. Here you articulate the doctrinal content the text teaches. What does it say about God, about us, about Christ? What timeless truths and particular doctrines surface?",
-        "Personal Implications follows. Then Pastoral Context. Then Synthesis. The order matters: doctrine grounds the personal call, and the personal call grounds the room-specific landing.",
+        "Implications closes the Study work by integrating three voices: what the text TEACHES (Theological Significance), what it ASKS of the hearer (Personal Implications), and the ROOM it lands in (Pastoral Context). The Implications Synthesis at the end weaves them together in your own voice.",
+        "Theological Significance comes first: the doctrine the text carries. What does it say about God, about us, about Christ? The order matters — doctrine grounds the personal call, and the personal call grounds the room-specific landing.",
       ],
     },
     // N/A grants (canon §5, SFDI Implications Field 1): each doctrinal question
     // may be N/A where the text genuinely doesn't carry that teaching (e.g. a
     // passage that doesn't address Christ's person directly).
     questions: [
-      { key: "about_god",       prompt: "What does this text teach about God?", naAllowed: true },
-      { key: "about_ourselves", prompt: "What does it teach about ourselves?", naAllowed: true },
-      { key: "about_christ",    prompt: "What does it teach about Christ — his person, his work, his nature?", naAllowed: true },
-      { key: "timeless",        prompt: "What principles in this text are timeless for us?", naAllowed: true },
-      { key: "doctrines",       prompt: "What does the passage teach about particular doctrines?", naAllowed: true },
+      { key: "about_god",       mapLabel: "About God",           prompt: "What does this text teach about God?", naAllowed: true },
+      { key: "about_ourselves", mapLabel: "About ourselves",     prompt: "What does it teach about ourselves?", naAllowed: true },
+      { key: "about_christ",    mapLabel: "About Christ",        prompt: "What does it teach about Christ — his person, his work, his nature? (This is doctrine the text teaches about him — different from the Christ-Connection you just traced, which was how the passage points to him.)", naAllowed: true },
+      { key: "timeless",        mapLabel: "Timeless principles", prompt: "What principles in this text are timeless for us?", naAllowed: true },
+      { key: "doctrines",       mapLabel: "Particular doctrines", prompt: "What does the passage teach about particular doctrines?", naAllowed: true },
     ],
   },
   {
@@ -435,26 +445,33 @@ export const IMPLICATIONS_FIELDS = [
       title: "Personal Implications — and how firmly the text holds them",
       paragraphs: [
         "The second of three voices: what the text ASKS of the hearer — to follow, forsake, receive, and settle into. Name these from the text, not from your own hobby-horses.",
-        "As you name each, weigh how firmly the text holds it. Merida (after Robinson) grades them: necessary — the text demands it, and you can preach it 'thus saith the Lord'; probable — strongly suggested; possible — defensible, but don't preach a possible as if it were a command. More heresy is preached in application than in exegesis; this gradient is the guard. (You'll grade your actual sermon applications fully in the Body stage later — here, just hold each implication against it.)",
+        "As you name each, weigh how firmly the text holds it: necessary — the text demands it, and you can preach it as God's own word; probable — strongly suggested; possible — defensible, but never preached as a command. Application is where a sermon most easily overreaches; this gradient keeps yours honest. (You'll weigh your actual applications in Body later — here, just hold each implication against it.)",
       ],
     },
     // N/A grants (canon §5, SFDI Implications Field 2): each verb-slot may be
     // N/A where the text genuinely makes no such call (not every passage calls
     // the hearer to follow AND forsake AND receive AND settle).
     questions: [
-      { key: "follow",  prompt: "What does the text call the hearer to do or follow? (Examples to imitate, commands to keep.)", naAllowed: true },
-      { key: "forsake", prompt: "What does the text warn against? (Errors to avoid, sins to forsake.)", naAllowed: true },
-      { key: "receive", prompt: "What does the text invite the hearer to receive? (Gospel promises to claim, fresh thoughts about God to gain.)", naAllowed: true },
-      { key: "settle",  prompt: "What does the text ask the hearer to settle into? (Truths or doctrines to explore, convictions to live by.)", naAllowed: true },
+      { key: "follow",  mapLabel: "To do or follow",  prompt: "What does the text call the hearer to do or follow? (Examples to imitate, commands to keep.)", naAllowed: true },
+      { key: "forsake", mapLabel: "To forsake",       prompt: "What does the text warn against? (Errors to avoid, sins to forsake.)", naAllowed: true },
+      { key: "receive", mapLabel: "To receive",       prompt: "What does the text invite the hearer to receive? (Gospel promises to claim, fresh thoughts about God to gain.)", naAllowed: true },
+      { key: "settle",  mapLabel: "To settle into",   prompt: "What does the text ask the hearer to settle into? (Truths or doctrines to explore, convictions to live by.)", naAllowed: true },
     ],
   },
   {
     key: "pastoral_context",
     label: "Pastoral Context",
     hint: "The third of three voices: the SPECIFIC ROOM the text is landing in. Name the people, then articulate how the text lands for them — costly and gifted.",
+    overview: {
+      title: "Pastoral Context",
+      paragraphs: [
+        "The third voice is your room. The text has spoken and made its ask; now name the people it lands on this Sunday.",
+        "Reach both kinds of listener: the prodigal — openly lost or wandering — and the older brother — faithful-looking, but quietly trusting his own performance instead of grace. A gospel word reaches both. Get specific: the wearied, the doubting, the new, the long-faithful, the one keeping score.",
+      ],
+    },
     questions: [
-      { key: "room_specifics", prompt: "Who in your room is this text speaking into? Name specific people and situations — and name both kinds Merida presses for: the prodigal (the openly lost or wandering) AND the older brother (the moralist in the pew — faithful-looking, trusting his own performance, not grace). A gospel word reaches both. Get specific: the wearied, the doubting, the new, the long-faithful, the one quietly keeping score." },
-      { key: "cost_and_gift",  prompt: "For those specific people, what's the cost — what will be hard, costly, counter-intuitive? What's the gift — the comfort, hope, freedom, or invitation this text holds out for them?" },
+      { key: "room_specifics", mapLabel: "The people in the room", prompt: "Who in your room is this text speaking into? Name specific people and situations — both the openly wandering and the quietly self-reliant." },
+      { key: "cost_and_gift",  mapLabel: "Cost and gift",          prompt: "For those specific people, what's the cost — what will be hard, costly, counter-intuitive? And what's the gift — the comfort, hope, freedom, or invitation this text holds out for them?" },
     ],
   },
   {
@@ -464,16 +481,16 @@ export const IMPLICATIONS_FIELDS = [
     overview: {
       title: "Implications Synthesis",
       paragraphs: [
-        "You've named what the text teaches (Theological Significance), what it asks (Personal Implications), and the specific room it's landing in (Pastoral Context). Three voices.",
-        "One more move closes Implications — and closes the Study work. Take what you've worked out and integrate it. For each thought unit — what does it ask of THIS hearer in THIS room? Drawing on the three voices.",
-        "Then, the whole passage. One paragraph. The Implications Synthesis. What does the text teach, what does it ask, and how does it land for the people in this room — all in one voice. Not three sections. One synthesis.",
-        "Now marinate. Before you move to the Main Point, step back and read the passage through once more — slowly, the way you read it at the start. Let it sit on you. The Main Point should rise from the text, not only from your notes. The passage is on the reference pane by default (open the pane's 'Open Bible' tab if it's collapsed); your Implications Synthesis and the other three named outcomes are a flip away on its 'Your work' tab. The foundation has been earned — let the text breathe on you before you forge.",
+        "You've named what the text teaches (Theological Significance), what it asks (Personal Implications), and the room it lands in (Pastoral Context). One more move closes the Study work: integrate them.",
+        "For each thought unit — what does it ask of THIS hearer in THIS room? Then the whole passage, one paragraph: what the text teaches, what it asks, and how it lands for your people, all in one voice. Not three sections. One synthesis.",
+        "Now marinate. Before you move to the Main Point, step back and read the passage through once more — slowly, the way you read it at the start. The Main Point should rise from the text, not only from your notes. The passage is on the reference pane beside you (the Open Bible button brings it back if you've collapsed it); your four named outcomes are a flip away on its 'Your work' tab. Let the text breathe on you before you forge.",
       ],
     },
     questions: [
       {
         key: "implication_per_unit",
         kind: "cumulative-synthesis-table",
+        mapLabel: "Implication per thought unit",
         prompt: "Beside each thought unit (with its Meaning from Interpret and Christ-Connection from Redemptive Thread), write the integrated implication. Drawing on Theological Significance + Personal Implications + Pastoral Context — what does this thought unit ask of the hearer in THIS room?",
         // Phase 4 extends the same canonical thought-unit array in
         // observations.divisions.thought_units with the final writable column
@@ -492,6 +509,7 @@ export const IMPLICATIONS_FIELDS = [
       },
       {
         key: "synthesis",
+        mapLabel: "The Implications Synthesis",
         prompt: "One paragraph. Integrate the three voices for the whole passage. What does the text teach, what does it ask, and how does it land for the people in this room — all in one voice. Not three sections. One synthesis. This is the Implications Synthesis. Anchor — where you forge the Main Point of the Text and Main Point of the Sermon (MPT/MPS) — opens against it.",
       },
     ],

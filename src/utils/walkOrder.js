@@ -65,7 +65,10 @@ function normalizeField(field) {
     // (SFDI's field-level N/A escape valve, 2026-05-03); propagate it onto the
     // synthesized question so the toggle + write guard see it just like the
     // per-question naAllowed on multi-question fields.
-    questions: [{ key: "primary", prompt: field.hint || field.label, naAllowed: field.naAllowed === true }],
+    // mapLabel defaults to the FIELD label — the synthesized prompt is the
+    // field's full hint, and rendering that on the map is exactly the
+    // wall-of-text the 2026-07-02 de-walling ruling removed.
+    questions: [{ key: "primary", prompt: field.hint || field.label, mapLabel: field.label, naAllowed: field.naAllowed === true }],
   };
 }
 
@@ -94,6 +97,11 @@ export const QUESTION_WALK_ORDER = Object.freeze(
       fieldLabel: field.label,
       questionKey: q.key,
       questionPrompt: q.prompt,
+      // Short label for list surfaces (the map, the handoff's "Left behind"
+      // list). Every authored question carries a mapLabel (de-walling ruling,
+      // 2026-07-02); the prompt fallback keeps a future label-less question
+      // visible rather than blank.
+      questionLabel: q.mapLabel || q.prompt,
       kind: q.kind,
       columns: q.columns,
       crossPhaseSource: q.crossPhaseSource,

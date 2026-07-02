@@ -99,13 +99,17 @@ these names. (See State Contract clause 5: *one name per concept*.)
   Each field contains one or more **questions** in an ordered sequence.
   Engineering-side terms (*column*, *key*, *slot*) remain available; contract
   language uses *field*.
-- **Question** — an ordered prompt inside a field. The pastor answers
-  questions one at a time; the field's value is the composition of the
+- **Question** — an ordered prompt inside a field. Questions are ordered
+  within their field, but the FIELD — not the question — is the unit the walk
+  advances by: a multi-question field presents its questions together on one
+  writing surface, in order, each with its own answer. (Amended 2026-07-02 —
+  the field-level walk, preacher-ratified by the OEM walk, supersedes the
+  earlier "one at a time" rendering language; history in
+  `docs/CORE-CHANGELOG.md`.) The field's value is the composition of the
   answers. Question keys are stable identifiers persisted as sub-keys inside
   the field's JSON value.
 - **Answer** — what the pastor writes for each question. Answers persist
-  individually; previous answers stay visible while the current question is
-  active.
+  individually; previous answers stay visible as he works.
 - **Named outcome** — the artifact each sub-phase produces, named explicitly.
   *Study sub-phases:* Observation Set (Observe), Interpretation Set
   (Interpret), Christ-Connection Statement (Redemptive Thread), Implications
@@ -178,16 +182,20 @@ these names. (See State Contract clause 5: *one name per concept*.)
    response) — are the artifacts the work produces. A sermon is not done
    until they exist; that is the contract. Completeness per load-bearing
    field is checked by the composite gate functions in
-   `src/utils/studyAdvancement.js` (`checkField3Composite`,
-   `checkField8Composite`, `checkPhase4Field4Composite`,
-   `checkField5Composite`, `checkMPTComposite`, `checkMPSComposite`) —
-   these are the foundation of the completeness contract. The
-   workspace-wide "is the sermon done" answer is wired (2026-06-10):
-   `deriveSermonCompleteness` in `src/utils/sermonState.js` consumes all
-   six composites — plus deliberately LENIENT presence checks for the
-   Sermon Outline, Sermon Body, and Manuscript (the doors check = an
-   opener answer + the response; transitions are deliberately never
-   counted, though the map still tracks them honestly). The lenient
+   `src/utils/studyAdvancement.js` (`checkField8Composite`,
+   `checkPhase4Field4Composite`, `checkField5Composite`,
+   `checkMPTComposite`, `checkMPSComposite`) — these are the foundation
+   of the completeness contract. The workspace-wide "is the sermon done"
+   answer is wired (2026-06-10): `deriveSermonCompleteness` in
+   `src/utils/sermonState.js` consumes all five composites — plus
+   deliberately LENIENT presence checks for the Observation Set (the
+   Obvious Point sentence; M2 audit ruling, 2026-07-02 — Finish must
+   agree with the handoff, reference pane, and map, which all treat the
+   Obvious Point as the Observation Set; `checkField3Composite` retired
+   from the completeness roll-up the same day), the Sermon Outline,
+   Sermon Body, and Manuscript (the doors check = an opener answer + the
+   response; transitions are deliberately never counted, though the map
+   still tracks them honestly). The lenient Outline/Body/Manuscript
    checks were ratified lenient by the OEM walk (2026-07-02) — leniency
    is now the ruled bar, not a placeholder. The SermonFinish screen
    renders the result at the end of the walk with per-artifact "go write
@@ -196,9 +204,10 @@ these names. (See State Contract clause 5: *one name per concept*.)
    visible continuously at lower weight via the map's per-question
    shading (`deriveQuestionStatesFromSermon`) and at the Study → Anchor
    handoff (`deriveStudyOutcomesFromSermon`,
-   `deriveStudyUnfinishedFromSermon`). The six composites are
+   `deriveStudyUnfinishedFromSermon`). The five composites are
    CORE-canonical. (The Intro/Conclusion composites retired with the
-   Frame collapse, 2026-07-02; history: `docs/CORE-CHANGELOG.md`.)
+   Frame collapse, 2026-07-02; `checkField3Composite` retired by the M2
+   ruling; history: `docs/CORE-CHANGELOG.md`.)
 3. **Movement is visible at thresholds, not narrated continuously.** Major
    transitions — sermon start, the Study → Anchor handoff, and sermon
    completion — surface as discrete landing screens (`.ssl-overlay`,

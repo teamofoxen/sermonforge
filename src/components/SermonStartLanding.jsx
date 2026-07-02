@@ -68,7 +68,7 @@ export default function SermonStartLanding({ onBegin }) {
         <div className="ssl-nav-note">
           <p className="ssl-nav-note-intro">Three controls carry you the whole way:</p>
           <ul className="ssl-nav-note-list">
-            <li><strong>Next</strong> — one question at a time, in order.</li>
+            <li><strong>Next</strong> — one field at a time, in order. Each field is a small set of related questions.</li>
             <li><strong>Back</strong> — return to what you just wrote.</li>
             <li><strong>Map</strong> — every question at once. Click any of them to go there.</li>
           </ul>

@@ -55,8 +55,11 @@ function QuestionRow({ entry, status, onJump }) {
 
   return (
     <div className={`sm-row sm-row--${state}`}>
-      <IconButton type="button" className="sm-jump" onClick={() => onJump?.(entry)} aria-label={entry.questionPrompt}>
-        {entry.questionPrompt}
+      {/* Short label, not the full prompt (de-walling ruling, 2026-07-02):
+          the map is for finding your place, and the prompt lives one click
+          away on the field itself. */}
+      <IconButton type="button" className="sm-jump" onClick={() => onJump?.(entry)} aria-label={entry.questionLabel}>
+        {entry.questionLabel}
       </IconButton>
       {showPreview && (
         <div className="sm-preview-wrap">

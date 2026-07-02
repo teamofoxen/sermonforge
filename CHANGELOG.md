@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-07-02 — Workspace audit remediation closed: rulings shipped, W4 fixed, doc drift resolved
+
+- Content rulings shipped: field-level walk vocabulary, gospel-grounding split, scholar names removed from pastor-facing copy, and the terminal Sermon Title field (never persists empty).
+- W4 fixed: a sermon load failure now shows a retryable message instead of silently reading as "Sermon not found."
+- Completeness re-based to five composites + four lenient checks (M2 ruling); the stale six/three count fixed across canon, the workspace spec, ENFORCEMENT_STATUS, and schema.md.
+- Pastor's Charter reworded to match the field-level walk language.
+- WORKSPACE-CANON authority line harmonized with CLAUDE.md's code-vs-CORE precedence.
+
+---
+
 ## 2026-07-02 — Thought unit = block: Divisions↔Synthesis seam ruled and built; sample sermon rebuilt end-to-end
 
 - Pastor ruled a thought unit is the block — the margin statement plus every line indented beneath it, spanning its verses; `composeThoughtUnitBlocks` (studyFields.js) composes blocks and verse spans live from the canvas at read time, stored shape unchanged, no migration.

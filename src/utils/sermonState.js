@@ -243,6 +243,17 @@ export function deriveQuestionStatesFromSermon(sermon) {
       }
       continue;
     }
+    if (entry.kind === "sermon-title") {
+      // The terminal Title field (ruled 2026-07-02) reads the native `title`
+      // column, not the region's JSON column. A sermon always has a name
+      // (State #3), so this row reads answered in practice — the field is a
+      // correction affordance, not a completeness gate.
+      const t = String(sermon?.title ?? "").trim();
+      out[id] = t
+        ? { state: "answered", preview: t, fullValue: t }
+        : { state: "unanswered" };
+      continue;
+    }
     // Default: text-prompt
     const fieldData = readFieldData(sermon, entry.stage, entry.subPhase);
     const naFlag = fieldData?.[entry.fieldKey]?.[entry.questionKey]?.na === true;
@@ -322,8 +333,8 @@ export function deriveStudyUnfinishedFromSermon(sermon) {
 // `checkMPSComposite`) — `checkField3Composite` was dropped in favor of the
 // lenient Observation Set check below, so Finish agrees with the Study→
 // Anchor handoff, the reference pane, and the sermon map instead of
-// contradicting them. (CORE.md's "consumes all six composites" line is now
-// stale and pending an `/anchor-update` pass — out of scope here.)
+// contradicting them. (CORE Process #2 was amended to the five-composite
+// wording on 2026-07-02 — the M2 ruling is now the law's own text.)
 // It returns one entry per load-bearing artifact, in walk order, each with a
 // pastor-facing reason when incomplete and a jump position so the finish
 // screen can offer "go write it".

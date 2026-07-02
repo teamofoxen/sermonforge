@@ -293,7 +293,11 @@ const sermon = {
       type: { value: "No direct typology — Paul is in didactic mode, not figural. The passage's Christological weight is in mediation, not pattern.", na: false },
     },
     gospel_makes_possible: {
-      primary: { value: "If the passage calls believers to rejoice in suffering and endure the productive chain, the gospel makes that possible in three ways: (1) Justification — they don't have to perform their way back into God's favour during suffering; their standing is settled. (2) Indwelling Spirit — the love is already poured in; they don't need to manufacture endurance from their own resources. (3) Christ's mediatorial presence — every gift comes 'through him,' so the call to endure is never a call to face suffering alone.", na: false },
+      // Two questions since the 2026-07-02 audit remediation (the old single
+      // prompt blurred the call and the grounding): `primary` carries the
+      // call, `enabled_by_gospel` the gospel grounding.
+      primary: { value: "The passage calls believers to rejoice in their sufferings — to stand in the grace they've been given, hold the peace they have with God, and let the suffering–endurance–character–hope chain do its work rather than despising it.", na: false },
+      enabled_by_gospel: { value: "The gospel makes that possible in three ways: (1) Justification — they don't have to perform their way back into God's favour during suffering; their standing is settled. (2) Indwelling Spirit — the love is already poured in; they don't need to manufacture endurance from their own resources. (3) Christ's mediatorial presence — every gift comes 'through him,' so the call to endure is never a call to face suffering alone.", na: false },
     },
     need_and_character: {
       human_need: { value: "The passage exposes the believer's need to be told what is already true. We are people who, under pressure, default to performance — trying to climb back to peace, build hope, manufacture endurance. The need this passage names is the need for an external word that re-anchors us in what God has already done. We do not need a new programme; we need to be told again whose we are.", na: false },

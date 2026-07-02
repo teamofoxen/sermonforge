@@ -6,7 +6,9 @@
 > peer to [`CORE.md`](CORE.md) (the law) and [`RULES.md`](RULES.md); the mechanics that render
 > this walk live in [`SYSTEMS/sermon-workspace.md`](SYSTEMS/sermon-workspace.md). It **supersedes**
 > the SFDI and SADI working docs (now banner-stamped historical records) as the live articulation
-> of the walk. **Ground truth remains the code at HEAD — code wins any conflict.**
+> of the walk. **Ground truth remains the code at HEAD — code wins any conflict about the walk's
+> current shape.** (Where the code diverges from `CORE.md` — the law — without a recorded
+> rationale, CORE governs and the code is the bug; see premise 4 below.)
 >
 > **What "live" binds, and what it doesn't.** This canon binds the walk's *current shape* — the
 > stages, sub-phases, fields, named outcomes, and completeness policy. It was drafted from the
@@ -91,14 +93,17 @@ the binding force lives in CORE.
    forces clarity by its shape and gravity, not by refusing navigation. → CORE Principle
    + Process #1.
 4. **The code at HEAD is ground truth.** Where this doc and the code disagree, the code is
-   right and this doc is stale.
+   right and this doc is stale. This governs conflicts about **the walk's current shape**
+   (this doc's own subject). Where the code diverges from CORE.md — the law — without a
+   recorded rationale, CORE governs instead: the code is the bug, not this doc.
 
 ---
 
 ## 1. The shape of the whole walk
 
-**Three stages · eight sub-phases · seven named outcomes · 23 Study fields + 7
-Assembly/Manuscript fields (30 total).** The stage boundary carries the walk's deepest
+**Three stages · eight sub-phases · seven named outcomes · 23 Study fields + 8
+Assembly/Manuscript fields (31 total; the Sermon Title field joined the doors
+2026-07-02).** The stage boundary carries the walk's deepest
 distinction (OEM walk, 2026-07-02): **Study understands, Assembly decides, Manuscript
 writes.** The preacher sees the whole arc from first entry; forward is the natural
 direction, but every question is reachable from the map at any time.
@@ -139,8 +144,9 @@ fields (§4.2), each prompt asking the decision and the preached words together.
 - **Completeness informs, never blocks.** "Is the sermon done?" has an answer (§5), shown
   at the Finish screen and at lower weight on the map. It never gates movement. The map
   renders three per-question states — answered, **partial** (some rows/points/cells of a
-  multi-part question filled), unanswered — at low weight; the six composites and three
-  lenient checks (§5) are the artifact-level roll-up of those signals.
+  multi-part question filled), unanswered — at low weight (the map legend speaks them
+  plainly: answered · started · not yet); the five composites and four lenient checks
+  (§5) are the artifact-level roll-up of those signals.
 - **The room and the guard ride along.** In the stages where the sermon is aimed at
   people — Body and the doors — the reference pane's "Your work" tab carries the
   **Pastoral Context room** (the prompts send the preacher to "the room you named") and
@@ -151,19 +157,20 @@ fields (§4.2), each prompt asking the decision and the preached words together.
 ### How questions are shaped and stored
 
 A field holds one or more **questions**, and a question has a **kind** that determines both
-what it *is* to the preacher and how it is stored. Seven kinds, in two storage families:
+what it *is* to the preacher and how it is stored. Eight kinds, in two storage families:
 
 - **Question-envelope kinds** — stored as `{value, na}` envelopes inside the sub-phase's
   JSON column (Study, Anchor): the default **text-prompt**; the **indented-canvas**
   (Observe's Divisions); and the **cumulative-synthesis-table** (the three per-unit tables).
   The cumulative table is the one kind whose state derives from the shared thought-unit
   array (`observations.divisions.thought_units`), not from its own column.
-- **Native-column kinds** — written to the native JSON columns the Word export reads, *not*
+- **Native-column kinds** — written to the native columns the Word export reads, *not*
   the envelope shape: **outline-builder** (Outline → `outline[]`), **functional-elements**
   (Body → `functional_elements{}`, four sub-elements per point), **manuscript-prose** and
-  **manuscript-transitions** (the doors → `manuscript{}`). The door `redemptive_note`
-  carries N/A semantics on a native-column kind — its persistence mechanism is part of the
-  scheduled N/A build (§7).
+  **manuscript-transitions** (the doors → `manuscript{}`), and **sermon-title** (the
+  terminal Title field → the native `title` column; added 2026-07-02, never persists an
+  empty name — State #3). The door `redemptive_note` carries N/A semantics on a
+  native-column kind — its persistence mechanism is part of the scheduled N/A build (§7).
 
 A field shown below with a single "Asks" cell carries one question keyed **`primary`** whose
 prompt is the field's hint (the legacy single-prompt shape, normalized at the walk-order
@@ -316,17 +323,21 @@ else; cell clarity, not extra structure, is what makes the manuscript flow.
 
 ### 4.2 Intro, Transitions, Conclusion — the doors *(OEM-walked + the Frame transplant)*
 
-Three fields, written last. The Frame stage's seven moves live here (transplant, OEM item
+Four fields, written last. The Frame stage's seven moves live here (transplant, OEM item
 8): each door prompt asks the **decision and the preached words together**, at full SADI
 richness, and — because the body now exists — speaks about *your* points, not a body in
 the abstract. The redemptive note and gospel-empowerment carry the anti-moralism guard to
-the doors.
+the doors. The Sermon Title field closes the walk (pastor-ruled 2026-07-02): the title is
+written last, after the whole sermon exists — the CCE source places naming after
+everything — and this field is the workspace's only title affordance (the topbar chrome
+carries none; State #3's "correctable afterward" lives here).
 
 | Field (`key`) | Questions | Merida |
 |---|---|---|
 | Introduction (`introduction`) | **`opener`** — choose the hook and write it to preach (skippable for a part-two/dense text per Merida); **`scripture_reading`** — the bridge into the text, landing MPT/MPS; **`expectation`** — what the body will actually ask, named before it begins; **`redemptive_note`** — the gospel anchor at the front door *(N/A-able, strict "satisfied another way" — see §5)* | 4 moves **[M — the Frame Intro moves, transplanted]** |
 | Transitions (`transitions`) | **`transitions`** — one bridge into each point and one into the conclusion; brief, inconspicuous, varied; reiterate the MPS lightly | **[M]** — genuinely new prose, not a transplant |
 | Conclusion (`conclusion`) | **`summation`** — gather what the points have built into one landing, fresh words, not a recap; **`response`** — the call from the MPS made concrete for the named room, gospel-empowered from the Christ-Connection Statement | 3 moves in 2 prompts **[M — summate → summation; land_call + gospel_empower → response]** |
+| Sermon Title (`title`) | **`title`** — name the finished sermon: short, faithful to the MPS, plain enough that the people know what they're about to hear. Writes the native `title` column; an empty name never persists (State #3 — the refusal is spoken inline). Not a completeness artifact: a sermon always has a name. | **[M — title written last, after the sermon exists]** |
 
 *The doubling, resolved:* the old Frame → Manuscript split asked the Intro/Conclusion
 twice — decisions in Assembly/Frame, prose in Manuscript. The OEM walk ruled the collapse
@@ -344,13 +355,12 @@ collapse, 2026-07-02 — their substance is checked inside the Manuscript's door
 The answer **informs, never blocks** (Process #1: no walls). It is shown at the Finish screen
 with per-artifact "go write it" jumps, and at lower weight on the map.
 
-### The six composites *(ratified — SFDI / SADI)*
+### The five composites *(ratified — SFDI / SADI; Observation Set moved to the lenient group by the M2 ruling, 2026-07-02)*
 
 An artifact is complete when its composite returns no reason:
 
 | Named outcome | Complete when |
 |---|---|
-| Observation Set | The Divisions canvas has ≥1 main sentence with an indented modifier under it. |
 | Interpretation Set | **Every** thought unit has a Meaning **and** the whole-passage meaning paragraph is written. |
 | Christ-Connection Statement | **Every** thought unit has a Christ-Connection **and** the Statement paragraph is written. |
 | Implications Synthesis | **Every** thought unit has an Implication **and** the Synthesis paragraph is written. |
@@ -359,17 +369,18 @@ An artifact is complete when its composite returns no reason:
 
 *(The Intro/Conclusion composites — `checkIntroComposite` / `checkConclusionComposite` —
 retired with the Frame collapse; the doors are covered by the ratified-lenient Manuscript
-check below.)*
+check below. `checkField3Composite` retired from the completeness roll-up by the M2 audit
+ruling, 2026-07-02 — see the Observation Set entry below.)*
 
-*One asymmetry to note:* the Observation Set is the only outcome whose **surfaced artifact**
-and **done-check** live in different fields — the Study → Anchor handoff renders the **Obvious
-Point** as the Observation Set, while its completeness gate checks the **Divisions canvas**.
+### The four lenient checks *(Outline/Body/Manuscript RATIFIED lenient — OEM walk, item 7; Observation Set — M2 audit ruling, 2026-07-02)*
 
-### The three lenient checks *(RATIFIED lenient — OEM walk, item 7)*
+These artifacts use deliberately lenient presence checks — "honest without nagging":
 
-Outline, Body, and Manuscript use deliberately lenient presence checks — "honest without
-nagging." The OEM walk ruled this the right bar, not a placeholder:
-
+- **Observation Set** — the **Obvious Point** sentence is written. (M2 ruling: the
+  Study → Anchor handoff, the reference pane, and the sermon map already treat the Obvious
+  Point text as the Observation Set; Finish asking more via the old Divisions-canvas
+  composite contradicted all three at the walk's final review. Everywhere now agrees —
+  the old surfaced-artifact/done-check asymmetry is resolved.)
 - **Sermon Outline** — ≥1 outline point with text.
 - **Sermon Body** — ≥1 functional element written under any point. (The *map's* per-question
   honesty is separate and stricter, per the OEM Equip ruling: a point reads "answered" when
@@ -492,7 +503,9 @@ record in `docs/handoff/oem-walk-rulings-2026-07-01.md`. The two remaining code 
 - **Amended 2026-07-02 (the OEM walk):** all regions preacher-walked; the Frame → Manuscript
   collapse + the Body move (decide/write stage boundary); the affections layer (§2.3); the
   completed application battery (§4.1); the door transplant (§4.2); completeness re-based to
-  six composites + three ratified-lenient checks (§5); the beholding moment + send-off (§6).
+  six composites + three ratified-lenient checks (§5) — since superseded by the M2 audit
+  ruling the same day, which moved Observation Set to the lenient group (five composites +
+  four lenient checks, §5's current shape); the beholding moment + send-off (§6).
   Rulings of record: `docs/handoff/oem-walk-rulings-2026-07-01.md`. CORE amended the same day
   (see `CORE-CHANGELOG.md`).
 - **N/A code build SHIPPED 2026-07-02 (§5, §7):** the ruled N/A policy is now enforced in

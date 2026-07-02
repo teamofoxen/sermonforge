@@ -42,11 +42,13 @@ export const MAIN_POINT_PAIR_FIELDS = [
     questions: [
       {
         key: "draft",
+        mapLabel: "MPT draft",
         prompt:
-          "Read the passage through once more (open the reference pane's 'Your work' tab if it's collapsed) — then draw from your Implications Synthesis and the four named outcomes to draft what this text was saying to its original audience. Past tense. Author-intended. As many sentences as you need to get the substance right — tightening is next.",
+          "Read the passage through once more — it's on the reference pane beside you (the Open Bible button brings it back if you've collapsed it). Then draw from your Implications Synthesis and the four named outcomes to draft what this text was saying to its original audience. Past tense. Author-intended. As many sentences as you need to get the substance right — tightening is next.",
       },
       {
         key: "tighten",
+        mapLabel: "MPT — one sentence",
         prompt:
           "Now tighten that draft to a single past-tense sentence. Compress without losing the substance. The MPT must be one sentence — long is fine if it holds together.",
       },
@@ -67,11 +69,13 @@ export const MAIN_POINT_PAIR_FIELDS = [
     questions: [
       {
         key: "translate",
+        mapLabel: "MPS draft",
         prompt:
           "Your MPT is on the reference pane's 'Your work' tab (open the pane if it's collapsed). Before you change the tense, name why your people need this text: what is the fallen condition — the human problem — this passage speaks to? What do your hearers share with its original audience? And what grace does this text hold out for that condition? Then turn the MPT from past into present or future, aimed at that need and that grace — so the call rests on what God gives, not just what we must do. As many sentences as you need to get the substance right — the gospel-check and tightening come next.",
       },
       {
         key: "gospel_check",
+        mapLabel: "Gospel check",
         prompt:
           "Your first draft is right above you. Open the reference pane's 'Your work' tab (if it's collapsed) and set your Christ-Connection Statement beside it. Read them side by side. Does the call in your draft rest on what Christ has done, or has it slipped into 'try harder' or 'be better'? If it has, name the drift and rewrite until the gospel-power is visible.",
         // SADI: the only N/A-able MPS question — strict "satisfied another
@@ -86,8 +90,9 @@ export const MAIN_POINT_PAIR_FIELDS = [
       },
       {
         key: "tighten",
+        mapLabel: "MPS — one sentence",
         prompt:
-          "Fold your work into one present/future-tense sentence. The substance from your first draft, the gospel-power from your gospel-check — both stay. It doesn't need to be short — it needs to be *one sentence*. Long is fine if it holds together. This is your MPS. Chapell's test: if someone woke you at 3 a.m., could you say it? If not, it isn't tight enough yet.",
+          "Fold your work into one present/future-tense sentence. The substance from your first draft, the gospel-power from your gospel-check — both stay. It doesn't need to be short — it needs to be *one sentence*. Long is fine if it holds together. This is your MPS. One test: if someone woke you at 3 a.m., could you say it? If not, it isn't tight enough yet.",
       },
     ],
   },

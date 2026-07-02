@@ -85,6 +85,19 @@
   Rulings of record: `docs/handoff/oem-walk-rulings-2026-07-01.md` (agenda item 8 + the confirmed walk
   shape).
 
+## Canonical Vocabulary — Question and Answer
+
+- **2026-07-02 (post-audit remediation, pastor-ruled):** the Question definition's "the
+  pastor answers questions one at a time" rendering language retired. The shipped,
+  preacher-walked walk has always advanced FIELD by field, with a multi-question field
+  presenting its prompts together (`walkOrder.js` field-level WALK_ORDER); the two
+  workspace audits flagged the promise/surface mismatch, and the pastor ruled the promise
+  side moves: CORE now states the field is the unit the walk advances by, and the
+  sermon-start landing's "one question at a time, in order" line was reworded to match
+  ("one field at a time"). The Answer clause's "while the current question is active"
+  phrasing simplified for the same reason — there is no single active question on a
+  stacked field.
+
 ## Canonical Vocabulary — Named outcome
 
 - **OEM walk, 2026-07-02:** the Sermon Frame outcome retired with the Frame collapse;
@@ -148,6 +161,13 @@
   Manuscript) were RATIFIED lenient (agenda item 7): the doors check = an opener answer +
   the response; transitions deliberately never counted (the map still tracks them
   honestly). Leniency is now the ruled bar, not a placeholder awaiting the walk.
+- **M2 audit ruling, 2026-07-02:** `checkField3Composite` retired from the completeness
+  roll-up — six CORE-canonical composites → five. The Observation Set joined the lenient
+  group: the Obvious Point sentence is the check, because the Study→Anchor handoff, the
+  reference pane, and the sermon map already treat the Obvious Point text as the
+  Observation Set (`STUDY_NAMED_OUTCOMES`), and Finish contradicting all three at the
+  walk's final review was the bug. The clause was amended to the five-composite wording
+  on 2026-07-02 (post-audit remediation session).
 
 ## Process #3 — Movement visible at thresholds
 

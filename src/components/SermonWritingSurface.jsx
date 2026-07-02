@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { findField, nextField, prevField, regionFrameFor, REGION_DISPLAY } from "../utils/walkOrder";
 import { createOutlinePoint } from "../utils";
 import { verseLabelsForRange } from "../utils/passageRef";
@@ -40,13 +40,15 @@ function AutoGrowTextarea({ value, onChange, disabled, ariaLabel, placeholder })
 }
 
 // N/A semantics (SADI, ratified): the toggle renders only on questions that
-// declare `naAllowed: true` — exactly intro.redemptive_note and
-// mps.gospel_check, where "not applicable" means "satisfied another way
-// upstream," never "skip." When a question IS marked N/A, the pastor's
-// words stay visible (dimmed, struck through) — blanking the textarea read
-// as data loss even though the envelope kept the text. The `na && !naAllowed`
-// branch keeps the undo reachable for any legacy flag on a now-suppressed
-// question.
+// declare `naAllowed: true`. The full grant list is WORKSPACE-CANON §5, not
+// restated here — it now spans more than the two originally-granted
+// questions (`mps.gospel_check`, the door `introduction.redemptive_note`,
+// strict "satisfied another way" semantic) to also include the declared
+// Study-question grants (2026-07-02 N/A code build). When a question IS
+// marked N/A, the pastor's words stay visible (dimmed, struck through) —
+// blanking the textarea read as data loss even though the envelope kept the
+// text. The `na && !naAllowed` branch keeps the undo reachable for any
+// legacy flag on a now-suppressed question.
 //
 // naLabel (L5, UX audit 2026-07-02): mps.gospel_check and the door
 // redemptive_note carry a RULED, STRICTER N/A meaning ("satisfied another
@@ -81,6 +83,48 @@ function PromptBlock({ prompt, answer, naAllowed, naLabel, onValueChange, onTogg
               : "not applicable · undo"
             : naLabel || "not applicable"}
         </IconButton>
+      )}
+    </div>
+  );
+}
+
+// Sermon Title editor (kind "sermon-title", ruled 2026-07-02: the title is
+// written last, with the doors). Edits the native `title` column through
+// onTitleChange. State #3 (no nameless atoms) is enforced by never
+// propagating an empty name — the local draft lets the pastor clear and
+// retype freely, and while the box is empty the refusal is SPOKEN inline:
+// the sermon keeps its last name until a new one is written.
+function SermonTitleEditor({ question, title, onTitleChange }) {
+  const stored = String(title ?? "");
+  const [draft, setDraft] = useState(stored);
+  // Adjust-during-render (ReferencePane's pattern): if the stored title
+  // changes underneath an untouched editor (e.g. a planner rename before
+  // this field was visited), re-sync rather than showing a stale draft.
+  const [prevStored, setPrevStored] = useState(stored);
+  if (prevStored !== stored) {
+    setPrevStored(stored);
+    if (draft.trim() === "" || draft === prevStored) setDraft(stored);
+  }
+  const empty = draft.trim() === "";
+  return (
+    <div className="sws-prompt-block">
+      <div className="sws-prompt">{question.prompt}</div>
+      <input
+        type="text"
+        className="sws-title-input"
+        value={draft}
+        onChange={(e) => {
+          const v = e.target.value;
+          setDraft(v);
+          if (v.trim()) onTitleChange?.(v.trim());
+        }}
+        aria-label={question.prompt}
+        placeholder="The sermon's name"
+      />
+      {empty && stored.trim() && (
+        <div className="sws-title-note">
+          A sermon needs a name — it keeps &ldquo;{stored}&rdquo; until you write a new one.
+        </div>
       )}
     </div>
   );
@@ -296,8 +340,8 @@ function FunctionalElementsEditor({ question, points, functionalElements, onChan
         <div className="sws-unmet">
           <p className="sws-unmet-message">
             Each section here is one of your outline points — but you haven't built
-            the outline yet. Start there, and the points will be ready to equip when
-            you come back.
+            the outline yet. Start there, and the points will be here, ready to
+            write, when you come back.
           </p>
           <IconButton
             type="button"
@@ -406,6 +450,8 @@ export default function SermonWritingSurface({
   outlinePoints,
   functionalElements,
   manuscript,
+  sermonTitle,
+  onTitleChange,
   onAnswerChange,
   onUnitColumnChange,
   onCanvasChange,
@@ -507,8 +553,8 @@ export default function SermonWritingSurface({
       <div className="sws-shell">
         <div className="sws-writing">
           <div className="sws-field">
-            <div className="sws-field-hint">
-              This part of the sermon isn't available yet. Use the Back button to return to your dashboard. ({String(stage)} · {String(subPhase)} · {String(fieldKey)})
+            <div className="sws-field-hint" title={`${String(stage)} · ${String(subPhase)} · ${String(fieldKey)}`}>
+              This part of the sermon isn't available yet. Use the Back button to return to your dashboard.
             </div>
           </div>
         </div>
@@ -591,6 +637,15 @@ export default function SermonWritingSurface({
           manuscript={manuscript}
           onChange={onManuscriptChange}
           onPositionChange={handleDoorJump}
+        />
+      );
+    }
+    if (q.kind === "sermon-title") {
+      return (
+        <SermonTitleEditor
+          question={q}
+          title={sermonTitle}
+          onTitleChange={onTitleChange}
         />
       );
     }

@@ -30,7 +30,9 @@
 // key `redemptive_note_na` (the manuscript column stores plain strings, not
 // {value,na} envelopes). The transitions field is kind "manuscript-transitions"
 // and writes manuscript.transitions, keyed by outline-point id (plus the
-// into-conclusion transition).
+// into-conclusion transition). The terminal Sermon Title field (kind
+// "sermon-title", added 2026-07-02) writes the native `title` column, not
+// the manuscript JSON.
 
 export const SERMON_MANUSCRIPT_FIELDS = [
   {
@@ -41,8 +43,8 @@ export const SERMON_MANUSCRIPT_FIELDS = [
       title: "Introduction",
       paragraphs: [
         "The body is built. Now you write the doors. The introduction is prepared near-last, on purpose: it frames how the listener walks into a body that already exists. Not a summary of the points — the listener's posture as they enter.",
-        "A good introduction incites interest for believer and unbeliever alike, introduces the text with the MPT and MPS, carries a redemptive note (the promise that makes the call good news), and names what the sermon will ask. Open with variety — Merida's own move is to address both: 'If you are a believer, here is why we need this text…'; 'If you are not a Christian, this is a great week to be here because…'.",
-        "Four moves, chosen and written here as the words you'll preach: the hook (from where the listener actually is), the bridge (into the text, landing the MPT and MPS), the expectations (what the body will ask), and the redemptive note — the gospel anchor at the front door. Expectations comes before the note on purpose: name the call first, then ground it in what Christ has done. Same pattern your MPS walked.",
+        "A good introduction incites interest for believer and unbeliever alike, introduces the text with the MPT and MPS, carries a redemptive note (the promise that makes the call good news), and names what the sermon will ask. Open with variety — one good move is to address both: 'If you are a believer, here is why we need this text…'; 'If you are not a Christian, this is a great week to be here because…'.",
+        "Four moves, written here as the words you'll preach: the hook (from where the listener actually is), the bridge (into the text, landing the MPT and MPS), the expectations (what the body will ask), and the redemptive note — the gospel anchor at the front door. Expectations comes before the note on purpose: name the call first, then ground it in what Christ has done. Same pattern your MPS walked.",
       ],
     },
     questions: [
@@ -50,13 +52,15 @@ export const SERMON_MANUSCRIPT_FIELDS = [
         key: "opener",
         kind: "manuscript-prose",
         section: "introduction",
+        mapLabel: "Hook",
         prompt:
-          "Choose your hook and write it as the words you'll preach: a story, an image, a question, a problem from lived experience. The listener arrives distracted — this is your invitation in, from where they actually are. (Merida allows skipping the opener for a part-two sermon or a dense text — if so, go straight to the bridge below.)",
+          "Choose your hook and write it as the words you'll preach: a story, an image, a question, a problem from lived experience. The listener arrives distracted — this is your invitation in, from where they actually are. (Skipping the opener is fine for a part-two sermon or a dense text — if so, go straight to the bridge below.)",
       },
       {
         key: "scripture_reading",
         kind: "manuscript-prose",
         section: "introduction",
+        mapLabel: "Bridge into the text",
         prompt:
           "Write the bridge from your opener into the passage — how you'll introduce and read the text, landing the MPT and MPS so the listener knows what this sermon is about.",
       },
@@ -64,6 +68,7 @@ export const SERMON_MANUSCRIPT_FIELDS = [
         key: "expectation",
         kind: "manuscript-prose",
         section: "introduction",
+        mapLabel: "Expectation",
         prompt:
           "Name what this sermon will ask of the listener — what your body actually calls them to see, believe, or do — and write it as the expectation you set before the body begins, so it doesn't blindside them.",
       },
@@ -71,6 +76,7 @@ export const SERMON_MANUSCRIPT_FIELDS = [
         key: "redemptive_note",
         kind: "manuscript-prose",
         section: "introduction",
+        mapLabel: "Redemptive note",
         prompt:
           "Before the body begins, let them hear why the ask is good news: what does Christ offer that turns the call from burden into invitation? Write the redemptive note as you'll say it — the gospel anchor at the front door.",
         // SADI semantics carried through the Frame transplant: N/A-able with
@@ -82,8 +88,11 @@ export const SERMON_MANUSCRIPT_FIELDS = [
         // UX audit 2026-07-02 (L5): override the toggle's generic default
         // copy so the stricter ruled meaning survives under deadline
         // pressure — see the naLabel note above PromptBlock in
-        // SermonWritingSurface.jsx.
-        naLabel: "not applicable — this hook wasn't redemptive.",
+        // SermonWritingSurface.jsx. (Label corrected 2026-07-02, audit W3:
+        // the first cut said "this hook wasn't redemptive" — the OPPOSITE
+        // of the ruled condition. N/A applies only when the hook itself
+        // already carried the redemptive turn.)
+        naLabel: "not applicable — the hook already carried the redemptive note",
       },
     ],
   },
@@ -102,6 +111,7 @@ export const SERMON_MANUSCRIPT_FIELDS = [
       {
         key: "transitions",
         kind: "manuscript-transitions",
+        mapLabel: "The bridges between points",
         prompt:
           "Write the transition into each point, and the transition into the conclusion. Keep each brief — a sentence or two that carries the listener across without a visible seam.",
       },
@@ -115,9 +125,8 @@ export const SERMON_MANUSCRIPT_FIELDS = [
       title: "Conclusion",
       paragraphs: [
         "Intro framed how the listener walked in; the conclusion frames how they walk out. The body has done its work and the listener has heard the through-line. Now you land it — write the words.",
-        "Two moves (Merida): summation, then response. Summate the whole arc into one landing in fresh words — not a point-by-point recap. Then deliver the response: tell the listener exactly what to do, drawn from the MPS, gospel-empowered from the Christ-Connection Statement so the call rests on what Christ has done, not on what they must muster.",
-        "Gospel-empower is the engine. Without it, the landed call slides into a moralistic push — even with the body's gospel work behind it. With it, the listener walks out knowing the call rests on what Christ has done.",
-        "Land the ending with intention — write the conclusion's final beat so it carries the listener out cleanly, the way the sermon has shaped them.",
+        "Two moves: summation, then response. Summate the whole arc into one landing in fresh words — not a point-by-point recap. Then deliver the response: tell the listener exactly what to do, drawn from the MPS and gospel-empowered from the Christ-Connection Statement, so the call rests on what Christ has done, not on what they must muster. Without that empowering, even a well-landed call slides into a moralistic push.",
+        "Land the ending with intention — write the final beat so it carries the listener out cleanly, the way the sermon has shaped them.",
       ],
     },
     questions: [
@@ -125,6 +134,7 @@ export const SERMON_MANUSCRIPT_FIELDS = [
         key: "summation",
         kind: "manuscript-prose",
         section: "conclusion",
+        mapLabel: "Summation",
         prompt:
           "Write the summation — gather what your points have built into one landing, in fresh words. Not a recap: the body already walked the points. This is the through-line, spoken from where the listener now stands.",
       },
@@ -132,8 +142,33 @@ export const SERMON_MANUSCRIPT_FIELDS = [
         key: "response",
         kind: "manuscript-prose",
         section: "conclusion",
+        mapLabel: "Response",
         prompt:
           "Write the response — tell the listener exactly what to do, drawn from the MPS and made concrete for the room you named. Gospel-empower it from your Christ-Connection Statement, so the call rests on what Christ has done, not on what they must muster.",
+      },
+    ],
+  },
+  {
+    // Sermon Title — ruled 2026-07-02: the title is written LAST, after the
+    // whole sermon exists (the CCE source places naming after everything),
+    // so it lives at the end of the doors walk. This is the workspace's only
+    // title affordance — the topbar chrome deliberately carries none (State
+    // #3 is satisfied at creation; this field is the "correctable afterward"
+    // half). The question kind "sermon-title" writes the native `title`
+    // column via SermonWorkspace's onTitleChange, which never persists an
+    // empty name (State #3: no nameless atoms; the refusal is spoken inline
+    // by the editor). Not a completeness artifact — a sermon always has a
+    // name, so there is nothing to gate.
+    key: "title",
+    label: "Sermon Title",
+    hint: "The sermon is written — now name it. The title comes last on purpose: you can only name what already exists.",
+    questions: [
+      {
+        key: "title",
+        kind: "sermon-title",
+        mapLabel: "Sermon title",
+        prompt:
+          "Give the sermon its true name — short, faithful to the MPS, and plain enough that your people know what they're about to hear.",
       },
     ],
   },

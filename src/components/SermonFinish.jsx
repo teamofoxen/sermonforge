@@ -117,7 +117,7 @@ export default function SermonFinish({
         {exportNote && <p className="sfin-export-note">{exportNote}</p>}
         <p className="sfin-sendoff">
           The page is ready when it&apos;s written. The preacher is ready when
-          he&apos;s prayed — Merida&apos;s charge: pray yourself hot.
+          he&apos;s prayed — so pray yourself hot.
         </p>
 
         <TextButton

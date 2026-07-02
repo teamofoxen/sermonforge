@@ -214,7 +214,10 @@ const SEED_ANSWERS = {
     type: { value: "", na: true },
     predictive: { value: "", na: true },
   },
-  gospel_makes_possible: { primary: { value: "", na: false } },
+  gospel_makes_possible: {
+    primary: { value: "", na: false },
+    enabled_by_gospel: { value: "", na: false },
+  },
   need_and_character: {
     human_need: {
       value:

@@ -42,6 +42,10 @@
 > "Step 2/3/4 / Blueprint / Frame stage" pre-rewrite map onto Assembly's
 > sub-phases — field content unchanged, named outcomes preserved. See
 > [`docs/PROPOSALS/workspace-restructure-charter.md`](../PROPOSALS/workspace-restructure-charter.md).
+> **Superseded 2026-07-02 by the OEM restructure above:** Assembly now
+> holds only two sub-phases, Anchor and Outline. Equip moved to Manuscript
+> as Body; Frame collapsed into the Manuscript doors. The four-sub-phase
+> shape described in this note is historical.
 
 > **Components.** [`SermonWorkspace.jsx`](../../src/components/SermonWorkspace.jsx)
 > is the workspace mount: it loads the sermon record, derives position from
@@ -117,7 +121,10 @@ enters only once that understanding is built. *(Before 2026-06-15 there was an e
 surface — the Observe "Possible Implications" field — removed in the Phase-2 Merida surgery.)*
 
 **Implications Field 3 — Pastoral Context** (`pastoral_context`): PC enters as one
-voice in the three-way conversation, two questions:
+voice in the three-way conversation, two questions. The field now carries an
+`overview` (R8, 2026-07-02) — first-visit teaching that absorbed the example
+freight previously loaded into the prompt text, rendered by `FieldTeaching`
+same as any other field's overview.
 
 | Question | Question key | Stored at |
 |----------|--------------|-----------|
@@ -214,6 +221,13 @@ Conclusion. (Body's per-question "answered" gates on Scripture + Explanation +
 Application per outline point; Illustration counts toward "partial" and the
 preview but never gates — the OEM Equip ruling.)
 
+Every `QUESTION_WALK_ORDER` entry carries a `questionLabel` — the short
+de-walled label (`mapLabel` on the field/question def, or the field label
+when a question has none) rather than the full authored prompt. The map and
+`StudyAnchorHandoff`'s "left behind" list both render `questionLabel`, not
+`questionPrompt` (de-walling ruling, 2026-07-02 — the map is a scanning
+surface, not a reading one).
+
 Per-question state by visual weight:
 
 - **Answered** — full weight; preview of the pastor's answer rendered.
@@ -240,7 +254,11 @@ Manuscript's faint entries show while the preacher is still in Observe.
 ## Threshold orientation
 
 Two threshold overlays mount on top of the writing surface, governed by the
-`thresholds_seen` JSON array column.
+`thresholds_seen` JSON array column. (The Finish screen — `SermonFinish.jsx`
+— is CORE's third threshold screen, but it is summoned via the Finish
+affordance and holds no `thresholds_seen` state of its own — Process #3
+treats it as always re-openable, not a one-time dismissal — which is why
+only two overlays ride this column.)
 
 **Sermon-start landing** — Component:
 [`SermonStartLanding.jsx`](../../src/components/SermonStartLanding.jsx).
@@ -343,23 +361,30 @@ State derivations live in
 ## The completeness contract
 
 Per CORE [Process Contract #2](../CORE.md) (rearticulated 2026-05-18 in
-Phase G; re-based 2026-07-02 by the Frame collapse): a sermon is complete when
-its load-bearing artifacts exist. The foundation is the six composite gate
-functions in
+Phase G; re-based 2026-07-02 by the Frame collapse, then again the same day by
+the M2 audit ruling): a sermon is complete when its load-bearing artifacts
+exist. The foundation is five composite gate functions in
 [`src/utils/studyAdvancement.js`](../../src/utils/studyAdvancement.js), one
 per load-bearing field:
 
 | Composite | Load-bearing field |
 |---|---|
-| `checkField3Composite` *(exported as the public completeness API)* | Observe Field 3 — Divisions / Thought Units |
 | `checkField8Composite` | Interpret Field 8 — Interpretation Synthesis |
 | `checkField5Composite` | Redemptive Thread Field 5 — Christ-Connection Statement |
 | `checkPhase4Field4Composite` | Implications Field 4 — Implications Synthesis |
 | `checkMPTComposite` | Assembly/Anchor — MPT (Main Point Pair part 1) |
 | `checkMPSComposite` | Assembly/Anchor — MPS (Main Point Pair part 2) |
 
-**6 composites** since the OEM walk (2026-07-02) retired `checkIntroComposite`
-and `checkConclusionComposite` with the Frame stage — the transplanted door
+**5 composites** since the M2 audit ruling (2026-07-02) dropped
+`checkField3Composite` (Observe Field 3 — Divisions / Thought Units) from the
+roll-up: the Study → Anchor handoff, the reference pane, and the sermon map
+already treated the Obvious Point text as the Observation Set, so Finish
+asking more via the old Divisions-canvas composite was an asymmetry, not a
+stricter standard. `checkField3Composite` still exists in
+`studyAdvancement.js` (still exported), but has zero live callers as of this
+change — a candidate for removal, not yet acted on. This is in addition to
+the OEM walk (same day) retiring `checkIntroComposite` and
+`checkConclusionComposite` with the Frame stage — the transplanted door
 questions are now covered by the ratified-lenient Manuscript check below. If
 this count ever fails to reconcile against the live `studyAdvancement.js` file,
 either this table is wrong and the inconsistency must be surfaced, not silently
@@ -367,13 +392,15 @@ absorbed.
 
 The composites are **wired into the workspace-wide "is the sermon done" answer**
 (2026-06-10): `deriveSermonCompleteness(sermon)` in
-[`src/utils/sermonState.js`](../../src/utils/sermonState.js) consumes all six — plus
-three deliberately lenient presence checks for Sermon Outline / Sermon Body / Manuscript
-(**ratified lenient** at the OEM walk, item 7 — no longer placeholders) — and returns
+[`src/utils/sermonState.js`](../../src/utils/sermonState.js) consumes all five — plus
+four deliberately lenient presence checks for Observation Set / Sermon Outline / Sermon
+Body / Manuscript (Outline/Body/Manuscript **ratified lenient** at the OEM walk, item 7;
+Observation Set joined the lenient group by the M2 ruling, same day) — and returns
 the per-artifact roll-up (**nine artifacts**: four Study outcomes, MPT + MPS, Outline,
-Body, Manuscript). The lenient Manuscript check = an `opener` answer **and** the
-Conclusion `response`; **transitions are deliberately never counted** (a sermon is
-preachable without written bridges; the map still tracks them honestly).
+Body, Manuscript). The lenient Observation Set check = the Obvious Point sentence is
+written; the lenient Manuscript check = an `opener` answer **and** the Conclusion
+`response`; **transitions are deliberately never counted** (a sermon is preachable
+without written bridges; the map still tracks them honestly).
 `SermonWorkspace.jsx` calls it for the Finish flow, and
 [`SermonFinish.jsx`](../../src/components/SermonFinish.jsx) renders the result: **the
 beholding moment** (the CCS + MPS read back under "did this sermon testify to Christ —
@@ -383,7 +410,7 @@ send-off), and Mark-as-preached. At lower weight, the map-weight derivation
 (`deriveQuestionStatesFromSermon`) is the continuous surface, and the Study → Anchor
 handoff surfaces the four Study named outcomes. The answer **informs, never blocks**
 (CORE Process #1 — no walls). The completeness *policy* these composites implement —
-what "done" means per artifact, the N/A rules, the three lenient checks — is
+what "done" means per artifact, the N/A rules, the four lenient checks — is
 [WORKSPACE-CANON §5](../WORKSPACE-CANON.md); this section is the wiring.
 
 The advancement gates that used to fire at sub-phase boundaries (the seven
@@ -446,12 +473,14 @@ Possible Implications removed 2026-06-15, Phase 2.)
   labels). Composition is 1:1 and order-preserving with the stored array —
   `handleUnitColumnChange` writes cumulative cells by index against the raw
   column, and the enrichment never reaches storage.
-- **Completeness foundation:** `checkField3Composite` for Field 3 — exported
-  as the public completeness API for Divisions / Thought Units. The
-  advancement-gate checks for Field 7 (Obvious Point) and the former Field 8
-  (Possible Implications, removed 2026-06-15) were inline in the deleted
+- **Completeness foundation:** `checkField3Composite` still exists in
+  `studyAdvancement.js` but has zero live callers as of the M2 audit ruling
+  (2026-07-02) — Observation Set completeness now runs on the lenient Obvious
+  Point check (Field 7) instead, [documented above](#the-completeness-contract).
+  The advancement-gate checks for Field 7 and the former Field 8 (Possible
+  Implications, removed 2026-06-15) were inline in the deleted
   `checkObserveToInterpretThreshold` wrapper and were removed entirely in
-  Phase F — no completeness composite survives for these fields.
+  Phase F.
 
 ### Phase 2: Interpret → `sermons.interpretation` (JSON)
 
@@ -593,7 +622,7 @@ Named outcome: Sermon Body. Walk position: `Manuscript/Body/equip`.
 [`src/utils/sermonManuscriptFields.js`](../../src/utils/sermonManuscriptFields.js)
 — preacher-walked, carrying the transplanted Frame moves (each door prompt asks the
 decision and the preached words together). walkOrder tags these fields
-`Manuscript/IntroTransitionsConclusion/<field>`. Three fields:
+`Manuscript/IntroTransitionsConclusion/<field>`. Four fields:
 
 - **Introduction** — 4 `manuscript-prose` questions (`opener`, `scripture_reading`,
   `expectation`, `redemptive_note`) → `manuscript.introduction`. `redemptive_note`
@@ -607,6 +636,11 @@ decision and the preached words together). walkOrder tags these fields
 - **Conclusion** — 2 `manuscript-prose` questions (`summation`, then `response`) →
   `manuscript.conclusion`. The OEM two-prompt split of the old single response box
   (Frame's `summate` → `summation`; `land_call` + `gospel_empower` → `response`).
+- **Sermon Title** — the walk's terminal field (kind `sermon-title`, added
+  2026-07-02, ruled: named last, with the doors). Writes the native `title`
+  column directly, not the `manuscript` JSON; an empty submission is never
+  persisted (spoken refusal instead — State #3, "a sermon must have a name,"
+  is satisfied at creation and this field only ever corrects it).
 
 These write the native `manuscript` JSON column the Word export reads via
 `parseManuscript` (`{introduction, transitions, conclusion}`) — one source of

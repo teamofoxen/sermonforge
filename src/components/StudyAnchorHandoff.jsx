@@ -149,10 +149,12 @@ export default function StudyAnchorHandoff({ passage, outcomes, unfinished, onJu
                   key={`${q.fieldKey}/${q.questionKey}`}
                   className="sah-unfinished"
                 >
+                  {/* Short label, not the full prompt (de-walling ruling,
+                      2026-07-02) — the jump lands on the prompt itself. */}
                   <IconButton
                     type="button"
                     className="sah-unfinished-btn"
-                    aria-label={q.questionPrompt}
+                    aria-label={q.questionLabel}
                     onClick={() =>
                       onJump?.({
                         stage: q.stage,
@@ -163,7 +165,7 @@ export default function StudyAnchorHandoff({ passage, outcomes, unfinished, onJu
                   >
                     <span className="sah-unfinished-field">{q.fieldLabel}</span>
                     <span className="sah-unfinished-prompt">
-                      {q.questionPrompt}
+                      {q.questionLabel}
                     </span>
                   </IconButton>
                 </li>

@@ -27,8 +27,8 @@ forgot it — because everything he is about to forge must be supported by what
 the passage actually says.
 
 **Clarity is forced, not found.** Left alone, study stays vague: read much,
-feel much, write mush. So the system asks its questions one at a time and
-requires the work to compile into named things — an Observation Set, an
+feel much, write mush. So the system asks its questions in order, one field
+at a time, and requires the work to compile into named things — an Observation Set, an
 Interpretation Set, a Christ-Connection Statement, an Implications Synthesis,
 a Main Point Pair, a Sermon Outline, a Sermon Body, and at last the Manuscript
 itself. A sermon is not done until the load-bearing ones exist, and a named
