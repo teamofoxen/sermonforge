@@ -155,7 +155,9 @@ SermonForge/
     │                        getOutline / getFunctionalElements / parseManuscript readers
     ├── styles/
     │   ├── global.css     — full design system, all CSS variables
-    │   └── typography.css — Google Fonts loader for IBM Plex Serif/Sans + JetBrains Mono
+    │   ├── typography.css — typography system (family/scale/tracking tokens + surfaces)
+    │   ├── fonts.css      — generated @font-face rules for the self-hosted fonts (2026-07-01)
+    │   └── fonts/         — bundled woff2 files: IBM Plex Serif/Sans + JetBrains Mono (latin + latin-ext)
     ├── core/
     │   ├── contracts.ts   — STAGE/SUB_PHASE/VIEW enums, SERMON_COLUMNS, MutationKind (STEP enum retired with src/constants/steps.js in post-sweep audit Chunk 3, 2026-05-18)
     │   └── spine.ts       — single sermon/series state surface (the only path)

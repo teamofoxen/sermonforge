@@ -24,13 +24,13 @@ they must use `src/core/spine.ts` for sermon/series state and `src/db/database.j
 for everything else (settings, calendar notes, theology, exports, etc.).
 
 ARI (2026-05-09) removed the AI subsystem. There is no Anthropic SDK, no AI IPC
-channel, no system prompts, and no context pipeline. Four outbound network
-destinations exist: ESV passage fetching (`api.esv.org`) is the only one that
-carries sermon-derived input; the BTI Cloudflare Worker (telemetry,
-consent-gated) and GitHub Releases (the auto-updater's version check)
-originate in the main process and carry no sermon content; and the renderer's
-CSS loads the app's typefaces from Google Fonts on start (a standard font
-request — no app data). See `docs/CORE.md` Non-Negotiable Boundaries and
+channel, no system prompts, and no context pipeline. Three outbound network
+destinations exist, all originating in the main process: ESV passage fetching
+(`api.esv.org`) is the only one that carries sermon-derived input; the BTI
+Cloudflare Worker (telemetry, consent-gated) and GitHub Releases (the
+auto-updater's version check) carry no sermon content. (The renderer's former
+Google Fonts typeface load was removed 2026-07-01 — fonts are bundled at
+`src/styles/fonts/`.) See `docs/CORE.md` Non-Negotiable Boundaries and
 `docs/REFERENCE/privacy.md`.
 
 ---

@@ -336,13 +336,13 @@ either reshapes to pass, or it does not ship.
 - **No AI.** SermonForge contains no AI surfaces (ARI, 2026-05-09). The Anthropic SDK,
   IPC `"ai-message"` channel, system prompts, and context pipeline have been removed.
   ESV passage fetching (Crossway API) is the only outbound call that carries
-  sermon-derived input. Three other outbound calls exist and carry no sermon content:
-  the auto-updater's launch-time GitHub Releases version check, (unless the pastor
-  opts out) BTI interaction *metadata* to a developer-run Cloudflare endpoint, and
-  the renderer's Google Fonts typeface load on start (a standard font request; no
-  app data — self-hosting the fonts to remove it is a named candidate improvement). The
-  local-first guarantee is about sermon *content* — that never leaves the machine. See
-  `docs/REFERENCE/privacy.md`.
+  sermon-derived input. Two other outbound calls exist and carry no sermon content:
+  the auto-updater's launch-time GitHub Releases version check, and (unless the pastor
+  opts out) BTI interaction *metadata* to a developer-run Cloudflare endpoint. (A
+  fourth call — the renderer's Google Fonts typeface load — was surfaced by the
+  2026-07-01 drift sweep and removed the same day: the three font families now ship
+  inside the app, `src/styles/fonts/`.) The local-first guarantee is about sermon
+  *content* — that never leaves the machine. See `docs/REFERENCE/privacy.md`.
 - **No raw SQL in the renderer.** All database operations go through named IPC channels handled
   in `electron/main.js`. No SQL is accepted from the renderer.
 - **No direct `window.electronAPI` outside wrapper modules.** Components use `src/db/database.js`

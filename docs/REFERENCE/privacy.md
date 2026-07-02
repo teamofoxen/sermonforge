@@ -6,19 +6,15 @@
 
 SermonForge is single-user software that runs on your machine. Your sermons live in a SQLite database on your computer, and **your sermon content never leaves it.**
 
-Four things talk to the network, and only these four:
+Three things talk to the network, and only these three:
 
 - **Crossway ESV API** — when you load a passage, to fetch its text. Only the reference is sent (e.g. `John 3:16`), never your writing.
 - **GitHub Releases** — a quiet version check on launch so the app can keep itself up to date. No personal data and no sermon data — just "is there a newer version." This runs regardless of the telemetry toggle below.
 - **BTI telemetry** — one developer-controlled channel of interaction *metadata* (never sermon content), opt-out, covered in detail below.
-- **Google Fonts** — the app's typefaces load from Google's font service
-  (`fonts.googleapis.com` / `fonts.gstatic.com`) when the app starts. This is a
-  standard font request — it carries no sermon data and nothing the app knows
-  about you; like any web request it exposes your IP address to the font
-  server. It is not governed by the telemetry toggle. (Bundling the fonts with
-  the app so this request disappears entirely is a candidate improvement.)
 
-This document covers all four.
+This document covers all three. (The app's typefaces used to load from Google's
+font service on every launch — a fourth network call, disclosed and then removed
+the same day, 2026-07-01: the fonts now ship inside the app.)
 
 ---
 
@@ -105,7 +101,7 @@ Until the structured beta cohort program closes. After that, the data set is tri
 
 ### Toggle off semantics
 
-If you turn the toggle off in the setup screen, **no BTI telemetry leaves your device.** The three other network calls are not governed by this toggle: the Crossway passage fetch still runs when you load a passage, the launch-time GitHub version check still runs, and the fonts still load from Google's font service — none of these carries sermon content. The local `app.log` also still exists on your machine for debugging purposes; that is not affected by the toggle.
+If you turn the toggle off in the setup screen, **no BTI telemetry leaves your device.** The two other network calls are not governed by this toggle: the Crossway passage fetch still runs when you load a passage, and the launch-time GitHub version check still runs — neither carries sermon content. The local `app.log` also still exists on your machine for debugging purposes; that is not affected by the toggle.
 
 If you want to turn it back on later, the same toggle will live in a Settings panel in a later version of the app. Until then, contact the developer to flip it via the database.
 
@@ -120,4 +116,4 @@ If anything in the app contradicts this document, the document is the source of 
 
 ---
 
-*Last revised: 2026-07-01 (doc drift sweep truth-up: Google Fonts disclosed as the fourth network destination; crash events carry a short error string, never log-file lines; only `app-open` and `crash` actually emit today, the other four event types are registered-but-unwired; the tester ID survives reinstall; flag-button surfaces updated). Prior revision 2026-05-09 (post-ARI rewrite) — the pre-ARI version disclosed AI exchanges with Anthropic and an optional AI-exchange include on flag clicks; both removed when AI was removed from the product.*
+*Last revised: 2026-07-01 (doc drift sweep truth-up: crash events carry a short error string, never log-file lines; only `app-open` and `crash` actually emit today, the other four event types are registered-but-unwired; the tester ID survives reinstall; flag-button surfaces updated. The sweep also surfaced a previously undisclosed fourth network call — the app's typefaces loading from Google Fonts — removed the same day by bundling the fonts with the app). Prior revision 2026-05-09 (post-ARI rewrite) — the pre-ARI version disclosed AI exchanges with Anthropic and an optional AI-exchange include on flag clicks; both removed when AI was removed from the product.*

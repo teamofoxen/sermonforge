@@ -40,14 +40,15 @@
 
 ## Non-Negotiable Boundaries — No AI (outbound-call enumeration)
 
-- **2026-07-01 (doc drift sweep):** the outbound-call enumeration corrected from "two
-  other outbound calls" to **three** — the drift sweep surfaced that the renderer's CSS
-  loads the app's typefaces from Google Fonts on start (`src/styles/typography.css`
-  `@import`), a fourth network destination alongside ESV / GitHub Releases / BTI. It
-  carries no app or sermon data (a standard font request), is not telemetry-toggle
-  governed, and was previously undisclosed; `docs/REFERENCE/privacy.md` now discloses
-  it, and self-hosting the fonts (removing the call entirely) is named as a candidate
-  improvement.
+- **2026-07-01 (doc drift sweep):** the drift sweep surfaced that the renderer's CSS
+  loaded the app's typefaces from Google Fonts on start (`src/styles/typography.css`
+  `@import`) — a previously undisclosed fourth network destination alongside ESV /
+  GitHub Releases / BTI, carrying no app or sermon data but not telemetry-toggle
+  governed. Disclosed in `docs/REFERENCE/privacy.md`, then **removed the same day**:
+  the three font families (36 woff2 files, latin + latin-ext, ~1 MB) now ship inside
+  the app at `src/styles/fonts/`, loaded by `src/styles/fonts.css`. The clause's
+  enumeration stays at "two other outbound calls," with the fonts episode noted
+  parenthetically.
 
 ## Canonical Vocabulary — Stage
 

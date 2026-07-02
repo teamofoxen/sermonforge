@@ -108,10 +108,12 @@ results.append(("C2 — Canonical vocabulary present in SFDI + workspace", "FAIL
 # entries; we no longer require them as canonical, only forbid stale counts.
 # Updated 2026-07-01: the SFDI doc is a frozen historical record and keeps its
 # 8/8/5/4 field-order headers, but the LIVE workspace doc tracks the code at
-# HEAD, which is 7/7/5/4 (23 fields) since the Re-Foundation Phase-2 Merida
-# surgery (2026-06-15/16, c07139e — Possible Implications and Genre cut). The
-# workspace patterns below assert the live shape; the SFDI check above them
-# asserts the frozen record's internal shape. They are expected to differ.
+# HEAD (7/7/5/4 = 23 fields since the Re-Foundation Phase-2 Merida surgery,
+# 2026-06-15/16, c07139e). The live per-phase counts are DERIVED from
+# src/utils/studyFields.js (each field def opens with "  {" inside its
+# exported array), so a future field cut/add forces the workspace doc to
+# follow the code — hardcoding the live shape here missed exactly that case.
+# The SFDI check asserts the frozen record; the two are expected to differ.
 # ---------------------------------------------------------------------------
 c3 = []
 sfdi = content["SFDI"]
@@ -120,15 +122,34 @@ sfdi_orders = re.findall(r"### Field order \(revised — (\d+) fields\)", sfdi)
 if sfdi_orders != expected_orders:
     c3.append(f"SFDI field-order counts: {sfdi_orders}, expected {expected_orders}")
 
+def live_field_counts():
+    """Count field defs per exported array in src/utils/studyFields.js."""
+    src = (REPO / "src/utils/studyFields.js").read_text(encoding="utf-8")
+    counts = {}
+    for name in ["OBSERVE_FIELDS", "INTERPRET_FIELDS", "REDEMPTIVE_FIELDS", "IMPLICATIONS_FIELDS"]:
+        m = re.search(rf"^export const {name} = \[$(.*?)^\];", src, re.M | re.S)
+        if not m:
+            return None, f"could not locate `export const {name}` in studyFields.js"
+        n = len(re.findall(r"^  \{", m.group(1), re.M))
+        if not 1 <= n <= 30:
+            return None, f"{name}: implausible field count {n} — parser or file shape changed"
+        counts[name] = n
+    return counts, None
+
+live, parse_err = live_field_counts()
+if parse_err:
+    c3.append(f"live-count derivation FAILED (do not trust a green C3 until fixed): {parse_err}")
+    ws_checks = []
+else:
+    ws_text_counts = [live["OBSERVE_FIELDS"], live["INTERPRET_FIELDS"], live["REDEMPTIVE_FIELDS"], live["IMPLICATIONS_FIELDS"]]
+    # Newline-tolerant: workspace doc wraps long sentences, so "N-field" and
+    # "shape" may sit on adjacent lines.
+    ws_checks = [
+        (rf"Phase {i}[\s\S]{{0,400}}{n}-field\s+shape", f"Phase {i} = {n} (live, derived from studyFields.js)")
+        for i, n in enumerate(ws_text_counts, 1)
+    ]
+
 ws_text = content["workspace"]
-# Newline-tolerant: workspace doc wraps long sentences, so "N-field" and "shape"
-# may sit on adjacent lines.
-ws_checks = [
-    (r"Phase 1[\s\S]{0,400}7-field\s+shape", "Phase 1 = 7 (live)"),
-    (r"Phase 2[\s\S]{0,400}7-field\s+shape", "Phase 2 = 7 (live)"),
-    (r"Phase 3[\s\S]{0,400}5-field\s+shape", "Phase 3 = 5"),
-    (r"Phase 4[\s\S]{0,400}4-field\s+shape", "Phase 4 = 4"),
-]
 for pat, desc in ws_checks:
     if not re.search(pat, ws_text):
         c3.append(f"workspace: missing pattern for {desc}  (regex: {pat})")
@@ -151,7 +172,7 @@ for cstr in ["Phase 1 Observe: 8", "Phase 2 Interpret: 8", "Phase 3 RT: 5", "Pha
     if cstr not in sm:
         c3.append(f"state_memory: missing per-phase count '{cstr}'")
 
-results.append(("C3 — Per-phase field counts consistent (frozen SFDI 8/8/5/4 · live workspace 7/7/5/4)", "FAIL" if c3 else "PASS", c3, []))
+results.append(("C3 — Per-phase field counts consistent (frozen SFDI 8/8/5/4 · live derived from studyFields.js)", "FAIL" if c3 else "PASS", c3, []))
 
 
 # ---------------------------------------------------------------------------

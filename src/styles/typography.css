@@ -18,9 +18,14 @@
    Playfair Display, Newsreader) created.
 
    Crimson Pro and Playfair Display are no longer used.
+
+   Fonts are SELF-HOSTED as of 2026-07-01 (fonts.css + ./fonts/*.woff2):
+   previously a Google Fonts @import — the app's only renderer-side
+   network call, undisclosed and toggle-independent. Bundling the files
+   removes the call and keeps typography correct offline.
    ═════════════════════════════════════════════════════════════════ */
 
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import './fonts.css';
 
 :root {
   /* ─── Family tokens ────────────────────────────────────────────── */

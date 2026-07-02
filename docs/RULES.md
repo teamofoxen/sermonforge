@@ -98,7 +98,7 @@ variables. Never hardcode these values anywhere else.
 - IBM Plex Serif — headings, body copy, italic quotes, sermon manuscripts, all prose (the reading voice)
 - JetBrains Mono — wordmark, eyebrows, scripture refs, attributions, dates, all meta/labels (the structural voice)
 - IBM Plex Sans — reserve, available for any future dense-UI surface
-- Loaded from Google Fonts via `src/styles/typography.css`. Tokens: `--font-serif`, `--font-mono`, `--font-sans`.
+- Self-hosted (bundled woff2 at `src/styles/fonts/`, loaded by `src/styles/fonts.css` via `typography.css` — no network font call since 2026-07-01). Tokens: `--font-serif`, `--font-mono`, `--font-sans`.
 
 **Layout:**
 - Sidebar: 260px, `var(--sidebar-bg)` background (dark in both themes; `--ink` is a

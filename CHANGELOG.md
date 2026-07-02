@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-07-01 — Fonts self-hosted; drift-sweep tail items closed
+
+- The app's three typefaces (IBM Plex Serif/Sans, JetBrains Mono) now ship inside the app (`src/styles/fonts/`, ~1 MB woff2) instead of loading from Google Fonts — the last non-essential network call is gone and typography renders correctly offline; verified zero external font requests in preview.
+- privacy.md is back to "three things talk to the network, and only these three," with the fonts episode noted; CORE/ipc/RULES/project-structure re-propagated.
+- `sfdi-cross-doc-consistency.py` C3 now derives the live per-phase field counts from `studyFields.js` instead of hardcoding them, so a future field change forces the workspace doc to follow the code.
+- The dead `FEEDBACK_TOKEN` repo secret was deleted from GitHub (its only consumer was removed in the public-launch hardening pass; feedback runs through the Cloudflare Worker).
+
+---
+
 ## 2026-07-01 — Doc drift sweep: 98 corrections, dead disk-write banner deleted
 
 - An adversarially verified drift sweep fixed 98 false present-tense claims across 19 binding/live docs plus CLAUDE.md — headline corrections: CORE's legacy-DB resolver now states the row-count-wins rule (recency-wins was the 2026-05-02 data-loss bug), RULES' layout spec matches the shipped dark topbar, and privacy.md/CORE now disclose Google Fonts as the fourth outbound network destination.
