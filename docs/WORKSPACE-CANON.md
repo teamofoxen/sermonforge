@@ -13,7 +13,7 @@
 > Phase-1 net-truth map + the code at HEAD and verified by a 15-agent ultracode pass (0 blockers)
 > before ratification. The Merida tags (`[M] / [+] / [◆] / [⚠] / [✂]`) and the §7 open-seams were
 > **Phase-2 input**; the Phase-2 surgery (2026-06-15/16) and the **OEM walk (2026-07-02,
-> rulings of record: `oem-walk-rulings-2026-07-01.md`) have now edited this live doc** — every
+> rulings of record: `docs/handoff/oem-walk-rulings-2026-07-01.md`) have now edited this live doc** — every
 > region is preacher-walked and ratified, and the same walk ruled the Frame → Manuscript
 > collapse (Assembly decides; Manuscript writes). The structural sweep that lands the collapse
 > in code rides the same commit series as this amendment — see §7.
@@ -447,7 +447,7 @@ Recorded so canon is honest about what is *not* yet frozen. The OEM walk (2026-0
 closed the old seams 2–4: the DRAFT pedagogy is preacher-walked and ratified, the two
 provisional names are ratified, and the OEM-deferred Merida items (adoration telos,
 construction-stage congregation, the application battery) are all ruled — rulings of
-record in `oem-walk-rulings-2026-07-01.md`. The two remaining code seams then **shipped**:
+record in `docs/handoff/oem-walk-rulings-2026-07-01.md`. The two remaining code seams then **shipped**:
 
 1. ✅ **The structural sweep — SHIPPED 2026-07-02** (the Frame collapse, Equip →
    Manuscript/Body, the pane passengers, the Finish beholding moment + send-off, the
@@ -480,7 +480,7 @@ record in `oem-walk-rulings-2026-07-01.md`. The two remaining code seams then **
   collapse + the Body move (decide/write stage boundary); the affections layer (§2.3); the
   completed application battery (§4.1); the door transplant (§4.2); completeness re-based to
   six composites + three ratified-lenient checks (§5); the beholding moment + send-off (§6).
-  Rulings of record: `oem-walk-rulings-2026-07-01.md`. CORE amended the same day
+  Rulings of record: `docs/handoff/oem-walk-rulings-2026-07-01.md`. CORE amended the same day
   (see `CORE-CHANGELOG.md`).
 - **N/A code build SHIPPED 2026-07-02 (§5, §7):** the ruled N/A policy is now enforced in
   code — the Study-question grants (2b) and per-cell cumulative-table N/A (2c), with the

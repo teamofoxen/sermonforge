@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-07-02 — Repo-root document sweep: five handoff docs relocated to docs/handoff/
+
+- Moved five dated, spent session artifacts from the repo root into `docs/handoff/` (its existing home for this doc shape): `doc-drift-report-2026-07-01.md`, `oem-walk-packet-2026-07-01.md`, `oem-walk-rulings-2026-07-01.md`, `ux-audit-prompt-2026-07-02.md`, `ux-audit-report-2026-07-02.md`.
+- Updated every live pointer to the old repo-root paths (CORE.md, CORE-CHANGELOG.md, WORKSPACE-CANON.md, sermon-workspace.md, refoundation-initiative.md, and four code comments) — CHANGELOG entries and the moved docs' own frozen bodies were left untouched as historical record.
+- `sermonforge-design-context.md`, also loose at the root, turned out to be deliberately gitignored (not tracked, not part of the shared repo) — left alone; it's stale local scratch, not sprawl in the shared corpus.
+- Verified: drift-check PASS (zero broken references), the touched test file's 24 tests pass, `node --check` clean on every touched JS/Electron file.
+
+---
+
 ## 2026-07-02 — Workspace UX audit (CORE × Pastor's Charter): executed, remediated, verified
 
 - Ran the chartered workspace UX audit (ground truth → rendered walk → five lens sweeps → adversarial verification) to 16 confirmed findings, 2 High; report at `ux-audit-report-2026-07-02.md`.

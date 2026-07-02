@@ -220,7 +220,7 @@ describe("deriveThoughtUnitsFromCanvas", () => {
     }
   });
 
-  // Audit finding H2 (2026-07-02, ux-audit-report-2026-07-02.md): a depth-0
+  // Audit finding H2 (2026-07-02, docs/handoff/ux-audit-report-2026-07-02.md): a depth-0
   // row typed empty (Enter-split at position 0, or a cleared line) used to
   // drop out of the derived array entirely, silently taking its typed
   // Meaning / Christ-Connection / Implication cells with it. A row that's

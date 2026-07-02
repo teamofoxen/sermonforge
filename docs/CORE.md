@@ -255,7 +255,7 @@ these names. (See State Contract clause 5: *one name per concept*.)
    validators continue to check those frozen records for internal consistency.
    (The OEM walk, 2026-07-02, completed the remaining regions: Outline, Body,
    and the Manuscript doors are preacher-walked and ratified — rulings of
-   record in `oem-walk-rulings-2026-07-01.md`. This contract is now testable
+   record in `docs/handoff/oem-walk-rulings-2026-07-01.md`. This contract is now testable
    in full across the whole walk.)
 
    (Saturation amendment, 2026-06-10 — pastor's ruling: the throughline is

@@ -8,7 +8,7 @@
 // finished body ("prepared near-last" preserved). Intro carries hook / bridge /
 // expectations / redemptive note; Conclusion carries summation / response
 // (response absorbs land-the-call + gospel-empower). Rulings of record:
-// oem-walk-rulings-2026-07-01.md (agenda item 8 + Stage 3).
+// docs/handoff/oem-walk-rulings-2026-07-01.md (agenda item 8 + Stage 3).
 //
 // On-disk shape: writes the native `manuscript` JSON column the Word export
 // already reads (via parseManuscript):

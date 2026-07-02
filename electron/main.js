@@ -1380,7 +1380,7 @@ function runMigrations() {
     // (a) gives Manuscript its per-stage memory column, and (b) rewrites
     // every legacy position value so in-flight sermons land at the ruled
     // shape's equivalent spot — a one-time rewrite, not a permanent read
-    // coercion (rulings of record: oem-walk-rulings-2026-07-01.md).
+    // coercion (rulings of record: docs/handoff/oem-walk-rulings-2026-07-01.md).
     //
     // Position mapping: Assembly/Equip → Manuscript/Body (same field);
     // Assembly/Frame → Manuscript doors (intro → introduction; conclusion

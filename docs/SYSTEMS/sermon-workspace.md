@@ -25,7 +25,7 @@
 > the `sermon_frame` column persists as legacy data (existing sermons' frame
 > answers stay on disk and searchable, but the walk no longer renders them —
 > pastor-ruled 2026-07-02). Rulings of record:
-> [`oem-walk-rulings-2026-07-01.md`](../../oem-walk-rulings-2026-07-01.md);
+> [`oem-walk-rulings-2026-07-01.md`](../handoff/oem-walk-rulings-2026-07-01.md);
 > the walk's what & why is [`WORKSPACE-CANON.md`](../WORKSPACE-CANON.md).
 
 > Rewritten post-ARI (2026-05-09). All AI surfaces are gone.

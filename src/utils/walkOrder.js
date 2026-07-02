@@ -32,7 +32,7 @@
 // moved from Assembly: the cells ARE the manuscript body) and Intro,
 // Transitions, Conclusion (the doors, carrying the collapsed Frame's seven
 // moves). Assembly decides; Manuscript writes. Rulings of record:
-// oem-walk-rulings-2026-07-01.md.
+// docs/handoff/oem-walk-rulings-2026-07-01.md.
 
 import { STAGE, SUB_PHASE } from "../core/contracts";
 import {

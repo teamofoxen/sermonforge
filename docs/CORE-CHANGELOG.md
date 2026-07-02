@@ -82,7 +82,7 @@
   collapsed — its seven moves transplanted into the Manuscript door fields, each prompt
   asking the decision and the preached words together at full SADI richness. Assembly =
   Anchor, Outline (decide); Manuscript = Body, then Intro, Transitions, Conclusion (write).
-  Rulings of record: `oem-walk-rulings-2026-07-01.md` (agenda item 8 + the confirmed walk
+  Rulings of record: `docs/handoff/oem-walk-rulings-2026-07-01.md` (agenda item 8 + the confirmed walk
   shape).
 
 ## Canonical Vocabulary — Named outcome

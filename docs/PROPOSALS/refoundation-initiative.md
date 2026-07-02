@@ -1,6 +1,6 @@
 # Workspace Re-Foundation Initiative — working board
 
-> **Status: ESSENTIALLY COMPLETE — Phase 1 shipped (2026-06-14/15, canon LIVE); Phase 2 rulable items 1–5 shipped (2026-06-15/16); the OEM walk + Frame→Manuscript collapse shipped 2026-07-02 (`oem-walk-rulings-2026-07-01.md`); the ruled N/A code build (Study grants 2b + per-cell cumulative-table N/A 2c) shipped 2026-07-02. Remaining: only the independent infra-doc pass below (present-tense sql.js/saveDb cruft, schema-version drift) + trivial doc-cleanup (historicize the §2 [◆] tags in canon). No code or rulings outstanding.** Chartered
+> **Status: ESSENTIALLY COMPLETE — Phase 1 shipped (2026-06-14/15, canon LIVE); Phase 2 rulable items 1–5 shipped (2026-06-15/16); the OEM walk + Frame→Manuscript collapse shipped 2026-07-02 (`docs/handoff/oem-walk-rulings-2026-07-01.md`); the ruled N/A code build (Study grants 2b + per-cell cumulative-table N/A 2c) shipped 2026-07-02. Remaining: only the independent infra-doc pass below (present-tense sql.js/saveDb cruft, schema-version drift) + trivial doc-cleanup (historicize the §2 [◆] tags in canon). No code or rulings outstanding.** Chartered
 > 2026-06-13 at the end of a long design conversation. This is the doc the work runs from.
 > It has two coupled jobs: (1) **consolidate the scattered document authority** into a
 > clean structure, and (2) **re-examine the contracts + the Study/Anchor question set
