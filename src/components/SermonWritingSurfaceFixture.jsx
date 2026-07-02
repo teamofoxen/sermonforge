@@ -4,7 +4,7 @@ import SermonMap from "./SermonMap";
 import SermonStartLanding from "./SermonStartLanding";
 import StudyAnchorHandoff from "./StudyAnchorHandoff";
 import { FIRST_FIELD, QUESTION_WALK_ORDER, questionId } from "../utils/walkOrder";
-import { deriveThoughtUnitsFromCanvas } from "../utils/studyFields";
+import { deriveThoughtUnitsFromCanvas, composeThoughtUnitBlocks } from "../utils/studyFields";
 import {
   STAGE_SUBPHASE_TO_COLUMN,
   deriveStudyOutcomesFromSermon,
@@ -521,6 +521,13 @@ export default function SermonWritingSurfaceFixture() {
     () => buildSermonShapeFromFixture(answers, thoughtUnits),
     [answers, thoughtUnits]
   );
+  // Mirror production (SermonWorkspace): units render as their BLOCKS,
+  // composed live from the canvas (ruled 2026-07-02). Raw units stay in
+  // state for the index-aligned writes; only the surface prop is enriched.
+  const composedThoughtUnits = useMemo(
+    () => composeThoughtUnitBlocks(answers?.divisions?.canvas?.value, thoughtUnits),
+    [answers, thoughtUnits]
+  );
   const studyOutcomes = useMemo(
     () => deriveStudyOutcomesFromSermon(sermonShape),
     [sermonShape]
@@ -538,7 +545,7 @@ export default function SermonWritingSurfaceFixture() {
         fieldKey={position.fieldKey}
         reference={{ passage: "Romans 8:1-4", outcomes: studyOutcomes, mpt: "", mps: "" }}
         fieldAnswers={fieldAnswers}
-        thoughtUnits={thoughtUnits}
+        thoughtUnits={composedThoughtUnits}
         onAnswerChange={handleAnswerChange}
         onUnitColumnChange={handleUnitColumnChange}
         onCanvasChange={handleCanvasChange}

@@ -428,8 +428,21 @@ Possible Implications removed 2026-06-15, Phase 2.)
   (`PassageCanvas.jsx`; commits `15d4356` → `3334079` → `4fcc112`). A number marks only
   where a verse begins; continuation/indented rows carry none. Canvas rows produce the
   canonical `thought_units` array via `deriveThoughtUnitsFromCanvas` on every
-  save (depth-0 rows are the thought units per era-2-primacy ruling 8).
-  Phases 2/3/4 all read from this array.
+  save (depth-0 rows mark the unit boundaries per era-2-primacy ruling 8).
+  Phases 2/3/4 all read from this array. **What a unit IS was ruled 2026-07-02:
+  the block** — the margin (depth-0) statement plus every line indented beneath
+  it, spanning the verses it covers. The stored array keeps ruling 8's shape
+  (identity + header `thought_unit_text` + cumulative columns); the block and
+  its verse span are NOT materialized — `composeThoughtUnitBlocks`
+  ([`studyFields.js`](../../src/utils/studyFields.js)) composes them at read
+  time from the canvas, matched by `_canvas_row_id`, so a canvas edit can never
+  leave a stale block and no migration was needed. Consumers: `SermonWorkspace`
+  (enriches the `thoughtUnits` prop that `CumulativeSynthesisTable` renders as
+  the read-only unit cell, indentation + verse span preserved) and
+  `deriveQuestionStatesFromSermon` (verse spans on the map's partial "Unit N"
+  labels). Composition is 1:1 and order-preserving with the stored array —
+  `handleUnitColumnChange` writes cumulative cells by index against the raw
+  column, and the enrichment never reaches storage.
 - **Completeness foundation:** `checkField3Composite` for Field 3 — exported
   as the public completeness API for Divisions / Thought Units. The
   advancement-gate checks for Field 7 (Obvious Point) and the former Field 8

@@ -2701,24 +2701,31 @@ function validateAndCommit(op, payload) {
           ],
         );
         dbRun(
+          // main_point_pair (the v19 envelope the Anchor fields render) and
+          // tags (the workspace Topics field, v32) are part of the seed —
+          // without main_point_pair in this INSERT the sample's MPT/MPS
+          // fields rendered empty in the app even though sampleData.js
+          // authored them (caught in the 2026-07-02 sample rebuild).
           `INSERT INTO sermons (
             id, series_id, is_one_off, title, passage, date, stage,
-            mpt, mps,
+            mpt, mps, main_point_pair,
             observations, interpretation, redemptive_thread, implications,
             outline, functional_elements,
             manuscript, delivery_notes, timing_notes,
-            study_guide_note, big_idea, overview, sermon_frame,
+            study_guide_note, big_idea, overview, sermon_frame, tags,
+            notebook_study, notebook_blueprint, notebook_manuscript,
             current_stage, current_sub_phase,
             last_study_subphase, last_assembly_subphase, last_manuscript_subphase,
             last_touched_position, thresholds_seen
-          ) VALUES (?,?,0,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+          ) VALUES (?,?,0,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
           [
             sermon.id, sermon.series_id, sermon.title, sermon.passage, sermon.date, sermon.stage,
-            sermon.mpt, sermon.mps,
+            sermon.mpt, sermon.mps, sermon.main_point_pair,
             sermon.observations, sermon.interpretation, sermon.redemptive_thread, sermon.implications,
             sermon.outline, sermon.functional_elements,
             sermon.manuscript, sermon.delivery_notes, sermon.timing_notes,
-            sermon.study_guide_note, sermon.big_idea, sermon.overview, sermon.sermon_frame,
+            sermon.study_guide_note, sermon.big_idea, sermon.overview, sermon.sermon_frame, sermon.tags,
+            sermon.notebook_study, sermon.notebook_blueprint, sermon.notebook_manuscript,
             // current_step removed in the trail deletion sweep (Phase B2).
             STAGE.Study, SUB_PHASE.Observe,
             // Per-stage memory: sample sermon always resets to the first

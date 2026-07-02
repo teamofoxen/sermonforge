@@ -696,6 +696,83 @@ export function canvasRowIdsWithCumulativeWork(thoughtUnits) {
   return ids;
 }
 
+// ── Thought-unit blocks (ruled 2026-07-02) ─────────────────────────────────
+//
+// A thought unit IS the block: the margin (depth-0) statement PLUS every line
+// indented beneath it, spanning the verses it covers. The margin line marks
+// where a unit begins — it is not the unit. (The pre-ruling code used the
+// depth-0 row as both the unit's boundary marker AND its entire content,
+// which amputated the supporting lines from every downstream table.)
+//
+// The stored thought_units array stays exactly as ruling 8 shaped it —
+// identity (_canvas_row_id = the margin row) + header text + cumulative
+// columns. The block is NOT materialized into storage; it is composed at
+// read time from the canvas, matched by _canvas_row_id, so a canvas edit
+// can never leave a stale block behind and existing sermons need no
+// migration. Composition is 1:1 and order-preserving — callers that write
+// cumulative cells by index (handleUnitColumnChange) stay aligned.
+
+// Format a verse span from the labels in effect at a block's first and last
+// rows. Labels are the canvas gutter's strings — bare ("8") or chaptered at
+// a seam ("6:1") — treated as opaque text.
+function formatVerseSpan(startVerse, endVerse) {
+  const start = typeof startVerse === "string" ? startVerse.trim() : "";
+  const end = typeof endVerse === "string" ? endVerse.trim() : "";
+  if (!start && !end) return "";
+  if (!start || !end || start === end) return `v. ${start || end}`;
+  return `vv. ${start}–${end}`;
+}
+
+// Compose display blocks for the thought units. Returns a new array of
+// enriched unit copies (input untouched), each carrying:
+//   block:      [{text, depth, verse}, ...] — the margin row + its indented
+//               children (empty-text lines dropped); falls back to a
+//               single-line block from thought_unit_text when the unit's
+//               canvas row is gone or was never recorded (legacy/fixture
+//               data), and to [] when there is no text at all.
+//   verse_span: "v. 8" / "vv. 8–9" / "" — from the gutter labels IN EFFECT
+//               across the block. Labels mark verse starts only, so a block
+//               opening mid-verse inherits the most recent label above it.
+export function composeThoughtUnitBlocks(canvas, thoughtUnits) {
+  const units = Array.isArray(thoughtUnits) ? thoughtUnits : [];
+  const rows = Array.isArray(canvas) ? canvas : [];
+
+  // One walk over the canvas: group each depth-0 row with the deeper rows
+  // beneath it, tracking the verse label in effect. Rows above the first
+  // margin row belong to no unit (a unit begins AT a margin line).
+  const blocksById = new Map();
+  let current = null;
+  let lastVerse = "";
+  for (const row of rows) {
+    if (!row || typeof row !== "object") continue;
+    const depth = Number.isInteger(row.depth) && row.depth > 0 ? row.depth : 0;
+    const verse = typeof row.verse === "string" ? row.verse.trim() : "";
+    if (verse) lastVerse = verse;
+    if (depth === 0) {
+      current = { lines: [], startVerse: lastVerse, endVerse: lastVerse };
+      if (typeof row.id === "string" && row.id) blocksById.set(row.id, current);
+    }
+    if (!current) continue;
+    current.endVerse = lastVerse;
+    const text = typeof row.text === "string" ? row.text.trim() : "";
+    if (text) current.lines.push({ text, depth, verse });
+  }
+
+  return units.map((u) => {
+    const rowId = u && typeof u === "object" && typeof u._canvas_row_id === "string" ? u._canvas_row_id : "";
+    const entry = rowId ? blocksById.get(rowId) : null;
+    if (entry && entry.lines.length > 0) {
+      return { ...u, block: entry.lines, verse_span: formatVerseSpan(entry.startVerse, entry.endVerse) };
+    }
+    const headerText = u && typeof u.thought_unit_text === "string" ? u.thought_unit_text.trim() : "";
+    return {
+      ...(u && typeof u === "object" ? u : {}),
+      block: headerText ? [{ text: headerText, depth: 0, verse: "" }] : [],
+      verse_span: "",
+    };
+  });
+}
+
 // Write an indented-canvas value to the `divisions` field, materializing the
 // derived thought_units array alongside. Both paths are authoritative — canvas
 // for Field 3 UI, thought_units for Phase 2/3/4 cross-phase reads — so this

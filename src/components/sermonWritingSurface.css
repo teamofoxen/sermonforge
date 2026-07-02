@@ -197,6 +197,22 @@
   font-style: italic;
 }
 
+/* A thought unit rendered as its block — the margin statement plus its
+   indented lines (ruled 2026-07-02). Same voice as .sws-unit-value; the
+   per-line indent rides inline (depth × px), matching the canvas idiom. */
+.sws-unit-block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sws-unit-block-line {
+  font-family: var(--font-serif);
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--ink-mid);
+}
+
 .sws-unmet {
   margin-top: 16px;
   padding: 22px 24px;

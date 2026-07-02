@@ -86,6 +86,11 @@ function PromptBlock({ prompt, answer, naAllowed, naLabel, onValueChange, onTogg
   );
 }
 
+// Per-depth indent for a thought unit's block lines. Shallower than the
+// canvas's 32px (PassageCanvas INDENT_PX) — the unit cell is a narrow
+// clearing; the indent only has to make the structure legible, not editable.
+const BLOCK_INDENT_PX = 18;
+
 function CumulativeSynthesisTable({
   question,
   thoughtUnits,
@@ -140,6 +145,31 @@ function CumulativeSynthesisTable({
             return (
               <article key={unit.id ?? idx} className="sws-unit-row">
                 {priorColumns.map((col) => {
+                  // The thought-unit cell renders the BLOCK — the margin
+                  // statement plus its indented lines, labeled with the
+                  // verses it spans (ruled 2026-07-02). The margin line
+                  // marks where a unit begins; it is not the unit.
+                  if (col.key === "thought_unit_text" && Array.isArray(unit.block) && unit.block.length > 0) {
+                    return (
+                      <div key={col.key} className="sws-unit-prior">
+                        <div className="sws-unit-label">
+                          {col.label}
+                          {unit.verse_span ? ` · ${unit.verse_span}` : ""}
+                        </div>
+                        <div className="sws-unit-block">
+                          {unit.block.map((line, li) => (
+                            <div
+                              key={li}
+                              className="sws-unit-block-line"
+                              style={line.depth > 0 ? { paddingLeft: line.depth * BLOCK_INDENT_PX } : undefined}
+                            >
+                              {line.text}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  }
                   const v = unit[col.key];
                   const isEmpty = v == null || v === "";
                   // Per-cell N/A (canon §5 2c) applies to prior/read-only

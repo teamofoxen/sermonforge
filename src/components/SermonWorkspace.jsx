@@ -33,6 +33,7 @@ import {
   setQuestionNA,
   setDivisionsCanvas,
   getQuestionAnswer,
+  composeThoughtUnitBlocks,
 } from "../utils/studyFields";
 import {
   getOutline,
@@ -654,9 +655,17 @@ export default function SermonWorkspace({
   const currentFieldData = currentCol ? parseStructuredField(sermon[currentCol]) : {};
   const fieldAnswers = currentFieldData[position.fieldKey] ?? {};
 
-  // Thought units for cumulative-synthesis-table consumption.
+  // Thought units for cumulative-synthesis-table consumption. A unit renders
+  // as its BLOCK — the margin statement plus its indented lines, with verse
+  // span (ruled 2026-07-02) — composed live from the canvas so a canvas edit
+  // can never leave a stale block. Order-preserving 1:1 with the stored
+  // array, so handleUnitColumnChange's index writes stay aligned; the
+  // enrichment never reaches storage (that handler re-reads the raw column).
   const observationsData = parseStructuredField(sermon.observations);
-  const thoughtUnits = observationsData?.divisions?.thought_units?.value ?? [];
+  const thoughtUnits = composeThoughtUnitBlocks(
+    observationsData?.divisions?.canvas?.value,
+    observationsData?.divisions?.thought_units?.value ?? []
+  );
 
   // Native-column data for the Outline / Equip / Manuscript editors. Cheap to
   // parse (these columns are small); only consumed when on those stages.

@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-07-02 — Thought unit = block: Divisions↔Synthesis seam ruled and built; sample sermon rebuilt end-to-end
+
+- Pastor ruled a thought unit is the block — the margin statement plus every line indented beneath it, spanning its verses; `composeThoughtUnitBlocks` (studyFields.js) composes blocks and verse spans live from the canvas at read time, stored shape unchanged, no migration.
+- The three cumulative tables render each unit as its full indented block labeled "vv. X–Y"; map partial labels gain verse spans; WORKSPACE-CANON §2 and sermon-workspace.md amended with the ruling.
+- Sample sermon Divisions rebuilt to the ruled shape: five ESV block-units with verse gutter, all three cumulative columns authored per unit.
+- Fixed `load-sample-sermon` INSERT silently dropping `main_point_pair` (Anchor rendered empty in-app) and seeded `tags` plus the three per-stage notebooks.
+- Seed-lock tests added: every walk question must derive "answered" and the Word-export payload must be fully populated — 297/297 tests, lint clean, sweep PASS.
+
+---
+
 ## 2026-07-02 — Repo-root document sweep: five handoff docs relocated to docs/handoff/
 
 - Moved five dated, spent session artifacts from the repo root into `docs/handoff/` (its existing home for this doc shape): `doc-drift-report-2026-07-01.md`, `oem-walk-packet-2026-07-01.md`, `oem-walk-rulings-2026-07-01.md`, `ux-audit-prompt-2026-07-02.md`, `ux-audit-report-2026-07-02.md`.

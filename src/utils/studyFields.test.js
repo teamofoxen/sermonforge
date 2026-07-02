@@ -33,6 +33,7 @@ import {
   getQuestionAnswer,
   deriveThoughtUnitsFromCanvas,
   canvasRowIdsWithCumulativeWork,
+  composeThoughtUnitBlocks,
   setDivisionsCanvas,
   OBSERVE_FIELDS,
   INTERPRET_FIELDS,
@@ -277,6 +278,115 @@ describe("canvasRowIdsWithCumulativeWork", () => {
     expect(ids.has("row-2")).toBe(false);
     expect(ids.has("row-3")).toBe(true);
     expect(ids.has("row-4")).toBe(false);
+  });
+});
+
+describe("composeThoughtUnitBlocks — a unit is its block (ruled 2026-07-02)", () => {
+  // Verse-labeled canvas: two blocks, the first spanning vv. 8–9, the second
+  // opening mid-verse (no label of its own row) so it inherits v. 9's label.
+  const VERSED_CANVAS = [
+    { id: "b-1", depth: 0, text: "For by grace you have been saved", verse: "8" },
+    { id: "b-1a", depth: 1, text: "through faith" },
+    { id: "b-1b", depth: 1, text: "it is the gift of God", verse: "9" },
+    { id: "b-1c", depth: 2, text: "not a result of works" },
+    { id: "b-2", depth: 0, text: "For we are his workmanship", verse: "10" },
+  ];
+
+  it("gathers the margin row plus its indented children into the block", () => {
+    const units = [
+      { _canvas_row_id: "b-1", thought_unit_text: "For by grace you have been saved" },
+      { _canvas_row_id: "b-2", thought_unit_text: "For we are his workmanship" },
+    ];
+    const out = composeThoughtUnitBlocks(VERSED_CANVAS, units);
+    expect(out).toHaveLength(2);
+    expect(out[0].block.map((l) => l.text)).toEqual([
+      "For by grace you have been saved",
+      "through faith",
+      "it is the gift of God",
+      "not a result of works",
+    ]);
+    expect(out[0].block.map((l) => l.depth)).toEqual([0, 1, 1, 2]);
+    expect(out[1].block.map((l) => l.text)).toEqual(["For we are his workmanship"]);
+  });
+
+  it("labels each block with the verse span in effect across it", () => {
+    const units = [
+      { _canvas_row_id: "b-1", thought_unit_text: "For by grace you have been saved" },
+      { _canvas_row_id: "b-2", thought_unit_text: "For we are his workmanship" },
+    ];
+    const out = composeThoughtUnitBlocks(VERSED_CANVAS, units);
+    expect(out[0].verse_span).toBe("vv. 8–9");
+    expect(out[1].verse_span).toBe("v. 10");
+  });
+
+  it("a block opening mid-verse inherits the label in effect above it", () => {
+    const canvas = [
+      { id: "m-1", depth: 0, text: "and we rejoice", verse: "2" },
+      { id: "m-2", depth: 0, text: "Not only that" }, // no label — still v. 2
+      { id: "m-2a", depth: 1, text: "but we rejoice in our sufferings", verse: "3" },
+    ];
+    const units = [
+      { _canvas_row_id: "m-1", thought_unit_text: "and we rejoice" },
+      { _canvas_row_id: "m-2", thought_unit_text: "Not only that" },
+    ];
+    const out = composeThoughtUnitBlocks(canvas, units);
+    expect(out[0].verse_span).toBe("v. 2");
+    expect(out[1].verse_span).toBe("vv. 2–3");
+  });
+
+  it("is 1:1 and order-preserving with the stored array (index writes stay aligned)", () => {
+    const units = [
+      { _canvas_row_id: "b-2", thought_unit_text: "For we are his workmanship", meaning: "kept" },
+      { _canvas_row_id: "b-1", thought_unit_text: "For by grace you have been saved" },
+    ];
+    const out = composeThoughtUnitBlocks(VERSED_CANVAS, units);
+    expect(out).toHaveLength(2);
+    expect(out[0]._canvas_row_id).toBe("b-2");
+    expect(out[0].meaning).toBe("kept");
+    expect(out[1]._canvas_row_id).toBe("b-1");
+  });
+
+  it("does not mutate the input units", () => {
+    const units = [{ _canvas_row_id: "b-1", thought_unit_text: "For by grace you have been saved" }];
+    composeThoughtUnitBlocks(VERSED_CANVAS, units);
+    expect(units[0].block).toBeUndefined();
+    expect(units[0].verse_span).toBeUndefined();
+  });
+
+  it("drops empty-text lines from the block", () => {
+    const canvas = [
+      { id: "b-1", depth: 0, text: "For by grace you have been saved", verse: "8" },
+      { id: "b-1a", depth: 1, text: "   " },
+      { id: "b-1b", depth: 1, text: "through faith" },
+    ];
+    const units = [{ _canvas_row_id: "b-1", thought_unit_text: "For by grace you have been saved" }];
+    const out = composeThoughtUnitBlocks(canvas, units);
+    expect(out[0].block.map((l) => l.text)).toEqual([
+      "For by grace you have been saved",
+      "through faith",
+    ]);
+  });
+
+  it("falls back to a single-line block from thought_unit_text when the unit's canvas row is gone", () => {
+    const units = [{ _canvas_row_id: "row-ghost", thought_unit_text: "But God" }];
+    const out = composeThoughtUnitBlocks(VERSED_CANVAS, units);
+    expect(out[0].block).toEqual([{ text: "But God", depth: 0, verse: "" }]);
+    expect(out[0].verse_span).toBe("");
+  });
+
+  it("yields an empty block when there is no canvas match and no header text", () => {
+    const out = composeThoughtUnitBlocks([], [{ _canvas_row_id: "row-ghost", thought_unit_text: "" }]);
+    expect(out[0].block).toEqual([]);
+  });
+
+  it("rows above the first margin row belong to no unit — a unit begins AT a margin line", () => {
+    const canvas = [
+      { id: "orphan", depth: 1, text: "a stray indented opener" },
+      { id: "b-1", depth: 0, text: "For by grace you have been saved" },
+    ];
+    const units = [{ _canvas_row_id: "b-1", thought_unit_text: "For by grace you have been saved" }];
+    const out = composeThoughtUnitBlocks(canvas, units);
+    expect(out[0].block.map((l) => l.text)).toEqual(["For by grace you have been saved"]);
   });
 });
 

@@ -25,7 +25,7 @@
 
 import { STAGE } from "../core/contracts";
 import { QUESTION_WALK_ORDER, WALK_ORDER, questionId } from "./walkOrder";
-import { parseStructuredField, getQuestionAnswer } from "./studyFields";
+import { parseStructuredField, getQuestionAnswer, composeThoughtUnitBlocks } from "./studyFields";
 import {
   hasContent,
   checkField8Composite,
@@ -89,6 +89,10 @@ function readDivisionsCanvas(sermon) {
 export function deriveQuestionStatesFromSermon(sermon) {
   const out = {};
   const thoughtUnits = readThoughtUnits(sermon);
+  // Verse spans for the partial-state "Unit N" labels — composed live from
+  // the canvas (ruled 2026-07-02: a unit is its block, labeled by the verses
+  // it spans). Order-preserving 1:1 with thoughtUnits, so index lookup holds.
+  const unitBlocks = composeThoughtUnitBlocks(readDivisionsCanvas(sermon), thoughtUnits);
   // Parse the native Outline / Equip / Manuscript columns ONCE. The new-kind
   // branches below read them; parsing inside the loop re-parsed the same
   // columns several times per call, and this runs via useMemo on every keystroke.
@@ -119,7 +123,10 @@ export function deriveQuestionStatesFromSermon(sermon) {
         out[id] = { state: "answered", preview: firstText, fullValue: full };
       } else {
         const full = thoughtUnits
-          .map((u, i) => `Unit ${i + 1}: ${cellDisplay(u) || "—"}`)
+          .map((u, i) => {
+            const span = unitBlocks[i]?.verse_span;
+            return `Unit ${i + 1}${span ? ` (${span})` : ""}: ${cellDisplay(u) || "—"}`;
+          })
           .join("\n\n");
         out[id] = { state: "partial", preview: firstText, fullValue: full };
       }

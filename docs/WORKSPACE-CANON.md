@@ -179,6 +179,16 @@ canvas in Observe, and each later sub-phase adds one column beside them — **Me
 Upstream columns render read-only downstream. This cumulative table is load-bearing in
 code (the per-unit gate, §5) and is a Phase-2 fidelity subject **[◆]**.
 
+**What a thought unit IS** *(ruled 2026-07-02)*: the **block** — a margin (depth-0)
+statement **plus every line indented beneath it**, spanning the verses it covers. The
+margin line marks where a unit *begins*; it is not the unit. The derived array keys each
+unit to its margin row; the tables render the whole block, indentation preserved and
+labeled with its verse span, composed live from the canvas so it can never go stale.
+(The pre-ruling rendering showed only the margin line — the header standing in for the
+whole, amputating the supporting lines the Meaning work is about.) Parallel statements
+at the margin are **two units**: the preacher echoes the shared meaning or marks the
+twin's cell not applicable — both satisfy the per-unit gate (§5).
+
 ### 2.1 Observe → **Observation Set**
 
 Outside-in: locate the passage, report its surface, lay out its structure, then read the
@@ -188,7 +198,7 @@ lens cluster against that structure; close with the plain-sense point. Seven fie
 |---|---|---|
 | Context (`context`) | What happened before / after / does it bear on this passage | before·after·impact **[M]** |
 | Surface Questions (`surface_questions`) | Where / when / what's happening, in order | **[M]** *(Phase-2: verify against the Merida source which of his surface questions are kept vs trimmed)* |
-| Divisions / Thought Units (`divisions`) | Hand-type the passage; main statements to the margin, supporting clauses indented, parallels aligned — one indented canvas. The thought-unit table is derived from this. | **[M]** |
+| Divisions / Thought Units (`divisions`) | Hand-type the passage; main statements to the margin, supporting clauses indented, parallels aligned — one indented canvas. The thought-unit table is derived from this: each margin statement begins a unit, and the unit is its whole block (ruled 2026-07-02, see the §2 preamble). | **[M]** |
 | Main Characters (`characters`) | Who acts; name each one's role | **[M]** |
 | Commands and Declarations (`commands_declarations`) | For each main sentence, command vs declaration, and what it's doing | **[M]** |
 | Big Ideas (`big_ideas`) | What concepts the passage wrestles with | **[M]** |
