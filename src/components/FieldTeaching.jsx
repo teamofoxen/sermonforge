@@ -3,7 +3,8 @@ import { TextButton } from "./primitives/TextButton";
 
 // FieldTeaching — renders a field's authored `overview` teaching block
 // (the 3–4 paragraph explanations written in the SFDI/SADI walks and the
-// 2026-06-09 OEM drafts; dead data since FieldOverviewScreen's deletion).
+// 2026-06-09 OEM drafts). Revived here since 2026-06-10 (UX overhaul T18),
+// after the block briefly went unrendered when FieldOverviewScreen was deleted.
 //
 // Behavior (ratified): auto-open on the pastor's FIRST visit to the field
 // per sermon, collapsed behind a quiet "About this field" link forever

@@ -24,7 +24,6 @@ export const SERMON_OUTLINE_FIELDS = [
     key: "outline",
     label: "Outline",
     hint: "Lay out the body's points — the movements your sermon walks through. Each reflects the text and carries the MPS forward.",
-    heavyLifting: true,
     overview: {
       title: "Outline",
       paragraphs: [

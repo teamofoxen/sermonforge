@@ -24,7 +24,6 @@ export const SERMON_EQUIP_FIELDS = [
     key: "equip",
     label: "Equip",
     hint: "Give each outline point its substance — the Scripture it rests on, the explanation that makes it clear, the application that makes it land, the illustration that makes it stick.",
-    heavyLifting: true,
     overview: {
       title: "Equip",
       paragraphs: [

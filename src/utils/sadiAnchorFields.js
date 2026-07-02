@@ -39,7 +39,6 @@ export const MAIN_POINT_PAIR_FIELDS = [
     key: "mpt",
     label: "MPT — Main Point of the Text",
     hint: "Past tense. Author-intended. Single sentence after tightening. The historical anchor MPS derives from.",
-    heavyLifting: false,
     questions: [
       {
         key: "draft",
@@ -57,7 +56,6 @@ export const MAIN_POINT_PAIR_FIELDS = [
     key: "mps",
     label: "MPS — Main Point of the Sermon",
     hint: "Present/future tense, starting from why your people need this text. Derived from MPT. Gospel-empowered, not moralistic. Single sentence after tightening.",
-    heavyLifting: true,
     overview: {
       title: "MPS",
       paragraphs: [

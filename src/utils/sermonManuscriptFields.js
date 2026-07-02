@@ -30,7 +30,6 @@ export const SERMON_MANUSCRIPT_FIELDS = [
     key: "introduction",
     label: "Introduction",
     hint: "Write the opening you'll actually preach — bring the listener from where they are into the text, the MPT, and the MPS.",
-    heavyLifting: true,
     overview: {
       title: "Introduction",
       paragraphs: [
@@ -87,7 +86,6 @@ export const SERMON_MANUSCRIPT_FIELDS = [
     key: "conclusion",
     label: "Conclusion",
     hint: "Write the landing — gather the through-line and deliver the response you chose in Frame.",
-    heavyLifting: true,
     overview: {
       title: "Conclusion",
       paragraphs: [

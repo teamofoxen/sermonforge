@@ -44,7 +44,6 @@ export const SERMON_FRAME_FIELDS = [
     key: "intro",
     label: "Intro",
     hint: "Frame the listener for the body — hook, bridge to text, expectations, and the redemptive note that turns the call from burden into invitation.",
-    heavyLifting: true,
     overview: {
       title: "Intro",
       paragraphs: [
@@ -79,7 +78,6 @@ export const SERMON_FRAME_FIELDS = [
     key: "conclusion",
     label: "Conclusion",
     hint: "Land the body's call — summate the through-line, land the call from MPS, and gospel-empower it.",
-    heavyLifting: true,
     overview: {
       title: "Conclusion",
       paragraphs: [

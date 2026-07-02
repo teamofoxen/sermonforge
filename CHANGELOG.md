@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-07-01 — OEM walk prep audit + dead-code cleanup
+
+- Ultracode audit (8 agents) verified every pastor-facing string in the Outline/Equip/Manuscript draft stages against code at HEAD; the "overview teaching blocks render nowhere" finding from 2026-06-09 is stale — they render live via FieldTeaching.jsx. Walk prep packet + 8-item decision agenda written to `oem-walk-packet-2026-07-01.md`.
+- Real findings for the walk: Equip's prompt blesses uneven point coverage while the map requires all points × 4 cells filled to read "answered"; the Word export strips Equip's on-screen element labels to unlabeled prose.
+- Removed dead `heavyLifting` field-def metadata (7 files, zero consumers) and the uncalled `assembleManuscriptText` (`src/utils.js`, orphaned since ARI removed its AI callers); fixed a stale "dead data" comment in `FieldTeaching.jsx` describing the very block it renders.
+
+---
+
 ## 2026-07-01 — Charter stamping: shipped charters get historicized automatically
 
 - New standing rule: a charter gets its ⛔ HISTORICAL RECORD stamp the day its build ships — live-dressed shipped plans were where today's drift sweep found its staleness; banner-stamped docs had none.

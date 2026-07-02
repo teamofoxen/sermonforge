@@ -98,7 +98,6 @@ export const OBSERVE_FIELDS = [
     key: "divisions",
     label: "Divisions / Thought Units",
     hint: "How is the passage built? Lay out the main sentences and indent supporting clauses so the structure shows.",
-    heavyLifting: true,
     overview: {
       title: "Divisions / Thought Units",
       paragraphs: [
@@ -177,7 +176,6 @@ export const INTERPRET_FIELDS = [
     key: "interpretation_synthesis",
     label: "Interpretation Synthesis",
     hint: "Articulate what the passage MEANS — per thought unit and as a whole — in your own voice. The Interpretation Set lives here.",
-    heavyLifting: true,
     overview: {
       title: "Interpretation Synthesis",
       paragraphs: [
@@ -259,7 +257,6 @@ export const REDEMPTIVE_FIELDS = [
     key: "this_passage_and_christ",
     label: "This Passage and Christ",
     hint: "Position the text in relation to Christ. Locate it in the redemptive arc and surface any explicit content about Christ.",
-    heavyLifting: true,
     overview: {
       title: "This Passage and Christ",
       paragraphs: [
@@ -277,7 +274,6 @@ export const REDEMPTIVE_FIELDS = [
     key: "passage_points_to_christ",
     label: "How the Passage Points to Christ",
     hint: "Trace the four kinds of Christological pointing the text may carry — biblical theme, promise, type, and predictive prophecy.",
-    heavyLifting: true,
     overview: {
       title: "How the Passage Points to Christ",
       paragraphs: [
@@ -311,7 +307,6 @@ export const REDEMPTIVE_FIELDS = [
     key: "christ_connection_statement",
     label: "Christ-Connection Statement",
     hint: "How does the whole passage point to Christ — and how is Christ the hero of it? One paragraph, in your own voice.",
-    heavyLifting: true,
     overview: {
       title: "Christ-Connection Statement",
       paragraphs: [
@@ -404,7 +399,6 @@ export const IMPLICATIONS_FIELDS = [
     key: "theological_significance",
     label: "Theological Significance",
     hint: "The first of three voices: what the text TEACHES. Articulate the doctrinal content the passage carries.",
-    heavyLifting: true,
     overview: {
       title: "Implications — The Three-Voice Conversation",
       paragraphs: [
@@ -452,7 +446,6 @@ export const IMPLICATIONS_FIELDS = [
     key: "implications_synthesis",
     label: "Implications Synthesis",
     hint: "Integrate the three voices for the whole passage — what does the text teach, what does it ask, and how does it land for the people in this room. One paragraph in your own voice.",
-    heavyLifting: true,
     overview: {
       title: "Implications Synthesis",
       paragraphs: [
