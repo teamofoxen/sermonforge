@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-07-02 — OEM-walk quality cleanup (reuse + altitude, no behavior change)
+
+- The manuscript-prose N/A block now reuses the existing `PromptBlock` component instead of re-implementing it, and the three reference-pane items (RefItem / OutlineRefItem / BodyRefItem) share a single extracted `RefSection` collapsible shell.
+- The manuscript N/A allowlist is now one field-def-driven helper (`isManuscriptNaAllowed`, mirroring the envelope path's `naAllowed` read) instead of a hardcoded `section === "introduction" && key === "redemptive_note_na"` check, so adding an N/A-able door is a one-line field-def edit.
+- The "illustration never gates" rule moved from a string literal in the map engine to a `gating: false` flag on the illustration element def; the Body gating check folds into the existing single grid pass; the "point has substance" predicate is a shared `bodyHasSubstance` helper.
+- Added `sermonBodyGating.test.js` (6 tests) covering the Body map-gating ruling, which previously had no coverage; migration cosmetic nits (redundant `IS NULL` guards dropped, `IN` → `=`).
+- Verified behavior-preserving: lint clean, 268 tests green, `node --check` clean; deferred from the OEM-walk restructure commit so the just-reviewed N/A path got its own verification.
+
 ## 2026-07-02 — OEM walk: the Frame → Manuscript collapse (decide/write boundary)
 
 - The pastor walked the Outline/Body/Manuscript stages and ruled the stage boundary as decide-then-write: Study understands → Assembly (Anchor, Outline) decides → Manuscript (Body, then Intro/Transitions/Conclusion) writes; Equip moved into Manuscript as Body, the Frame sub-phase retired and its seven moves transplanted into the door fields (each door prompt now asks the decision and the preached words together). Schema v33 migrates every legacy position.

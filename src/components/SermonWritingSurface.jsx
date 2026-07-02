@@ -515,38 +515,21 @@ export default function SermonWritingSurface({
       );
     }
     if (q.kind === "manuscript-prose") {
+      // Native-column prose: the manuscript column stores plain strings, so the
+      // N/A flag lives beside the value as a "<key>_na" sidecar (only the
+      // transplanted introduction.redemptive_note declares naAllowed). Synthesize
+      // the {value, na} envelope PromptBlock expects; the toggle writes the
+      // sidecar. Reusing PromptBlock keeps the N/A voice in one place.
       const v = manuscript?.[q.section]?.[q.key] ?? "";
-      // N/A sidecar for native-column prose — the manuscript column stores
-      // plain strings, so the flag lives beside the key as "<key>_na". Only
-      // the transplanted introduction.redemptive_note declares naAllowed
-      // (strict SADI "satisfied another way" semantics); the toggle mirrors
-      // PromptBlock's voice exactly (one error/one N/A vocabulary).
       const na = manuscript?.[q.section]?.[`${q.key}_na`] === true;
-      const naAllowed = q.naAllowed === true;
       return (
-        <div className="sws-prompt-block">
-          <div className="sws-prompt">{q.prompt}</div>
-          <AutoGrowTextarea
-            value={v}
-            onChange={(val) => onManuscriptChange?.(q.section, q.key, val)}
-            disabled={na}
-            ariaLabel={q.prompt}
-          />
-          {(naAllowed || na) && (
-            <IconButton
-              type="button"
-              className={"sws-na-toggle" + (na ? " is-on" : "")}
-              onClick={() => onManuscriptChange?.(q.section, `${q.key}_na`, !na)}
-              aria-label="not applicable"
-            >
-              {na
-                ? String(v).trim()
-                  ? "not applicable · undo — your words are kept"
-                  : "not applicable · undo"
-                : "not applicable"}
-            </IconButton>
-          )}
-        </div>
+        <PromptBlock
+          prompt={q.prompt}
+          answer={{ value: v, na }}
+          naAllowed={q.naAllowed === true}
+          onValueChange={(val) => onManuscriptChange?.(q.section, q.key, val)}
+          onToggleNA={() => onManuscriptChange?.(q.section, `${q.key}_na`, !na)}
+        />
       );
     }
     return (

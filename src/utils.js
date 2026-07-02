@@ -136,6 +136,26 @@ export function getFunctionalElements(sermon) {
   return result;
 }
 
+// The four functional-element cells under each outline point (the Sermon Body).
+// Single source of the key list so consumers don't re-spell it.
+export const FUNCTIONAL_ELEMENT_KEYS = ["scripture", "explanation", "application", "illustration"];
+
+/**
+ * True when any outline point carries at least one non-empty functional
+ * element — the "does the Sermon Body have any substance yet" predicate.
+ * Behaviour-neutral over whatever `points` array the caller passes (the
+ * completeness check passes all points; the reference pane passes its
+ * text-filtered list) — it just `.some()`s over what it's given.
+ */
+export function bodyHasSubstance(points, functionalElements) {
+  const list = Array.isArray(points) ? points : [];
+  const fes = functionalElements || {};
+  return list.some((p) => {
+    const fe = fes[p?.id] || {};
+    return FUNCTIONAL_ELEMENT_KEYS.some((k) => String(fe[k] ?? "").trim());
+  });
+}
+
 /**
  * Serialize a functional_elements object for storage.
  * Returns '{}' and logs an error if the value is not a plain object.

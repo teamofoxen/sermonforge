@@ -30,7 +30,7 @@ import {
   checkMPTComposite,
   checkMPSComposite,
 } from "./studyAdvancement";
-import { getOutline, getFunctionalElements, parseManuscript } from "../utils";
+import { getOutline, getFunctionalElements, parseManuscript, bodyHasSubstance } from "../utils";
 
 // Stage + sub-phase → the sermon-record JSON column that holds that
 // region's field data. The single source of stage→column mapping for the
@@ -161,31 +161,37 @@ export function deriveQuestionStatesFromSermon(sermon) {
       const points = outlinePoints;
       const fes = functionalElements;
       const elementKeys = (entry.elements || []).map((e) => e.key);
-      // OEM Equip ruling (2026-07-02): the map's math obeys the teaching —
-      // a point is fully equipped when its Scripture, Explanation, and
-      // Application are written; Illustration never gates "answered"
-      // (it still counts toward "partial" and the preview).
-      const gatingKeys = elementKeys.filter((k) => k !== "illustration");
+      // OEM Equip ruling (2026-07-02): "answered" obeys the teaching — a point
+      // is fully equipped when its GATING elements are written. Which elements
+      // gate is declared in the field def: illustration carries `gating: false`
+      // ("serves," never gates); every other element gates. Illustration still
+      // counts toward the filled/preview signal.
+      const gatingKeys = new Set(
+        (entry.elements || []).filter((e) => e.gating !== false).map((e) => e.key)
+      );
       if (points.length === 0 || elementKeys.length === 0) {
         out[id] = { state: "unanswered" };
         continue;
       }
+      // One pass over the points × elements grid: count filled cells (for the
+      // empty/preview signal) and track per-point gating in the same walk.
       let filledCells = 0;
       let firstPreview = "";
+      let everyPointGated = true;
       for (const pt of points) {
         const fe = fes[pt.id] || {};
+        let pointGated = true;
         for (const k of elementKeys) {
           const v = String(fe[k] ?? "").trim();
           if (v) {
             filledCells += 1;
             if (!firstPreview) firstPreview = v;
+          } else if (gatingKeys.has(k)) {
+            pointGated = false;
           }
         }
+        if (!pointGated) everyPointGated = false;
       }
-      const everyPointGated = points.every((pt) => {
-        const fe = fes[pt.id] || {};
-        return gatingKeys.every((k) => String(fe[k] ?? "").trim() !== "");
-      });
       if (filledCells === 0) out[id] = { state: "unanswered" };
       else if (everyPointGated) out[id] = { state: "answered", preview: firstPreview };
       else out[id] = { state: "partial", preview: firstPreview };
@@ -322,12 +328,7 @@ export function deriveSermonCompleteness(sermon) {
     : "Lay out at least one outline point.";
 
   // Lenient: at least one functional element written under any point.
-  const bodyHasAny = outlinePoints.some((p) => {
-    const fe = functionalElements?.[p.id] || {};
-    return ["scripture", "explanation", "application", "illustration"].some(
-      (k) => String(fe[k] ?? "").trim()
-    );
-  });
+  const bodyHasAny = bodyHasSubstance(outlinePoints, functionalElements);
   const bodyReason = outlineReason
     ? "Build the outline first — the Sermon Body grows under its points."
     : bodyHasAny

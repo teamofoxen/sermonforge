@@ -26,6 +26,7 @@ import {
   STAGE_SUBPHASE_TO_COLUMN,
 } from "../utils/sermonState";
 import { firstFieldFor, findField } from "../utils/walkOrder";
+import { isManuscriptNaAllowed } from "../utils/sermonManuscriptFields";
 import {
   parseStructuredField,
   setQuestionAnswer,
@@ -449,11 +450,11 @@ export default function SermonWorkspace({
   const handleManuscriptChange = useCallback((section, key, value) => {
     if (!sermon) return;
     // Write-path N/A guard (T19 parity for the native manuscript column):
-    // "_na" sidecar keys are accepted only for the allowlisted door question
-    // — introduction.redemptive_note, whose strict SADI "satisfied another
-    // way" semantics moved here in the Frame transplant (2026-07-02). No
-    // future caller can set a forbidden flag through this path.
-    if (key.endsWith("_na") && !(section === "introduction" && key === "redemptive_note_na")) {
+    // "_na" sidecar keys are accepted only for door questions the field defs
+    // declare naAllowed. isManuscriptNaAllowed is the single source of truth
+    // (mirrors the envelope path reading question.naAllowed), so a new N/A-able
+    // door is a one-line field-def edit, not a change here too.
+    if (key.endsWith("_na") && !isManuscriptNaAllowed(section, key)) {
       return;
     }
     const ms = parseManuscript(sermon.manuscript);

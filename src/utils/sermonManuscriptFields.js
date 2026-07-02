@@ -136,3 +136,20 @@ export const SERMON_MANUSCRIPT_FIELDS = [
 
 // Overview subtitles removed 2026-06-10 — internal scaffolding; the
 // teaching layer renders the overview body only.
+
+// Which door questions may carry an N/A flag — the ONE source of truth for the
+// manuscript path's N/A allowlist, read from the field defs' `naAllowed` flag
+// (mirrors how the envelope path reads `question.naAllowed`). Accepts either a
+// base key ("redemptive_note") or its sidecar form ("redemptive_note_na"); the
+// manuscript column stores the flag as a `<key>_na` sibling of the plain-string
+// value. The renderer write-path guard calls this so adding a second N/A-able
+// door is a one-line field-def edit (naAllowed: true), not a three-site change.
+export function isManuscriptNaAllowed(section, key) {
+  const baseKey = key.endsWith("_na") ? key.slice(0, -3) : key;
+  for (const field of SERMON_MANUSCRIPT_FIELDS) {
+    for (const q of field.questions || []) {
+      if (q.section === section && q.key === baseKey) return q.naAllowed === true;
+    }
+  }
+  return false;
+}

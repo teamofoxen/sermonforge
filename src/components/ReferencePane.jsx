@@ -4,6 +4,7 @@ import { RECOVERY, PassageRecovery } from "./PassagePopup";
 import EsvKeyModal from "./EsvKeyModal";
 import { TextButton } from "./primitives/TextButton";
 import IconButton from "./primitives/IconButton";
+import { bodyHasSubstance } from "../utils";
 import "./referencePane.css";
 
 // ReferencePane — "a Bible open beside the notepad."
@@ -52,11 +53,12 @@ function readInitialCollapsed() {
   return false;
 }
 
-// One reference item: a named artifact, its text (or "not yet written" +
-// a go-write-it jump), optionally collapsed behind its label.
-function RefItem({ label, text, jump, onJump, defaultOpen = true }) {
+// Shared collapsible shell for a "Your work" reference item: a labelled
+// section that toggles open/closed and, when it has no content yet, shows the
+// "not yet written / go write it" fallback. The three ref items below differ
+// only in the body they render when open + populated — they pass it as children.
+function RefSection({ label, defaultOpen = true, jump, onJump, hasContent, children }) {
   const [open, setOpen] = useState(defaultOpen);
-  const has = !!(text && String(text).trim());
   return (
     <section className="refpane-item">
       <TextButton
@@ -68,9 +70,7 @@ function RefItem({ label, text, jump, onJump, defaultOpen = true }) {
         {label} {open ? "▾" : "▸"}
       </TextButton>
       {open && (
-        has ? (
-          <p className="refpane-item-text">{String(text).trim()}</p>
-        ) : (
+        hasContent ? children : (
           <div className="refpane-item-empty">
             <span>not yet written</span>
             {jump && onJump && (
@@ -85,104 +85,76 @@ function RefItem({ label, text, jump, onJump, defaultOpen = true }) {
   );
 }
 
+// One reference item: a named artifact, its text (or the shared empty state).
+function RefItem({ label, text, jump, onJump, defaultOpen = true }) {
+  const has = !!(text && String(text).trim());
+  return (
+    <RefSection label={label} defaultOpen={defaultOpen} jump={jump} onJump={onJump} hasContent={has}>
+      <p className="refpane-item-text">{String(text).trim()}</p>
+    </RefSection>
+  );
+}
+
 // The assembled body — every outline point with the prose written under it
 // in Body, reading the way the Word export reads (scripture, then the three
 // prose cells run together). The doors write against this (OEM ruling: the
 // pastor asked for the body as context for intro/transitions/conclusion).
 function BodyRefItem({ points, functionalElements, onJump, defaultOpen = true }) {
-  const [open, setOpen] = useState(defaultOpen);
   const list = (Array.isArray(points) ? points : []).filter(
     (p) => p && String(p.text ?? "").trim()
   );
   const fes = functionalElements || {};
   const jump = { stage: "Manuscript", subPhase: "Body", fieldKey: "equip" };
-  const hasAny = list.some((p) => {
-    const fe = fes[p.id] || {};
-    return ["scripture", "explanation", "application", "illustration"].some(
-      (k) => String(fe[k] ?? "").trim()
-    );
-  });
   return (
-    <section className="refpane-item">
-      <TextButton
-        size="sm"
-        className="refpane-item-label"
-        aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
-      >
-        Sermon Body {open ? "▾" : "▸"}
-      </TextButton>
-      {open && (
-        hasAny ? (
-          <div className="refpane-body-prose">
-            {list.map((p, i) => {
-              const fe = fes[p.id] || {};
-              const scripture = String(fe.scripture ?? "").trim();
-              const prose = ["explanation", "application", "illustration"]
-                .map((k) => String(fe[k] ?? "").trim())
-                .filter(Boolean);
-              return (
-                <div key={p.id ?? i} className="refpane-body-point">
-                  <p className="refpane-item-text"><strong>{`${i + 1}. ${String(p.text).trim()}`}</strong></p>
-                  {scripture && <p className="refpane-item-text"><em>{scripture}</em></p>}
-                  {prose.map((t, j) => (
-                    <p key={j} className="refpane-item-text">{t}</p>
-                  ))}
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="refpane-item-empty">
-            <span>not yet written</span>
-            {onJump && (
-              <TextButton size="sm" onClick={() => onJump(jump)}>
-                go write it
-              </TextButton>
-            )}
-          </div>
-        )
-      )}
-    </section>
+    <RefSection
+      label="Sermon Body"
+      defaultOpen={defaultOpen}
+      jump={jump}
+      onJump={onJump}
+      hasContent={bodyHasSubstance(list, fes)}
+    >
+      <div className="refpane-body-prose">
+        {list.map((p, i) => {
+          const fe = fes[p.id] || {};
+          const scripture = String(fe.scripture ?? "").trim();
+          const prose = ["explanation", "application", "illustration"]
+            .map((k) => String(fe[k] ?? "").trim())
+            .filter(Boolean);
+          return (
+            <div key={p.id ?? i} className="refpane-body-point">
+              <p className="refpane-item-text"><strong>{`${i + 1}. ${String(p.text).trim()}`}</strong></p>
+              {scripture && <p className="refpane-item-text"><em>{scripture}</em></p>}
+              {prose.map((t, j) => (
+                <p key={j} className="refpane-item-text">{t}</p>
+              ))}
+            </div>
+          );
+        })}
+      </div>
+    </RefSection>
   );
 }
 
 function OutlineRefItem({ points, onJump, defaultOpen = true }) {
-  const [open, setOpen] = useState(defaultOpen);
   const list = (Array.isArray(points) ? points : []).filter(
     (p) => p && String(p.text ?? "").trim()
   );
   // eslint-disable-next-line sermonforge/canonical-stage-name -- canonical sub-phase + column key, not a stage status
   const jump = { stage: "Assembly", subPhase: "Outline", fieldKey: "outline" };
   return (
-    <section className="refpane-item">
-      <TextButton
-        size="sm"
-        className="refpane-item-label"
-        aria-expanded={open}
-        onClick={() => setOpen((v) => !v)}
-      >
-        Sermon Outline {open ? "▾" : "▸"}
-      </TextButton>
-      {open && (
-        list.length > 0 ? (
-          <ol className="refpane-outline">
-            {list.map((p, i) => (
-              <li key={p.id ?? i}>{String(p.text).trim()}</li>
-            ))}
-          </ol>
-        ) : (
-          <div className="refpane-item-empty">
-            <span>not yet written</span>
-            {onJump && (
-              <TextButton size="sm" onClick={() => onJump(jump)}>
-                go write it
-              </TextButton>
-            )}
-          </div>
-        )
-      )}
-    </section>
+    <RefSection
+      label="Sermon Outline"
+      defaultOpen={defaultOpen}
+      jump={jump}
+      onJump={onJump}
+      hasContent={list.length > 0}
+    >
+      <ol className="refpane-outline">
+        {list.map((p, i) => (
+          <li key={p.id ?? i}>{String(p.text).trim()}</li>
+        ))}
+      </ol>
+    </RefSection>
   );
 }
 

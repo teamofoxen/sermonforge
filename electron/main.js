@@ -1391,12 +1391,14 @@ function runMigrations() {
     // are deliberately NOT rewritten — a stale id just re-opens that field's
     // teaching once, and the reworded teaching deserves the re-show.
     safeAlter("ALTER TABLE sermons ADD COLUMN last_manuscript_subphase TEXT");
+    // These two reads MUST run before the current_sub_phase rewrites below
+    // (those destroy the Equip/Frame values matched here). The column is freshly
+    // added and unwritten, and the two predicates are mutually exclusive, so no
+    // IS NULL guard is needed to keep them from colliding.
     dbRun(`UPDATE sermons SET last_manuscript_subphase = 'Body'
-             WHERE last_manuscript_subphase IS NULL
-               AND current_sub_phase IN ('Equip')`);
+             WHERE current_sub_phase = 'Equip'`);
     dbRun(`UPDATE sermons SET last_manuscript_subphase = 'IntroTransitionsConclusion'
-             WHERE last_manuscript_subphase IS NULL
-               AND (current_sub_phase = 'Frame' OR current_stage = 'Manuscript')`);
+             WHERE current_sub_phase = 'Frame' OR current_stage = 'Manuscript'`);
     dbRun(`UPDATE sermons SET current_stage = 'Manuscript', current_sub_phase = 'Body'
              WHERE current_sub_phase = 'Equip'`);
     dbRun(`UPDATE sermons SET current_stage = 'Manuscript', current_sub_phase = 'IntroTransitionsConclusion'

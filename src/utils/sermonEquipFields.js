@@ -64,6 +64,11 @@ export const SERMON_EQUIP_FIELDS = [
             key: "illustration",
             label: "Illustration",
             hint: "Make it stick. A story, image, or example that serves the explanation and application — brief, vivid, fitting, fresh. Don't stretch it; if it doesn't fit naturally, it doesn't fit.",
+            // Illustration "serves," never gates (OEM Equip ruling): the map's
+            // "answered" state requires the other three, not this one. The
+            // gating logic in sermonState reads this flag, so the teaching and
+            // the math share one source. Absent = gates (the default).
+            gating: false,
           },
         ],
       },
