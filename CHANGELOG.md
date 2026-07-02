@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-07-02 — Pastor's Charter: extraction, fidelity audit, revised draft (placement open)
+
+- Synthesized the five pastoral convictions beneath docs/CORE.md; analysis-only session — no code or docs changed.
+- Drafted a one-page explanatory Pastor's Charter; CORE remains the sole normative authority and the Charter creates no requirements.
+- Paragraph-level fidelity audit classified five sentences speculative (doctrine supplied where CORE stays tool-scoped); all five corrected plus three minor wordings.
+- Revised Charter passed per-paragraph adversarial verification; placement (docs/PASTORS-CHARTER.md vs CORE preamble) and pronoun register await the pastor's ruling.
+- Charter text preserved in memory and in the untracked repo-root handoff ux-audit-prompt-2026-07-02.md for the next session's workspace UX audit.
+
 ## 2026-07-02 — N/A code build: Study-question grants + per-cell cumulative-table N/A
 
 - Built the ruled-but-unbuilt N/A policy (canon §5, ruled 2026-06-14): declared Study questions may now be marked "nothing here / doesn't apply" and count as done — Observe Where/When, Cross-References/Commentary (field-level), Redemptive Thread's four ways, and Implications Fields 1–2.
