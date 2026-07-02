@@ -44,6 +44,7 @@ import {
   RedemptiveThreadUpdate, ImplicationsUpdate,
   ContractViolation, IpcResult,
 } from "./contracts";
+import mapError from "../utils/mapError";
 
 // ── IPC bridge ───────────────────────────────────────────────────────────────
 
@@ -386,6 +387,10 @@ export async function applyMutation(input: UserInputMutation): Promise<void> {
 export interface SaveState {
   saving: boolean;
   saveError: boolean;
+  // Optional plain mapped message for a failed save (mapError(err, "save") —
+  // disk full / file locked / generic). The topbar chip renders it when
+  // present, else falls back to "Save failed". Cleared on a successful save.
+  saveErrorMessage?: string;
   lastSavedAt: number | null;
 }
 
@@ -415,7 +420,11 @@ export async function persistMutation<T>(
     return result;
   } catch (e) {
     console.error("[persistMutation] save failed:", e);
-    setSaveState((prev) => ({ ...prev, saving: false, saveError: true }));
+    // Carry the same plain mapped message the rest of the app already uses so
+    // the save chip can speak it (Mutation #5, one voice). This only ADDS the
+    // message string — saveError stays true, lastSavedAt is not advanced, and
+    // the caller still gets undefined, so retry behavior is unchanged.
+    setSaveState((prev) => ({ ...prev, saving: false, saveError: true, saveErrorMessage: mapError(e, "save") }));
     return undefined;
   }
 }

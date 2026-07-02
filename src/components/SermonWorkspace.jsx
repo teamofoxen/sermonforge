@@ -88,7 +88,7 @@ export default function SermonWorkspace({
   const [loadError, setLoadError] = useState(false);
   const [loadNonce, setLoadNonce] = useState(0);
   const [saveState, setSaveState] = useState(INITIAL_SAVE_STATE);
-  const { saving, saveError, lastSavedAt } = saveState;
+  const { saving, saveError, saveErrorMessage, lastSavedAt } = saveState;
   const [siblingIds, setSiblingIds] = useState([]);
   // The pastor's existing topic tags across all sermons — the own-tag
   // autocomplete source for this sermon's TagInput (Coverage Initiative,
@@ -375,11 +375,16 @@ export default function SermonWorkspace({
   }, [returnTo, beforePositionChange, writePositionAndThresholds]);
 
   const handleAnswerChange = useCallback((fieldKey, questionKey, envelope) => {
-    if (!sermon) return;
-    const pos = deriveCurrentPositionFromSermon(sermon);
+    // Read the merge base from sermonRef.current (the freshest state), not the
+    // render-time `sermon` closure — same discipline writePositionAndThresholds
+    // uses. Two same-column writes in one React batch would otherwise both read
+    // the pre-first `sermon` and the second would clobber the first's column.
+    const cur = sermonRef.current;
+    if (!cur) return;
+    const pos = deriveCurrentPositionFromSermon(cur);
     const col = STAGE_SUBPHASE_TO_COLUMN[`${pos.stage}/${pos.subPhase}`];
     if (!col) return;
-    const parsed = parseStructuredField(sermon[col]);
+    const parsed = parseStructuredField(cur[col]);
     let next = setQuestionAnswer(parsed, fieldKey, questionKey, envelope?.value ?? "");
     // N/A allowlist (UX-overhaul Gate-0 ruling, 2026-06-10): only questions
     // that declare naAllowed may carry na:true. On the envelope columns that
@@ -411,7 +416,7 @@ export default function SermonWorkspace({
       fields.mps = String(getQuestionAnswer(next, "mps", "tighten") ?? "");
     }
     handleUpdate(fields);
-  }, [sermon, handleUpdate]);
+  }, [handleUpdate]);
 
   const handleUnitColumnChange = useCallback((_questionKey, unitIdx, columnKey, value) => {
     // Per-unit cumulative columns write into observations.divisions.
@@ -424,8 +429,9 @@ export default function SermonWorkspace({
     // table cell unconditionally (canon §5 2c) — there is no forbidden target.
     // If a non-N/A-able editable column is ever added to a cumulative table,
     // add a guard here (as handleAnswerChange / handleManuscriptChange do).
-    if (!sermon) return;
-    const parsed = parseStructuredField(sermon.observations);
+    const cur = sermonRef.current; // freshest state — see handleAnswerChange note
+    if (!cur) return;
+    const parsed = parseStructuredField(cur.observations);
     const existing = parsed?.divisions?.thought_units?.value;
     const units = Array.isArray(existing) ? existing.slice() : [];
     if (unitIdx < 0 || unitIdx >= units.length) return;
@@ -438,16 +444,17 @@ export default function SermonWorkspace({
       },
     };
     handleUpdate({ observations: JSON.stringify(next) });
-  }, [sermon, handleUpdate]);
+  }, [handleUpdate]);
 
   const handleCanvasChange = useCallback((_fieldKey, _questionKey, rows) => {
     // setDivisionsCanvas writes both canvas + the derived thought_units
     // array atomically (single canonical write path per ruling 8).
-    if (!sermon) return;
-    const parsed = parseStructuredField(sermon.observations);
+    const cur = sermonRef.current; // freshest state — see handleAnswerChange note
+    if (!cur) return;
+    const parsed = parseStructuredField(cur.observations);
     const next = setDivisionsCanvas(parsed, rows);
     handleUpdate({ observations: JSON.stringify(next) });
-  }, [sermon, handleUpdate]);
+  }, [handleUpdate]);
 
   // ── Assembly/Outline, Manuscript/Body, Manuscript doors write paths ───
   // These three stages don't use the question-envelope shape. They write the
@@ -459,11 +466,12 @@ export default function SermonWorkspace({
   }, [sermon, handleUpdate]);
 
   const handleFunctionalElementChange = useCallback((pointId, key, value) => {
-    if (!sermon) return;
-    const fes = getFunctionalElements(sermon);
+    const cur = sermonRef.current; // freshest state — see handleAnswerChange note
+    if (!cur) return;
+    const fes = getFunctionalElements(cur);
     const next = { ...fes, [pointId]: { ...(fes[pointId] || {}), [key]: value } };
     handleUpdate({ functional_elements: serializeFunctionalElements(next) });
-  }, [sermon, handleUpdate]);
+  }, [handleUpdate]);
 
   // Sermon Title write path (ruled 2026-07-02: the walk's terminal Title
   // field is the workspace's one title affordance — the topbar chrome still
@@ -478,7 +486,8 @@ export default function SermonWorkspace({
   }, [sermon, handleUpdate]);
 
   const handleManuscriptChange = useCallback((section, key, value) => {
-    if (!sermon) return;
+    const cur = sermonRef.current; // freshest state — see handleAnswerChange note
+    if (!cur) return;
     // Write-path N/A guard (T19 parity for the native manuscript column):
     // "_na" sidecar keys are accepted only for door questions the field defs
     // declare naAllowed. isManuscriptNaAllowed is the single source of truth
@@ -487,15 +496,16 @@ export default function SermonWorkspace({
     if (key.endsWith("_na") && !isManuscriptNaAllowed(section, key)) {
       return;
     }
-    const ms = parseManuscript(sermon.manuscript);
+    const ms = parseManuscript(cur.manuscript);
     const next = { ...ms, [section]: { ...(ms[section] || {}), [key]: value } };
     handleUpdate({ manuscript: JSON.stringify(next) });
-  }, [sermon, handleUpdate]);
+  }, [handleUpdate]);
 
   const dismissThreshold = useCallback((id) => {
-    if (!sermon) return;
-    handleUpdate({ thresholds_seen: nextThresholdsSeen(sermon, id) });
-  }, [sermon, handleUpdate]);
+    const cur = sermonRef.current; // freshest state — see handleAnswerChange note
+    if (!cur) return;
+    handleUpdate({ thresholds_seen: nextThresholdsSeen(cur, id) });
+  }, [handleUpdate]);
 
   // Which notebook the drawer is viewing. null = follow the current
   // position's stage (the default on open); a value means the pastor
@@ -554,7 +564,13 @@ export default function SermonWorkspace({
     setExporting(true);
     setExportNote(null);
     try {
-      await persistUpdate();
+      // flush() (not bare persistUpdate) so the pending debounce timer is
+      // CLEARED, not merely superseded — otherwise it fires ~800ms later with
+      // an identical payload (a duplicate idempotent write + a spurious
+      // "Saving…" flicker after export). flush runs the pending save when one
+      // is queued and no-ops otherwise; the payload below still reads the
+      // freshest sermonRef either way. C2 (Track C).
+      await debouncedSave.flush();
       const result = await exportManuscript(buildManuscriptExportPayload(sermonRef.current));
       if (result?.success) {
         setExportNote(
@@ -571,7 +587,7 @@ export default function SermonWorkspace({
     } finally {
       setExporting(false);
     }
-  }, [exporting, _fixtureSermon, persistUpdate]);
+  }, [exporting, _fixtureSermon, debouncedSave]);
 
   // Mark as preached — the sermon's lifecycle event, offered where the work
   // actually ends (the finish screen) instead of only on a faraway list.
@@ -818,7 +834,7 @@ export default function SermonWorkspace({
             )}
             {!saving && saveError && (
               <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "0 6px" }}>
-                <span style={{ fontSize: "12px", color: "var(--topbar-danger)" }}>Save failed</span>
+                <span style={{ fontSize: "12px", color: "var(--topbar-danger)" }}>{saveErrorMessage || "Save failed"}</span>
                 <SecondaryButton size="sm" style={{ fontSize: "12px", padding: "2px 8px" }} onClick={persistUpdate}>
                   Retry
                 </SecondaryButton>

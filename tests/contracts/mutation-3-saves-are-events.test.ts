@@ -19,6 +19,8 @@ import {
 // Tests cover:
 //   • Successful save surfaces lastSavedAt with sufficient detail.
 //   • Forced save failure surfaces saveError so a banner can render.
+//   • A failed save carries the plain mapped message (mapError(err, "save")) so
+//     the topbar chip can speak disk-full / file-locked wording (C3, Track C).
 
 function makeSetter(states: SaveState[]) {
   return (next: SaveState | ((prev: SaveState) => SaveState)) => {
@@ -50,6 +52,8 @@ describe("Mutation Contract #3: saves are events", () => {
     expect(final.lastSavedAt).not.toBeNull();
     expect(final.lastSavedAt!).toBeGreaterThanOrEqual(before);
     expect(final.lastSavedAt!).toBeLessThanOrEqual(after);
+    // A successful save carries no error message (cleared).
+    expect(final.saveErrorMessage).toBeUndefined();
   });
 
   it("forced save failure surfaces saveError=true (renders the retry banner)", async () => {
@@ -65,6 +69,22 @@ describe("Mutation Contract #3: saves are events", () => {
     // lastSavedAt must NOT advance on failure — the user's work is not
     // confirmed safe; the banner stays accurate.
     expect(final.lastSavedAt).toBeNull();
+    // The failure now carries a plain mapped message (mapError always maps a
+    // save error to a one-voice sentence; a generic error yields the FALLBACK
+    // save sentence). The topbar renders it, falling back to "Save failed".
+    expect(final.saveErrorMessage).toBeTruthy();
+  });
+
+  it("a mapped save error (disk full) carries the plain disk-full sentence", async () => {
+    const states: SaveState[] = [];
+    await persistMutation(makeSetter(states), async () => {
+      throw new Error("SQLITE_FULL: database or disk is full");
+    });
+    const final = states[states.length - 1];
+    expect(final.saveError).toBe(true);
+    expect(final.lastSavedAt).toBeNull(); // retryable — not confirmed safe
+    // The same wording the rest of the app uses for a disk-full failure.
+    expect(final.saveErrorMessage).toMatch(/disk is full/i);
   });
 
   it("save failure preserves the structured envelope details from the spine", async () => {

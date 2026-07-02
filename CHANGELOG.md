@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-07-02 — Workspace architecture Track C/Gate 3: three correctness seams closed
+
+- C1 — six content handlers now read their merge base from `sermonRef.current`, so two same-column writes in one React batch no longer drop the first.
+- C2 — `handleExport` flushes via `debouncedSave.flush()` instead of bare `persistUpdate`, clearing the debounce timer so no duplicate write / "Saving…" flicker fires after export.
+- C3 — `SaveState` gains an optional `saveErrorMessage`; `persistMutation` carries `mapError(err,"save")` and the save chip renders it (falling back to "Save failed"), so a failed save speaks the app's one voice.
+- Added same-column-write, flush-no-redundant-write, and c3-save-error-message tests + extended mutation-3; each verified fail-before / pass-after.
+- No sermon-walk / completion / navigation / schema / export / close-quit change; retry + success + debounce semantics unchanged; suite 328 → 330, lint 0, spine-integrity OK, drift-check PASS.
+
+---
+
 ## 2026-07-02 — Workspace architecture Track B/Gate 2: invariant tests pin the seams
 
 - Added 7 invariant-test files: completion-consistency across map/handoff/Finish (with the M2 regression pin), question-kind parity across field defs / renderer / state derivation, and a retired-composite/vocabulary tripwire.
