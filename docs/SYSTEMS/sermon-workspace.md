@@ -7,6 +7,9 @@
 > restate it. The law (the four contracts) lives in [`docs/CORE.md`](../CORE.md).
 > (Thinned to this boundary 2026-06-15 in the Workspace Re-Foundation Initiative,
 > Phase 1 step 4; the walk content this doc used to carry migrated to the canon.)
+>
+> **Changing what the pastor sees or reads, or adding/removing a question?** Also load
+> [`docs/PASTORS-CHARTER.md`](../PASTORS-CHARTER.md) — explanatory lens, not law; the CORE governs.
 
 > Rewritten end-to-end post-sweep (2026-05-18) to describe the writing-surface
 > + map + threshold-overlay + workspace-notebook-drawer architecture. The

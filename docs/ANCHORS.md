@@ -5,6 +5,7 @@ Load-bearing strategic documents that span multiple sessions and anchor downstre
 **Live anchors:**
 
 - [`docs/WORKSPACE-CANON.md`](WORKSPACE-CANON.md) — **the canon: the sermon walk's *what & why*** (every stage, sub-phase, field, question, named outcome, completeness policy, Merida fidelity). Ratified 2026-06-15 (Re-Foundation Phase 1 step 5); peer to CORE/RULES. CORE = the law; this = the walk; [`SYSTEMS/sermon-workspace.md`](SYSTEMS/sermon-workspace.md) = the mechanics.
+- [`docs/PASTORS-CHARTER.md`](PASTORS-CHARTER.md) — **the Pastor's Charter: explanation, not law** (the convictions behind the CORE, in the pastor's register). Placed 2026-07-02, pastor-ruled. **Dormant by design** — summoned only by its CLAUDE.md trigger row (pastor-facing copy/affordances, question add/remove) and by UX audits; creates no requirements, never cited as authorization.
 - [`docs/PROPOSALS/refoundation-initiative.md`](PROPOSALS/refoundation-initiative.md) — Workspace Re-Foundation working board; the ACTIVE initiative (Phase 1 complete 2026-06-15; Phase 2 rulable-now surgery items 1–5 shipped 2026-06-15/16; OEM walk + per-cell N/A build remain). Holds the net-truth map (registered 2026-06-14).
 - [`docs/PROPOSALS/beta-testing-initiative.md`](PROPOSALS/beta-testing-initiative.md) — BTI charter; closed-cohort beta program governing invasiveness/workflow-fit testing.
 - [`docs/PROPOSALS/bti-tester-summary.md`](PROPOSALS/bti-tester-summary.md) — BTI tester-facing letter; what the cohort actually reads at onboarding (must stay in sync with the charter).

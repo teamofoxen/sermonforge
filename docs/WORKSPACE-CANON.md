@@ -17,6 +17,9 @@
 > region is preacher-walked and ratified, and the same walk ruled the Frame → Manuscript
 > collapse (Assembly decides; Manuscript writes). The structural sweep that lands the collapse
 > in code rides the same commit series as this amendment — see §7.
+>
+> **Changing what the pastor sees or reads, or adding/removing a question?** Also load
+> [`PASTORS-CHARTER.md`](PASTORS-CHARTER.md) — explanatory lens, not law; the CORE governs.
 
 ---
 
