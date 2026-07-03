@@ -5,7 +5,16 @@ import { TextButton } from "./primitives/TextButton";
 import IconButton from "./primitives/IconButton";
 import { bodyHasSubstance } from "../utils";
 import { REGION_NAMED_OUTCOME } from "../utils/walkOrder";
+import { MAIN_POINT_PAIR_FIELDS } from "../utils/sadiAnchorFields";
 import "./referencePane.css";
+
+// MPT/MPS labels are owned by the Anchor field defs (the writing surface renders
+// field.label). Derived here so the reference pane doesn't re-spell the prefixed
+// workspace label (DMN Vocabulary B seam, 2026-07-03) — byte-identical to the
+// prior literals. The bare Finish/export forms are a separate context-specific
+// vocabulary and are deliberately NOT sourced from here.
+const MPT_LABEL = MAIN_POINT_PAIR_FIELDS.find((f) => f.key === "mpt").label;
+const MPS_LABEL = MAIN_POINT_PAIR_FIELDS.find((f) => f.key === "mps").label;
 
 // ReferencePane — "a Bible open beside the notepad."
 //
@@ -287,7 +296,7 @@ export default function ReferencePane({
   const mptItem = (
     <RefItem
       key={`${ctx}:mpt`}
-      label="MPT — Main Point of the Text"
+      label={MPT_LABEL}
       text={mpt}
       jump={{ stage: "Assembly", subPhase: "Anchor", fieldKey: "mpt" }}
       onJump={onJump}
@@ -296,7 +305,7 @@ export default function ReferencePane({
   const mpsItem = (
     <RefItem
       key={`${ctx}:mps`}
-      label="MPS — Main Point of the Sermon"
+      label={MPS_LABEL}
       text={mps}
       jump={{ stage: "Assembly", subPhase: "Anchor", fieldKey: "mps" }}
       onJump={onJump}

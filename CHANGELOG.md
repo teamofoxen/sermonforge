@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-07-03 — DMN Vocabulary B: reference-pane MPT/MPS labels derive from the field def
+
+- The reference pane's MPT/MPS section labels now derive from `MAIN_POINT_PAIR_FIELDS[…].label` (`src/utils/sadiAnchorFields.js`) instead of re-spelled string literals — the one clean subtraction in Vocabulary B (both surfaces were byte-identical, em-dash U+2014 included).
+- **Pastor-facing strings remain byte-identical** ("MPT — Main Point of the Text" / "MPS — Main Point of the Sermon"); no copy or behavior changed.
+- **Deferred deliberately:** the bare Finish labels (`sermonState.js`) and the bare-plus-colon Word-export headings (`electron/main.js`, CJS) are a distinct context-specific vocabulary, left untouched; no structured owner introduced. `Main Point Pair` (the Anchor named outcome) stays distinct.
+- New `mpt-mps-refpane-label-parity.test.ts` pins the field-def owner strings, guards the derivation (fail-before/pass-after), and asserts MPT/MPS ≠ "Main Point Pair". Suite 371 → 374, lint 0, spine-integrity OK, drift-check PASS.
+
+---
+
 ## 2026-07-03 — Domain Model Normalization Phase 2: Vocabulary A label consolidation
 
 - The seven per-sub-phase named-outcome labels now **derive from `REGION_NAMED_OUTCOME`** (`src/utils/walkOrder.js`, now exported as the canonical owner) instead of re-spelled string literals — `STUDY_NAMED_OUTCOMES` and the Study/Outline/Body/Manuscript artifact labels in `deriveSermonCompleteness` (`src/utils/sermonState.js`), plus the Sermon Body / Sermon Outline sections in `ReferencePane.jsx`.
