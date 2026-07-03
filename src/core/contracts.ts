@@ -85,7 +85,7 @@ export const STAGE_LABELS: Readonly<Record<Stage, string>> = Object.freeze({
 // The Stage value disambiguates which set applies. The stored value
 // "IntroTransitionsConclusion" is identifier-shaped for position composites;
 // its display name is the pastor's literal "Intro, Transitions, Conclusion"
-// (SUB_PHASE_LABELS below).
+// (owned by REGION_DISPLAY in src/utils/walkOrder.js).
 export type SubPhase =
   | "Observe" | "Interpret" | "RedemptiveThread" | "Implications"
   | "Anchor" | "Outline" | "Body" | "IntroTransitionsConclusion";
@@ -126,16 +126,14 @@ export const SUB_PHASE_CANONICAL_SEQUENCE: readonly SubPhase[] = Object.freeze([
   ...MANUSCRIPT_SUB_PHASE_SEQUENCE,
 ]);
 
-export const SUB_PHASE_LABELS: Readonly<Record<SubPhase, string>> = Object.freeze({
-  Observe: "Observe",
-  Interpret: "Interpret",
-  RedemptiveThread: "Redemptive Thread",
-  Implications: "Implications",
-  Anchor: "Anchor",
-  Outline: "Outline",
-  Body: "Body",
-  IntroTransitionsConclusion: "Intro, Transitions, Conclusion",
-});
+// Sub-phase DISPLAY labels are owned by REGION_DISPLAY in src/utils/walkOrder.js
+// (the live consumers are SermonMap + SermonWritingSurface). A former
+// SUB_PHASE_LABELS map lived here but had ZERO consumers — a dead source-of-truth
+// claim inside the file that declares itself SSoT "for every label." It was
+// deleted in the Domain Model Normalization Grammar-Ownership slice (2026-07-03);
+// do not re-add it. A second definition of labels walkOrder already owns re-opens
+// the competing-source drift State Contract #6 forbids. (STAGE_LABELS above stays:
+// it IS the live owner of stage display names, consumed by SermonMap.)
 
 // Maps each SubPhase back to its parent Stage. The spine uses this to know
 // which stage a SubPhase belongs to without threading the stage everywhere.

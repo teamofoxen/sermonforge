@@ -2,6 +2,29 @@
 
 ---
 
+## 2026-07-03 — Domain Model Normalization Slice 1: grammar ownership + boundary parity
+
+- **Grammar ownership:** deleted the dead `SUB_PHASE_LABELS` map from `src/core/contracts.ts` — zero consumers, a stale source-of-truth claim inside the file that declares itself SSoT "for every label." `src/utils/walkOrder.js` `REGION_DISPLAY` is the live owner (SermonMap + SermonWritingSurface); `STAGE_LABELS` stays (it IS live). Replaced with a pointer comment; no label wording changed.
+- **ESM/CJS mirror parity:** new `contracts-mirror-parity.test.ts` widens the sync guard beyond the column allowlists to the vocabulary/sequence portion — STAGE, SUB_PHASE, the stage/sub-phase sequences, SUB_PHASE_STAGE, statuses, MUTATION_KIND, LOADING_VERB, STRUCTURED_FIELDS — across contracts.ts ⟷ contracts.cjs ⟷ test-spine.
+- **Fixture reconciled to production:** removed the retired `coerceLegacyStage` (Blueprint/Frame→Assembly) from `tests/contracts/_helpers/test-spine.ts`; its `shapeSermon` now reads `current_stage` straight through, matching `electron/main.js`. Production truth wins; the retired coercion is not restored to either side.
+- **Export grammar parity:** new `export-grammar-parity.test.ts` pins that the Word docx builder references every `manuscript-prose` door key the field defs declare (the seam that silently dropped `redemptive_note` once), honors each naAllowed door's `_na` sidecar, and prints every `FUNCTIONAL_ELEMENT_KEYS` entry.
+- **Search grammar parity:** new `search-grammar-parity.test.ts` asserts `SERMON_SEARCH_COLUMNS` (main.js) ⟷ `HINT_MAP` (searchHints.js) ⟷ `COLUMN_LABELS` (SearchResultSnippet.jsx) stay keyed on the same columns (source-scan; no constant moved).
+- **Structural doc/code parity:** new `doc-structural-parity.test.ts` asserts `docs/WORKSPACE-CANON.md` §1 counts, the stage/sub-phase display table, and field-table keys match `WALK_ORDER` — mechanical claims only, no semantic prose (field-key scope narrowed to field-table body rows when the whole-doc scan over-reached).
+- Also `workspace-grammar-ownership.test.ts` characterizes the live labels + named outcomes and guards the deleted map from returning.
+- No schema, migration, pastor-facing behavior, label wording, walk order, questions, completion meaning, export output, or search behavior changed; no global store / mega-hook / mega-domain object / runtime gate introduced. Suite 347 → 364, lint 0, spine-integrity OK.
+
+---
+
+## 2026-07-03 — Domain Model Normalization charter (docs-only)
+
+- Added `docs/PROPOSALS/domain-model-normalization-charter.md` — an **approved planning-only** governance charter (owner ruling 2026-07-03) converting the prior Domain Model Normalization review into a durable initiative document.
+- Records the evidence basis (dead `SUB_PHASE_LABELS` source-of-truth claim in `src/core/contracts.ts`; unasserted + already-drifted vocabulary portion of the three-way contracts mirror; five scattered named-outcome label lists; docx-export/search hand-mirrors with a documented past miss; no doc-field parity test), classifies the seven review targets, and defines **Phase 1 — Grammar Ownership & Boundary Parity**.
+- States the binding limits: planning only, **implementation separately approved**, one seam at a time, no rewrite / global store / mega-hook / mega-domain object / schema migration, pastor-facing behavior unchanged.
+- Registered the charter as a **Live anchor** in `docs/ANCHORS.md`.
+- No source code, tests, schema, migrations, product behavior, or pastor-facing copy changed.
+
+---
+
 ## 2026-07-03 — Architecture-normalization governance (docs-only)
 
 - Updated governance docs (`docs/CORE.md`, `docs/RULES.md`, `CLAUDE.md`) to distinguish speculative refactoring / aesthetic cleanup / rewrites from evidence-based architecture-normalization planning — conservative in implementation, directional in architecture.

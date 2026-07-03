@@ -49,10 +49,11 @@ export const SUB_PHASE_STAGE: Record<string, string> = {
   Observe: "Study", Interpret: "Study", RedemptiveThread: "Study", Implications: "Study",
   Anchor: "Assembly", Outline: "Assembly", Body: "Manuscript", IntroTransitionsConclusion: "Manuscript",
 };
-function coerceLegacyStage(stage: string | null | undefined): string {
-  if (stage === "Blueprint" || stage === "Frame") return STAGE.Assembly;
-  return stage || STAGE.Study;
-}
+// The Blueprint/Frame legacy-stage coercion was removed here in the Domain Model
+// Normalization Grammar-Ownership slice (2026-07-03) to match production:
+// electron/main.js shapeSermon reads current_stage straight through (the coercion
+// was retired in the trail deletion sweep, Phase B3). Production truth wins over
+// the fixture; the retired coercion is not restored to either side.
 export const SERMON_STATUS = { InProgress: "in_progress", Complete: "complete" } as const;
 export const SERIES_STATUS = { InProgress: "in_progress", Complete: "complete" } as const;
 // ARI Phase 9 — collapsed to `user_input` only. Mirrors MUTATION_KIND in
@@ -164,9 +165,10 @@ function success(value?: unknown) {
 
 function shapeSermon(row: Row | undefined, parentContext: any) {
   if (!row) return null;
-  // Workspace Restructure (2026-05-10) — legacy stage coercion mirrors
-  // electron/main.js's shapeSermon path.
-  const stage = coerceLegacyStage(row.current_stage);
+  // Reads current_stage straight through — mirrors electron/main.js shapeSermon
+  // (the Blueprint/Frame coercion was removed in the trail deletion sweep, Phase
+  // B3; no production data carries those values).
+  const stage = row.current_stage;
   return {
     id: row.id,
     name: row.title || "",
