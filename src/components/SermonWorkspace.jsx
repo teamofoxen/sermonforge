@@ -1,45 +1,35 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { useDebounce } from "../utils/hooks";
-import { registerFlush } from "../utils/closeFlush";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useWorkspaceSave } from "../utils/useWorkspaceSave";
+import { useWorkspaceCompletion } from "../utils/useWorkspaceCompletion";
+import { useWorkspaceMutations } from "../utils/useWorkspaceMutations";
+import { useWorkspaceNavigation } from "../utils/useWorkspaceNavigation";
 import {
-  getSermon, updateSermon, deleteSermon,
+  getSermon, deleteSermon,
   getSeries, getSectionsBySeries, getSermonsBySeries,
   getAllTags,
-  persistMutation, INITIAL_SAVE_STATE,
 } from "../core/spine";
-import { parseTags, serializeTags, dedupeTags } from "../utils/tags";
+import { parseTags } from "../utils/tags";
 import TagInput from "./TagInput";
 import { exportManuscript } from "../db/database";
 import mapError from "../utils/mapError";
-import { pickSermonColumns, STAGE, SERMON_STATUS, LOADING_VERB } from "../core/contracts";
+import { STAGE, LOADING_VERB } from "../core/contracts";
 import {
   deriveCurrentPositionFromSermon,
-  deriveQuestionStatesFromSermon,
-  deriveStudyOutcomesFromSermon,
-  deriveStudyUnfinishedFromSermon,
-  deriveSermonCompleteness,
   serializePosition,
   hasSeenThreshold,
-  nextThresholdsSeen,
   THRESHOLD_ID,
   fieldOverviewThresholdId,
   STAGE_SUBPHASE_TO_COLUMN,
 } from "../utils/sermonState";
-import { firstFieldFor, findField } from "../utils/walkOrder";
-import { isManuscriptNaAllowed } from "../utils/sermonManuscriptFields";
+import { firstFieldFor } from "../utils/walkOrder";
 import {
   parseStructuredField,
-  setQuestionAnswer,
-  setQuestionNA,
-  setDivisionsCanvas,
   getQuestionAnswer,
   composeThoughtUnitBlocks,
 } from "../utils/studyFields";
 import {
   getOutline,
-  serializeOutline,
   getFunctionalElements,
-  serializeFunctionalElements,
   parseManuscript,
   buildManuscriptExportPayload,
 } from "../utils";
@@ -87,28 +77,12 @@ export default function SermonWorkspace({
   // Retry button to re-run the load effect below.
   const [loadError, setLoadError] = useState(false);
   const [loadNonce, setLoadNonce] = useState(0);
-  const [saveState, setSaveState] = useState(INITIAL_SAVE_STATE);
-  const { saving, saveError, saveErrorMessage, lastSavedAt } = saveState;
   const [siblingIds, setSiblingIds] = useState([]);
   // The pastor's existing topic tags across all sermons — the own-tag
   // autocomplete source for this sermon's TagInput (Coverage Initiative,
   // Phase 3). Loaded once on mount; empty in fixture mode (no disk).
   const [allTags, setAllTags] = useState([]);
   const [mapOpen, setMapOpen] = useState(false);
-  // Origin position a "door" jump came from (e.g. clicking "Lay out the
-  // passage's structure" from a synthesis table). Set on a door jump, surfaced
-  // as the writing surface's return banner, and cleared the moment the pastor
-  // navigates any other way (chevron / map / handoff / finish) — so a stale
-  // return link never lingers once they've moved on. Session-local, never
-  // persisted: it's wayfinding for the current detour, not sermon state.
-  const [returnTo, setReturnTo] = useState(null);
-  // Question the last map jump targeted — the writing surface scrolls to it
-  // and flashes it once, then clears this via onHighlightDone.
-  const [jumpHighlight, setJumpHighlight] = useState(null);
-  // Threshold screen re-summoned from the map's "Read again" row. Plain
-  // local state, never thresholds_seen — re-reading is view-only (Process
-  // #3: dismissal ends the interruption, not the access).
-  const [rereadThreshold, setRereadThreshold] = useState(null);
   const [notebookOpen, setNotebookOpen] = useState(false);
   // Finish threshold — plain React state, deliberately NOT thresholds_seen:
   // the completion screen is re-openable forever (Process #3: dismissal ends
@@ -121,6 +95,17 @@ export default function SermonWorkspace({
   // source state on open and on close; the ref guards against re-applying
   // on a re-run of the load effect).
   const navHintRef = useRef(navHint);
+
+  // Persistence spine (Track D slice 1). Owns save state + every write
+  // primitive; reads sermonRef.current (never the `sermon` value) so its
+  // callbacks keep the identity cadence the writing surface depends on.
+  const { saveState, handleUpdate, persistUpdate, debouncedSave } = useWorkspaceSave({
+    sermonId,
+    sermonRef,
+    setSermon,
+    isFixture: !!_fixtureSermon,
+  });
+  const { saving, saveError, saveErrorMessage, lastSavedAt } = saveState;
 
   // Sermon load (skipped in fixture mode). The cancelled flag matters
   // twice: StrictMode double-invokes this effect in dev (two racing
@@ -218,54 +203,6 @@ export default function SermonWorkspace({
     return () => { cancelled = true; };
   }, [_fixtureSermon]);
 
-  const persistUpdate = useCallback(
-    async () => {
-      const data = sermonRef.current;
-      if (!data) return;
-      if (_fixtureSermon) return; // fixture mode — no writes
-      const payload = pickSermonColumns(data);
-      if (!payload || Object.keys(payload).length === 0) return;
-      await persistMutation(setSaveState, async () => {
-        await updateSermon(sermonId, payload);
-      });
-    },
-    [sermonId, _fixtureSermon]
-  );
-
-  const debouncedSave = useDebounce(persistUpdate, 800);
-
-  // Flush pending debounced save on unmount.
-  useEffect(() => {
-    return () => { persistUpdate(); };
-  }, [persistUpdate]);
-
-  // Register with the close-flush registry while mounted, so window close /
-  // app quit / reload flush the 800ms debounce window instead of dropping it
-  // (src/utils/closeFlush.js; asked by main via "app-flush-edits").
-  // persistUpdate reads sermonRef.current, so one call persists everything
-  // pending regardless of debounce timer state. registerFlush returns the
-  // unregister function — used directly as the effect cleanup.
-  useEffect(() => registerFlush(persistUpdate), [persistUpdate]);
-
-  // handleUpdate — applies field changes to sermonRef + setSermon, then
-  // queues a debounced save. Used by every UI write path (writing-surface
-  // answer change, canvas change, per-unit column change, threshold
-  // dismissal, position write).
-  const handleUpdate = useCallback((fields) => {
-    const merged = { ...sermonRef.current, ...fields };
-    sermonRef.current = merged;
-    setSermon(merged);
-    debouncedSave();
-  }, [debouncedSave]);
-
-  // Topic tags — sermon-level, optional, AI-free (Coverage Initiative, Phase 3).
-  // Persist through the same autosave path as every other field, then fold any
-  // new tags into the live autocomplete source so they're reusable immediately.
-  const handleTagsChange = useCallback((nextTags) => {
-    handleUpdate({ tags: serializeTags(nextTags) });
-    setAllTags((prev) => dedupeTags([...prev, ...nextTags]).sort((a, b) => a.localeCompare(b)));
-  }, [handleUpdate]);
-
   // Sermon passage is set in the sermon modal and shown read-only in the
   // workspace (topbar identity for standalone sermons, and above the
   // reference-pane text). The topbar chrome carries no sermon title — but
@@ -275,237 +212,49 @@ export default function SermonWorkspace({
   // is satisfied at creation and can't be undone from this surface. Looking
   // up other passages is the Passage lookup's job, decoupled from the sermon.
 
-  // beforePositionChange — async; flushes any pending debounced save
-  // BEFORE the position settles. The chain is: position-change trigger
-  // (chevron / map jump / unmet-state door / handoff jump / required-
-  // outcome go-write-it) → await beforePositionChange → write the new
-  // position → handleUpdate writes last_touched_position. The flush
-  // guarantees draft persistence on jump (spec open question 3).
-  const beforePositionChange = useCallback(async () => {
-    await persistUpdate();
-  }, [persistUpdate]);
+  // Completion / read-only derivations (Track D slice 2). Pure selectors over
+  // sermon state; each is gated + memoised inside the hook exactly as before.
+  // Called above the loading / not-found early returns so the hook order stays
+  // stable across renders (rules-of-hooks).
+  const { questionStates, studyOutcomes, studyUnfinished, completeness } =
+    useWorkspaceCompletion(sermon, finishOpen);
 
-  // The three walk-spanning derivations parse every JSON column on every
-  // call (~205 JSON.parse calls per render at the populated fixture).
-  // useMemo keyed on [sermon] keeps them off the hot path for re-renders
-  // driven by non-sermon state (saveState transitions, map open/close,
-  // notebook open/close, passage popup toggle). Keystrokes still
-  // re-derive because handleUpdate writes a new sermon ref each keystroke.
-  // Declared above the loading / not-found early returns so the hook
-  // order stays stable across renders (rules-of-hooks). Each helper
-  // tolerates a null sermon (returns {}, [], [] respectively) so the
-  // pre-load render is safe.
-  const questionStates = useMemo(() => deriveQuestionStatesFromSermon(sermon), [sermon]);
-  const studyOutcomes = useMemo(() => deriveStudyOutcomesFromSermon(sermon), [sermon]);
-  const studyUnfinished = useMemo(() => deriveStudyUnfinishedFromSermon(sermon), [sermon]);
-  // Gated on finishOpen: this derivation parses ~6 JSON columns and the
-  // finish screen is closed during normal typing — no reason to pay that on
-  // every keystroke. SermonFinish only renders while finishOpen, so the null
-  // never reaches it.
-  const completeness = useMemo(
-    () => (finishOpen ? deriveSermonCompleteness(sermon) : null),
-    [finishOpen, sermon]
-  );
+  // Field-write handlers (Track D slice 3). Every handler routes through
+  // handleUpdate; names, signatures, storage columns, N/A guards, and the
+  // Track-C sermonRef.current merge base are preserved exactly. handleNotebookChange
+  // (notebook-drawer state) stays in the coordinator below.
+  const {
+    handleAnswerChange,
+    handleUnitColumnChange,
+    handleCanvasChange,
+    handleOutlineChange,
+    handleFunctionalElementChange,
+    handleTitleChange,
+    handleManuscriptChange,
+    handleTagsChange,
+    handleMarkPreached,
+  } = useWorkspaceMutations({ sermon, sermonRef, handleUpdate, setAllTags });
 
-  // ── Write paths ────────────────────────────────────────────────────
-  // Each handler routes through handleUpdate so save-state, debounce,
-  // and persistUpdate work uniformly across every write. Wrapped in
-  // useCallback above the loading / not-found early returns so the
-  // hook order stays stable AND children receive a stable reference
-  // across renders that don't change the handler's deps. Each handler
-  // is null-safe — the UI mounting them only renders once sermon loads,
-  // so a sermon-null invocation is not a real call path, but guards
-  // keep the contract honest.
-
-  const writePositionAndThresholds = useCallback((next, extraFields = {}, { suppressTeachingSeen = false } = {}) => {
-    const fields = {
-      last_touched_position: serializePosition(next),
-      ...extraFields,
-    };
-    // Leaving a field whose teaching block is still auto-open ends the
-    // first visit — mark it seen in the same write. Parent-side on purpose:
-    // a child unmount-cleanup would also fire on StrictMode's simulated
-    // remount (dev) and on workspace close, and the ratified semantics say
-    // quitting mid-read does NOT count as seen — only collapse (the child's
-    // trigger) or moving to another field (this one). Same-field jumps
-    // (map click on the current field) are not "leaving," and callers whose
-    // jump leaves a field the pastor never actually saw (the handoff overlay
-    // covers the surface from arrival) suppress the mark. Everything reads
-    // from sermonRef at call time so no closure can go stale.
-    const cur = sermonRef.current;
-    if (cur && !suppressTeachingSeen) {
-      const pos = deriveCurrentPositionFromSermon(cur);
-      const overview = findField(pos.stage, pos.subPhase, pos.fieldKey)?.overview;
-      const hasTeaching = !!(overview && Array.isArray(overview.paragraphs) && overview.paragraphs.length > 0);
-      const curId = fieldOverviewThresholdId(pos.stage, pos.subPhase, pos.fieldKey);
-      const nextId = fieldOverviewThresholdId(next.stage, next.subPhase, next.fieldKey);
-      if (hasTeaching && nextId !== curId && !hasSeenThreshold(cur, curId)) {
-        // Fold the mark into any caller-supplied thresholds_seen instead of
-        // replacing it — a latent lost-update otherwise (no caller passes
-        // one today, but the extraFields signature invites it).
-        const base = "thresholds_seen" in fields ? { thresholds_seen: fields.thresholds_seen } : cur;
-        fields.thresholds_seen = nextThresholdsSeen(base, curId);
-      }
-    }
-    handleUpdate(fields);
-  }, [handleUpdate]);
-
-  const handlePositionChange = useCallback(async (next) => {
-    await beforePositionChange();
-    setReturnTo(null); // ordinary navigation — any pending door-return is stale
-    writePositionAndThresholds(next);
-  }, [beforePositionChange, writePositionAndThresholds]);
-
-  // A door jump records where the pastor came from so the writing surface can
-  // offer a return. The doors used to be one-way (the gap the pastor reported:
-  // their copy says "come back" but nothing brought you back).
-  const handleDoorJump = useCallback(async (next, origin) => {
-    await beforePositionChange();
-    setReturnTo(origin);
-    writePositionAndThresholds(next);
-  }, [beforePositionChange, writePositionAndThresholds]);
-
-  // Return banner click — jump back to the stashed origin and consume it.
-  const handleReturn = useCallback(async () => {
-    const dest = returnTo;
-    if (!dest) return;
-    await beforePositionChange();
-    setReturnTo(null);
-    writePositionAndThresholds(dest);
-  }, [returnTo, beforePositionChange, writePositionAndThresholds]);
-
-  const handleAnswerChange = useCallback((fieldKey, questionKey, envelope) => {
-    // Read the merge base from sermonRef.current (the freshest state), not the
-    // render-time `sermon` closure — same discipline writePositionAndThresholds
-    // uses. Two same-column writes in one React batch would otherwise both read
-    // the pre-first `sermon` and the second would clobber the first's column.
-    const cur = sermonRef.current;
-    if (!cur) return;
-    const pos = deriveCurrentPositionFromSermon(cur);
-    const col = STAGE_SUBPHASE_TO_COLUMN[`${pos.stage}/${pos.subPhase}`];
-    if (!col) return;
-    const parsed = parseStructuredField(cur[col]);
-    let next = setQuestionAnswer(parsed, fieldKey, questionKey, envelope?.value ?? "");
-    // N/A allowlist (UX-overhaul Gate-0 ruling, 2026-06-10): only questions
-    // that declare naAllowed may carry na:true. On the envelope columns that
-    // is exactly mps.gospel_check (the door redemptive_note moved to the
-    // native manuscript column in the Frame transplant, 2026-07-02 — its
-    // guard lives in handleManuscriptChange). The broader Study/per-cell
-    // grants were RULED 2026-06-14 (Re-Foundation exam 1) and await their
-    // scheduled code build. The UI hides the toggle everywhere else; this
-    // write-path guard means no future caller can set a forbidden flag
-    // either (an N/A'd mpt/mps tighten would silently blank the flat
-    // columns the Word export reads). Clearing na is always allowed.
-    let na = envelope?.na === true;
-    if (na) {
-      const fieldDef = findField(pos.stage, pos.subPhase, fieldKey);
-      const question = fieldDef?.questions?.find((q) => q.key === questionKey);
-      if (!question?.naAllowed) na = false;
-    }
-    next = setQuestionNA(next, fieldKey, questionKey, na);
-    const fields = { [col]: JSON.stringify(next) };
-    // Keep the legacy flat mpt/mps columns in sync with the v19 main_point_pair
-    // envelope. The Word manuscript export reads sermon.mpt / sermon.mps (the
-    // tightened single sentences); without this mirror those columns stay ''
-    // forever, so a completed sermon exports with stale or missing Main Points.
-    // This replaces StudyTab.updateMPP, deleted in the trail-deletion sweep
-    // (Phase E) and never re-wired. The tightened answer is the canonical flat
-    // value (the named outcome); a not-yet-tightened MPT/MPS stays '').
-    if (col === "main_point_pair") {
-      fields.mpt = String(getQuestionAnswer(next, "mpt", "tighten") ?? "");
-      fields.mps = String(getQuestionAnswer(next, "mps", "tighten") ?? "");
-    }
-    handleUpdate(fields);
-  }, [handleUpdate]);
-
-  const handleUnitColumnChange = useCallback((_questionKey, unitIdx, columnKey, value) => {
-    // Per-unit cumulative columns write into observations.divisions.
-    // thought_units — the canonical cross-phase array. The writing
-    // surface doesn't care which phase's column is being updated; the
-    // array IS the storage. columnKey may be a value column (meaning /
-    // christ_connection / implication) or its per-cell N/A sidecar
-    // (`<column>_na`) — both write generically. INVARIANT: this path has no
-    // naAllowed guard because per-cell N/A is granted on EVERY cumulative-
-    // table cell unconditionally (canon §5 2c) — there is no forbidden target.
-    // If a non-N/A-able editable column is ever added to a cumulative table,
-    // add a guard here (as handleAnswerChange / handleManuscriptChange do).
-    const cur = sermonRef.current; // freshest state — see handleAnswerChange note
-    if (!cur) return;
-    const parsed = parseStructuredField(cur.observations);
-    const existing = parsed?.divisions?.thought_units?.value;
-    const units = Array.isArray(existing) ? existing.slice() : [];
-    if (unitIdx < 0 || unitIdx >= units.length) return;
-    units[unitIdx] = { ...units[unitIdx], [columnKey]: value };
-    const next = {
-      ...parsed,
-      divisions: {
-        ...(parsed?.divisions || {}),
-        thought_units: { value: units, na: parsed?.divisions?.thought_units?.na ?? false },
-      },
-    };
-    handleUpdate({ observations: JSON.stringify(next) });
-  }, [handleUpdate]);
-
-  const handleCanvasChange = useCallback((_fieldKey, _questionKey, rows) => {
-    // setDivisionsCanvas writes both canvas + the derived thought_units
-    // array atomically (single canonical write path per ruling 8).
-    const cur = sermonRef.current; // freshest state — see handleAnswerChange note
-    if (!cur) return;
-    const parsed = parseStructuredField(cur.observations);
-    const next = setDivisionsCanvas(parsed, rows);
-    handleUpdate({ observations: JSON.stringify(next) });
-  }, [handleUpdate]);
-
-  // ── Assembly/Outline, Manuscript/Body, Manuscript doors write paths ───
-  // These three stages don't use the question-envelope shape. They write the
-  // native `outline` / `functional_elements` / `manuscript` JSON columns the
-  // Word export already reads — one source of truth, no MPT/MPS-style desync.
-  const handleOutlineChange = useCallback((nextPoints) => {
-    if (!sermon) return;
-    handleUpdate({ outline: serializeOutline(nextPoints) });
-  }, [sermon, handleUpdate]);
-
-  const handleFunctionalElementChange = useCallback((pointId, key, value) => {
-    const cur = sermonRef.current; // freshest state — see handleAnswerChange note
-    if (!cur) return;
-    const fes = getFunctionalElements(cur);
-    const next = { ...fes, [pointId]: { ...(fes[pointId] || {}), [key]: value } };
-    handleUpdate({ functional_elements: serializeFunctionalElements(next) });
-  }, [handleUpdate]);
-
-  // Sermon Title write path (ruled 2026-07-02: the walk's terminal Title
-  // field is the workspace's one title affordance — the topbar chrome still
-  // carries none). State #3 guard: an empty name is never persisted; the
-  // editor keeps the draft local and speaks the refusal inline, and the
-  // stored name survives until a real replacement arrives.
-  const handleTitleChange = useCallback((value) => {
-    if (!sermon) return;
-    const v = String(value ?? "").trim();
-    if (!v) return;
-    handleUpdate({ title: v });
-  }, [sermon, handleUpdate]);
-
-  const handleManuscriptChange = useCallback((section, key, value) => {
-    const cur = sermonRef.current; // freshest state — see handleAnswerChange note
-    if (!cur) return;
-    // Write-path N/A guard (T19 parity for the native manuscript column):
-    // "_na" sidecar keys are accepted only for door questions the field defs
-    // declare naAllowed. isManuscriptNaAllowed is the single source of truth
-    // (mirrors the envelope path reading question.naAllowed), so a new N/A-able
-    // door is a one-line field-def edit, not a change here too.
-    if (key.endsWith("_na") && !isManuscriptNaAllowed(section, key)) {
-      return;
-    }
-    const ms = parseManuscript(cur.manuscript);
-    const next = { ...ms, [section]: { ...(ms[section] || {}), [key]: value } };
-    handleUpdate({ manuscript: JSON.stringify(next) });
-  }, [handleUpdate]);
-
-  const dismissThreshold = useCallback((id) => {
-    const cur = sermonRef.current; // freshest state — see handleAnswerChange note
-    if (!cur) return;
-    handleUpdate({ thresholds_seen: nextThresholdsSeen(cur, id) });
-  }, [handleUpdate]);
+  // Navigation + movement-write cluster (Track D slice 5). Owns position writes,
+  // the six jump handlers, threshold dismissal, teaching-seen folding, and the
+  // reread / return / jump state. Option A: the pure visibility reads (position,
+  // showSermonStart, showHandoff, teachingId, teachingAutoOpen) stay in the shell.
+  const {
+    beforePositionChange,
+    handlePositionChange,
+    handleDoorJump,
+    handleReturn,
+    handleMapJump,
+    handleHandoffJump,
+    handleFinishJump,
+    dismissThreshold,
+    returnTo,
+    jumpHighlight,
+    clearJumpHighlight,
+    rereadingStart,
+    rereadingHandoff,
+    setRereadThreshold,
+  } = useWorkspaceNavigation({ sermon, sermonRef, handleUpdate, persistUpdate, setMapOpen, setFinishOpen });
 
   // Which notebook the drawer is viewing. null = follow the current
   // position's stage (the default on open); a value means the pastor
@@ -518,43 +267,6 @@ export default function SermonWorkspace({
     const col = NOTEBOOK_COLUMN_BY_STAGE[stage] ?? "notebook_study";
     handleUpdate({ [col]: value });
   }, [sermon, notebookStage, handleUpdate]);
-
-  // Map jump and handoff jump both share the pattern: flush, write
-  // position, optionally mark a threshold seen, close any overlay.
-  // The map passes the full question entry; position serialization only
-  // reads stage/subPhase/fieldKey, and questionKey drives the landing flash.
-  const handleMapJump = useCallback(async (next) => {
-    await beforePositionChange();
-    setReturnTo(null); // navigated via the map — any pending door-return is stale
-    writePositionAndThresholds(next);
-    setJumpHighlight(next.questionKey ?? null);
-    setMapOpen(false);
-  }, [beforePositionChange, writePositionAndThresholds]);
-
-  // Stable identity — the writing surface's flash effect depends on this;
-  // an inline closure would restart the flash on every workspace render.
-  const clearJumpHighlight = useCallback(() => setJumpHighlight(null), []);
-
-  // Handoff "go write it" jumps deliberately do NOT consume the threshold:
-  // the pastor left to fix a Study outcome, not to dismiss the screen, so
-  // the handoff returns on their next Anchor entry. Only the explicit Close
-  // marks it seen. (T9, 2026-06-10 — previously a jump consumed it and the
-  // screen could never be read through.)
-  //
-  // The REAL handoff (not re-read) covers the writing surface from the
-  // moment the position lands, so a field teaching that auto-opened under
-  // it was never visible — jumping away must not consume the first-visit
-  // auto-open (same spirit as quit-mid-read). Re-read mode had a visible
-  // surface underneath; normal marking applies.
-  const handleHandoffJump = useCallback(async (next) => {
-    if (!sermon) return;
-    await beforePositionChange();
-    setReturnTo(null); // left via the handoff — any pending door-return is stale
-    writePositionAndThresholds(next, {}, {
-      suppressTeachingSeen: rereadThreshold !== THRESHOLD_ID.StudyToAnchorHandoff,
-    });
-    setRereadThreshold(null);
-  }, [sermon, beforePositionChange, writePositionAndThresholds, rereadThreshold]);
 
   // Export to Word — shared by the topbar button and the finish screen.
   // Flushes the debounce first so the document carries the last keystrokes,
@@ -588,22 +300,6 @@ export default function SermonWorkspace({
       setExporting(false);
     }
   }, [exporting, _fixtureSermon, debouncedSave]);
-
-  // Mark as preached — the sermon's lifecycle event, offered where the work
-  // actually ends (the finish screen) instead of only on a faraway list.
-  const handleMarkPreached = useCallback(() => {
-    if (!sermon) return;
-    handleUpdate({ stage: SERMON_STATUS.Complete });
-  }, [sermon, handleUpdate]);
-
-  // Finish-screen jump — same flush-then-move shape as the map jump; closes
-  // the finish screen so the pastor lands on the field they chose.
-  const handleFinishJump = useCallback(async (next) => {
-    await beforePositionChange();
-    setReturnTo(null); // jumped from the finish screen — pending door-return is stale
-    writePositionAndThresholds(next);
-    setFinishOpen(false);
-  }, [beforePositionChange, writePositionAndThresholds]);
 
   // Whole-sermon delete (audit M3). Soft delete under the hood (tombstone +
   // restoreSermon), but until now the workspace-originated path never
@@ -675,8 +371,8 @@ export default function SermonWorkspace({
   // field per sermon, then collapses behind "About this field" forever
   // after. Seen-marking rides the canonical thresholds mechanism, fed from
   // two ends: the surface fires onTeachingSeen when the pastor collapses
-  // the auto-opened block; writePositionAndThresholds marks it when he
-  // moves to another field. Quitting the workspace mid-read marks nothing.
+  // the auto-opened block; the navigation hook's writePositionAndThresholds
+  // marks it when he moves to another field. Quitting mid-read marks nothing.
   const teachingId = fieldOverviewThresholdId(position.stage, position.subPhase, position.fieldKey);
   const teachingAutoOpen = !hasSeenThreshold(sermon, teachingId);
 
@@ -742,10 +438,6 @@ export default function SermonWorkspace({
     position.stage === STAGE.Assembly &&
     position.subPhase === "Anchor" &&
     !hasSeenThreshold(sermon, THRESHOLD_ID.StudyToAnchorHandoff);
-  // Re-read mode — summoned from the map header, closes back to the work
-  // without touching thresholds_seen.
-  const rereadingStart = rereadThreshold === THRESHOLD_ID.SermonStart;
-  const rereadingHandoff = rereadThreshold === THRESHOLD_ID.StudyToAnchorHandoff;
 
   // Notebook column + value derived from the current stage. The handler
   // (handleNotebookChange) lives above with the other useCallbacks and

@@ -48,12 +48,34 @@
 > shape described in this note is historical.
 
 > **Components.** [`SermonWorkspace.jsx`](../../src/components/SermonWorkspace.jsx)
-> is the workspace mount: it loads the sermon record, derives position from
-> `last_touched_position`, derives threshold-flag state from `thresholds_seen`,
-> and composes the writing surface (with the notebook drawer + threshold
-> overlays + passage popup mounted alongside). Stage tabs are gone — the
-> back-to-dashboard button is the only top-bar navigation. The pastor reaches
-> each field through the writing-surface chevron or the summoned map.
+> is the workspace mount and **coordinator shell**: it loads the sermon record,
+> derives position from `last_touched_position`, derives threshold-flag state
+> from `thresholds_seen`, and composes the writing surface (with the notebook
+> drawer + threshold overlays + passage popup mounted alongside). Stage tabs are
+> gone — the back-to-dashboard button is the only top-bar navigation. The pastor
+> reaches each field through the writing-surface chevron or the summoned map.
+>
+> **Post-Track-D architecture (2026-07-03).** The shell is a thin coordinator
+> composing four focused hooks (in `src/utils/`); named functions throughout this
+> doc live in these hooks now, and the shell consumes them under the same names:
+> - **`useWorkspaceSave`** — the save spine: `saveState`, `handleUpdate`,
+>   `persistUpdate`, the 800 ms `debouncedSave`, and the close/quit/unmount flush.
+> - **`useWorkspaceCompletion`** — the walk-spanning derivations: `questionStates`,
+>   `studyOutcomes`, `studyUnfinished`, `completeness` (gated on `finishOpen`).
+> - **`useWorkspaceMutations`** — the field-write handlers (`handleAnswerChange`
+>   and the cumulative-table / canvas / outline / functional-element / manuscript
+>   / title / tag / mark-preached writes), carrying the N/A guards and the
+>   `sermonRef.current` merge base.
+> - **`useWorkspaceNavigation`** — movement + movement-writes:
+>   `writePositionAndThresholds` (the `last_touched_position` write + the
+>   teaching-seen fold), `beforePositionChange`, the six jump handlers,
+>   `dismissThreshold`, and the reread / return / jump-highlight state.
+>
+> **Stays in the shell by design:** the load lifecycle, the reference-pane
+> substrate derivation, the pure threshold-**visibility** reads (`position`,
+> `showSermonStart`, `showHandoff`, `teachingId`, `teachingAutoOpen`), export,
+> delete, the notebook cluster, and overlay rendering. A thinner coordinator, not
+> an empty component.
 
 ---
 
@@ -190,7 +212,7 @@ Chrome:
 - **Chrome buttons** (bottom) — notebook summon (a quiet mono text link near
   the save indicator, per the D2d option-i ruling), the chevron-next
   (`.sws-forward`), and the map summon (`.sws-map-summon`).
-- **Save indicator** — string from `SermonWorkspace`'s saveState.
+- **Save indicator** — string from `saveState` (owned by `useWorkspaceSave`, rendered by the shell).
 
 **`beforePositionChange` flush-await chain.** Every position-change trigger
 — chevron-next, map-jump, unmet-state door, handoff jump, "go write it" —
@@ -693,7 +715,7 @@ with ESV text, section headings, and Previous/Next chapter navigation. There is 
 **User-edit save path:**
 
 1. Pastor edits a field in the writing surface.
-2. `onUpdate(fields)` → `SermonWorkspace.handleUpdate()`.
+2. `onUpdate(fields)` → `handleUpdate()` (from `useWorkspaceSave`, consumed by the shell).
 3. `setSermon()` merges into local state (optimistic update).
 4. `sermonRef.current` updated.
 5. `debouncedSave()` scheduled (800ms debounce).

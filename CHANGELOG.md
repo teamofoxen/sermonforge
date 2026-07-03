@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-07-03 — Workspace architecture Track D complete + Track E/E1 tripwire
+
+- Extracted the 995-line `SermonWorkspace` god component (finding A) into four behaviour-preserving hooks — `useWorkspaceSave`, `useWorkspaceCompletion`, `useWorkspaceMutations`, `useWorkspaceNavigation` — leaving a 687-line coordinator shell.
+- Added regression pins for the relocated seams: close/quit flush (`exit-flush-persist`), the save-before-move timer-bite, threshold lifecycle, and Finish open/close.
+- Track E/E1 — `transition-state-no-caller` tripwire locks the vestigial position path (static `src/` scan, red-tested against an injected caller).
+- Doc-ownership sync: `docs/SYSTEMS/sermon-workspace.md` now describes the four-hook coordinator shell; pure threshold-visibility reads stay in the shell by design.
+- Behaviour-preserving throughout; suite 330 → 344, lint 0, spine-integrity OK, drift-check PASS.
+
+---
+
 ## 2026-07-02 — Workspace architecture Track C/Gate 3: three correctness seams closed
 
 - C1 — six content handlers now read their merge base from `sermonRef.current`, so two same-column writes in one React batch no longer drop the first.
