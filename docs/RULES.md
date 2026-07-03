@@ -72,6 +72,23 @@
 - Database writes commit at the IPC handler (better-sqlite3) — never add a main-process
   save debounce or queue in front of them. See `docs/CORE.md`.
 
+### Normalization Discipline
+
+Evidence-based architecture normalization is allowed only when the evidence is
+named before implementation. Valid evidence includes duplicated derivations of
+the same canonical truth, code/docs/schema disagreement, repeated defensive
+tests around one concept, stale ownership paths, or manual repo-wide coordination
+that predictably threatens a CORE contract.
+
+Rules:
+- Plan first; do not implement normalization in the same step unless explicitly approved.
+- Normalize one seam at a time.
+- Preserve current pastor-facing behavior unless a behavior change is separately approved.
+- Add or identify tests that prove current behavior before moving logic.
+- Prefer deletion, consolidation, pure derivation, or adapter boundaries before new abstraction.
+- Do not introduce a global state system, mega-hook, mega-domain object, or schema migration by default.
+- Stop when the evidenced drift is removed.
+
 ### Pre-Completion Check
 Before finishing any change verify:
 - No boundary violations

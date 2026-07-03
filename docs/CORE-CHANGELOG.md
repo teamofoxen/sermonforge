@@ -60,6 +60,23 @@
   "pray yourself hot" send-off at export. Turning-toward is not measuring; the
   Principle's scope is unchanged.
 
+## Architecture Direction
+
+- **2026-07-03 (architecture-normalization governance):** added a new subsection
+  between Hierarchy and Canonical Vocabulary — *SermonForge is conservative in
+  implementation but directional in architecture.* No clause authorizes speculative
+  refactoring, aesthetic cleanup, framework-building, or rewrites; but architectural
+  drift is not harmless merely because today's pastor-facing surface still appears to
+  work — when the structure makes a CORE truth depend on duplicated derivations,
+  scattered vocabulary, stale ownership, manual repo-wide coordination, or defensive
+  tripwires around one concept, that drift is evidence. Evidence-based normalization is
+  permitted when it strengthens the contract hierarchy by reducing competing sources of
+  truth; the preferred method is subtraction, clarification, and test-protected movement
+  — not new frameworks or broad rewrites. Authorization to plan a normalization
+  initiative is not authorization to implement it: implementation stays separately
+  scoped, minimal, reversible where possible, and tested against current pastor-facing
+  behavior.
+
 ## Canonical Vocabulary — Stage
 
 - **v24 migration session, 2026-06-10:** "Delivery" struck from the Stage vocabulary; its
@@ -131,6 +148,17 @@
 - **OEM walk, 2026-07-02:** the position model gained Manuscript sub-phases (Body →
   Intro, Transitions, Conclusion) and lost Assembly's Equip and Frame — see Canonical
   Vocabulary — Sub-phase above for the restructure record.
+
+## State #6 — One source for each canonical truth
+
+- **2026-07-03 (architecture-normalization governance):** added clause 6; the prior
+  clause 6 ("In-progress work is queryable from the front door") renumbered to 7. A
+  canonical concept may have many consumers but not many independent definitions —
+  stage, sub-phase, field, question, answer, named outcome, handoff, throughline,
+  position, completion, save status, and ownership rules must move toward a single
+  derivation or an explicitly named adapter boundary. Mirrors are allowed only where a
+  storage boundary or migration need requires them, and the canonical side must be
+  named.
 
 ## Process #1 — Movement is monotonic in expectation
 
@@ -258,6 +286,21 @@
 - **2026-06-10:** added Q5 "Where does the pastor SEE this — and what does it orphan?" The
   navHint chain built across three files and dropped in the fourth, and the dead composite
   gates with no caller, are the two failure modes Q5 exists to catch.
+
+## The Test — architecture-normalization questions (Q6–Q8)
+
+- **2026-07-03 (architecture-normalization governance):** added three planning-only
+  questions asked before a normalization *implementation* is approved — Q6 what drift is
+  evidenced (the duplicated derivation, stale authority, manual coordination burden,
+  defensive tripwire, or competing source of truth), Q7 which pastor-facing trust it
+  could *eventually* weaken (vocabulary, position, completion, save safety, handoff
+  integrity, local-first trust, no-AI authorship, or calm navigation), and Q8 the
+  smallest seam that removes the drift (naming what will not be touched; a global store,
+  schema migration, mega-hook, or broad rewrite must prove a smaller adapter or
+  derivation is insufficient). The base five-question Test is unchanged. A normalization
+  plan may pass even when it does not change today's surface; a normalization
+  implementation still fails if it changes pastor-facing behavior without separate
+  approval. Latent drift can therefore be contract-relevant before a visible UI break.
 
 ## Non-Negotiable Boundaries — better-sqlite3
 

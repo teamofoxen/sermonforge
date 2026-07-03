@@ -74,6 +74,29 @@ When contracts appear to conflict, this resolves it:
 - Surface derives from all three. Surfaces *express* what the contracts permit.
   Surfaces never *invent*.
 
+### Architecture Direction
+
+SermonForge is conservative in implementation but directional in architecture.
+
+No clause in this document authorizes speculative refactoring, aesthetic cleanup,
+framework-building, or rewrites. However, architectural drift is not harmless
+merely because today's pastor-facing surface still appears to work. When the
+current structure makes a CORE truth depend on duplicated derivations, scattered
+vocabulary, stale ownership claims, manual repo-wide coordination, or defensive
+tripwires around the same concept, that drift is evidence.
+
+Evidence-based normalization is permitted when it strengthens the contract
+hierarchy by reducing competing sources of truth. The preferred direction is:
+canonical grammar, single derivations for pastor-facing truth, stable adapters
+at storage boundaries, and thin consumers. The preferred method is subtraction,
+clarification, and test-protected movement — not new frameworks or broad rewrites.
+
+Authorization to plan a normalization initiative is not authorization to
+implement it. Implementation must still be separately scoped, minimal,
+reversible where possible, and tested against current pastor-facing behavior.
+
+(Added 2026-07-03; history in `docs/CORE-CHANGELOG.md`.)
+
 ### Canonical Vocabulary
 
 Terms used by the contracts below. Code, docs, and contract clauses bind to
@@ -158,7 +181,15 @@ these names. (See State Contract clause 5: *one name per concept*.)
    dropdown value, with one spelling, everywhere it appears. Vocabulary is part
    of state, not a UI decoration. Stage values, tab names, sub-phase names, and
    dropdown options must be the canonical names — never aliases or drifts.
-6. **In-progress work is queryable from the front door.** "What sermons am I
+6. **One source for each canonical truth.** A canonical concept may have many
+   consumers, but it may not have many independent definitions. Stage,
+   sub-phase, field, question, answer, named outcome, handoff, throughline,
+   position, completion, save status, and ownership rules must move toward
+   a single derivation or explicitly named adapter boundary. Mirrors are
+   allowed only when a storage boundary or migration need requires them, and
+   the canonical side must be named. (Added 2026-07-03; history in
+   `docs/CORE-CHANGELOG.md`.)
+7. **In-progress work is queryable from the front door.** "What sermons am I
    currently working on" has an answer the dashboard can show. There is no
    scenario where a sermon exists but the user cannot find it from the launchpad.
 
@@ -351,6 +382,26 @@ questions before it ships:
 
 A change that passes all five ships. A change that fails any one of them
 either reshapes to pass, or it does not ship.
+
+For architecture-normalization proposals, answer three additional questions
+before implementation is approved:
+
+6. **What drift is evidenced?** Name the duplicated derivation, stale authority,
+   manual coordination burden, defensive tripwire, or competing source of truth.
+7. **Which pastor-facing trust could it eventually weaken?** Name the future
+   risk to vocabulary, position, completion, save safety, handoff integrity,
+   local-first trust, no-AI authorship, or calm navigation.
+8. **What is the smallest seam that removes the drift?** Name what will not be
+   touched. If the answer requires a global store, schema migration, mega-hook,
+   or broad rewrite, the proposal must prove why a smaller adapter or derivation
+   is insufficient.
+
+A normalization plan may pass this test even when it does not change today's
+surface. A normalization implementation still fails if it changes pastor-facing
+behavior without separate approval.
+
+(Architecture-normalization questions added 2026-07-03; history in
+`docs/CORE-CHANGELOG.md`.)
 
 ---
 

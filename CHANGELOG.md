@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-07-03 — Architecture-normalization governance (docs-only)
+
+- Updated governance docs (`docs/CORE.md`, `docs/RULES.md`, `CLAUDE.md`) to distinguish speculative refactoring / aesthetic cleanup / rewrites from evidence-based architecture-normalization planning — conservative in implementation, directional in architecture.
+- CORE gained an Architecture Direction subsection, State Contract clause 6 "One source for each canonical truth" (old clause 6 → 7), and three planning-only Test questions (evidenced drift, future pastor-facing trust risk, smallest seam); latent drift is contract-relevant before a visible UI break. Dated per-clause provenance in `docs/CORE-CHANGELOG.md`.
+- RULES/CLAUDE operating guidance requires named evidence, planning-only authorization (implementation separately approved), test-before-move, one seam at a time, explicit non-goals, and stopping when the evidenced drift is removed.
+- No source code, schema, migrations, product behavior, or pastor-facing copy changed.
+
+---
+
 ## 2026-07-03 — getTightenedMainPoints DRY helper (Track E follow-up)
 
 - Extracted `getTightenedMainPoints(mppData)` in `src/utils/studyFields.js` — the single accessor for the two tightened Main Point outcomes.

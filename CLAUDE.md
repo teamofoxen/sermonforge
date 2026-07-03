@@ -22,6 +22,7 @@ This file is a navigation guide. Do not load everything by default.
 | Series Planner — macro/architect series planning (three-screen planner: Outline · Schedule · Study guide; create-then-update, study-guide export) | [`docs/SYSTEMS/series-planner.md`](docs/SYSTEMS/series-planner.md) | [`docs/PROPOSALS/series-planner-revival-charter.md`](docs/PROPOSALS/series-planner-revival-charter.md) (historical record) for the original what & why / decisions |
 | Database, schema, migrations, FTS | [`docs/SYSTEMS/database.md`](docs/SYSTEMS/database.md) | adding columns to `sermons` requires updating the `SERMON_COLUMNS` allowlist in `src/core/contracts.ts` and its mirrors (`electron/contracts.cjs`, `tests/contracts/_helpers/test-spine.ts` — sync is test-asserted) — `buildUpdate()` in `electron/main.js` throws in dev if you miss this, but only if you exercise the save path in testing |
 | IPC channels, preload, main process boundaries | [`docs/SYSTEMS/ipc.md`](docs/SYSTEMS/ipc.md) | — |
+| Architecture-normalization planning — source-of-truth consolidation, domain grammar, completion/position/vocabulary derivation, stale ownership paths, or structural drift with no immediate UI break | [`docs/CORE.md`](docs/CORE.md), [`docs/RULES.md`](docs/RULES.md), and the relevant `docs/SYSTEMS/*` file for the seam | Planning-only first. Identify evidence, pastor-facing trust risk, smallest seam, tests needed before movement, and explicit non-goals. Do not implement without approval. |
 | Distribution, installers, auto-updates, ESV API key setup, crash logging | [`docs/PROPOSALS/distribution.md`](docs/PROPOSALS/distribution.md) | `electron/config.js` (paths + dev/prod gatekeeper), `electron/keystore.js` (safeStorage for ESV key), `electron/logger.js` (`app.log`), `electron/updater.js` (electron-updater), `src/components/SetupScreen.jsx` (first-run setup) |
 | Dashboard redesign / handoff to a designer | [`docs/PROPOSALS/dashboard-design-brief.md`](docs/PROPOSALS/dashboard-design-brief.md) | `src/components/Dashboard.jsx`, `DashboardVerseCarousel.jsx`, `DashboardPreacherQuote.jsx`, `src/styles/global.css` (dashboard blocks ~1819–2514, plus dark-mode dashboard overrides at end of file) |
 
@@ -63,6 +64,18 @@ If code and these documents diverge, the code is considered incorrect unless an 
 rationale exists.
 
 CHANGELOG format and discipline are owned by [`.claude/skills/end-session/SKILL.md`](.claude/skills/end-session/SKILL.md). Do not duplicate those rules here.
+
+---
+
+## Architecture-normalization posture
+
+Do not propose rewrites or broad refactors. Also do not dismiss evidenced
+architectural drift merely because today's pastor-facing UI still works.
+When a canonical truth requires duplicated derivations, stale docs, scattered
+vocabulary, manual synchronization, or defensive tripwires, produce a
+planning-only normalization proposal: evidence, affected CORE contracts,
+pastor-facing trust risk, smallest seam, tests-before-move, non-goals, and
+stop condition.
 
 ---
 
