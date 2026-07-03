@@ -25,6 +25,7 @@ import { firstFieldFor } from "../utils/walkOrder";
 import {
   parseStructuredField,
   getQuestionAnswer,
+  getTightenedMainPoints,
   composeThoughtUnitBlocks,
 } from "../utils/studyFields";
 import {
@@ -386,11 +387,12 @@ export default function SermonWorkspace({
   const implicationsData = parseStructuredField(sermon.implications);
   const pcRoom = String(getQuestionAnswer(implicationsData, "pastoral_context", "room_specifics") ?? "").trim();
   const pcCostGift = String(getQuestionAnswer(implicationsData, "pastoral_context", "cost_and_gift") ?? "").trim();
+  const mainPoints = getTightenedMainPoints(mainPointPair);
   const reference = {
     passage: sermon.passage || "",
     outcomes: studyOutcomes,
-    mpt: String(getQuestionAnswer(mainPointPair, "mpt", "tighten") ?? "").trim(),
-    mps: String(getQuestionAnswer(mainPointPair, "mps", "tighten") ?? "").trim(),
+    mpt: mainPoints.mpt.trim(),
+    mps: mainPoints.mps.trim(),
     pastoralContext: [pcRoom, pcCostGift].filter(Boolean).join("\n\n"),
   };
   // Shared identity label — the composed passage reference, same substrate

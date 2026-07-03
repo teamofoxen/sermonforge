@@ -568,6 +568,24 @@ export function getQuestionAnswer(fieldData, fieldKey, questionKey = DEFAULT_QUE
   return q.value ?? "";
 }
 
+/**
+ * Read the tightened Main Point of the Text + Main Point of the Sermon from a
+ * parsed `main_point_pair` envelope — the single canonical accessor for the two
+ * named Main Point outcomes. The Word export (`buildManuscriptExportPayload`)
+ * and the reference pane both read through here, so the field/question keys live
+ * in one place. Returns "" for a missing, N/A, or not-yet-tightened answer (via
+ * `getQuestionAnswer`). The value is returned untrimmed — the export keeps it
+ * verbatim so its payload shape is unchanged; display callers may `.trim()`.
+ * @param {object} mppData parsed main_point_pair (from parseStructuredField)
+ * @returns {{ mpt: string, mps: string }}
+ */
+export function getTightenedMainPoints(mppData) {
+  return {
+    mpt: String(getQuestionAnswer(mppData, "mpt", "tighten") ?? ""),
+    mps: String(getQuestionAnswer(mppData, "mps", "tighten") ?? ""),
+  };
+}
+
 // String-guarded read for textarea / pause-clearing display. Returns "" for
 // missing, N/A, or non-string values (e.g., the array shapes used by
 // unified-canvas fields).

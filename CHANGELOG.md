@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-07-03 — getTightenedMainPoints DRY helper (Track E follow-up)
+
+- Extracted `getTightenedMainPoints(mppData)` in `src/utils/studyFields.js` — the single accessor for the two tightened Main Point outcomes.
+- Rewired both read sites onto it: the Word export (`buildManuscriptExportPayload`, raw) and the reference pane (`SermonWorkspace.jsx`, `.trim()`ed), so the field/question-key spelling lives in one place.
+- Behaviour-preserving — export payload + reference-pane output byte-identical (E2 export pin + sampleData export test green); suite 347, lint 0.
+
+---
+
 ## 2026-07-03 — Workspace architecture Track E complete: Main Point single-sourced, transitionState removed
 
 - E2 — the Word manuscript export derives MPT/MPS from the `main_point_pair` envelope (`buildManuscriptExportPayload`), not the flat `mpt`/`mps` columns.

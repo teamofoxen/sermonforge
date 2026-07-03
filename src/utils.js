@@ -3,7 +3,7 @@
 // turn imports `tryParse` from this file — a deliberate sibling cycle that is
 // safe because every binding involved is a hoisted function declaration and
 // none is invoked at module-evaluation time.
-import { parseStructuredField, getQuestionAnswer } from "./utils/studyFields";
+import { parseStructuredField, getTightenedMainPoints } from "./utils/studyFields";
 
 export function tryParse(val, fallback) {
   try { return JSON.parse(val) || fallback; } catch { return fallback; }
@@ -199,13 +199,13 @@ export function buildManuscriptExportPayload(sermon) {
   // The legacy flat `mpt` / `mps` columns are retained in the schema but are no
   // longer written on the walk (the mirror write was retired in Track E3) nor
   // read here — the envelope is the sole source.
-  const mpp = parseStructuredField(sermon?.main_point_pair);
+  const mainPoints = getTightenedMainPoints(parseStructuredField(sermon?.main_point_pair));
   return {
     title: sermon?.title || "",
     passage: sermon?.passage || "",
     date: sermon?.date || "",
-    mpt: String(getQuestionAnswer(mpp, "mpt", "tighten") ?? ""),
-    mps: String(getQuestionAnswer(mpp, "mps", "tighten") ?? ""),
+    mpt: mainPoints.mpt,
+    mps: mainPoints.mps,
     introduction: ms.introduction || {},
     transitions: ms.transitions || {},
     conclusion: ms.conclusion || {},
