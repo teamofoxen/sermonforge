@@ -6,12 +6,12 @@
 // way" semantic is strict — the pastor must have run the moralism check
 // upstream against the Christ-Connection Statement; N/A is not "skip."
 //
-// Flat-column sync: writes to `mpt.tighten` / `mps.tighten` are mirrored
-// into the flat `sermon.mpt` / `sermon.mps` columns by
-// SermonWorkspace.handleAnswerChange (wired 2026-06-09, commit d3da7e8 —
-// replacing StudyTab.updateMPP, deleted in trail-deletion Phase E). The
-// T19 N/A allowlist closed the last hazard (an N/A'd tighten can no
-// longer blank the flat columns the Word export reads).
+// Main Point storage: the `mpt.tighten` / `mps.tighten` answers live in the
+// `main_point_pair` envelope, which is the sole store. The Word export derives
+// the tightened sentences from it (buildManuscriptExportPayload, Track E2); the
+// legacy flat `sermon.mpt` / `sermon.mps` columns are retained defensively but
+// are no longer written on the walk — the mirror write (d3da7e8, replacing the
+// deleted StudyTab.updateMPP) was retired in Track E3, 2026-07-03.
 //
 // Prompt copy de-fossiled 2026-06-10 (UX overhaul T18) under the ratified
 // rule "no coordinates the screen doesn't show": the cross-field

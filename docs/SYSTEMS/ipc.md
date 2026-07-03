@@ -77,7 +77,7 @@ All handlers are implemented in `electron/main.js`.
 Every sermon/series state operation follows this exact path — no exceptions:
 
 1. Component calls a function in `src/core/spine.ts` (e.g. `spine.getSermon(id)`,
-   `spine.createSermon({...})`, `spine.transitionState({...})`).
+   `spine.createSermon({...})`, `spine.applyMutation({...})`).
 2. `src/core/spine.ts` invokes `window.electronAPI.spine(op, payload)` (via contextBridge).
 3. `electron/main.js` `"spine"` handler dispatches to `spineRead` (read-only) or
    `validateAndCommit` (writes; contract-gated). Contract violations return

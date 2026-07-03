@@ -360,8 +360,10 @@ export const SERMON_COLUMNS: ReadonlySet<string> = Object.freeze(new Set([
   "sermon_frame",
   // v19 — Main Point Pair JSON column (SADI Step 2 plumbing, 2026-05-05).
   // Holds MPT (2Q: draft, tighten) + MPS (3Q: translate, gospel_check,
-  // tighten). Flat `mpt` and `mps` columns above are auto-synced from the
-  // tighten answers; downstream readers keep using the flat columns.
+  // tighten) and is the sole store for the Main Points: the Word export derives
+  // them from this envelope (Track E2). The flat `mpt` / `mps` columns above are
+  // retained defensively; their auto-sync mirror write was retired in Track E3
+  // (they are now written only by direct apply-mutation).
   "main_point_pair",
   // v20 — ARI Phase 3 per-tab notebooks (2026-05-09). Free-form pastor-typed
   // notes, sermon-scoped, one column per workspace tab where AI used to
@@ -417,13 +419,12 @@ export const SECTION_COLUMNS: ReadonlySet<string> = Object.freeze(new Set([
   "title", "passage_range", "big_idea", "overview", "sort_order",
 ])) as ReadonlySet<string>;
 
-// Spine-controlled columns. These are written by `transitionState` (and the
-// tour-sermon seed) and must NOT be sent on user-edit saves — the renderer's
-// in-memory sermon view can lag a fresh spine write, and including these in
-// the persistUpdate payload would let stale state clobber the spine's record
-// of the pastor's position. They stay in `SERMON_COLUMNS` so reads/seeds and
-// `assertSchemaContract()` still see them; `pickSermonColumns` filters them
-// out of writes.
+// Spine-controlled columns. The spine's `transitionState` position-writer that
+// once wrote them was removed in Track E4 (2026-07-03); today they have no live
+// updater — they retain their create-INSERT or DEFAULT value. They are
+// still kept OUT of user-edit saves — `pickSermonColumns` filters them from the
+// persistUpdate payload — and stay in `SERMON_COLUMNS` so reads/seeds and
+// `assertSchemaContract()` still see them.
 export const SPINE_ONLY_COLUMNS: ReadonlySet<string> = Object.freeze(new Set([
   // current_step removed in the trail deletion sweep (Phase B2) — see
   // SERMON_COLUMNS comment above.

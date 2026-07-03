@@ -22,7 +22,7 @@ const SPINE_ONLY_NAMES = new Set([
   'getSermonsBySeries',
   'getSectionsBySeries', 'createSection', 'updateSection', 'deleteSection',
   'loadSampleSermon',
-  'transitionState', 'applyMutation', 'persistMutation',
+  'applyMutation', 'persistMutation',
 ]);
 
 const RE_DATABASE_PATH = /(?:^|\/)db\/database(?:\.js)?$/;

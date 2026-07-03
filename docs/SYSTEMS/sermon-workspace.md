@@ -354,8 +354,9 @@ session re-entry and threshold dismissal:
   Defaults to `[]` when NULL.
 
 Both columns sit in `SERMON_COLUMNS` but **not** in `SPINE_ONLY_COLUMNS` —
-the renderer writes them through `persistUpdate`, not through
-`transitionState`.
+the renderer writes them directly through `persistUpdate`. `last_touched_position`
+is the sole position store; the vestigial spine `transitionState` position-writer
+was removed in Track E4.
 
 State derivations live in
 [`src/utils/sermonState.js`](../../src/utils/sermonState.js):
@@ -576,9 +577,11 @@ Step 2. Two fields:
   non-empty, no N/A; Q2 non-empty or explicit N/A per the SADI "satisfied
   another way" carve-out for upstream-resolved moralism checks.
 
-Named outcome: Main Point Pair. Flat `mpt` + `mps` columns auto-sync from
-the v19 envelope's tighten answers; downstream readers keep using the flat
-columns.
+Named outcome: Main Point Pair. The v19 `main_point_pair` envelope is the sole
+store; the Word export derives MPT/MPS from its tighten answers (Track E2). The
+flat `mpt` / `mps` columns are retained defensively — their auto-sync mirror
+write was retired in Track E3, and they are now written only by direct
+`apply-mutation`.
 
 **Completeness foundations:** `checkMPTComposite` + `checkMPSComposite`.
 The advancement gate at the Anchor → Outline boundary (the deleted

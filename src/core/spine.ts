@@ -37,7 +37,7 @@
 
 import {
   Stage, SubPhase, Sermon, Series,
-  STAGE, STAGE_SEQUENCE, SUB_PHASE_CANONICAL_SEQUENCE,
+  STAGE,
   STRUCTURED_FIELDS,
   OutlineUpdate, FunctionalElementUpdate,
   ObservationUpdate, InterpretationUpdate,
@@ -293,44 +293,20 @@ export function loadSampleSermon(opts?: { fresh?: boolean }): Promise<{ sermonId
   return call("load-sample-sermon", opts?.fresh ? { fresh: true } : undefined);
 }
 
-// ── transitionState — position-writer (post-Phase-G) ─────────────────────────
+// ── transitionState (position-writer) — REMOVED in Track E4 (2026-07-03) ─────
 //
-// Phase G (2026-05-18) gravestone — `evidence` + `direction` were dropped
-// from `TransitionInput`; `PROCESS_1_INVALID_DIRECTION` throw was deleted;
-// the empty-evidence no-op comment block was deleted. The wrapper is now a
-// plain position-writer: classify `to` as a Stage or SubPhase, then dispatch
-// to the IPC handler. CORE Process #1 + #2 rearticulated against the new
-// completeness-contract surface (see docs/CORE.md).
-
-export interface TransitionInput {
-  sermonId: string;
-  to: Stage | SubPhase;
-}
-
-const STAGE_VALUES: ReadonlySet<string> = new Set([
-  ...STAGE_SEQUENCE as readonly string[],
-  // "Blueprint" / "Frame" removed in the trail deletion sweep (Phase B3);
-  // "Delivery" struck in the v24 migration session (2026-06-10).
-]);
-const SUB_PHASE_VALUES: ReadonlySet<string> = new Set(SUB_PHASE_CANONICAL_SEQUENCE as readonly string[]);
-
-function classify(target: string): "stage" | "sub_phase" | null {
-  if (STAGE_VALUES.has(target)) return "stage";
-  if (SUB_PHASE_VALUES.has(target)) return "sub_phase";
-  return null;
-}
-
-export function transitionState(input: TransitionInput): Promise<void> {
-  const kind = classify(input.to as string);
-  if (!kind) {
-    throw new ContractViolation(
-      `State Contract #5 violation: 'to' must be a canonical PascalCase value (received '${String(input.to)}').`,
-      "State #5",
-      "STATE_5_NONCANONICAL_TO",
-    );
-  }
-  return call("transition-state", { ...input, kind });
-}
+// The vestigial legacy position subsystem (audit finding D): a renderer wrapper
+// that classified a target Stage/SubPhase and dispatched the `transition-state`
+// IPC op to an electron handler which wrote current_stage / current_sub_phase /
+// last_*_subphase. It had no live caller — the workspace stores position solely
+// in `last_touched_position` (via `update-sermon`). E1 locked out a live caller
+// while the definition stood; E4 removed the whole path: this wrapper + its
+// `TransitionInput` / `classify` helpers, the electron `case "transition-state"`
+// handler, and the test-spine fixture mirror. The current_stage / current_sub_phase
+// / last_*_subphase columns stay in the schema (no migration) with no live
+// updater — they retain their create-INSERT or DEFAULT value. Reintroduction is
+// guarded by
+// tests/contracts/transition-state-no-caller.test.ts.
 
 // ── applyMutation — Mutation Contract #1, #2 ─────────────────────────────────
 

@@ -153,9 +153,11 @@ const SERMON_COLUMNS = Object.freeze(new Set([
 ]));
 /* eslint-enable sermonforge/canonical-stage-name */
 
-// Spine-controlled columns. Written by `transitionState` and the sample-sermon
-// seed; never by user-edit saves (renderer's `pickSermonColumns` excludes
-// them). Mirrors `SPINE_ONLY_COLUMNS` in src/core/contracts.ts.
+// Spine-controlled columns. The `transitionState` position-writer that once
+// wrote them was removed in Track E4; now with no live updater — they retain
+// their create-INSERT or DEFAULT value. Never sent on user-edit saves (renderer's
+// `pickSermonColumns` excludes them). Mirrors `SPINE_ONLY_COLUMNS` in
+// src/core/contracts.ts.
 const SPINE_ONLY_COLUMNS = Object.freeze(new Set([
   // current_step removed in the trail deletion sweep (Phase B2) — see
   // SERMON_COLUMNS comment above.

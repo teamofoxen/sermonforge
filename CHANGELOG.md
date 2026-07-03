@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-07-03 — Workspace architecture Track E complete: Main Point single-sourced, transitionState removed
+
+- E2 — the Word manuscript export derives MPT/MPS from the `main_point_pair` envelope (`buildManuscriptExportPayload`), not the flat `mpt`/`mps` columns.
+- E3 — retired the live flat `mpt`/`mps` mirror write from `useWorkspaceMutations`; schema columns kept, no migration, direct `apply-mutation(field=mpt/mps)` preserved.
+- E4 — removed the vestigial `transitionState` writer, its `transition-state` IPC handler, the test-spine fixture mirror, and two `SPINE_ONLY_NAMES` allowlist entries.
+- Strengthened the no-caller tripwire to guard `transition-state` op-literal reintroduction (fixed a CRLF comment-strip bug); reconciled the now-stale auto-sync / spine-written doc + comment sites.
+- Behaviour-preserving; position stays in `last_touched_position`; suite 347, lint 0, spine-integrity OK, drift-check PASS.
+
+---
+
 ## 2026-07-03 — Workspace architecture Track D complete + Track E/E1 tripwire
 
 - Extracted the 995-line `SermonWorkspace` god component (finding A) into four behaviour-preserving hooks — `useWorkspaceSave`, `useWorkspaceCompletion`, `useWorkspaceMutations`, `useWorkspaceNavigation` — leaving a 687-line coordinator shell.

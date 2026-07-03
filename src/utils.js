@@ -1,3 +1,10 @@
+// The manuscript export reads the canonical `main_point_pair` envelope through
+// these accessors (see buildManuscriptExportPayload below). studyFields.js in
+// turn imports `tryParse` from this file — a deliberate sibling cycle that is
+// safe because every binding involved is a hoisted function declaration and
+// none is invoked at module-evaluation time.
+import { parseStructuredField, getQuestionAnswer } from "./utils/studyFields";
+
 export function tryParse(val, fallback) {
   try { return JSON.parse(val) || fallback; } catch { return fallback; }
 }
@@ -185,12 +192,20 @@ export function parseManuscript(raw) {
 // no matter where the pastor asks for it.
 export function buildManuscriptExportPayload(sermon) {
   const ms = parseManuscript(sermon?.manuscript);
+  // MPT/MPS come from the canonical `main_point_pair` envelope — the tightened
+  // single sentence is the named outcome the writing surface renders and
+  // completeness reads. Reading the envelope directly means the Word document
+  // always matches what the pastor sees, never a stale (or empty) flat mirror.
+  // The legacy flat `mpt` / `mps` columns are retained in the schema but are no
+  // longer written on the walk (the mirror write was retired in Track E3) nor
+  // read here — the envelope is the sole source.
+  const mpp = parseStructuredField(sermon?.main_point_pair);
   return {
     title: sermon?.title || "",
     passage: sermon?.passage || "",
     date: sermon?.date || "",
-    mpt: sermon?.mpt || "",
-    mps: sermon?.mps || "",
+    mpt: String(getQuestionAnswer(mpp, "mpt", "tighten") ?? ""),
+    mps: String(getQuestionAnswer(mpp, "mps", "tighten") ?? ""),
     introduction: ms.introduction || {},
     transitions: ms.transitions || {},
     conclusion: ms.conclusion || {},

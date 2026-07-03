@@ -108,13 +108,13 @@ const sermon = {
   mps: "The hope that holds in suffering is not something you build — it is anchored in a love that has already been poured into you.",
 
   // SADI v19 envelope — MPT (draft + tighten) and MPS (translate + gospel_check + tighten).
-  // The legacy `mpt` / `mps` flat columns above hold the tightened versions; pre-sweep
-  // they were auto-synced from `*.tighten` by `StudyTab.updateMPP`, which was deleted with
-  // StudyTab in Phase E of the trail deletion sweep. The envelope is what the
-  // post-D2c writing surface renders at Assembly/Anchor via MAIN_POINT_PAIR_FIELDS;
-  // the flat-column sync wiring post-D2c is a follow-up question (see the matching
-  // comment in src/utils/sadiAnchorFields.js for context). Without the envelope,
-  // those fields render empty.
+  // The envelope is the sole store: the post-D2c writing surface renders it at
+  // Assembly/Anchor via MAIN_POINT_PAIR_FIELDS, and the Word export derives
+  // MPT/MPS from its `*.tighten` answers (Track E2). The legacy `mpt` / `mps`
+  // flat columns above are seeded to the same tightened sentences and retained
+  // defensively; their auto-sync mirror write (once StudyTab.updateMPP, later
+  // handleAnswerChange) was retired in Track E3. Without the envelope, those
+  // fields render empty.
   main_point_pair: JSON.stringify({
     mpt: {
       draft: { value: "In Romans 5:1-5, Paul taught the Roman believers that the justification they had received by faith was not the front door of Christian life but the floor they were already standing on. Because God had already declared them righteous through Christ, they had peace with God — settled, not pending. They had obtained access into grace and were standing in it. From that standing, they could even rejoice in suffering, because suffering did productive work: it produced endurance, endurance produced character, character produced hope. And the hope at the end of that chain would not shame them, because its weight rested not on their endurance but on God's love already poured into their hearts by the Holy Spirit. The whole passage was a declaration of what was already true of them — anchoring their hope under pressure in what God had already done, not in what they had to muster.", na: false },

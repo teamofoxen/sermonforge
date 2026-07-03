@@ -439,43 +439,9 @@ function validateAndCommit(op: string, payload: any) {
       sections.delete(payload);
       return success();
     }
-    case "transition-state": {
-      // Phase G (2026-05-18) gravestone — the rejection-mirror blocks were
-      // deleted here in lockstep with the main.js wall-layer deletion (see
-      // electron/main.js transition-state case). What used to mirror:
-      //   - Process #2 empty-evidence rejection (forward-only) + `isLegacy`
-      //     carve-out
-      //   - Process #1 stage forward-to-prior rejection
-      //   - Process #1 sub-phase forward-to-prior rejection
-      // What remains is the position-write mirror itself + the existence
-      // guard + the noncanonical-`to` guard.
-      const { sermonId, kind } = payload || {};
-      let { to } = payload || {};
-      const row = sermons.get(sermonId);
-      if (!row) return rejection("NOT_FOUND", "State #1", `Sermon ${sermonId} not found.`);
-      // Workspace Restructure (2026-05-10) — coerce legacy stage values in
-      // `to` so old fixtures using STAGE.Blueprint / STAGE.Frame still
-      // resolve cleanly to STAGE.Assembly.
-      if (kind === "stage") to = coerceLegacyStage(to);
-      const currentStage = coerceLegacyStage(row.current_stage);
-      if (kind === "stage") {
-        row.current_stage = to;
-        // current_step removed in the trail deletion sweep (Phase B2).
-        row.current_sub_phase = to === STAGE.Study ? SUB_PHASE.Observe
-          : to === STAGE.Assembly ? SUB_PHASE.Anchor
-          : null;
-      } else if (kind === "sub_phase") {
-        const targetStage = SUB_PHASE_STAGE[to];
-        if (targetStage && targetStage !== currentStage) {
-          row.current_stage = targetStage;
-        }
-        row.current_sub_phase = to;
-      } else {
-        return rejection("STATE_5_NONCANONICAL_TO", "State #5",
-          `'to' must be a canonical Stage or SubPhase value (got '${to}').`);
-      }
-      return success();
-    }
+    // `case "transition-state"` fixture mirror removed in Track E4 (2026-07-03)
+    // in lockstep with the production handler (electron/main.js). No test drives
+    // this op — the renderer stores position via `last_touched_position`.
     case "apply-mutation": {
       const { kind, sermonId, field } = payload || {};
       if (!sermonId || !field)

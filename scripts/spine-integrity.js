@@ -96,7 +96,7 @@ const SPINE_ONLY_NAMES = [
   'getSermonsBySeries',
   'getSectionsBySeries', 'createSection', 'updateSection', 'deleteSection',
   'loadSampleSermon',
-  'transitionState', 'applyMutation', 'persistMutation',
+  'applyMutation', 'persistMutation',
 ];
 
 // ── Detectors ────────────────────────────────────────────────────────────────

@@ -6,7 +6,6 @@ import {
   setQuestionAnswer,
   setQuestionNA,
   setDivisionsCanvas,
-  getQuestionAnswer,
 } from "./studyFields";
 import {
   serializeOutline,
@@ -62,8 +61,9 @@ export function useWorkspaceMutations({ sermon, sermonRef, handleUpdate, setAllT
     // grants were RULED 2026-06-14 (Re-Foundation exam 1) and await their
     // scheduled code build. The UI hides the toggle everywhere else; this
     // write-path guard means no future caller can set a forbidden flag
-    // either (an N/A'd mpt/mps tighten would silently blank the flat
-    // columns the Word export reads). Clearing na is always allowed.
+    // either (an N/A'd mpt/mps tighten would silently blank the tightened
+    // sentence the Word export derives from the envelope). Clearing na is
+    // always allowed.
     let na = envelope?.na === true;
     if (na) {
       const fieldDef = findField(pos.stage, pos.subPhase, fieldKey);
@@ -72,17 +72,12 @@ export function useWorkspaceMutations({ sermon, sermonRef, handleUpdate, setAllT
     }
     next = setQuestionNA(next, fieldKey, questionKey, na);
     const fields = { [col]: JSON.stringify(next) };
-    // Keep the legacy flat mpt/mps columns in sync with the v19 main_point_pair
-    // envelope. The Word manuscript export reads sermon.mpt / sermon.mps (the
-    // tightened single sentences); without this mirror those columns stay ''
-    // forever, so a completed sermon exports with stale or missing Main Points.
-    // This replaces StudyTab.updateMPP, deleted in the trail-deletion sweep
-    // (Phase E) and never re-wired. The tightened answer is the canonical flat
-    // value (the named outcome); a not-yet-tightened MPT/MPS stays '').
-    if (col === "main_point_pair") {
-      fields.mpt = String(getQuestionAnswer(next, "mpt", "tighten") ?? "");
-      fields.mps = String(getQuestionAnswer(next, "mps", "tighten") ?? "");
-    }
+    // No flat mpt/mps mirror: the v19 main_point_pair envelope is the sole store
+    // for the Main Points, and the Word export derives the tightened sentences
+    // from it (buildManuscriptExportPayload, E2). The legacy mirror write that
+    // kept sermon.mpt / sermon.mps in sync with `*.tighten` was retired here in
+    // Track E3 (2026-07-03); the flat columns stay in the schema, written only
+    // by the direct apply-mutation path.
     handleUpdate(fields);
   }, [handleUpdate, sermonRef]);
 

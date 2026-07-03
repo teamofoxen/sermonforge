@@ -9,7 +9,6 @@ const {
   STAGE, STAGE_SEQUENCE,
   SUB_PHASE, SUB_PHASE_CANONICAL_SEQUENCE,
   STUDY_SUB_PHASE_SEQUENCE, ASSEMBLY_SUB_PHASE_SEQUENCE,
-  SUB_PHASE_STAGE,
   SERMON_STATUS, SERIES_STATUS,
   MUTATION_KIND,
   SERMON_COLUMNS, SERIES_COLUMNS, SECTION_COLUMNS,
@@ -913,8 +912,11 @@ function runMigrations() {
     // Contract #2 ("every sermon has a canonical position in the process …
     // queryable from any surface that touches the sermon") cannot be
     // enforced while position lives only in component state and localStorage.
-    // These columns become the canonical position store; the spine writes
-    // them via transitionState and reads them via getSermon.
+    // These columns become the canonical position store; in the v17 era the
+    // spine wrote them via `transitionState` and read them via `getSermon`.
+    // (Superseded: `transitionState` was removed in Track E4; the live walk
+    // stores position in `last_touched_position`, and these columns now have no
+    // live updater (they retain their create-INSERT or DEFAULT value).)
     //
     // Phase G (2026-05-18) gravestone: this migration also used to insert
     // a `legacy_evidence_cutoff` meta row to carve out sermons created
@@ -972,9 +974,11 @@ function runMigrations() {
     // Adds a JSON column for the per-question envelope holding MPT (2Q:
     // draft, tighten) and MPS (3Q: translate, gospel_check, tighten),
     // mirroring v18's sermon_frame shape. The legacy flat `mpt` and `mps`
-    // columns stay defensively per migration policy and are auto-synced
-    // from the tighten answers on write — downstream readers (AI prompts,
-    // context builder, exports) keep reading the flat columns unchanged.
+    // columns stay defensively per migration policy. (They were auto-synced
+    // from the tighten answers and read downstream in the v19 era; superseded —
+    // the Word export now derives MPT/MPS from this envelope (E2) and the
+    // auto-sync mirror write was retired in Track E3. The columns remain,
+    // written only by direct apply-mutation.)
     // NULL is acceptable as the empty state.
     const sermonInfo = queryAll("PRAGMA table_info(sermons)");
     const have = new Set(sermonInfo.map(r => r.name));
@@ -2015,10 +2019,11 @@ function searchSermonsFts(rawQuery, limit = 50) {
 
 // _legacyEvidenceCutoffCache + getLegacyEvidenceCutoff + isLegacySermon
 // deleted in the trail deletion sweep (Phase G, 2026-05-18). These existed
-// only to feed the Process #2 empty-evidence rejection in transitionState's
-// wall layer — when that rejection went, every consumer of the cutoff
-// machinery went with it (shapeSermon's `legacy:` field deleted; Sermon
-// interface's `legacy: boolean` field deleted from src/core/contracts.ts).
+// only to feed the Process #2 empty-evidence rejection in the then-live
+// `transitionState` wall layer — when that rejection went, every consumer of
+// the cutoff machinery went with it (shapeSermon's `legacy:` field deleted;
+// Sermon interface's `legacy: boolean` field deleted from src/core/contracts.ts).
+// (`transitionState` itself was later removed entirely in Track E4.)
 // The v17 `legacy_evidence_cutoff` meta-table row remains in deployed
 // databases as orphaned residue — the migration step that inserted it has
 // been gravestoned at its insertion site (~line 745). No runtime code
@@ -2525,103 +2530,11 @@ function validateAndCommit(op, payload) {
       return success();
     }
 
-    case "transition-state": {
-      // Phase G (2026-05-18) gravestone — the wall layer was deleted here.
-      // What used to live in this handler:
-      //   - Process #2 empty-evidence rejection (forward-only) — gated
-      //     movement on the presence of an evidence string. Removed: the
-      //     invisible-system rebuild replaced advancement gating with the
-      //     completeness contract; the renderer no longer sends evidence
-      //     (the `evidence` + `direction` fields are gone from
-      //     `TransitionInput` in src/core/spine.ts).
-      //   - Process #1 stage forward-to-prior rejection — gated forward
-      //     stage moves against monotonic order. Removed: the new surface
-      //     has free navigation; the preacher can revisit any field/stage
-      //     freely.
-      //   - Process #1 sub-phase forward-to-prior rejection — same logic
-      //     at the sub-phase resolution. Removed for the same reason.
-      // What remains is a clean position-writer: existence guard, type-
-      // canonicality guard, the per-kind UPDATE blocks. CORE Process
-      // Contracts #1 and #2 are rearticulated alongside this deletion.
-      const { sermonId, kind } = payload || {};
-      let { to } = payload || {};
-      const row = fetchSermonRow(sermonId);
-      if (!row) {
-        return rejection("NOT_FOUND", "State #1", `Sermon ${sermonId} not found.`);
-      }
-      // Legacy stage coercion removed in the trail deletion sweep (Phase B3).
-      const currentStage = row.current_stage;
-      if (kind === "stage") {
-        // Stage entry restores the pastor's last position WITHIN the
-        // destination stage (per-stage memory), so tabbing across stages
-        // returns them to where they were last. COALESCE falls back to the
-        // first sub-phase when last_*_subphase is NULL (never been to that
-        // stage). Stage transitions do NOT write last_*_subphase — that
-        // column is only updated by sub-phase transitions within its stage,
-        // so a stage tab-out followed by tab-back preserves position.
-        let subDefault = null;
-        let lastCol = null;
-        if (to === STAGE.Study) { subDefault = SUB_PHASE.Observe; lastCol = "last_study_subphase"; }
-        else if (to === STAGE.Assembly) { subDefault = SUB_PHASE.Anchor; lastCol = "last_assembly_subphase"; }
-        // v33 (OEM restructure): Manuscript gained sub-phases (Body → the
-        // doors); it gets the same per-stage memory as the other two.
-        else if (to === STAGE.Manuscript) { subDefault = SUB_PHASE.Body; lastCol = "last_manuscript_subphase"; }
-        if (lastCol) {
-          dbRun(
-            `UPDATE sermons SET current_stage = ?,
-                                current_sub_phase = COALESCE(${lastCol}, ?),
-                                updated_at = datetime('now')
-             WHERE id = ?`,
-            [to, subDefault, sermonId],
-          );
-        } else {
-          dbRun(
-            `UPDATE sermons SET current_stage = ?, current_sub_phase = ?, updated_at = datetime('now') WHERE id = ?`,
-            [to, subDefault, sermonId],
-          );
-        }
-      } else if (kind === "sub_phase") {
-        // Sub-phase transition. Update current_sub_phase, align current_stage
-        // if the new sub-phase belongs to a different stage (e.g., the
-        // Implications → Anchor cross would otherwise leave current_stage at
-        // "Study" while sub-phase is "Anchor"). Also update the per-stage
-        // memory column for the destination stage so tab-back restores cleanly.
-        const targetStage = SUB_PHASE_STAGE[to];
-        let lastCol = null;
-        if (targetStage === STAGE.Study) lastCol = "last_study_subphase";
-        else if (targetStage === STAGE.Assembly) lastCol = "last_assembly_subphase";
-        else if (targetStage === STAGE.Manuscript) lastCol = "last_manuscript_subphase";
-        const crossStage = targetStage && targetStage !== currentStage;
-        if (crossStage && lastCol) {
-          dbRun(
-            `UPDATE sermons SET current_stage = ?, current_sub_phase = ?, ${lastCol} = ?, updated_at = datetime('now') WHERE id = ?`,
-            [targetStage, to, to, sermonId],
-          );
-        } else if (crossStage) {
-          dbRun(
-            `UPDATE sermons SET current_stage = ?, current_sub_phase = ?, updated_at = datetime('now') WHERE id = ?`,
-            [targetStage, to, sermonId],
-          );
-        } else if (lastCol) {
-          dbRun(
-            `UPDATE sermons SET current_sub_phase = ?, ${lastCol} = ?, updated_at = datetime('now') WHERE id = ?`,
-            [to, to, sermonId],
-          );
-        } else {
-          dbRun(
-            `UPDATE sermons SET current_sub_phase = ?, updated_at = datetime('now') WHERE id = ?`,
-            [to, sermonId],
-          );
-        }
-      } else {
-        return rejection(
-          "STATE_5_NONCANONICAL_TO",
-          "State #5",
-          `'to' must be a canonical Stage or SubPhase value (got '${to}').`,
-        );
-      }
-      return success();
-    }
+    // `case "transition-state"` (the vestigial position-writer handler) was
+    // removed in Track E4 (2026-07-03). It wrote current_stage / current_sub_phase /
+    // last_*_subphase but had no sender — the renderer stores position via
+    // `last_touched_position` (the update-sermon path). See the tombstone in
+    // src/core/spine.ts and tests/contracts/transition-state-no-caller.test.ts.
 
     case "apply-mutation": {
       const { kind, sermonId, field } = payload || {};
