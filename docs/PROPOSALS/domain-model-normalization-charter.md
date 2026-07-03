@@ -30,6 +30,13 @@ at approval time; the remaining citations were reproduced at HEAD by the verific
 - **Implementation: approved per-phase only.** Slice 1 (Phases 1 + 6 + 8) was approved and shipped
   2026-07-03 (see CHANGELOG). Phases 2, 3, 4, 5, and 7 still require separate sign-off before any
   code moves.
+- **Label-consolidation follow-on (Target 1 direction) shipped 2026-07-03**, after Slice 1 and under
+  the same owner ruling: **Vocabulary A** (`8d9b0cd`) — the seven per-sub-phase named-outcome labels
+  derive from `REGION_NAMED_OUTCOME` (Finish roll-up, Study→Anchor handoff, reference-pane
+  Body/Outline); **Vocabulary B — reference pane** (`09d796c`) — the MPT/MPS labels derive from
+  `MAIN_POINT_PAIR_FIELDS`. Both byte-identical and characterization-pinned. This completes the §4
+  "five label lists" evidence under Target 1 (`workspaceContract`); it is **not** the deferred
+  field-model seam (Target 2), which stays planning-only.
 - **Posture:** conservative in implementation, directional in architecture.
 - **Shape:** one seam at a time. **Phase 1 = Grammar Ownership & Boundary Parity.** No later seam
   opens without its own named evidence and approval.
@@ -197,6 +204,15 @@ canonical truth hand-copied across the ESM/CJS wall or into docs, without a pari
   enums/labels; `walkOrder.js` for walk-derived structure).
 - **Expansion trigger:** a ratified rename that requires editing more than the one owned source +
   its asserted mirrors.
+- **Shipped (post-Slice-1, 2026-07-03):** the five label lists are consolidated to their owners —
+  Vocabulary A (7 named-outcome labels → `REGION_NAMED_OUTCOME`, `8d9b0cd`) and Vocabulary B
+  reference-pane (MPT/MPS → `MAIN_POINT_PAIR_FIELDS`, `09d796c`), both byte-identical and pinned.
+  **Ruling (settled):** MPT/MPS are two intentional, context-specific families — the *prefixed*
+  workspace label ("MPT — Main Point of the Text"), owned by the field def, and the *bare*
+  Finish/export form ("Main Point of the Text"), a distinct vocabulary — and both are DISTINCT from
+  the Anchor named outcome "Main Point Pair" (`REGION_NAMED_OUTCOME.Anchor`); **never collapse** them.
+  The bare Finish/export forms + any structured owner stay **deferred** (CJS wall; not byte-identical;
+  a structured owner would be construction) until a §9 trigger fires.
 
 ### 6. `serialization` — Core seam (parity only)
 - **Why this class:** the export and search parity gaps are the same unasserted-mirror class as #1,

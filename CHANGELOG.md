@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-07-03 — docs: sync DMN charter — record Vocabulary A/B shipped + persist the Vocab B ruling
+
+- Record the Target-1 label-consolidation follow-on as **shipped** in the DMN charter (§1 Status + §6.1): Vocabulary A (named-outcome labels → `REGION_NAMED_OUTCOME`, `8d9b0cd`) and Vocabulary B reference-pane (MPT/MPS → `MAIN_POINT_PAIR_FIELDS`, `09d796c`), both byte-identical and characterization-pinned.
+- Persist the settled Vocab B ruling in §6.1: MPT/MPS are two intentional context-specific families, DISTINCT from the Anchor named outcome "Main Point Pair" — never collapse; bare Finish/export forms + any structured owner stay deferred until a §9 trigger fires.
+- Left the deferred field-model / completion / answer-writer / navigation seams (Targets 2–5) untouched — still planning-only; no code, behavior, schema, or pastor-facing copy changed.
+
+---
+
 ## 2026-07-03 — DMN Vocabulary B: reference-pane MPT/MPS labels derive from the field def
 
 - The reference pane's MPT/MPS section labels now derive from `MAIN_POINT_PAIR_FIELDS[…].label` (`src/utils/sadiAnchorFields.js`) instead of re-spelled string literals — the one clean subtraction in Vocabulary B (both surfaces were byte-identical, em-dash U+2014 included).
