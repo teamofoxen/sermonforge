@@ -164,7 +164,13 @@ export const FIRST_FIELD = WALK_ORDER[0];
 // (today: Implications → Anchor, the Study → Anchor handoff) return null —
 // the screen will carry the shift when it ships.
 
-const REGION_NAMED_OUTCOME = {
+// The canonical owner of per-sub-phase named-outcome labels. Exported so the
+// completeness roll-up (sermonState.deriveSermonCompleteness), the Study→Anchor
+// handoff outcome cards (STUDY_NAMED_OUTCOMES), and the reference pane derive
+// these strings from here rather than re-spelling them (DMN Phase 2, 2026-07-03).
+// The MPT/MPS labels ("Main Point of the Text/Sermon") are a DISTINCT, finer
+// vocabulary than the Anchor outcome "Main Point Pair" and are NOT owned here.
+export const REGION_NAMED_OUTCOME = {
   Observe: "Observation Set",
   Interpret: "Interpretation Set",
   RedemptiveThread: "Christ-Connection Statement",

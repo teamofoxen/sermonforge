@@ -25,7 +25,7 @@
 // removed 2026-07-02 (Track A).
 
 import { STAGE } from "../core/contracts";
-import { QUESTION_WALK_ORDER, WALK_ORDER, questionId } from "./walkOrder";
+import { QUESTION_WALK_ORDER, WALK_ORDER, REGION_NAMED_OUTCOME, questionId } from "./walkOrder";
 import { parseStructuredField, getQuestionAnswer, composeThoughtUnitBlocks } from "./studyFields";
 import {
   hasContent,
@@ -277,12 +277,17 @@ export function deriveQuestionStatesFromSermon(sermon) {
 // surfaces what's been written here. REQUIRED_OUTCOME_POSITIONS is used
 // to dedupe these out of the "Left behind" list (the outcomes section
 // surfaces them once, with their own go-write-it affordance).
-export const STUDY_NAMED_OUTCOMES = Object.freeze([
-  { label: "Observation Set",             stage: STAGE.Study, subPhase: "Observe",          fieldKey: "obvious_point",               questionKey: "primary" },
-  { label: "Interpretation Set",          stage: STAGE.Study, subPhase: "Interpret",        fieldKey: "interpretation_synthesis",    questionKey: "meaning_whole" },
-  { label: "Christ-Connection Statement", stage: STAGE.Study, subPhase: "RedemptiveThread", fieldKey: "christ_connection_statement", questionKey: "statement" },
-  { label: "Implications Synthesis",      stage: STAGE.Study, subPhase: "Implications",     fieldKey: "implications_synthesis",      questionKey: "synthesis" },
-]);
+// Labels derive from REGION_NAMED_OUTCOME (the canonical owner) — not re-spelled
+// (DMN Phase 2, 2026-07-03). Byte-identical to the prior literals; a rename in
+// walkOrder.js now propagates here instead of silently diverging.
+export const STUDY_NAMED_OUTCOMES = Object.freeze(
+  [
+    { stage: STAGE.Study, subPhase: "Observe",          fieldKey: "obvious_point",               questionKey: "primary" },
+    { stage: STAGE.Study, subPhase: "Interpret",        fieldKey: "interpretation_synthesis",    questionKey: "meaning_whole" },
+    { stage: STAGE.Study, subPhase: "RedemptiveThread", fieldKey: "christ_connection_statement", questionKey: "statement" },
+    { stage: STAGE.Study, subPhase: "Implications",     fieldKey: "implications_synthesis",      questionKey: "synthesis" },
+  ].map((o) => ({ label: REGION_NAMED_OUTCOME[o.subPhase], ...o })),
+);
 
 const REQUIRED_OUTCOME_POSITIONS = new Set(
   STUDY_NAMED_OUTCOMES.map((o) => `${o.fieldKey}/${o.questionKey}`)
@@ -388,17 +393,22 @@ export function deriveSermonCompleteness(sermon) {
     ? null
     : "Write the Obvious Point — the plain-sense point of the passage.";
 
+  // Vocabulary-A labels derive from REGION_NAMED_OUTCOME (the canonical owner) —
+  // not re-spelled (DMN Phase 2, 2026-07-03); byte-identical to the prior
+  // literals. MPT/MPS keep their own labels: "Main Point of the Text/Sermon" is a
+  // DISTINCT, finer vocabulary than the Anchor outcome "Main Point Pair" (the two
+  // Main Points are separately-completable artifacts), deferred as Vocabulary B.
   const artifacts = [
-    { key: "observation_set",        label: "Observation Set",             reason: observationSetReason,                 jump: { stage: STAGE.Study, subPhase: "Observe", fieldKey: "obvious_point" } },
-    { key: "interpretation_set",     label: "Interpretation Set",          reason: checkField8Composite(sermon),         jump: { stage: STAGE.Study, subPhase: "Interpret", fieldKey: "interpretation_synthesis" } },
-    { key: "christ_connection",      label: "Christ-Connection Statement", reason: checkField5Composite(sermon),         jump: { stage: STAGE.Study, subPhase: "RedemptiveThread", fieldKey: "christ_connection_statement" } },
-    { key: "implications_synthesis", label: "Implications Synthesis",      reason: checkPhase4Field4Composite(sermon),   jump: { stage: STAGE.Study, subPhase: "Implications", fieldKey: "implications_synthesis" } },
-    { key: "mpt",                    label: "Main Point of the Text",      reason: checkMPTComposite(mppData),           jump: { stage: STAGE.Assembly, subPhase: "Anchor", fieldKey: "mpt" } },
-    { key: "mps",                    label: "Main Point of the Sermon",    reason: checkMPSComposite(mppData),           jump: { stage: STAGE.Assembly, subPhase: "Anchor", fieldKey: "mps" } },
+    { key: "observation_set",        label: REGION_NAMED_OUTCOME.Observe,          reason: observationSetReason,                 jump: { stage: STAGE.Study, subPhase: "Observe", fieldKey: "obvious_point" } },
+    { key: "interpretation_set",     label: REGION_NAMED_OUTCOME.Interpret,        reason: checkField8Composite(sermon),         jump: { stage: STAGE.Study, subPhase: "Interpret", fieldKey: "interpretation_synthesis" } },
+    { key: "christ_connection",      label: REGION_NAMED_OUTCOME.RedemptiveThread, reason: checkField5Composite(sermon),         jump: { stage: STAGE.Study, subPhase: "RedemptiveThread", fieldKey: "christ_connection_statement" } },
+    { key: "implications_synthesis", label: REGION_NAMED_OUTCOME.Implications,     reason: checkPhase4Field4Composite(sermon),   jump: { stage: STAGE.Study, subPhase: "Implications", fieldKey: "implications_synthesis" } },
+    { key: "mpt",                    label: "Main Point of the Text",              reason: checkMPTComposite(mppData),           jump: { stage: STAGE.Assembly, subPhase: "Anchor", fieldKey: "mpt" } },
+    { key: "mps",                    label: "Main Point of the Sermon",            reason: checkMPSComposite(mppData),           jump: { stage: STAGE.Assembly, subPhase: "Anchor", fieldKey: "mps" } },
     // eslint-disable-next-line sermonforge/canonical-stage-name -- field key, not a stage status
-    { key: "outline",                label: "Sermon Outline",              reason: outlineReason,                        jump: { stage: STAGE.Assembly, subPhase: "Outline", fieldKey: "outline" } },
-    { key: "body",                   label: "Sermon Body",                 reason: bodyReason,                           jump: { stage: STAGE.Manuscript, subPhase: "Body", fieldKey: "equip" } },
-    { key: "manuscript",             label: "Manuscript",                  reason: manuscriptReason,                     jump: { stage: STAGE.Manuscript, subPhase: "IntroTransitionsConclusion", fieldKey: "introduction" } },
+    { key: "outline",                label: REGION_NAMED_OUTCOME.Outline,          reason: outlineReason,                        jump: { stage: STAGE.Assembly, subPhase: "Outline", fieldKey: "outline" } },
+    { key: "body",                   label: REGION_NAMED_OUTCOME.Body,             reason: bodyReason,                           jump: { stage: STAGE.Manuscript, subPhase: "Body", fieldKey: "equip" } },
+    { key: "manuscript",             label: REGION_NAMED_OUTCOME.IntroTransitionsConclusion, reason: manuscriptReason,           jump: { stage: STAGE.Manuscript, subPhase: "IntroTransitionsConclusion", fieldKey: "introduction" } },
   ].map((a) => ({ ...a, complete: a.reason == null }));
 
   return { artifacts, allComplete: artifacts.every((a) => a.complete) };

@@ -4,6 +4,7 @@ import { usePassageRecovery } from "./EsvRecovery";
 import { TextButton } from "./primitives/TextButton";
 import IconButton from "./primitives/IconButton";
 import { bodyHasSubstance } from "../utils";
+import { REGION_NAMED_OUTCOME } from "../utils/walkOrder";
 import "./referencePane.css";
 
 // ReferencePane — "a Bible open beside the notepad."
@@ -106,7 +107,7 @@ function BodyRefItem({ points, functionalElements, onJump, defaultOpen = true })
   const jump = { stage: "Manuscript", subPhase: "Body", fieldKey: "equip" };
   return (
     <RefSection
-      label="Sermon Body"
+      label={REGION_NAMED_OUTCOME.Body}
       defaultOpen={defaultOpen}
       jump={jump}
       onJump={onJump}
@@ -142,7 +143,7 @@ function OutlineRefItem({ points, onJump, defaultOpen = true }) {
   const jump = { stage: "Assembly", subPhase: "Outline", fieldKey: "outline" };
   return (
     <RefSection
-      label="Sermon Outline"
+      label={REGION_NAMED_OUTCOME.Outline}
       defaultOpen={defaultOpen}
       jump={jump}
       onJump={onJump}

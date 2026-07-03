@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-07-03 — Domain Model Normalization Phase 2: Vocabulary A label consolidation
+
+- The seven per-sub-phase named-outcome labels now **derive from `REGION_NAMED_OUTCOME`** (`src/utils/walkOrder.js`, now exported as the canonical owner) instead of re-spelled string literals — `STUDY_NAMED_OUTCOMES` and the Study/Outline/Body/Manuscript artifact labels in `deriveSermonCompleteness` (`src/utils/sermonState.js`), plus the Sermon Body / Sermon Outline sections in `ReferencePane.jsx`.
+- **MPT/MPS labels (Vocabulary B)** — "Main Point of the Text/Sermon", a finer vocabulary distinct from the Anchor outcome "Main Point Pair" — remain **deferred** to a separate future decision; left untouched.
+- **Byte-identical:** exact-string characterization pins (the 9 Finish labels + 4 Study→Anchor handoff labels) stay green, and the pre-existing completion-consistency label assertions pass unchanged. No pastor-facing copy or behavior changed.
+- New `named-outcome-label-consolidation.test.ts` pins the current labels and asserts each Vocabulary-A consumer equals `REGION_NAMED_OUTCOME[subPhase]`. Suite 364 → 371, lint 0, spine-integrity OK, drift-check PASS.
+
+---
+
 ## 2026-07-03 — Domain Model Normalization Slice 1: grammar ownership + boundary parity
 
 - **Grammar ownership:** deleted the dead `SUB_PHASE_LABELS` map from `src/core/contracts.ts` — zero consumers, a stale source-of-truth claim inside the file that declares itself SSoT "for every label." `src/utils/walkOrder.js` `REGION_DISPLAY` is the live owner (SermonMap + SermonWritingSurface); `STAGE_LABELS` stays (it IS live). Replaced with a pointer comment; no label wording changed.
