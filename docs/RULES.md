@@ -48,6 +48,30 @@
 
 ---
 
+## Verification cadence
+
+Two layers run when you close a session. Keep them distinct — the first is automatic and
+identical every time; the second is your call, codified here so it stops being ad hoc (which
+is what makes the close *feel* inconsistent).
+
+**Automatic — fires the same way every time, nothing to decide:**
+- Every `electron/*.js` save → `node --check` (PostToolUse hook).
+- Every commit → `scripts/spine-integrity.js` + `lint-staged` (eslint on staged files), via the husky pre-commit hook.
+- Every `/end-session` → `scripts/preflight.sh` (clean-tree, drift-check, sweep-trigger + staging advisories).
+- Every push to `main` → CI reruns `npm test`.
+
+**Discretionary — you decide:**
+- `npm test` (full suite, ~13s) — run when the change is logic-bearing (components, IPC
+  handlers, the spine, contracts, migrations). Skip it for pure copy/doc/style edits; CI is
+  the backstop on push.
+- `npm run lint` (full repo) — do not run routinely. `lint-staged` already lints staged files
+  at commit; reserve the full-repo pass for a deliberate lint cleanup.
+- `/sweep-the-house` — run when the diff touches the sweep-trigger paths. The authoritative
+  list lives in `scripts/preflight.sh` (do not duplicate it); preflight prints an advisory
+  when the diff hits one. If it fires and you have not swept this session, sweep before `/end-session`.
+
+---
+
 ## Guardrails
 
 ### Boundaries

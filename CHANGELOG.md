@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-07-03 — perf: drift-check 54s→4s, restore its non-gating checks, codify verification cadence
+
+- Drift-check ran 54s because C1/C2 forked a subprocess per markdown link (Windows spawn tax); de-spawned to one grep pass + pure-bash matching (→4s), added `docs/AUDITS/` to the skip list (sole false-positive source), removed the dead python3 no-op.
+- Fixed a subshell bug that left C1/C2/C4 unable to fail (FAIL flags set inside a piped `while`); they now gate on real broken links/paths/IPC-refs as originally intended — tree passes clean.
+- Deleted C5 and C6: decoration that gated nothing (C6 could not fail; C5 was a soft WARN).
+- Unbackticked a deleted file (`sermonFrameFields.js`) in `docs/ENFORCEMENT_STATUS.md` — the one real drift the fixed check surfaced.
+- Codified when `npm test` / `npm run lint` / `/sweep-the-house` run in `docs/RULES.md` → "Verification cadence".
+
+---
+
 ## 2026-07-03 — docs: sync DMN charter — record Vocabulary A/B shipped + persist the Vocab B ruling
 
 - Record the Target-1 label-consolidation follow-on as **shipped** in the DMN charter (§1 Status + §6.1): Vocabulary A (named-outcome labels → `REGION_NAMED_OUTCOME`, `8d9b0cd`) and Vocabulary B reference-pane (MPT/MPS → `MAIN_POINT_PAIR_FIELDS`, `09d796c`), both byte-identical and characterization-pinned.
