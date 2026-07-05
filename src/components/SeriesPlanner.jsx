@@ -110,9 +110,15 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
   const [drafts, setDrafts] = useState([]);
   const [draftErrors, setDraftErrors] = useState({});
   const [expandedSermons, setExpandedSermons] = useState(() => new Set());
-  // The last failed save's mutation thunk, so the topbar Retry re-runs the real
-  // write instead of an empty no-op.
-  const lastFailedRef = useRef(null);
+  // Queue of failed RETRYABLE writes (idempotent field edits — updateSeries/
+  // Section/Sermon) so the topbar Retry re-runs the real writes. A QUEUE, not a
+  // single slot: a single slot lost an earlier failed edit whenever a later,
+  // unrelated save succeeded (which also flipped the indicator back to "Saved"),
+  // silently dropping the pastor's work (Mutation #3). Structural mutations
+  // (create/delete/move/bulk) are NEVER queued — re-running them would duplicate
+  // a create or desync a locally-reconciled delete; they surface failure via
+  // saveError and roll back their own optimistic state.
+  const failedWritesRef = useRef([]);
 
   useEffect(() => {
     if (_fixture) return; // preview fixture — no DB reads
@@ -182,17 +188,22 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
   // One save path for every planner write — series, section, and sermon — so the
   // topbar Saving/Saved/Save-failed indicator reflects them all and no write is
   // silent. runSave remembers the failed thunk so Retry re-runs the real write.
-  const runSave = useCallback(async (doMutation) => {
+  const runSave = useCallback(async (doMutation, { retryable = true } = {}) => {
     if (_fixture) return true; // preview fixture — no DB writes
     setSaving(true);
-    setSaveError(false);
     try {
       await doMutation();
-      lastFailedRef.current = null;
+      // A success NEVER clears a still-pending failed write — only draining the
+      // queue (Retry) flips the indicator back to "Saved". Otherwise an unrelated
+      // success masks (and strands) an earlier failed edit.
+      setSaveError(failedWritesRef.current.length > 0);
       return true;
     } catch (e) {
       console.error("[SeriesPlanner save]", e);
-      lastFailedRef.current = doMutation;
+      // Only idempotent field writes are safe for topbar Retry to replay.
+      // Structural mutations (retryable:false) surface the error but reconcile
+      // their own optimistic state; re-running them would duplicate/desync.
+      if (retryable) failedWritesRef.current.push(doMutation);
       setSaveError(true);
       return false;
     } finally {
@@ -300,8 +311,22 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
     syncSeriesEndDate(sermons.map((s) => (s.id === id ? { ...s, date } : s)));
   }, [handleSermonField, syncSeriesEndDate, sermons]);
 
-  function retryLastSave() {
-    if (lastFailedRef.current) runSave(lastFailedRef.current);
+  // Drain the failed-write queue. Each entry is an idempotent field write, safe
+  // to replay; one that fails again is re-queued so the pastor can retry once
+  // more. The indicator reflects only what remains unsaved.
+  async function retryLastSave() {
+    const pending = failedWritesRef.current;
+    if (pending.length === 0) return;
+    failedWritesRef.current = [];
+    setSaving(true);
+    const stillFailed = [];
+    for (const thunk of pending) {
+      try { await thunk(); }
+      catch (e) { console.error("[SeriesPlanner retry]", e); stillFailed.push(thunk); }
+    }
+    failedWritesRef.current = stillFailed;
+    setSaving(false);
+    setSaveError(stillFailed.length > 0);
   }
 
   // A load failure (throw, or a series id that no longer resolves) gets its own
@@ -655,7 +680,7 @@ function OutlineTab({
         setCollapsedSections((prev) => { const n = new Set(prev); n.delete(result.id); return n; });
         setJustCreatedSectionId(result.id);
       }
-    });
+    }, { retryable: false }); // create thunk — never queue for topbar Retry (would duplicate the section)
   }
   async function deleteSectionRow(id) {
     // Mirror the server (no section-less limbo): the deleted section's sermons
@@ -670,7 +695,7 @@ function OutlineTab({
     } else {
       onSermonsChange((prev) => prev.filter((s) => s.section_id !== id));
     }
-    const ok = await runSave(() => deleteSection(id));
+    const ok = await runSave(() => deleteSection(id), { retryable: false });
     if (!ok) {
       const [secs, serms] = await Promise.all([getSectionsBySeries(seriesId), getSermonsBySeries(seriesId)]);
       onSectionsChange(secs);
@@ -688,7 +713,7 @@ function OutlineTab({
     const reordered = [...sections];
     [reordered[idx], reordered[newIdx]] = [reordered[newIdx], reordered[idx]];
     onSectionsChange(reordered);
-    const ok = await runSave(() => Promise.all(reordered.map((s, i) => updateSection(s.id, { sort_order: i }))));
+    const ok = await runSave(() => Promise.all(reordered.map((s, i) => updateSection(s.id, { sort_order: i }))), { retryable: false });
     if (!ok) onSectionsChange(await getSectionsBySeries(seriesId));
   }
 
@@ -706,7 +731,7 @@ function OutlineTab({
     [reordered[idx], reordered[newIdx]] = [reordered[newIdx], reordered[idx]];
     const withOrder = reordered.map((s, i) => ({ ...s, sort_order: i }));
     onSermonsChange(withOrder);
-    const ok = await runSave(() => Promise.all(withOrder.map((s) => updateSermon(s.id, { sort_order: s.sort_order }))));
+    const ok = await runSave(() => Promise.all(withOrder.map((s) => updateSermon(s.id, { sort_order: s.sort_order }))), { retryable: false });
     if (!ok) onSermonsChange(await getSermonsBySeries(seriesId));
   }
 
@@ -754,7 +779,6 @@ function OutlineTab({
         // book_id rides the same create-then-update follow-up (the create-sermon
         // INSERT is never widened) — a topical draft may carry a picked book.
         if (latest.book_id) followUp.book_id = latest.book_id;
-        if (Object.keys(followUp).length) await updateSermon(newId, followUp);
         const realSlot = {
           id: newId, series_id: draft.series_id, section_id: draft.section_id,
           title: name, passage: latest.passage || "", date: latest.date || "",
@@ -762,8 +786,16 @@ function OutlineTab({
           big_idea: latest.big_idea || "", overview: latest.overview || "",
           stage: SERMON_STATUS.InProgress,
         };
+        // The sermon row is COMMITTED — promote the draft to it now. The follow-up
+        // fields are an idempotent field write on an existing row, so route it
+        // through the retryable save path rather than awaiting it here. Awaiting
+        // let a failed follow-up throw to the catch below, which left the draft in
+        // place under a misleading "could not create" error — and re-committing
+        // created a SECOND sermon. Now a follow-up failure is a visible, retryable
+        // field save on the real row; the create is never re-run.
         onSermonsChange((prev) => [...prev, realSlot]);
         setDrafts((prev) => prev.filter((d) => d.id !== draftId));
+        if (Object.keys(followUp).length) runSave(() => updateSermon(newId, followUp));
         // Carry the expanded state from the draft row to the committed row.
         setExpandedSermons((prev) => {
           const n = new Set(prev); n.delete(draftId); n.add(newId); return n;
@@ -794,10 +826,17 @@ function OutlineTab({
   async function removeSermonRow(id) {
     if (isDraftId(id)) { setDrafts((prev) => prev.filter((s) => s.id !== id)); clearDraftError(id); return; }
     onSermonsChange((prev) => prev.filter((s) => s.id !== id));
-    const ok = await runSave(() => deleteSermon(id));
+    const ok = await runSave(() => deleteSermon(id), { retryable: false });
+    if (!ok) {
+      // The delete failed but the row was optimistically removed — reload so the
+      // "deleted" sermon doesn't silently reappear on the next load (it never
+      // left the DB). Mirrors deleteSectionRow's rollback.
+      onSermonsChange(await getSermonsBySeries(seriesId));
+      return;
+    }
     // end_date mirrors the LAST dated sermon — recompute once this one is gone, or
     // deleting the latest-dated sermon strands a phantom end date on the booklet/Arc.
-    if (ok) onSyncEndDate(sermons.filter((s) => s.id !== id));
+    onSyncEndDate(sermons.filter((s) => s.id !== id));
   }
 
   // Group committed sermons + drafts by section. Drafts merge in so they render
@@ -1477,7 +1516,15 @@ function ScheduleTab({ series, sermons, calNotes, onSeriesField, onSermonDate, o
     const fillById = new Map(undated.map((s, i) => [s.id, fill[i]]));
     const dated = sermons.map((s) => (fillById.has(s.id) ? { ...s, date: fillById.get(s.id) } : s));
     onSermonsChange(dated);
-    await runSave(() => Promise.all(undated.map((s, i) => updateSermon(s.id, { date: fill[i] }))));
+    const ok = await runSave(() => Promise.all(undated.map((s, i) => updateSermon(s.id, { date: fill[i] }))), { retryable: false });
+    if (!ok) {
+      // The bulk date write failed — roll the optimistic dates back to DB truth
+      // rather than leaving every sermon showing a date (and mirroring a new
+      // end_date) that never persisted (false success / stale UI). Mirrors moveSermon.
+      onSermonsChange(await getSermonsBySeries(series.id));
+      setSuggesting(false);
+      return;
+    }
     onSyncEndDate(dated);
     setSuggesting(false);
   }
@@ -1680,7 +1727,13 @@ function StudyGuideTab({ series, sections, sermons, seriesId, onSermonExtras, on
     setExporting(true);
     setExportResult(null);
     try {
-      await runRegisteredFlushes(); // flush any pending Outline edits first
+      const { ok } = await runRegisteredFlushes(); // flush any pending Outline edits first
+      if (!ok) {
+        // A pending edit failed to persist — exporting now would bake a stale,
+        // out-of-date booklet while reporting success. Stop and say so instead.
+        setExportResult({ ok: false, error: "Couldn't save your latest edits, so the export was stopped to avoid an out-of-date booklet. Please try again in a moment." });
+        return;
+      }
       const result = await exportStudyGuide(series.id);
       setExportResult(result.success ? { ok: true, filepath: result.filepath } : { ok: false, error: result.error || "Export failed" });
     } catch (e) {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { createSeries, updateSeries } from "../core/spine";
 import { bookById, bookSpan } from "../data/canonicalBooks";
 import BookSelect from "./BookSelect";
@@ -29,6 +29,10 @@ export default function NewSeriesModal({ onClose, onCreated }) {
   const [year, setYear] = useState(new Date().getFullYear());
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  // When a topical create commits but its kind/theme follow-up fails, the series
+  // row already exists — remember its id so a retry UPDATES it (never a second
+  // createSeries → duplicate series). Cleared once the follow-up confirms.
+  const createdIdRef = useRef(null);
 
   // Escape + focus trap + focus restore; respects the active mode's autoFocus
   // (the book select in book mode, the theme input in topical mode).
@@ -45,20 +49,28 @@ export default function NewSeriesModal({ onClose, onCreated }) {
       setSaving(true);
       setError(null);
       try {
-        const result = await createSeries({
-          name,
-          year: Number(year) || new Date().getFullYear(),
-        });
+        // A prior attempt may have created the series but failed the kind write —
+        // reuse that id so this retry updates it instead of creating a duplicate.
+        let newId = createdIdRef.current;
+        if (!newId) {
+          const result = await createSeries({
+            name,
+            year: Number(year) || new Date().getFullYear(),
+          });
+          newId = result.id;
+          createdIdRef.current = newId;
+        }
         // create-then-update: the INSERT stays name/year/color. kind marks the
         // topical mode; the theme is also the series' Big Idea, so seed big_idea
-        // with it so the Study Guide introduction projects it. A failed write
-        // leaves the default kind='book' — recoverable, not a stranded series.
-        try {
-          await updateSeries(result.id, { kind: "topical", big_idea: name });
-        } catch (kindErr) {
-          console.error("topical series kind/theme write failed (recoverable on the planner):", kindErr);
-        }
-        onCreated(result.id);
+        // with it so the Study Guide introduction projects it. This write is
+        // LOAD-BEARING, not "recoverable metadata": nothing on the planner can
+        // convert a book series to topical, so a swallowed failure would strand
+        // the pastor with a book-mode series reported as success. Let it fail
+        // loudly — surface the error and DON'T navigate; the createdIdRef above
+        // makes the retry idempotent.
+        await updateSeries(newId, { kind: "topical", big_idea: name });
+        createdIdRef.current = null;
+        onCreated(newId);
       } catch (e) {
         console.error(e);
         setError(mapError(e, "create"));
