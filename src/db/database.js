@@ -97,8 +97,8 @@ export const getAppVersion    = () => api.getAppVersion();
 // ── Close-time edit flush ─────────────────────────────────────────────────────
 // main asks the renderer to flush debounced edits before close/quit; the
 // renderer acks with the nonce. See src/utils/closeFlush.js for the registry.
-export const onFlushEdits   = (callback) => api.onFlushEdits(callback);
-export const flushEditsDone = (nonce)    => api.flushEditsDone(nonce);
+export const onFlushEdits   = (callback)   => api.onFlushEdits(callback);
+export const flushEditsDone = (nonce, ok)  => api.flushEditsDone(nonce, ok);
 
 // ── Startup warnings ──────────────────────────────────────────────────────────
 export const getStartupWarning = ()        => api.getStartupWarning();

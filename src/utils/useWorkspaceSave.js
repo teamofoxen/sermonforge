@@ -33,13 +33,20 @@ export function useWorkspaceSave({ sermonId, sermonRef, setSermon, isFixture }) 
   const persistUpdate = useCallback(
     async () => {
       const data = sermonRef.current;
-      if (!data) return;
-      if (isFixture) return; // fixture mode — no writes
+      if (!data) return true;          // nothing to persist = success
+      if (isFixture) return true;      // fixture mode — no writes
       const payload = pickSermonColumns(data);
-      if (!payload || Object.keys(payload).length === 0) return;
-      await persistMutation(setSaveState, async () => {
+      if (!payload || Object.keys(payload).length === 0) return true;
+      // persistMutation swallows the write error into saveState (so the save
+      // chip can show it) and returns undefined on failure, the sentinel on
+      // success. Return an explicit boolean so the close-flush registry can tell
+      // a failed exit-flush from a successful one and block the close (Mutation
+      // #3), instead of the failure vanishing behind Promise.allSettled.
+      const result = await persistMutation(setSaveState, async () => {
         await updateSermon(sermonId, payload);
+        return true;
       });
+      return result === true;
     },
     [sermonId, isFixture, sermonRef]
   );

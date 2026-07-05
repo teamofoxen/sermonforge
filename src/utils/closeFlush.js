@@ -21,17 +21,19 @@ export function registerFlush(fn) {
   return () => flushers.delete(fn);
 }
 
-// Run every registered flusher. Never rejects — close paths must proceed
-// whether or not a flush succeeded (failures are main's flushDb problem to
-// report, not a reason to trap the window).
-export function runRegisteredFlushes() {
-  return Promise.allSettled(
-    [...flushers].map((fn) => {
-      try {
-        return Promise.resolve(fn());
-      } catch (e) {
-        return Promise.reject(e);
-      }
-    })
+// Run every registered flusher and report whether they all SUCCEEDED. Never
+// rejects (close paths must always be able to proceed), but it no longer hides
+// failure: a flusher that rejects, or that resolves `false` to signal a failed
+// write (see useWorkspaceSave's persistUpdate), makes `ok` false. The caller
+// carries `ok` through the close ack so main can block/prompt instead of
+// silently dropping the pastor's last edits (Mutation #3 — failed saves are
+// visible and retryable, never silent). Flushers that resolve any non-`false`
+// value (including undefined) count as success — only an explicit failure gates
+// the close.
+export async function runRegisteredFlushes() {
+  const results = await Promise.allSettled(
+    [...flushers].map((fn) => Promise.resolve().then(fn))
   );
+  const ok = results.every((r) => r.status === "fulfilled" && r.value !== false);
+  return { ok };
 }

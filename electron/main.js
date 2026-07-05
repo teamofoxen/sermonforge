@@ -1603,34 +1603,37 @@ function buildFtsQuery(userQuery) {
 // Before the window closes or the app quits, ask the renderer to flush and
 // await its ack — bounded by a hard timeout so a hung renderer can never make
 // the window unclosable. Ask/ack over "app-flush-edits"(nonce) /
-// "app-flush-edits-done"(nonce); the renderer side lives in src/App.jsx +
-// src/utils/closeFlush.js. Resolves true when the renderer acked, false on
-// timeout / dead window — callers proceed either way.
+// "app-flush-edits-done"(nonce, ok); the renderer side lives in src/App.jsx +
+// src/utils/closeFlush.js. Resolves "ok" when the renderer acked with every
+// flush saved, "failed" when it acked but a flush WRITE failed (the caller
+// should block/prompt rather than close over lost edits — Mutation #3), and
+// "unknown" on timeout / dead window / send failure (proceed; we can't
+// determine, and the window must stay closable).
 let _flushNonce = 0;
 function flushRendererEdits(win, timeoutMs = 2000) {
   return new Promise((resolve) => {
-    if (!win || win.isDestroyed() || win.webContents.isDestroyed()) return resolve(false);
+    if (!win || win.isDestroyed() || win.webContents.isDestroyed()) return resolve("unknown");
     const nonce = String(++_flushNonce);
     let settled = false;
     let timer = null;
-    const onDone = (_e, ackNonce) => { if (ackNonce === nonce) finish(true); };
-    const finish = (ok) => {
+    const onDone = (_e, ackNonce, ok) => { if (ackNonce === nonce) finish(ok === false ? "failed" : "ok"); };
+    const finish = (result) => {
       if (settled) return;
       settled = true;
       clearTimeout(timer);
       ipcMain.removeListener("app-flush-edits-done", onDone);
-      resolve(ok);
+      resolve(result);
     };
     timer = setTimeout(() => {
       logError(`[close-flush] renderer ack timed out after ${timeoutMs}ms`);
-      finish(false);
+      finish("unknown");
     }, timeoutMs);
     ipcMain.on("app-flush-edits-done", onDone);
     try {
       win.webContents.send("app-flush-edits", nonce);
     } catch (err) {
       logError("[close-flush] send failed", err);
-      finish(false);
+      finish("unknown");
     }
   });
 }
@@ -1718,7 +1721,32 @@ function createWindow() {
   mainWindow.on("close", (e) => {
     if (_closeFlushed || _isQuitting) return;
     e.preventDefault();
-    flushRendererEdits(mainWindow).finally(() => {
+    flushRendererEdits(mainWindow).then((result) => {
+      // A flush WRITE failed. Closing now would silently drop the pastor's last
+      // edits (Mutation #3 — failed saves are visible and retryable, never
+      // silent). Ask before losing work; "Close anyway" keeps the window
+      // closable so a genuine failure can never trap the user. Only "failed" (an
+      // acked-but-failed write) prompts — a "unknown" timeout still closes, as
+      // before, to avoid trapping the window behind a hung renderer.
+      if (result === "failed" && mainWindow && !mainWindow.isDestroyed()) {
+        const choice = dialog.showMessageBoxSync(mainWindow, {
+          type: "warning",
+          buttons: ["Keep working", "Close anyway"],
+          defaultId: 0,
+          cancelId: 0,
+          noLink: true,
+          title: "Your last changes didn't save",
+          message: "SermonForge couldn't save your most recent edits.",
+          detail: "If you close now, those edits will be lost. Choose “Keep working” to stay and try again — the save indicator in the corner will keep retrying.",
+        });
+        if (choice === 0) return; // stay open; a later close re-runs the flush
+      }
+      _closeFlushed = true;
+      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.close();
+    }).catch((err) => {
+      // flushRendererEdits never rejects, but never let an unexpected throw make
+      // the window unclosable — force the close through.
+      logError("[close-flush] close handler threw; closing anyway", err);
       _closeFlushed = true;
       if (mainWindow && !mainWindow.isDestroyed()) mainWindow.close();
     });

@@ -104,7 +104,10 @@ function AppInner() {
   // (Electron treats that as cancel-the-close).
   useEffect(() => {
     const unsubscribe = onFlushEdits(async (nonce) => {
-      try { await runRegisteredFlushes(); } finally { flushEditsDone(nonce); }
+      let ok = true;
+      try { ({ ok } = await runRegisteredFlushes()); }
+      catch { ok = false; }
+      finally { flushEditsDone(nonce, ok); }
     });
     const onBeforeUnload = () => { runRegisteredFlushes(); };
     window.addEventListener("beforeunload", onBeforeUnload);

@@ -121,7 +121,15 @@ export default function PassageCanvas({ rows, onChange, seedVerses, rowIdsWithWo
       const verse = r.verse == null ? "" : String(r.verse).trim();
       return text !== "" || verse !== "";
     });
-  const safeRows = hasContent ? rows : seedRows;
+  // Re-seeding a blank canvas swaps in fresh-UUID rows — the intended "start the
+  // field over" affordance. But those new ids would ORPHAN any downstream
+  // Meaning/Christ-Connection/Implication work, which is keyed by canvas row id.
+  // If any current row carries such work (rowIdsWithWork), keep the existing rows
+  // so their ids stay stable even when every line has been emptied — the
+  // "emptied-but-still-present row is auto-preserved" contract this canvas is
+  // meant to honor. Re-seed only when there is genuinely nothing to strand.
+  const hasAnchoredWork = Array.isArray(rows) && rows.some((r) => r && rowIdsWithWork.has(r.id));
+  const safeRows = (hasContent || hasAnchoredWork) ? rows : seedRows;
   const refs = useRef(new Map());
   const focusNextRef = useRef(null);
   // One transient hint slot — any silent refusal (blocked paste, indent
@@ -292,6 +300,24 @@ export default function PassageCanvas({ rows, onChange, seedVerses, rowIdsWithWo
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         const pos = el.selectionStart;
+        // Enter at the very start of a line must NOT move the row's whole text
+        // onto a fresh id — that strands any Meaning/Christ-Connection/
+        // Implication work keyed to THIS row.id on the now-empty original while
+        // the text (carrying no work) moves to a new id. Insert a blank row
+        // ABOVE instead: the existing row keeps its id, its text, its verse, and
+        // its downstream work. (Matches a plain textarea — Enter at offset 0
+        // opens a blank line above and the caret stays with the text.)
+        if (pos === 0) {
+          const blankAbove = { id: newId(), text: "", depth: row.depth };
+          const next = [
+            ...safeRows.slice(0, idx),
+            blankAbove,
+            row,
+            ...safeRows.slice(idx + 1),
+          ];
+          setRows(next, { id: row.id, pos: 0 });
+          return;
+        }
         const before = row.text.slice(0, pos);
         const after = row.text.slice(pos);
         const newRow = { id: newId(), text: after, depth: row.depth };
