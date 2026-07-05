@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-07-05 — Correctness-audit remediation: 23 findings fixed, 11 phantoms evidenced
+
+- Remediated the correctness/robustness audit on `fix/correctness-audit-remediation` (7 commits): 23 confirmed findings fixed, 11 flagged findings evidenced as phantoms (left unchanged with proof), 2 explicitly deferred (a dead defensive guard + a pastor policy ruling). Full report: `docs/AUDITS/correctness-audit-remediation-2026-07-05.md`.
+- **Tier-1 whole-library (main.js/dbMigration.js):** v22 `sermon_search` DDL now derived from `SERMON_SEARCH_COLUMNS` (a hardcoded mirror missing `functional_elements` boot-locked any pre-v22 library with rows); damaged `.bak` preserved before the boot copy; WAL/SHM sidecars quarantined/cleared during recovery; non-numeric `schema_version` throws+rolls back instead of resetting to 0; legacy resolver retries transient locks and withholds its one-shot marker when a candidate was locked (was orphaning the real library).
+- **Save-failure visibility (Mutation #3):** exit-flush surfaces failure and the window-close prompts instead of dropping the last edits; SeriesPlanner retry queue is keyed per target+field (no masking, no stale-write supersession); rollbacks on failed delete/bulk-date; export refuses stale data after a failed pre-flush; topical series-create gates navigation; SermonList shows a real load error instead of a false empty.
+- **Render/order correctness:** PassageCanvas preserves row-id/downstream-work on empty + Enter-at-line-start, and stops truncating 7+ char verse labels; Preached-view export re-fetches the full sermon (not the thin search row) and reopen leaves the search list; Dashboard workspace-undo re-adds the restored sermon; stale `last_touched_position` self-heals; topical Outline shows the pastor's arrangement (sort_order), date-independent.
+- Verification: 64 files / 408 tests green (12 new/expanded regression surfaces, each failing on pre-fix code where the harness can exercise the path); `/sweep-the-house` PASS (all touched contracts strengthened); every commit passed spine-integrity + lint-staged. Boot-path fixes verified by reasoning + `node --check` + source guards (main.js isn't require-able in the harness) — a build-and-run smoke test is recommended before release.
+
+---
+
 ## 2026-07-04 — Monthly multiverse audit: system healthy; audit skill de-ghosted; State #4 N-of-M
 
 - First comprehensive `/sweep-the-multiverse` since 2026-05-04 (267-commit delta) via 6 inspection agents + adversarial verify — the live surface (DB/schema/IPC/export/search/telemetry/workspace) all PASS; report at `docs/AUDITS/multiverse-sweep-2026-07-04.md`.
