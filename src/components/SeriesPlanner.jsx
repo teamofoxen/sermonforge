@@ -1317,7 +1317,10 @@ function SermonNode({ sermon: p, expanded, onToggle, onField, onCommit, onDelete
   useEffect(() => {
     if (p._draft) {
       rowRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
-      titleRef.current?.focus();
+      // preventScroll: focus()'s default synchronous scroll otherwise fights the
+      // queued smooth scrollIntoView above, so a draft added far below the fold
+      // wasn't reliably centered (audit finding 34).
+      titleRef.current?.focus({ preventScroll: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
