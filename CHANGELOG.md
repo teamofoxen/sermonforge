@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-07-04 — Monthly multiverse audit: system healthy; audit skill de-ghosted; State #4 N-of-M
+
+- First comprehensive `/sweep-the-multiverse` since 2026-05-04 (267-commit delta) via 6 inspection agents + adversarial verify — the live surface (DB/schema/IPC/export/search/telemetry/workspace) all PASS; report at `docs/AUDITS/multiverse-sweep-2026-07-04.md`.
+- Corrected the skill: it audited three ARI-removed subsystems (Context Pipeline/AI Flow/Memory) — collapsed them to an AI-removal tripwire, fixed stale better-sqlite3/sermon_search rules, added Series Planner + Telemetry areas.
+- Fixed the lone finding (State #4): the Series Planner Schedule tab renders "Sermon N of M" instead of a bare index.
+- Verified telemetry is privacy-clean (metadata only, no sermon content) and refuted the sermon-search-orphan claim (live via SermonList/CompletedSermons); lint 0, 374 tests green.
+
+---
+
 ## 2026-07-03 — perf: drift-check 54s→4s, restore its non-gating checks, codify verification cadence
 
 - Drift-check ran 54s because C1/C2 forked a subprocess per markdown link (Windows spawn tax); de-spawned to one grep pass + pure-bash matching (→4s), added `docs/AUDITS/` to the skip list (sole false-positive source), removed the dead python3 no-op.

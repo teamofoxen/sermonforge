@@ -1556,10 +1556,15 @@ function ScheduleTab({ series, sermons, calNotes, onSeriesField, onSermonDate, o
                 }}
               >
                 <div style={{
-                  display: "grid", gridTemplateColumns: "24px 1fr 150px minmax(84px, auto) auto auto",
+                  display: "grid", gridTemplateColumns: "52px 1fr 150px minmax(84px, auto) auto auto",
                   alignItems: "center", gap: "14px", padding: "12px 16px",
                 }}>
-                  <span style={{ fontSize: "12px", color: "var(--ink-ghost)", textAlign: "center" }}>{idx + 1}</span>
+                  <span
+                    style={{ fontSize: "12px", color: "var(--ink-ghost)", textAlign: "center", fontFamily: "var(--font-mono)", whiteSpace: "nowrap" }}
+                    aria-label={`Sermon ${idx + 1} of ${sermons.length} in this series`}
+                  >
+                    {idx + 1}<span style={{ opacity: 0.55 }}> of {sermons.length}</span>
+                  </span>
                   <div>
                     <div style={{ fontSize: "14px", color: "var(--ink)", fontFamily: "var(--font-serif)", lineHeight: "1.3" }}>
                       {sermon.title || <span style={{ color: "var(--ink-ghost)", fontStyle: "italic" }}>Untitled</span>}
