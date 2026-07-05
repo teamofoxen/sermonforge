@@ -115,4 +115,36 @@ describe("SeriesPlanner — save-failure retry safety", () => {
     await act(async () => { fireEvent.click(screen.getByText("Retry")); });
     await screen.findByText("Saved");
   });
+
+  it("finding 15: a later success for the SAME field supersedes the stale failed write — Retry can't revert it", async () => {
+    await renderPlanner({ ...TOPICAL });
+    const theme = screen.getByPlaceholderText("e.g. The Mission of God") as HTMLInputElement;
+    const bigIdea = screen.getByPlaceholderText(
+      "The single idea this series sounds — in one sentence.",
+    ) as HTMLInputElement;
+
+    // Only the FIRST updateSeries (the title:"A" write) fails; everything after succeeds.
+    spine.updateSeries.mockRejectedValueOnce(new Error("db locked"));
+
+    // Edit theme "A" (queues), then edit big-idea → flushes title:"A" (FAILS, queued).
+    await act(async () => { fireEvent.change(theme, { target: { value: "A" } }); });
+    await act(async () => { fireEvent.change(bigIdea, { target: { value: "x" } }); });
+    await screen.findByText("Save failed");
+
+    // Edit theme "AB" → flushes the big-idea write (succeeds); edit big-idea again
+    // → flushes title:"AB" (SUCCEEDS), which must supersede the queued title:"A".
+    await act(async () => { fireEvent.change(theme, { target: { value: "AB" } }); });
+    await act(async () => { fireEvent.change(bigIdea, { target: { value: "y" } }); });
+
+    // The stale title:"A" failure is cleared by the title:"AB" success → back to Saved.
+    // (On the pre-fix list queue, the "A" thunk survived and this stayed "Save failed".)
+    await screen.findByText("Saved");
+
+    // And Retry must never replay the stale title:"A" write (which would revert the DB).
+    spine.updateSeries.mockClear();
+    const retry = screen.queryByText("Retry");
+    if (retry) await act(async () => { fireEvent.click(retry); });
+    const revertedToA = spine.updateSeries.mock.calls.some(([, f]) => f && (f as { title?: string }).title === "A");
+    expect(revertedToA).toBe(false);
+  });
 });

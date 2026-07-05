@@ -88,6 +88,14 @@ function parseStudyGuideExtras(raw) {
   }
 }
 
+// Stable retry-queue key for a field write: "<target>:<sorted field names>". A
+// later write to the SAME target+field supersedes a queued failure for it, so
+// Retry never replays a stale value over a newer one (see runSave's failed-writes
+// map). Sorted so {a,b} and {b,a} key identically.
+function saveKey(target, fields) {
+  return `${target}:${Object.keys(fields || {}).sort().join(",")}`;
+}
+
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture }) {
   // _fixture — preview seam (mirrors SermonWorkspace's _fixtureSermon). When set,
@@ -110,15 +118,21 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
   const [drafts, setDrafts] = useState([]);
   const [draftErrors, setDraftErrors] = useState({});
   const [expandedSermons, setExpandedSermons] = useState(() => new Set());
-  // Queue of failed RETRYABLE writes (idempotent field edits — updateSeries/
-  // Section/Sermon) so the topbar Retry re-runs the real writes. A QUEUE, not a
-  // single slot: a single slot lost an earlier failed edit whenever a later,
-  // unrelated save succeeded (which also flipped the indicator back to "Saved"),
-  // silently dropping the pastor's work (Mutation #3). Structural mutations
-  // (create/delete/move/bulk) are NEVER queued — re-running them would duplicate
-  // a create or desync a locally-reconciled delete; they surface failure via
-  // saveError and roll back their own optimistic state.
-  const failedWritesRef = useRef([]);
+  // Failed RETRYABLE writes (idempotent field edits — updateSeries/Section/
+  // Sermon), keyed by target+field, so the topbar Retry re-runs the real writes.
+  // A MAP keyed by target, not a single slot and not a plain list:
+  //   • a single slot lost an earlier failed edit whenever any later save
+  //     succeeded (and flipped the indicator back to "Saved"), and
+  //   • an unkeyed list let a stale failed write for a field survive a LATER
+  //     SUCCESSFUL write to that SAME field — Retry would then replay the stale
+  //     value over the newer one, silently reverting the pastor's work.
+  // Keying by target means: a success for a field DROPS any queued failure for it
+  // (supersession), while a failure for a DIFFERENT field is still remembered
+  // (Mutation #3 — every failed edit stays visible and retryable). Structural
+  // mutations (create/delete/move/bulk) are NEVER queued — re-running them would
+  // duplicate a create or desync a locally-reconciled delete; they surface the
+  // failure via saveError and roll back their own optimistic state.
+  const failedWritesRef = useRef(new Map());
 
   useEffect(() => {
     if (_fixture) return; // preview fixture — no DB reads
@@ -188,22 +202,25 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
   // One save path for every planner write — series, section, and sermon — so the
   // topbar Saving/Saved/Save-failed indicator reflects them all and no write is
   // silent. runSave remembers the failed thunk so Retry re-runs the real write.
-  const runSave = useCallback(async (doMutation, { retryable = true } = {}) => {
+  const runSave = useCallback(async (doMutation, { retryable = true, key = null } = {}) => {
     if (_fixture) return true; // preview fixture — no DB writes
     setSaving(true);
     try {
       await doMutation();
-      // A success NEVER clears a still-pending failed write — only draining the
-      // queue (Retry) flips the indicator back to "Saved". Otherwise an unrelated
-      // success masks (and strands) an earlier failed edit.
-      setSaveError(failedWritesRef.current.length > 0);
+      // A success for `key` SUPERSEDES any queued failure for the same target+
+      // field — drop it, or Retry would replay the stale value over this newer
+      // one. A success for a DIFFERENT key leaves other failures queued, so an
+      // unrelated success never masks (or strands) an earlier failed edit.
+      if (key) failedWritesRef.current.delete(key);
+      setSaveError(failedWritesRef.current.size > 0);
       return true;
     } catch (e) {
       console.error("[SeriesPlanner save]", e);
-      // Only idempotent field writes are safe for topbar Retry to replay.
+      // Only idempotent field writes are safe for topbar Retry to replay, and
+      // only keyed ones (so a re-failure REPLACES the stale thunk, never stacks).
       // Structural mutations (retryable:false) surface the error but reconcile
       // their own optimistic state; re-running them would duplicate/desync.
-      if (retryable) failedWritesRef.current.push(doMutation);
+      if (retryable && key) failedWritesRef.current.set(key, doMutation);
       setSaveError(true);
       return false;
     } finally {
@@ -214,7 +231,7 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
   // ── Series (book-level) field persistence — debounced updateSeries ──────────
   const persistSeries = useCallback((fields) => {
     setSeries((prev) => ({ ...prev, ...fields }));
-    return runSave(() => updateSeries(seriesId, fields));
+    return runSave(() => updateSeries(seriesId, fields), { key: saveKey("series", fields) });
   }, [runSave, seriesId]);
   const debouncedSeries = useDebounce(persistSeries, 800);
   useFlushOnExit(debouncedSeries);
@@ -253,7 +270,7 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
   }, [series?.passage_range, persistSeries]);
 
   // ── Section field persistence — debounced updateSection ─────────────────────
-  const persistSection = useCallback((id, fields) => runSave(() => updateSection(id, fields)), [runSave]);
+  const persistSection = useCallback((id, fields) => runSave(() => updateSection(id, fields), { key: saveKey(`section:${id}`, fields) }), [runSave]);
   const debouncedSectionSave = useDebounce(persistSection, 800);
   useFlushOnExit(debouncedSectionSave);
   const lastSectionEdit = useRef({ id: null, field: null });
@@ -271,7 +288,7 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
   }, [debouncedSectionSave]);
 
   // ── Sermon (sermon) field persistence — debounced + immediate paths ───────
-  const persistSermon = useCallback((id, fields) => runSave(() => updateSermon(id, fields)), [runSave]);
+  const persistSermon = useCallback((id, fields) => runSave(() => updateSermon(id, fields), { key: saveKey(`sermon:${id}`, fields) }), [runSave]);
   const debouncedSermonSave = useDebounce(persistSermon, 800);
   useFlushOnExit(debouncedSermonSave);
   const lastSermonEdit = useRef({ id: null, field: null });
@@ -291,7 +308,7 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
   // additions, notes sizing, Suggest-Sundays bulk dating.
   const persistSermonNow = useCallback((id, fields) => {
     setSermons((prev) => prev.map((s) => (s.id === id ? { ...s, ...fields } : s)));
-    return runSave(() => updateSermon(id, fields));
+    return runSave(() => updateSermon(id, fields), { key: saveKey(`sermon:${id}`, fields) });
   }, [runSave]);
 
   // The series end_date mirrors the LAST dated sermon. Recompute it from a list
@@ -312,21 +329,20 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
   }, [handleSermonField, syncSeriesEndDate, sermons]);
 
   // Drain the failed-write queue. Each entry is an idempotent field write, safe
-  // to replay; one that fails again is re-queued so the pastor can retry once
-  // more. The indicator reflects only what remains unsaved.
+  // to replay; the queued key is removed before replay and re-added only if it
+  // fails again — so a fresh edit to that field arriving mid-retry (which sets
+  // its own key) is never clobbered. The indicator reflects only what remains.
   async function retryLastSave() {
-    const pending = failedWritesRef.current;
+    const pending = [...failedWritesRef.current.entries()];
     if (pending.length === 0) return;
-    failedWritesRef.current = [];
+    for (const [key] of pending) failedWritesRef.current.delete(key);
     setSaving(true);
-    const stillFailed = [];
-    for (const thunk of pending) {
+    for (const [key, thunk] of pending) {
       try { await thunk(); }
-      catch (e) { console.error("[SeriesPlanner retry]", e); stillFailed.push(thunk); }
+      catch (e) { console.error("[SeriesPlanner retry]", e); failedWritesRef.current.set(key, thunk); }
     }
-    failedWritesRef.current = stillFailed;
     setSaving(false);
-    setSaveError(stillFailed.length > 0);
+    setSaveError(failedWritesRef.current.size > 0);
   }
 
   // A load failure (throw, or a series id that no longer resolves) gets its own
@@ -817,7 +833,7 @@ function OutlineTab({
         // field save on the real row; the create is never re-run.
         onSermonsChange((prev) => [...prev, realSlot]);
         setDrafts((prev) => prev.filter((d) => d.id !== draftId));
-        if (Object.keys(followUp).length) runSave(() => updateSermon(newId, followUp));
+        if (Object.keys(followUp).length) runSave(() => updateSermon(newId, followUp), { key: saveKey(`sermon:${newId}`, followUp) });
         // Carry the expanded state from the draft row to the committed row.
         setExpandedSermons((prev) => {
           const n = new Set(prev); n.delete(draftId); n.add(newId); return n;
