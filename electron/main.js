@@ -172,12 +172,42 @@ async function initDatabase() {
     throw lastErr;
   }
 
+  // Remove stale WAL/SHM sidecars at path `p`. Called where the main DB at `p`
+  // is about to be replaced by a checkpointed restore (a .bak copy). A leftover
+  // sidecar belongs to the previous (damaged/gone) generation; opening the
+  // restored file in WAL mode with a stale sidecar present lets SQLite replay
+  // mismatched-generation frames onto it — silent corruption of the very copy
+  // recovery just restored.
+  function clearStaleSidecars(p) {
+    for (const suffix of ["-wal", "-shm"]) {
+      try {
+        if (fs.existsSync(p + suffix)) fs.unlinkSync(p + suffix);
+      } catch (e) {
+        logError(`[DB] failed to remove stale sidecar ${p + suffix}`, e);
+      }
+    }
+  }
+
   function quarantineCorrupt(p) {
     const stamp = new Date().toISOString().replace(/[:.]/g, "-");
     const q = `${p}.corrupt-${stamp}`;
     try {
       fs.renameSync(p, q);
       logError(`[DB] quarantined unreadable DB to ${q}`);
+      // Move the WAL/SHM sidecars alongside the quarantined main file. They
+      // belong to the damaged generation: leaving them at the active path would
+      // let SQLite replay a stale WAL onto the freshly restored .bak
+      // (mixed-generation corruption). Moving — not just deleting — keeps them
+      // paired with their DB for manual recovery. If a sidecar can't be moved
+      // (locked), delete it: a leftover replayable sidecar is worse than a lost one.
+      for (const suffix of ["-wal", "-shm"]) {
+        if (!fs.existsSync(p + suffix)) continue;
+        try {
+          fs.renameSync(p + suffix, q + suffix);
+        } catch (e) {
+          try { fs.unlinkSync(p + suffix); } catch { /* ignore */ }
+        }
+      }
       return q;
     } catch (e) {
       logError(`[DB] failed to quarantine unreadable DB at ${p}`, e);
@@ -225,6 +255,11 @@ async function initDatabase() {
     "wait a moment, then reopen SermonForge. Your sermons are safe and untouched.";
 
   let recoveredFromBak = false;
+  // True when recovery failed and we started a fresh EMPTY db at the active path.
+  // Gates the boot-time .bak backup below: overwriting the existing .bak (the
+  // damaged library's last surviving backup) with an empty DB would destroy the
+  // final recovery artifact. See the boot-backup block.
+  let startedFreshAfterCorruption = false;
 
   if (fs.existsSync(dbPath)) {
     try {
@@ -277,6 +312,7 @@ async function initDatabase() {
         // Both primary and .bak are corrupt. The primary is quarantined (kept
         // on disk for manual recovery); start fresh at the active path.
         db = new BetterSqlite3(dbPath);
+        startedFreshAfterCorruption = true;
         _pendingStartupWarnings.push({
           kind: "db_corrupt_quarantined",
           message:
@@ -290,6 +326,9 @@ async function initDatabase() {
   } else if (fs.existsSync(bakPath)) {
     // Primary missing but backup present (a crash between steps, or the
     // primary deleted by AV / disk cleanup). Restore by copy, then open.
+    // Clear any orphaned -wal/-shm first: the primary is gone but its sidecars
+    // may remain, and a stale WAL replayed onto the restored .bak would corrupt it.
+    clearStaleSidecars(dbPath);
     try {
       fs.copyFileSync(bakPath, dbPath);
       db = await loadWithRetry(dbPath);
@@ -308,6 +347,7 @@ async function initDatabase() {
       logError(`[DB] backup unreadable, starting fresh`, e);
       try { fs.unlinkSync(dbPath); } catch { /* ignore */ }
       db = new BetterSqlite3(dbPath);
+      startedFreshAfterCorruption = true;
       _pendingStartupWarnings.push({
         kind: "db_corrupt_quarantined",
         message: `SermonForge couldn't read your library backup, so it started a fresh one. If you had sermons before, email ${SUPPORT_EMAIL} before doing more work so we can try to recover them.`,
@@ -366,13 +406,15 @@ async function initDatabase() {
         logError(`[DB] failed to back up empty active .bak before migration`, e);
       }
     }
-    // migrateLegacyDb closes every candidate handle (including the winner)
-    // and returns { source } — file-backed connections are path-bound, so the
-    // active DB is reopened at dbPath below either way.
-    const migrated = migrateLegacyDb({
+    // migrateLegacyDb closes every candidate handle (including the winner) and
+    // returns { source, deferred } — file-backed connections are path-bound, so
+    // the active DB is reopened at dbPath below either way. It's given the
+    // RETRYING loader (loadWithRetry) so a transiently-locked candidate is
+    // retried before being deferred rather than silently skipped.
+    const migrated = await migrateLegacyDb({
       activePath: dbPath,
       candidatePaths: legacyDbPaths,
-      tryLoad,
+      tryLoad: loadWithRetry,
       countRows: countContentRows,
       logger: { info: logInfo, error: logError },
     });
@@ -386,19 +428,27 @@ async function initDatabase() {
       return;
     }
     applyConnectionPragmas(db);
-    if (migrated) {
+    if (migrated.source) {
       legacyMigrated = true;
       _pendingStartupWarnings.push({
         kind: "db_migrated",
         message: `Restored your library from a previous install location (${migrated.source}). The original file is preserved there as a backup.`,
       });
     }
-    // Mark this active path resolved whether or not a winner was found — we
-    // looked once; we don't keep overwriting the active DB on later boots.
-    try {
-      fs.writeFileSync(legacyMarkerPath, new Date().toISOString());
-    } catch (e) {
-      logError(`[DB] failed to write legacy-checked marker`, e);
+    // Mark this active path resolved so we don't re-run the resolver every boot —
+    // UNLESS a candidate was left unread because it was transiently locked. Writing
+    // the marker then would permanently orphan a real library sitting at that
+    // locked legacy path; withholding it lets the next boot retry once the lock
+    // clears. (A winner we DID adopt makes the active DB non-empty, so Phase 2
+    // self-gates off next boot regardless.)
+    if (migrated.deferred) {
+      logInfo("[DB] legacy resolution deferred — a candidate was temporarily locked; not writing the checked marker so the next boot retries");
+    } else {
+      try {
+        fs.writeFileSync(legacyMarkerPath, new Date().toISOString());
+      } catch (e) {
+        logError(`[DB] failed to write legacy-checked marker`, e);
+      }
     }
   }
 
@@ -409,11 +459,30 @@ async function initDatabase() {
   // Skipped on a true first launch (an empty shell isn't worth backing up),
   // but a legacy-migrated-in library on a first launch at a new path is.
   if (!_firstLaunch || legacyMigrated) {
-    try {
-      db.pragma("wal_checkpoint(TRUNCATE)");
-      fs.copyFileSync(dbPath, bakPath);
-    } catch (e) {
-      logError(`[DB] boot-time .bak copy failed (continuing — writes are still journaled)`, e);
+    // If recovery FAILED and we started fresh (empty/legacy-migrated), the
+    // existing .bak still holds the damaged library's backup — the last
+    // recovery artifact. Rename it aside BEFORE the boot copy so an empty (or
+    // unrelated legacy) DB can never clobber it. If it can't be renamed, skip
+    // the boot backup entirely rather than overwrite it.
+    let bakSafeToOverwrite = true;
+    if (startedFreshAfterCorruption && fs.existsSync(bakPath)) {
+      const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+      const preserved = `${bakPath}.corrupt-${stamp}`;
+      try {
+        fs.renameSync(bakPath, preserved);
+        logError(`[DB] preserved damaged .bak as ${path.basename(preserved)} before writing a fresh boot backup`);
+      } catch (e) {
+        logError(`[DB] could not preserve damaged .bak; skipping boot backup so it isn't clobbered`, e);
+        bakSafeToOverwrite = false;
+      }
+    }
+    if (bakSafeToOverwrite) {
+      try {
+        db.pragma("wal_checkpoint(TRUNCATE)");
+        fs.copyFileSync(dbPath, bakPath);
+      } catch (e) {
+        logError(`[DB] boot-time .bak copy failed (continuing — writes are still journaled)`, e);
+      }
     }
   }
 
@@ -652,13 +721,22 @@ function runMigrations() {
   const row = queryOne("SELECT value FROM meta WHERE key = 'schema_version'");
   let version = row ? parseInt(row.value, 10) : 0;
   // Guard against a non-numeric schema_version (corruption of just this value, or
-  // hand-tampering). Left as NaN, every `version < N` guard is false and ALL
-  // migrations silently skip forever — a degraded install that never heals. The
-  // migration blocks are idempotent (safeAlter no-ops, CREATE IF NOT EXISTS,
-  // WHERE-guarded backfills), so resetting to 0 re-runs them safely.
+  // hand-tampering). Resetting to 0 and re-running is NOT safe: the ladder is not
+  // fully idempotent. Data-shaping migrations — the v19 main_point_pair envelope
+  // wrap, the v25 canon_category remap, the v26 book_structure fold — would
+  // double-apply against a DB that is actually already fully migrated, corrupting
+  // content. Refuse to guess. Throw so the wrapping transaction rolls back (the
+  // on-disk DB is left pristine) and the boot surfaces the migration_failed screen
+  // ("your sermons are safe and were not changed"). A genuinely non-numeric value
+  // needs meta repaired by support, not a blind 33-migration replay over
+  // unknown-state data.
   if (!Number.isInteger(version)) {
-    logError(`[DB] meta.schema_version is non-numeric ("${row?.value}"); resetting to 0 and re-running idempotent migrations`);
-    version = 0;
+    const e = new Error(
+      `meta.schema_version is non-numeric ("${row?.value}") — refusing to reset to 0 and re-run migrations against an unknown-state DB`,
+    );
+    e._sfClass = "corrupt";
+    logError(`[DB] ${e.message}`);
+    throw e;
   }
   const initialVersion = version;
 
@@ -1054,27 +1132,20 @@ function runMigrations() {
     // low hundreds; LIKE is plenty fast at that scale. The indexer keeps
     // this table in sync via validateAndCommit hooks; the first-launch
     // backfill below handles existing sermons.
-    dbRun(`
-      CREATE TABLE IF NOT EXISTS sermon_search (
-        sermon_id TEXT PRIMARY KEY,
-        title TEXT NOT NULL DEFAULT '',
-        passage TEXT NOT NULL DEFAULT '',
-        series_title TEXT NOT NULL DEFAULT '',
-        observations TEXT NOT NULL DEFAULT '',
-        interpretation TEXT NOT NULL DEFAULT '',
-        redemptive_thread TEXT NOT NULL DEFAULT '',
-        implications TEXT NOT NULL DEFAULT '',
-        main_point_pair TEXT NOT NULL DEFAULT '',
-        outline TEXT NOT NULL DEFAULT '',
-        manuscript TEXT NOT NULL DEFAULT '',
-        sermon_frame TEXT NOT NULL DEFAULT '',
-        notebook_study TEXT NOT NULL DEFAULT '',
-        notebook_blueprint TEXT NOT NULL DEFAULT '',
-        notebook_manuscript TEXT NOT NULL DEFAULT '',
-        delivery_notes TEXT NOT NULL DEFAULT '',
-        timing_notes TEXT NOT NULL DEFAULT ''
-      )
-    `);
+    // Built from SERMON_SEARCH_COLUMNS — the single source of truth the indexer
+    // (indexSermonFtsFromRow) writes against — so the table schema and the
+    // indexer can't drift. A hardcoded column list here that omitted a live
+    // indexer column (functional_elements) made the backfill INSERT below throw
+    // ("no column named functional_elements"), which rolled back the whole
+    // migration transaction and BOOT-LOCKED any pre-v22 library that actually
+    // had sermon rows (a fresh install has 0 rows, so the loop never ran and the
+    // mismatch stayed invisible). v24 already builds the table this way; v22 now
+    // matches. The exact historical column set is irrelevant — v24 drops and
+    // recreates this table — only that the v22 backfill can write into it.
+    dbRun(`CREATE TABLE IF NOT EXISTS sermon_search (
+      sermon_id TEXT PRIMARY KEY,
+      ${SERMON_SEARCH_COLUMNS.map((c) => `${c.key} TEXT NOT NULL DEFAULT ''`).join(",\n      ")}
+    )`);
     // Backfill: index every existing sermon. Cheap for typical libraries
     // (~40-100 sermons); a no-op on a fresh install with zero rows.
     const rows = queryAll(

@@ -31,23 +31,34 @@ const LEGACY_DB_MIN_BYTES = 32 * 1024;
 
 /**
  * Find and migrate the most-content-rich recoverable legacy DB into
- * `activePath`. Returns `{ source }` on success (all candidate handles
- * closed), `null` when nothing recoverable was found.
+ * `activePath`. Always returns `{ source, deferred }`:
+ *   - `source`: the adopted legacy path, or `null` if nothing was adopted.
+ *   - `deferred`: `true` if a candidate was left unread because it was
+ *     TRANSIENTLY locked (antivirus / OneDrive / backup tool) even after the
+ *     loader's retries. The caller MUST NOT write its "already checked" marker
+ *     when `deferred` is true — that candidate may be the user's real library,
+ *     and marking the path resolved would orphan it forever. Leaving the marker
+ *     unwritten lets the next boot retry once the lock clears.
+ *
+ * All candidate handles are closed before returning. Async because the injected
+ * loader retries transient locks with a delay (production wires the async
+ * `loadWithRetry` from `initDatabase`).
  *
  * Dependencies are injected so callers can swap them in tests without mocking
  * global modules. In production, callers wire `fs`, the project logger, the
- * closure-bound `tryLoad` from `initDatabase`, and a `countRows(db)` that
+ * closure-bound retrying loader from `initDatabase`, and a `countRows(db)` that
  * returns the sermons+series row count.
  *
  * @param {object}   options
  * @param {string}   options.activePath       — current `paths.userData/sermonforge.db`
  * @param {string[]} options.candidatePaths   — `legacyDbPaths` from config
- * @param {(p:string) => any} options.tryLoad — loads a DB from disk, throws on corruption
+ * @param {(p:string) => any} options.tryLoad — loads a DB from disk (may be async); throws tagged errors (`err._sfClass === "transient"` for locks, else corruption)
  * @param {(db:any) => number} options.countRows — returns content-row count (sermons+series)
  * @param {object}   [options.fsImpl]         — { existsSync, statSync, copyFileSync }
  * @param {object}   [options.logger]         — { info, error }
+ * @returns {Promise<{ source: string|null, deferred: boolean }>}
  */
-function migrateLegacyDb({ activePath, candidatePaths, tryLoad, countRows, fsImpl = require("fs"), logger = console }) {
+async function migrateLegacyDb({ activePath, candidatePaths, tryLoad, countRows, fsImpl = require("fs"), logger = console }) {
   if (typeof countRows !== "function") {
     throw new Error("migrateLegacyDb requires a countRows(db) callback");
   }
@@ -73,10 +84,11 @@ function migrateLegacyDb({ activePath, candidatePaths, tryLoad, countRows, fsImp
   // DBs and anything that fails to load. We close non-winning DBs at the end
   // to avoid holding multiple open SQLite buffers in memory.
   const evaluated = [];
+  let deferred = false; // a candidate was transiently locked and left unread
   for (const c of stated) {
     let candidateDb = null;
     try {
-      candidateDb = tryLoad(c.path);
+      candidateDb = await tryLoad(c.path);
       const rows = Number(countRows(candidateDb)) || 0;
       if (rows === 0) {
         closeQuietly(candidateDb);
@@ -84,12 +96,22 @@ function migrateLegacyDb({ activePath, candidatePaths, tryLoad, countRows, fsImp
       }
       evaluated.push({ ...c, db: candidateDb, rows });
     } catch (err) {
-      logger.error?.(`[DB] legacy DB at ${c.path} unreadable; skipping`, err);
       closeQuietly(candidateDb);
+      if (err && err._sfClass === "transient") {
+        // Healthy but momentarily locked, still locked after the loader's
+        // retries. Do NOT treat as unreadable — this candidate might be the
+        // user's real library. Defer so the caller withholds the "checked"
+        // marker and the next boot retries once the lock clears.
+        deferred = true;
+        logger.error?.(`[DB] legacy DB at ${c.path} temporarily locked; deferring (will retry next boot)`, err);
+      } else {
+        // Genuine corruption (or an untagged failure) — nothing recoverable here.
+        logger.error?.(`[DB] legacy DB at ${c.path} unreadable; skipping`, err);
+      }
     }
   }
 
-  if (evaluated.length === 0) return null;
+  if (evaluated.length === 0) return { source: null, deferred };
 
   // Phase 3 — pick the winner. Most rows wins; mtime breaks ties (more recent
   // among equal-content-volume candidates).
@@ -111,11 +133,11 @@ function migrateLegacyDb({ activePath, candidatePaths, tryLoad, countRows, fsImp
     fsImpl.copyFileSync(winner.path, activePath);
   } catch (copyErr) {
     logger.error?.(`[DB] failed to copy ${winner.path} → ${activePath}`, copyErr);
-    return null;
+    return { source: null, deferred };
   }
 
   logger.info?.(`[DB] migrated user data from legacy path ${winner.path} (${winner.rows} content rows, ${winner.stat.size} bytes, mtime ${new Date(winner.stat.mtimeMs).toISOString()}) → ${activePath}; legacy file preserved as backup`);
-  return { source: winner.path };
+  return { source: winner.path, deferred };
 }
 
 function closeQuietly(db) {

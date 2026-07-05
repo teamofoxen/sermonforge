@@ -7,7 +7,13 @@
 //     (1-sermon dev DB beating a 10-sermon real DB on mtime) is the
 //     regression for this rule.
 //   - Skip 0-row schema-only DBs entirely.
-//   - Surface nothing when no legacy is recoverable.
+//   - Surface nothing recoverable as { source: null }.
+//   - Distinguish a TRANSIENTLY-locked candidate (antivirus / OneDrive) from a
+//     corrupt one: a lock must be deferred, NOT skipped, so the caller withholds
+//     its one-shot "checked" marker and the next boot retries. Skipping-then-
+//     marking a locked real library orphans it forever (correctness audit,
+//     finding 5). The resolver is async because production wires the retrying
+//     loader (`loadWithRetry`).
 
 import { describe, it, expect, vi } from "vitest";
 
@@ -48,16 +54,25 @@ const makeFakeDb = (rows: number): FakeDb => ({
   close() { this.closed = true; },
 });
 
+// A tagged transient (lock) error, matching what the real `tryLoad`/`loadWithRetry`
+// throw after retries when a file is healthy but held by another process.
+function transientError(msg = "SQLITE_BUSY"): Error {
+  const e = new Error(msg) as Error & { _sfClass?: string; code?: string };
+  e._sfClass = "transient";
+  e.code = "SQLITE_BUSY";
+  return e;
+}
+
 const ACTIVE = "/userData/data/sermonforge.db";
 const LEGACY_OLD = "/userData/sermonforge.db";
 const LEGACY_FIXED = "C:/SermonForge/data/sermonforge.db";
 const LEGACY_DEV = "/userData/data-dev/sermonforge.db";
 
 describe("migrateLegacyDb — userData path permanence (CORE.md)", () => {
-  it("returns null when no legacy candidates exist", () => {
+  it("returns { source: null } when no legacy candidates exist", async () => {
     const { fs, copies } = makeFakeFs({});
     const tryLoad = vi.fn();
-    const result = migrateLegacyDb({
+    const result = await migrateLegacyDb({
       activePath: ACTIVE,
       candidatePaths: [LEGACY_OLD, LEGACY_FIXED, LEGACY_DEV],
       tryLoad,
@@ -65,17 +80,17 @@ describe("migrateLegacyDb — userData path permanence (CORE.md)", () => {
       fsImpl: fs,
       logger: { info: () => {}, error: () => {} },
     });
-    expect(result).toBeNull();
+    expect(result).toEqual({ source: null, deferred: false });
     expect(tryLoad).not.toHaveBeenCalled();
     expect(copies).toEqual([]);
   });
 
-  it("filters out candidates below the size pre-filter", () => {
+  it("filters out candidates below the size pre-filter", async () => {
     const { fs, copies } = makeFakeFs({
       [LEGACY_OLD]: { size: LEGACY_DB_MIN_BYTES - 1, mtimeMs: 5_000 },
     });
     const tryLoad = vi.fn();
-    const result = migrateLegacyDb({
+    const result = await migrateLegacyDb({
       activePath: ACTIVE,
       candidatePaths: [LEGACY_OLD],
       tryLoad,
@@ -83,18 +98,18 @@ describe("migrateLegacyDb — userData path permanence (CORE.md)", () => {
       fsImpl: fs,
       logger: { info: () => {}, error: () => {} },
     });
-    expect(result).toBeNull();
+    expect(result).toEqual({ source: null, deferred: false });
     expect(tryLoad).not.toHaveBeenCalled();
     expect(copies).toEqual([]);
   });
 
-  it("skips 0-row candidates entirely (schema-only DBs)", () => {
+  it("skips 0-row candidates entirely (schema-only DBs)", async () => {
     const { fs, copies } = makeFakeFs({
       [LEGACY_OLD]: { size: 100_000, mtimeMs: 5_000 },
     });
     const fakeDb = makeFakeDb(0);
     const tryLoad = vi.fn().mockReturnValue(fakeDb);
-    const result = migrateLegacyDb({
+    const result = await migrateLegacyDb({
       activePath: ACTIVE,
       candidatePaths: [LEGACY_OLD],
       tryLoad,
@@ -102,13 +117,13 @@ describe("migrateLegacyDb — userData path permanence (CORE.md)", () => {
       fsImpl: fs,
       logger: { info: () => {}, error: () => {} },
     });
-    expect(result).toBeNull();
+    expect(result).toEqual({ source: null, deferred: false });
     expect(copies).toEqual([]);
     // The 0-row candidate was loaded for inspection then closed.
     expect(fakeDb.closed).toBe(true);
   });
 
-  it("regression: row count beats mtime — picks 10-row candidate over 1-row newer one (2026-05-02 incident)", () => {
+  it("regression: row count beats mtime — picks 10-row candidate over 1-row newer one (2026-05-02 incident)", async () => {
     const { fs, copies } = makeFakeFs({
       [LEGACY_FIXED]: { size: 147_000, mtimeMs: 5_000 },  // 10 sermons + 2 series, older
       [LEGACY_DEV]:   { size: 122_000, mtimeMs: 9_000 },  // 1 sermon, newer
@@ -120,7 +135,7 @@ describe("migrateLegacyDb — userData path permanence (CORE.md)", () => {
       if (p === LEGACY_DEV) return devDb;
       throw new Error(`unexpected path ${p}`);
     });
-    const result = migrateLegacyDb({
+    const result = await migrateLegacyDb({
       activePath: ACTIVE,
       candidatePaths: [LEGACY_FIXED, LEGACY_DEV],
       tryLoad,
@@ -128,7 +143,7 @@ describe("migrateLegacyDb — userData path permanence (CORE.md)", () => {
       fsImpl: fs,
       logger: { info: () => {}, error: () => {} },
     });
-    expect(result).toEqual({ source: LEGACY_FIXED });
+    expect(result).toEqual({ source: LEGACY_FIXED, deferred: false });
     expect(copies).toEqual([{ from: LEGACY_FIXED, to: ACTIVE }]);
     // Loser db was closed.
     expect(devDb.closed).toBe(true);
@@ -137,7 +152,7 @@ describe("migrateLegacyDb — userData path permanence (CORE.md)", () => {
     expect(fixedDb.closed).toBe(true);
   });
 
-  it("breaks ties by mtime when two candidates have the same row count", () => {
+  it("breaks ties by mtime when two candidates have the same row count", async () => {
     const { fs, copies } = makeFakeFs({
       [LEGACY_OLD]:   { size: 100_000, mtimeMs: 1_000 },
       [LEGACY_FIXED]: { size: 100_000, mtimeMs: 9_000 },
@@ -149,7 +164,7 @@ describe("migrateLegacyDb — userData path permanence (CORE.md)", () => {
       if (p === LEGACY_FIXED) return fixedDb;
       throw new Error("unexpected");
     });
-    const result = migrateLegacyDb({
+    const result = await migrateLegacyDb({
       activePath: ACTIVE,
       candidatePaths: [LEGACY_OLD, LEGACY_FIXED],
       tryLoad,
@@ -157,22 +172,22 @@ describe("migrateLegacyDb — userData path permanence (CORE.md)", () => {
       fsImpl: fs,
       logger: { info: () => {}, error: () => {} },
     });
-    expect(result).toEqual({ source: LEGACY_FIXED });
+    expect(result).toEqual({ source: LEGACY_FIXED, deferred: false });
     expect(copies).toEqual([{ from: LEGACY_FIXED, to: ACTIVE }]);
   });
 
-  it("skips candidates that fail to load and tries the next", () => {
+  it("skips corrupt (untagged) candidates and tries the next", async () => {
     const { fs, copies } = makeFakeFs({
       [LEGACY_FIXED]: { size: 200_000, mtimeMs: 5_000 },
       [LEGACY_DEV]:   { size: 120_000, mtimeMs: 9_000 },  // newer but corrupt
     });
     const fixedDb = makeFakeDb(7);
     const tryLoad = vi.fn().mockImplementation((p: string) => {
-      if (p === LEGACY_DEV) throw new Error("corrupt");
+      if (p === LEGACY_DEV) throw new Error("corrupt"); // untagged → treated as corrupt
       if (p === LEGACY_FIXED) return fixedDb;
       throw new Error("unexpected");
     });
-    const result = migrateLegacyDb({
+    const result = await migrateLegacyDb({
       activePath: ACTIVE,
       candidatePaths: [LEGACY_FIXED, LEGACY_DEV],
       tryLoad,
@@ -180,16 +195,17 @@ describe("migrateLegacyDb — userData path permanence (CORE.md)", () => {
       fsImpl: fs,
       logger: { info: () => {}, error: () => {} },
     });
-    expect(result).toEqual({ source: LEGACY_FIXED });
+    // Corrupt candidate is skipped but does NOT defer — nothing recoverable there.
+    expect(result).toEqual({ source: LEGACY_FIXED, deferred: false });
     expect(copies).toEqual([{ from: LEGACY_FIXED, to: ACTIVE }]);
   });
 
-  it("never copies the active path onto itself when it appears in the candidate list", () => {
+  it("never copies the active path onto itself when it appears in the candidate list", async () => {
     const { fs, copies } = makeFakeFs({
       [ACTIVE]: { size: 100_000, mtimeMs: 9_000 },
     });
     const tryLoad = vi.fn();
-    const result = migrateLegacyDb({
+    const result = await migrateLegacyDb({
       activePath: ACTIVE,
       candidatePaths: [ACTIVE, LEGACY_OLD],
       tryLoad,
@@ -197,17 +213,17 @@ describe("migrateLegacyDb — userData path permanence (CORE.md)", () => {
       fsImpl: fs,
       logger: { info: () => {}, error: () => {} },
     });
-    expect(result).toBeNull();
+    expect(result).toEqual({ source: null, deferred: false });
     expect(tryLoad).not.toHaveBeenCalled();
     expect(copies).toEqual([]);
   });
 
-  it("preserves the legacy source file (copy, not move)", () => {
+  it("preserves the legacy source file (copy, not move)", async () => {
     const { fs, copies } = makeFakeFs({
       [LEGACY_OLD]: { size: 100_000, mtimeMs: 5_000 },
     });
     const tryLoad = vi.fn().mockReturnValue(makeFakeDb(3));
-    migrateLegacyDb({
+    await migrateLegacyDb({
       activePath: ACTIVE,
       candidatePaths: [LEGACY_OLD],
       tryLoad,
@@ -219,15 +235,77 @@ describe("migrateLegacyDb — userData path permanence (CORE.md)", () => {
     expect(fs.existsSync(LEGACY_OLD)).toBe(true);
   });
 
-  it("requires a countRows callback", () => {
+  it("requires a countRows callback", async () => {
     const { fs } = makeFakeFs({});
-    expect(() => migrateLegacyDb({
+    await expect(migrateLegacyDb({
       activePath: ACTIVE,
       candidatePaths: [],
       tryLoad: () => null,
       // countRows omitted on purpose
       fsImpl: fs,
       logger: { info: () => {}, error: () => {} },
-    })).toThrow(/countRows/);
+    })).rejects.toThrow(/countRows/);
+  });
+
+  // ── Transient-lock defer (correctness audit, finding 5) ──────────────────
+
+  it("defers a transiently-locked sole candidate instead of skipping it (marker must not be written)", async () => {
+    const { fs, copies } = makeFakeFs({
+      [LEGACY_FIXED]: { size: 200_000, mtimeMs: 5_000 }, // the user's real library, momentarily locked
+    });
+    const tryLoad = vi.fn().mockImplementation(() => { throw transientError(); });
+    const result = await migrateLegacyDb({
+      activePath: ACTIVE,
+      candidatePaths: [LEGACY_FIXED],
+      tryLoad,
+      countRows: (db: FakeDb) => db.rows,
+      fsImpl: fs,
+      logger: { info: () => {}, error: () => {} },
+    });
+    // Nothing adopted, but deferred=true → caller withholds the one-shot marker.
+    expect(result).toEqual({ source: null, deferred: true });
+    expect(copies).toEqual([]);
+  });
+
+  it("adopts a readable winner but still defers when another candidate was locked", async () => {
+    const { fs, copies } = makeFakeFs({
+      [LEGACY_FIXED]: { size: 200_000, mtimeMs: 5_000 }, // readable, 7 rows
+      [LEGACY_DEV]:   { size: 120_000, mtimeMs: 9_000 }, // locked
+    });
+    const fixedDb = makeFakeDb(7);
+    const tryLoad = vi.fn().mockImplementation((p: string) => {
+      if (p === LEGACY_DEV) throw transientError();
+      if (p === LEGACY_FIXED) return fixedDb;
+      throw new Error("unexpected");
+    });
+    const result = await migrateLegacyDb({
+      activePath: ACTIVE,
+      candidatePaths: [LEGACY_FIXED, LEGACY_DEV],
+      tryLoad,
+      countRows: (db: FakeDb) => db.rows,
+      fsImpl: fs,
+      logger: { info: () => {}, error: () => {} },
+    });
+    expect(result).toEqual({ source: LEGACY_FIXED, deferred: true });
+    expect(copies).toEqual([{ from: LEGACY_FIXED, to: ACTIVE }]);
+  });
+
+  it("awaits an async loader and adopts on eventual success (retry cleared the lock)", async () => {
+    const { fs, copies } = makeFakeFs({
+      [LEGACY_OLD]: { size: 100_000, mtimeMs: 5_000 },
+    });
+    // Models loadWithRetry: the transient lock cleared on retry, so the loader
+    // ultimately resolves to a healthy handle. migrateLegacyDb must await it.
+    const tryLoad = vi.fn().mockResolvedValue(makeFakeDb(4));
+    const result = await migrateLegacyDb({
+      activePath: ACTIVE,
+      candidatePaths: [LEGACY_OLD],
+      tryLoad,
+      countRows: (db: FakeDb) => db.rows,
+      fsImpl: fs,
+      logger: { info: () => {}, error: () => {} },
+    });
+    expect(result).toEqual({ source: LEGACY_OLD, deferred: false });
+    expect(copies).toEqual([{ from: LEGACY_OLD, to: ACTIVE }]);
   });
 });
