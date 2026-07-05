@@ -201,6 +201,9 @@ export function buildManuscriptExportPayload(sermon) {
   // read here — the envelope is the sole source.
   const mainPoints = getTightenedMainPoints(parseStructuredField(sermon?.main_point_pair));
   return {
+    // id disambiguates the export filename so two same-titled sermons can't
+    // silently overwrite each other's .docx (see the export handler).
+    id: sermon?.id || "",
     title: sermon?.title || "",
     passage: sermon?.passage || "",
     date: sermon?.date || "",

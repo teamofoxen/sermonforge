@@ -76,4 +76,25 @@ describe("PassageCanvas — row-id / downstream-work integrity", () => {
     expect(emitted[0].text).toBe("hello");
     expect(emitted[1].text).toBe("world"); // after-text on the new row
   });
+
+  it("finding 19: a 7+ char verse label is not truncated by the gutter's length cap", () => {
+    const onChange = vi.fn();
+    // Row has text so the canvas renders it (not a re-seed). Psalm 119:176.
+    const rows = [{ id: "unit-A", text: "The whole of your word is truth", depth: 0, verse: "3" }];
+    const { container } = render(<PassageCanvas rows={rows} onChange={onChange} />);
+    const gutter = container.querySelector("input.pc-gutter") as HTMLInputElement;
+    fireEvent.change(gutter, { target: { value: "119:176" } });
+    const emitted = firstEmitted(onChange);
+    expect(emitted[0].verse).toBe("119:176"); // NOT "119:17" (old 6-char slice)
+  });
+
+  it("finding 19: the gutter still rejects non-verse characters (prose can't leak in)", () => {
+    const onChange = vi.fn();
+    const rows = [{ id: "unit-A", text: "some text", depth: 0, verse: "3" }];
+    const { container } = render(<PassageCanvas rows={rows} onChange={onChange} />);
+    const gutter = container.querySelector("input.pc-gutter") as HTMLInputElement;
+    fireEvent.change(gutter, { target: { value: "12:5-19 abc!" } });
+    const emitted = firstEmitted(onChange);
+    expect(emitted[0].verse).toBe("12:5-19"); // letters/space/punct stripped, range kept
+  });
 });

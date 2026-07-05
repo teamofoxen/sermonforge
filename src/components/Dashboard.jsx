@@ -79,6 +79,13 @@ export default function Dashboard({ onOpenSermon, onNavigate, deletedSermonNotic
   // fresh on close and never fetched the (now-tombstoned) sermon itself.
   async function handleUndoWorkspaceDelete(id) {
     await restoreSermon(id);
+    // The workspace delete happened before this (freshly remounted) Dashboard
+    // fetched its list, so the restored sermon is absent from `inProgress` —
+    // clearing the notice alone makes the row vanish until a manual reload.
+    // Refetch so the restored sermon re-enters the list the same frame the
+    // notice clears (Mutation #3 — the undo must be visibly honored).
+    try { setInProgress((await getInProgressSermons()) || []); }
+    catch (e) { console.error("[Dashboard] refetch after undo failed:", e); }
     onClearDeletedSermonNotice?.();
   }
 

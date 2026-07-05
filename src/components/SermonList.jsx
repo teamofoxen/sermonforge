@@ -14,6 +14,7 @@ import SecondaryButton from "./primitives/SecondaryButton";
 import { TextButton } from "./primitives/TextButton";
 import EmptyState from "./primitives/EmptyState";
 import LoadingState from "./primitives/LoadingState";
+import InlineError from "./InlineError";
 
 export default function SermonList({ onOpenSermon }) {
   const [sermons, setSermons] = useState([]);
@@ -22,6 +23,7 @@ export default function SermonList({ onOpenSermon }) {
   const [searching, setSearching] = useState(false);
   const [showNewModal, setShowNewModal] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   // Sermons marked preached THIS visit. Their cards don't vanish — they swap
   // to a confirmation stub with Undo, so the act is visible and reversible
   // instead of reading as deletion (the old select filtered the card out
@@ -50,7 +52,13 @@ export default function SermonList({ onOpenSermon }) {
   useEffect(() => {
     getAllSermons()
       .then((data) => setSermons(data.filter((s) => s.stage !== SERMON_STATUS.Complete)))
-      .catch(console.error)
+      .catch((e) => {
+        // A load failure must not read as "No sermons found." — that false empty
+        // state hides real data behind an empty library (the pastor's whole
+        // in-progress list looking gone). Surface the failure instead.
+        console.error("[SermonList] load failed:", e);
+        setLoadError(true);
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -119,6 +127,10 @@ export default function SermonList({ onOpenSermon }) {
 
         {loading || (search && searching) ? (
           <LoadingState />
+        ) : loadError && !search ? (
+          <div style={{ padding: "40px 0", display: "flex", justifyContent: "center" }}>
+            <InlineError>Could not load your sermons.</InlineError>
+          </div>
         ) : filtered.length === 0 ? (
           <EmptyState title="No sermons found." />
         ) : (

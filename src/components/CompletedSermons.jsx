@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { getAllSermons, updateSermon } from "../core/spine";
+import { getAllSermons, getSermon, updateSermon } from "../core/spine";
 import DeletedSermonStub, { useSoftDelete } from "./DeletedSermonStub";
 import { exportManuscript, searchSermons } from "../db/database";
 import mapError from "../utils/mapError";
@@ -86,7 +86,13 @@ export default function CompletedSermons({ onOpenSermon }) {
     setExportError(null);
     setExportNote(null);
     try {
-      const result = await exportManuscript(buildManuscriptExportPayload(sermon));
+      // When searching, `sermon` is a SEARCH-RESULT row carrying only flattened
+      // search text — no manuscript JSON, main_point_pair, outline, or functional
+      // elements — so building the export payload from it produces an empty/broken
+      // document. Always export from the full sermon row.
+      const full = await getSermon(sermon.id);
+      if (!full) { setExportError(mapError("", "export")); return; }
+      const result = await exportManuscript(buildManuscriptExportPayload(full));
       if (result?.success) {
         setExportNote({
           id: sermon.id,
@@ -111,7 +117,11 @@ export default function CompletedSermons({ onOpenSermon }) {
   async function handleReopen(sermon, e) {
     e.stopPropagation();
     await updateSermon(sermon.id, { stage: SERMON_STATUS.InProgress });
+    // Drop it from BOTH the loaded list AND any active search results — otherwise
+    // the reopened (now In-progress) sermon lingers in this Preached view while a
+    // search is showing (filtered = searchResults).
     setSermons((prev) => prev.filter((s) => s.id !== sermon.id));
+    setSearchResults((prev) => (prev != null ? prev.filter((s) => s.id !== sermon.id) : prev));
   }
 
   return (

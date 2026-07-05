@@ -3414,6 +3414,7 @@ ipcMain.handle("sermon-export-manuscript", async (_, payload) => {
     const { Packer } = require("docx");
 
     const {
+      id = "",
       title = "",
       passage = "",
       date = "",
@@ -3560,8 +3561,15 @@ ipcMain.handle("sermon-export-manuscript", async (_, payload) => {
     const exportDir = path.join(app.getPath("documents"), "SermonForge", "exports", "Manuscripts");
     if (!fs.existsSync(exportDir)) fs.mkdirSync(exportDir, { recursive: true });
 
-    const safeTitle = (title || passage || "Sermon").replace(/[<>:"/\\|?*\n\r\t]/g, "—").trim();
-    const filepath = path.join(exportDir, `${safeTitle} — Manuscript.docx`);
+    const safeTitle = (title || passage || "Sermon").replace(/[<>:"/\\|?*\n\r\t]/g, "—").trim() || "Sermon";
+    // Disambiguate so two sermons that share a title never overwrite each other's
+    // Word document (silent data loss — writeFile below is an unconditional
+    // overwrite), while re-exporting the SAME sermon stably overwrites its own
+    // file. Prefer the pastor-meaningful preached date; fall back to a short id
+    // fragment when undated (two undated same-title sermons would still collide).
+    const disambiguator = String(date || "").trim() || (id ? String(id).slice(0, 8) : "");
+    const namePart = disambiguator ? `${safeTitle} — ${disambiguator}` : safeTitle;
+    const filepath = path.join(exportDir, `${namePart} — Manuscript.docx`);
 
     const buffer = await Packer.toBuffer(doc);
     await fs.promises.writeFile(filepath, buffer);

@@ -240,7 +240,13 @@ export default function PassageCanvas({ rows, onChange, seedVerses, rowIdsWithWo
   // (digits, colon, hyphen) so a stray keystroke can't drop sermon text in.
   const handleVerseChange = useCallback(
     (id, value) => {
-      const cleaned = value.replace(/[^0-9:-]/g, "").slice(0, 6);
+      // The character filter (digits, colon, hyphen) already blocks sermon text
+      // from bleeding into the gutter. The length cap only guards against a stuck
+      // key, so it must be generous enough never to TRUNCATE a real label —
+      // "119:176" (7), a range like "12:5-19" (7), or a cross-chapter
+      // "119:100-120:5" all exceeded the old 6-char slice and were silently
+      // mangled. 16 covers every realistic verse label with headroom.
+      const cleaned = value.replace(/[^0-9:-]/g, "").slice(0, 16);
       const next = safeRows.map((r) => (r.id === id ? { ...r, verse: cleaned } : r));
       setRows(next);
       setPendingRisk((risk) => (risk && risk.id === id ? null : risk));

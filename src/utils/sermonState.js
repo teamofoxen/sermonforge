@@ -424,7 +424,16 @@ export function deriveCurrentPositionFromSermon(sermon) {
   if (typeof ltp === "string" && ltp.trim()) {
     const parts = ltp.split("/");
     if (parts.length === 3 && parts[0] && parts[1] && parts[2]) {
-      return { stage: parts[0], subPhase: parts[1], fieldKey: parts[2] };
+      const [stage, subPhase, fieldKey] = parts;
+      // Only honor a composite that STILL EXISTS in the walk. A stale/retired
+      // position — a pre-v33 field, or any field renamed without a matching
+      // migration — would otherwise be returned unvalidated and land the pastor
+      // on the "this part isn't available yet" dead-end with no way to write.
+      // Fall through to the first field so a stale position self-heals.
+      const exists = WALK_ORDER.some(
+        (w) => w.stage === stage && w.subPhase === subPhase && w.key === fieldKey,
+      );
+      if (exists) return { stage, subPhase, fieldKey };
     }
   }
   const first = WALK_ORDER[0];
