@@ -624,6 +624,24 @@ function formatPacingDate(iso) {
   return parseLocalDate(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
+// A topical series' Outline is the pastor's ARRANGEMENT (sort_order), and the
+// Schedule owns dates — so the Outline must NOT reshuffle when a sermon is dated.
+// But `sermons` arrives from seriesSermonOrderBy DATED-FIRST, so rendering it raw
+// (or reordering over it) let a single scheduled sermon jump to the top and bake
+// that date-driven position into sort_order on the next reorder — scrambling the
+// arrangement (audit finding 24). Sort by sort_order here, date-independent, with
+// a creation-order tiebreak for never-arranged (NULL) sermons (matching
+// seriesSermonOrderBy's undated tiebreak). The render AND moveSermon share this
+// one order so the up/down arrows can't desync from what's on screen.
+function arrangedTopicalSermons(sermons) {
+  return [...(sermons || [])].sort((a, b) => {
+    const ao = a.sort_order ?? Number.MAX_SAFE_INTEGER;
+    const bo = b.sort_order ?? Number.MAX_SAFE_INTEGER;
+    if (ao !== bo) return ao - bo;
+    return String(a.created_at || "").localeCompare(String(b.created_at || ""));
+  });
+}
+
 // ── Outline Tab ───────────────────────────────────────────────────────────────
 // The book as ONE live nested outline: Book ▸ Section ▸ Sermon, each rung the
 // same unit (Title + range · Big idea · Overview). Replaces the old
@@ -724,10 +742,14 @@ function OutlineTab({
   // read the same sort_order via seriesSermonOrderBy, so this one write reorders
   // everywhere.
   async function moveSermon(id, direction) {
-    const idx = sermons.findIndex((s) => s.id === id);
+    // Reorder over the ARRANGEMENT order the pastor sees (sort_order), NOT the raw
+    // dated-first `sermons` — otherwise a move rewrites sort_order from date-driven
+    // positions and scrambles the arrangement (audit finding 24).
+    const ordered = arrangedTopicalSermons(sermons);
+    const idx = ordered.findIndex((s) => s.id === id);
     const newIdx = idx + direction;
-    if (idx < 0 || newIdx < 0 || newIdx >= sermons.length) return;
-    const reordered = [...sermons];
+    if (idx < 0 || newIdx < 0 || newIdx >= ordered.length) return;
+    const reordered = [...ordered];
     [reordered[idx], reordered[newIdx]] = [reordered[newIdx], reordered[idx]];
     const withOrder = reordered.map((s, i) => ({ ...s, sort_order: i }));
     onSermonsChange(withOrder);
@@ -857,10 +879,11 @@ function OutlineTab({
   // list of sermons (no section tier; passages come from many books). Charter:
   // series-planner-revival-charter.md "2026-06-25 — Topical Series mode".
   if (series.kind === "topical") {
-    // Committed sermons arrive in the pastor's order (seriesSermonOrderBy reads
-    // sermons.sort_order for topical); drafts append at the end. Reorder acts on
-    // the committed list only.
-    const rows = [...sermons, ...drafts];
+    // Committed sermons render in the pastor's ARRANGEMENT (sort_order), date-
+    // independent — `sermons` itself arrives dated-first from seriesSermonOrderBy,
+    // so it must be re-sorted here (and identically in moveSermon). Drafts append
+    // at the end. Reorder acts on the committed list only.
+    const rows = [...arrangedTopicalSermons(sermons), ...drafts];
     return (
       <div className="page-body" style={{ background: "var(--parchment)" }}>
         <div className="page-header" style={{ padding: "0 0 4px" }}>
