@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-07-05 — fix(observe): Commands and Declarations prompt — restore Merida fidelity
+
+- Reworded the Observe **Commands and Declarations** prompt to note the passage's commands and declarations, dropping the "for each main sentence" framing (which reached back to the Divisions canvas) and the "in your own words" clause (paraphrase is Interpret work).
+- Matched the `WORKSPACE-CANON.md` field row to the reworded prompt; its **[M]** Merida-fidelity tag is now accurate rather than falsified by drift.
+- Left the old phrasing in three banner-tagged historical PROPOSALS docs untouched (record, not live spec).
+
+---
+
 ## 2026-07-05 — Correctness-audit remediation: 23 findings fixed, 11 phantoms evidenced
 
 - Remediated the correctness/robustness audit on `fix/correctness-audit-remediation` (7 commits): 23 confirmed findings fixed, 11 flagged findings evidenced as phantoms (left unchanged with proof), 2 explicitly deferred (a dead defensive guard + a pastor policy ruling). Full report: `docs/AUDITS/correctness-audit-remediation-2026-07-05.md`.

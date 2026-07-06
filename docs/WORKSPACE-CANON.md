@@ -210,7 +210,7 @@ lens cluster against that structure; close with the plain-sense point. Seven fie
 | Surface Questions (`surface_questions`) | Where / when / what's happening, in order | **[M]** *(Phase-2: verify against the Merida source which of his surface questions are kept vs trimmed)* |
 | Divisions / Thought Units (`divisions`) | Hand-type the passage; main statements to the margin, supporting clauses indented, parallels aligned — one indented canvas. The thought-unit table is derived from this: each margin statement begins a unit, and the unit is its whole block (ruled 2026-07-02, see the §2 preamble). | **[M]** |
 | Main Characters (`characters`) | Who acts; name each one's role | **[M]** |
-| Commands and Declarations (`commands_declarations`) | For each main sentence, command vs declaration, and what it's doing | **[M]** |
+| Commands and Declarations (`commands_declarations`) | Note the passage's commands (where it tells the hearer to do something) and declarations (where it states what is true) | **[M]** |
 | Big Ideas (`big_ideas`) | What concepts the passage wrestles with | **[M]** |
 | Obvious Point (`obvious_point`) | The plain-sense point in one sentence | **[M]** — *binds the Observation Set* |
 

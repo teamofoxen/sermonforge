@@ -123,7 +123,7 @@ export const OBSERVE_FIELDS = [
     ],
   },
   { key: "characters",            label: "Main Characters",           hint: "Who's acting in this passage? For each character, name their role." },
-  { key: "commands_declarations", label: "Commands and Declarations", hint: "For each main sentence, name what kind of action it carries — a command (asking the hearer to do something) or a declaration (naming reality). Then say in your own words what the sentence is doing." },
+  { key: "commands_declarations", label: "Commands and Declarations", hint: "Go through the passage and note where it tells the hearer to do something (commands) and where it states what is true (declarations)." },
   { key: "big_ideas",             label: "Big Ideas",                 hint: "What concepts is the passage wrestling with? List them. For each, a one-line note on how it shows up." },
   { key: "obvious_point",         label: "Obvious Point",             hint: "State the plain-sense point of the passage in one sentence." },
 ];
