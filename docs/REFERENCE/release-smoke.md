@@ -37,8 +37,8 @@ every item. Items marked **(Win + Mac)** must run on both platforms.
 7. **Soft delete** — delete a sermon from All Sermons: the card swaps to a
    stub with Undo; Undo restores it. Delete again, relaunch: it stays gone
    from every list and from search.
-8. **Search** — search a word typed into the sermon body (Equip prose):
-   the hit appears labeled "EQUIP · SERMON BODY".
+8. **Search** — search a word typed into the sermon body (Body prose):
+   the hit appears labeled "BODY · SERMON BODY".
 9. **Menu (Win + Mac)** — the menu shows File/Edit/View/Help only; no
    Reload/DevTools in the packaged build; **on macOS, cut/copy/paste work
    in a text field** (Edit roles); Help → About shows the real version +
@@ -52,7 +52,7 @@ every item. Items marked **(Win + Mac)** must run on both platforms.
     the splash paint dark from the first frame (no light flash).
 12. **Migration** — launch this build over a copy of a previous-version
     library: no migration errors in `app.log`, sermons intact, schema
-    version reads 32 (or current), search works.
+    version reads 33 (or current), search works.
 13. **Passage popup** — with a valid key: passage text + Crossway line
     render. With no key: the popup offers "Add ESV key" and saving a key
     in-place loads the passage without closing anything.

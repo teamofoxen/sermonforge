@@ -153,7 +153,7 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
   // Front door: the first time a given series is opened, auto-show the short
   // "How this works" orientation once (the macro analog of the sermon-start
   // landing). It stays re-readable forever via the topbar button. The seen-flag
-  // is write-only localStorage (mirrors the tour's sf_tour_planner_seen) — NEVER
+  // is write-only localStorage (set once on first open, read on mount) — NEVER
   // a schema column, so the create-then-update INSERT is untouched.
   useEffect(() => {
     const introKey = `sermonforge_planner_intro_${seriesId}`;

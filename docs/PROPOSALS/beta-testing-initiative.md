@@ -1,6 +1,6 @@
 # Beta Testing Initiative (BTI) — Charter
 
-**Status:** Active. Phase 1 build infrastructure shipped. Cohort onboarding pending charter ratification post-ARI.
+**Status:** Active — cohort NOT yet onboarded (re-verified 2026-07-10). Phase 1 build infrastructure shipped 2026-05-08; Phase 1.5 closed 2026-05-09. Phase 2 (cohort onboarding) waits on the owner's Q6/Q7 cohort decisions plus one readiness item: the live feedback-path round-trip (flag click → worker → D1) is unverified post-ARI and currently blocked — the deployed worker still token-gates `/ingest` (checked 2026-07-10) while the shipped client is token-free, so feedback/telemetry buffers locally until the owner redeploys the worker. No ratification event for the 2026-05-09 rewrite is recorded; this rewritten text is the working charter — ratification and cohort timing remain the owner's call.
 **Audience:** The lone developer of SermonForge, who is also a pastor and the pastor-user. Plain language, no engineering vocabulary required.
 **Date drafted:** 2026-05-01.
 **Last revision:** 2026-05-09 — full rewrite for the post-ARI product. AI was removed from SermonForge (see `docs/PROPOSALS/ai-removal-initiative.md`); the charter's anchor framing, telemetry signals, and feedback dimensions are recast for a system whose only authorship surface is the pastor's typing into structured questions and notebooks.

@@ -1,6 +1,6 @@
 # Workspace Re-Foundation Initiative — working board
 
-> **Status: ESSENTIALLY COMPLETE — Phase 1 shipped (2026-06-14/15, canon LIVE); Phase 2 rulable items 1–5 shipped (2026-06-15/16); the OEM walk + Frame→Manuscript collapse shipped 2026-07-02 (`docs/handoff/oem-walk-rulings-2026-07-01.md`); the ruled N/A code build (Study grants 2b + per-cell cumulative-table N/A 2c) shipped 2026-07-02. Remaining: only the independent infra-doc pass below (present-tense sql.js/saveDb cruft, schema-version drift) + trivial doc-cleanup (historicize the §2 [◆] tags in canon). No code or rulings outstanding.** Chartered
+> **Status: ESSENTIALLY COMPLETE — Phase 1 shipped (2026-06-14/15, canon LIVE); Phase 2 rulable items 1–5 shipped (2026-06-15/16); the OEM walk + Frame→Manuscript collapse shipped 2026-07-02 (`docs/handoff/oem-walk-rulings-2026-07-01.md`); the ruled N/A code build (Study grants 2b + per-cell cumulative-table N/A 2c) shipped 2026-07-02; the independent infra-doc pass closed 2026-07-01 (the doc drift sweep — see worklist B below). Remaining: only the trivial doc-cleanup (historicize the §2 [◆] tags in canon — WORKSPACE-CANON §7 item 3). No code or rulings outstanding.** Chartered
 > 2026-06-13 at the end of a long design conversation. This is the doc the work runs from.
 > It has two coupled jobs: (1) **consolidate the scattered document authority** into a
 > clean structure, and (2) **re-examine the contracts + the Study/Anchor question set
@@ -22,6 +22,12 @@
 ---
 
 ## Where this stands (the simple version)
+
+> **Dated snapshot — 2026-06-13, charter time. Retained as history; the Status banner
+> above is the current truth.** Everything this section calls "next" has since shipped,
+> and its "No canonical change committed yet" line was true only on the day it was
+> written — Phase 1 (canon LIVE), Phase 2 items 1–5, the OEM walk, and the N/A build
+> have all landed since.
 
 - We audited whether SermonForge applies Merida faithfully. Verdict: the **question
   spine is mostly faithful**, but there are a few **drifts**, some **gate-induced**
@@ -253,6 +259,10 @@ the traced authority belongs elsewhere and must NOT be pulled into canon.
   read as undermining it. Clarification, not amendment.
 
 ## Phase 2 (after Phase 1) — the Merida question surgery
+
+> **Shipped.** Items 1–5 landed 2026-06-15/16 (`ab5c87c`, `2029747`, `c07139e`); the
+> per-unit-gate/N-A ruling was built 2026-07-02; the OEM-deferred items were ruled and
+> shipped in the OEM walk (2026-07-02). This section is the plan as written, kept as history.
 
 Rule + cut against the clean CANON, editing one doc in place. Lowest-cost first:
 MPS→fallen-condition-focus, two-brothers language, authority gradient, the cuts

@@ -68,8 +68,9 @@ fully retired: its only consumer, the legacy GitHub-posting feedback handler,
 was removed in the public-launch hardening pass, and the vestigial CI step
 that still wrote it into a build-time `.env` was removed 2026-07-01 — live
 feedback goes through the BTI Cloudflare Worker instead (see
-`docs/SYSTEMS/ipc.md`). The `FEEDBACK_TOKEN` repo secret itself can be
-deleted from GitHub settings at leisure.
+`docs/SYSTEMS/ipc.md`). The `FEEDBACK_TOKEN` repo secret has since been
+deleted from GitHub settings (verified 2026-07-10 — `gh secret list` shows
+only the eight Apple/Mac signing secrets).
 
 ---
 

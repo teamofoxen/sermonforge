@@ -14,9 +14,9 @@ This is a focused reasoning tool, not a broad audit.
 
 User must specify a target:
 
-- file (e.g. `contextBuilder.js`)
-- function (e.g. `sendAIMessage`)
-- flow (e.g. "AI request lifecycle")
+- file (e.g. `SermonWorkspace.jsx`, `electron/main.js`)
+- function (e.g. `deriveSermonCompleteness`, `buildUpdate`)
+- flow (e.g. "the autosave → flush → IPC commit lifecycle", "the study-guide export chain")
 
 If the target is unclear, ask for clarification BEFORE proceeding.
 
@@ -70,10 +70,28 @@ Identify:
 ### 7. ARCHITECTURE COMPLIANCE (SERMONFORGE)
 
 Validate:
-- no renderer access to DB or AI
-- AI calls go through IPC `"ai-message"`
-- `saveDb()` debounce preserved
-- no business logic in UI layer
+- no AI path exists or is reintroduced — no AI calls, prompts, SDK imports, or AI-shaped
+  IPC anywhere (ARI, 2026-05-09; the `sermonforge/no-direct-ai` lint tripwire is
+  no-exception)
+- renderer database access goes only through the current wrappers — `src/core/spine.ts`
+  (sermon/series spine) and `src/db/database.js` (non-spine channels); never
+  `window.electronAPI` directly, never raw SQL
+- durable writes commit at the IPC handler (better-sqlite3, WAL) — no main-process save
+  debounce or queue may sit in front of them
+- the renderer's 800ms autosave debounce flushes where the current system requires it:
+  window close / quit / reload (`src/utils/closeFlush.js`), position moves
+  (`beforePositionChange`), and before export
+- no business/domain logic in UI components — derivations belong in `src/utils/`
+  (e.g. `sermonState.js`, `studyAdvancement.js`, `walkOrder.js`)
+- contract and vocabulary ownership respected — renderer-writable columns ride the
+  `SERMON_COLUMNS` / `SERIES_COLUMNS` / `SECTION_COLUMNS` allowlists (kept in sync across
+  `src/core/contracts.ts`, `electron/contracts.cjs`, and the test-spine mirror), and only
+  canonical stage/sub-phase names appear (CORE State #5)
+
+If the target is itself a visible UI flow — a screen or interaction the pastor works
+through — also consult `docs/PRODUCT-LENS.md` and examine the human task: can a
+first-time pastor find it, read it cold, and recover when it fails? One lens within
+this step, not a UX audit.
 
 ## OUTPUT FORMAT
 

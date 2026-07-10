@@ -1,8 +1,18 @@
 # Proposal: SermonForge Public Distribution
 
-> **Status:** Draft — 2026-04-28
-> **Owner:** Ross
-> **Motivation:** SermonForge has been a single-user app on one machine. This proposal
+> **Status: OPERATIONAL — the pipeline this proposal designed is live.** First public
+> release `v1.0.0` shipped 2026-05-07 (Windows NSIS installer + signed/notarized macOS
+> DMG); latest release `v1.1.0` shipped 2026-07-01 with the full pipeline re-exercised
+> clean end-to-end. GitHub Actions builds both installers on every `v*` tag and
+> publishes to GitHub Releases; `electron-updater` delivers updates to installed users
+> automatically. **Section 14 (Release Pipeline) is the current operational reference,
+> and [`docs/REFERENCE/release-smoke.md`](../REFERENCE/release-smoke.md) is the current
+> smoke-test source. Sections 1–13 are the original 2026-04-28 proposal, retained as
+> rationale and history** — where an older section and Section 14 disagree, Section 14
+> is current.
+>
+> **Owner:** Ross · **Originally drafted:** 2026-04-28
+> **Motivation (original):** SermonForge has been a single-user app on one machine. This proposal
 > covers everything needed to distribute it to other pastors: downloadable installers
 > for Mac and Windows, automatic updates, optional ESV API key entry, and the
 > feedback/error visibility loop that replaces "I can see the console."
@@ -28,18 +38,21 @@
 
 ## 3. Current State
 
+*(Updated 2026-07-10 to operational reality; the original 2026-04-28 gaps this table
+tracked are all closed. Section 14 is the detailed reference.)*
+
 | Piece | Status |
 |-------|--------|
-| Windows installer build | Working (`npm run build` → NSIS `.exe`) |
-| Mac build | Not configured |
-| Auto-updates | **Done** — `electron-updater` wired up via `electron/updater.js` |
+| Windows installer build | **Done** — NSIS `.exe` built by CI on every `v*` tag (local `npm run build` still works for packaging checks) |
+| Mac build | **Done** — universal DMG, signed (Developer ID) + notarized (`notarytool`), built by CI since `v1.0.0` (2026-05-07) |
+| Auto-updates | **Done** — `electron-updater` wired up via `electron/updater.js`; `latest.yml` + `latest-mac.yml` feeds live |
 | Setup screen | **Done** — `SetupScreen.jsx`; optional ESV key via `safeStorage` + BTI telemetry preference (post-ARI: Anthropic key removed) |
 | GitHub repo | Exists at `github.com/teamofoxen/sermonforge` |
-| Feedback → GitHub Issues | **Working** — `GITHUB_FEEDBACK_TOKEN` in `.env`, posts structured issues |
-| Crash log / auto error capture | **Done** — `electron/logger.js`; last 50 lines attached to feedback |
-| GitHub Actions (automated builds) | Not set up |
-| Apple Developer account | Not confirmed |
-| Windows code signing cert | Deferred — optional for first wave |
+| Feedback → GitHub Issues | **Replaced** — the GitHub-posting path (and `GITHUB_FEEDBACK_TOKEN`) was removed in the public-launch hardening pass (2026-06-09); in-app feedback goes to the BTI Cloudflare Worker (see `bti-build-mvp.md` + `docs/REFERENCE/privacy.md`) |
+| Crash log / auto error capture | **Done** — `electron/logger.js` (`app.log`); local-only (see `privacy.md` — log lines are not attached to anything outbound) |
+| GitHub Actions (automated builds) | **Done** — `.github/workflows/build.yml`; `build-windows` + `build-macos` jobs on `v*` tags, publish to GitHub Releases |
+| Apple Developer account | **Confirmed** — notarization live since `v1.0.0` |
+| Windows code signing cert | Still deferred — installers ship unsigned; SmartScreen warning on first install is expected |
 | NIV / The Message (API.Bible) | **Removed** — ESV-only; `BIBLE_API_KEY` fully purged |
 
 ---
@@ -62,7 +75,10 @@ secure storage (Electron's `safeStorage`). Never shows again.~~
 ~~In dev mode (`ELECTRON_DEV=1`) the app reads `.env` as always. No change to local workflow.~~
 
 ### 4.2 Mac support
-`package.json` only configures a Windows NSIS build. Mac needs its own targets and assets.
+*(Done — shipped with `v1.0.0`, 2026-05-07: universal DMG, signed + notarized via CI. The
+paragraph below is the original proposal.)*
+
+~~`package.json` only configures a Windows NSIS build.~~ Mac needs its own targets and assets.
 
 **Fix:** Add Mac targets to the `build` section of `package.json`. Requires:
 - `build/icon.icns` (Mac icon format)
@@ -151,15 +167,20 @@ GitHub Actions runs on GitHub's servers when Ross pushes a version tag (`v1.0.1`
 It builds both Mac and Windows installers and attaches them to a GitHub Release.
 Ross's machine is not involved in the build process.
 
-File: `.github/workflows/build.yml` (to be created).
+File: `.github/workflows/build.yml` — **exists and is live** (this section proposed it;
+Section 14 Step 2 documents the as-built jobs, which are the current reference).
 
-Requires secrets stored in GitHub repo settings (not in code):
+Requires secrets stored in GitHub repo settings (not in code). *(As-built note: notarization
+settled on the App Store Connect API-key path — `APPLE_API_KEY_BASE64` / `APPLE_API_KEY_ID` /
+`APPLE_API_ISSUER` — rather than the Apple-ID + app-specific-password pair proposed below;
+see Section 14 Step 2. The build-time `.env` write was removed 2026-07-01 — no bundled
+secrets.)* Original proposal list:
 - `APPLE_ID` — for notarization
 - `APPLE_ID_PASSWORD` — app-specific password
 - `APPLE_TEAM_ID` — from Apple Developer account
 - `CSC_LINK` + `CSC_KEY_PASSWORD` — Mac signing cert (exported from Keychain)
 - `WIN_CSC_LINK` + `WIN_CSC_KEY_PASSWORD` — Windows cert (optional, deferred)
-- `GITHUB_FEEDBACK_TOKEN` — written into a build-time `.env` by the workflow; `ESV_API_KEY` is deliberately excluded (users supply their own via the setup screen). (Pre-ARI: `ANTHROPIC_API_KEY` was also excluded — moot now that AI is removed.)
+- `GITHUB_FEEDBACK_TOKEN` — written into a build-time `.env` by the workflow (retired 2026-07-01 with its consumer); `ESV_API_KEY` is deliberately excluded (users supply their own via the setup screen). (Pre-ARI: `ANTHROPIC_API_KEY` was also excluded — moot now that AI is removed.)
 
 ---
 
@@ -184,12 +205,12 @@ These don't require code — just a shift in how to think when building:
 |-------|-------|--------------|
 | 0 | `electron/config.js` — dev/prod gatekeeper | Nothing ✅ |
 | 1 | `SetupScreen.jsx` — first-run optional ESV key + telemetry preference | Phase 0 ✅ |
-| 2 | Crash log + auto-attach to feedback | Phase 0 ✅ |
+| 2 | Crash log + auto-attach to feedback | Phase 0 ✅ *(the auto-attach half was later removed — the log is local-only now; see privacy.md)* |
 | 3 | `electron-updater` wired up | Phase 0 ✅ |
-| 4 | Mac build config + icons + entitlements | Apple Developer account confirmed |
-| 5 | GitHub Actions build workflow | Phases 3 + 4 complete |
-| 6 | First public release on GitHub Releases | Phase 5 complete |
-| 7 | theology.db as separate download | [theology-corpus.md](../ARCHIVE/theology-corpus.md) Phase 1 complete |
+| 4 | Mac build config + icons + entitlements | ✅ shipped with `v1.0.0` (2026-05-07) |
+| 5 | GitHub Actions build workflow | ✅ live (`.github/workflows/build.yml`) |
+| 6 | First public release on GitHub Releases | ✅ `v1.0.0` 2026-05-07; latest `v1.1.0` 2026-07-01 |
+| 7 | theology.db as separate download | Dormant — the corpus's AI consumer was removed (ARI, 2026-05-09); revisit only if retrieval returns ([theology-corpus.md](../ARCHIVE/theology-corpus.md), orphaned per ARI D5) |
 
 ---
 
@@ -205,14 +226,16 @@ invisible-system rebuild (tour, per-tab notebook, Manuscript tab).
 
 ## 13. Open Questions
 
-- **Apple Developer account** — does Ross have one, or does it need to be created?
-  Blocks Phase 4 entirely.
-- **Windows cert** — skip for v1 and warn users to click through SmartScreen? Almost
-  certainly yes for first wave (trusted pastors who know Ross).
-- **Update channel** — one channel (latest) or stable/beta split? Defer until there
+*(Statuses updated 2026-07-10.)*
+
+- **Apple Developer account** — ✅ resolved: the account exists and notarization has been
+  live since `v1.0.0` (2026-05-07).
+- **Windows cert** — still deferred, as decided: installers ship unsigned and the
+  SmartScreen warning on first install is expected for the current wave.
+- **Update channel** — still a single channel (latest). Defer a stable/beta split until there
   are enough users to matter.
-- **theology.db hosting** — GitHub Releases supports up to 2GB per file. Sufficient
-  for current corpus. Revisit if it grows past that.
+- **theology.db hosting** — dormant with Phase 7 (the corpus's consumer was removed in ARI);
+  the 2GB-per-file GitHub Releases note stands if it ever revives.
 
 ---
 
@@ -246,12 +269,12 @@ Two parallel jobs run on GitHub-hosted runners. Ross's machine is not involved.
 **`build-windows`** (`runs-on: windows-latest`):
 1. Checkout, Node 20, `npm install`.
 2. Sync `package.json` version: `npm version "$TAG_VERSION" --no-git-tag-version --allow-same-version`.
-3. Write build-time `.env` with `GITHUB_FEEDBACK_TOKEN` (from `secrets.FEEDBACK_TOKEN`).
+3. ~~Write build-time `.env` with `GITHUB_FEEDBACK_TOKEN`~~ — removed 2026-07-01; the token's only consumer (the legacy GitHub-posting feedback handler) was deleted in public-launch hardening, and builds need no bundled secrets.
 4. `npx vite build` → `dist/`.
 5. `npx electron-builder --win --publish always` → uploads `SermonForge-Setup.exe`, `SermonForge-Setup.exe.blockmap`, and `latest.yml` to the GitHub Release for this tag (auth: `secrets.GITHUB_TOKEN`).
 
 **`build-macos`** (`runs-on: macos-latest`):
-1. Checkout, Node 20, `npm install`, version sync, build-time `.env` (same as Windows).
+1. Checkout, Node 20, `npm install`, version sync (no build-time `.env` — same removal as Windows step 3).
 2. `iconutil -c icns brand/icons/sermonforge.iconset -o build/icon.icns` — generate `.icns` at build time from the iconset.
 3. **Diagnostic step** (always runs): probes the `.p12` — password length, character categories, SHA-256 hash, OpenSSL decrypt test (with and without MAC verify). Lets you tell at a glance whether secret rotation broke the cert.
 4. Decode App Store Connect API key from `secrets.APPLE_API_KEY_BASE64` to `~/private_keys/AuthKey.p8`; export `APPLE_API_KEY=$HOME/private_keys/AuthKey.p8`.
@@ -334,14 +357,14 @@ Subsequent launches read from `safeStorage` (prod) or `.env` (dev — `ELECTRON_
 
 ### Step 7 — Closing the loop
 
-**Owned by:** [`electron/logger.js`](../../electron/logger.js) (`app.log`) + the feedback transport.
+**Owned by:** [`electron/logger.js`](../../electron/logger.js) (`app.log`) + the BTI telemetry/feedback channel (`electron/telemetry/`).
 
 When something breaks for a user:
-1. Errors land in `app.log` (writable user-data path).
-2. `process.on('uncaughtException')` writes to the same log before exit.
-3. User clicks a feedback flag in-app → modal opens → submission auto-attaches the last 50 log lines → posts a structured GitHub Issue via `GITHUB_FEEDBACK_TOKEN`.
+1. Errors land in `app.log` (writable user-data path). The log is local-only — no part of it is attached to anything outbound (see [`docs/REFERENCE/privacy.md`](../REFERENCE/privacy.md)).
+2. `process.on('uncaughtException')` writes to the same log before exit; a `crash` telemetry event (short error message, ≤500 chars, never log lines or sermon content) reaches the developer unless the pastor opted out.
+3. User clicks a feedback flag in-app (workspace writing surface or planner topbar) or "Send feedback…" in the sidebar → the note goes to the developer-run BTI Cloudflare Worker. (The original GitHub-Issues path via `GITHUB_FEEDBACK_TOKEN` was removed in public-launch hardening, 2026-06-09.)
 
-This closes the pipeline: ship → install → run → break → bug surfaces in your inbox without depending on the user copying a console.
+This closes the pipeline: ship → install → run → break → the signal surfaces without depending on the user copying a console.
 
 ---
 

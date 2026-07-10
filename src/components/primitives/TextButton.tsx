@@ -5,16 +5,14 @@
 // Same migration rules as `PrimaryButton` / `SecondaryButton`:
 // structural, no visual redesign.
 //
-// Used for tertiary text-link actions: "guided tour" hint in the
-// Dashboard hero, "Send feedback" in the sidebar footer, "How this
-// works" links in the workspace + planner topbars, "Study Guide"
-// in the planner topbar, and "Leave tour" in the tour overlay.
+// Used for tertiary text-link actions: "Send feedback…" and "Add or
+// update ESV key…" in the sidebar footer, the map header's "Read
+// again" doors, "How this works" in the planner topbar, and the
+// notebook drawer's stage tabs.
 //
-// `className` extends the canonical class — the dark-theme tour
-// overlay site passes additional inline styling that way (no
-// `theme="dark"` variant prop; Surface #2's "one shape" rule keeps
-// the primitive simple and lets the rare dark surface override via
-// className).
+// `className` extends the canonical class — a dark-surface site can
+// override colors that way (no `theme="dark"` variant prop; Surface
+// #2's "one shape" rule keeps the primitive simple).
 
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 

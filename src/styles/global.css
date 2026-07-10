@@ -377,7 +377,7 @@ body {
 }
 
 /* Buttons rendered inside the topbar inherit the dark-surface treatment —
-   matches the existing .btn-*-dark variants used by the tour overlay. */
+   light-on-ink colors matching the topbar's always-dark bar. */
 .topbar .btn-icon {
   color: var(--topbar-fg-muted);
   border-color: transparent;
@@ -518,8 +518,10 @@ button {
   cursor: not-allowed;
 }
 
-/* Dark-theme variants — used by the tour overlay callout, which renders
-   on a dark ink background. Override colors only; layout is unchanged. */
+/* Dark-on-ink variants of .btn-text / .btn-ghost. ORPHANED at HEAD — their
+   only consumer (the tour overlay callout) was deleted 2026-05-17, and no
+   src/ consumer remains (verified 2026-07-10). Deletion candidate: needs
+   explicit owner approval (design-system file) — kept until ruled. */
 .btn-text-dark {
   color: var(--parchment);
   opacity: 0.65;

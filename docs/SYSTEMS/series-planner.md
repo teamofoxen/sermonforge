@@ -183,8 +183,10 @@ all writes gate through `buildUpdate` in `electron/main.js`. The sermon's
 columns the same create-then-update way — never on the INSERT: `series.kind`
 (v30), `sermons.sort_order` (v30, the topical pastor-authored order),
 `sermons.book_id` (v31, the structured per-sermon book for topical), and
-`sermons.tags` (v32, free-form topic tags). Schema is at **v32**; all four are
-in the three allowlist mirrors.
+`sermons.tags` (v32, free-form topic tags). The planner-owned schema additions
+run through **v32**; the application schema itself is at **v33** (the
+2026-07-02 OEM workspace restructure — a workspace migration, not a planner
+change). All four planner columns are in the three allowlist mirrors.
 
 ## 5. Sermon draft / commit
 

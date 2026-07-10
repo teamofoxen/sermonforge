@@ -1,42 +1,89 @@
 # SermonForge
 
-A sermon preparation workspace for pastors. Built with Electron, React, Vite, and SQLite.
+A local-first sermon preparation workspace for pastors. Built with Electron, React,
+Vite, and SQLite (better-sqlite3). **No AI** — the system asks structured questions
+and the pastor authors every word; all AI surfaces were removed 2026-05-09 and may
+not return (`docs/CORE.md`, Process Contract #5).
 
-## Setup
+## Setup (development)
 
-1. Ensure `.env` exists in the project root with:
-   ```
-   ANTHROPIC_API_KEY=your-key-here
-   ```
+1. Install dependencies:
 
-2. Install dependencies:
    ```
    npm install
    ```
 
-3. Launch the app:
+   Native modules must be rebuilt for Electron's ABI after install if the app
+   complains on boot: `npx @electron/rebuild -m node_modules/better-sqlite3`.
+
+2. Optional — create `.env` in the project root for the dev passage view:
+
    ```
-   npm start
+   ESV_API_KEY=your-key-here
    ```
 
-## Features
+   This is the only secret the app consumes, and it is optional (from
+   [api.esv.org](https://api.esv.org); without it the passage view stays empty).
+   Packaged builds never read `.env` — end users enter their own ESV key, skippable,
+   on the first-run setup screen (`SetupScreen.jsx`), stored via the OS keystore
+   (`electron/keystore.js`).
 
-- **Dashboard** — stats, upcoming sermons, active series
-- **Sermon Workspace** — full prep workflow: Study → Outline → Manuscript → Delivery
-- **Study Tab** — four-phase exegesis (Observe, Interpret, Redemptive Thread, Implications), MPT→MPS Forge, Outline Builder, Functional Elements (E/A/I)
-- **Manuscript Tab** — full editor with Sermon Tune-Up Engine (AI)
-- **Delivery Tab** — pre-sermon checklist, timing notes, post-sermon reflection, full-screen delivery view
-- **AI Panel** — Claude-powered feedback for every stage via IPC (API key stays in main process)
-- **Calendar** — visual sermon schedule
-- **Illustrations** — searchable illustration library
-- **Archive** — past sermons
+3. Launch:
+
+   ```
+   npm start          # Electron app (dev)
+   npm run dev        # Vite-only browser preview — UI renders; DB/IPC calls are stubbed
+   npm test           # vitest suite
+   npm run build      # Windows installer → C:\Projects\SermonForgeBuilds\
+   ```
+
+## What's in the app
+
+- **Dashboard** — a re-entry point, not a stats page: build a sermon, pick up where
+  you left off, or open the worked sample sermon (Romans 5:1–5).
+- **Sermon Workspace** — the prep walk: **Study** (Observe → Interpret → Redemptive
+  Thread → Implications) → **Assembly** (Anchor: the MPT/MPS Main Point Pair ·
+  Outline) → **Manuscript** (Body, then Intro/Transitions/Conclusion). One writing
+  surface with a summonable map, the ESV passage alongside in the reference pane,
+  per-stage notebooks, autosave with close-flush, and a re-openable Finish screen
+  carrying **Export to Word** and **Mark as preached**.
+- **All Sermons / Preached Sermons** — the library: search, soft delete with Undo,
+  re-open and per-sermon Word export for preached sermons.
+- **Series Planning** — the macro planner. A series is **Book**-led (Book ▸ Section ▸
+  Sermon) or **Topical** (theme-led, flat pastor-ordered sermon list), across three
+  screens: Outline · Schedule (Sundays, church seasons, pacing) · Study guide (an
+  editable congregational booklet with its own Word export).
+- **What I've Preached** — coverage in two lenses: By book (the Series Arc) and
+  By topic (sermon tags).
+- **Calendar** — the preaching schedule; clicking a day starts a new sermon with that
+  date pre-filled.
+- Light/dark theme (sidebar toggle), in-app feedback to the developer, and automatic
+  updates from GitHub Releases.
 
 ## Database
 
-Local-first SQLite storage. No dependency on OneDrive for the database.
+Local-first SQLite via **better-sqlite3** (WAL mode; writes commit durably at the IPC
+handler). Everything lives under Electron's `userData` path — no cloud, no server:
 
-- Main application database: `%APPDATA%\sermonforge\data\sermonforge.db` (sql.js)
-- Theology corpus: `%APPDATA%\sermonforge\data\theology.db` (better-sqlite3 + sqlite-vec)
+- Packaged: `<userData>\data\sermonforge.db`
+- Dev: `<userData>\data-dev\sermonforge.db` (kept separate from real data)
 
-The data directory is created on first launch. Seeded with sample sermons on
-first launch.
+`theology.db` (better-sqlite3 + sqlite-vec) exists on disk as dormant corpus
+infrastructure — retained per the AI-removal charter, no live consumer.
+
+Privacy: sermon content never leaves the machine. The only outbound calls are the ESV
+passage fetch, the auto-updater's version check, and opt-out interaction metadata —
+see `docs/REFERENCE/privacy.md`.
+
+## Distribution
+
+GitHub Actions builds both installers (Windows NSIS `.exe`, signed + notarized macOS
+`.dmg`) on every `v*` tag and publishes them to GitHub Releases; installed apps
+auto-update. See `docs/PROPOSALS/distribution.md` (Section 14 is the live pipeline
+reference) and `docs/REFERENCE/release-smoke.md`.
+
+## Documentation
+
+`CLAUDE.md` is the navigation guide. `docs/CORE.md` is the law (identity, contracts,
+non-negotiables); `docs/RULES.md` governs development; `docs/WORKSPACE-CANON.md` holds
+the sermon walk's what & why; `docs/SYSTEMS/` holds current mechanics.

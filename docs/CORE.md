@@ -462,15 +462,23 @@ behavior without separate approval.
   deliberate (keystroke batching), and is flushed on close/quit/reload via
   `src/utils/closeFlush.js`. (Driver-swap history: `docs/CORE-CHANGELOG.md`.)
 
-- **The design system lives entirely in `src/styles/global.css`** as CSS variables. Never
-  hardcode colors, font names, or layout dimensions outside that file. Never change the
-  design system without explicit user approval.
+- **The design system lives in `src/styles/` as CSS variables, split across three
+  canonical files:** `global.css` (the reset, all color/surface/shadow/radius/layout
+  tokens, dark-theme token overrides, and component styles), `typography.css` (the
+  two-voice type system — family + scale/tracking tokens), and `fonts.css` (the
+  generated `@font-face` rules for the self-hosted files in `src/styles/fonts/`).
+  Never hardcode colors, font names, or layout dimensions anywhere else — everything
+  outside these files consumes the tokens. Never change the design system without
+  explicit user approval.
 
 ---
 
 ## Tech Stack (summary)
 
 Electron 31 · React 18 · Vite 5 (config: `vite.config.mjs`) · better-sqlite3 (native
-SQLite, WAL) · dotenv · Node 24 · Windows 11 / OneDrive storage.
+SQLite, WAL) · dotenv · Node 24 · cross-platform desktop app (Windows + macOS) · all
+application data local under `app.getPath("userData")` (OneDrive is only a legacy
+migration source — see the userData-path boundary above). Installers, signing, and
+auto-update mechanics: `docs/PROPOSALS/distribution.md`.
 
 Full details: `docs/REFERENCE/project-structure.md`.

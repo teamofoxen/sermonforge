@@ -2780,9 +2780,11 @@ const SPINE_READ_OPS = new Set([
   "get-sections-by-series",
 ]);
 
-// Sermon FTS — full-text search over all sermon content (v22). Separate
+// Sermon search — text search over all sermon content (v22). Separate
 // IPC channel because it's a read-only auxiliary surface, not a spine
-// transition. Returns up to `limit` hits (default 50) ranked by FTS5.
+// transition. Returns up to `limit` hits (default 50). Despite the
+// handler's legacy "Fts" name, matching is LIKE over the sermon_search
+// table — see the "Why not FTS5" note at the sermon_search table build.
 ipcMain.handle("db-searchSermons", (_, payload) => {
   try {
     const query = typeof payload === "string" ? payload : (payload?.query || "");

@@ -12,8 +12,9 @@
 // (Phase 1's `STEPS / PHASES / STEP_SEQUENCE / PHASE_SEQUENCE` re-export
 // decision retired in post-sweep audit Chunk 3, 2026-05-18 — see the
 // gravestone block below for context. The Step layer was retired in the
-// Workspace Restructure; tour prerequisites + AIPanel routing all went
-// with ARI + the trail deletion sweep.)
+// Workspace Restructure; the guided-tour engine and AIPanel routing were
+// deleted outright — ARI (2026-05-09) + the trail deletion sweep
+// (2026-05-17) — and neither exists at HEAD.)
 //
 // Phase 1 cleanup chose to **subsume** `SERMON_COLUMNS / pickSermonColumns`
 // (Option A in the prompt). The former renderer-side mirror at

@@ -12,6 +12,17 @@ This file is a navigation guide. Do not load everything by default.
 
 - [`docs/RULES.md`](docs/RULES.md) — development rules, guardrails, design system, git workflow
 
+## Visible work is a human task
+
+Any change a pastor will see — UI, user-facing copy, navigation, a journey — is judged
+as a human task, not only as an implementation. A passing test or a successful render
+proves the code ran; it does not prove a pastor can find the feature, read the screen
+cold without a remembered modal, know his natural first move, see that his work saved,
+or recover when something fails. Preserve cold legibility, an obvious first action,
+visible feedback, recovery, and predictable re-entry. For pastor-facing UI, copy,
+navigation, journey, product-planning, or UX-audit work, load
+[`docs/PRODUCT-LENS.md`](docs/PRODUCT-LENS.md).
+
 ## Load for the specific area of work
 
 | Task area | Load | Also check |
@@ -19,6 +30,7 @@ This file is a navigation guide. Do not load everything by default.
 | Sermon workspace — the walk's *what & why* (questions, named outcomes, completeness policy, Merida fidelity) | [`docs/WORKSPACE-CANON.md`](docs/WORKSPACE-CANON.md) | the law is `docs/CORE.md` |
 | Sermon workspace — *how & where* (components, JSON columns, save flow, study tab, PassagePopup) | [`docs/SYSTEMS/sermon-workspace.md`](docs/SYSTEMS/sermon-workspace.md) | [`docs/WORKSPACE-CANON.md`](docs/WORKSPACE-CANON.md) for the what & why |
 | Workspace work that touches **what the pastor reads or feels** — user-facing copy, error/save messages, empty states, the three threshold screens, N/A affordances, naming an outcome or control, any new affordance in the walk, or **adding/removing a question in the walk** | [`docs/PASTORS-CHARTER.md`](docs/PASTORS-CHARTER.md) | explanatory lens only — creates no requirements, never cite it as authorization; the law is `docs/CORE.md` |
+| **Pastor-facing product work, app-wide** — UI, user-facing copy, navigation, journeys, product planning, UX audits (any surface, not just the workspace walk) | [`docs/PRODUCT-LENS.md`](docs/PRODUCT-LENS.md) | standing orientation only — subordinate to CORE / RULES / WORKSPACE-CANON / SYSTEMS; creates no requirements; the workspace-copy row above still applies for walk copy |
 | Series Planner — macro/architect series planning (three-screen planner: Outline · Schedule · Study guide; create-then-update, study-guide export) | [`docs/SYSTEMS/series-planner.md`](docs/SYSTEMS/series-planner.md) | [`docs/PROPOSALS/series-planner-revival-charter.md`](docs/PROPOSALS/series-planner-revival-charter.md) (historical record) for the original what & why / decisions |
 | Database, schema, migrations, FTS | [`docs/SYSTEMS/database.md`](docs/SYSTEMS/database.md) | adding columns to `sermons` requires updating the `SERMON_COLUMNS` allowlist in `src/core/contracts.ts` and its mirrors (`electron/contracts.cjs`, `tests/contracts/_helpers/test-spine.ts` — sync is test-asserted) — `buildUpdate()` in `electron/main.js` throws in dev if you miss this, but only if you exercise the save path in testing |
 | IPC channels, preload, main process boundaries | [`docs/SYSTEMS/ipc.md`](docs/SYSTEMS/ipc.md) | — |

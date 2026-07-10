@@ -123,8 +123,10 @@ Before finishing any change verify:
 
 ## Design System
 
-Never deviate without explicit user approval. All values live in `src/styles/global.css` as CSS
-variables. Never hardcode these values anywhere else.
+Never deviate without explicit user approval. All values live as CSS variables in the three
+canonical style files — `src/styles/global.css` (color/surface/layout tokens + component
+styles), `src/styles/typography.css` (the type system), and `src/styles/fonts.css` (the
+`@font-face` rules for the self-hosted fonts). Never hardcode these values anywhere else.
 
 **Colors:**
 ```

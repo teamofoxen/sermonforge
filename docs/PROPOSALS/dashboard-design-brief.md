@@ -13,23 +13,45 @@ underlying code or the broader design system.
 
 ## 1. What the screen is doing (top → bottom)
 
-1. **Verse band** (`DashboardVerseCarousel.jsx`) — rotating Scripture quote.
-   Refreshes every 15s. White → parchment vertical gradient, 1px gold
-   horizontal rule across the bottom edge.
+*(Inventory re-verified against `Dashboard.jsx` at HEAD, 2026-07-10.)*
 
-2. **2×2 tile grid** (`Dashboard.jsx`) — the four actions:
-   - **Build a sermon** (hero — gold left bar)
-   - **Build a series**
-   - **Where you left off** (in-progress sermons; empty if none)
-   - **Explore SermonForge** (guided tour, sample sermon)
+1. **Verse band** (`DashboardVerseCarousel.jsx`) — rotating Scripture quote,
+   eyebrow "From the Word". Refreshes every 15s. White → parchment vertical
+   gradient, 1px gold horizontal rule across the bottom edge.
+
+2. **Tile grid** (`Dashboard.jsx`) — a two-column grid holding **three** tiles
+   (the earlier "Build a series" tile is gone; series work starts from the
+   sidebar's "Series Planning" entry):
+   - **"Build a sermon."** (hero) — eyebrow "Begin work", blurb, and a primary
+     "Build sermon →" button; opens the New Sermon modal.
+   - **"Where you left off."** (`ResumeWorkTile`) — in-progress sermons; overdue
+     rows get a "Past its date — preached?" flag with an inline "Mark preached"
+     action; a quiet "{N} preached sermons" row links to Preached Sermons; empty
+     state: "Nothing in flight. Start a sermon when you're ready."
+   - **"Explore SermonForge."** — eyebrow "Look around": "Open a sample sermon"
+     (Romans 5:1–5 worked example) and "Start the sample fresh" (a confirmed
+     reset). *(No guided tour exists — the tour engine was deleted 2026-05-17;
+     the sample sermon is the whole Explore surface.)*
 
 3. **Preacher quote** (`DashboardPreacherQuote.jsx`) — rotating quote from
    a historical preacher (Spurgeon, Edwards, Calvin, etc.) with a small
-   stencil portrait. Refreshes every 15s.
+   stencil portrait, eyebrow "From the pulpit". Refreshes every 15s.
+
+**Theme:** the app is two-theme. The sidebar footer toggle sets
+`data-theme="dark"` on `<html>` (persisted as `sf-theme` + pre-painted on next
+launch), and the dashboard carries its own dark-mode overrides
+(`[data-theme="dark"] .dash-*` / `.tile-hero`, near the end of `global.css`).
+Any design pass must read in both themes.
 
 ---
 
 ## 2. What feels stapled — my read
+
+> **Dated diagnosis (2026-06 snapshot).** Written against the earlier four-tile
+> grid; the grid is now three tiles and some internals moved (notably: tiles are
+> a fixed 240px height now — the `grid-auto-rows: 1fr` equal-height stretch in
+> issue #3 no longer exists). Treat the table as the flavor of the problem, and
+> re-verify each row against `global.css` before acting on it.
 
 These are the friction points worth fixing. Not every one needs to be solved;
 showing them so you have my diagnosis to react to.
@@ -107,6 +129,13 @@ and the Big Idea. Don't use Plex Sans here.
 
 ## 4. Layout reference
 
+> **Dated sketch (2026-06 snapshot) — the shape is right, the details have moved.**
+> Current facts at HEAD: the grid is `grid-template-columns: 1fr 1fr` with
+> `gap: 18px`, holding **three** tiles ("Build a series" is gone); tiles are
+> `height: 240px` fixed with `padding: 22px 28px 20px` (not min-height 160px +
+> forced equal rows); the hero uses `--shadow-hero`. `global.css` is ground truth
+> for every value below.
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │ Sidebar (260px, --ink bg, gold gradient right border)      │
@@ -171,20 +200,25 @@ Secondary:
 
 ## 5. Source files (everything that paints these pixels)
 
-You'll want all four:
+You'll want all of these:
 
-- `src/components/Dashboard.jsx` — the grid, the four tiles, in-progress logic
+- `src/components/Dashboard.jsx` — the grid, the three tiles (hero + `ResumeWorkTile` + Explore), in-progress logic
 - `src/components/DashboardVerseCarousel.jsx` — the rotating verse band
 - `src/components/DashboardPreacherQuote.jsx` — the bottom preacher quote
-- `src/styles/global.css` — **lines 2407–2880** are the dashboard's CSS block (`.dash-*`, `.tile-*`, `.hdr-*`, `.preacher-stencil-*`, `.quote-*`)
-- `src/styles/typography.css` — the two-voice type system
+- `src/styles/global.css` — the dashboard's CSS block starts at `.dash-page-body`
+  (~line 1824 at HEAD) and runs through the tile/quote styles (~2500), with the
+  responsive collapse (`.dash-grid { grid-template-columns: 1fr }`) and the
+  `[data-theme="dark"]` dashboard overrides near the end of the file (~3040–3075).
+  Line numbers drift — search for `.dash-page-body`, `.dash-grid`, `.tile-hero`,
+  `.preacher-stencil`, `.quote-*`.
+- `src/styles/typography.css` — the two-voice type system (which `@import`s
+  `fonts.css`, the self-hosted `@font-face` layer)
 
 Inline styles to know about (these don't live in CSS yet — and probably should):
-- `Dashboard.jsx:215–249` — Resume Work tile internal layout (gaps, max-height, scroll)
-- `Dashboard.jsx:267–294` — Resume row pill styling
-- `Dashboard.jsx:311–331` — Explore row pill styling
-
-If you change the row pills, change them in both places — they share a pattern that isn't yet abstracted.
+the Resume-row and Explore-row pills are still styled with inline `style={{...}}`
+blocks inside `Dashboard.jsx` (in `ResumeWorkTile` and the Explore tile rows).
+If you change the row pills, change them in both places — they share a pattern
+that isn't yet abstracted.
 
 ---
 
@@ -230,7 +264,11 @@ npm install
 npm start
 ```
 
-Or just `npm run dev` for the browser-only Vite version (DB calls fail on
-click but the visuals render exactly the same).
+Or `npm run dev` for the browser-only Vite version — useful, with limits: it
+proves **layout, styling, and copy** (the CSS and markup are the same code), but
+the database is stubbed, so the Resume tile renders its empty state rather than
+real in-progress rows, sample-sermon clicks don't load anything, and anything
+Electron-side (real data, saves, the packaged window chrome) is not exercised.
+For "does it render real content correctly," use the Electron app (`npm start`).
 
 The dashboard is the default landing screen — no navigation needed.

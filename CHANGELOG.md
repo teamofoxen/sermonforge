@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-07-10 — docs(brain): product lens + stale-orientation correction + comment hygiene
+
+- Added `docs/PRODUCT-LENS.md` — standing pastor-facing product orientation, subordinate to CORE/RULES/canon/SYSTEMS — with a compact CLAUDE.md posture section and routing row.
+- Trued stale orientation to HEAD: README rewritten (no AI/Delivery/sql.js); CORE tech-stack + three-file design-system split (RULES matched); distribution.md marked operational; dashboard brief (three tiles, no tour); refoundation/ANCHORS status; series-planner v32-vs-v33 wording; BTI charter status (dated, worker still token-gated); release-smoke items 8/12; project-structure FEEDBACK_TOKEN note.
+- De-ghosted `/interrogate` + `/sweep-the-house`: deleted-AI checks replaced with current DB/IPC/save-flush/privacy/search-export-telemetry checks plus a product-lens pass on visible UI diffs.
+- Comment-only code sweep: tour/FTS5 residue corrected in contracts.ts, SeriesPlanner.jsx, TextButton.tsx, main.js, global.css; `.btn-*-dark` marked orphaned — deletion awaits owner approval.
+- Verified: lint 0, 64 files / 408 tests green, preflight PASS, sweep PASS; memory index + 8 topic files corrected.
+
+---
+
 ## 2026-07-05 — fix(observe): Commands and Declarations prompt — restore Merida fidelity
 
 - Reworded the Observe **Commands and Declarations** prompt to note the passage's commands and declarations, dropping the "for each main sentence" framing (which reached back to the Divisions canvas) and the "in your own words" clause (paraphrase is Interpret work).
