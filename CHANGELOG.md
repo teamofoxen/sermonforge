@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-07-10 — chore(styles): delete orphaned .btn-text-dark / .btn-ghost-dark
+
+- Deleted `.btn-text-dark` and `.btn-ghost-dark` from `global.css` — dead since the tour overlay (their only consumer) was removed 2026-05-17; zero `src/` consumers confirmed, owner-approved.
+- Left a one-line gravestone comment matching the codebase's existing `.stage-select` deletion precedent.
+- Verified: lint 0, 64 files / 408 tests green, preflight PASS.
+
+---
+
 ## 2026-07-10 — docs(brain): product lens + stale-orientation correction + comment hygiene
 
 - Added `docs/PRODUCT-LENS.md` — standing pastor-facing product orientation, subordinate to CORE/RULES/canon/SYSTEMS — with a compact CLAUDE.md posture section and routing row.
