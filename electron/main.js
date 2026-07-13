@@ -1,4 +1,12 @@
 const { app, BrowserWindow, ipcMain, shell, dialog } = require("electron");
+// Packaged-smoke isolation (Session 5): scripts/packaged-smoke.cjs points the
+// run at a throwaway userData dir BEFORE electron/config.js captures paths, so
+// the smoke never touches a real library and never clashes with a running
+// install's single-instance lock (the lock is scoped to userData). Inert
+// unless the env var is set by the smoke harness.
+if (process.env.SF_SMOKE_USERDATA) {
+  app.setPath("userData", process.env.SF_SMOKE_USERDATA);
+}
 const path = require("path");
 const fs = require("fs");
 const os = require("os");
@@ -18,6 +26,7 @@ const {
 const { buildStudyGuideModel } = require("./studyGuideModel.cjs");
 const { SAVE_TRANSITION, confirmExitOverSaveResult } = require("./saveTransition.cjs");
 const { createDbRecovery } = require("./dbRecovery.cjs");
+const { fetchCrossway } = require("./crosswayFetch.cjs");
 
 // coerceLegacyStage removed in the trail deletion sweep (Phase B3) —
 // pre-restructure "Blueprint" / "Frame" stage values are no longer admitted
@@ -1769,23 +1778,21 @@ ipcMain.handle("app-save-api-key", async (_, keys) => {
   const cleaned = typeof esv === "string" ? esv.trim().replace(/^token\s+/i, "") : "";
   let unverified = false;
   if (cleaned) {
-    try {
-      const res = await fetch(
-        "https://api.esv.org/v3/passage/text/?q=John+3:16" +
-        "&include-headings=false&include-footnotes=false" +
-        "&include-verse-numbers=false&include-short-copyright=false" +
-        "&include-passage-references=false",
-        {
-          headers: { Authorization: `Token ${cleaned}` },
-          signal: AbortSignal.timeout(8000),
-        }
-      );
-      if (res.status === 401 || res.status === 403) {
-        return { success: false, error: "That key wasn't accepted by the ESV API — check it and try again." };
-      }
-    } catch (_) {
-      // Network unreachable — save the key anyway, but tell the renderer
-      // honestly so the pastor isn't surprised when passages don't load.
+    // Same bounded Crossway helper as passage-fetch (Session 5) — the probe
+    // ends as success / controlled error / timeout, never an indefinite pend.
+    const attempt = await fetchCrossway(
+      "https://api.esv.org/v3/passage/text/?q=John+3:16" +
+      "&include-headings=false&include-footnotes=false" +
+      "&include-verse-numbers=false&include-short-copyright=false" +
+      "&include-passage-references=false",
+      { key: cleaned, timeoutMs: 8000 },
+    );
+    if (attempt.kind === "success" && (attempt.res.status === 401 || attempt.res.status === 403)) {
+      return { success: false, error: "That key wasn't accepted by the ESV API — check it and try again." };
+    }
+    if (attempt.kind !== "success") {
+      // Network unreachable / timed out — save the key anyway, but tell the
+      // renderer honestly so the pastor isn't surprised when passages don't load.
       unverified = true;
     }
   }
@@ -1949,14 +1956,19 @@ ipcMain.handle('passage-fetch', async (_, passage, opts) => {
   const url = `https://api.esv.org/v3/passage/text/?q=${encodeURIComponent(passage)}` +
     `&include-headings=${headings ? 'true' : 'false'}&include-footnotes=false&include-verse-numbers=true` +
     `&include-short-copyright=false&include-passage-references=false`;
-  let res;
-  try {
-    res = await fetch(url, { headers: { 'Authorization': `Token ${key}` } });
-  } catch (e) {
+  // One bounded Crossway helper (Session 5): the request ends as success /
+  // controlled error / timeout / cancellation — never an indefinite pend.
+  // Timeout and network failure both map to the existing "offline" voice
+  // (the popup's plain-language wording is unchanged).
+  const attempt = await fetchCrossway(url, { key });
+  if (attempt.kind !== "success") {
     result.esvState = "offline";
-    result.esvError = e.message;
+    result.esvError = attempt.kind === "timeout"
+      ? "ESV request timed out"
+      : (attempt.error?.message || attempt.kind);
     return result;
   }
+  const res = attempt.res;
   if (res.status === 401 || res.status === 403) {
     result.esvState = "bad-key";
     return result;
@@ -2038,6 +2050,33 @@ if (!app.requestSingleInstanceLock()) {
       // Pastor-shaped menu replaces the stock Electron one — also kills the
       // stock Ctrl+R / DevTools accelerators in packaged builds.
       buildApplicationMenu({ getWindow: () => mainWindow });
+
+      // ── Packaged release smoke (Session 5) ─────────────────────────────
+      // SF_SMOKE=1 turns a normal launch into a bounded self-check driven by
+      // scripts/packaged-smoke.cjs: once the real renderer finishes loading,
+      // prove the schema initialized/migrated, the preload exposed the bridge,
+      // and the window rendered — print one parseable line and exit cleanly.
+      // Inert in every ordinary launch (the env var gates everything).
+      if (process.env.SF_SMOKE === "1") {
+        mainWindow.webContents.once("did-finish-load", async () => {
+          try {
+            const schemaRow = queryOne("SELECT value FROM meta WHERE key = 'schema_version'");
+            const preloadOk = await mainWindow.webContents.executeJavaScript(
+              "typeof window.electronAPI === 'object' && window.electronAPI !== null"
+            );
+            const rendered = mainWindow.isVisible() && !mainWindow.webContents.isCrashed();
+            console.log(
+              `SF_SMOKE_RESULT ok=${Boolean(schemaRow && preloadOk && rendered)} ` +
+              `schema=${schemaRow?.value ?? "none"} preload=${preloadOk} rendered=${rendered}`
+            );
+          } catch (err) {
+            console.log(`SF_SMOKE_RESULT ok=false error=${String(err?.message || err).slice(0, 200)}`);
+          } finally {
+            // A clean quit exercises the full before-quit path (flush + close).
+            setTimeout(() => app.quit(), 250);
+          }
+        });
+      }
     } catch (err) {
       // Any unexpected boot failure (native module unloadable, userData not
       // writable, etc.) — show a clear message and quit instead of hanging on

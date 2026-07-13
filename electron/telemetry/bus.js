@@ -29,6 +29,7 @@ const {
   FLUSH_TIMEOUT_MS,
   MAX_BATCH_SIZE,
 } = require("./config");
+const { validateEvent } = require("./events");
 
 let _sessionId = null;
 let _ndjsonFile = null;
@@ -63,9 +64,20 @@ function emit(eventType, payload = {}) {
   if (!_initialized || !_enabled || !_ndjsonFile) return;
   if (!eventType || typeof eventType !== "string") return;
 
+  // Schema gate (Session 5): validate BEFORE local persistence — an event
+  // outside the frozen registry (electron/telemetry/events.js) never even
+  // reaches the NDJSON buffer, let alone the wire. Rejections are spoken to
+  // app.log (never thrown — telemetry never breaks the app) so a drifted
+  // emitter fails loudly in development instead of shipping junk.
+  const verdict = validateEvent(eventType, payload);
+  if (!verdict.ok) {
+    logError(`[telemetry] rejected emit (${verdict.reason})`);
+    return;
+  }
+
   const event = {
     eventType,
-    payload: payload && typeof payload === "object" ? payload : {},
+    payload,
     timestamp: new Date().toISOString(),
   };
 

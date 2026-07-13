@@ -16,11 +16,23 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
+          # Node policy (Session 5): the app's runtime is Electron's own Node;
+          # tooling supports Node >=20 (package.json engines). CI pins the
+          # 20 LTS line so test/build runs are reproducible; local dev on any
+          # >=20 (the maintainer runs 24) is supported.
           node-version: 20
           cache: "npm"
 
-      - name: Install dependencies
-        run: npm install
+      - name: Install dependencies (immutable)
+        # npm ci, never npm install: CI must FAIL on package.json/lock drift,
+        # not silently heal it by regenerating the lock (Session 5, Part A).
+        run: npm ci
 
       - name: Run tests
         run: npm test
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Spine integrity
+        run: npm run spine-integrity

@@ -4,6 +4,9 @@
   "description": "Sermon preparation workspace for pastors",
   "author": "SermonForge",
   "main": "electron/main.js",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "start": "vite build && electron .",
     "dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && cross-env ELECTRON_DEV=1 electron .\"",

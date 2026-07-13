@@ -238,7 +238,11 @@ async function load() {
 
   setStatus("Loading…");
   try {
-    const res = await fetch(`${baseUrl}/inbox?token=${encodeURIComponent(token)}&limit=200`);
+    // Session 5: the admin token travels ONLY in the Authorization header —
+    // the Worker rejects any ?token= query outright (it would land in logs).
+    const res = await fetch(`${baseUrl}/inbox?limit=200`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
     if (!res.ok) {
       setStatus(`HTTP ${res.status} — ${res.status === 401 ? "bad token" : "load failed"}`, true);
       return;

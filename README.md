@@ -7,14 +7,24 @@ not return (`docs/CORE.md`, Process Contract #5).
 
 ## Setup (development)
 
+Node **>= 20** is required (`package.json` `engines`; CI pins the Node 20 LTS
+line for reproducible runs, and any newer major — the maintainer runs 24 —
+works for local development; the shipped app runs on Electron's own Node
+either way).
+
 1. Install dependencies:
 
    ```
-   npm install
+   npm ci
    ```
 
-   Native modules must be rebuilt for Electron's ABI after install if the app
-   complains on boot: `npx @electron/rebuild -m node_modules/better-sqlite3`.
+   `npm ci` is the supported install — it installs the lockfile exactly and
+   FAILS on package.json/package-lock drift instead of silently rewriting the
+   lock the way `npm install` would (CI does the same). Native modules must be
+   rebuilt for Electron's ABI after install if the app complains on boot:
+   `npx @electron/rebuild -m node_modules/better-sqlite3` (the
+   `better-sqlite3-node` devDependency is a same-version alias the test suite
+   uses so that rebuild can never break `npm test`).
 
 2. Optional — create `.env` in the project root for the dev passage view:
 

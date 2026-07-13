@@ -52,19 +52,24 @@ This is the part the toggle in the setup screen controls. Default-on; one click 
 
 ### What is captured
 
-**Behavioral events.** Small JSON records of what you do in the app. Two are
-actually sent today:
+**Behavioral events.** Small JSON records of what you do in the app. Exactly
+two exist:
 
 - `app-open` — when you launch the app, with the version and platform.
 - `crash` — when the app hits an unexpected error, with a short error message (capped at 500 characters; no sermon content, no log file attached).
 
-Four more event types are registered in the app's event vocabulary but are
-**not currently emitted anywhere** — nothing in the app sends them today. They
-are disclosed here so that if they are ever wired up, this document already
-names them:
-
-- `panel-time` / `field-time` — how long a panel or field has focus, in summary form (no keystrokes).
-- `sermon-create` / `sermon-finish` — sermon-level lifecycle markers, with the sermon's database ID.
+**This list is enforced by code, not just by this document** (Session 5,
+2026-07-13): the exact event names, payload keys, and value types live in a
+schema registry (`electron/telemetry/events.js`), and every event is validated
+against it twice — in the app before it is even written to the local buffer,
+and again in the developer's ingest Worker before it is stored. An event with
+an unknown name, an unknown field, a wrong type, or an over-length value is
+rejected at both gates, so a payload shaped like sermon text structurally
+cannot fit. (Four event types that were named in earlier drafts of this
+document — `panel-time`, `field-time`, `sermon-create`, `sermon-finish` — were
+never emitted by anything and have been removed from the vocabulary entirely;
+if a future feature wants one, it must be re-added to the registry and to this
+document in the same change.)
 
 These are **metadata about your interactions, not the content of your work.** None of them carry sermon text, study text, notebook text, or your typing.
 

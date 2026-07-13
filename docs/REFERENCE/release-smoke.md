@@ -5,6 +5,19 @@ and asks one yes/no question per numbered item. Auto-update ships the build
 to every installed user in the background; treat each tag as a production
 deploy. **If any step fails, do not tag.**
 
+> **Automated gates (Session 5, 2026-07-13).** Pushing the tag now runs a
+> `gates` job on the EXACT tagged commit before either platform build can
+> start: `npm ci` (immutable install), the full test suite, the
+> production-SQLite integration + migration/recovery matrix
+> (`tests/persistence/`), lint, spine integrity, and the Vite production
+> build. The Windows job then packages with `--publish never`, runs the
+> bounded packaged smoke (`node scripts/packaged-smoke.cjs` — the real
+> unpacked app must launch, initialize/migrate its schema, load the preload
+> bridge, render the window, and exit cleanly, in an isolated userData), and
+> only then publishes. The macOS job publishes after the same gates
+> (signing + notarization run only there — no local environment can test
+> them; the manual checklist below remains the human half).
+
 Rewritten 2026-06-10 (UX overhaul T17): the previous checklist lived in
 `docs/PROPOSALS/distribution.md` §12 and described surfaces deleted in the
 invisible-system rebuild (tour, per-tab notebook, Manuscript tab).

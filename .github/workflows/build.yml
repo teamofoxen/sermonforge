@@ -6,8 +6,46 @@ on:
       - "v*"
 
 jobs:
+  # ── Release gates (Session 5) ───────────────────────────────────────────────
+  # The EXACT TAGGED COMMIT must pass every gate before either platform build
+  # runs — publishing is impossible without them (both build jobs `needs` this
+  # job). Gates: immutable install, full test suite, lint, spine integrity,
+  # the production-SQLite integration + migration/recovery suites (run
+  # explicitly so a release log shows them by name), and the Vite production
+  # build.
+  gates:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout tagged commit
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Install dependencies (immutable)
+        run: npm ci
+
+      - name: Full test suite
+        run: npm test
+
+      - name: Production-SQLite integration + migration/recovery matrix
+        run: npx vitest run tests/persistence/
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Spine integrity
+        run: npm run spine-integrity
+
+      - name: Vite production build
+        run: npx vite build
+
   build-windows:
     runs-on: windows-latest
+    needs: gates
 
     steps:
       - name: Checkout
@@ -26,13 +64,27 @@ jobs:
           echo "Setting package.json version to $TAG_VERSION"
           npm version "$TAG_VERSION" --no-git-tag-version --allow-same-version
 
-      - name: Install dependencies
-        run: npm install
+      - name: Install dependencies (immutable)
+        run: npm ci
 
       - name: Build Vite
         run: npx vite build
 
-      - name: Build and publish Windows installer
+      - name: Package Windows installer (no publish yet)
+        run: >
+          npx electron-builder --win
+          --publish never
+          --config.directories.output=release
+
+      - name: Packaged smoke — launch, schema, preload, render, clean exit
+        # The bounded packaged smoke (scripts/packaged-smoke.cjs + the
+        # SF_SMOKE hook in electron/main.js): the actual unpacked app must
+        # launch, initialize/migrate its schema, load the preload bridge,
+        # render the primary window, and exit cleanly — or the release stops
+        # here, before anything publishes.
+        run: node scripts/packaged-smoke.cjs release/win-unpacked
+
+      - name: Publish Windows installer
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: >
@@ -42,6 +94,7 @@ jobs:
 
   build-macos:
     runs-on: macos-latest
+    needs: gates
 
     steps:
       - name: Checkout
@@ -59,8 +112,8 @@ jobs:
           echo "Setting package.json version to $TAG_VERSION"
           npm version "$TAG_VERSION" --no-git-tag-version --allow-same-version
 
-      - name: Install dependencies
-        run: npm install
+      - name: Install dependencies (immutable)
+        run: npm ci
 
       - name: Generate macOS .icns from designer iconset
         run: |
