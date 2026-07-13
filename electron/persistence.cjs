@@ -999,18 +999,26 @@ function createPersistence({ getDb, logError = console.error, logInfo = () => {}
   }
 
 
+  // buildUpdate — the allowlist gate for every field-update mutation. An
+  // unknown supplied field REJECTS THE ENTIRE MUTATION, identically in
+  // development and production (Session-3 Part C). The old shape — dev-throw
+  // but packaged warn-and-DROP — saved the recognized sibling fields and
+  // reported success, so a renderer↔main allowlist drift silently shed the
+  // unknown field's data while the pastor saw "Saved". Now nothing is
+  // written and the rejection names the refused fields. (isDev remains a
+  // factory input; this gate deliberately no longer branches on it.)
   function buildUpdate(fields, allowedColumns) {
     const rejected = Object.keys(fields).filter((k) => !allowedColumns.has(k));
     if (rejected.length > 0) {
-      const msg = `[buildUpdate] Unknown field(s) rejected: [${rejected.join(", ")}]. ` +
-        `Allowed columns: [${[...allowedColumns].join(", ")}].`;
-      // Dev throws so column/allowlist drift surfaces loudly during development.
-      // Packaged warns so a stale build never crashes a pastor mid-save.
-      if (isDev) throw new Error(msg);
-      console.warn(msg);
+      logError(`[buildUpdate] rejecting whole update — unknown field(s): [${rejected.join(", ")}]`);
+      return rejection(
+        "STATE_5_UNKNOWN_FIELD",
+        "State #5",
+        `Unknown field(s): [${rejected.join(", ")}]. The whole update was refused — no fields were saved.`,
+      );
     }
 
-    const entries = Object.entries(fields).filter(([k]) => allowedColumns.has(k));
+    const entries = Object.entries(fields);
     if (!entries.length) return null;
     return {
       setClauses: entries.map(([k]) => `${k} = ?`).join(", "),
@@ -1432,6 +1440,35 @@ function createPersistence({ getDb, logError = console.error, logInfo = () => {}
     return rejection("STATE_5_BAD_OP", "State #5", `Unknown structured op: ${update.op}`);
   }
 
+  // ── Session-3 atomicity helpers ──────────────────────────────────────────
+  // withTransaction — ONE SQLite transaction per mutation. Every operation
+  // that changes searchable sermon state runs its source writes AND its
+  // sermon_search projection writes inside this wrapper, so a failure in
+  // either rolls back both — source and search can never disagree, and a
+  // failed create leaves no row for a retry to duplicate. better-sqlite3
+  // nests inner transaction() calls as savepoints, so shared helpers that
+  // write (firstSectionIdForSeries) compose safely.
+  function withTransaction(fn) {
+    return getDb().transaction(fn)();
+  }
+
+  // Full search-projection rebuild — the EXPLICIT REPAIR mechanism (support /
+  // recovery use; the v22/v24 migration blocks carry their own inline
+  // equivalents). Deliberately not called from any normal write path: per-row
+  // projection rides inside each mutation's transaction instead.
+  function rebuildSearchIndex() {
+    return withTransaction(() => {
+      dbRun("DELETE FROM sermon_search");
+      const rows = queryAll(
+        `SELECT s.*, sr.title AS series_title
+           FROM sermons s LEFT JOIN series sr ON sr.id = s.series_id
+          WHERE s.deleted_at IS NULL`,
+      );
+      for (const r of rows) indexSermonFtsFromRow(r);
+      return rows.length;
+    });
+  }
+
   function validateAndCommit(op, payload) {
     switch (op) {
       case "create-sermon": {
@@ -1446,10 +1483,33 @@ function createPersistence({ getDb, logError = console.error, logInfo = () => {}
         const id = randomUUID();
         const seriesId = payload.series_id || null;
         let sectionId = payload.section_id || null;
+        // Relational validation (Session-3 Part C): a supplied parent must
+        // exist, and a supplied series/section combination must cohere — a
+        // stale series_id used to create a dangling-parent sermon silently.
+        const seriesRow = seriesId ? queryOne("SELECT id, kind FROM series WHERE id = ?", [seriesId]) : null;
+        if (seriesId && !seriesRow) {
+          return rejection("NOT_FOUND", "State #1", `Series ${seriesId} not found — a sermon cannot be created under a series that doesn't exist.`);
+        }
+        if (sectionId && !seriesId) {
+          return rejection("STATE_1_INCOHERENT_PARENT", "State #1", "A section_id without a series_id is incoherent — sections only exist inside a series.");
+        }
+        if (sectionId) {
+          const secRow = queryOne("SELECT id, series_id FROM series_sections WHERE id = ?", [sectionId]);
+          if (!secRow) {
+            return rejection("NOT_FOUND", "State #1", `Section ${sectionId} not found.`);
+          }
+          if (secRow.series_id !== seriesId) {
+            return rejection("STATE_1_SECTION_SERIES_MISMATCH", "State #1", `Section ${sectionId} belongs to a different series than ${seriesId}.`);
+          }
+        }
         // Canonical position is (current_stage, current_sub_phase). current_step
         // was retired in the trail deletion sweep (Phase B2).
-        dbRun("BEGIN");
-        try {
+        //
+        // ONE transaction covers the row INSERT, the Section-1 auto-file, and
+        // the search projection (Session-3 Part A): an index failure used to
+        // land AFTER the commit, so the sermon row survived while the handler
+        // reported failure — and the renderer's retry created a duplicate.
+        withTransaction(() => {
           // No "in a series but in no section" limbo: a sermon created under a
           // series must land in a section, or it is invisible in the Outline
           // (which only buckets sermons that have one). The New Sermon modal sets
@@ -1459,14 +1519,10 @@ function createPersistence({ getDb, logError = console.error, logInfo = () => {}
           // series' first section, auto-creating "Section 1" where the series has
           // none — mirrors the v28/v29 normalize + delete-section's reattach. The
           // planner's own draft/commit already passes section_id, so this only
-          // fires for the section-less create paths. Guarded on the series
-          // actually existing so a stale series_id can't spawn an orphan section.
-          // Topical series (kind='topical', v30) are section-OPTIONAL: their
-          // sermons live flat under the Big Idea and must NOT be auto-filed into a
-          // section. Only book series enforce the no-section-less-limbo auto-file.
-          // Read kind alongside existence in the one guard query.
-          const seriesRow = seriesId ? queryOne("SELECT id, kind FROM series WHERE id = ?", [seriesId]) : null;
-          if (seriesId && !sectionId && seriesRow && seriesRow.kind !== "topical") {
+          // fires for the section-less create paths. Topical series
+          // (kind='topical', v30) are section-OPTIONAL: their sermons live flat
+          // under the Big Idea and must NOT be auto-filed into a section.
+          if (seriesId && !sectionId && seriesRow.kind !== "topical") {
             sectionId = firstSectionIdForSeries(seriesId);
           }
           dbRun(
@@ -1489,12 +1545,8 @@ function createPersistence({ getDb, logError = console.error, logInfo = () => {}
               SUB_PHASE.Observe,
             ],
           );
-          dbRun("COMMIT");
-        } catch (e) {
-          dbRun("ROLLBACK");
-          throw e;
-        }
-        indexSermonFts(id);
+          indexSermonFts(id);
+        });
         return success({ id });
       }
 
@@ -1536,18 +1588,25 @@ function createPersistence({ getDb, logError = console.error, logInfo = () => {}
         // Multi-field user_input mutation — every supplied field is treated as
         // user typing. Structured fields are accepted as pre-serialized JSON
         // strings; for typed structured updates callers should use
-        // apply-mutation with kind "user_input". Same allowlist + dev-throw
-        // path as single-field updates.
+        // apply-mutation with kind "user_input". An unknown field rejects the
+        // whole update (buildUpdate); a missing target rejects instead of the
+        // old silent zero-row no-op; source + search commit in one transaction.
         const { id, fields } = payload || {};
         const update = buildUpdate(fields || {}, SERMON_COLUMNS);
+        if (update && update.ok === false) return update;
         if (!update) {
           return rejection("UPDATE_NO_FIELDS", "State #5", "No valid fields to update.");
         }
-        dbRun(
-          `UPDATE sermons SET ${update.setClauses}, updated_at = datetime('now') WHERE id = ?`,
-          [...update.values, id],
-        );
-        indexSermonFts(id);
+        if (!queryOne("SELECT id FROM sermons WHERE id = ?", [id])) {
+          return rejection("NOT_FOUND", "State #1", `Sermon ${id} not found — the update would affect zero rows.`);
+        }
+        withTransaction(() => {
+          dbRun(
+            `UPDATE sermons SET ${update.setClauses}, updated_at = datetime('now') WHERE id = ?`,
+            [...update.values, id],
+          );
+          indexSermonFts(id);
+        });
         return success();
       }
 
@@ -1564,59 +1623,81 @@ function createPersistence({ getDb, logError = console.error, logInfo = () => {}
           }
         }
         const update = buildUpdate(fields || {}, SERIES_COLUMNS);
+        if (update && update.ok === false) return update;
         if (!update) {
           return rejection("UPDATE_NO_FIELDS", "State #5", "No valid fields to update.");
         }
-        dbRun(`UPDATE series SET ${update.setClauses} WHERE id = ?`, [...update.values, id]);
-        // Series title is part of every sermon-FTS row; if it changed,
-        // re-index every sermon attached to this series.
-        if (Object.prototype.hasOwnProperty.call(fields || {}, "title")) {
-          const sermonRows = queryAll("SELECT id FROM sermons WHERE series_id = ?", [id]);
-          for (const r of sermonRows) indexSermonFts(r.id);
+        if (!queryOne("SELECT id FROM series WHERE id = ?", [id])) {
+          return rejection("NOT_FOUND", "State #1", `Series ${id} not found — the update would affect zero rows.`);
         }
+        // Series title is part of every attached sermon's search row: the
+        // UPDATE and the per-sermon re-index commit in ONE transaction, so a
+        // failure mid-loop can't leave half the search rows on the old title.
+        withTransaction(() => {
+          dbRun(`UPDATE series SET ${update.setClauses} WHERE id = ?`, [...update.values, id]);
+          if (Object.prototype.hasOwnProperty.call(fields || {}, "title")) {
+            const sermonRows = queryAll("SELECT id FROM sermons WHERE series_id = ?", [id]);
+            for (const r of sermonRows) indexSermonFts(r.id);
+          }
+        });
         return success();
       }
 
       case "delete-sermon":
         // Soft delete (v24) — the row stays, stops appearing everywhere, and
-        // restore-sermon brings it back. Search row drops so a deleted
-        // sermon can't be found either.
-        dbRun("UPDATE sermons SET deleted_at = ? WHERE id = ?", [
-          new Date().toISOString(),
-          payload,
-        ]);
-        dropSermonFts(payload);
+        // restore-sermon brings it back. Tombstone + search-row drop commit in
+        // one transaction; a missing target rejects (was a silent no-op).
+        if (!queryOne("SELECT id FROM sermons WHERE id = ?", [payload])) {
+          return rejection("NOT_FOUND", "State #1", `Sermon ${payload} not found — nothing to delete.`);
+        }
+        withTransaction(() => {
+          dbRun("UPDATE sermons SET deleted_at = ? WHERE id = ?", [
+            new Date().toISOString(),
+            payload,
+          ]);
+          dropSermonFts(payload);
+        });
         return success();
 
       case "restore-sermon":
-        // Undo for delete-sermon. Clears the tombstone and re-indexes.
-        dbRun("UPDATE sermons SET deleted_at = NULL WHERE id = ?", [payload]);
-        indexSermonFts(payload);
+        // Undo for delete-sermon. Clears the tombstone and re-indexes — both
+        // in one transaction; a missing target rejects (was a silent no-op).
+        if (!queryOne("SELECT id FROM sermons WHERE id = ?", [payload])) {
+          return rejection("NOT_FOUND", "State #1", `Sermon ${payload} not found — nothing to restore.`);
+        }
+        withTransaction(() => {
+          dbRun("UPDATE sermons SET deleted_at = NULL WHERE id = ?", [payload]);
+          indexSermonFts(payload);
+        });
         return success();
 
       case "delete-series": {
+        if (!queryOne("SELECT id FROM series WHERE id = ?", [payload])) {
+          return rejection("NOT_FOUND", "State #1", `Series ${payload} not found — nothing to delete.`);
+        }
         // Capture the sermon ids attached to this series BEFORE the cascade
         // nullifies their series_id, so we can re-index each one with its
-        // series_title cleared from the FTS row.
+        // series_title cleared from the FTS row. Cascade + re-index commit in
+        // ONE transaction (the re-index used to run after COMMIT — a failure
+        // there stranded stale series titles in half the search rows).
         const affectedSermonRows = queryAll(
           "SELECT id FROM sermons WHERE series_id = ?",
           [payload],
         );
-        dbRun("BEGIN");
-        try {
+        withTransaction(() => {
           dbRun("DELETE FROM series_sections WHERE series_id = ?", [payload]);
           dbRun("UPDATE sermons SET series_id = NULL, section_id = NULL WHERE series_id = ?", [payload]);
           dbRun("DELETE FROM series WHERE id = ?", [payload]);
-          dbRun("COMMIT");
-        } catch (e) {
-          dbRun("ROLLBACK");
-          throw e;
-        }
-        for (const r of affectedSermonRows) indexSermonFts(r.id);
+          for (const r of affectedSermonRows) indexSermonFts(r.id);
+        });
         return success();
       }
 
       case "create-section": {
+        // A section only exists inside a series — reject a missing/stale parent.
+        if (!payload?.series_id || !queryOne("SELECT id FROM series WHERE id = ?", [payload.series_id])) {
+          return rejection("NOT_FOUND", "State #1", `Series ${payload?.series_id} not found — a section cannot be created without its series.`);
+        }
         const id = randomUUID();
         dbRun(
           `INSERT INTO series_sections
@@ -1638,8 +1719,12 @@ function createPersistence({ getDb, logError = console.error, logInfo = () => {}
       case "update-section": {
         const { id, fields } = payload || {};
         const update = buildUpdate(fields || {}, SECTION_COLUMNS);
+        if (update && update.ok === false) return update;
         if (!update) {
           return rejection("UPDATE_NO_FIELDS", "State #5", "No valid fields to update.");
+        }
+        if (!queryOne("SELECT id FROM series_sections WHERE id = ?", [id])) {
+          return rejection("NOT_FOUND", "State #1", `Section ${id} not found — the update would affect zero rows.`);
         }
         dbRun(`UPDATE series_sections SET ${update.setClauses} WHERE id = ?`, [...update.values, id]);
         return success();
@@ -1651,11 +1736,14 @@ function createPersistence({ getDb, logError = console.error, logInfo = () => {}
         // they become standalone (series_id NULL) — back to the library, the same
         // way deleting the series itself releases its sermons.
         const secRow = queryOne("SELECT series_id FROM series_sections WHERE id = ?", [payload]);
-        const delSeriesId = secRow?.series_id ?? null;
+        if (!secRow) {
+          return rejection("NOT_FOUND", "State #1", `Section ${payload} not found — nothing to delete.`);
+        }
+        const delSeriesId = secRow.series_id ?? null;
         const affectedSermonRows = queryAll("SELECT id FROM sermons WHERE section_id = ?", [payload]);
-        let wentStandalone = false;
-        dbRun("BEGIN");
-        try {
+        // Moves, delete, and the conditional standalone re-index commit in ONE
+        // transaction (the re-index used to run after COMMIT).
+        withTransaction(() => {
           const remaining = delSeriesId
             ? queryOne(
                 "SELECT id FROM series_sections WHERE series_id = ? AND id != ? ORDER BY sort_order ASC, created_at ASC LIMIT 1",
@@ -1666,16 +1754,11 @@ function createPersistence({ getDb, logError = console.error, logInfo = () => {}
             dbRun("UPDATE sermons SET section_id = ? WHERE section_id = ?", [remaining.id, payload]);
           } else {
             dbRun("UPDATE sermons SET series_id = NULL, section_id = NULL WHERE section_id = ?", [payload]);
-            wentStandalone = true;
+            // Sermons that left the series need their FTS series_title cleared.
+            for (const r of affectedSermonRows) indexSermonFts(r.id);
           }
           dbRun("DELETE FROM series_sections WHERE id = ?", [payload]);
-          dbRun("COMMIT");
-        } catch (e) {
-          dbRun("ROLLBACK");
-          throw e;
-        }
-        // Sermons that left the series need their FTS series_title cleared.
-        if (wentStandalone) for (const r of affectedSermonRows) indexSermonFts(r.id);
+        });
         return success();
       }
 
@@ -1715,15 +1798,119 @@ function createPersistence({ getDb, logError = console.error, logInfo = () => {}
             }
             serialized = payload.value;
           }
-          dbRun(
-            `UPDATE sermons SET ${field} = ?, updated_at = datetime('now') WHERE id = ?`,
-            [serialized, sermonId],
-          );
-          indexSermonFts(sermonId);
+          withTransaction(() => {
+            dbRun(
+              `UPDATE sermons SET ${field} = ?, updated_at = datetime('now') WHERE id = ?`,
+              [serialized, sermonId],
+            );
+            indexSermonFts(sermonId);
+          });
           return success();
         }
 
         return rejection("BAD_KIND", "Mutation", `Unknown mutation kind: ${kind}`);
+      }
+
+      // ── Session-3 Part B — bounded planner-gesture ops ─────────────────────
+      // Each VISIBLE HUMAN GESTURE below used to fan out as N independent
+      // renderer writes (Promise.all) — a mid-flight failure left half the
+      // rows moved/dated. Each op validates its parents and commits in one
+      // transaction; renderer optimistic state reloads DB truth on failure.
+
+      case "reorder-sections": {
+        const { series_id, orderedIds } = payload || {};
+        if (!series_id || !Array.isArray(orderedIds) || orderedIds.length === 0) {
+          return rejection("BAD_PAYLOAD", "Spine", "reorder-sections requires series_id and a non-empty orderedIds array.");
+        }
+        if (!queryOne("SELECT id FROM series WHERE id = ?", [series_id])) {
+          return rejection("NOT_FOUND", "State #1", `Series ${series_id} not found.`);
+        }
+        const live = queryAll("SELECT id FROM series_sections WHERE series_id = ?", [series_id]).map((r) => r.id);
+        const liveSet = new Set(live);
+        for (const id of orderedIds) {
+          if (!liveSet.has(id)) {
+            return rejection("STATE_1_SECTION_SERIES_MISMATCH", "State #1", `Section ${id} does not belong to series ${series_id}.`);
+          }
+        }
+        if (new Set(orderedIds).size !== live.length) {
+          return rejection("BAD_PAYLOAD", "Spine", `orderedIds must name each of the series' ${live.length} sections exactly once.`);
+        }
+        withTransaction(() => {
+          orderedIds.forEach((id, i) => {
+            dbRun("UPDATE series_sections SET sort_order = ? WHERE id = ?", [i, id]);
+          });
+        });
+        return success();
+      }
+
+      case "reorder-series-sermons": {
+        // Topical arrangement: sort_order = index over the pastor's order.
+        const { series_id, orderedIds } = payload || {};
+        if (!series_id || !Array.isArray(orderedIds) || orderedIds.length === 0) {
+          return rejection("BAD_PAYLOAD", "Spine", "reorder-series-sermons requires series_id and a non-empty orderedIds array.");
+        }
+        if (!queryOne("SELECT id FROM series WHERE id = ?", [series_id])) {
+          return rejection("NOT_FOUND", "State #1", `Series ${series_id} not found.`);
+        }
+        const live = queryAll("SELECT id FROM sermons WHERE series_id = ? AND deleted_at IS NULL", [series_id]).map((r) => r.id);
+        const liveSet = new Set(live);
+        for (const id of orderedIds) {
+          if (!liveSet.has(id)) {
+            return rejection("STATE_1_SECTION_SERIES_MISMATCH", "State #1", `Sermon ${id} is not a live sermon of series ${series_id}.`);
+          }
+        }
+        if (new Set(orderedIds).size !== live.length) {
+          return rejection("BAD_PAYLOAD", "Spine", `orderedIds must name each of the series' ${live.length} live sermons exactly once.`);
+        }
+        withTransaction(() => {
+          orderedIds.forEach((id, i) => {
+            dbRun("UPDATE sermons SET sort_order = ?, updated_at = datetime('now') WHERE id = ?", [i, id]);
+          });
+        });
+        return success();
+      }
+
+      case "bulk-date-sermons": {
+        // Date assignment (single date pick AND Suggest Sundays) plus the
+        // series.end_date mirror — one gesture, one transaction. `date` is not
+        // a searchable column, so no projection write rides along.
+        const { series_id, dates } = payload || {};
+        if (!series_id || !Array.isArray(dates) || dates.length === 0) {
+          return rejection("BAD_PAYLOAD", "Spine", "bulk-date-sermons requires series_id and a non-empty dates array.");
+        }
+        for (const d of dates) {
+          if (!d || typeof d.id !== "string" || typeof d.date !== "string") {
+            return rejection("BAD_PAYLOAD", "Spine", "each dates entry must be { id: string, date: string }.");
+          }
+        }
+        if (!queryOne("SELECT id FROM series WHERE id = ?", [series_id])) {
+          return rejection("NOT_FOUND", "State #1", `Series ${series_id} not found.`);
+        }
+        const live = new Set(
+          queryAll("SELECT id FROM sermons WHERE series_id = ? AND deleted_at IS NULL", [series_id]).map((r) => r.id),
+        );
+        for (const d of dates) {
+          if (!live.has(d.id)) {
+            return rejection("NOT_FOUND", "State #1", `Sermon ${d.id} is not a live sermon of series ${series_id}.`);
+          }
+        }
+        let endDate = "";
+        withTransaction(() => {
+          for (const d of dates) {
+            dbRun("UPDATE sermons SET date = ?, updated_at = datetime('now') WHERE id = ?", [d.date, d.id]);
+          }
+          // Mirror: series.end_date tracks the LAST dated live sermon; clearing
+          // every date clears the mirror too (no phantom end date).
+          const last = queryOne(
+            "SELECT date FROM sermons WHERE series_id = ? AND deleted_at IS NULL AND date != '' ORDER BY date DESC LIMIT 1",
+            [series_id],
+          );
+          endDate = last?.date || "";
+          dbRun("UPDATE series SET end_date = ? WHERE id = ?", [endDate, series_id]);
+        });
+        // The renderer gets the mirrored value back so its optimistic series
+        // state can settle on DB truth without a refetch.
+        return success({ end_date: endDate });
       }
 
       case "load-sample-sermon": {
@@ -1736,8 +1923,10 @@ function createPersistence({ getDb, logError = console.error, logInfo = () => {}
         if (!fresh && queryOne("SELECT id FROM sermons WHERE id = ?", [SERMON_ID])) {
           return success({ sermonId: SERMON_ID, created: false });
         }
-        dbRun("BEGIN");
-        try {
+        // The whole reseed — source deletes, source inserts, stale search-row
+        // cleanup, and the fresh index — is ONE transaction (the search half
+        // used to run after COMMIT).
+        withTransaction(() => {
           dbRun("DELETE FROM sermons WHERE id LIKE 'sample-%'");
           dbRun("DELETE FROM series  WHERE id LIKE 'sample-%'");
           // Full-INSERT seed path (distinct from the create-series user flow, which
@@ -1796,18 +1985,12 @@ function createPersistence({ getDb, logError = console.error, logInfo = () => {}
               sermon.last_touched_position, sermon.thresholds_seen,
             ],
           );
-          dbRun("COMMIT");
-        } catch (e) {
-          dbRun("ROLLBACK");
-          throw e;
-        }
-        // Search index: drop any stale sample rows + re-index the freshly-
-        // inserted one. The DELETE above runs against `sermons`;
-        // `sermon_search` is a separate table and needs its own cleanup.
-        // Index the freshly-inserted sermon so search finds the sample
-        // content immediately.
-        dbRun("DELETE FROM sermon_search WHERE sermon_id LIKE 'sample-%'");
-        indexSermonFts(SERMON_ID);
+          // Search index: drop any stale sample rows + re-index the freshly-
+          // inserted one. The DELETE above runs against `sermons`;
+          // `sermon_search` is a separate table and needs its own cleanup.
+          dbRun("DELETE FROM sermon_search WHERE sermon_id LIKE 'sample-%'");
+          indexSermonFts(SERMON_ID);
+        });
         return success({ sermonId: SERMON_ID, created: true });
       }
 
@@ -1832,7 +2015,9 @@ function createPersistence({ getDb, logError = console.error, logInfo = () => {}
     bootstrapSchema, safeAlter, runMigrations, migrate, assertSchemaContract,
     // search projection
     SERMON_SEARCH_COLUMNS, flattenJsonToText, extractJsonText,
-    indexSermonFtsFromRow, indexSermonFts, dropSermonFts,
+    indexSermonFtsFromRow, indexSermonFts, dropSermonFts, rebuildSearchIndex,
+    // atomicity
+    withTransaction,
     // spine
     rejection, success, shapeSermon, shapeSeries, fetchSermonRow,
     computeParentContext, seriesSermonOrderBy, buildUpdate,

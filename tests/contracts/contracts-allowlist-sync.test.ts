@@ -36,7 +36,7 @@ describe("Column allowlists stay in sync across the three mirrors", () => {
   });
 });
 
-describe("Allowlist gating: update-series drops unknown columns", () => {
+describe("Allowlist gating: an unknown column rejects the WHOLE update (Session 3)", () => {
   beforeEach(() => {
     installTestSpine();
     resetTestSpine();
@@ -46,19 +46,25 @@ describe("Allowlist gating: update-series drops unknown columns", () => {
     return (globalThis as any).electronAPI.spine as (op: string, payload?: any) => Promise<any>;
   }
 
-  it("an update with only unknown fields is rejected (UPDATE_NO_FIELDS), known fields still apply", async () => {
+  it("an update carrying ANY unknown field is rejected whole — known siblings do NOT apply (Session-3 Part C)", async () => {
     const created = await spine()("create-series", { name: "Sync" });
     const id = created.value.id;
 
-    // Only-unknown → no valid fields → rejected.
+    // Only-unknown → rejected.
     const bad = await spine()("update-series", { id, fields: { not_a_column: "x" } });
     expect(bad.ok).toBe(false);
     expect(bad.clause).toBe("State #5");
+    expect(bad.code).toBe("STATE_5_UNKNOWN_FIELD");
 
-    // Mixed → known field applies, unknown silently dropped.
-    await spine()("update-series", { id, fields: { big_idea: "kept", not_a_column: "x" } });
+    // Mixed → the WHOLE update is refused; the valid sibling must not land.
+    // (The pre-Session-3 behavior — save the known field, silently drop the
+    // unknown one, report success — is exactly the silent partial persistence
+    // this gate now forbids, identically in dev and production.)
+    const mixed = await spine()("update-series", { id, fields: { big_idea: "must not land", not_a_column: "x" } });
+    expect(mixed.ok).toBe(false);
+    expect(mixed.code).toBe("STATE_5_UNKNOWN_FIELD");
     const row = await spine()("get-series", id);
-    expect(row.big_idea).toBe("kept");
+    expect(row.big_idea ?? "").toBe("");
     expect(row.not_a_column).toBeUndefined();
   });
 });

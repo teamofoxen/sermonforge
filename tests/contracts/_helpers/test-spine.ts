@@ -128,8 +128,23 @@ export const STRUCTURED_FIELDS = new Set([
 // return null when nothing valid remains. main.js additionally throws in dev
 // for unknown fields; the fixture keeps that behavior optional via this flag,
 // but contract tests today exercise only the valid-or-empty paths.
-function buildUpdate(fields: Record<string, any>, allowed: Set<string>): Array<[string, any]> | null {
-  const entries = Object.entries(fields).filter(([k]) => allowed.has(k));
+// Mirrors production buildUpdate (electron/persistence.cjs, Session 3): an
+// unknown supplied field rejects the ENTIRE mutation — no sibling fields are
+// saved. Returns the rejection envelope for unknown fields, null for an empty
+// update, else the entries to apply.
+function buildUpdate(
+  fields: Record<string, any>,
+  allowed: Set<string>,
+): Array<[string, any]> | null | { ok: false; code: string; clause: string; message: string } {
+  const rejected = Object.keys(fields).filter((k) => !allowed.has(k));
+  if (rejected.length > 0) {
+    return rejection(
+      "STATE_5_UNKNOWN_FIELD",
+      "State #5",
+      `Unknown field(s): [${rejected.join(", ")}]. The whole update was refused — no fields were saved.`,
+    );
+  }
+  const entries = Object.entries(fields);
   return entries.length ? entries : null;
 }
 
@@ -312,13 +327,26 @@ function validateAndCommit(op: string, payload: any) {
       const id = randomUUID();
       const seriesId = payload.series_id || null;
       let sectionId = payload.section_id || null;
-      // No "in a series but in no section" limbo (mirrors main.js create-sermon):
-      // a section-less in-series sermon is auto-filed under the series' first
-      // section, auto-creating "Section 1" when it has none. Guarded on the
-      // series existing so a stale series_id can't spawn an orphan section.
-      // EXCEPT topical series (kind='topical', v30) — section-optional, so their
-      // sermons stay flat (never auto-filed), mirroring main.js create-sermon.
+      // Relational validation (Session-3 mirror): parents must exist and cohere.
       const seriesRow = series.get(seriesId);
+      if (seriesId && !seriesRow) {
+        return rejection("NOT_FOUND", "State #1", `Series ${seriesId} not found — a sermon cannot be created under a series that doesn't exist.`);
+      }
+      if (sectionId && !seriesId) {
+        return rejection("STATE_1_INCOHERENT_PARENT", "State #1", "A section_id without a series_id is incoherent — sections only exist inside a series.");
+      }
+      if (sectionId) {
+        const secRow = sections.get(sectionId);
+        if (!secRow) return rejection("NOT_FOUND", "State #1", `Section ${sectionId} not found.`);
+        if (secRow.series_id !== seriesId) {
+          return rejection("STATE_1_SECTION_SERIES_MISMATCH", "State #1", `Section ${sectionId} belongs to a different series than ${seriesId}.`);
+        }
+      }
+      // No "in a series but in no section" limbo (mirrors production create-sermon):
+      // a section-less in-series sermon is auto-filed under the series' first
+      // section, auto-creating "Section 1" when it has none.
+      // EXCEPT topical series (kind='topical', v30) — section-optional, so their
+      // sermons stay flat (never auto-filed), mirroring production.
       if (seriesId && !sectionId && seriesRow && seriesRow.kind !== "topical") {
         sectionId = firstSectionIdForSeries(seriesId);
       }
@@ -355,9 +383,10 @@ function validateAndCommit(op: string, payload: any) {
     case "update-sermon": {
       const { id, fields } = payload || {};
       const entries = buildUpdate(fields || {}, SERMON_COLUMNS);
+      if (entries && !Array.isArray(entries)) return entries; // unknown-field rejection
       if (!entries) return rejection("UPDATE_NO_FIELDS", "State #5", "No valid fields to update.");
       const row = sermons.get(id);
-      if (!row) return success();
+      if (!row) return rejection("NOT_FOUND", "State #1", `Sermon ${id} not found — the update would affect zero rows.`);
       for (const [k, v] of entries) row[k] = v;
       return success();
     }
@@ -369,24 +398,28 @@ function validateAndCommit(op: string, payload: any) {
           "State Contract #3 violation: a series must have a name.");
       }
       const entries = buildUpdate(fields || {}, SERIES_COLUMNS);
+      if (entries && !Array.isArray(entries)) return entries; // unknown-field rejection
       if (!entries) return rejection("UPDATE_NO_FIELDS", "State #5", "No valid fields to update.");
       const row = series.get(id);
-      if (!row) return success();
+      if (!row) return rejection("NOT_FOUND", "State #1", `Series ${id} not found — the update would affect zero rows.`);
       for (const [k, v] of entries) row[k] = v;
       return success();
     }
     // v24 soft-delete mirror: tombstone + restore, like production.
     case "delete-sermon": {
       const s = sermons.get(payload);
-      if (s) s.deleted_at = new Date().toISOString();
+      if (!s) return rejection("NOT_FOUND", "State #1", `Sermon ${payload} not found — nothing to delete.`);
+      s.deleted_at = new Date().toISOString();
       return success();
     }
     case "restore-sermon": {
       const s = sermons.get(payload);
-      if (s) s.deleted_at = null;
+      if (!s) return rejection("NOT_FOUND", "State #1", `Sermon ${payload} not found — nothing to restore.`);
+      s.deleted_at = null;
       return success();
     }
     case "delete-series": {
+      if (!series.has(payload)) return rejection("NOT_FOUND", "State #1", `Series ${payload} not found — nothing to delete.`);
       // Cascade: remove series_sections, null out sermons.series_id + section_id.
       for (const [sid, sec] of sections) {
         if (sec.series_id === payload) sections.delete(sid);
@@ -401,6 +434,9 @@ function validateAndCommit(op: string, payload: any) {
       return success();
     }
     case "create-section": {
+      if (!payload?.series_id || !series.has(payload.series_id)) {
+        return rejection("NOT_FOUND", "State #1", `Series ${payload?.series_id} not found — a section cannot be created without its series.`);
+      }
       const id = randomUUID();
       sections.set(id, { id, ...payload, sort_order: payload.sort_order ?? 0 });
       return success({ id });
@@ -408,11 +444,68 @@ function validateAndCommit(op: string, payload: any) {
     case "update-section": {
       const { id, fields } = payload || {};
       const entries = buildUpdate(fields || {}, SECTION_COLUMNS);
+      if (entries && !Array.isArray(entries)) return entries; // unknown-field rejection
       if (!entries) return rejection("UPDATE_NO_FIELDS", "State #5", "No valid fields to update.");
       const row = sections.get(id);
-      if (!row) return success();
+      if (!row) return rejection("NOT_FOUND", "State #1", `Section ${id} not found — the update would affect zero rows.`);
       for (const [k, v] of entries) row[k] = v;
       return success();
+    }
+    case "reorder-sections": {
+      // Session-3 mirror of the production gesture op: exact-cover reorder.
+      const { series_id, orderedIds } = payload || {};
+      if (!series_id || !Array.isArray(orderedIds) || orderedIds.length === 0) {
+        return rejection("BAD_PAYLOAD", "Spine", "reorder-sections requires series_id and a non-empty orderedIds array.");
+      }
+      if (!series.has(series_id)) return rejection("NOT_FOUND", "State #1", `Series ${series_id} not found.`);
+      const live = [...sections.values()].filter((s) => s.series_id === series_id).map((s) => s.id);
+      const liveSet = new Set(live);
+      for (const id of orderedIds) {
+        if (!liveSet.has(id)) return rejection("STATE_1_SECTION_SERIES_MISMATCH", "State #1", `Section ${id} does not belong to series ${series_id}.`);
+      }
+      if (new Set(orderedIds).size !== live.length) {
+        return rejection("BAD_PAYLOAD", "Spine", `orderedIds must name each of the series' ${live.length} sections exactly once.`);
+      }
+      orderedIds.forEach((id: string, i: number) => { sections.get(id)!.sort_order = i; });
+      return success();
+    }
+    case "reorder-series-sermons": {
+      const { series_id, orderedIds } = payload || {};
+      if (!series_id || !Array.isArray(orderedIds) || orderedIds.length === 0) {
+        return rejection("BAD_PAYLOAD", "Spine", "reorder-series-sermons requires series_id and a non-empty orderedIds array.");
+      }
+      if (!series.has(series_id)) return rejection("NOT_FOUND", "State #1", `Series ${series_id} not found.`);
+      const live = [...sermons.values()].filter((s) => s.series_id === series_id && !s.deleted_at).map((s) => s.id);
+      const liveSet = new Set(live);
+      for (const id of orderedIds) {
+        if (!liveSet.has(id)) return rejection("STATE_1_SECTION_SERIES_MISMATCH", "State #1", `Sermon ${id} is not a live sermon of series ${series_id}.`);
+      }
+      if (new Set(orderedIds).size !== live.length) {
+        return rejection("BAD_PAYLOAD", "Spine", `orderedIds must name each of the series' ${live.length} live sermons exactly once.`);
+      }
+      orderedIds.forEach((id: string, i: number) => { sermons.get(id)!.sort_order = i; });
+      return success();
+    }
+    case "bulk-date-sermons": {
+      const { series_id, dates } = payload || {};
+      if (!series_id || !Array.isArray(dates) || dates.length === 0) {
+        return rejection("BAD_PAYLOAD", "Spine", "bulk-date-sermons requires series_id and a non-empty dates array.");
+      }
+      for (const d of dates) {
+        if (!d || typeof d.id !== "string" || typeof d.date !== "string") {
+          return rejection("BAD_PAYLOAD", "Spine", "each dates entry must be { id: string, date: string }.");
+        }
+      }
+      if (!series.has(series_id)) return rejection("NOT_FOUND", "State #1", `Series ${series_id} not found.`);
+      const liveRows = [...sermons.values()].filter((s) => s.series_id === series_id && !s.deleted_at);
+      const liveSet = new Set(liveRows.map((s) => s.id));
+      for (const d of dates) {
+        if (!liveSet.has(d.id)) return rejection("NOT_FOUND", "State #1", `Sermon ${d.id} is not a live sermon of series ${series_id}.`);
+      }
+      for (const d of dates) { sermons.get(d.id)!.date = d.date; }
+      const endDate = liveRows.reduce((max, s) => (s.date && s.date > max ? s.date : max), "");
+      series.get(series_id)!.end_date = endDate;
+      return success({ end_date: endDate });
     }
     case "delete-section": {
       // Cascade mirrors production (no section-less limbo): the deleted section's
@@ -420,7 +513,8 @@ function validateAndCommit(op: string, payload: any) {
       // then created_at); if it was the LAST section they leave the series
       // (series_id + section_id nulled), like delete-series.
       const sec = sections.get(payload);
-      const delSeriesId = sec?.series_id ?? null;
+      if (!sec) return rejection("NOT_FOUND", "State #1", `Section ${payload} not found — nothing to delete.`);
+      const delSeriesId = sec.series_id ?? null;
       const remaining = delSeriesId
         ? [...sections.values()]
             .filter((s) => s.series_id === delSeriesId && s.id !== payload)

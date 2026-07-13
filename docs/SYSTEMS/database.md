@@ -97,11 +97,34 @@ Read via IPC `"db-getSchemaVersion"`.
 
 ## SERMON_COLUMNS Allowlist
 
-`buildUpdate()` in `electron/main.js` validates all fields passed to `db-updateSermon` against
-a `SERMON_COLUMNS` allowlist before any SQL UPDATE runs. This is a security boundary — no
-renderer-supplied field name outside the allowlist reaches the database.
+`buildUpdate()` (in `electron/persistence.cjs` since the Session-2 extraction)
+validates every field of every update mutation against the
+`SERMON_COLUMNS` / `SERIES_COLUMNS` / `SECTION_COLUMNS` allowlists before any
+SQL UPDATE runs. This is a security boundary — no renderer-supplied field name
+outside the allowlist reaches the database. **Since Session 3 (2026-07-13) an
+unknown field rejects the WHOLE mutation, identically in development and
+production** — the old packaged behavior (warn, drop the unknown field, save
+the recognized siblings, report success) silently shed data on allowlist
+drift and is gone.
 
 When adding new fields to the `sermons` table, they must also be added to `SERMON_COLUMNS`.
+
+## Mutation atomicity (Session 3, 2026-07-13)
+
+Every operation that changes searchable sermon state commits its source rows
+AND its `sermon_search` projection in **one SQLite transaction**
+(`withTransaction` in `electron/persistence.cjs`): create/update/structured
+mutation/soft delete/restore/series-title change/series deletion/section
+deletion/sample reset. A failure in either half rolls back both — source and
+search can never disagree, and a failed create leaves no row for a retry to
+duplicate. The three planner gestures (`reorder-sections`,
+`reorder-series-sermons`, `bulk-date-sermons` + its `series.end_date` mirror)
+are each one transaction too. `rebuildSearchIndex()` remains the explicit
+whole-projection REPAIR mechanism — never the normal write path. Relational
+validation rides the same boundary: parents must exist, series/section
+combinations must cohere, and zero-row updates reject instead of reporting
+success. Proven by failure injection (SQLite `RAISE(ABORT)` triggers) in
+`tests/persistence/atomic-mutations.test.ts`.
 
 ---
 

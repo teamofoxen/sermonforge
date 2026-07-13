@@ -7,6 +7,7 @@ import {
   getSeries, updateSeries,
   getSectionsBySeries, createSection, updateSection, deleteSection,
   getSermonsBySeries, createSermon, updateSermon, deleteSermon,
+  reorderSections, reorderSeriesSermons, bulkDateSermons,
 } from "../core/spine";
 import { getCalendarNotes, exportStudyGuide } from "../db/database";
 import {
@@ -321,14 +322,59 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
     if (last !== (series?.end_date || "")) handleSeriesField("end_date", last);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [series?.end_date]);
-  // Single-source date write for the Schedule screen — the one place dates live
-  // (the Outline carries none since the outlining-only rebuild). Persist the date
-  // through the shared debounced path, then re-mirror series end_date so the
-  // exported booklet's date range always tracks the last dated sermon.
+  // Reload sermons + series from DB truth — the rollback for a failed
+  // planner-gesture op (Session-3: optimistic state may remain, but failure
+  // must settle on what the database actually holds).
+  const reloadPlannerTruth = useCallback(async () => {
+    try {
+      const [s, serms] = await Promise.all([getSeries(seriesId), getSermonsBySeries(seriesId)]);
+      if (s) setSeries(s);
+      setSermons(serms);
+    } catch (e) {
+      console.error("[SeriesPlanner] truth reload after failed gesture", e);
+    }
+  }, [seriesId]);
+
+  // Single-source date write for the Schedule screen — the one place dates
+  // live (the Outline carries none since the outlining-only rebuild). Since
+  // Session 3 the visible gesture "this sermon preaches on this Sunday" is ONE
+  // spine transaction (`bulk-date-sermons`, one entry): the sermon date and
+  // the series end_date mirror commit together in main — no separate debounced
+  // series write that could fire later or fail apart from the date. Optimistic
+  // locally; the resolved mirror settles series state; failure reloads truth.
+  // Keyed retryable — replaying the same date + mirror is idempotent.
   const handleSermonDate = useCallback((id, date) => {
-    handleSermonField(id, { date });
-    syncSeriesEndDate(sermons.map((s) => (s.id === id ? { ...s, date } : s)));
-  }, [handleSermonField, syncSeriesEndDate, sermons]);
+    const nextSermons = sermons.map((s) => (s.id === id ? { ...s, date } : s));
+    setSermons(nextSermons);
+    const localEnd = [...nextSermons].filter((s) => s.date).sort((a, b) => (a.date > b.date ? 1 : -1)).pop()?.date || "";
+    setSeries((prev) => ({ ...prev, end_date: localEnd }));
+    runSave(async () => {
+      const { end_date } = await bulkDateSermons(seriesId, [{ id, date }]);
+      setSeries((prev) => ({ ...prev, end_date }));
+    }, { key: saveKey(`sermon:${id}`, { date }) }).then((ok) => {
+      if (!ok) reloadPlannerTruth();
+    });
+  }, [sermons, runSave, seriesId, reloadPlannerTruth]);
+
+  // Suggest Sundays lands here from ScheduleTab: entries = [{ id, date }] for
+  // every undated sermon — one gesture, one transaction in main (all dates +
+  // the end_date mirror). retryable:false like the sibling structural bulks:
+  // the pastor re-runs the visible gesture rather than a blind replay.
+  const handleBulkDates = useCallback(async (entries) => {
+    const byId = new Map(entries.map((e) => [e.id, e.date]));
+    setSermons((prev) => prev.map((s) => (byId.has(s.id) ? { ...s, date: byId.get(s.id) } : s)));
+    let mirrored = null;
+    const ok = await runSave(async () => {
+      const { end_date } = await bulkDateSermons(seriesId, entries);
+      mirrored = end_date;
+    }, { retryable: false });
+    if (!ok) {
+      await reloadPlannerTruth();
+      return false;
+    }
+    setSeries((prev) => ({ ...prev, end_date: mirrored ?? prev.end_date }));
+    return true;
+  }, [runSave, seriesId, reloadPlannerTruth]);
 
   // Drain the failed-write queue. Each entry is an idempotent field write, safe
   // to replay; the queued key is removed before replay and re-added only if it
@@ -543,10 +589,8 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
             calNotes={calNotes}
             onSeriesField={handleSeriesField}
             onSermonDate={handleSermonDate}
-            onSyncEndDate={syncSeriesEndDate}
-            onSermonsChange={setSermons}
+            onBulkDates={handleBulkDates}
             onNavigate={handleTabChange}
-            runSave={runSave}
           />
         )}
         {activeTab === "study-guide" && (
@@ -804,7 +848,10 @@ function OutlineTab({
     const reordered = [...sections];
     [reordered[idx], reordered[newIdx]] = [reordered[newIdx], reordered[idx]];
     onSectionsChange(reordered);
-    const ok = await runSave(() => Promise.all(reordered.map((s, i) => updateSection(s.id, { sort_order: i }))), { retryable: false });
+    // One gesture, one transaction (Session-3): the fan-out of per-section
+    // sort_order writes moved into the `reorder-sections` spine op — a failure
+    // mid-reorder can no longer leave half the sections moved.
+    const ok = await runSave(() => reorderSections(seriesId, reordered.map((s) => s.id)), { retryable: false });
     if (!ok) onSectionsChange(await getSectionsBySeries(seriesId));
   }
 
@@ -826,7 +873,9 @@ function OutlineTab({
     [reordered[idx], reordered[newIdx]] = [reordered[newIdx], reordered[idx]];
     const withOrder = reordered.map((s, i) => ({ ...s, sort_order: i }));
     onSermonsChange(withOrder);
-    const ok = await runSave(() => Promise.all(withOrder.map((s) => updateSermon(s.id, { sort_order: s.sort_order }))), { retryable: false });
+    // One gesture, one transaction (Session-3): the per-sermon sort_order
+    // fan-out moved into the `reorder-series-sermons` spine op.
+    const ok = await runSave(() => reorderSeriesSermons(seriesId, withOrder.map((s) => s.id)), { retryable: false });
     if (!ok) onSermonsChange(await getSermonsBySeries(seriesId));
   }
 
@@ -1565,7 +1614,7 @@ function SermonNode({ sermon: p, expanded, onToggle, onField, onCommit, onDelete
 // Each row expands to show the sermon's big idea + overview (read-only — edited on
 // the Outline). AI scheduling advisor stays removed (no-direct-ai); the
 // church-calendar engine is preserved verbatim.
-function ScheduleTab({ series, sermons, calNotes, onSeriesField, onSermonDate, onSyncEndDate, onSermonsChange, onNavigate, runSave }) {
+function ScheduleTab({ series, sermons, calNotes, onSeriesField, onSermonDate, onBulkDates, onNavigate }) {
   const [suggesting, setSuggesting] = useState(false);
   const excludeDates = calNotes.map((n) => n.date);
   // Suggest Sundays fills ONLY the undated sermons (preserves hand-set dates).
@@ -1612,19 +1661,12 @@ function ScheduleTab({ series, sermons, calNotes, onSeriesField, onSermonDate, o
       if (after > startFrom) startFrom = after;
     }
     const fill = getUpcomingSundays(startFrom, undated.length, excludeDates);
-    const fillById = new Map(undated.map((s, i) => [s.id, fill[i]]));
-    const dated = sermons.map((s) => (fillById.has(s.id) ? { ...s, date: fillById.get(s.id) } : s));
-    onSermonsChange(dated);
-    const ok = await runSave(() => Promise.all(undated.map((s, i) => updateSermon(s.id, { date: fill[i] }))), { retryable: false });
-    if (!ok) {
-      // The bulk date write failed — roll the optimistic dates back to DB truth
-      // rather than leaving every sermon showing a date (and mirroring a new
-      // end_date) that never persisted (false success / stale UI). Mirrors moveSermon.
-      onSermonsChange(await getSermonsBySeries(series.id));
-      setSuggesting(false);
-      return;
-    }
-    onSyncEndDate(dated);
+    // One gesture, one transaction (Session-3): every assigned date AND the
+    // series end_date mirror commit together in main (`bulk-date-sermons`).
+    // The parent (handleBulkDates) owns the optimistic state and reloads DB
+    // truth on failure — a mid-flight failure can no longer leave half the
+    // Sundays assigned.
+    await onBulkDates(undated.map((s, i) => ({ id: s.id, date: fill[i] })));
     setSuggesting(false);
   }
 

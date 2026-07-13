@@ -127,15 +127,24 @@ human label is "Outline"). A remembered `localStorage` tab id for a removed tab
     chapter:verse that won't parse shows an inline **"Couldn't read"** hint (the
     Coverage panel's unreadable affordance, surfaced per-row since that panel is
     hidden in topical mode). Sermons carry a pastor-authored order
-    (`sermons.sort_order`) and reorder with ↑/↓ (`moveSermon` rewrites
-    `sort_order`); there is no auto-file and no "+ Add section".
+    (`sermons.sort_order`) and reorder with ↑/↓ — since Session 3 (2026-07-13)
+    `moveSermon` commits through the `reorder-series-sermons` spine op: ONE
+    SQLite transaction over every sort_order (a mid-flight failure can't leave
+    half the arrangement moved; the optimistic list reloads DB truth on
+    failure). Section reorder in book mode rides the sibling
+    `reorder-sections` op the same way. There is no auto-file and no
+    "+ Add section" in topical mode.
 - **Schedule** (`ScheduleTab`) — **the one place dates live.** Lays each sermon
-  on a Sunday; per-row edits autosave through the shared debounced
-  `updateSermon` path (`end_date` mirrors the last dated sermon on any change; there
-  is no separate `schedule` snapshot). Each row is **working title + passage +
+  on a Sunday. Since Session 3 a date pick is ONE spine transaction
+  (`bulk-date-sermons`, single entry): the sermon date and the
+  `series.end_date` mirror commit together in main — no separate debounced
+  series write that could fire later or fail apart from the date; the op
+  resolves the mirrored `end_date` so the planner's optimistic series state
+  settles on DB truth. Each row is **working title + passage +
   date**, expandable (▾) to its read-only **big idea + overview** (edited on the
   Outline). "Suggest Sundays" (`getUpcomingSundays`) is one explicit bulk gesture
-  that writes every date in list order. The **undated pool sorts in outline
+  that assigns every undated Sunday via the same `bulk-date-sermons` op — all
+  dates plus the mirror in one transaction, rolled back whole on failure. The **undated pool sorts in outline
   reading order** via the one shared `seriesSermonOrderBy` (`electron/main.js`) —
   dated first, then section order (`ss.sort_order`), then the sermon's own
   pastor-authored `sort_order` (the topical reorder term), then `created_at` —

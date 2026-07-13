@@ -286,6 +286,35 @@ export function deleteSection(id: string): Promise<void> {
   return call("delete-section", id);
 }
 
+// ── Bounded planner-gesture ops (Session-3 Part B) ───────────────────────────
+// Each of these is ONE visible human gesture that used to fan out as N
+// independent writes from the renderer (Promise.all) — a mid-flight failure
+// left half the rows changed. Main commits each gesture in one SQLite
+// transaction and validates the parent relationships; the renderer keeps its
+// optimistic state and reloads DB truth on failure.
+
+// Section reorder: orderedIds must name every section of the series exactly
+// once; sort_order becomes the array index.
+export function reorderSections(seriesId: string, orderedIds: string[]): Promise<void> {
+  return call("reorder-sections", { series_id: seriesId, orderedIds });
+}
+
+// Topical-arrangement reorder: orderedIds must name every live sermon of the
+// series exactly once; sort_order becomes the array index.
+export function reorderSeriesSermons(seriesId: string, orderedIds: string[]): Promise<void> {
+  return call("reorder-series-sermons", { series_id: seriesId, orderedIds });
+}
+
+// Date assignment (single pick or Suggest Sundays) + the series.end_date
+// mirror in the same transaction. Resolves with the mirrored end_date so the
+// renderer's optimistic series state can settle on DB truth without a refetch.
+export function bulkDateSermons(
+  seriesId: string,
+  dates: Array<{ id: string; date: string }>,
+): Promise<{ end_date: string }> {
+  return call("bulk-date-sermons", { series_id: seriesId, dates });
+}
+
 // Sandbox semantics: without `fresh`, an existing sample is returned as-is
 // (the pastor's exploration survives re-entry); `fresh: true` deletes and
 // reseeds — the dashboard's explicit "Start the sample fresh".

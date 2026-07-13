@@ -7,7 +7,13 @@ See `docs/SYSTEMS/ipc.md` for architecture and boundary rules.
 
 ## Database Operations
 
-All sermon and series state routes through the `"spine"` channel. Named per-operation `db-get*` channels for sermons/series (`db-getRecentSermons`, `db-getRecentSeries`, `db-loadSampleSermon`) no longer exist — they are spine ops now. (`db-loadTourSermon` was renamed to `db-loadSampleSermon` in the tour-cleanup phase, 2026-05-17; `db-removeTourSermon` retired in the same phase — the sample-sermon path is self-cleaning via delete-then-insert.) Settings, calendar notes, schema, and sermon full-text search remain as named channels. No raw SQL is accepted from the renderer.
+All sermon and series state routes through the `"spine"` channel. Session 3
+(2026-07-13) added three bounded planner-gesture mutation ops —
+`reorder-sections`, `reorder-series-sermons`, and `bulk-date-sermons` (dates +
+the `series.end_date` mirror; resolves `{ end_date }`) — each one visible
+human gesture committed in one SQLite transaction with relational validation
+(parents must exist and cohere; unknown update fields reject the whole
+mutation in dev and production alike). Named per-operation `db-get*` channels for sermons/series (`db-getRecentSermons`, `db-getRecentSeries`, `db-loadSampleSermon`) no longer exist — they are spine ops now. (`db-loadTourSermon` was renamed to `db-loadSampleSermon` in the tour-cleanup phase, 2026-05-17; `db-removeTourSermon` retired in the same phase — the sample-sermon path is self-cleaning via delete-then-insert.) Settings, calendar notes, schema, and sermon full-text search remain as named channels. No raw SQL is accepted from the renderer.
 
 ### `"spine"`
 ```
