@@ -7,13 +7,15 @@
 // What it enforces (cited to docs/CORE.md "The Framework"):
 //
 //   1. `db.run` / `db.prepare` / `db.exec` (driver calls on the main sermon
-//      database) appear only in `electron/main.js`. Anywhere else and the
-//      spine's mutation gate is bypassable.
+//      database) appear only in `electron/main.js` and
+//      `electron/persistence.cjs` (the production persistence seam the
+//      Session-2 extraction moved the mutation gate into — main.js delegates
+//      to it). Anywhere else and the spine's mutation gate is bypassable.
 //      → Undermines: Mutation Contract #1 (user typing wins; ai_apply
 //        requires a referenced proposal); State Contract #1, #2.
 //
 //   2. Raw INSERT / UPDATE / DELETE SQL targeting `sermons`, `series`, or
-//      `series_sections` tables appears only in `electron/main.js`.
+//      `series_sections` tables appears only in those same two files.
 //      → Undermines: same as 1.
 //
 //   3. `window.electronAPI.spine(...)` is called only from `src/core/spine.ts`.
@@ -69,11 +71,13 @@ function rel(p) {
 // ── Allowlists ───────────────────────────────────────────────────────────────
 
 const ALLOW_DB_WRAPPERS = new Set([
-  'electron/main.js', // the only place sermon/series SQL lives
+  'electron/main.js',          // lifecycle + IPC wiring (residual driver calls: WAL checkpoint, boot probes)
+  'electron/persistence.cjs',  // the production persistence seam — validateAndCommit lives here (Session-2 extraction)
 ]);
 
 const ALLOW_RAW_SERMON_SQL = new Set([
   'electron/main.js',
+  'electron/persistence.cjs',
 ]);
 
 const ALLOW_SPINE_BRIDGE = new Set([

@@ -1,86 +1,73 @@
 # Contract tests
 
-Each test file in this directory maps 1:1 to a contract clause in
-`docs/CORE.md`. Filenames follow the convention `<clause-id>-<short-name>.test.ts`
-or `.test.tsx` for tests that need to render a React component.
+Test files in this directory map to contract clauses in `docs/CORE.md` (plus
+structural parity/tripwire suites added by later initiatives). Filenames
+follow `<clause-id>-<short-name>.test.ts`, or `.test.tsx` for tests that
+render a React component.
 
-## Test environment — Path B chosen
+## Two test layers (since the Session-2 seam extraction, 2026-07-13)
 
-The Phase 5 spec preferred Path A (real Electron main process + in-memory
-SQLite, full IPC round-trip). Path B is what this directory implements: the
-spine boundary (`validateAndCommit` + `spineRead` from `electron/main.js`)
-is reproduced as an in-memory test fixture in `_helpers/test-spine.ts`.
-Renderer-side spine (`src/core/spine.ts`) calls the bridge transparently
-because the fixture mounts itself on `globalThis.electronAPI.spine`.
+**Layer 1 — the in-memory fixture (this directory's component tests).**
+`_helpers/test-spine.ts` reproduces the spine boundary (`validateAndCommit` +
+`spineRead`) as a plain-`Map` fixture mounted on `globalThis.electronAPI.spine`.
+Renderer code (`src/core/spine.ts`) calls it transparently. It exists for
+SPEED: component tests mount the real React surfaces against it without any
+database, and the whole suite stays in seconds. It is a mirror, and mirrors
+can drift — see the parity tripwires below.
 
-### Why Path B
+**Layer 2 — the production persistence seam (`tests/persistence/`).**
+`electron/persistence.cjs` is the PRODUCTION mutation dispatcher, read
+router, query helpers, search projection, and migration ladder — extracted
+from `electron/main.js` (which now delegates to it) so it is directly
+executable without booting Electron.
+`tests/persistence/production-persistence.test.ts` runs that module against
+real SQLite files (via `better-sqlite3-node`, an npm alias of the same
+better-sqlite3 version that stays Node-loadable regardless of Electron ABI
+rebuilds of the main copy). Create/read, structured mutation, series
+attachment, soft-delete/restore, search projection, State-#3 rejections,
+close/reopen durability, and the FULL migration ladder execute for real
+there.
 
-* `electron/main.js` boots a real Electron app — `app.whenReady()`, BrowserWindow
-  setup, embedder host, AI handlers, sql.js WASM file resolution, dotenv
-  loading, OneDrive warning. Spinning that up under Vitest is genuinely
-  invasive: the test process needs Electron's main runtime, which the
-  vitest CLI doesn't provide. Forcing it in would require a bespoke
-  Electron-test runner (e.g. spectron / playwright) and substantial setup
-  that this phase explicitly disclaims ("do not modify... IPC handlers").
-* The contract-clause logic — the `validateAndCommit` switch — is what the
-  tests actually exercise. The fidelity loss is the SQL layer, not the
-  contract enforcement logic. The fixture mirrors the same `{ ok, code,
-  clause, message }` envelopes and the same rejection citations.
+### What still isn't executed by any test
 
-### Fidelity tradeoff (explicit)
+`electron/main.js` itself — the Electron lifecycle (app.whenReady, window
+close/quit events) and the IPC handler registrations. Those are covered by
+source-scan tripwires (`exit-seam-wiring.test.ts`, `db-userdata-path-permanent.test.ts`),
+`node --check`, and the build-and-run workflow — not by test execution. Do
+not read a green suite as Electron-lifecycle coverage.
 
-The fixture and the main-process implementation can drift. Drift surface:
+## Drift control between the fixture and production
 
-* Adding a new mutation op or rejection citation requires updating both
-  files. A unit test of contract-clause behavior that passes in the
-  fixture but is broken in main.js would be invisible.
-* The fixture uses plain `Map` stores; main.js uses sql.js. SQL semantics
-  differences (constraint violations, transaction rollback) aren't
-  exercised here.
-
-Mitigations:
-
-* `scripts/spine-integrity.js` enforces that no renderer code bypasses the
-  spine in either direction.
-* The structural reimplementation in `_helpers/test-spine.ts` is small —
-  the contract-clause checks are the load-bearing part, and they're
-  literal copies of the main.js logic.
-* Path A can be revisited later as a higher-fidelity verification layer
-  without reshaping these tests; the test bodies care about the
-  rejection envelope shape, not the database backend.
+* `contracts-allowlist-sync.test.ts` — SERMON/SERIES/SECTION_COLUMNS set-equal
+  across `contracts.ts` ⟷ `contracts.cjs` ⟷ the fixture.
+* `contracts-mirror-parity.test.ts` — vocabulary/sequence parity across the
+  same three mirrors.
+* `mutation-kind-parity.test.ts` — `user_input` is the only mutation kind in
+  fixture AND production dispatch (`electron/persistence.cjs`).
+* `spine-read-op-parity.test.ts` — the read-op set is identical across
+  main.js routing, production `spineRead`, and the fixture (set + switch).
+  This is the tripwire that turns a missing fixture op into a FAILING test
+  instead of routine stderr (the `get-all-tags` drift class).
 
 ## Running
 
 ```
-npm test -- tests/contracts/
+npm test                      # everything
+npm test -- tests/contracts/  # fixture-layer contract tests
+npm test -- tests/persistence # production seam against real SQLite
 ```
 
-Tests use Vitest. RTL-based tests (`process-3`, `process-4`) carry a
-`@vitest-environment jsdom` pragma; pure-Node tests (everything else) use
-the project's default node environment.
+Tests use Vitest. RTL-based tests carry a `@vitest-environment jsdom` pragma;
+pure-Node tests use the default node environment.
 
-## What's covered
+## History
 
-| Clause | File | Layer |
-|---|---|---|
-| State #3 | `state-3-no-anonymous-atoms.test.ts` | renderer fast-fail + IPC re-validation |
-| State #5 | `state-5-one-name-per-concept.test.ts` | source scan |
-| Process #1 | `process-1-monotonic.test.ts` | main-side validateAndCommit |
-| Process #2 | `process-2-evidence-gated.test.ts` | main-side, with legacy carve-out |
-| Process #3 | `process-3-movement-visible.test.tsx` | RTL render + meta-test for marker presence |
-| Process #4 | `process-4-pc-follows-text.test.tsx` | RTL render of new-sermon shell |
-| Process #5 | `process-5-ai-augments.test.ts` | main-side validateAndCommit |
-| Mutation #1 | `mutation-1-user-typing-wins.test.ts` | main-side validateAndCommit |
-| Mutation #3 | `mutation-3-saves-are-events.test.ts` | spine.persistMutation |
-| Surface #1 | `surface-1-one-vocabulary.test.ts` | source scan (shares helper with State #5) |
-| Surface #4 | `surface-4-you-are-here.test.ts` | router-vs-sidebar set comparison |
-
-## What's NOT covered (deferred)
-
-* Contract clauses without a Phase 5 test file: State #1, #2, #4, #6;
-  Mutation #2, #4, #5; Surface #2, #3, #5. Some are structurally enforced
-  (State #1 by the spine itself; Mutation #2 by the ProposalPanel
-  component pattern) and some are deferred to audit-triage Pilots C–E.
-* SPRD phase mechanics (Process #4 progressive PC). The `process-4` test
-  asserts only the structural shell ("PC absent != Study locked"); the
-  per-phase mechanics will be tested when SPRD lands.
+The original Phase-5 write-up chose "Path B" (fixture-only) because main.js
+could not be required outside Electron; that constraint drove years of
+mirror maintenance. The Session-2 extraction (2026-07-13) removed the
+constraint for persistence itself — the production dispatcher and migration
+ladder are now under direct test — while the fixture layer stays for fast
+component tests. (That old write-up also referenced sql.js, live AI
+handlers, and a `process-1-monotonic` test file; the driver is
+better-sqlite3, AI was removed in ARI 2026-05-09, and the process-1 test was
+deleted in the trail-deletion sweep Phase G.)

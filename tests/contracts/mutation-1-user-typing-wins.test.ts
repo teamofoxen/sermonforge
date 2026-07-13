@@ -13,8 +13,14 @@ import {
 //
 // Enforcement is now structural-by-absence: MutationKind collapsed to
 // `user_input` only, so the spine has NO path for a system actor to write a
-// sermon field. This test drives the REAL production path (electron/main.js
-// `apply-mutation`): user_input commits; every other kind is BAD_KIND'd.
+// sermon field. This test drives the in-memory FIXTURE's `apply-mutation`
+// (tests/contracts/_helpers/test-spine.ts — fast component-test spine), NOT
+// the production dispatcher; the earlier header claimed "the REAL production
+// path", which was never true of this file. The REAL production path — the
+// same op through electron/persistence.cjs `validateAndCommit` against real
+// SQLite — is exercised in tests/persistence/production-persistence.test.ts,
+// and mutation-kind-parity.test.ts pins fixture ⇔ production agreement that
+// user_input is the only live kind.
 //
 // (Rewritten 2026-07-02, Track B/B4. The prior file drove the deleted
 // ai_proposal/ai_apply proposal-then-apply cycle and only passed because the

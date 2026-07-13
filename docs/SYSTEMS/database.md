@@ -65,8 +65,13 @@ Read via IPC `"db-getSchemaVersion"`.
 ## Migration Rules
 
 - **Never alter `CREATE TABLE` statements directly.** The schema is defined once at creation time.
-- All schema changes must go through `runMigrations()` in `electron/main.js` with a version
-  increment. Each migration is a conditional block keyed to the version number.
+- All schema changes must go through `runMigrations()` — which lives in
+  `electron/persistence.cjs` since the Session-2 seam extraction (2026-07-13;
+  `electron/main.js` calls it via the module's `migrate()` transaction
+  wrapper) — with a version increment. Each migration is a conditional block
+  keyed to the version number. The extraction made the ladder directly
+  executable: `tests/persistence/production-persistence.test.ts` runs it
+  against real SQLite.
 - Never add a column, table, or index without a corresponding migration.
 - Schema version must be incremented atomically with the migration that requires it.
 - All `ALTER TABLE … ADD COLUMN` statements go through `safeAlter()`. It treats

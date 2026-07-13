@@ -68,7 +68,13 @@ Google Fonts typeface load was removed 2026-07-01 — fonts are bundled at
 | `"telemetry-*"` / `"bti-feedback-submit"` | BTI telemetry + flag/form transport |
 | `"app-*"` | App metadata (version, key status, sermon columns, startup warnings, data folder) |
 
-All handlers are implemented in `electron/main.js`.
+All handlers are registered in `electron/main.js`. Since the Session-2 seam
+extraction (2026-07-13) the persistence logic they dispatch to —
+`validateAndCommit`, `spineRead`, the query helpers, the search projection,
+and the migration ladder — lives in `electron/persistence.cjs`
+(`createPersistence({ getDb, logError, logInfo, isDev })`, injected
+dependencies, one implementation); main.js delegates and remains the
+lifecycle + IPC wiring owner.
 
 ---
 

@@ -32,6 +32,8 @@
  *
  * Allowed locations (full file exemptions):
  *   - electron/main.js (the v16/v17 migration deals with legacy values).
+ *   - electron/persistence.cjs (the migration ladder + spine moved there in
+ *     the Session-2 seam extraction, 2026-07-13 — same legacy-value need).
  *   - tests/** (fixtures may reference deprecated values).
  *   - src/core/contracts (the canonical types are defined here).
  */
@@ -80,6 +82,7 @@ module.exports = {
   create(context) {
     const filename = (context.getFilename ? context.getFilename() : context.filename || '').replace(/\\/g, '/');
     if (filename.endsWith('electron/main.js')) return {};
+    if (filename.endsWith('electron/persistence.cjs')) return {};
     if (filename.includes('/tests/')) return {};
     if (filename.includes('src/core/contracts')) return {};
 

@@ -6,18 +6,17 @@ import { fileURLToPath } from "node:url";
 // ─────────────────────────────────────────────────────────────────────────────
 // SOURCE-GUARD tests (correctness audit, Tier-1 findings 1 & 4).
 //
-// `electron/main.js` runs Electron's `app.whenReady()` at load, so it cannot be
-// `require`d into a test to exercise `runMigrations`/`initDatabase` directly.
-// These tests therefore assert the two Tier-1 migration-safety INVARIANTS at the
-// source level (the repo's existing scan-aliases pattern). They are NOT full
-// behavioral coverage of the boot path — the boot path is verified by reasoning
-// + `node --check` + the build-and-run workflow. They exist to fail loudly if a
-// future edit reintroduces either catastrophe.
+// The migration ladder lives in electron/persistence.cjs since the Session-2
+// seam extraction — and unlike the old main.js home it IS require-able, with
+// behavioral coverage in tests/persistence/production-persistence.test.ts
+// (the ladder executes against real SQLite there). These source-level guards
+// stay as cheap tripwires for the two Tier-1 shapes; the full behavioral
+// migration/recovery matrix is Session-4 work.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..", "..");
-const MAIN = fs.readFileSync(path.join(ROOT, "electron", "main.js"), "utf8");
+const MAIN = fs.readFileSync(path.join(ROOT, "electron", "persistence.cjs"), "utf8");
 
 // Slice the body of a `if (version < N) { ... }` migration block. Returns the
 // text between the block's opener and the next migration block opener.
@@ -86,9 +85,13 @@ describe("migration safety — Tier-1 source guards", () => {
     // Find the guard block: `if (!Number.isInteger(version)) { ... }`.
     const guardStart = MAIN.indexOf("if (!Number.isInteger(version)) {");
     expect(guardStart, "the non-numeric schema_version guard should exist").toBeGreaterThanOrEqual(0);
-    // Take a generous window covering the guard body.
+    // Take a generous window covering the guard body. The closer match is
+    // indentation-tolerant — the ladder sits inside the createPersistence
+    // factory since the Session-2 extraction.
     const guard = MAIN.slice(guardStart, guardStart + 600);
-    const guardBody = guard.slice(0, guard.indexOf("\n  }") + 1);
+    const closeIdx = guard.search(/\n[ \t]*\}/);
+    expect(closeIdx, "guard body closer should be found").toBeGreaterThan(0);
+    const guardBody = guard.slice(0, closeIdx + 1);
     // Must THROW…
     expect(guardBody).toMatch(/throw\s+/);
     // …and must NOT silently reset to 0 (the old, unsafe behavior).

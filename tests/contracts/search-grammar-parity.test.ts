@@ -5,7 +5,8 @@ import * as path from "node:path";
 // Domain Model Normalization — Slice 1, item 4 (Search grammar parity).
 //
 // The search pipeline keys three hand-synced maps on the same sermon columns:
-//   • SERMON_SEARCH_COLUMNS  (electron/main.js)          — what gets indexed
+//   • SERMON_SEARCH_COLUMNS  (electron/persistence.cjs)  — what gets indexed
+//     (lived in electron/main.js until the Session-2 seam extraction)
 //   • HINT_MAP               (src/utils/searchHints.js)  — matched column → landing hint
 //   • COLUMN_LABELS          (src/components/SearchResultSnippet.jsx) — matched column → pastor-facing label
 // A column indexed with no hint lands nowhere; with no label shows a blank tag.
@@ -21,11 +22,13 @@ function read(rel: string): string {
   return fs.readFileSync(path.resolve(ROOT, rel), "utf8");
 }
 
-// Isolate a top-level `const NAME = <open> … <close>` block (non-greedy to the
-// first column-0 closer). These literals have no column-0 braces/brackets inside.
+// Isolate a `const NAME = <open> … <close>` block (non-greedy to the first
+// line-start closer, at any indentation — SERMON_SEARCH_COLUMNS moved inside
+// the createPersistence factory in the Session-2 extraction). These literals
+// have no line-start braces/brackets inside.
 function block(src: string, name: string, open: "{" | "["): string {
   const close = open === "{" ? "}" : "]";
-  const re = new RegExp(`const ${name} = \\${open}([\\s\\S]*?)\\n\\${close};`);
+  const re = new RegExp(`const ${name} = \\${open}([\\s\\S]*?)\\n[ \\t]*\\${close};`);
   const m = src.match(re);
   if (!m) throw new Error(`Could not locate const ${name} block`);
   return m[1];
@@ -43,7 +46,7 @@ function keyFieldValues(blockSrc: string): string[] {
 
 describe("Search maps stay keyed on the same columns", () => {
   const searchColumns = keyFieldValues(
-    block(read("electron/main.js"), "SERMON_SEARCH_COLUMNS", "["),
+    block(read("electron/persistence.cjs"), "SERMON_SEARCH_COLUMNS", "["),
   ).sort();
   const hintKeys = objectKeys(
     block(read("src/utils/searchHints.js"), "HINT_MAP", "{"),

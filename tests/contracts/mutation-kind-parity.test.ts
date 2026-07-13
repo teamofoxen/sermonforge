@@ -12,11 +12,13 @@ import { MUTATION_KIND } from "./_helpers/test-spine";
 // fixture and production agree the ONLY live mutation kind is `user_input`.
 
 const ROOT = path.resolve(__dirname, "..", "..");
-const mainSrc = fs.readFileSync(path.join(ROOT, "electron", "main.js"), "utf8");
+// The production apply-mutation dispatch lives in electron/persistence.cjs
+// since the Session-2 seam extraction (validateAndCommit moved out of main.js).
+const mainSrc = fs.readFileSync(path.join(ROOT, "electron", "persistence.cjs"), "utf8");
 const cjsSrc = fs.readFileSync(path.join(ROOT, "electron", "contracts.cjs"), "utf8");
 
 // Isolate the production apply-mutation case so assertions don't match
-// unrelated (historical) mentions elsewhere in the 4k-line main.js.
+// unrelated (historical) mentions elsewhere in the module.
 function applyMutationCase(src: string): string {
   const start = src.indexOf('case "apply-mutation":');
   expect(start).toBeGreaterThan(-1);

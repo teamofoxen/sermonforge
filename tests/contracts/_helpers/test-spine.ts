@@ -566,6 +566,26 @@ function spineRead(op: string, payload: any): any {
       }
       return counts;
     }
+    case "get-all-tags": {
+      // Mirrors production (electron/persistence.cjs spineRead): distinct
+      // sorted topic tags across live sermons; fail-soft per row;
+      // case-insensitive de-dupe keeping first-seen casing. (Session-2 fixture
+      // parity — before this, every workspace mount in a component test logged
+      // "Unknown spine mutation op: get-all-tags" as routine stderr.)
+      const byLower = new Map<string, string>();
+      for (const s of sermons.values()) {
+        if (s.deleted_at || String(s.id).startsWith("sample-")) continue;
+        let arr: unknown;
+        try { arr = JSON.parse((s.tags as string) || "[]"); } catch { arr = []; }
+        if (!Array.isArray(arr)) continue;
+        for (const t of arr) {
+          if (typeof t !== "string") continue;
+          const trimmed = t.trim();
+          if (trimmed && !byLower.has(trimmed.toLowerCase())) byLower.set(trimmed.toLowerCase(), trimmed);
+        }
+      }
+      return [...byLower.values()].sort((a, b) => a.localeCompare(b));
+    }
     case "get-sections-by-series":
       return [...sections.values()]
         .filter((s) => s.series_id === payload)
@@ -577,7 +597,8 @@ function spineRead(op: string, payload: any): any {
 const SPINE_READ_OPS = new Set([
   "get-sermon", "get-series", "get-all-sermons", "get-all-series",
   "get-recent-sermons", "get-recent-series", "get-in-progress-sermons",
-  "get-sermons-by-series", "get-series-sermon-counts", "get-sections-by-series",
+  "get-sermons-by-series", "get-series-sermon-counts", "get-all-tags",
+  "get-sections-by-series",
 ]);
 
 async function dispatch(op: string, payload?: any) {

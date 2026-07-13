@@ -2,6 +2,17 @@
 
 ---
 
+## 2026-07-13 — test: expose production persistence seam (remediation session 2/6)
+
+- **Extracted `electron/persistence.cjs`** — the production mutation dispatcher (`validateAndCommit`), read router (`spineRead`), query helpers, `sermon_search` projection (`SERMON_SEARCH_COLUMNS` + indexers), bootstrap DDL, `safeAlter`, the FULL `runMigrations` ladder, `assertSchemaContract`, and the `migrate()` transaction wrapper — moved VERBATIM out of `electron/main.js` into `createPersistence({ getDb, clock-free deps: logError, logInfo, isDev })`. main.js (4,00x → 2,376 lines) remains the lifecycle + IPC wiring owner and DELEGATES — one implementation, no duplicate.
+- **Real-SQLite integration suite** (`tests/persistence/production-persistence.test.ts`): the production module executes against temporary SQLite files — create+read, structured mutation via `apply-mutation`, series attach (+ the Section-1 auto-file), soft-delete/restore with the search-row lifecycle, search-projection refresh on update, nameless-sermon/series State-#3 rejections, close/reopen durability, and the migration entry point (full ladder 0→current on fresh DB; stable no-op re-run; `assertSchemaContract` silent). Runs via `better-sqlite3-node` — a same-version npm alias devDependency that stays Node-loadable regardless of `@electron/rebuild` state of the main copy (which was re-verified Electron-side and by `npm start`).
+- **Fixture drift fixed:** `test-spine.ts` gained the missing `get-all-tags` read op (green tests no longer log `Unknown spine mutation op: get-all-tags` as routine stderr), and new `spine-read-op-parity.test.ts` pins the read-op set identical across main.js routing ⟷ production `spineRead` ⟷ fixture — the whole drift class now FAILS a test instead of surviving as noise.
+- **False claims corrected:** `mutation-1-user-typing-wins.test.ts` no longer claims to drive "the REAL production path" (it drives the fixture; the real path is exercised in the new suite); `tests/contracts/README.md` rewritten (sql.js / AI handlers / deleted `process-1` file / Path-B-only story replaced with the two-layer truth); ENFORCEMENT_STATUS test-caveat section updated.
+- Gates follow the code: `scripts/spine-integrity.js` allowlists extend to `electron/persistence.cjs` (the mutation gate's new home); the `canonical-stage-name` lint exemption follows the migration ladder there. Source-scan tests retargeted (`mutation-kind-parity`, `migration-safety`, `search-grammar-parity` — now indentation-tolerant).
+- **Behavior lock:** no schema change, no pastor-facing change, no atomicity change (Session 3's work). Suite 437 → 450 green; lint 0; spine-integrity OK (124 files); `npm start` boots clean on the extracted seam (verified in `logs-dev/app.log`).
+
+---
+
 ## 2026-07-13 — fix: unify save transition integrity (remediation session 1/6)
 
 - **One persistence-transition contract.** Every deliberate transition away from editable work now resolves its flush to exactly `"saved"` / `"failed"` / `"unknown"` and handles the result explicitly — new `src/utils/saveTransition.js` (renderer: constants + `resolveSaveTransition`, 2s unknown-timeout) and `electron/saveTransition.cjs` (main: mirrored constants + `confirmExitOverSaveResult`, the one native-dialog exit decision; parity test-asserted).
