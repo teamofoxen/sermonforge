@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useModalA11y } from "../utils/useModalA11y";
 import TextButton from "./primitives/TextButton";
 import IconButton from "./primitives/IconButton";
 import "./workspaceNotebookDrawer.css";
@@ -23,17 +24,17 @@ const STAGE_LABEL = {
 export default function WorkspaceNotebookDrawer({ stage, value, onChange, onStageChange, onClose }) {
   const textareaRef = useRef(null);
 
-  useEffect(() => {
-    const onKey = (e) => {
-      if (e.key === "Escape") onClose?.();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  // The house dialog pattern (Session 6). The notebook IS a drawer visually,
+  // but it must carry the same guarantees while open: keyboard focus stays
+  // inside it (no accidental typing into the obscured writing surface),
+  // Escape closes, and focus restores to the summoning notebook link.
+  const drawerRef = useModalA11y(onClose);
 
   useEffect(() => {
     // Land focus in the textarea so the preacher can start writing
-    // immediately. Small timeout so the slide-in animation finishes first.
+    // immediately. Small timeout so the slide-in animation finishes first
+    // (the a11y hook lands focus on the first focusable instantly; this
+    // refined landing wins right after).
     const id = setTimeout(() => textareaRef.current?.focus({ preventScroll: true }), 80);
     return () => clearTimeout(id);
   }, []);
@@ -44,7 +45,9 @@ export default function WorkspaceNotebookDrawer({ stage, value, onChange, onStag
       <section
         className="wnd-drawer"
         role="dialog"
+        aria-modal="true"
         aria-label={STAGE_LABEL[stage] ?? "Notebook"}
+        ref={drawerRef}
       >
         <div className="wnd-header">
           <div className="wnd-tabs" aria-label="Notebooks">

@@ -1,5 +1,5 @@
-import { useEffect } from "react";
 import { arcSummary } from "../utils/walkOrder";
+import { useModalA11y } from "../utils/useModalA11y";
 import PrimaryButton from "./primitives/PrimaryButton";
 import "./sermonStartLanding.css";
 
@@ -24,23 +24,18 @@ function joinOutcomes(outcomes) {
 export default function SermonStartLanding({ onBegin }) {
   const arc = arcSummary();
 
-  useEffect(() => {
-    const onKey = (e) => {
-      // Escape is the deliberate "get me out" gesture (matches
-      // SermonFinish's unscoped, never-consumable pattern). Enter is
-      // deliberately NOT handled here: a focused native <button>
-      // (PrimaryButton) already activates on Enter on its own, and handling
-      // it again at the window level would let a stray/repeat Enter dismiss
-      // the overlay no matter what has focus — on first visit that
-      // permanently consumes the threshold before the pastor has read it.
-      if (e.key === "Escape") onBegin?.();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onBegin]);
+  // The house dialog pattern (Session 6): focus moves INTO the overlay on
+  // open (the Begin button — the one focusable), Tab is trapped inside it so
+  // keyboard focus can't reach the obscured writing surface, Escape dismisses
+  // (the deliberate "get me out" gesture, same as before), and focus restores
+  // to the invoking control on close. Enter is deliberately still unhandled
+  // at the window level: the focused PrimaryButton activates on Enter by
+  // itself, and a window-level Enter would let a stray keypress consume the
+  // threshold before the pastor has read it.
+  const dialogRef = useModalA11y(onBegin);
 
   return (
-    <div className="ssl-overlay" role="dialog" aria-label="Sermon start">
+    <div className="ssl-overlay" role="dialog" aria-modal="true" aria-label="Sermon start" ref={dialogRef}>
       <article className="ssl-card">
         <p className="ssl-opener">What you're about to walk through.</p>
         {arc.map((stage) => {

@@ -1,5 +1,5 @@
-import { useEffect } from "react";
 import { SERMON_STATUS, LOADING_VERB } from "../core/contracts";
+import { useModalA11y } from "../utils/useModalA11y";
 import PrimaryButton from "./primitives/PrimaryButton";
 import SecondaryButton from "./primitives/SecondaryButton";
 import { TextButton } from "./primitives/TextButton";
@@ -37,13 +37,10 @@ export default function SermonFinish({
   onMarkPreached,
   onClose,
 }) {
-  useEffect(() => {
-    const onKey = (e) => {
-      if (e.key === "Escape") onClose?.();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  // The house dialog pattern (Session 6): focus enters the overlay, Tab is
+  // trapped inside it (the obscured writing surface is unreachable), Escape
+  // closes, focus restores to the summoning "Finish sermon →" control.
+  const dialogRef = useModalA11y(onClose);
 
   const artifacts = completeness?.artifacts ?? [];
   const allComplete = completeness?.allComplete === true;
@@ -57,7 +54,7 @@ export default function SermonFinish({
       : `Here is where the sermon stands — ${missing.length} parts are still open.`;
 
   return (
-    <div className="sfin-overlay" role="dialog" aria-label="Finish sermon">
+    <div className="sfin-overlay" role="dialog" aria-modal="true" aria-label="Finish sermon" ref={dialogRef}>
       <article className="sfin-card">
         {(beholding?.ccs || beholding?.mps) && (
           <section className="sfin-beholding">

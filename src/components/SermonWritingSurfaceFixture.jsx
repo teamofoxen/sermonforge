@@ -3,10 +3,11 @@ import SermonWritingSurface from "./SermonWritingSurface";
 import SermonMap from "./SermonMap";
 import SermonStartLanding from "./SermonStartLanding";
 import StudyAnchorHandoff from "./StudyAnchorHandoff";
-import { FIRST_FIELD, QUESTION_WALK_ORDER, questionId } from "../utils/walkOrder";
+import { FIRST_FIELD, QUESTION_WALK_ORDER } from "../utils/walkOrder";
 import { deriveThoughtUnitsFromCanvas, composeThoughtUnitBlocks } from "../utils/studyFields";
 import {
   STAGE_SUBPHASE_TO_COLUMN,
+  deriveQuestionStatesFromSermon,
   deriveStudyOutcomesFromSermon,
   deriveStudyUnfinishedFromSermon,
 } from "../utils/sermonState";
@@ -371,54 +372,12 @@ function readInitialAnswers() {
   return rest;
 }
 
-// Per-question state for the map. Dispatch by question.kind per the principle
-// logged in walkOrder.js: text-prompt reads the nominal column; cumulative-
-// synthesis-table reads the cross-phase source (the thought-unit array).
-function deriveQuestionStates(answers, thoughtUnits) {
-  const out = {};
-  for (const entry of QUESTION_WALK_ORDER) {
-    const id = questionId(entry);
-    if (entry.kind === "cumulative-synthesis-table") {
-      const editableKey = entry.columns?.find((c) => !c.readOnly)?.key;
-      const units = Array.isArray(thoughtUnits) ? thoughtUnits : [];
-      if (units.length === 0 || !editableKey) {
-        out[id] = { state: "unanswered" };
-        continue;
-      }
-      const filled = units.filter((u) => {
-        const v = u?.[editableKey];
-        return v != null && String(v).trim() !== "";
-      });
-      if (filled.length === 0) {
-        out[id] = { state: "unanswered" };
-      } else if (filled.length === units.length) {
-        const sample = String(filled[0][editableKey]);
-        const full = units.map((u) => String(u[editableKey] ?? "")).join("\n\n");
-        out[id] = { state: "answered", preview: sample, fullValue: full };
-      } else {
-        const sample = String(filled[0][editableKey]);
-        const full = units
-          .map((u, i) => `Unit ${i + 1}: ${u[editableKey] ?? "—"}`)
-          .join("\n\n");
-        out[id] = { state: "partial", preview: sample, fullValue: full };
-      }
-    } else {
-      const a = answers?.[entry.fieldKey]?.[entry.questionKey];
-      if (a?.na) {
-        out[id] = { state: "answered", preview: "(not applicable)" };
-        continue;
-      }
-      const v = a?.value;
-      if (v == null || String(v).trim() === "") {
-        out[id] = { state: "unanswered" };
-      } else {
-        const str = String(v);
-        out[id] = { state: "answered", preview: str, fullValue: str };
-      }
-    }
-  }
-  return out;
-}
+// Per-question map state comes from the PRODUCTION derivation
+// (deriveQuestionStatesFromSermon, via the sermon-shape adapter above) —
+// Session 6 removed the fixture's local reimplementation. The local copy had
+// no per-kind dispatch for the indented canvas, so the Divisions question's
+// map preview stringified the canvas envelope to "[object Object]", and any
+// production change to the derivation silently left the fixture behind.
 
 export default function SermonWritingSurfaceFixture() {
   const [position, setPosition] = useState(readInitialPosition);
@@ -489,9 +448,14 @@ export default function SermonWritingSurfaceFixture() {
     [answers, position.fieldKey]
   );
 
-  const questionStates = useMemo(
-    () => deriveQuestionStates(answers, thoughtUnits),
+  const sermonShape = useMemo(
+    () => buildSermonShapeFromFixture(answers, thoughtUnits),
     [answers, thoughtUnits]
+  );
+
+  const questionStates = useMemo(
+    () => deriveQuestionStatesFromSermon(sermonShape),
+    [sermonShape]
   );
 
   const handleJump = useCallback((next) => {
@@ -520,10 +484,6 @@ export default function SermonWritingSurfaceFixture() {
     });
   }, []);
 
-  const sermonShape = useMemo(
-    () => buildSermonShapeFromFixture(answers, thoughtUnits),
-    [answers, thoughtUnits]
-  );
   // Mirror production (SermonWorkspace): units render as their BLOCKS,
   // composed live from the canvas (ruled 2026-07-02). Raw units stay in
   // state for the index-aligned writes; only the surface prop is enriched.

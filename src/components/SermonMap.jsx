@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useModalA11y } from "../utils/useModalA11y";
 import { QUESTION_WALK_ORDER, questionId, findField, REGION_DISPLAY } from "../utils/walkOrder";
 import { THRESHOLD_ID } from "../utils/sermonState";
 import { STAGE_LABELS } from "../core/contracts";
@@ -89,7 +90,11 @@ export default function SermonMap({
   onClose,
 }) {
   const groups = useMemo(() => buildGroups(questions), [questions]);
-  const panelRef = useRef(null);
+  // The house dialog pattern (Session 6): focus enters the panel, Tab is
+  // trapped inside it (the writing surface behind the backdrop is
+  // keyboard-unreachable), Escape closes, focus restores to the map-summon
+  // control. (The old bare panelRef had no consumer — the hook's ref replaces it.)
+  const panelRef = useModalA11y(onClose);
   const currentRowRef = useRef(null);
 
   // Per-region answered counts — the map's standing completeness summary
@@ -105,14 +110,6 @@ export default function SermonMap({
     }
     return counts;
   }, [questions, questionStates]);
-
-  useEffect(() => {
-    const onKey = (e) => {
-      if (e.key === "Escape") onClose?.();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
 
   useEffect(() => {
     currentRowRef.current?.scrollIntoView({ block: "center", behavior: "instant" });
@@ -141,7 +138,7 @@ export default function SermonMap({
   return (
     <>
       <div className="sm-backdrop" onClick={onClose} />
-      <section className="sm-panel" role="dialog" aria-label="Sermon map" ref={panelRef}>
+      <section className="sm-panel" role="dialog" aria-modal="true" aria-label="Sermon map" ref={panelRef}>
         <IconButton
           type="button"
           className="sm-close"

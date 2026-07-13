@@ -13,11 +13,16 @@ export default function KeyInput({
   onChange,
   disabled = false,
   placeholder = "Paste your key here",
+  // Forwarded to the inner <input> so a visible <label htmlFor> can own this
+  // control programmatically (Session 6 — the Setup API-key field's label
+  // had no association before this).
+  id,
 }) {
   const [show, setShow] = useState(false);
   return (
     <div style={{ position: "relative" }}>
       <input
+        id={id}
         type={show ? "text" : "password"}
         value={value}
         onChange={(e) => onChange(e.target.value)}

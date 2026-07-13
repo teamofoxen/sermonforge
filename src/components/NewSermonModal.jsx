@@ -170,8 +170,9 @@ export default function NewSermonModal({ onClose, onCreated, initialDate = "" })
               </div>
 
               <div className="field-group">
-                <label className="field-label">Chapter:verse</label>
+                <label className="field-label" htmlFor="new-sermon-ref">Chapter:verse</label>
                 <input
+                  id="new-sermon-ref"
                   className="field-input"
                   style={{ fontFamily: "var(--font-mono)" }}
                   placeholder="e.g. 8:1-17"
@@ -190,8 +191,9 @@ export default function NewSermonModal({ onClose, onCreated, initialDate = "" })
               </div>
 
               <div className="field-group">
-                <label className="field-label">Date</label>
+                <label className="field-label" htmlFor="new-sermon-date">Date</label>
                 <input
+                  id="new-sermon-date"
                   className="field-input"
                   type="date"
                   value={date}

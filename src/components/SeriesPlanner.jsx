@@ -1023,8 +1023,9 @@ function OutlineTab({
         </TierBand>
         <div className="card" style={{ borderLeft: "3px solid var(--gold)" }}>
           <div className="field-group">
-            <label className="field-label">Theme</label>
+            <label className="field-label" htmlFor="outline-theme">Theme</label>
             <input
+              id="outline-theme"
               className="field-input"
               value={series.title || ""}
               onChange={(e) => onSeriesField("title", e.target.value)}
@@ -1035,8 +1036,9 @@ function OutlineTab({
             </div>
           </div>
           <div className="field-group">
-            <label className="field-label">Big Idea <span style={{ color: "var(--ink-ghost)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(one line)</span></label>
+            <label className="field-label" htmlFor="outline-topical-big-idea">Big Idea <span style={{ color: "var(--ink-ghost)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(one line)</span></label>
             <input
+              id="outline-topical-big-idea"
               className="field-input"
               value={series.big_idea || ""}
               onChange={(e) => onSeriesField("big_idea", e.target.value)}
@@ -1044,8 +1046,9 @@ function OutlineTab({
             />
           </div>
           <div className="field-group" style={{ marginBottom: 0 }}>
-            <label className="field-label">Overview <span style={{ color: "var(--ink-ghost)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(a paragraph)</span></label>
+            <label className="field-label" htmlFor="outline-topical-overview">Overview <span style={{ color: "var(--ink-ghost)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(a paragraph)</span></label>
             <textarea
+              id="outline-topical-overview"
               className="field-textarea large"
               value={series.overview || ""}
               onChange={(e) => onSeriesField("overview", e.target.value)}
@@ -1146,8 +1149,9 @@ function OutlineTab({
         {/* Series title — a demoted, optional display name. State #3 keeps the
             series name correctable; it defaults to the book, edited here. */}
         <div className="field-group">
-          <label className="field-label">Series title <span style={{ color: "var(--ink-ghost)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(optional)</span></label>
+          <label className="field-label" htmlFor="outline-series-title">Series title <span style={{ color: "var(--ink-ghost)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(optional)</span></label>
           <input
+            id="outline-series-title"
             className="field-input"
             value={series.title || ""}
             onChange={(e) => onSeriesField("title", e.target.value)}
@@ -1159,8 +1163,9 @@ function OutlineTab({
         </div>
 
         <div className="field-group">
-          <label className="field-label">Big Idea <span style={{ color: "var(--ink-ghost)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(one line)</span></label>
+          <label className="field-label" htmlFor="outline-book-big-idea">Big Idea <span style={{ color: "var(--ink-ghost)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(one line)</span></label>
           <input
+            id="outline-book-big-idea"
             className="field-input"
             value={series.big_idea || ""}
             onChange={(e) => onSeriesField("big_idea", e.target.value)}
@@ -1168,8 +1173,9 @@ function OutlineTab({
           />
         </div>
         <div className="field-group" style={{ marginBottom: 0 }}>
-          <label className="field-label">Overview <span style={{ color: "var(--ink-ghost)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(a paragraph)</span></label>
+          <label className="field-label" htmlFor="outline-book-overview">Overview <span style={{ color: "var(--ink-ghost)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(a paragraph)</span></label>
           <textarea
+            id="outline-book-overview"
             className="field-textarea large"
             value={series.overview || ""}
             onChange={(e) => onSeriesField("overview", e.target.value)}
@@ -1188,6 +1194,7 @@ function OutlineTab({
             </p>
             <textarea
               className="field-textarea large" rows={5}
+              aria-label="Book structural outline (commentary reference)"
               value={series.structural_outline || ""}
               onChange={(e) => onSeriesField("structural_outline", e.target.value)}
               onInput={(e) => autoResize(e.target)}
@@ -1352,23 +1359,26 @@ function SectionNode({
       {!collapsed && (
         <div style={{ marginTop: "14px", display: "flex", flexDirection: "column", gap: "14px" }}>
           {/* Section's own unit */}
+          {/* Repeated per-row controls: ids are scoped by section.id so every
+              visible label owns its control programmatically (Session 6). */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
             <div className="field-group" style={{ marginBottom: 0 }}>
-              <label className="field-label">Section Title</label>
-              <input ref={titleRef} className="field-input" value={section.title || ""} onChange={(e) => onField("title", e.target.value)} placeholder="e.g. Seeing Jesus Through Others' Eyes" />
+              <label className="field-label" htmlFor={`sec-${section.id}-title`}>Section Title</label>
+              <input id={`sec-${section.id}-title`} ref={titleRef} className="field-input" value={section.title || ""} onChange={(e) => onField("title", e.target.value)} placeholder="e.g. Seeing Jesus Through Others' Eyes" />
             </div>
             <div className="field-group" style={{ marginBottom: 0 }}>
-              <label className="field-label">Passage Range</label>
-              <input className="field-input" style={{ fontFamily: "var(--font-mono)" }} value={section.passage_range || ""} onChange={(e) => onField("passage_range", e.target.value)} placeholder="e.g. 1:1–4:13" />
+              <label className="field-label" htmlFor={`sec-${section.id}-range`}>Passage Range</label>
+              <input id={`sec-${section.id}-range`} className="field-input" style={{ fontFamily: "var(--font-mono)" }} value={section.passage_range || ""} onChange={(e) => onField("passage_range", e.target.value)} placeholder="e.g. 1:1–4:13" />
             </div>
           </div>
           <div className="field-group" style={{ marginBottom: 0 }}>
-            <label className="field-label">Big Idea</label>
-            <input className="field-input" value={section.big_idea || ""} onChange={(e) => onField("big_idea", e.target.value)} placeholder="The central truth of this section, in one line." />
+            <label className="field-label" htmlFor={`sec-${section.id}-big-idea`}>Big Idea</label>
+            <input id={`sec-${section.id}-big-idea`} className="field-input" value={section.big_idea || ""} onChange={(e) => onField("big_idea", e.target.value)} placeholder="The central truth of this section, in one line." />
           </div>
           <div className="field-group" style={{ marginBottom: 0 }}>
-            <label className="field-label">Overview</label>
+            <label className="field-label" htmlFor={`sec-${section.id}-overview`}>Overview</label>
             <textarea
+              id={`sec-${section.id}-overview`}
               className="field-textarea" rows={3}
               value={section.overview || ""}
               onChange={(e) => onField("overview", e.target.value)}
@@ -1471,6 +1481,7 @@ function SermonNode({ sermon: p, expanded, onToggle, onField, onCommit, onDelete
   const titleField = (
     <>
       <input
+        id={`sermon-${p.id}-title`}
         ref={titleRef} className="field-input" style={{ fontSize: "14px" }}
         value={p.title || ""}
         onChange={(e) => onField(p.id, "title", e.target.value)}
@@ -1535,12 +1546,13 @@ function SermonNode({ sermon: p, expanded, onToggle, onField, onCommit, onDelete
             <>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                 <div className="field-group" style={{ marginBottom: 0 }}>
-                  <label className="field-label">Book</label>
-                  <BookSelect value={p.book_id || ""} onChange={(e) => onPickBook(e.target.value)} />
+                  <label className="field-label" htmlFor={`sermon-${p.id}-book`}>Book</label>
+                  <BookSelect id={`sermon-${p.id}-book`} value={p.book_id || ""} onChange={(e) => onPickBook(e.target.value)} />
                 </div>
                 <div className="field-group" style={{ marginBottom: 0 }}>
-                  <label className="field-label">Chapter:verse</label>
+                  <label className="field-label" htmlFor={`sermon-${p.id}-ref`}>Chapter:verse</label>
                   <input
+                    id={`sermon-${p.id}-ref`}
                     className="field-input" style={{ fontFamily: "var(--font-mono)", fontSize: "14px" }}
                     value={refText}
                     onChange={(e) => onRefChange(e.target.value)}
@@ -1555,15 +1567,16 @@ function SermonNode({ sermon: p, expanded, onToggle, onField, onCommit, onDelete
                 </div>
               </div>
               <div className="field-group" style={{ marginBottom: 0 }}>
-                <label className="field-label">Working title</label>
+                <label className="field-label" htmlFor={`sermon-${p.id}-title`}>Working title</label>
                 {titleField}
               </div>
             </>
           ) : (
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
               <div className="field-group" style={{ marginBottom: 0 }}>
-                <label className="field-label">Passage</label>
+                <label className="field-label" htmlFor={`sermon-${p.id}-passage`}>Passage</label>
                 <input
+                  id={`sermon-${p.id}-passage`}
                   className="field-input" style={{ fontFamily: "var(--font-mono)", fontSize: "14px" }}
                   value={p.passage || ""}
                   onChange={(e) => onField(p.id, "passage", e.target.value)}
@@ -1572,7 +1585,7 @@ function SermonNode({ sermon: p, expanded, onToggle, onField, onCommit, onDelete
                 />
               </div>
               <div className="field-group" style={{ marginBottom: 0 }}>
-                <label className="field-label">Working title</label>
+                <label className="field-label" htmlFor={`sermon-${p.id}-title`}>Working title</label>
                 {titleField}
               </div>
             </div>

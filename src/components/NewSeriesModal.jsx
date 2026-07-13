@@ -168,8 +168,9 @@ export default function NewSeriesModal({ onClose, onCreated }) {
               </div>
 
               <div className="field-group">
-                <label className="field-label">Series title <span style={{ color: "var(--ink-ghost)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(optional)</span></label>
+                <label className="field-label" htmlFor="new-series-title-input">Series title <span style={{ color: "var(--ink-ghost)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(optional)</span></label>
                 <input
+                  id="new-series-title-input"
                   className="field-input"
                   placeholder={bookId ? (bookById(bookId)?.name || "Defaults to the book name") : "e.g. Advent: The Light Has Come"}
                   value={title}
@@ -210,8 +211,9 @@ export default function NewSeriesModal({ onClose, onCreated }) {
           )}
 
           <div className="field-group">
-            <label className="field-label">Year</label>
+            <label className="field-label" htmlFor="new-series-year">Year</label>
             <input
+              id="new-series-year"
               className="field-input"
               type="number"
               value={year}

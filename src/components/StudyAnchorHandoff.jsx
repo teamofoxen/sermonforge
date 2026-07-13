@@ -1,6 +1,7 @@
-import { useEffect } from "react";
+import { useRef, useCallback } from "react";
 import { useEsvPassage } from "../utils/useEsvPassage";
 import { usePassageRecovery } from "./EsvRecovery";
+import { useModalA11y } from "../utils/useModalA11y";
 import IconButton from "./primitives/IconButton";
 import "./studyAnchorHandoff.css";
 
@@ -48,26 +49,25 @@ export default function StudyAnchorHandoff({ passage, outcomes, unfinished, onJu
   const { data: passageData, loading: passageLoading, refresh: refreshPassage } = useEsvPassage(passage || "");
   // Shared with PassagePopup/ReferencePane — see EsvRecovery.jsx.
   const { esvState: passageState, fetchErrorNode, recoveryNode, keyModalNode, keyModalOpen } = usePassageRecovery(passageData, refreshPassage);
-  useEffect(() => {
-    const onKey = (e) => {
-      // Escape is the deliberate "get me out" gesture (matches
-      // SermonFinish's unscoped, never-consumable pattern) — but not while
-      // the nested key modal owns it, or one Escape would close both layers
-      // and, on a first visit, silently consume the threshold along with it.
-      if (e.key === "Escape" && !keyModalOpen) onClose?.();
-      // Enter is deliberately NOT handled here. A focused native <button>
-      // (IconButton/PrimaryButton) already activates on Enter on its own;
-      // handling it again at the window level double-fires on the dismiss
-      // button and — worse — lets a stray/repeat Enter dismiss the overlay
-      // no matter what has focus, which on first visit can permanently
-      // consume the "read it once more" threshold before it's been read.
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose, keyModalOpen]);
+  // The house dialog pattern (Session 6): focus enters the overlay, Tab is
+  // trapped inside it (no background keyboard reach), Escape dismisses, and
+  // focus restores to the invoking control on close. Escape stays guarded
+  // while the nested ESV-key modal is open — one Escape must not close both
+  // layers and, on a first visit, silently consume the threshold. The guard
+  // reads a ref so the hook's callback identity stays stable across the
+  // nested modal's open/close (no focus churn). Enter is deliberately still
+  // unhandled at the window level: a focused button activates on Enter by
+  // itself, and a stray window-level Enter could consume the "read it once
+  // more" threshold before it's been read.
+  const keyModalOpenRef = useRef(keyModalOpen);
+  keyModalOpenRef.current = keyModalOpen;
+  const escClose = useCallback(() => {
+    if (!keyModalOpenRef.current) onClose?.();
+  }, [onClose]);
+  const dialogRef = useModalA11y(escClose);
 
   return (
-    <div className="sah-overlay" role="dialog" aria-label="Study to Anchor handoff">
+    <div className="sah-overlay" role="dialog" aria-modal="true" aria-label="Study to Anchor handoff" ref={dialogRef}>
       <article className="sah-card">
         <p className="sah-frame">Anchor opens, against your Study work.</p>
 

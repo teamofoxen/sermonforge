@@ -308,6 +308,21 @@ canonical mechanism for "has this threshold been dismissed" per the spec's
 hard commitment. Stable threshold ids live in `THRESHOLD_ID` in
 `sermonState.js`.
 
+**Dialog accessibility (Session 6, 2026-07-13).** All four workspace
+overlays — sermon start, the Study → Anchor handoff, Finish, and the map —
+plus the notebook drawer carry the house dialog contract via `useModalA11y`
+(`src/utils/useModalA11y.js`): focus moves INTO the dialog on open, Tab is
+trapped inside it (the obscured writing surface is keyboard-unreachable),
+Escape dismisses, and focus restores to the invoking control on close; each
+carries `role="dialog" aria-modal="true"`. The handoff's Escape stays guarded
+while its nested ESV-key modal is open (one Escape must not close both
+layers and consume the threshold). The notebook is a drawer visually but
+holds the same guarantees while open. Enter deliberately stays unhandled at
+the window level on the threshold screens — a stray Enter must not consume a
+first-visit threshold before it's been read. Pinned by
+`tests/contracts/workspace-a11y.test.tsx` (jsdom: entry/Escape/restore) and
+keyboard-walked in the real preview (Tab-wrap containment).
+
 Within-stage step movement (chevron-next, map-jump) is silent per CORE
 [Process Contract #3](../CORE.md) ("movement is visible at thresholds, not
 narrated continuously"). The meta-test in

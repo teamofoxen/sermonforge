@@ -135,8 +135,9 @@ export default function SetupScreen({ onComplete }) {
             <li>On their site choose <strong style={{ color: "var(--ink)" }}>Create an API Application</strong> — your key appears on the next page</li>
             <li>Copy the key and paste it below</li>
           </ol>
-          <label style={LABEL}>Your ESV API key <span style={{ color: "var(--ink-ghost)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(leave blank to skip)</span></label>
+          <label style={LABEL} htmlFor="setup-esv-key">Your ESV API key <span style={{ color: "var(--ink-ghost)", fontWeight: 400, textTransform: "none", letterSpacing: 0 }}>(leave blank to skip)</span></label>
           <KeyInput
+            id="setup-esv-key"
             value={esv}
             onChange={setEsv}
             placeholder="Paste your key here"

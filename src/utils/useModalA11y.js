@@ -27,11 +27,18 @@ export function useModalA11y(onClose) {
         : [];
 
     // Move focus into the dialog only if it isn't already there (don't fight an
-    // autoFocus'd field).
+    // autoFocus'd field). When no focusable child is found, the dialog NODE
+    // takes focus — which requires a tabindex: a bare div ignores .focus()
+    // (Session 6: the fallback silently no-opped before, leaving focus on the
+    // obscured background).
     if (node && !node.contains(document.activeElement)) {
       const first = focusables()[0];
-      if (first) first.focus();
-      else node.focus();
+      if (first) {
+        first.focus();
+      } else {
+        if (!node.hasAttribute("tabindex")) node.setAttribute("tabindex", "-1");
+        node.focus();
+      }
     }
 
     function onKey(e) {
