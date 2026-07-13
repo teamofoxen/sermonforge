@@ -159,6 +159,48 @@ describe("workspace overlays — the house dialog contract", () => {
     await act(async () => { unmount(); });
     expect(document.activeElement).toBe(invoker);
   });
+
+  it("typing in the notebook drawer never loses focus — parent re-renders with UNSTABLE inline callbacks must not churn the dialog lifecycle", async () => {
+    // The final-integration-review regression (2026-07-13): SermonWorkspace
+    // passes inline arrows (`onClose={() => …}`) to every overlay, and the
+    // drawer re-renders the workspace on EVERY keystroke (handleNotebookChange
+    // → setSermon). When useModalA11y keyed its lifecycle on the `onClose`
+    // identity, each keystroke ran the close half (restore focus to the
+    // invoker) then the open half (focus the first focusable — the Study
+    // tab), so the textarea went deaf after the first character. This harness
+    // reproduces the exact production wiring: state-driven value + fresh
+    // callback identities per render.
+    focusProbe();
+    const Mod = await import("../../src/components/WorkspaceNotebookDrawer");
+    function Harness() {
+      const [value, setValue] = React.useState("");
+      return React.createElement(Mod.default, {
+        stage: "Study",
+        value,
+        onChange: (v: string) => setValue(v),        // fresh identity every render,
+        onStageChange: () => {},                      // exactly like SermonWorkspace
+        onClose: () => {},
+        key: undefined,
+      });
+    }
+    await renderOverlay(React.createElement(Harness));
+
+    const textarea = screen.getByRole("textbox", { name: "Study notebook" }) as HTMLTextAreaElement;
+    await act(async () => { textarea.focus(); });
+    expect(document.activeElement).toBe(textarea);
+
+    await act(async () => {
+      fireEvent.change(textarea, { target: { value: "a" } });
+    });
+    await act(async () => {
+      fireEvent.change(textarea, { target: { value: "ab" } });
+    });
+
+    expect(textarea.value).toBe("ab");
+    // The contract under test: focus NEVER left the textarea across the
+    // re-renders the typing itself caused.
+    expect(document.activeElement).toBe(textarea);
+  });
 });
 
 describe("programmatic labels — every visible label owns its control", () => {

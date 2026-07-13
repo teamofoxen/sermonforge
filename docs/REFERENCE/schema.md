@@ -131,9 +131,11 @@ Current schema version: **33**
 ## Table: sermon_search
 
 System-managed full-content search index for sermons. The renderer never
-writes to it directly; `validateAndCommit` in `electron/main.js` calls the
-indexer on every sermon create / update / delete so this table stays in
-sync. Search runs as LIKE-based matching against the flattened text columns.
+writes to it directly; `validateAndCommit` (in `electron/persistence.cjs`
+since the Session-2 seam extraction, 2026-07-13) calls the indexer inside the
+same SQLite transaction as every sermon create / update / delete so this
+table stays in sync. Search runs as LIKE-based matching against the flattened
+text columns.
 
 | Column | Type | Notes |
 |--------|------|-------|
@@ -155,8 +157,8 @@ sync. Search runs as LIKE-based matching against the flattened text columns.
 | `functional_elements` | TEXT | Flattened text of the sermon body (per-point explanation / illustration / application). Added in the v24 rebuild, which also dropped `delivery_notes` / `timing_notes` (their stage UI is gone) |
 
 Added v22 migration; rebuilt (drop + recreate + full reindex) in v24. The
-table is created FROM `SERMON_SEARCH_COLUMNS` in `electron/main.js` so the
-schema and the indexer can't drift.
+table is created FROM `SERMON_SEARCH_COLUMNS` in `electron/persistence.cjs`
+so the schema and the indexer can't drift.
 
 > **Why not FTS5:** the table predates the better-sqlite3 driver swap (`sql.js` lacked FTS5). It remains a regular SQLite table with one row per sermon and per-column flattened text; LIKE-based matching is fast enough at typical pastor library sizes (<500 sermons). better-sqlite3 has FTS5 available if libraries grow significantly.
 

@@ -10,8 +10,24 @@ import { useEffect, useRef } from "react";
 //
 // Returns a ref to attach to the dialog element. Pair it with
 // role="dialog" aria-modal="true" aria-labelledby={titleId} on that element.
+//
+// The focus lifecycle is bound to the dialog's MOUNT, deliberately not to the
+// identity of `onClose`. Callers pass inline arrows (new identity every parent
+// render), and the workspace re-renders while its overlays are open — the
+// notebook drawer re-renders the workspace on every keystroke. If this effect
+// re-ran on `onClose` changes, each such render would run the close half
+// (restore focus to the invoker) and then the open half (focus the first
+// focusable), yanking focus out of whatever the pastor was typing in —
+// exactly the drawer-goes-deaf regression the final integration review caught
+// live. `onCloseRef` keeps Escape wired to the latest callback without making
+// callback identity part of the dialog's lifetime.
 export function useModalA11y(onClose) {
   const ref = useRef(null);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     const prevActive = document.activeElement;
@@ -43,7 +59,7 @@ export function useModalA11y(onClose) {
 
     function onKey(e) {
       if (e.key === "Escape") {
-        onClose?.();
+        onCloseRef.current?.();
         return;
       }
       if (e.key !== "Tab") return;
@@ -65,7 +81,10 @@ export function useModalA11y(onClose) {
       document.removeEventListener("keydown", onKey);
       if (prevActive && typeof prevActive.focus === "function") prevActive.focus();
     };
-  }, [onClose]);
+    // Mount-only by design (see the header comment): the dialog conditionally
+    // renders (`{open && <Dialog/>}`), so mount/unmount IS open/close.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return ref;
 }

@@ -10,7 +10,8 @@ database_name = "sermonforge-bti"
 database_id = "7cd9f545-3d00-451c-8e6f-19eadba81173"
 
 # Secrets (set via `wrangler secret put`, not in this file):
-#   ADMIN_TOKEN  — query token the inbox UI uses for GET /inbox
+#   ADMIN_TOKEN  — Bearer token (Authorization header) the inbox UI uses for
+#                  GET /inbox; a ?token= query is rejected outright (Session 5)
 #
 # /ingest is intentionally unauthenticated (see worker.js): a bearer token
 # shipped in every desktop client is readable by every user and provided no real

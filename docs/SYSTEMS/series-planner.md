@@ -145,7 +145,7 @@ human label is "Outline"). A remembered `localStorage` tab id for a removed tab
   Outline). "Suggest Sundays" (`getUpcomingSundays`) is one explicit bulk gesture
   that assigns every undated Sunday via the same `bulk-date-sermons` op — all
   dates plus the mirror in one transaction, rolled back whole on failure. The **undated pool sorts in outline
-  reading order** via the one shared `seriesSermonOrderBy` (`electron/main.js`) —
+  reading order** via the one shared `seriesSermonOrderBy` (`electron/persistence.cjs`) —
   dated first, then section order (`ss.sort_order`), then the sermon's own
   pastor-authored `sort_order` (the topical reorder term), then `created_at` —
   the same composite the workspace breadcrumb and study-guide export use, so the
@@ -185,7 +185,9 @@ between rows can't drop an earlier entity's last keystrokes.
 `SERMON_COLUMNS` / `SERIES_COLUMNS` / `SECTION_COLUMNS` — mirrored across
 `src/core/contracts.ts`, `electron/contracts.cjs`, and the test fixture
 `tests/contracts/_helpers/test-spine.ts` (the allowlist-sync test enforces it);
-all writes gate through `buildUpdate` in `electron/main.js`. The sermon's
+all writes gate through `buildUpdate` in `electron/persistence.cjs` (the
+Session-2 seam; an unknown field rejects the whole mutation in dev and
+production alike). The sermon's
 `big_idea` / `overview` and the guide-local `study_guide_extras` are in
 `SERMON_COLUMNS`; the retired book-study + melodic-line columns left
 `SERIES_COLUMNS` but remain in the DB as backup. The two later initiatives added

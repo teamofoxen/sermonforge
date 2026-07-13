@@ -245,9 +245,14 @@ directory.
 ## Cross-System Dependencies
 
 **If adding columns to the `sermons` table:** also update the `SERMON_COLUMNS` allowlist in
-`electron/main.js`. `buildUpdate()` already guards this: in dev it **throws** if an unknown
-field is submitted; in production it **logs a warning** and drops the field. You will catch
-the miss immediately in development — but only if you actually exercise the save path in testing.
+`src/core/contracts.ts` and its mirrors (`electron/contracts.cjs`,
+`tests/contracts/_helpers/test-spine.ts` — set-equality is asserted by
+`tests/contracts/contracts-allowlist-sync.test.ts`). `buildUpdate()` (in
+`electron/persistence.cjs` since the Session-2 extraction) guards this: an
+unknown field **rejects the whole mutation, identically in development and
+production** (Session 3, 2026-07-13 — see "SERMON_COLUMNS Allowlist" above).
+You will catch the miss immediately — but only if you actually exercise the
+save path in testing.
 
 ---
 
