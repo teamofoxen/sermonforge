@@ -54,8 +54,10 @@ no shared statements.
 
 ## Schema Version
 
-Current schema version: **32** (the full migration ledger lives in
-[`docs/REFERENCE/schema.md`](../REFERENCE/schema.md)).
+Current schema version: **33** (the full migration ledger lives in
+[`docs/REFERENCE/schema.md`](../REFERENCE/schema.md); v33 = the OEM
+restructure's `last_manuscript_subphase` + position rewrite. This line said
+"32" until the Session-4 drift correction, 2026-07-13).
 
 The version is stored in the `meta` table under key `schema_version`.
 Read via IPC `"db-getSchemaVersion"`.
@@ -191,7 +193,24 @@ Resolved by `electron/config.js` via `app.getPath("userData")` plus a `data` /
   launch (post-quick_check, pre-migration). On startup, a corrupt primary
   falls back to `.bak`; if both fail the corrupt original is renamed to
   `<dbPath>.corrupt-<ts>` and a fresh DB is created — pastor data is never
-  silently overwritten.
+  silently overwritten. The recovery machinery lives in
+  `electron/dbRecovery.cjs` (Session-4 extraction; `initDatabase` composes it)
+  and is executed against real SQLite files in
+  `tests/persistence/migration-recovery.test.ts`.
+
+### Backup + recovery-point objective (ruled Session 4, 2026-07-13)
+
+**RPO = one app launch.** The `.bak` is a boot-time copy, so a `.bak` restore
+recovers the library **as it stood when the app last started** — everything
+done during the damaged session may be missing. That is the deliberate,
+documented objective: cadence stays boot-time (no per-keystroke or periodic
+backups; WAL journaling already makes every committed write crash-durable,
+so `.bak` only matters when the main file itself is destroyed). The
+pastor-facing recovery warnings say exactly this ("anything you added or
+changed since the last time SermonForge started may be missing"); the earlier
+"your most recent one or two edits may be missing" wording promised a
+recovery point this architecture never had and was corrected in the same
+ruling. Tests pin the honest wording (`migration-recovery.test.ts`).
 - `sf-esv.enc` (the ESV safeStorage key — the only key SermonForge stores;
   Anthropic-key handling was removed with ARI, so `sf-anthropic.enc` and
   `ai-log.jsonl` do not exist), `ui-prefs.json`, and `tester-id.txt` live at
