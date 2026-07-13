@@ -34,6 +34,8 @@ import {
   parseManuscript,
   buildManuscriptExportPayload,
 } from "../utils";
+import { SAVE_TRANSITION, resolveSaveTransition } from "../utils/saveTransition";
+import UnsavedLeaveConfirm from "./UnsavedLeaveConfirm";
 import SermonWritingSurface from "./SermonWritingSurface";
 import SermonFinish from "./SermonFinish";
 import SermonMap from "./SermonMap";
@@ -91,6 +93,11 @@ export default function SermonWorkspace({
   const [finishOpen, setFinishOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [exportNote, setExportNote] = useState(null);
+  // A deliberate leave (Back, series prev/next) that resolved "failed" or
+  // "unknown" — { result, proceed }. While set, the UnsavedLeaveConfirm
+  // dialog holds the choice; null = no blocked leave.
+  const [leaveBlocked, setLeaveBlocked] = useState(null);
+  const leaveInFlightRef = useRef(false);
   const sermonRef = useRef(_fixtureSermon ?? null);
   // Search-result navigation hint, captured once at mount (App clears the
   // source state on open and on close; the ref guards against re-applying
@@ -283,13 +290,28 @@ export default function SermonWorkspace({
       // "Saving…" flicker after export). flush runs the pending save when one
       // is queued and no-ops otherwise; the payload below still reads the
       // freshest sermonRef either way. C2 (Track C).
-      await debouncedSave.flush();
+      const flushed = await debouncedSave.flush();
+      // The docx payload below is built from sermonRef — renderer memory — so
+      // the exported document can never go stale; when the library save is
+      // broken this document is the rescue copy, so the export is deliberately
+      // NOT blocked. What must not happen is the note reading as though the
+      // library save succeeded (the persistence-transition contract): a
+      // confirmed-failed flush — including an earlier failed save whose
+      // debounce timer is long gone (saveError with nothing left to flush,
+      // re-attempted here) — is spoken on the note.
+      let librarySaved = flushed !== false;
+      if (librarySaved && saveError) {
+        librarySaved = (await persistUpdate()) === true;
+      }
+      const librarySuffix = librarySaved
+        ? ""
+        : " Heads up: your latest edits haven't saved to your library yet — the save indicator will keep retrying.";
       const result = await exportManuscript(buildManuscriptExportPayload(sermonRef.current));
       if (result?.success) {
         setExportNote(
-          result.opened === false
+          (result.opened === false
             ? "Saved to Documents › SermonForge › exports › Manuscripts."
-            : "Opened in Word — saved to Documents › SermonForge › exports › Manuscripts."
+            : "Opened in Word — saved to Documents › SermonForge › exports › Manuscripts.") + librarySuffix
         );
       } else {
         // result.error is authored plain English in the export handler.
@@ -300,7 +322,30 @@ export default function SermonWorkspace({
     } finally {
       setExporting(false);
     }
-  }, [exporting, _fixtureSermon, debouncedSave]);
+  }, [exporting, _fixtureSermon, debouncedSave, saveError, persistUpdate]);
+
+  // Deliberate exits — Back and the series prev/next switch — run the
+  // persistence-transition contract (src/utils/saveTransition.js): flush
+  // FIRST, leave only on a confirmed "saved". The unmount flush in
+  // useWorkspaceSave stays as a backstop, but async effect cleanup is never
+  // the primary guarantee for deliberate navigation — it can't block the view
+  // change when the write fails. On "failed"/"unknown" the workspace stays
+  // put and UnsavedLeaveConfirm puts the choice to the pastor; only his
+  // explicit "Leave anyway" discards (Mutation #3 — never silent).
+  const requestLeave = useCallback(async (proceed) => {
+    if (leaveInFlightRef.current) return; // one transition at a time
+    leaveInFlightRef.current = true;
+    try {
+      const result = await resolveSaveTransition(persistUpdate);
+      if (result === SAVE_TRANSITION.Saved) {
+        proceed();
+        return;
+      }
+      setLeaveBlocked({ result, proceed });
+    } finally {
+      leaveInFlightRef.current = false;
+    }
+  }, [persistUpdate]);
 
   // Whole-sermon delete (audit M3). Soft delete under the hood (tombstone +
   // restoreSermon), but until now the workspace-originated path never
@@ -469,8 +514,9 @@ export default function SermonWorkspace({
                 just a tooltip (Surface Contract #5 — every re-entry is
                 predictable; audit M5). The primitive supplies "← Back"; a
                 fixed "Back to dashboard" would be wrong for the
-                planner-return case. */}
-            <BackButton onClick={onClose} style={{ flexShrink: 0 }} />
+                planner-return case. Routed through requestLeave: Back leaves
+                only on a confirmed save. */}
+            <BackButton onClick={() => requestLeave(onClose)} style={{ flexShrink: 0 }} />
             <div className="topbar-left">
               <div className="topbar-series">
                 {/* Standalone sermons (no series) get no breadcrumb above —
@@ -492,9 +538,14 @@ export default function SermonWorkspace({
                     <>
                       {sermon.series_title && <span> · </span>}
                       <span style={{ display: "inline-flex", alignItems: "center", gap: "2px" }} title={`Sermon ${pos} of ${total} in this series`}>
-                        <IconButton style={prevId && onOpenSermon ? navStyle : navStyleDisabled} onClick={() => prevId && onOpenSermon && onOpenSermon(prevId)} disabled={!prevId || !onOpenSermon} aria-label="Previous sermon in series">‹</IconButton>
+                        {/* Cross-sermon switching remounts the workspace (App
+                            keys it by sermon id) — routed through requestLeave
+                            so this sermon's pending edits are confirmed saved
+                            (or explicitly discarded) BEFORE the remount, never
+                            abandoned to the unawaited unmount flush. */}
+                        <IconButton style={prevId && onOpenSermon ? navStyle : navStyleDisabled} onClick={() => prevId && onOpenSermon && requestLeave(() => onOpenSermon(prevId))} disabled={!prevId || !onOpenSermon} aria-label="Previous sermon in series">‹</IconButton>
                         <span>Sermon {pos} of {total}</span>
-                        <IconButton style={nextId && onOpenSermon ? navStyle : navStyleDisabled} onClick={() => nextId && onOpenSermon && onOpenSermon(nextId)} disabled={!nextId || !onOpenSermon} aria-label="Next sermon in series">›</IconButton>
+                        <IconButton style={nextId && onOpenSermon ? navStyle : navStyleDisabled} onClick={() => nextId && onOpenSermon && requestLeave(() => onOpenSermon(nextId))} disabled={!nextId || !onOpenSermon} aria-label="Next sermon in series">›</IconButton>
                       </span>
                     </>
                   );
@@ -682,6 +733,17 @@ export default function SermonWorkspace({
           onChange={handleNotebookChange}
           onStageChange={setNotebookStage}
           onClose={() => setNotebookOpen(false)}
+        />
+      )}
+      {leaveBlocked && (
+        <UnsavedLeaveConfirm
+          result={leaveBlocked.result}
+          onStay={() => setLeaveBlocked(null)}
+          onLeave={() => {
+            const go = leaveBlocked.proceed;
+            setLeaveBlocked(null);
+            go();
+          }}
         />
       )}
     </>

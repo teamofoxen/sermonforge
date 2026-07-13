@@ -136,7 +136,13 @@ reject with a tagged error and the next call respawns.
 
 The renderer debounce is a deliberate trade-off, and it is **flushed on window
 close, app quit, and reload** via `src/utils/closeFlush.js` + the
-`app-flush-edits` ask/ack (see `docs/REFERENCE/ipc-channels.md`). The former
+`app-flush-edits` ask/ack (see `docs/REFERENCE/ipc-channels.md`). Since
+2026-07-13 every deliberate exit resolves that flush to the
+persistence-transition tri-state — `"saved"` / `"failed"` / `"unknown"`
+(`src/utils/saveTransition.js`, mirrored in `electron/saveTransition.cjs`) —
+and a non-`"saved"` result is put to the pastor ("Keep working" / "… anyway")
+instead of being ignored; the exit-seam detail lives in
+`docs/SYSTEMS/sermon-workspace.md` (save flow). The former
 500ms main-process `saveDb()` debounce was retired with the sql.js driver
 (2026-06-10): writes now commit at the IPC handler, and no main-process save
 debounce may be reintroduced (see `docs/CORE.md`).

@@ -751,6 +751,41 @@ with ESV text, section headings, and Previous/Next chapter navigation. There is 
   renderer's autosave-debounce window unflushed — the last `<800ms` of typing —
   documented as accepted risk in `electron/main.js`.
 
+**Deliberate-exit transitions (the persistence-transition contract, 2026-07-13):**
+
+Every deliberate transition away from editable work resolves a flush to
+exactly one of `"saved"` / `"failed"` / `"unknown"`
+([`src/utils/saveTransition.js`](../../src/utils/saveTransition.js); the
+main process mirrors the constants in
+[`electron/saveTransition.cjs`](../../electron/saveTransition.cjs)) and
+handles the result explicitly — the unmount flush in `useWorkspaceSave`
+remains a backstop, never the guarantee (async effect cleanup can't block a
+view change on failure):
+
+- **Workspace Back and the series prev/next switch** route through the
+  shell's `requestLeave`: flush via `persistUpdate`, leave only on
+  `"saved"`. On `"failed"`/`"unknown"` the workspace stays put and
+  `UnsavedLeaveConfirm` puts the choice to the pastor — "Keep working"
+  (primary) or the explicit "Leave anyway". Cross-sermon switching (App
+  remounts the workspace keyed by sermon id) therefore never abandons the
+  old sermon's failed save to the unawaited unmount flush.
+- **The Series Planner** does the same for its Back and its open-sermon
+  hop, flushing through the close-flush registry — which includes a
+  parked-failure flusher: a write whose debounce already fired and failed
+  (the `failedWritesRef` queue) fails the global flush even though no
+  timer remains, after one drain-retry. The study-guide export refuses to
+  run in that state (the booklet is built from the DB in main — it would
+  be stale); the workspace Word export is payload-built from renderer
+  memory, so it proceeds as the rescue copy but its note says the library
+  save hasn't landed.
+- **Window close, menu Quit / Cmd-Q, and updater restart** run the same
+  decision in main (`confirmExitOverSaveResult`): `"saved"` proceeds
+  silently; `"failed"`/`"unknown"` ask with the same wording family
+  ("Keep working" / "Close|Quit|Restart anyway"); a dead window or a
+  broken dialog always proceeds, so the app can never become unclosable.
+  `"unknown"` (the 2s flush timeout) is spoken as uncertainty — distinct
+  wording from failure, never dressed up as success.
+
 ---
 
 ## Cross-system notes

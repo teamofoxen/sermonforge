@@ -22,7 +22,9 @@ const WhatIvePreached = lazy(() => import("./components/WhatIvePreached"));
 const ArcFixture = lazy(() => import("./components/ArcFixture"));
 const WhatIvePreachedFixture = lazy(() => import("./components/WhatIvePreachedFixture"));
 
-class ErrorBoundary extends Component {
+// Exported (named) for the trust-wording contract test — the fallback copy
+// below must never promise more than persistence can prove.
+export class ErrorBoundary extends Component {
   constructor(props) {
     super(props);
     this.state = { hasError: false, error: null };
@@ -58,10 +60,16 @@ class ErrorBoundary extends Component {
           {/* Never the raw JS error — it reads as alarming nonsense to a
               pastor, and the full detail already went to app.log via
               reportRendererError above. Answer the only question that matters
-              in this moment: is my work safe? */}
+              in this moment — is my work safe? — HONESTLY: this boundary has
+              no way to know whether the current edits' debounced save landed
+              before the crash, so it must not promise "nothing is lost"
+              (persistence-transition contract: uncertainty is never dressed
+              up as success). Everything already saved IS safe — writes commit
+              durably at the IPC handler. */}
           <p style={{ color: "var(--ink-ghost)", fontSize: "14px", maxWidth: "400px", textAlign: "center" }}>
-            Your sermons are saved on this computer — nothing is lost. Reload to
-            pick up where you left off.
+            Everything you saved is safe in your library on this computer. Only
+            the last edits you were just making may not have finished saving.
+            Reload to pick up where you left off.
           </p>
           <PrimaryButton onClick={() => window.location.reload()}>
             Reload App
@@ -401,11 +409,13 @@ function AppInner() {
           />
         )}
         {currentView === VIEW.Workspace && openSermonId && (
-          // key forces a REMOUNT per sermon: the old instance's unmount
-          // flush persists its own sermon and useDebounce's cleanup clears
-          // any pending save timer — without it, series prev/next within
-          // the 800ms debounce window could fire the old timer against the
-          // newly loaded sermonRef and overwrite sermon A with B's content.
+          // key forces a REMOUNT per sermon: useDebounce's cleanup clears any
+          // pending save timer — without it, series prev/next within the
+          // 800ms debounce window could fire the old timer against the newly
+          // loaded sermonRef and overwrite sermon A with B's content. The old
+          // sermon's edits are flushed BEFORE the switch by the workspace's
+          // requestLeave guard (persistence-transition contract); the old
+          // instance's unmount flush remains a backstop only.
           <SermonWorkspace
             key={openSermonId}
             sermonId={openSermonId}

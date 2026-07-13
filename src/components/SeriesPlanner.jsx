@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useDebounce, useFlushOnExit } from "../utils/hooks";
-import { runRegisteredFlushes } from "../utils/closeFlush";
+import { registerFlush, runRegisteredFlushes } from "../utils/closeFlush";
+import { SAVE_TRANSITION, resolveSaveTransition } from "../utils/saveTransition";
 import { useModalA11y } from "../utils/useModalA11y";
 import {
   getSeries, updateSeries,
@@ -30,6 +31,7 @@ import IconButton from "./primitives/IconButton";
 import BackButton from "./primitives/BackButton";
 import TextButton from "./primitives/TextButton";
 import FeedbackFlag from "./FeedbackFlag";
+import UnsavedLeaveConfirm from "./UnsavedLeaveConfirm";
 
 // ── The three screens ─────────────────────────────────────────────────────────
 // The planner is a top-down way to understand the book at three levels —
@@ -332,7 +334,9 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
   // to replay; the queued key is removed before replay and re-added only if it
   // fails again — so a fresh edit to that field arriving mid-retry (which sets
   // its own key) is never clobbered. The indicator reflects only what remains.
-  async function retryLastSave() {
+  // useCallback (stable deps: refs + setters) so the parked-failure flusher
+  // below can hold it across renders.
+  const retryLastSave = useCallback(async () => {
     const pending = [...failedWritesRef.current.entries()];
     if (pending.length === 0) return;
     for (const [key] of pending) failedWritesRef.current.delete(key);
@@ -343,7 +347,47 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
     }
     setSaving(false);
     setSaveError(failedWritesRef.current.size > 0);
-  }
+  }, []);
+
+  // The three useFlushOnExit registrations above only cover writes still
+  // WAITING on a debounce timer. A write whose debounce already fired and
+  // FAILED is parked in failedWritesRef with no timer left — without this,
+  // the global flush (runRegisteredFlushes: window close / quit / study-guide
+  // export / planner Back) would report every flusher clean and proceed over
+  // stale library truth. Register the parked queue as its own flusher: try it
+  // once more, then report honestly — unresolved failed writes make the
+  // global flush a FAILED transition (persistence-transition contract).
+  useEffect(() => registerFlush(async () => {
+    if (failedWritesRef.current.size === 0) return true;
+    await retryLastSave();
+    return failedWritesRef.current.size === 0;
+  }), [retryLastSave]);
+
+  // Deliberate exits — Back and opening a sermon into the workspace — run the
+  // persistence-transition contract: flush everything (pending timers AND the
+  // parked failed-write queue, via the registry) and leave only on "saved".
+  // On "failed"/"unknown" the planner stays and UnsavedLeaveConfirm puts the
+  // choice to the pastor; only his explicit "Leave anyway" discards. The
+  // unmount flush in useFlushOnExit stays as a backstop, never the guarantee.
+  const [leaveBlocked, setLeaveBlocked] = useState(null);
+  const leaveInFlightRef = useRef(false);
+  const requestLeave = useCallback(async (proceed) => {
+    if (leaveInFlightRef.current) return; // one transition at a time
+    leaveInFlightRef.current = true;
+    try {
+      const result = await resolveSaveTransition(async () => (await runRegisteredFlushes()).ok);
+      if (result === SAVE_TRANSITION.Saved) {
+        proceed();
+        return;
+      }
+      setLeaveBlocked({ result, proceed });
+    } finally {
+      leaveInFlightRef.current = false;
+    }
+  }, []);
+  const openSermonGuarded = useCallback((id) => {
+    requestLeave(() => onOpenSermon(id));
+  }, [requestLeave, onOpenSermon]);
 
   // A load failure (throw, or a series id that no longer resolves) gets its own
   // voice + Retry instead of the perpetual "Loading…" spinner.
@@ -385,7 +429,9 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
           works → FeedbackFlag. */}
       <div className="topbar">
         <div style={{ display: "flex", alignItems: "center", gap: "12px", flex: 1, minWidth: 0 }}>
-          <BackButton variant="icon" onClick={onBack} title="Back" className="btn-icon" style={{ flexShrink: 0 }} />
+          {/* Routed through requestLeave: Back leaves only when every pending
+              write — debounced or parked-failed — is confirmed saved. */}
+          <BackButton variant="icon" onClick={() => requestLeave(onBack)} title="Back" className="btn-icon" style={{ flexShrink: 0 }} />
           <div style={{
             width: "10px", height: "10px", borderRadius: "50%", flexShrink: 0,
             background: `var(--${series.color || "gold"})`,
@@ -479,7 +525,7 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
             onSermonField={handleSermonField}
             onSectionsChange={setSections}
             onSermonsChange={setSermons}
-            onOpenSermon={onOpenSermon}
+            onOpenSermon={openSermonGuarded}
             onSyncEndDate={syncSeriesEndDate}
             drafts={drafts}
             setDrafts={setDrafts}
@@ -516,6 +562,17 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
       </div>
     </div>
     {showHowItWorks && <SeriesHowItWorksModal kind={series.kind} onClose={() => setShowHowItWorks(false)} />}
+    {leaveBlocked && (
+      <UnsavedLeaveConfirm
+        result={leaveBlocked.result}
+        onStay={() => setLeaveBlocked(null)}
+        onLeave={() => {
+          const go = leaveBlocked.proceed;
+          setLeaveBlocked(null);
+          go();
+        }}
+      />
+    )}
     </>
   );
 }

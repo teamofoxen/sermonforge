@@ -315,12 +315,16 @@ dismissible line; no dialog ever steals focus.
 ### `"updater-restart"`
 ```
 receives: nothing
-returns:  { ok: true }
+returns:  { ok: boolean, restarted: boolean }
 ```
 Renderer-initiated "Restart now". Main flushes the renderer's debounced
-edits (`flushRendererEdits`), then `quitAndInstall` routes through the
-before-quit handler (second flush + WAL checkpoint + db close) before the
-installer runs.
+edits (`flushRendererEdits`) and runs the result through the shared exit
+decision (`confirmExitOverSaveResult`, `electron/saveTransition.cjs`): a
+"failed"/"unknown" flush asks the pastor ("Keep working" returns
+`{ ok: false, restarted: false }` without restarting; "Restart anyway"
+proceeds). On proceed, `quitAndInstall` routes through the before-quit
+handler (second flush — the explicit choice is not re-asked — + WAL
+checkpoint + db close) before the installer runs.
 
 ### `"app-get-startup-warning"`
 ```
@@ -433,11 +437,16 @@ unsubscribe function.
 
 ### `"app-flush-edits"`
 Payload: `string` (nonce). Sent by `flushRendererEdits` in `electron/main.js`
-before window close / app quit. The renderer runs every registered flusher
-(`src/utils/closeFlush.js`) and acks on `"app-flush-edits-done"` with the same
-nonce. Subscribed via `onFlushEdits` (returns an unsubscribe function).
+before window close / app quit / updater restart. The renderer runs every
+registered flusher (`src/utils/closeFlush.js`) and acks on
+`"app-flush-edits-done"` with the same nonce plus an `ok` flag. Subscribed via
+`onFlushEdits` (returns an unsubscribe function).
 
 ### `"app-flush-edits-done"` (renderer → main, `ipcRenderer.send`)
-Payload: `string` (the nonce from `"app-flush-edits"`). Ack that all registered
-flushers settled. main matches the nonce to the pending request; a 2s hard
-timeout in `flushRendererEdits` means a missing ack can never block close.
+Payload: `string` (the nonce from `"app-flush-edits"`), `boolean` (`ok` —
+`false` when any registered flush write failed). main matches the nonce to the
+pending request and maps the ack onto the persistence-transition tri-state
+(`electron/saveTransition.cjs`): ack+ok → `"saved"`, ack+!ok → `"failed"`, and
+a 2s hard timeout → `"unknown"`, so a missing ack can never block close — the
+exit seams prompt on `"failed"`/`"unknown"` but always keep an explicit
+"anyway" way out.

@@ -53,7 +53,12 @@ export function useWorkspaceSave({ sermonId, sermonRef, setSermon, isFixture }) 
 
   const debouncedSave = useDebounce(persistUpdate, 800);
 
-  // Flush pending debounced save on unmount.
+  // Flush pending debounced save on unmount — BACKSTOP only. Deliberate exits
+  // (Back, series prev/next) flush before navigating via the shell's
+  // requestLeave and handle the result explicitly; this unawaited cleanup
+  // cannot block the view change on failure, so it is never the primary
+  // guarantee for deliberate navigation (persistence-transition contract,
+  // src/utils/saveTransition.js).
   useEffect(() => {
     return () => { persistUpdate(); };
   }, [persistUpdate]);

@@ -2,6 +2,19 @@
 
 ---
 
+## 2026-07-13 — fix: unify save transition integrity (remediation session 1/6)
+
+- **One persistence-transition contract.** Every deliberate transition away from editable work now resolves its flush to exactly `"saved"` / `"failed"` / `"unknown"` and handles the result explicitly — new `src/utils/saveTransition.js` (renderer: constants + `resolveSaveTransition`, 2s unknown-timeout) and `electron/saveTransition.cjs` (main: mirrored constants + `confirmExitOverSaveResult`, the one native-dialog exit decision; parity test-asserted).
+- **Main-process exit seams stop ignoring the flush result.** `before-quit` (menu Quit / Cmd-Q) and `updater-restart` used to `await flushRendererEdits()` and discard it; both now run the same decision window close already had — "Keep working" aborts the quit/restart, the explicit "Quit/Restart anyway" proceeds. Window close now also prompts on `"unknown"` (distinct uncertainty wording — a timeout no longer closes silently as if saved); a dead window or broken dialog always proceeds, so the app can never become unclosable. An updater "Restart anyway" isn't re-asked by the before-quit flush that follows (10s-fresh explicit-choice window).
+- **Workspace Back and series prev/next flush first, leave only on `"saved"`.** The shell's new `requestLeave` guards both; on `"failed"`/`"unknown"` the new `UnsavedLeaveConfirm` dialog (existing `.modal` idiom) holds the surface — "Keep working" primary, explicit "Leave anyway" to discard. Cross-sermon switching no longer abandons the old sermon to the unawaited unmount flush (that flush is now documented backstop-only).
+- **Series Planner exposes parked failed writes to the global flush.** A write whose debounce already fired and failed sits in `failedWritesRef` with no timer left — a new registered flusher drain-retries the queue and fails the global flush while entries remain, so window close / quit / study-guide export / planner Back can no longer proceed over stale library truth. Planner Back and the planner→sermon hop run the same leave guard.
+- **Exports handle persistence honestly.** Study-guide export (DB-built) already refused a failed flush — the parked-failure case now actually fails that check; the workspace Word export (payload-built from renderer memory — the rescue copy) still proceeds but its note now says when the library save hasn't landed, and it re-attempts a parked failed save before claiming otherwise.
+- **Error boundary stops over-promising.** "nothing is lost" replaced with the honest two-part statement (saved work is safe; the very last edits may not have finished saving).
+- Tests 408 → 437 (6 new files): tri-state mapping + ESM⟷CJS parity, the production exit-decision matrix (executed real `saveTransition.cjs`), main.js seam-wiring tripwires (source scan — honestly labeled, NOT lifecycle execution), workspace Back/switch/unknown-timeout guards, planner parked-failure flush + export refusal + Back guard, boundary wording. Full suite green, lint 0, spine-integrity OK, `npm start` boots clean (verified in app.log), workspace + planner fixtures render with zero console errors.
+- Live Electron lifecycle events (close/before-quit firing end-to-end) still lack harness execution — covered by the decision-module tests + wiring tripwires here; the executable main-process seam is Session 2's work.
+
+---
+
 ## 2026-07-10 — chore(styles): delete orphaned .btn-text-dark / .btn-ghost-dark
 
 - Deleted `.btn-text-dark` and `.btn-ghost-dark` from `global.css` — dead since the tour overlay (their only consumer) was removed 2026-05-17; zero `src/` consumers confirmed, owner-approved.

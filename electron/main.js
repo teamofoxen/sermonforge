@@ -16,12 +16,20 @@ const {
   ContractViolation,
 } = require("./contracts.cjs");
 const { buildStudyGuideModel } = require("./studyGuideModel.cjs");
+const { SAVE_TRANSITION, confirmExitOverSaveResult } = require("./saveTransition.cjs");
 
 // coerceLegacyStage removed in the trail deletion sweep (Phase B3) —
 // pre-restructure "Blueprint" / "Frame" stage values are no longer admitted
 // or coerced. No production data carries them. Delivery's separate
 // defensive-tolerance (ARI Phase 7) is a different concern and stays.
 let _isQuitting = false;
+// Set when the pastor has ALREADY answered the exit-over-unsaved-edits
+// question this exit (updater "Restart anyway"), so the before-quit flush that
+// immediately follows doesn't re-ask. A timestamp, not a boolean: an explicit
+// choice authorizes the exit it belongs to, not a quit minutes later (e.g.
+// dev-mode restartAndInstall is a no-op and the app keeps running).
+let _exitDecisionAt = 0;
+const EXIT_DECISION_FRESH_MS = 10_000;
 
 // Catch anything that slips through before app ready
 process.on("uncaughtException", (err) => {
@@ -1604,19 +1612,21 @@ function buildFtsQuery(userQuery) {
 // await its ack — bounded by a hard timeout so a hung renderer can never make
 // the window unclosable. Ask/ack over "app-flush-edits"(nonce) /
 // "app-flush-edits-done"(nonce, ok); the renderer side lives in src/App.jsx +
-// src/utils/closeFlush.js. Resolves "ok" when the renderer acked with every
-// flush saved, "failed" when it acked but a flush WRITE failed (the caller
-// should block/prompt rather than close over lost edits — Mutation #3), and
-// "unknown" on timeout / dead window / send failure (proceed; we can't
-// determine, and the window must stay closable).
+// src/utils/closeFlush.js. Resolves to the persistence-transition contract
+// (electron/saveTransition.cjs): "saved" when the renderer acked with every
+// flush committed, "failed" when it acked but a flush WRITE failed, and
+// "unknown" on timeout / dead window / send failure. Every exit seam (window
+// close, before-quit, updater restart) puts a non-"saved" result through
+// confirmExitOverSaveResult rather than proceeding over lost edits silently
+// (Mutation #3).
 let _flushNonce = 0;
 function flushRendererEdits(win, timeoutMs = 2000) {
   return new Promise((resolve) => {
-    if (!win || win.isDestroyed() || win.webContents.isDestroyed()) return resolve("unknown");
+    if (!win || win.isDestroyed() || win.webContents.isDestroyed()) return resolve(SAVE_TRANSITION.Unknown);
     const nonce = String(++_flushNonce);
     let settled = false;
     let timer = null;
-    const onDone = (_e, ackNonce, ok) => { if (ackNonce === nonce) finish(ok === false ? "failed" : "ok"); };
+    const onDone = (_e, ackNonce, ok) => { if (ackNonce === nonce) finish(ok === false ? SAVE_TRANSITION.Failed : SAVE_TRANSITION.Saved); };
     const finish = (result) => {
       if (settled) return;
       settled = true;
@@ -1626,14 +1636,14 @@ function flushRendererEdits(win, timeoutMs = 2000) {
     };
     timer = setTimeout(() => {
       logError(`[close-flush] renderer ack timed out after ${timeoutMs}ms`);
-      finish("unknown");
+      finish(SAVE_TRANSITION.Unknown);
     }, timeoutMs);
     ipcMain.on("app-flush-edits-done", onDone);
     try {
       win.webContents.send("app-flush-edits", nonce);
     } catch (err) {
       logError("[close-flush] send failed", err);
-      finish("unknown");
+      finish(SAVE_TRANSITION.Unknown);
     }
   });
 }
@@ -1713,34 +1723,28 @@ function createWindow() {
 
   // Close interception: flush the renderer's debounced edits before the
   // window closes (the X button / Alt-F4 path). preventDefault exactly once;
-  // the second close() goes through whether or not the flush succeeded (hard
-  // timeout inside flushRendererEdits), so the window can never become
-  // unclosable. Quit paths skip this — before-quit runs its own renderer
-  // flush, and app.exit() there skips close events anyway.
+  // the second close() goes through whether or not the flush succeeded, so the
+  // window can never become unclosable. Quit paths skip this — before-quit
+  // runs its own renderer flush, and app.exit() there skips close events
+  // anyway. A "failed" or "unknown" flush puts the choice to the pastor
+  // (confirmExitOverSaveResult — the shared exit decision): closing over a
+  // confirmed-failed write silently would drop his last edits (Mutation #3),
+  // and an unconfirmed one must not masquerade as success. "Close anyway"
+  // keeps the window closable either way — a genuine failure or a hung
+  // renderer can never trap him (the dialog is native, main-process).
   let _closeFlushed = false;
   mainWindow.on("close", (e) => {
     if (_closeFlushed || _isQuitting) return;
     e.preventDefault();
     flushRendererEdits(mainWindow).then((result) => {
-      // A flush WRITE failed. Closing now would silently drop the pastor's last
-      // edits (Mutation #3 — failed saves are visible and retryable, never
-      // silent). Ask before losing work; "Close anyway" keeps the window
-      // closable so a genuine failure can never trap the user. Only "failed" (an
-      // acked-but-failed write) prompts — a "unknown" timeout still closes, as
-      // before, to avoid trapping the window behind a hung renderer.
-      if (result === "failed" && mainWindow && !mainWindow.isDestroyed()) {
-        const choice = dialog.showMessageBoxSync(mainWindow, {
-          type: "warning",
-          buttons: ["Keep working", "Close anyway"],
-          defaultId: 0,
-          cancelId: 0,
-          noLink: true,
-          title: "Your last changes didn't save",
-          message: "SermonForge couldn't save your most recent edits.",
-          detail: "If you close now, those edits will be lost. Choose “Keep working” to stay and try again — the save indicator in the corner will keep retrying.",
-        });
-        if (choice === 0) return; // stay open; a later close re-runs the flush
-      }
+      const proceed = confirmExitOverSaveResult({
+        result,
+        win: mainWindow,
+        dialog,
+        anywayLabel: "Close anyway",
+        verbPhrase: "close",
+      });
+      if (!proceed) return; // stay open; a later close re-runs the flush
       _closeFlushed = true;
       if (mainWindow && !mainWindow.isDestroyed()) mainWindow.close();
     }).catch((err) => {
@@ -3673,11 +3677,25 @@ ipcMain.handle("app-email-support", async (_, { subject, body } = {}) => {
 ipcMain.handle("updater-get-status", () => getUpdaterStatus());
 
 ipcMain.handle("updater-restart", async () => {
-  // Belt and braces: drain the renderer's debounce first; before-quit
-  // (triggered inside restartAndInstall) flushes again regardless.
-  try { await flushRendererEdits(mainWindow); } catch (err) { logError("[updater-restart] flush threw", err); }
+  // Drain the renderer's debounce and put a "failed"/"unknown" result to the
+  // pastor BEFORE committing to the restart (this used to flush and ignore the
+  // result). Same shared exit decision + wording family as window close and
+  // menu quit (confirmExitOverSaveResult).
+  let result = SAVE_TRANSITION.Unknown;
+  try { result = await flushRendererEdits(mainWindow); } catch (err) { logError("[updater-restart] flush threw", err); }
+  const proceed = confirmExitOverSaveResult({
+    result,
+    win: mainWindow,
+    dialog,
+    anywayLabel: "Restart anyway",
+    verbPhrase: "restart",
+  });
+  if (!proceed) return { ok: false, restarted: false }; // pastor chose to keep working
+  // An explicit "Restart anyway" answers the exit question once — before-quit
+  // (triggered inside restartAndInstall) flushes again but must not re-ask.
+  if (result !== SAVE_TRANSITION.Saved) _exitDecisionAt = Date.now();
   restartAndInstall();
-  return { ok: true };
+  return { ok: true, restarted: true };
 });
 
 // ── First-run gate ────────────────────────────────────────────────────────────
@@ -3996,9 +4014,11 @@ if (!app.requestSingleInstanceLock()) {
 
 // Quit sequence:
 //   1. before-quit fires (covers menu Quit, Cmd-Q, Alt-F4, taskbar Close).
-//   2. preventDefault holds the process open while flushDb completes (await).
-//   3. Native DB closes after the flush (theology is read-only; close after
-//      the flush settles).
+//   2. preventDefault holds the process open while the renderer flush runs; a
+//      "failed"/"unknown" result goes through the shared exit decision — a
+//      "Keep working" choice aborts the quit (_isQuitting re-armed).
+//   3. flushDb checkpoints and the native DB closes after the flush settles
+//      (theology is read-only).
 //   4. app.exit(0) terminates without re-entering the handler (_isQuitting guard).
 // Without this sequencing the previous code raced flushDb against app.quit() and
 // could lose the in-flight write itself, not just the 500 ms debounce window.
@@ -4010,9 +4030,31 @@ app.on("before-quit", async (e) => {
   // image to disk — otherwise the final flushDb persists a state missing the
   // last <800ms of typing. The window-close interception can't cover this
   // path: menu quit / Cmd-Q reach before-quit without a window close event,
-  // and app.exit() below skips close events entirely. No-op (resolves false,
-  // fast) when the window is already gone.
-  try { await flushRendererEdits(mainWindow); } catch (err) { logError("[quit] renderer flush threw", err); }
+  // and app.exit() below skips close events entirely. No-op (resolves
+  // "unknown", fast) when the window is already gone.
+  let flushResult = SAVE_TRANSITION.Unknown;
+  try { flushResult = await flushRendererEdits(mainWindow); } catch (err) { logError("[quit] renderer flush threw", err); }
+  // Menu Quit / Cmd-Q must HANDLE a "failed"/"unknown" flush, not discard it
+  // (this used to await and ignore the result — closing over lost edits).
+  // Same shared exit decision + wording family as window close
+  // (confirmExitOverSaveResult): no live window → proceed (nothing left
+  // holding edits, never trap shutdown); a fresh explicit "Restart anyway"
+  // from the updater path already answered this question — don't re-ask.
+  if (Date.now() - _exitDecisionAt >= EXIT_DECISION_FRESH_MS) {
+    const proceed = confirmExitOverSaveResult({
+      result: flushResult,
+      win: mainWindow,
+      dialog,
+      anywayLabel: "Quit anyway",
+      verbPhrase: "quit",
+    });
+    if (!proceed) {
+      // Quit aborted — the pastor chose to keep working. Re-arm the guard so
+      // the next quit attempt runs this handler (and its flush) again.
+      _isQuitting = false;
+      return;
+    }
+  }
   // Never flush when init aborted (_initError): db may hold a half-migrated or
   // empty image, and flushing it would overwrite the pristine on-disk DB the
   // abort was protecting.
