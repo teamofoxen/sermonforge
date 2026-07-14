@@ -1,10 +1,15 @@
 import { BOOKS, bookById } from "../data/canonicalBooks";
 
 // passageRef — parse a slot's passage string into a normalized chapter:verse
-// range WITHIN a known book. The series already knows its book, so this does
-// NOT recognize the 66 book names; it parses the TRAILING chapter:verse pattern
-// and ignores a leading book name. That's what lets digit-containing names
-// ("1 Samuel 2:3", "2 John 1:5") work without a name table.
+// range WITHIN a known book. The series already knows its book, so parsing
+// anchors on the TRAILING chapter:verse pattern rather than a name table —
+// that's what lets digit-containing names ("1 Samuel 2:3", "2 John 1:5") work.
+// A leading book name is tolerated with ONE lookup: a prefix that IS a
+// canonical book name (case-insensitive) for a DIFFERENT book than bookId's
+// is rejected — "Matthew 1:18-25" typed into a Luke series must never
+// silently parse as Luke 1:18-25 and miscount coverage (false covered verses,
+// phantom overlaps). A prefix that resolves to no canonical name ("Matt.",
+// "Psalm") still parses against the series' book, as before.
 //
 // Because it anchors on the trailing token, it guards against a leading REAL
 // reference + trailing junk (e.g. "John 3.16", "John 3 vv.16-17") by requiring
@@ -19,8 +24,10 @@ import { BOOKS, bookById } from "../data/canonicalBooks";
 //
 // In scope: "1:1-4:13" (cross-chapter), "1:1-4" (same chapter), "2" (whole
 // chapter), "2:9" (single verse); hyphen / en-dash / em-dash / minus; surrounding
-// spaces; optional leading book name. Out of scope (v1): disjoint ranges
-// ("1:1-4, 1:46-55") and cross-book ranges.
+// spaces; optional leading book name (the same book, or one that resolves to
+// no canonical book). Out of scope (v1): disjoint ranges ("1:1-4, 1:46-55")
+// and cross-book ranges; a leading name for a DIFFERENT canonical book errors
+// (the cross-book guard above).
 
 // Trailing "C[:V][ <dash> C2[:V2] ]" — the book-name prefix (if any) is ignored.
 const REF_RE = /(\d+)\s*(?::\s*(\d+))?\s*(?:[-–—−]\s*(\d+)\s*(?::\s*(\d+))?)?\s*$/;
@@ -29,6 +36,15 @@ const REF_RE = /(\d+)\s*(?::\s*(\d+))?\s*(?:[-–—−]\s*(\d+)\s*(?::\s*(\d+))
 // (1/2/3 for "1 Samuel", "2 John") then letters / spaces / periods. No stray
 // digits or separators — those signal the trailing token isn't the whole ref.
 const BOOK_PREFIX_RE = /^\s*(?:[1-3]\s+)?[A-Za-z][A-Za-z.\s]*$/;
+
+// Resolve text to one of the 66 canonical book records by exact name match —
+// case-insensitive, inner whitespace collapsed ("1  samuel" still resolves).
+// Null when the text isn't a canonical name (abbreviations don't resolve).
+function bookByName(text) {
+  const name = text.trim().replace(/\s+/g, " ").toLowerCase();
+  if (!name) return null;
+  return BOOKS.find((b) => b.name.toLowerCase() === name) || null;
+}
 
 export function parsePassageRef(raw, bookId) {
   if (typeof raw !== "string") return { error: true };
@@ -45,6 +61,18 @@ export function parsePassageRef(raw, bookId) {
   const prefix = s.slice(0, m.index);
   if (prefix && !BOOK_PREFIX_RE.test(prefix)) return { error: true };
 
+  const book = bookById(bookId);
+
+  // Cross-book guard: a prefix naming a canonical book OTHER than this one
+  // ("Matthew 1:18-25" in a Luke series) is a real reference to a different
+  // book — unreadable here, never silently re-homed onto this book's numbers
+  // (coverage would count phantom verses and overlaps). Only an exact
+  // canonical name triggers this; an unresolvable prefix parses as before.
+  if (prefix && book) {
+    const named = bookByName(prefix);
+    if (named && named.id !== book.id) return { error: true };
+  }
+
   // Sanity cap: the largest book is Psalms (150 chapters), so any chapter/verse
   // beyond this is a malformed or overflowing token — e.g. a 20-digit number that
   // parseInt turns into 1e20, or a 50000-digit one that becomes Infinity. Reject
@@ -59,7 +87,6 @@ export function parsePassageRef(raw, bookId) {
   const startV = startHasVerse ? parseInt(v1, 10) : 1;
   if (bad(startCh) || (startHasVerse && bad(startV))) return { error: true };
 
-  const book = bookById(bookId);
   // For a KNOWN book, a chapter past its end is a typo for this book → error.
   // (startCh / endNum are already validated >= 1 by bad() above, so only the
   // upper bound is checked here.)
@@ -133,8 +160,7 @@ function bookFromPassageName(raw) {
   if (typeof raw !== "string") return null;
   const m = raw.trim().match(/^(.+?)\s+\d/);
   if (!m) return null;
-  const name = m[1].trim().toLowerCase();
-  return BOOKS.find((b) => b.name.toLowerCase() === name) || null;
+  return bookByName(m[1]);
 }
 
 // Gutter labels for a passage range, for pre-seeding the structure canvas's

@@ -40,6 +40,44 @@ describe("parsePassageRef — digit-containing book name in the ignored prefix",
   });
 });
 
+describe("parsePassageRef — cross-book leading name (the Matthew-in-Luke guard)", () => {
+  it("rejects a canonical name for a DIFFERENT book than the series' (never re-homed)", () => {
+    // The bug this locks out: "Matthew 1:18-25" typed into a Luke series used
+    // to parse as Luke 1:18-25 and silently count toward Luke coverage
+    // (false covered verses, phantom overlaps). Unreadable instead.
+    expect(parsePassageRef("Matthew 1:18-25", "luke")).toEqual({ error: true });
+    expect(parsePassageRef("John 2", "luke")).toEqual({ error: true });
+  });
+  it("matches case-insensitively", () => {
+    expect(parsePassageRef("matthew 1:18-25", "luke")).toEqual({ error: true });
+    expect(parsePassageRef("MARK 2:1", "luke")).toEqual({ error: true });
+  });
+  it("ordinal names resolve whole — '2 Samuel' in a 1 Samuel series is cross-book", () => {
+    expect(parsePassageRef("2 Samuel 2:3", "1-samuel")).toEqual({ error: true });
+    expect(parsePassageRef("1 John 4:7", "2-john")).toEqual({ error: true });
+  });
+  it("the SAME book's leading name still parses (incl. ordinals and the passage_range form)", () => {
+    expect(parsePassageRef("Luke 1:18-25", "luke")).toEqual({ startCh: 1, startV: 18, endCh: 1, endV: 25 });
+    expect(parsePassageRef("2 John 1:5", "2-john")).toEqual({ startCh: 1, startV: 5, endCh: 1, endV: 5 });
+    // bookSpan()-shaped series ranges carry the book name + en-dash.
+    expect(parsePassageRef("Luke 1:1–24:53", "luke")).toEqual({ startCh: 1, startV: 1, endCh: 24, endV: 53 });
+  });
+  it("no-prefix refs are untouched by the guard", () => {
+    expect(parsePassageRef("1:18-25", "luke")).toEqual({ startCh: 1, startV: 18, endCh: 1, endV: 25 });
+  });
+  it("a prefix that is NOT a canonical name still parses against the series' book", () => {
+    // Abbreviations/misspellings don't resolve, so they aren't treated as
+    // cross-book — deliberate: only an exact canonical name is strong enough
+    // evidence to refuse a slot ("Psalm" vs the canonical "Psalms").
+    expect(parsePassageRef("Matt 1:18-25", "luke")).toEqual({ startCh: 1, startV: 18, endCh: 1, endV: 25 });
+    expect(parsePassageRef("Psalm 23", "psalms")).toEqual({ startCh: 23, startV: 1, endCh: 23, endV: 6 });
+  });
+  it("without a KNOWN series book, a named prefix is tolerated as before (verseLabels path)", () => {
+    expect(parsePassageRef("Matthew 1:18-25", null)).toEqual({ startCh: 1, startV: 18, endCh: 1, endV: 25 });
+    expect(parsePassageRef("Matthew 1:18-25", "not-a-book")).toEqual({ startCh: 1, startV: 18, endCh: 1, endV: 25 });
+  });
+});
+
 describe("parsePassageRef — fail-soft verse-bound resolution", () => {
   it("whole chapter with explicit verses needs no book data (no verseUnknown)", () => {
     expect(parsePassageRef("2:9", "not-a-book")).toEqual({

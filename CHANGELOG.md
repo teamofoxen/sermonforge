@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-07-14 — fix: reject cross-book passage references instead of miscounting coverage
+
+- `parsePassageRef` now errors when a leading canonical book name differs from the series' book, so "Matthew 1:18-25" typed into a Luke series shows under Coverage's honest "Couldn't read" note instead of silently counting as Luke 1:18-25 (false covered verses, phantom overlaps).
+- Same-book prefixes ("Luke 1:1–24:53", "1 Samuel 2:3") and non-canonical prefixes ("Matt.", "Psalm") parse exactly as before; topical rows can't reach the guard because `composePassage` always leads with the bound book's own name.
+- 7 new unit tests; full suite 536 green; verified live in the planner fixture's Coverage panel.
+- Planner spec (`docs/SYSTEMS/series-planner.md`) and the sample-series content review §1.1 record the new behavior (those doc files ride the feature branch's in-flight work).
+
+---
+
 ## 2026-07-13 — fix: close remediation integration gaps (final integration review, session 7/7)
 
 - **Independent final review of the six-session remediation program (`e264027..e78c9f1`).** Every session's claims re-verified from scratch: save-transition contract, persistence seam extraction (spot-diffed verbatim against pre-remediation main.js), atomicity + failure injection, migration/recovery matrix, release gates, privacy boundaries, accessibility. Full verification battery re-run clean: `npm ci` (33s, no lock healing), 515 tests green with clean stderr, lint 0, spine-integrity OK (126 files), `npm start` boots (0 errors in `logs-dev/app.log`), `npm run build`, packaged smoke `SF_SMOKE_RESULT ok=true schema=33 preload=true rendered=true`.
