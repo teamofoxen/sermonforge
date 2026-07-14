@@ -65,6 +65,24 @@ not a separate file), `NewSeriesModal.jsx`, `BookSelect.jsx`,
 route, `&kind=topical` for the topical seed; default Outline; the book seed is
 the real Jesus-of-Luke artifact, the topical seed is "The Mission of God").
 
+**The sample series (2026-07-14).** The Planning screen carries a standing
+"Look around" card — the planner-side sibling of the Dashboard's "Open a
+sample sermon": **"Open the sample series"** seeds and opens the complete
+Jesus-of-Luke plan (`electron/sampleSeriesData.js` — the pastor's real series:
+book node + the four movements as sections + the full ~109-sermon plan, every
+sermon dated on consecutive Sundays, Coverage tiling the whole Gospel). The
+spine op is `load-sample-series`, with the sample sermon's sandbox semantics:
+re-opening returns the sample as the pastor left it; the two-step "Start the
+sample series fresh" reseeds. All rows use `sample-luke-` IDs, so the series
+never appears in the Planning grid or any list/search surface (`sample-%` is
+filtered everywhere, including — since this change — the All Sermons search);
+the door is the only way in. Reseed deletes are prefix-scoped per family
+(`sample-luke-%` here, `sample-romans-%` for the Dashboard sample) so the two
+samples can't clobber each other. Seed invariants are locked by
+`tests/unit/sampleSeriesData.test.js` (naming, prefix scope, section filing,
+Sunday schedule, passage parseability, 100% coverage with the plan's one true
+overlap).
+
 ## 2. AI-free
 
 No Analyze / Generate / Assist / Chat / scheduling-advisor. Every field is
@@ -150,7 +168,10 @@ human label is "Outline"). A remembered `localStorage` tab id for a removed tab
   pastor-authored `sort_order` (the topical reorder term), then `created_at` —
   the same composite the workspace breadcrumb and study-guide export use, so the
   three never disagree. The `CoveragePanel` lives here now **for book series**
-  (hidden whenever `series.kind === 'topical'`). Season labels (`getSeasonForDate`),
+  (hidden whenever `series.kind === 'topical'`). A cross-book reference in a
+  book-series row ("Matthew 1:18-25" in a Luke plan) reads as one of Coverage's
+  unreadable slots rather than silently counting toward the book
+  (`parsePassageRef`'s cross-book guard, 2026-07-14). Season labels (`getSeasonForDate`),
   the pacing strip (`src/utils/pacing.js`), and skip-a-week are kept.
 - **Study guide** (`StudyGuideTab`) — an editable congregational booklet
   ("mini-commentary"). "Import from outline" gates the empty state → booklet via

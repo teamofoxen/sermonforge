@@ -1927,8 +1927,12 @@ function createPersistence({ getDb, logError = console.error, logInfo = () => {}
         // cleanup, and the fresh index — is ONE transaction (the search half
         // used to run after COMMIT).
         withTransaction(() => {
-          dbRun("DELETE FROM sermons WHERE id LIKE 'sample-%'");
-          dbRun("DELETE FROM series  WHERE id LIKE 'sample-%'");
+          // Prefix-scoped to sample-romans-: the sample SERIES seed
+          // (sample-luke-, load-sample-series below) coexists with this one,
+          // and a broad 'sample-%' here would destroy it on every
+          // "Start the sample fresh".
+          dbRun("DELETE FROM sermons WHERE id LIKE 'sample-romans-%'");
+          dbRun("DELETE FROM series  WHERE id LIKE 'sample-romans-%'");
           // Full-INSERT seed path (distinct from the create-series user flow, which
           // stays create-then-update). book_id is seeded directly here so the sample
           // exercises the canonical-book path the feature exists to showcase.
@@ -1988,10 +1992,83 @@ function createPersistence({ getDb, logError = console.error, logInfo = () => {}
           // Search index: drop any stale sample rows + re-index the freshly-
           // inserted one. The DELETE above runs against `sermons`;
           // `sermon_search` is a separate table and needs its own cleanup.
-          dbRun("DELETE FROM sermon_search WHERE sermon_id LIKE 'sample-%'");
+          dbRun("DELETE FROM sermon_search WHERE sermon_id LIKE 'sample-romans-%'");
           indexSermonFts(SERMON_ID);
         });
         return success({ sermonId: SERMON_ID, created: true });
+      }
+
+      case "load-sample-series": {
+        // The planner-side sibling of load-sample-sermon: seeds the complete
+        // Luke sample series (electron/sampleSeriesData.js) — one series, four
+        // sections, the full sermon plan — for the Series Planning screen's
+        // "Open the sample series" door. Same sandbox semantics: an existing
+        // sample is returned as-is (the pastor's poking-around survives
+        // re-entry); { fresh: true } deletes and reseeds, which is also how
+        // seed content changes get picked up.
+        const sampleSeries = require("./sampleSeriesData");
+        const fresh = payload?.fresh === true;
+        if (!fresh && queryOne("SELECT id FROM series WHERE id = ?", [sampleSeries.SERIES_ID])) {
+          return success({ seriesId: sampleSeries.SERIES_ID, created: false });
+        }
+        withTransaction(() => {
+          // Prefix-scoped to sample-luke-: this reseed and the sample
+          // sermon's (sample-romans-, above) must never clobber each other.
+          // The sermons DELETE also catches rows a sandbox delete-series
+          // released to standalone (series_id nulled, id prefix intact).
+          dbRun("DELETE FROM sermons WHERE id LIKE 'sample-luke-%'");
+          dbRun("DELETE FROM series_sections WHERE id LIKE 'sample-luke-%'");
+          dbRun("DELETE FROM series WHERE id LIKE 'sample-luke-%'");
+          dbRun("DELETE FROM sermon_search WHERE sermon_id LIKE 'sample-luke-%'");
+          // Full-INSERT seed path, like the sample sermon's (distinct from the
+          // create-then-update user flow — the create-series INSERT is never
+          // widened; this is not that INSERT).
+          dbRun(
+            `INSERT INTO series (
+              id, title, color, description, year, kind, book_id, canon_category,
+              big_idea, overview, passage_range, structural_outline,
+              start_date, end_date, status
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+            [
+              sampleSeries.series.id, sampleSeries.series.title, sampleSeries.series.color,
+              sampleSeries.series.description, sampleSeries.series.year, sampleSeries.series.kind,
+              sampleSeries.series.book_id, sampleSeries.series.canon_category,
+              sampleSeries.series.big_idea, sampleSeries.series.overview,
+              sampleSeries.series.passage_range, sampleSeries.series.structural_outline,
+              sampleSeries.series.start_date, sampleSeries.series.end_date, sampleSeries.series.status,
+            ],
+          );
+          for (const sec of sampleSeries.sections) {
+            dbRun(
+              "INSERT INTO series_sections (id, series_id, title, passage_range, big_idea, overview, sort_order) VALUES (?,?,?,?,?,?,?)",
+              [sec.id, sec.series_id, sec.title, sec.passage_range, sec.big_idea, sec.overview, sec.sort_order],
+            );
+          }
+          for (const s of sampleSeries.sermons) {
+            // Planner-born shape: the create-sermon defaults (Study/Observe,
+            // empty prep columns) plus the planner's own fields
+            // (big_idea / overview / sort_order). These are PLANNED sermons
+            // awaiting "Build this sermon" — not worked ones.
+            dbRun(
+              `INSERT INTO sermons
+                 (id, series_id, section_id, is_one_off, title, passage, date, preacher,
+                  stage, mpt, mps, observations, outline, manuscript,
+                  current_stage, current_sub_phase,
+                  big_idea, overview, sort_order)
+               VALUES (?, ?, ?, 0, ?, ?, ?, '', ?, '', '', '', '[]', '', ?, ?, ?, ?, ?)`,
+              [
+                s.id, s.series_id, s.section_id, s.title, s.passage, s.date,
+                s.stage, s.current_stage, s.current_sub_phase,
+                s.big_idea, s.overview, s.sort_order,
+              ],
+            );
+            // Keep the search projection 1:1 with the sermons table (the
+            // Session-3 invariant rebuildSearchIndex also enforces); sample
+            // rows are excluded at query time, like every list surface.
+            indexSermonFts(s.id);
+          }
+        });
+        return success({ seriesId: sampleSeries.SERIES_ID, created: true });
       }
 
       default:

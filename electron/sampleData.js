@@ -83,7 +83,6 @@ V. The Gospel That Sends Us (Rom 12–15) — the body, the world, the weak`,
   // content-model rebuild and are no longer seeded. The book's shape now lives
   // once in structural_outline (the Outline's Reference + the booklet's
   // Reference part); the book's idea lives in big_idea + overview above.
-  structural_outline: "Romans moves in three large arcs: (1) the gospel stated and defended (1–4), (2) the gospel applied to the believer's life — peace, freedom, hope (5–8), (3) the gospel applied to Israel's history and the body's ethics (9–16). Romans 5 is the hinge: the doctrinal foundation laid in 1–4 turns into the lived ground of 6–8.",
 };
 
 // ── Sermon: "The Hope That Does Not Disappoint" — Romans 5:1-5 ────────────────

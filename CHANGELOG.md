@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-07-14 — feat: add the Luke sample series to the Series Planner
+
+- The Planning screen gains a standing "Look around" card — "Open the sample series" seeds and opens the complete Gospel-of-Luke plan (four sections, 109 dated sermons, 100% coverage) via the new `load-sample-series` spine op with the sample sermon's sandbox semantics.
+- Reseed DELETEs are prefix-scoped per family (`sample-romans-%` / `sample-luke-%`) so the two samples can't clobber each other; "Start the sample series fresh" rides the canonical two-step confirm.
+- All Sermons search now excludes `sample-%` rows — the one surface that didn't filter them.
+- Content sources + open review decisions recorded in `docs/handoff/sample-series-content-review-2026-07-14.md`; seed invariants locked by 13 new unit tests (suite 536 green).
+- Docs: `docs/SYSTEMS/series-planner.md` (the door, prefix scoping) and `docs/REFERENCE/ipc-channels.md` (the op + narrowed reseed).
+
+---
+
 ## 2026-07-14 — build: enforce no-dupe-keys in ESLint
 
 - `.eslintrc.cjs` enables `no-dupe-keys: 'error'` — the config never extended `eslint:recommended`, and the gap let a duplicate `structural_outline` key on the sample series object (`electron/sampleData.js`, from `3330f35`) silently shadow the intended Roman-numeral book outline while lint stayed green.

@@ -53,7 +53,8 @@ Single channel for all sermon, series, and section state. Operations dispatch to
 | `update-section` | `{ id, ...fields }` | — |
 | `delete-section` | sectionId string | — |
 | `apply-mutation` | `{ kind: "user_input", sermonId, field, value }` | `kind` must be `"user_input"` — the only kind since `MUTATION_KIND` was collapsed in ARI Phase 9. `value` is a string for simple fields or a typed `StructuredFieldUpdate` for structured fields (State #5 shape check). Mutation #1 enforcement. No `proposalId` — that token exists only in the AI-simulation test helper, not in the main-process handler. |
-| `load-sample-sermon` | `{ fresh?: true }` (optional) | Default (no payload / `fresh` falsy): returns the existing sample sermon as-is if one exists — `{ sermonId, created: false }` — preserving the pastor's sandbox edits; seeds only when none exists. With `fresh: true` (Dashboard's "Start the sample fresh" action): delete-then-insert reseed of every `sample-%` sermon/series row. |
+| `load-sample-sermon` | `{ fresh?: true }` (optional) | Default (no payload / `fresh` falsy): returns the existing sample sermon as-is if one exists — `{ sermonId, created: false }` — preserving the pastor's sandbox edits; seeds only when none exists. With `fresh: true` (Dashboard's "Start the sample fresh" action): delete-then-insert reseed scoped to the `sample-romans-%` prefix family (narrowed from `sample-%` when the sample series landed, so the two samples can't clobber each other). |
+| `load-sample-series` | `{ fresh?: true }` (optional) | The planner-side sibling (seeds `electron/sampleSeriesData.js` — the complete Luke sample series: series + 4 sections + the full sermon plan, FTS rows included). Same sandbox semantics: existing sample returned as-is (`{ seriesId, created: false }`); `fresh: true` (Planning's "Start the sample series fresh") is a delete-then-insert reseed scoped to `sample-luke-%`. One transaction either way. |
 
 ---
 

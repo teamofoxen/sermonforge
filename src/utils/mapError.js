@@ -25,6 +25,7 @@ const FALLBACK = {
   export: "Could not save the Word document. Try again.",
   key: "Could not save the key. Try again.",
   sample: "Couldn't open the sample sermon. Try again.",
+  sampleSeries: "Couldn't open the sample series. Try again.",
   general: "Something went wrong. Try again — and if this keeps happening, close SermonForge and reopen it.",
 };
 

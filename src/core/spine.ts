@@ -322,6 +322,13 @@ export function loadSampleSermon(opts?: { fresh?: boolean }): Promise<{ sermonId
   return call("load-sample-sermon", opts?.fresh ? { fresh: true } : undefined);
 }
 
+// The planner-side sibling: seeds (or returns) the sample SERIES — the
+// complete Luke plan — for the Series Planning screen's "Open the sample
+// series" door. Same sandbox semantics as the sample sermon.
+export function loadSampleSeries(opts?: { fresh?: boolean }): Promise<{ seriesId: string; created: boolean }> {
+  return call("load-sample-series", opts?.fresh ? { fresh: true } : undefined);
+}
+
 // ── transitionState (position-writer) — REMOVED in Track E4 (2026-07-03) ─────
 //
 // The vestigial legacy position subsystem (audit finding D): a renderer wrapper

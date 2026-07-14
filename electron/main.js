@@ -800,6 +800,7 @@ function searchSermonsFts(rawQuery, limit = 50) {
        JOIN sermons s ON s.id = ss.sermon_id
        LEFT JOIN series sr ON sr.id = s.series_id
        WHERE s.deleted_at IS NULL
+         AND s.id NOT LIKE 'sample-%'
          AND ${tokenClauses}
        ORDER BY s.updated_at DESC, s.created_at DESC
        LIMIT ?`,

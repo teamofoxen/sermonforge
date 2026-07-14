@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
-import { getAllSeries, deleteSeries, getSeriesSermonCounts } from "../core/spine";
+import { getAllSeries, deleteSeries, getSeriesSermonCounts, loadSampleSeries } from "../core/spine";
 import { SERIES_STATUS, SERIES_STATUS_LABELS } from "../core/contracts";
 import { GENRES } from "../data/canonicalBooks";
 import { useModalA11y } from "../utils/useModalA11y";
 import { buttonKeydown } from "../utils/buttonKeydown";
+import mapError from "../utils/mapError";
 import PrimaryButton from "./primitives/PrimaryButton";
 import SecondaryButton from "./primitives/SecondaryButton";
 import IconButton from "./primitives/IconButton";
+import DeleteButton from "./primitives/DeleteButton";
 import EmptyState from "./primitives/EmptyState";
 import InlineError from "./InlineError";
 import NewSeriesModal from "./NewSeriesModal";
@@ -45,8 +47,28 @@ export default function Planning({ onOpenPlanner }) {
   // two-step row confirm. pendingDelete holds the series awaiting confirmation.
   const [pendingDelete, setPendingDelete] = useState(null);
   const [deleteError, setDeleteError] = useState(null);
+  const [loadingSample, setLoadingSample] = useState(false);
+  const [sampleError, setSampleError] = useState(null);
 
   useEffect(() => { load(); }, []);
+
+  // The sample series door — mirrors the Dashboard's sample-sermon flow.
+  // Opening it again returns the sandbox as the pastor left it; fresh=true
+  // (the two-step "Start the sample series fresh") reseeds it.
+  async function openSampleSeries(fresh = false) {
+    if (loadingSample) return;
+    setLoadingSample(true);
+    setSampleError(null);
+    try {
+      const result = await loadSampleSeries({ fresh });
+      if (result?.seriesId) onOpenPlanner(result.seriesId);
+    } catch (e) {
+      console.error("Failed to open sample series:", e);
+      setSampleError(mapError(e, "sampleSeries"));
+    } finally {
+      setLoadingSample(false);
+    }
+  }
 
   async function load() {
     try {
@@ -156,6 +178,55 @@ export default function Planning({ onOpenPlanner }) {
             ))}
           </div>
         )}
+
+        {/* LOOK AROUND — the sample series door (the planner-side sibling of
+            the Dashboard's "Open a sample sermon"). Always present, below the
+            pastor's own series: a worked example lives where he'd build his
+            own, without occupying the primary position ("+ New Series"). The
+            sample is seeded with sample- IDs, so it never appears in the grid
+            above — this door is the only way in. */}
+        <div className="card" style={{ marginTop: "24px" }}>
+          <div style={{
+            fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--ink-ghost)",
+            textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "10px",
+          }}>
+            Look around
+          </div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px", flexWrap: "wrap" }}>
+            <div>
+              <div style={{ fontFamily: "var(--font-serif)", fontSize: "15px", fontWeight: "600", color: "var(--ink)", marginBottom: "4px" }}>
+                See a finished plan
+              </div>
+              <div style={{ fontSize: "13px", color: "var(--ink-soft)", lineHeight: "1.5" }}>
+                The Gospel of Luke, planned end to end — four sections, a sermon for every
+                Sunday, a study guide to explore. It&rsquo;s a sandbox; it never mixes with your own series.
+              </div>
+            </div>
+            <SecondaryButton
+              onClick={() => openSampleSeries()}
+              disabled={loadingSample}
+              style={{ flexShrink: 0 }}
+            >
+              {loadingSample ? "Loading…" : "Open the sample series"}
+            </SecondaryButton>
+          </div>
+          {/* Resetting is destructive (any changes made in the sample are
+              discarded), so it goes through the app's canonical two-step
+              confirm — same as the Dashboard's sample reset. */}
+          <div style={{ marginTop: "10px" }}>
+            <DeleteButton
+              small
+              label="Start the sample series fresh"
+              confirmLabel="Start the sample series fresh? Any changes you made in the sample series will be gone."
+              onDelete={() => openSampleSeries(true)}
+            />
+          </div>
+          {sampleError && (
+            <div style={{ marginTop: "10px" }}>
+              <InlineError onDismiss={() => setSampleError(null)}>{sampleError}</InlineError>
+            </div>
+          )}
+        </div>
       </div>
 
       {showNew && (
