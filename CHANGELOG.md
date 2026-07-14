@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-07-14 — build: CI installs Node 24 so npm ci matches the lock-writing npm
+
+- Both workflows' four `node-version` pins move 20 → 24: npm 10 builds a different ideal tree from the npm-11-written lockfile (it materializes vitest→vite's optional esbuild peer) and fails `npm ci` with "Missing: esbuild@0.27.7".
+- Every Test run since 2026-07-13 died at the install step before tests ran; `build.yml`'s gates job carried the identical failure for the next release tag.
+- `b1db881`'s npm-ci drift tripwire stays; it exposed this pre-existing npm-major gap on its first pull, as designed.
+- `test.yml`'s Node-policy comment now states the rule: the CI pin tracks whichever npm major writes `package-lock.json`.
+
+---
+
 ## 2026-07-14 — feat: add the Luke sample series to the Series Planner
 
 - The Planning screen gains a standing "Look around" card — "Open the sample series" seeds and opens the complete Gospel-of-Luke plan (four sections, 109 dated sermons, 100% coverage) via the new `load-sample-series` spine op with the sample sermon's sandbox semantics.

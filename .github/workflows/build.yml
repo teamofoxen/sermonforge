@@ -22,7 +22,9 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # Node 24 LTS — must match the npm major that writes package-lock.json
+          # (see the Node-policy note in test.yml; npm 10 rejects the npm-11 lock).
+          node-version: 24
           cache: "npm"
 
       - name: Install dependencies (immutable)
@@ -54,7 +56,9 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # Node 24 LTS — must match the npm major that writes package-lock.json
+          # (see the Node-policy note in test.yml; npm 10 rejects the npm-11 lock).
+          node-version: 24
           cache: "npm"
 
       - name: Sync package.json version from tag
@@ -103,7 +107,9 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # Node 24 LTS — must match the npm major that writes package-lock.json
+          # (see the Node-policy note in test.yml; npm 10 rejects the npm-11 lock).
+          node-version: 24
           cache: "npm"
 
       - name: Sync package.json version from tag

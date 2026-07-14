@@ -16,11 +16,15 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          # Node policy (Session 5): the app's runtime is Electron's own Node;
-          # tooling supports Node >=20 (package.json engines). CI pins the
-          # 20 LTS line so test/build runs are reproducible; local dev on any
-          # >=20 (the maintainer runs 24) is supported.
-          node-version: 20
+          # Node policy (Session 5, amended 2026-07-14): the app's runtime is
+          # Electron's own Node; tooling supports Node >=20 (package.json
+          # engines). CI pins the 24 LTS line — the same npm major (11) as the
+          # machine that writes package-lock.json. npm 10 (bundled with Node
+          # 20) builds a DIFFERENT ideal tree from the same lock (it insists on
+          # materializing vitest→vite's optional esbuild peer) and fails
+          # `npm ci` outright — the 2026-07-13/14 red runs. If the npm that
+          # generates the lock ever changes, move this pin with it.
+          node-version: 24
           cache: "npm"
 
       - name: Install dependencies (immutable)
