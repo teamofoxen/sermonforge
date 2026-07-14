@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-07-14 — build: enforce no-dupe-keys in ESLint
+
+- `.eslintrc.cjs` enables `no-dupe-keys: 'error'` — the config never extended `eslint:recommended`, and the gap let a duplicate `structural_outline` key on the sample series object (`electron/sampleData.js`, from `3330f35`) silently shadow the intended Roman-numeral book outline while lint stayed green.
+- Full `npm run lint` plus a one-off single-rule sweep of `tests/` both exit clean — no other duplicate keys in the repo.
+- Report-only: thirteen sibling `eslint:recommended` correctness rules (`no-dupe-args`, `no-unreachable`, `no-dupe-else-if`, …) are also at zero violations today; deliberately left unenabled pending the pastor's call.
+- `docs/ENFORCEMENT_STATUS.md` lint-baseline table gains the `no-dupe-keys` row.
+
+---
+
 ## 2026-07-14 — fix: reject cross-book passage references instead of miscounting coverage
 
 - `parsePassageRef` now errors when a leading canonical book name differs from the series' book, so "Matthew 1:18-25" typed into a Luke series shows under Coverage's honest "Couldn't read" note instead of silently counting as Luke 1:18-25 (false covered verses, phantom overlaps).

@@ -61,5 +61,11 @@ module.exports = {
     // same on non-JSX symbols (function calls, member accesses, hooks).
     'react/jsx-no-undef': 'error',
     'no-undef': 'error',
+    // Core correctness rule opted in by hand — this config does not extend
+    // eslint:recommended, so rules like this are off unless listed. Added
+    // after a duplicate `structural_outline` key on the sample series object
+    // (electron/sampleData.js, from 3330f35) silently shadowed the intended
+    // Roman-numeral book outline while lint stayed green.
+    'no-dupe-keys': 'error',
   },
 };
