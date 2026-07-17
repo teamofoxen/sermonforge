@@ -2065,7 +2065,20 @@ if (!app.requestSingleInstanceLock()) {
             const preloadOk = await mainWindow.webContents.executeJavaScript(
               "typeof window.electronAPI === 'object' && window.electronAPI !== null"
             );
-            const rendered = mainWindow.isVisible() && !mainWindow.webContents.isCrashed();
+            // did-finish-load can fire before the ready-to-show → show() path
+            // makes the window visible, so a one-shot isVisible() sample flakes
+            // rendered=false on a healthy fast boot (observed 2026-07-16: FAIL
+            // then PASS on the identical binary). Await visibility instead —
+            // bounded, so a window that genuinely never shows still fails the
+            // smoke rather than hanging it (the script's own timeout is 120s).
+            let visible = mainWindow.isVisible();
+            if (!visible) {
+              visible = await new Promise((resolve) => {
+                const timer = setTimeout(() => resolve(false), 10_000);
+                mainWindow.once("show", () => { clearTimeout(timer); resolve(true); });
+              });
+            }
+            const rendered = visible && !mainWindow.webContents.isCrashed();
             console.log(
               `SF_SMOKE_RESULT ok=${Boolean(schemaRow && preloadOk && rendered)} ` +
               `schema=${schemaRow?.value ?? "none"} preload=${preloadOk} rendered=${rendered}`

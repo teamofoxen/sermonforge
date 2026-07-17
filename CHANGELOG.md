@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-07-16 — fix: packaged smoke awaits window visibility instead of sampling once
+
+- The SF_SMOKE hook sampled `mainWindow.isVisible()` once inside `did-finish-load`, which can fire before `ready-to-show` → `show()`, so a healthy build could print `rendered=false` (observed live: FAIL then PASS on the identical binary).
+- The gate runs in CI's "Packaged smoke" step between packaging and publishing, so the flake could spuriously block a release.
+- The hook now awaits the window's `show` event (10s bound) when not yet visible; a never-shown window still fails within the smoke script's 120s timeout.
+- The `SF_SMOKE=1` gate and the single parseable `SF_SMOKE_RESULT` line are unchanged; verified with `npm run build` + five consecutive `node scripts/packaged-smoke.cjs` PASSes.
+
+---
+
 ## 2026-07-16 — fix: only CI-published builds may auto-update
 
 - A local `npm run build` reports the permanent 1.0.0 `package.json` pin, so the published release always outranked it and `electron-updater` silently replaced the build under test within seconds of launch (`app.log`: 2026-07-05 and twice 2026-07-16).
