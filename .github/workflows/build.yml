@@ -61,12 +61,18 @@ jobs:
           node-version: 24
           cache: "npm"
 
-      - name: Sync package.json version from tag
+      - name: Stamp version + release channel from tag
         shell: bash
+        # sfReleaseChannel marks this as a CI-published build — the ONLY kind
+        # allowed to auto-update. Local builds (npm run build) carry no stamp,
+        # so electron/updater.js stays inert in them; without this, the
+        # published release outranks the 1.0.0 dev pin and silently replaces
+        # any local build under test.
         run: |
           TAG_VERSION="${GITHUB_REF#refs/tags/v}"
           echo "Setting package.json version to $TAG_VERSION"
           npm version "$TAG_VERSION" --no-git-tag-version --allow-same-version
+          npm pkg set sfReleaseChannel=stable
 
       - name: Install dependencies (immutable)
         run: npm ci
@@ -112,11 +118,13 @@ jobs:
           node-version: 24
           cache: "npm"
 
-      - name: Sync package.json version from tag
+      - name: Stamp version + release channel from tag
+        # Same stamp as build-windows — see the comment there.
         run: |
           TAG_VERSION="${GITHUB_REF#refs/tags/v}"
           echo "Setting package.json version to $TAG_VERSION"
           npm version "$TAG_VERSION" --no-git-tag-version --allow-same-version
+          npm pkg set sfReleaseChannel=stable
 
       - name: Install dependencies (immutable)
         run: npm ci

@@ -323,7 +323,7 @@ On launch, after a 3-second delay:
 All updater events log to `app.log` ([`electron/logger.js`](../../electron/logger.js)) — last 50 lines auto-attach to feedback bug reports.
 
 **If it breaks here:**
-- User reports they didn't get the update → check `app.log` for `[updater]` entries. Common causes: not on a packaged build, `latest.yml` malformed (rare), GitHub Releases unreachable, machine offline at every launch since the release.
+- User reports they didn't get the update → check `app.log` for `[updater]` entries. Common causes: not on a packaged build, a local build without the `sfReleaseChannel` stamp (log shows `[updater] disabled — local build`; only CI-published builds auto-update, since 2026-07-16), `latest.yml` malformed (rare), GitHub Releases unreachable, machine offline at every launch since the release.
 - Update downloads but never installs → `quitAndInstall` was blocked; check for "Restart Now" dialog log and whether the user clicked Later then never quit.
 
 ### Step 5 — New users download from the website

@@ -25,6 +25,13 @@ invisible-system rebuild (tour, per-tab notebook, Manuscript tab).
 Use the packaged build (installer or portable), never `npm run dev`, for
 every item. Items marked **(Win + Mac)** must run on both platforms.
 
+> Local builds never auto-update: only CI stamps `sfReleaseChannel` into
+> package.json, and `electron/updater.js` is inert without it. This is what
+> makes local smoke builds testable at all — before the stamp (2026-07-16),
+> the published release outranked the local 1.0.0 version pin and silently
+> replaced the build under test within seconds of launch. Item 10 is
+> unaffected (it uses a CI-published previous release, which carries the stamp).
+
 1. **First-run setup** — fresh install (or delete `userData/sf-esv.enc` and
    clear the `bti_telemetry_enabled` setting): the setup screen appears;
    the api.esv.org link opens the browser; saving a key works (and pasting

@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-07-16 — fix: only CI-published builds may auto-update
+
+- A local `npm run build` reports the permanent 1.0.0 `package.json` pin, so the published release always outranked it and `electron-updater` silently replaced the build under test within seconds of launch (`app.log`: 2026-07-05 and twice 2026-07-16).
+- `build.yml`'s stamp step (both platforms) now also sets `sfReleaseChannel=stable`; `electron/updater.js` is inert without it — init logs `[updater] disabled — local build`, `restartAndInstall` no-ops, and Help → Check for Updates answers honestly.
+- Installed CI builds are unaffected: existing installs run pre-gate updater code, and every published build from here forward carries the stamp.
+- Docs: `docs/REFERENCE/release-smoke.md` preamble + `docs/PROPOSALS/distribution.md` §14 troubleshooting.
+
+---
+
 ## 2026-07-14 — build: CI installs Node 24 so npm ci matches the lock-writing npm
 
 - Both workflows' four `node-version` pins move 20 → 24: npm 10 builds a different ideal tree from the npm-11-written lockfile (it materializes vitest→vite's optional esbuild peer) and fails `npm ci` with "Missing: esbuild@0.27.7".

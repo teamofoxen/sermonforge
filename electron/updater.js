@@ -15,6 +15,21 @@ const { app, dialog } = require("electron");
 const { logInfo, logError } = require("./logger");
 const { isPackaged } = require("./config");
 
+// Only CI-published builds may auto-update. CI stamps sfReleaseChannel into
+// package.json alongside the tag version (build.yml); a local `npm run build`
+// carries no stamp. Without this gate, a local build reports the 1.0.0
+// package.json pin, the published GitHub release always outranks it, and the
+// updater silently replaces the build under test with the last release
+// (the 2026-07-16 downgrade: a dev build became v1.1.0 within seconds of
+// launch — twice — while the pastor was looking for a newer feature).
+const isReleaseBuild = (() => {
+  try {
+    return require("../package.json").sfReleaseChannel === "stable";
+  } catch {
+    return false;
+  }
+})();
+
 // Last known status — pulled by the renderer on mount (covers the race
 // where the download finished before React subscribed) and pushed on
 // change. Shape: { state: "downloaded", version } is the only state the
@@ -32,7 +47,7 @@ function getUpdaterStatus() {
 // preempt quitAndInstall's immediate path; the install still happens on
 // the resulting exit.
 function restartAndInstall() {
-  if (!isPackaged) return;
+  if (!isPackaged || !isReleaseBuild) return;
   autoUpdater.quitAndInstall();
 }
 
@@ -45,6 +60,17 @@ async function checkForUpdatesInteractive(win) {
       type: "info",
       title: "Check for Updates",
       message: "Updates only run in the installed app.",
+      buttons: ["OK"],
+    });
+    return;
+  }
+  if (!isReleaseBuild) {
+    // Ross-facing only: pastors never run an unstamped build.
+    dialog.showMessageBox(parent, {
+      type: "info",
+      title: "Check for Updates",
+      message: "Updates are off in this build.",
+      detail: "This is a local development build — it never auto-updates. Published releases update themselves.",
       buttons: ["OK"],
     });
     return;
@@ -93,6 +119,10 @@ async function checkForUpdatesInteractive(win) {
 
 function initUpdater({ getWindow } = {}) {
   if (!isPackaged) return;
+  if (!isReleaseBuild) {
+    logInfo("[updater] disabled — local build (no release channel stamp)");
+    return;
+  }
 
   autoUpdater.logger = null; // we handle all logging ourselves
   autoUpdater.autoDownload = true;
