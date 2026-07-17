@@ -2,6 +2,12 @@
 
 ---
 
+## 2026-07-16 — refactor: collapse the smoke visibility wait to a single expression
+
+- Style-only follow-up to the previous commit, applying its simplify-pass finding: the `let visible` + `if (!visible)` reassignment becomes one `const` with `||` short-circuit; behavior identical.
+
+---
+
 ## 2026-07-16 — fix: packaged smoke awaits window visibility instead of sampling once
 
 - The SF_SMOKE hook sampled `mainWindow.isVisible()` once inside `did-finish-load`, which can fire before `ready-to-show` → `show()`, so a healthy build could print `rendered=false` (observed live: FAIL then PASS on the identical binary).

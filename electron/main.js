@@ -2071,13 +2071,10 @@ if (!app.requestSingleInstanceLock()) {
             // then PASS on the identical binary). Await visibility instead —
             // bounded, so a window that genuinely never shows still fails the
             // smoke rather than hanging it (the script's own timeout is 120s).
-            let visible = mainWindow.isVisible();
-            if (!visible) {
-              visible = await new Promise((resolve) => {
-                const timer = setTimeout(() => resolve(false), 10_000);
-                mainWindow.once("show", () => { clearTimeout(timer); resolve(true); });
-              });
-            }
+            const visible = mainWindow.isVisible() || await new Promise((resolve) => {
+              const timer = setTimeout(() => resolve(false), 10_000);
+              mainWindow.once("show", () => { clearTimeout(timer); resolve(true); });
+            });
             const rendered = visible && !mainWindow.webContents.isCrashed();
             console.log(
               `SF_SMOKE_RESULT ok=${Boolean(schemaRow && preloadOk && rendered)} ` +
