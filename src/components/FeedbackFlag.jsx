@@ -9,12 +9,14 @@ import { useEffect, useRef, useState } from "react";
 import PrimaryButton from "./primitives/PrimaryButton";
 import SecondaryButton from "./primitives/SecondaryButton";
 import IconButton from "./primitives/IconButton";
+import { describeFeedbackOutcome } from "../utils/feedbackOutcome";
 import "./feedbackFlag.css";
 
 export default function FeedbackFlag({ surface, sermonId = null, step = null }) {
   const [open, setOpen] = useState(false);
   const [note, setNote] = useState("");
   const [confirm, setConfirm] = useState(null);
+  const [confirmTone, setConfirmTone] = useState("sent");
   const wrapRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -40,12 +42,14 @@ export default function FeedbackFlag({ surface, sermonId = null, step = null }) 
     if (open && inputRef.current) inputRef.current.focus();
   }, [open]);
 
-  // Confirmation banner auto-clears after a few seconds.
+  // Confirmation banner auto-clears after a few seconds. A message reporting
+  // that the flag was NOT kept has to outlast a glance, so it dwells longer
+  // than the cheerful one it replaced.
   useEffect(() => {
     if (!confirm) return;
-    const t = setTimeout(() => setConfirm(null), 2500);
+    const t = setTimeout(() => setConfirm(null), confirmTone === "sent" ? 2500 : 8000);
     return () => clearTimeout(t);
-  }, [confirm]);
+  }, [confirm, confirmTone]);
 
   async function send(blank) {
     const payload = {
@@ -56,15 +60,20 @@ export default function FeedbackFlag({ surface, sermonId = null, step = null }) 
       timestamp: new Date().toISOString(),
     };
 
+    let result;
     try {
-      await window.electronAPI?.btiSubmit?.("flag", payload);
+      result = await window.electronAPI?.btiSubmit?.("flag", payload);
     } catch (_) {
-      // Bus persists failures locally; nothing to do here.
+      result = { ok: false, queued: false, reason: "failed" };
     }
 
     setNote("");
     setOpen(false);
-    setConfirm("Flag sent. Thank you.");
+    // Never "Flag sent." for a flag the bus discarded — see
+    // src/utils/feedbackOutcome.js.
+    const outcome = describeFeedbackOutcome(result);
+    setConfirmTone(outcome.tone);
+    setConfirm(outcome.tone === "sent" ? "Flag sent. Thank you." : outcome.message);
   }
 
   return (

@@ -30,6 +30,7 @@ const {
   MAX_BATCH_SIZE,
 } = require("./config");
 const { validateEvent } = require("./events");
+const { sweepOrphanedQueues } = require("./queueSweep");
 
 let _sessionId = null;
 let _ndjsonFile = null;
@@ -38,6 +39,7 @@ let _flushTimer = null;
 let _testerId = null;
 let _initialized = false;
 let _enabled = true; // Chunk 6 wires this to the user-prefs toggle
+let _orphanSweepDone = false;
 
 function init() {
   if (_initialized) return;
@@ -53,6 +55,12 @@ function init() {
     _flushTimer = setInterval(() => {
       flush().catch(() => {});
       drainImmediateQueue().catch(() => {});
+      // Once per run, and only after the stored consent preference has been
+      // applied during boot — see drainOrphanedQueues.
+      if (!_orphanSweepDone) {
+        _orphanSweepDone = true;
+        drainOrphanedQueues().catch(() => {});
+      }
     }, FLUSH_INTERVAL_MS);
     _initialized = true;
   } catch (err) {
@@ -207,20 +215,25 @@ async function flushAndExit() {
 // `kind` is "flag" | "form". `payload` is the per-kind shape from the BTI
 // build proposal (lines 138-149 for flag, 174-181 for form). The function
 // adds testerId at send time, so callers don't need to know the tester ID.
+// The `queued` flag is load-bearing, not decoration. Three of these outcomes
+// KEEP the pastor's note and one THROWS IT AWAY, and until 2026-07-20 both
+// feedback surfaces rendered "Sent." for all of them — so a pastor who had
+// opted out of telemetry wrote bug reports that were discarded while the UI
+// thanked him for them. The renderer must be able to tell the difference.
 async function sendImmediate(kind, payload) {
-  if (!_initialized || !_enabled) return { ok: false, reason: "disabled" };
-  if (!kind || typeof kind !== "string") return { ok: false, reason: "bad-kind" };
+  if (!_initialized || !_enabled) return { ok: false, queued: false, reason: "disabled" };
+  if (!kind || typeof kind !== "string") return { ok: false, queued: false, reason: "bad-kind" };
   const item = { kind, payload: payload && typeof payload === "object" ? payload : {} };
 
   if (!WORKER_URL) {
     // local-only mode — persist for later (in case transport is configured later)
     queueImmediate(item);
-    return { ok: false, reason: "no-transport" };
+    return { ok: false, queued: true, reason: "no-transport" };
   }
 
   const ok = await postOne(item);
   if (!ok) queueImmediate(item);
-  return { ok };
+  return { ok, queued: !ok, reason: ok ? undefined : "offline" };
 }
 
 async function postOne({ kind, payload }) {
@@ -283,6 +296,32 @@ async function drainImmediateQueue() {
   } catch (_) {}
 }
 
+// Queue files are named per SESSION, and the drain above only ever touches
+// the CURRENT session's file. Anything queued when the app exits — including
+// notes the UI reported as sent — was therefore stranded on disk forever,
+// and the dead files accumulated with no reader. This sweeps the prior
+// sessions' leftovers exactly once per run.
+//
+// Consent is re-checked inside the sweep, not inherited: a pastor who opted
+// out after a note was queued must not have it sent behind him. The sweep
+// runs on the flush tick rather than from init() so the stored preference
+// has already been applied by then — draining at init would race the
+// consent load. The mechanics live in ./queueSweep so they are testable
+// without Electron.
+async function drainOrphanedQueues() {
+  if (!_initialized || !_enabled) return;
+  if (!WORKER_URL) return;
+  await sweepOrphanedQueues({
+    dir: paths.telemetry,
+    currentFile: _immediateFile,
+    // Re-checked per item inside the sweep, so a revoke mid-sweep stops it.
+    isEnabled: () => _enabled,
+    post: postOne,
+    onMalformed: (file, count) =>
+      logError("[telemetry] quarantined malformed queue records", new Error(`${count} in ${path.basename(file)}`)),
+  });
+}
+
 function loadOrAssignTesterId() {
   const file = path.join(paths.userData, "tester-id.txt");
   try {
@@ -299,4 +338,15 @@ function loadOrAssignTesterId() {
   return id;
 }
 
-module.exports = { init, emit, setEnabled, getTesterId, flush, flushAndExit, sendImmediate };
+module.exports = {
+  init,
+  emit,
+  setEnabled,
+  getTesterId,
+  flush,
+  flushAndExit,
+  sendImmediate,
+  // Exported so the cross-session recovery path is testable; the app itself
+  // only ever calls it from the flush tick.
+  drainOrphanedQueues,
+};

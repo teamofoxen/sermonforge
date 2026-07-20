@@ -120,6 +120,15 @@ function buildApplicationMenu({ getWindow }) {
           label: "Open Data Folder",
           click: () => shell.openPath(paths.userData),
         },
+        {
+          // "Open Data Folder" opens userData/data; app.log lives in
+          // userData/logs, so no shipped surface told a pastor where the
+          // log was — the one file support always asks for (2026-07-20
+          // audit, L13). Opens the containing folder rather than the file
+          // itself, so the pastor can attach it to an email.
+          label: "Open Log Folder",
+          click: () => shell.openPath(paths.logs),
+        },
         ...(!isMac
           ? [
               { type: "separator" },

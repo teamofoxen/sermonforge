@@ -1806,8 +1806,15 @@ ipcMain.handle("app-save-api-key", async (_, keys) => {
     console.error("[app-save-api-key]", e.message);
     return {
       success: false,
+      // `reason` lets the setup screen offer a way forward. Without it the
+      // pastor was trapped: the primary button only says "Skip" when the key
+      // box is EMPTY, so after this failure the sole escape was clearing the
+      // field — and nothing on screen said so (2026-07-20 audit, lead 5).
+      reason: "keystore",
       error:
-        "Windows couldn't store the key securely on this computer, so it wasn't saved. " +
+        // Platform-neutral: this string rendered the word "Windows" verbatim
+        // on macOS (audit L10).
+        "This computer couldn't store the key securely, so it wasn't saved. " +
         "You can still use SermonForge — Bible passages just won't load automatically.",
     };
   }
