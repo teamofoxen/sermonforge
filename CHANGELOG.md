@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-07-20 — release: v1.2.2 published — macOS auto-update works for the first time
+
+- CI run 29782198767: all six jobs green including the new `finalize-release`; v1.2.2 published with **8 assets**, the derived manifest exactly, and holds `releases/latest`.
+- `latest-mac.yml` now lists `SermonForge-Setup.zip` first with `path:` pointing at it — `MacUpdater.findFile` resolves, so macOS can apply an update for the first time since v1.0.0.
+- The packaged universal app was **launched on real Intel and Apple Silicon runners** before publication (`schema=33`, `mounted=true`) — the first macOS build this pipeline has ever run, and the configuration that crashed at boot for three releases.
+- The finalizer downloaded all three payloads, verified their real sha512 against the feeds, and only then flipped the release public; no duplicate drafts.
+- Containment: v1.0.0's credential-bearing installers deleted (both URLs now 404), Intel warnings added to v1.0.0–v1.2.0, three unused Apple-ID-era secrets removed. **The leaked PAT still requires manual revocation.**
+
+---
+
 ## 2026-07-20 — fix: distribution-pipeline repair (macOS auto-update, draft-first releases, enforced contracts)
 
 Answers the 2026-07-20 distribution audit (verdict FAIL). Local repairs only —
@@ -90,9 +100,8 @@ break-glass pointer, and the honest macOS/Intel history. `CLAUDE.md` now
 separates preflight's enforced checks from its advisory ones; `RULES.md`
 corrects the DMG-since-v1.1.0 error and the Windows-signing claim.
 
-Still open, and deliberately not claimed as done: nothing has been pushed or
-run in CI; no real Mac has performed an N→N+1 update; the v1.0.0 credential
-containment and rotation are production actions awaiting approval.
+Local-only when written; shipped later the same day — see the v1.2.2 entry
+above for what was actually validated, published, and contained.
 
 ---
 

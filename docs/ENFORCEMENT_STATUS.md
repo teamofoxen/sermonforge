@@ -1,6 +1,6 @@
 # Enforcement Status
 
-**Last verified:** 2026-07-10 — documentation-only project-brain pass: the CORE design-system Absolute Invariant now names the actual three-file token split (`global.css` / `typography.css` / `fonts.css`; the explicit-approval requirement unchanged) and the Tech Stack summary was trued to cross-platform + local `userData`. Wording-only — no clause weakened, no enforcement mechanism changed; the prior verification narrative (2026-07-03, architecture-audit Tracks A–E + the OEM/N-A sweep) lives in git log and `CHANGELOG.md`.
+**Last verified:** 2026-07-20 — distribution-pipeline repair added five contract-test files (`release-manifest`, `mac-arch-gate`, `packaged-secrets`, `telemetry-queue-recovery`, `feedback-truthfulness`) and reworked `release-pipeline`. These enforce the DISTRIBUTION contract — release completeness, artifact identity, packaging-secret hygiene, architecture integrity — not CORE clauses; no per-clause row below changes and no CORE enforcement mechanism was altered or weakened. Prior verification narrative lives in git log and `CHANGELOG.md`.
 **Verified against:** [`docs/CORE.md`](CORE.md).
 **History:** see `git log docs/ENFORCEMENT_STATUS.md` and [`CHANGELOG.md`](../CHANGELOG.md). Per-event narrative is intentionally not duplicated here.
 
