@@ -2,6 +2,14 @@
 
 ---
 
+## 2026-07-18 — docs: true up distribution.md §14 to the as-built release pipeline
+
+- §14 ("the current operational reference") still described the pre-gates pipeline: two parallel CI jobs on Node 20 with `npm install`, and Windows publishing straight from `--publish always`. As built: a `gates` job (2026-07-13) runs the full suite + persistence matrix + lint + spine integrity + Vite build first, both platform jobs `needs:`-depend on it on Node 24 with `npm ci` (2026-07-14), the stamp step also sets `sfReleaseChannel=stable`, and Windows goes package (`--publish never`) → packaged smoke → publish — order asserted by `tests/contracts/release-pipeline.test.ts`. Noted in passing that the smoke gate is Windows-only.
+- Step 4 no longer claims the updater "activates in packaged builds (`isPackaged`)" and shows a "Restart Now / Later" dialog — both retired: activation additionally requires the CI `sfReleaseChannel` stamp (2026-07-16, already stated in the troubleshooting bullet the old sentence contradicted), and `update-downloaded` drives the quiet dismissible sidebar line with **Restart now** (`Sidebar.jsx`), installing on next quit otherwise. Troubleshooting reworded to match; added the Help → Check for Updates manual path. Also caught in the cross-check: Step 4 still said the `app.log` tail "auto-attaches to feedback bug reports" — that path died with the GitHub feedback handler (2026-06-09), and the line contradicted both Step 7 and `docs/REFERENCE/privacy.md`; it now says local-only.
+- Prose-only; no code changes. Every reworded claim cross-checked against `.github/workflows/build.yml`, `electron/updater.js`, and `src/components/Sidebar.jsx`.
+
+---
+
 ## 2026-07-18 — docs: reduce the release smoke test to a single run-the-build check
 
 - Pastor's ruling: at today's distribution (one user, testing on his own machine) the 14-item manual walkthrough is overkill — `docs/REFERENCE/release-smoke.md` now carries one item: run the packaged installer, use the app, confirm an edit survives relaunch. `/release` Step 4 reads the doc fresh each run, so the gate shrinks to one question with no skill change.

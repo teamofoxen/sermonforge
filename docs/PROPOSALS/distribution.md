@@ -264,28 +264,37 @@ Run `/release`. The skill enforces hard gates in order:
 
 **Owned by:** [`.github/workflows/build.yml`](../../.github/workflows/build.yml) — trigger `on: push: tags: v*`
 
-Two parallel jobs run on GitHub-hosted runners. Ross's machine is not involved.
+Three jobs run on GitHub-hosted runners. Ross's machine is not involved.
 
-**`build-windows`** (`runs-on: windows-latest`):
-1. Checkout, Node 20, `npm install`.
-2. Sync `package.json` version: `npm version "$TAG_VERSION" --no-git-tag-version --allow-same-version`.
-3. ~~Write build-time `.env` with `GITHUB_FEEDBACK_TOKEN`~~ — removed 2026-07-01; the token's only consumer (the legacy GitHub-posting feedback handler) was deleted in public-launch hardening, and builds need no bundled secrets.
-4. `npx vite build` → `dist/`.
-5. `npx electron-builder --win --publish always` → uploads `SermonForge-Setup.exe`, `SermonForge-Setup.exe.blockmap`, and `latest.yml` to the GitHub Release for this tag (auth: `secrets.GITHUB_TOKEN`).
+**`gates`** (`runs-on: ubuntu-latest`, added 2026-07-13) runs first; both platform builds `needs:`-depend on it, so nothing packages unless the exact tagged commit passes every gate:
+1. Checkout, Node 24, `npm ci`.
+2. `npm test` (full suite), then `npx vitest run tests/persistence/` explicitly — the production-SQLite integration + migration/recovery matrix, run by name so the release log shows it.
+3. `npm run lint`, `npm run spine-integrity`, `npx vite build`.
 
-**`build-macos`** (`runs-on: macos-latest`):
-1. Checkout, Node 20, `npm install`, version sync (no build-time `.env` — same removal as Windows step 3).
-2. `iconutil -c icns brand/icons/sermonforge.iconset -o build/icon.icns` — generate `.icns` at build time from the iconset.
+**`build-windows`** (`runs-on: windows-latest`, after `gates`):
+1. Checkout, Node 24.
+2. Stamp version + release channel from the tag (one step): `npm version "$TAG_VERSION" --no-git-tag-version --allow-same-version` + `npm pkg set sfReleaseChannel=stable` — the channel stamp marks a CI-published build, the only kind whose updater activates (2026-07-16; a local `npm run build` carries no stamp).
+3. `npm ci`.
+4. ~~Write build-time `.env` with `GITHUB_FEEDBACK_TOKEN`~~ — removed 2026-07-01; the token's only consumer (the legacy GitHub-posting feedback handler) was deleted in public-launch hardening, and builds need no bundled secrets.
+5. `npx vite build` → `dist/`.
+6. `npx electron-builder --win --publish never` → packages the installer; nothing uploaded yet.
+7. Packaged smoke: `node scripts/packaged-smoke.cjs release/win-unpacked` — the actual unpacked app must launch, initialize/migrate its schema, load the preload bridge, render the primary window, and exit cleanly, or the job stops here with nothing published.
+8. `npx electron-builder --win --publish always` → uploads `SermonForge-Setup.exe`, `SermonForge-Setup.exe.blockmap`, and `latest.yml` to the GitHub Release for this tag (auth: `secrets.GITHUB_TOKEN`). The package → smoke → publish order is asserted by [`tests/contracts/release-pipeline.test.ts`](../../tests/contracts/release-pipeline.test.ts).
+
+**`build-macos`** (`runs-on: macos-latest`, after `gates`):
+1. Checkout, Node 24, the same version + `sfReleaseChannel` stamp as Windows, `npm ci` (no build-time `.env` — same removal as Windows step 4).
+2. `iconutil -c icns brand/icons/sermonforge.iconset -o build/icon.icns` — generate `.icns` at build time from the iconset. Then `npx vite build` → `dist/`.
 3. **Diagnostic step** (always runs): probes the `.p12` — password length, character categories, SHA-256 hash, OpenSSL decrypt test (with and without MAC verify). Lets you tell at a glance whether secret rotation broke the cert.
 4. Decode App Store Connect API key from `secrets.APPLE_API_KEY_BASE64` to `~/private_keys/AuthKey.p8`; export `APPLE_API_KEY=$HOME/private_keys/AuthKey.p8`.
-5. `npx electron-builder --mac --publish always` with `CSC_LINK`, `CSC_KEY_PASSWORD`, `APPLE_API_KEY_ID`, `APPLE_API_ISSUER`. Hard timeout 30 min. Builds, signs (Developer ID Application), notarizes via `notarytool`, staples, uploads `SermonForge-Setup.dmg` + `latest-mac.yml` to the GitHub Release.
+5. `npx electron-builder --mac --publish always` with `CSC_LINK`, `CSC_KEY_PASSWORD`, `APPLE_API_KEY_ID`, `APPLE_API_ISSUER`. Hard timeout 30 min. Builds, signs (Developer ID Application), notarizes via `notarytool`, staples, uploads `SermonForge-Setup.dmg` + `latest-mac.yml` to the GitHub Release. (No packaged-smoke step on macOS today — that gate is Windows-only.)
 6. **On failure or cancel:** a second diagnostic step reruns `notarytool submit --verbose` directly and uploads the raw log as artifact `notarytool-diagnostic` (7-day retention) — that's how you debug when `electron-notarize` swallows the cause.
 
 **Publish target** (both jobs): `github.com/teamofoxen/sermonforge/releases/v<X.Y.Z>` — configured in `package.json` `build.publish` (`provider: github`, `owner: teamofoxen`, `repo: sermonforge`).
 
 **If it breaks here:**
 - Tag pushed but no CI run → tag name doesn't match `v*` (e.g. `1.0.1` not `v1.0.1`).
-- Windows job fails → typically `npm install` or NSIS step. Windows cert is intentionally absent today; SmartScreen warning on first install is expected.
+- Both platform jobs show as skipped → the `gates` job failed; open its log for the failing step. Nothing packages until the tagged commit passes every gate.
+- Windows job fails → typically `npm ci`, the packaged smoke (the `SF_SMOKE_RESULT` line in the step log names what failed; nothing was published), or the NSIS step. Windows cert is intentionally absent today; SmartScreen warning on first install is expected.
 - Mac fails before signing → `.icns` path, vite build error.
 - Mac fails at signing → check the diagnostic step output: `.p12` hash, password length, OpenSSL probe. Likely `MAC_CSC_LINK` / `MAC_CSC_KEY_PASSWORD` rotation or OpenSSL 3 vs Apple Keychain `.p12` mismatch (regenerate with `-legacy`).
 - Mac fails at notarization → check `notarytool-diagnostic` artifact. Usually `APPLE_API_KEY_BASE64`, `APPLE_API_KEY_ID`, or `APPLE_API_ISSUER` mismatch, or pending Apple Developer agreement returning HTTP 403.
@@ -312,19 +321,21 @@ GitHub auto-aliases the most recent **published** release as `releases/latest/`.
 
 **Owned by:** [`electron/updater.js`](../../electron/updater.js) (uses `electron-updater`).
 
-Activates only in packaged builds (`isPackaged` check from `electron/config.js`). In dev or any unpackaged run, it's a no-op.
+Activates only in packaged builds that carry the CI release-channel stamp — `isPackaged` (from `electron/config.js`) **and** `sfReleaseChannel: "stable"` in `package.json`, stamped by `build.yml` and never present in a local `npm run build` (2026-07-16). In dev, any unpackaged run, or an unstamped local build, the background check is a no-op (`app.log`: `[updater] disabled — local build`).
 
 On launch, after a 3-second delay:
 1. `autoUpdater.checkForUpdates()` polls the configured GitHub repo for `latest.yml` (Win) or `latest-mac.yml` (Mac).
 2. If a newer version exists, downloads in the background (`autoDownload: true`).
-3. On `update-downloaded`, shows a dialog: **Restart Now / Later**.
-4. If user picks Later (or never sees the dialog), `autoInstallOnAppQuit: true` applies the update on next quit.
+3. On `update-downloaded`, main pushes `updater-status` to the renderer, and the sidebar ([`src/components/Sidebar.jsx`](../../src/components/Sidebar.jsx)) shows a quiet, dismissible line with a **Restart now** affordance — no dialog, nothing steals focus. (The renderer also pulls the status on mount, covering a download that finishes before React subscribes.)
+4. **Restart now** routes through main's `before-quit` flush — debounced edits save first — then installs and relaunches. Otherwise (dismissed, or never clicked), `autoInstallOnAppQuit: true` applies the update on the next quit.
 
-All updater events log to `app.log` ([`electron/logger.js`](../../electron/logger.js)) — last 50 lines auto-attach to feedback bug reports.
+The manual path — Help → **Check for Updates…** — never stays silent: dev run, unstamped local build, downloaded-and-waiting, up to date, and check-failed each get a plain answer, parented to the main window.
+
+All updater events log to `app.log` ([`electron/logger.js`](../../electron/logger.js)) — local-only; no part of it is attached to anything outbound (see Step 7).
 
 **If it breaks here:**
 - User reports they didn't get the update → check `app.log` for `[updater]` entries. Common causes: not on a packaged build, a local build without the `sfReleaseChannel` stamp (log shows `[updater] disabled — local build`; only CI-published builds auto-update, since 2026-07-16), `latest.yml` malformed (rare), GitHub Releases unreachable, machine offline at every launch since the release.
-- Update downloads but never installs → `quitAndInstall` was blocked; check for "Restart Now" dialog log and whether the user clicked Later then never quit.
+- Update downloads but never installs → check `app.log` for `[updater] Update downloaded: <version>`. The sidebar line is passive — install rides the next full quit (`autoInstallOnAppQuit`), so the usual cause is the app never actually quitting between sessions. If **Restart now** was clicked and nothing happened, the `before-quit` path blocked the quit; look for flush/close errors logged right after the click.
 
 ### Step 5 — New users download from the website
 
