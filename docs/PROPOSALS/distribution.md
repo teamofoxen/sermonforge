@@ -2,10 +2,22 @@
 
 > **Status: OPERATIONAL — the pipeline this proposal designed is live.** First public
 > release `v1.0.0` shipped 2026-05-07 (Windows NSIS installer + signed/notarized macOS
-> DMG); latest release `v1.1.0` shipped 2026-07-01 with the full pipeline re-exercised
-> clean end-to-end. GitHub Actions builds both installers on every `v*` tag and
-> publishes to GitHub Releases; `electron-updater` delivers updates to installed users
-> automatically. **Section 14 (Release Pipeline) is the current operational reference,
+> DMG). Latest release: **`v1.2.1`, 2026-07-20**.
+>
+> **Two defects escaped this pipeline and are recorded here rather than tidied away.**
+> (a) Every universal DMG from `v1.0.0` through `v1.2.0` carried an **arm64**
+> `better_sqlite3.node` inside its **Intel** half, so the app crashed at boot on every
+> Intel Mac. `v1.2.1` shipped the corrected binaries; `USE_HARD_LINKS=false` plus the
+> `afterPack` architecture gate now make that class unshippable, and a macOS runtime
+> smoke launches the packaged app on an Intel runner before a release can go public.
+> (b) macOS auto-update **never worked in any release up to and including `v1.2.1`** —
+> every published `latest-mac.yml` listed only the DMG, and `electron-updater` requires
+> a ZIP. The ZIP updater payload was added 2026-07-20; the first release carrying it is
+> the first one Macs can actually update to.
+>
+> GitHub Actions builds both installers on every stable `vX.Y.Z` tag, publishes them
+> into a **draft** release, and makes that release public only after a completeness
+> check passes. **Section 14 (Release Pipeline) is the current operational reference,
 > and [`docs/REFERENCE/release-smoke.md`](../REFERENCE/release-smoke.md) is the current
 > smoke-test source. Sections 1–13 are the original 2026-04-28 proposal, retained as
 > rationale and history** — where an older section and Section 14 disagree, Section 14
@@ -279,15 +291,18 @@ Three jobs run on GitHub-hosted runners. Ross's machine is not involved.
 5. `npx vite build` → `dist/`.
 6. `npx electron-builder --win --publish never` → packages the installer; nothing uploaded yet.
 7. Packaged smoke: `node scripts/packaged-smoke.cjs release/win-unpacked` — the actual unpacked app must launch, initialize/migrate its schema, load the preload bridge, render the primary window, and exit cleanly, or the job stops here with nothing published.
-8. `npx electron-builder --win --publish always` → uploads `SermonForge-Setup.exe`, `SermonForge-Setup.exe.blockmap`, and `latest.yml` to the GitHub Release for this tag (auth: `secrets.GITHUB_TOKEN`). The package → smoke → publish order is asserted by [`tests/contracts/release-pipeline.test.ts`](../../tests/contracts/release-pipeline.test.ts).
+8. `npx electron-builder --win --prepackaged release/win-unpacked --publish always` → uploads `SermonForge-Setup.exe`, `SermonForge-Setup.exe.blockmap`, and `latest.yml` into the **draft** release for this tag (auth: `secrets.GITHUB_TOKEN`). `--prepackaged` points electron-builder at the exact directory the smoke just exercised (2026-07-20): the previous second full `electron-builder --win` re-fetched prebuilt natives and rebuilt the installer *after* the smoke passed, so the published bytes were never provably the smoked bytes. The package → smoke → publish order, and the `--prepackaged` provenance, are asserted per-job by [`tests/contracts/release-pipeline.test.ts`](../../tests/contracts/release-pipeline.test.ts).
 
 **`build-macos`** (`runs-on: macos-latest`, after `gates`):
 1. Checkout, Node 24, the same version + `sfReleaseChannel` stamp as Windows, `npm ci` (no build-time `.env` — same removal as Windows step 4).
 2. `iconutil -c icns brand/icons/sermonforge.iconset -o build/icon.icns` — generate `.icns` at build time from the iconset. Then `npx vite build` → `dist/`.
 3. **Diagnostic step** (always runs): probes the `.p12` — password length, character categories, SHA-256 hash, OpenSSL decrypt test (with and without MAC verify). Lets you tell at a glance whether secret rotation broke the cert.
 4. Decode App Store Connect API key from `secrets.APPLE_API_KEY_BASE64` to `~/private_keys/AuthKey.p8`; export `APPLE_API_KEY=$HOME/private_keys/AuthKey.p8`.
-5. `npx electron-builder --mac --publish always` with `CSC_LINK`, `CSC_KEY_PASSWORD`, `APPLE_API_KEY_ID`, `APPLE_API_ISSUER` — and `USE_HARD_LINKS: "false"` (2026-07-20). Hard links were the mechanism behind the v1.0.0–v1.2.0 Intel-half corruption: electron-builder links `node_modules` files into the packaged x64 half, then the arm64 rebuild truncate-writes `better_sqlite3.node` in place (same filename both arches), silently rewriting the file inside the already-packaged x64 app — so every shipped DMG crashed at boot on Intel Macs while the build log stayed clean. Real copies make the halves independent. Hard timeout 30 min. Builds both arch halves, assembles the universal app, then the **arch gate** ([`scripts/mac-arch-gate.cjs`](../../scripts/mac-arch-gate.cjs), wired as `build.afterPack` in `package.json`) proves the assembled app **before signing**: every Mach-O `.node`/`.dylib` in `app-x64.asar.unpacked` is x86_64 and in `app-arm64.asar.unpacked` is arm64 (fat binaries pass; foreign-arch-labeled multi-arch layouts like onnxruntime's are skipped), `better_sqlite3.node` exists in both halves, and the main executable is fat. Any finding throws, so nothing signs, notarizes, or publishes. Then signs (Developer ID Application), notarizes via `notarytool`, staples, uploads `SermonForge-Setup.dmg` + `latest-mac.yml` to the GitHub Release. (No launch-smoke step on macOS — the packaged smoke is Windows-only; the arch gate is the Mac-side binary-integrity gate.)
+5. `npx electron-builder --mac --publish always` with `CSC_LINK`, `CSC_KEY_PASSWORD`, `APPLE_API_KEY_ID`, `APPLE_API_ISSUER` — and `USE_HARD_LINKS: "false"` (2026-07-20). Hard links were the mechanism behind the v1.0.0–v1.2.0 Intel-half corruption: electron-builder links `node_modules` files into the packaged x64 half, then the arm64 rebuild truncate-writes `better_sqlite3.node` in place (same filename both arches), silently rewriting the file inside the already-packaged x64 app — so every shipped DMG crashed at boot on Intel Macs while the build log stayed clean. Real copies make the halves independent. Hard timeout 30 min. Builds both arch halves, assembles the universal app, then the **arch gate** ([`scripts/mac-arch-gate.cjs`](../../scripts/mac-arch-gate.cjs), wired as `build.afterPack` in `package.json`) proves the assembled app **before signing**: every Mach-O `.node`/`.dylib` in `app-x64.asar.unpacked` is x86_64 and in `app-arm64.asar.unpacked` is arm64 (fat binaries pass **only if they actually carry that half's architecture** — the fat header is parsed, not trusted; foreign-arch-labeled multi-arch layouts like onnxruntime's are skipped, but a binary whose bytes disagree with the architecture its own path advertises fails), `better_sqlite3.node` exists in both halves, and the main executable is fat. Any finding throws, so nothing signs, notarizes, or publishes. Then signs (Developer ID Application), notarizes via `notarytool`, staples, and uploads `SermonForge-Setup.dmg` (+ `.blockmap`), **`SermonForge-Setup.zip` (+ `.blockmap`) — the updater payload**, and `latest-mac.yml` into the **draft** release. The DMG is what a human downloads; the ZIP is what `electron-updater` can actually apply (see Step 4). A separate job then LAUNCHES the packaged app on both architectures — see `smoke-macos` below.
 6. **On failure or cancel:** a second diagnostic step reruns `notarytool submit --verbose` directly and uploads the raw log as artifact `notarytool-diagnostic` (7-day retention) — that's how you debug when `electron-notarize` swallows the cause.
+
+**`smoke-macos`** (matrix: `macos-15-intel` = x64, `macos-latest` = arm64; after `gates`) — added 2026-07-20:
+Packages the universal app **unsigned and unpublished**, requires the `[mac-arch-gate] PASS` marker, then LAUNCHES it with `scripts/packaged-smoke.cjs`: the app must start, initialize its schema through `better_sqlite3`, load the preload bridge, render real application DOM, and exit cleanly. On the Intel runner macOS executes the x64 slice and loads the x64 half's native module — exactly the combination that shipped broken in `v1.0.0`–`v1.2.0`, which no static check could have caught at runtime and no human noticed for 74 days. Runner architectures are taken from `actions/runner-images`: **`macos-latest` is arm64**, so Intel needs its own label. Because it needs no credential it also runs on `workflow_dispatch`. `finalize-release` depends on it, so a macOS build that does not start leaves the release an unpublished draft.
 
 **Publish target** (both jobs): `github.com/teamofoxen/sermonforge/releases/v<X.Y.Z>` — configured in `package.json` `build.publish` (`provider: github`, `owner: teamofoxen`, `repo: sermonforge`).
 
@@ -304,18 +319,64 @@ Three jobs run on GitHub-hosted runners. Ross's machine is not involved.
 
 **Owned by:** GitHub Releases at `github.com/teamofoxen/sermonforge/releases`.
 
-Each tag produces a release containing:
-- `SermonForge-Setup.exe` + `.blockmap` (Windows installer)
-- `SermonForge-Setup.dmg` (Mac universal, signed + notarized)
-- `latest.yml` (Windows auto-update feed)
-- `latest-mac.yml` (Mac auto-update feed)
+Each stable tag produces a release containing **eight** assets. The expected set is
+DERIVED from the packaging contract in `package.json` by
+[`scripts/release-manifest.cjs`](../../scripts/release-manifest.cjs) — not written down
+as a number, because an *assumed* six-asset manifest is precisely what let the missing
+macOS updater payload go unnoticed for four releases:
 
-GitHub auto-aliases the most recent **published** release as `releases/latest/`. The `releases/latest/download/<filename>` URL pattern resolves to whichever release currently holds that alias.
+| Asset | Role |
+|---|---|
+| `SermonForge-Setup.exe` | Windows installer **and** updater payload |
+| `SermonForge-Setup.exe.blockmap` | differential-update map |
+| `latest.yml` | Windows update feed |
+| `SermonForge-Setup.dmg` | macOS installer — what the website links to |
+| `SermonForge-Setup.dmg.blockmap` | differential-update map |
+| `SermonForge-Setup.zip` | **macOS updater payload** — what `electron-updater` applies |
+| `SermonForge-Setup.zip.blockmap` | differential-update map |
+| `latest-mac.yml` | macOS update feed |
+
+Run `node scripts/release-manifest.cjs --print` to see the current derived set.
+
+**Publication is draft-first (2026-07-20).** `build.publish.releaseType` is `draft`, so
+both platform jobs upload into a release nobody can see. A `finalize-release` job that
+`needs` both platform builds *and* the macOS runtime smoke then runs
+`node scripts/release-manifest.cjs --tag <tag>`, which checks every derived artifact for
+presence and non-zero size, the feed version against the tag, each feed entry's declared
+size against the published asset, **the real SHA-512 of the downloaded bytes**, the
+presence of a `.zip` in `latest-mac.yml`, and the filenames the website hardcodes. Only
+if all of that passes does it flip the release public — the single draft→public
+transition in the whole pipeline — and then verify the live
+`releases/latest/download/...` URLs return 200.
+
+This replaced a model in which the release was created already-published, so it went
+public the moment the **first** platform uploaded. Every release had a window where the
+website's hardcoded Mac download 404'd (even the clean `v1.2.1`: ~2 minutes; `v1.2.0`:
+~27 hours). GitHub auto-aliases the most recent **published** release as
+`releases/latest/`, so an incomplete release captured that alias too.
 
 **If it breaks here:**
-- CI succeeded but release is empty → `--publish always` got a token error; re-check `secrets.GITHUB_TOKEN` permissions.
-- Release exists but `releases/latest/download/...` 404s → the release is still in draft state. Publish it.
-- New tag uploaded but `releases/latest/` still points to the old one → newer release was marked as pre-release. Toggle off.
+- **CI green but the release is empty, or missing one platform's assets** → the most
+  likely cause is NOT a token error. `electron-publish`'s GitHub publisher refuses to
+  touch a release that has been **published for more than two hours**, logs
+  `skipped publishing`, and **exits successfully**. This is what happened on 2026-07-18
+  (`v1.2.0`): a green macOS job uploaded nothing, and the release sat live and
+  Mac-less for ~27 hours. Draft-first prevents it — drafts always accept uploads — so
+  if you see this on a draft, check the job log for the real upload error instead.
+  The historical recovery, for reference: `gh release edit <tag> --draft=true`, re-run
+  the failed job, then let the finalizer publish it. Setting `EP_GH_IGNORE_TIME=true`
+  also bypasses the two-hour refusal.
+- **The finalizer failed** → read its log; it names every missing or disagreeing
+  artifact. The release stays a draft and nothing reached a user. Fix the cause and
+  re-run the failed job — do NOT publish the draft by hand, because that is the check
+  you would be skipping.
+- **A release is stuck as a draft** → that is the safe state, not an incident. Nothing
+  is public until the finalizer says so.
+- **Release exists and `releases/latest/download/...` 404s** → the finalizer's own URL
+  check covers this; if it passed and a URL still 404s, the release was later
+  unpublished or the asset was deleted by hand.
+- **New tag uploaded but `releases/latest/` still points at the old one** → the newer
+  release is still a draft (finalizer failed or was skipped) or was marked pre-release.
 
 ### Step 4 — Existing users auto-update
 
@@ -325,16 +386,20 @@ Activates only in packaged builds that carry the CI release-channel stamp — `i
 
 On launch, after a 3-second delay:
 1. `autoUpdater.checkForUpdates()` polls the configured GitHub repo for `latest.yml` (Win) or `latest-mac.yml` (Mac).
-2. If a newer version exists, downloads in the background (`autoDownload: true`).
+2. If a newer version exists, downloads in the background (`autoDownload: true`). **On macOS the download is the ZIP, never the DMG.** `electron-updater`'s `MacUpdater` calls `findFile(files, "zip", ["pkg","dmg"])` and throws `ERR_UPDATER_ZIP_FILE_NOT_FOUND` if the feed lists no ZIP — which is why macOS auto-update could never complete in any release up to `v1.2.1`, whose feeds were dmg-only. The DMG remains the human installer; the ZIP exists solely so the updater has something it can apply.
 3. On `update-downloaded`, main pushes `updater-status` to the renderer, and the sidebar ([`src/components/Sidebar.jsx`](../../src/components/Sidebar.jsx)) shows a quiet, dismissible line with a **Restart now** affordance — no dialog, nothing steals focus. (The renderer also pulls the status on mount, covering a download that finishes before React subscribes.)
 4. **Restart now** routes through main's `before-quit` flush — debounced edits save first — then installs and relaunches. Otherwise (dismissed, or never clicked), `autoInstallOnAppQuit: true` applies the update on the next quit.
 
-The manual path — Help → **Check for Updates…** — never stays silent: dev run, unstamped local build, downloaded-and-waiting, up to date, and check-failed each get a plain answer, parented to the main window.
+The manual path — Help → **Check for Updates…** — never stays silent, and (since 2026-07-20) never claims a step that has not happened. It branches on the updater's own `isUpdateAvailable` verdict rather than a version comparison, and on real recorded state: dev run, unstamped local build, **downloading**, downloaded-and-waiting, up to date, and check-failed each get a plain answer, parented to the main window. It previously announced *"A new version is downloading"* off a bare `latest !== current` compare — untrue during a rollback or draft window, and untrue on every Mac, where the download threw before a byte moved. Where a download may not complete, the copy names the manual route (`teamofoxen.com/sermonforge`) so the pastor is never left believing an install is guaranteed.
+
+Updater state is recorded only by the event that proves it — `available`, `downloading`, `downloaded`, `error` — so no surface can report a step the updater has not reached.
 
 All updater events log to `app.log` ([`electron/logger.js`](../../electron/logger.js)) — local-only; no part of it is attached to anything outbound (see Step 7).
 
 **If it breaks here:**
-- User reports they didn't get the update → check `app.log` for `[updater]` entries. Common causes: not on a packaged build, a local build without the `sfReleaseChannel` stamp (log shows `[updater] disabled — local build`; only CI-published builds auto-update, since 2026-07-16), `latest.yml` malformed (rare), GitHub Releases unreachable, machine offline at every launch since the release.
+- User reports they didn't get the update → check `app.log` for `[updater]` entries. Common causes: not on a packaged build, a local build without the `sfReleaseChannel` stamp (log shows `[updater] disabled — local build`; only CI-published builds auto-update, since 2026-07-16), feed malformed (rare), GitHub Releases unreachable, machine offline at every launch since the release.
+- **Mac user sees `Update available` then `Update failed` in `app.log`** → the release's `latest-mac.yml` lists no `.zip`. Every release through `v1.2.1` was in this state. The finalizer now refuses to publish such a release; if you see it, the release predates 2026-07-20 and the user must install the current DMG by hand from the website.
+- Log shows `[updater] disabled — SF_SMOKE run` → expected; the packaged release smoke deliberately runs with no updater, so the release gate carries no dependency on GitHub being reachable.
 - Update downloads but never installs → check `app.log` for `[updater] Update downloaded: <version>`. The sidebar line is passive — install rides the next full quit (`autoInstallOnAppQuit`), so the usual cause is the app never actually quitting between sessions. If **Restart now** was clicked and nothing happened, the `before-quit` path blocked the quit; look for flush/close errors logged right after the click.
 
 ### Step 5 — New users download from the website
@@ -349,7 +414,8 @@ These auto-resolve to the current latest release. **Cutting a release does not r
 
 **If it breaks here:**
 - Button 404s → the release is in draft, or the asset filename changed (electron-builder config drift).
-- Mac button missing entirely → page edit reverted; re-add per the spec in this document's Section 4.2 + Section 8.
+- Mac button missing entirely → page edit reverted. Re-add the anchor using the two URLs listed immediately above in this Step — they are the spec. (This used to point at Sections 4.2 and 8, neither of which contains a button spec.)
+- Filenames must match `package.json` `build.win.artifactName` / `build.mac.artifactName`; `tests/contracts/release-pipeline.test.ts` pins both, and the release finalizer re-checks the live URLs, so a rename fails the release instead of silently 404ing every download button.
 
 ### Step 6 — First run on the user's machine
 
@@ -358,12 +424,13 @@ These auto-resolve to the current latest release. **Cutting a release does not r
 On first launch (no stored keys):
 1. SetupScreen prompts for an optional ESV API key (`api.esv.org`) — skippable.
 2. Q9 telemetry consent toggle (BTI Phase 1, see `bti-build-mvp.md`).
-3. Keys persist to OS keychain via `safeStorage`. Screen never shows again.
+3. Keys persist to OS keychain via `safeStorage` — **no plaintext fallback**; if the keystore refuses, the key is not stored at all and the screen says so in platform-neutral wording, offering **Continue without the key** so the pastor is not trapped on the screen (previously the only exit was clearing the key field, which nothing told him). Skip never clobbers an already-stored key.
+4. The screen stops appearing once the telemetry-consent settings row exists — see the gate note below.
 
 Subsequent launches read from `safeStorage` (prod) or `.env` (dev — `ELECTRON_DEV=1`). Dev/prod gatekeeping in [`electron/config.js`](../../electron/config.js).
 
 **If it breaks here:**
-- SetupScreen never appears → check `userData/sf-esv.enc` and `bti_telemetry_enabled` settings; either presence skips the screen.
+- SetupScreen never appears → the gate is the **settings row alone**: `app-get-key-status` runs `SELECT value FROM settings WHERE key = 'bti_telemetry_enabled'` and returns `{configured: Boolean(row)}`. The ESV key file is **never consulted**. (This document previously said either the key file or the setting would skip the screen; that was wrong, and would mislead anyone debugging a reset database whose key file survived.) To make the screen reappear, clear that settings row.
 - ESV passages don't render in workspace → key was rejected at save time, or `safeStorage` returned encrypted bytes the OS can no longer decrypt (machine restored, user profile changed).
 
 ### Step 7 — Closing the loop
@@ -371,8 +438,12 @@ Subsequent launches read from `safeStorage` (prod) or `.env` (dev — `ELECTRON_
 **Owned by:** [`electron/logger.js`](../../electron/logger.js) (`app.log`) + the BTI telemetry/feedback channel (`electron/telemetry/`).
 
 When something breaks for a user:
-1. Errors land in `app.log` (writable user-data path). The log is local-only — no part of it is attached to anything outbound (see [`docs/REFERENCE/privacy.md`](../REFERENCE/privacy.md)).
+1. Errors land in `app.log` under `userData/logs` (`logs-dev` in dev). The log is local-only — no part of it is attached to anything outbound (see [`docs/REFERENCE/privacy.md`](../REFERENCE/privacy.md)). **Help → Open Log Folder** takes the pastor there; **Help → Open Data Folder** opens `userData/data`, which does NOT contain the log, so do not send anyone there for it.
 2. `process.on('uncaughtException')` writes to the same log before exit; a `crash` telemetry event (short error message, ≤500 chars, never log lines or sermon content) reaches the developer unless the pastor opted out.
+3. **Deliberate feedback is not crash telemetry, and the UI now says which happened.** `sendImmediate` reports `{ok, queued, reason}` and both surfaces render the truth via [`src/utils/feedbackOutcome.js`](../../src/utils/feedbackOutcome.js): *sent*, *queued* (offline — stored locally, sends later), *off* (telemetry disabled — the note was **not** kept; the copy gives the support email), *failed*. Until 2026-07-20 both surfaces printed "Sent. Thank you" unconditionally, so an opted-out pastor's bug reports were destroyed while the app thanked him for them.
+4. Anything queued for retry is drained across sessions by [`electron/telemetry/queueSweep.js`](../../electron/telemetry/queueSweep.js) — consent re-checked before every send, bounded to 20 files and 30 days, malformed records quarantined beside the queue. Before this, queue files were per-session and only the current session's file was ever read, so anything queued at exit was stranded forever.
+
+**Before the app boots**, none of the above exists. A pastor whose installer or app will not start reaches the developer through the **Report a problem** link on `teamofoxen.com/sermonforge` (the repository issue tracker). That route was added 2026-07-20: the page previously had no contact of any kind, which is why the Intel boot crash went unreported for 74 days and was found only by an out-of-band field report.
 3. User clicks a feedback flag in-app (workspace writing surface or planner topbar) or "Send feedback…" in the sidebar → the note goes to the developer-run BTI Cloudflare Worker. (The original GitHub-Issues path via `GITHUB_FEEDBACK_TOKEN` was removed in public-launch hardening, 2026-06-09.)
 
 This closes the pipeline: ship → install → run → break → the signal surfaces without depending on the user copying a console.

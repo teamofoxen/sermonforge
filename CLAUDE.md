@@ -93,12 +93,21 @@ stop condition.
 
 ## Commit gates
 
-`scripts/preflight.sh` runs from the `/end-session` skill before every commit. It enforces:
+`scripts/preflight.sh` runs from the `/end-session` skill before every commit. Two of
+its checks are **enforced** (exit 1, the commit stops) and two are **advisory** (printed,
+exit 0 — they rely on you reading them). Know which is which:
 
-- **Sweep required** when the staged diff touches contract-sensitive paths (see [`scripts/preflight.sh`](scripts/preflight.sh) for the exact list — kept in one place, not two).
+**Enforced — preflight exits 1:**
+- **Nothing to commit** — a clean working tree.
 - **Drift check** via [`scripts/drift-check.sh`](scripts/drift-check.sh) (broken refs, stale skill mentions, IPC/schema reference sanity).
+
+**Advisory — printed as `ADVISORY:`, preflight still exits 0:**
+- **Sweep required** when the staged diff touches contract-sensitive paths (see [`scripts/preflight.sh`](scripts/preflight.sh) for the exact list — kept in one place, not two).
 - **Staging hygiene** — no `git add .`-shaped patterns reaching the index.
 
-If preflight fails, the commit does not proceed. Do not bypass it; fix the finding.
+If preflight exits 1 the commit does not proceed; do not bypass it, fix the finding. If
+it prints `PASS WITH ADVISORIES`, nothing has stopped you — read them and act. (This
+section previously described all four as enforced, which was wrong in the two cases
+where it mattered most.)
 
 When `/sweep-the-house` runs and emits FAIL or WARN, stop and resolve before continuing. PASS continues to `/end-session`.

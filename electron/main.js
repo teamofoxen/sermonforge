@@ -1806,8 +1806,15 @@ ipcMain.handle("app-save-api-key", async (_, keys) => {
     console.error("[app-save-api-key]", e.message);
     return {
       success: false,
+      // `reason` lets the setup screen offer a way forward. Without it the
+      // pastor was trapped: the primary button only says "Skip" when the key
+      // box is EMPTY, so after this failure the sole escape was clearing the
+      // field — and nothing on screen said so (2026-07-20 audit, lead 5).
+      reason: "keystore",
       error:
-        "Windows couldn't store the key securely on this computer, so it wasn't saved. " +
+        // Platform-neutral: this string rendered the word "Windows" verbatim
+        // on macOS (audit L10).
+        "This computer couldn't store the key securely, so it wasn't saved. " +
         "You can still use SermonForge — Bible passages just won't load automatically.",
     };
   }
@@ -2076,9 +2083,30 @@ if (!app.requestSingleInstanceLock()) {
               mainWindow.once("show", () => { clearTimeout(timer); resolve(true); });
             });
             const rendered = visible && !mainWindow.webContents.isCrashed();
+            // A visible window is not a working app. Everything above is
+            // satisfied by a BLANK window: window.electronAPI is exposed by
+            // the PRELOAD, not the app bundle, and did-finish-load fires even
+            // when the renderer bundle throws before React mounts. So the
+            // smoke could pass — and a release publish — on a white screen.
+            //
+            // Probe the app's OWN DOM: #root must actually carry rendered
+            // content. Polled, because did-finish-load can precede React's
+            // first paint; bounded, so a renderer that never mounts fails
+            // the smoke instead of hanging it.
+            const mounted = await mainWindow.webContents.executeJavaScript(`
+              new Promise((resolve) => {
+                const deadline = Date.now() + 15000;
+                (function check() {
+                  const root = document.getElementById("root");
+                  if (root && root.childElementCount > 0 && (root.innerText || "").trim().length > 0) return resolve(true);
+                  if (Date.now() > deadline) return resolve(false);
+                  setTimeout(check, 250);
+                })();
+              })
+            `);
             console.log(
-              `SF_SMOKE_RESULT ok=${Boolean(schemaRow && preloadOk && rendered)} ` +
-              `schema=${schemaRow?.value ?? "none"} preload=${preloadOk} rendered=${rendered}`
+              `SF_SMOKE_RESULT ok=${Boolean(schemaRow && preloadOk && rendered && mounted)} ` +
+              `schema=${schemaRow?.value ?? "none"} preload=${preloadOk} rendered=${rendered} mounted=${mounted}`
             );
           } catch (err) {
             console.log(`SF_SMOKE_RESULT ok=false error=${String(err?.message || err).slice(0, 200)}`);

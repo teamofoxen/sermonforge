@@ -7,10 +7,16 @@ not return (`docs/CORE.md`, Process Contract #5).
 
 ## Setup (development)
 
-Node **>= 20** is required (`package.json` `engines`; CI pins the Node 20 LTS
-line for reproducible runs, and any newer major — the maintainer runs 24 —
-works for local development; the shipped app runs on Electron's own Node
-either way).
+Node **>= 24** is required (`package.json` `engines`; every CI job pins
+**Node 24**). This is not a preference — `package-lock.json` is written by
+**npm 11**, which ships with Node 24, and npm 10 (the npm bundled with Node 20
+and 22) cannot install it: `npm ci` fails outright with a missing-from-lock
+error. The shipped app runs on Electron's own bundled Node either way, so this
+constraint is about the build, not the product.
+
+`tests/contracts/release-pipeline.test.ts` asserts that this line, the
+`engines.node` field, and every workflow's `node-version` pin agree — so this
+paragraph cannot drift away from what CI actually does.
 
 1. Install dependencies:
 

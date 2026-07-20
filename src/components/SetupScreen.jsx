@@ -3,6 +3,7 @@ import { saveApiKeys, setSetting, openExternal } from "../db/database";
 import mapError from "../utils/mapError";
 import InlineError from "./InlineError";
 import PrimaryButton from "./primitives/PrimaryButton";
+import SecondaryButton from "./primitives/SecondaryButton";
 import TextButton from "./primitives/TextButton";
 import KeyInput from "./primitives/KeyInput";
 
@@ -44,6 +45,11 @@ export default function SetupScreen({ onComplete }) {
   // didn't answer) — the screen pauses on an honest note + Continue instead
   // of silently proceeding.
   const [unverifiedNote, setUnverifiedNote] = useState(false);
+  // Set when the OS keystore refused to store the key. The primary button
+  // only offers "Skip" while the key box is EMPTY, so without an explicit
+  // way out the pastor is stuck on this screen with a key he typed and no
+  // stated escape (2026-07-20 audit, lead 5).
+  const [keystoreFailed, setKeystoreFailed] = useState(false);
 
   async function finishSetup() {
     try {
@@ -68,6 +74,7 @@ export default function SetupScreen({ onComplete }) {
         await finishSetup();
       } else {
         setError(result?.error || "Failed to save.");
+        if (result?.reason === "keystore") setKeystoreFailed(true);
         setSaving(false);
       }
     } catch (e) {
@@ -148,6 +155,15 @@ export default function SetupScreen({ onComplete }) {
           <div style={{ marginTop: "16px" }}>
             <InlineError onDismiss={() => setError(null)}>{error}</InlineError>
           </div>
+        )}
+
+        {keystoreFailed && (
+          <SecondaryButton
+            onClick={finishSetup}
+            style={{ width: "100%", marginTop: "12px" }}
+          >
+            Continue without the key
+          </SecondaryButton>
         )}
 
         {unverifiedNote ? (

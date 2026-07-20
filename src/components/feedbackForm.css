@@ -130,4 +130,19 @@
   font-size: 14px;
   color: var(--sage);
   font-style: italic;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+/* The "what happened to your note" line. Shown when a note was queued
+   rather than sent, or discarded — so it must read as plain information,
+   not as the sage-green success voice above it. */
+.feedback-form-confirm-detail {
+  font-style: normal;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  max-width: 34ch;
 }

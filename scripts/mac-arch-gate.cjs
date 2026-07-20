@@ -44,26 +44,59 @@ const SLICES = [
   { dir: "app-arm64.asar.unpacked", want: "arm64", foreign: ["x64", "x86_64", "x86-64"] },
 ];
 
-// Reads enough of a Mach-O header to classify the file.
-// Returns "x86_64" | "arm64" | "universal" | "macho-other" | null (not Mach-O).
-function machOArch(file) {
-  const buf = Buffer.alloc(8);
+const CPU_X86_64 = 0x01000007;
+const CPU_ARM64 = 0x0100000c;
+
+function archName(cputype) {
+  if (cputype === CPU_X86_64) return "x86_64";
+  if (cputype === CPU_ARM64) return "arm64";
+  return `macho-other(0x${cputype.toString(16)})`;
+}
+
+// Reads a Mach-O header and reports WHICH architectures the file actually
+// contains. Returns null for non-Mach-O files.
+//
+//   { fat: false, arches: ["arm64"] }
+//   { fat: true,  arches: ["x86_64", "arm64"] }
+//
+// Fat headers are parsed rather than trusted. The previous version treated
+// any file starting with FAT magic as "universal" and passed it everywhere,
+// so a fat binary carrying only ONE slice satisfied both halves and the
+// universal main-executable check — the very thing this gate exists to
+// disprove. Fat headers are big-endian; the 64-bit variant (0xcafebabf) has
+// 32-byte entries with 64-bit offsets, the 32-bit variant 20-byte entries.
+function machOInfo(file) {
+  const head = Buffer.alloc(8);
   const fd = fs.openSync(file, "r");
-  let n;
   try {
-    n = fs.readSync(fd, buf, 0, 8, 0);
+    if (fs.readSync(fd, head, 0, 8, 0) < 8) return null;
+
+    const magicBE = head.readUInt32BE(0);
+    const isFat32 = magicBE === 0xcafebabe;
+    const isFat64 = magicBE === 0xcafebabf;
+
+    if (isFat32 || isFat64) {
+      const count = head.readUInt32BE(4);
+      // A plausibility bound: real universal binaries carry a handful of
+      // slices. A wild count means this is not actually a fat Mach-O
+      // (0xcafebabe is also Java class-file magic).
+      if (count === 0 || count > 16) return null;
+      const entrySize = isFat64 ? 32 : 20;
+      const table = Buffer.alloc(count * entrySize);
+      if (fs.readSync(fd, table, 0, table.length, 8) < table.length) return null;
+      const arches = [];
+      for (let i = 0; i < count; i += 1) {
+        arches.push(archName(table.readUInt32BE(i * entrySize)));
+      }
+      return { fat: true, arches };
+    }
+
+    const magicLE = head.readUInt32LE(0);
+    if (magicLE !== 0xfeedfacf && magicLE !== 0xfeedface) return null;
+    return { fat: false, arches: [archName(head.readUInt32LE(4))] };
   } finally {
     fs.closeSync(fd);
   }
-  if (n < 8) return null;
-  const be = buf.readUInt32BE(0);
-  if (be === 0xcafebabe || be === 0xcafebabf) return "universal";
-  const le = buf.readUInt32LE(0);
-  if (le !== 0xfeedfacf && le !== 0xfeedface) return null;
-  const cputype = buf.readUInt32LE(4);
-  if (cputype === 0x01000007) return "x86_64";
-  if (cputype === 0x0100000c) return "arm64";
-  return "macho-other";
 }
 
 function* walkFiles(dir) {
@@ -93,15 +126,34 @@ function checkApp(appPath) {
     for (const file of walkFiles(root)) {
       if (!/\.(node|dylib)$/i.test(file)) continue;
       const rel = path.relative(root, file).split(path.sep).join("/");
-      if (slice.foreign.some((t) => rel.toLowerCase().includes(t))) {
+      const info = machOInfo(file);
+      if (info === null) continue; // not Mach-O (linux/win binary in a multi-platform package)
+
+      // Paths naming a FOREIGN arch (e.g. onnxruntime's darwin/arm64 tree
+      // inside the x64 half) are runtime-selected multi-arch layouts, so
+      // they are not required to match this half. They are no longer taken
+      // purely on the word of the path, though: a binary whose bytes do not
+      // match the architecture its own path advertises is mislabelled, and
+      // a mislabelled binary is how a wrong-arch file hides from this gate.
+      const foreignLabel = slice.foreign.find((t) => rel.toLowerCase().includes(t));
+      if (foreignLabel) {
         skippedForeign += 1;
+        const claims = foreignLabel === "arm64" ? "arm64" : "x86_64";
+        if (!info.arches.includes(claims)) {
+          failures.push(
+            `${slice.dir}: path claims ${claims} but the binary contains [${info.arches.join(", ")}] — ${rel}`
+          );
+        }
         continue;
       }
-      const arch = machOArch(file);
-      if (arch === null) continue; // not Mach-O (linux/win binary in a multi-platform package)
+
       checked += 1;
-      if (arch !== slice.want && arch !== "universal") {
-        failures.push(`${slice.dir}: expected ${slice.want}, found ${arch} — ${rel}`);
+      // A fat binary satisfies this half only if it actually CARRIES this
+      // half's architecture — not merely because it is fat.
+      if (!info.arches.includes(slice.want)) {
+        failures.push(
+          `${slice.dir}: expected ${slice.want}, found [${info.arches.join(", ")}]${info.fat ? " (fat)" : ""} — ${rel}`
+        );
       }
     }
 
@@ -117,8 +169,23 @@ function checkApp(appPath) {
   const mainBinary = path.join(appPath, "Contents", "MacOS", appName);
   if (!fs.existsSync(mainBinary)) {
     failures.push(`Contents/MacOS/${appName}: main executable missing`);
-  } else if (machOArch(mainBinary) !== "universal") {
-    failures.push(`Contents/MacOS/${appName}: expected a fat (universal) binary, found ${machOArch(mainBinary)}`);
+  } else {
+    const info = machOInfo(mainBinary);
+    if (!info) {
+      failures.push(`Contents/MacOS/${appName}: not a Mach-O binary`);
+    } else if (!info.fat) {
+      failures.push(`Contents/MacOS/${appName}: expected a fat (universal) binary, found ${info.arches.join(", ")}`);
+    } else {
+      // "Fat" is not "universal". Both slices must actually be present, or
+      // one architecture launches nothing.
+      for (const want of ["x86_64", "arm64"]) {
+        if (!info.arches.includes(want)) {
+          failures.push(
+            `Contents/MacOS/${appName}: fat binary is missing the ${want} slice — carries [${info.arches.join(", ")}]`
+          );
+        }
+      }
+    }
   }
 
   return { ran: true, failures };
@@ -149,11 +216,28 @@ function findApp(dir) {
 module.exports = async function afterPack(context) {
   if (context.electronPlatformName !== "darwin") return;
   const appPath = findApp(context.appOutDir);
-  if (!appPath) return;
+  // A darwin pack that produced no single .app bundle is not a "nothing to
+  // check" case — it means the gate cannot see what is about to be signed.
+  // This used to `return` with no log line at all, so the one condition
+  // that blinds the gate completely was also its quietest.
+  if (!appPath) {
+    const found = fs.existsSync(context.appOutDir)
+      ? fs.readdirSync(context.appOutDir).filter((n) => n.endsWith(".app"))
+      : [];
+    console.error(`${TAG} FAIL — expected exactly one .app in ${context.appOutDir}, found ${found.length}: ${found.join(", ") || "(none)"}`);
+    throw new Error("mac-arch-gate: cannot locate the packaged app to verify — refusing to sign an unverified build");
+  }
   if (!report(appPath, checkApp(appPath))) {
     throw new Error("mac-arch-gate: wrong-architecture native binaries in the universal app — see log above");
   }
 };
+
+// Internals exposed for tests/contracts/mac-arch-gate.test.ts, attached to
+// the exported hook so electron-builder still receives a callable afterPack.
+// The gate only runs on macOS CI, so fixture tests are the one way its
+// failure paths get exercised at all before a release depends on them.
+module.exports.checkApp = checkApp;
+module.exports.machOInfo = machOInfo;
 
 // CLI: assert an already-built app (here a missing universal split is a failure,
 // not a skip — the caller is explicitly claiming this app should be universal).

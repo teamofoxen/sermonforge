@@ -36,7 +36,11 @@ const paths = {
   // and "SermonForge" userData paths would otherwise share a folder).
   userData: path.join(app.getPath("userData"), isPackaged ? "data" : "data-dev"),
 
-  // Crash + error log (Phase 2 — written here, attached to feedback reports)
+  // Crash + error log. LOCAL ONLY — nothing from app.log is attached to
+  // feedback reports or sent anywhere. The Phase-2 "attached to feedback
+  // reports" note was stale and contradicted the published privacy promise
+  // (2026-07-20 audit, L9); the wire payload carries no log content. Help →
+  // "Open Log Folder" is how a pastor reaches it.
   logs: path.join(app.getPath("userData"), isPackaged ? "logs" : "logs-dev"),
 
   // BTI telemetry NDJSON queue (electron/telemetry/bus.js).

@@ -2,6 +2,100 @@
 
 ---
 
+## 2026-07-20 — fix: distribution-pipeline repair (macOS auto-update, draft-first releases, enforced contracts)
+
+Answers the 2026-07-20 distribution audit (verdict FAIL). Local repairs only —
+nothing pushed, no CI triggered, no release or secret touched.
+
+**macOS auto-update has never worked, in any release.** `electron-updater`'s
+`MacUpdater` requires a `.zip` and explicitly excludes `dmg`; every published
+`latest-mac.yml` was dmg-only, so the download threw
+`ERR_UPDATER_ZIP_FILE_NOT_FOUND` before a byte moved — while the manual dialog
+told the pastor a new version was downloading. Added a `zip` target alongside
+the dmg (`artifactName` → `SermonForge-Setup.${ext}`, so the DMG filename the
+website hardcodes stays byte-identical). The DMG remains the human installer;
+the ZIP is the updater payload.
+
+**Releases are now draft-first.** Both platform jobs upload into a draft; a
+`finalize-release` job that needs both builds *and* the macOS runtime smoke
+verifies the release and performs the only draft→public transition in the
+pipeline. This closes the incomplete-public-release window (v1.2.0 sat live
+~27 hours with no macOS assets) and the >2h `skipped publishing` no-op that
+exits SUCCESS — drafts always accept uploads.
+
+**`scripts/release-manifest.cjs` derives the expected artifact set** from the
+packaging contract rather than hardcoding a count: an *assumed* six-asset
+manifest is what let the missing ZIP go unnoticed for four releases. Adding the
+zip target moved the expectation to eight on its own. It checks presence,
+non-zero size, feed/tag version agreement, feed→asset size agreement, the real
+SHA-512 of the downloaded bytes, the macOS ZIP, and the website's hardcoded
+filenames — and fails closed. Run against the live v1.2.1 release it exits 1 and
+independently rediscovers the macOS defect.
+
+**`smoke-macos` launches the packaged app on both architectures**, Intel first
+(`macos-15-intel`; `macos-latest` is arm64 per `actions/runner-images`). The
+arch gate is a static header check and could never prove the app starts — which
+is how three releases shipped a boot crash that took 74 days to surface.
+
+**Enforcement, each proven to bite by mutation testing (18/18):** stable
+`vX.Y.Z` tags only; publishing wired to a gates OUTPUT so removing `needs:`
+breaks publishing rather than an assertion; Windows publishes via
+`--prepackaged` from the exact directory the smoke exercised; `USE_HARD_LINKS`
+and the `[mac-arch-gate] PASS` marker required; the release-channel stamp
+present in both jobs and absent from HEAD; `appId`/owner/repo/artifactNames
+pinned. Contract tests now parse the YAML and assert against named jobs — the
+old whole-file `indexOf` ordering check still passed with the entire Windows
+publish step deleted.
+
+**Arch gate hardened:** fat headers are parsed, not trusted (a single-slice fat
+binary satisfied both halves and the universal check); a foreign-arch path
+label no longer overrides the bytes; `afterPack` fails instead of returning
+silently when it cannot find the app. Fifteen fixture tests from hand-built
+Mach-O headers, two of which close leads the audit could describe but not
+construct.
+
+**Credential guard:** `scripts/check-packaged-secrets.cjs` inspects the real
+packaged output for credential-bearing files (v1.0.0 shipped a plaintext `.env`
+with a GitHub PAT to every user). Reports paths only, never contents. Runs from
+`scripts/after-pack.cjs` alongside the arch gate.
+
+**Packaged smoke** now probes the app's own DOM. It asserted
+`window.electronAPI` — exposed by the PRELOAD, not the app bundle — so it
+passed on a blank white window.
+
+**Feedback told the truth.** Both surfaces rendered "Sent. Thank you"
+regardless of outcome; for an opted-out pastor the note was destroyed, not
+queued. `sendImmediate` now reports `queued`, and
+`src/utils/feedbackOutcome.js` maps the verdict to sent / queued / off /
+failed. A message reporting a LOST note no longer auto-dismisses.
+`electron/telemetry/queueSweep.js` drains prior sessions' queues (consent
+re-checked per item, bounded, malformed records quarantined) — previously
+anything queued at exit was stranded forever.
+
+**First run and support:** keystore failure copy is platform-neutral (it said
+"Windows" on macOS) and now offers **Continue without the key** instead of
+trapping the pastor, whose only escape had been clearing the key field with
+nothing telling him so. Help → **Open Log Folder** (Open Data Folder opens a
+different directory). The website gained a **Report a problem** route — before
+this there was no way to reach anyone before the app boots.
+
+**Node policy:** `engines.node` >=24 to match the four CI pins and the npm 11
+that writes the lockfile (npm 10 cannot install it); README corrected; the test
+asserts all four agree. Pinned actions moved to their current majors.
+
+**Docs:** `distribution.md` §14 trued up — the eight-asset manifest, the ZIP vs
+DMG distinction, draft-first publication, the >2h publisher-skip failure mode
+and its recovery, the real first-run gate (the settings row alone), the Step 5
+break-glass pointer, and the honest macOS/Intel history. `CLAUDE.md` now
+separates preflight's enforced checks from its advisory ones; `RULES.md`
+corrects the DMG-since-v1.1.0 error and the Windows-signing claim.
+
+Still open, and deliberately not claimed as done: nothing has been pushed or
+run in CI; no real Mac has performed an N→N+1 update; the v1.0.0 credential
+containment and rotation are production actions awaiting approval.
+
+---
+
 ## 2026-07-20 — fix: Mac DMG's Intel half shipped the arm64 database binary — real copies + arch gate
 
 - Field report from an Intel MacBook Pro: the app dies at boot (`dlopen … incompatible architecture`); extracting the shipped v1.2.0 and v1.1.0 DMGs confirmed `app-x64.asar.unpacked/…/better_sqlite3.node` is arm64 in every universal DMG since v1.0.0 — Intel Macs never worked; Apple Silicon unaffected.
@@ -1596,7 +1690,7 @@ Charter: [`docs/PROPOSALS/workspace-restructure-charter.md`](docs/PROPOSALS/work
 - `package.json` mac config: `mergeASARs: false` (sidesteps `@electron/asar` minimatch overflow on universal builds with native modules), `notarize: true` driven by App Store Connect API key env vars.
 - `.github/workflows/build.yml`: macOS job timeboxed to 30 min, `if: failure() || cancelled()` step re-runs `xcrun notarytool --verbose` directly against the signed `.app` and uploads raw output as a workflow artifact.
 - Walked rc.1 → rc.13 isolating each layer — universal-ASAR merge, OpenSSL 3 vs Apple Keychain `.p12` format (regenerated with `-legacy`), notarize teamId/credentials conflict (App Store Connect API key path), and pending Apple Developer agreement that returned plaintext HTTP 403 from notarytool and crashed `@electron/notarize`'s JSON parser.
-- `v1.0.0` shipped: signed Windows NSIS + signed/notarized universal macOS DMG attached, both auto-update feeds (`latest.yml` + `latest-mac.yml`) live; `known-good/mac-pipeline-pre-diagnostic` rollback tag at `c509548`.
+- `v1.0.0` shipped: Windows NSIS (**unsigned** — Windows code signing has never been implemented in this pipeline; corrected 2026-07-20, this line previously read "signed") + signed/notarized universal macOS DMG attached, both auto-update feeds (`latest.yml` + `latest-mac.yml`) live; `known-good/mac-pipeline-pre-diagnostic` rollback tag at `c509548`.
 
 ---
 

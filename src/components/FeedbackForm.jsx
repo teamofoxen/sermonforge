@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import PrimaryButton from "./primitives/PrimaryButton";
 import SecondaryButton from "./primitives/SecondaryButton";
 import IconButton from "./primitives/IconButton";
+import { describeFeedbackOutcome } from "../utils/feedbackOutcome";
 import "./feedbackForm.css";
 
 // Stored values stay the charter's dimension ids (telemetry keys on them;
@@ -35,6 +36,7 @@ export default function FeedbackForm({ onClose, sermonId = null, step = null }) 
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [confirmShown, setConfirmShown] = useState(false);
+  const [outcome, setOutcome] = useState(null);
 
   // Escape closes the modal.
   useEffect(() => {
@@ -45,12 +47,16 @@ export default function FeedbackForm({ onClose, sermonId = null, step = null }) 
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  // After the confirmation banner shows briefly, close.
+  // After the confirmation banner shows briefly, close — but ONLY when the
+  // note actually survived. If it was discarded (feedback off) or failed,
+  // the message saying so must not disappear before it can be read; the
+  // pastor dismisses that one himself.
   useEffect(() => {
     if (!confirmShown) return;
+    if (outcome && outcome.tone !== "sent" && outcome.tone !== "queued") return;
     const t = setTimeout(() => onClose?.(), 1400);
     return () => clearTimeout(t);
-  }, [confirmShown, onClose]);
+  }, [confirmShown, outcome, onClose]);
 
   async function handleSend() {
     if (!text.trim() || sending) return;
@@ -62,12 +68,14 @@ export default function FeedbackForm({ onClose, sermonId = null, step = null }) 
       step,
       timestamp: new Date().toISOString(),
     };
+    let result;
     try {
-      await window.electronAPI?.btiSubmit?.("form", payload);
+      result = await window.electronAPI?.btiSubmit?.("form", payload);
     } catch (_) {
-      // Bus persists failures locally for retry.
+      result = { ok: false, queued: false, reason: "failed" };
     }
     setSending(false);
+    setOutcome(describeFeedbackOutcome(result));
     setConfirmShown(true);
   }
 
@@ -91,7 +99,13 @@ export default function FeedbackForm({ onClose, sermonId = null, step = null }) 
 
         {confirmShown ? (
           <div className="feedback-form-confirm">
-            Sent. Thank you — every note shapes the tool.
+            <div>{outcome?.message ?? "Sent. Thank you — every note shapes the tool."}</div>
+            {outcome?.detail ? (
+              <div className="feedback-form-confirm-detail">{outcome.detail}</div>
+            ) : null}
+            {outcome && outcome.tone !== "sent" && outcome.tone !== "queued" ? (
+              <SecondaryButton onClick={() => onClose?.()}>Close</SecondaryButton>
+            ) : null}
           </div>
         ) : (
           <>

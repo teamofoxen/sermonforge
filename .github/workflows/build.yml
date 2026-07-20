@@ -4,6 +4,13 @@ on:
   push:
     tags:
       - "v*"
+  # Validation mode. Runs the whole pipeline — gates, packaging, smoke, the
+  # arch gate, manifest derivation — WITHOUT publishing anything, so the
+  # release machinery can be exercised without burning a production tag.
+  # Publishing is not merely "skipped" here: every publish step and the
+  # public-release flip are guarded on the ref being a tag, so a dispatch
+  # run has no path to creating or mutating a release.
+  workflow_dispatch:
 
 jobs:
   # ── Release gates (Session 5) ───────────────────────────────────────────────
@@ -15,17 +22,41 @@ jobs:
   # build.
   gates:
     runs-on: ubuntu-latest
+    outputs:
+      # Consumed by both platform jobs' publish steps. Removing `needs: gates`
+      # makes this expression unresolvable, so publishing BREAKS rather than
+      # silently racing ahead of a red gate (2026-07-20 audit, M12: the old
+      # `needs:` assertion ran inside the gates job itself and test.yml never
+      # fires on tags, so nothing outside the gate protected the gate).
+      release_ok: ${{ steps.gate_stamp.outputs.release_ok }}
     steps:
       - name: Checkout tagged commit
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          # Node 24 LTS — must match the npm major that writes package-lock.json
-          # (see the Node-policy note in test.yml; npm 10 rejects the npm-11 lock).
+          # Node 24 — must match the npm major that writes package-lock.json
+          # (npm 10 rejects the npm-11 lock). package.json engines.node and
+          # README state the same line; release-pipeline.test.ts asserts all
+          # four pins agree.
           node-version: 24
           cache: "npm"
+
+      - name: Only a stable vX.Y.Z tag may become a release
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        # `on: push: tags: v*` matches release candidates too, and this repo
+        # really does push them (v1.0.0-mac.rc.1 … rc.13). Combined with a
+        # non-draft, non-prerelease publish, any one of them would capture
+        # the `releases/latest` alias and auto-ship to every install.
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          if ! printf '%s' "$TAG" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::Tag '$TAG' is not a stable release tag (expected vX.Y.Z). Refusing to build a publishable release."
+            exit 1
+          fi
+          echo "Stable release tag: $TAG"
 
       - name: Install dependencies (immutable)
         run: npm ci
@@ -45,29 +76,33 @@ jobs:
       - name: Vite production build
         run: npx vite build
 
+      - name: Mark gates passed
+        id: gate_stamp
+        run: echo "release_ok=true" >> "$GITHUB_OUTPUT"
+
   build-windows:
     runs-on: windows-latest
     needs: gates
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          # Node 24 LTS — must match the npm major that writes package-lock.json
-          # (see the Node-policy note in test.yml; npm 10 rejects the npm-11 lock).
           node-version: 24
           cache: "npm"
 
       - name: Stamp version + release channel from tag
+        if: startsWith(github.ref, 'refs/tags/v')
         shell: bash
         # sfReleaseChannel marks this as a CI-published build — the ONLY kind
         # allowed to auto-update. Local builds (npm run build) carry no stamp,
         # so electron/updater.js stays inert in them; without this, the
         # published release outranks the 1.0.0 dev pin and silently replaces
-        # any local build under test.
+        # any local build under test. A validation (workflow_dispatch) run
+        # deliberately skips this, so nothing it produces can ever update.
         run: |
           TAG_VERSION="${GITHUB_REF#refs/tags/v}"
           echo "Setting package.json version to $TAG_VERSION"
@@ -90,31 +125,40 @@ jobs:
         # The bounded packaged smoke (scripts/packaged-smoke.cjs + the
         # SF_SMOKE hook in electron/main.js): the actual unpacked app must
         # launch, initialize/migrate its schema, load the preload bridge,
-        # render the primary window, and exit cleanly — or the release stops
-        # here, before anything publishes.
+        # render real application DOM, and exit cleanly — or the release
+        # stops here, before anything publishes.
         run: node scripts/packaged-smoke.cjs release/win-unpacked
 
-      - name: Publish Windows installer
+      - name: Publish Windows installer (from the SMOKED build)
+        if: startsWith(github.ref, 'refs/tags/v') && needs.gates.outputs.release_ok == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # --prepackaged points electron-builder at the EXACT directory the
+        # smoke just exercised, instead of repacking from scratch. The old
+        # second full `electron-builder --win` re-fetched prebuilt natives and
+        # rebuilt the installer AFTER the smoke passed, so the published bytes
+        # were never provably the smoked bytes (2026-07-20 audit, M7).
         run: >
           npx electron-builder --win
+          --prepackaged release/win-unpacked
           --publish always
           --config.directories.output=release
 
   build-macos:
-    runs-on: macos-latest
+    runs-on: macos-latest   # arm64 (see actions/runner-images); Intel is macos-15-intel
     needs: gates
+    # Signing, notarization and publishing only ever apply to a real tag. A
+    # validation run exercises macOS through smoke-macos instead, which
+    # packages and LAUNCHES the app without any credential.
+    if: startsWith(github.ref, 'refs/tags/v')
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          # Node 24 LTS — must match the npm major that writes package-lock.json
-          # (see the Node-policy note in test.yml; npm 10 rejects the npm-11 lock).
           node-version: 24
           cache: "npm"
 
@@ -153,7 +197,7 @@ jobs:
           if openssl pkcs12 -in /tmp/diagnose.p12 -nokeys -passin "pass:$CSC_KEY_PASSWORD" -info -nomacver 2>&1 | grep -q "Bag Attributes"; then
             echo "OpenSSL: opened .p12 (no MAC verify)"
           else
-            echo "OpenSSL: FAILED to open .p12 even without MAC verify — file is corrupt"
+            echo "OpenSSL: FAILED to open .p12 even without MAC verify â€” file is corrupt"
           fi
           echo "=== OpenSSL with MAC verify (real test) ==="
           openssl pkcs12 -in /tmp/diagnose.p12 -nokeys -passin "pass:$CSC_KEY_PASSWORD" -info 2>&1 | grep -E "MAC|verify|Bag|error" | head -5
@@ -166,11 +210,12 @@ jobs:
           mkdir -p ~/private_keys
           printf '%s' "$APPLE_API_KEY_BASE64" | base64 -d > ~/private_keys/AuthKey.p8
           ls -la ~/private_keys/AuthKey.p8
-          head -1 ~/private_keys/AuthKey.p8
           echo "APPLE_API_KEY=$HOME/private_keys/AuthKey.p8" >> "$GITHUB_ENV"
 
-      - name: Build and publish macOS DMG
-        timeout-minutes: 30
+      # ── Release build: signed, notarized, published to the DRAFT ──────────
+      - name: Build and publish macOS DMG + updater ZIP
+        if: needs.gates.outputs.release_ok == 'true'
+        timeout-minutes: 45
         env:
           # Hard links are the mechanism behind the v1.0.0–v1.2.0 Intel-half
           # corruption: electron-builder links node_modules files into the
@@ -186,10 +231,30 @@ jobs:
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
           DEBUG: electron-builder,electron-notarize*,electron-osx-sign*
-        run: >
-          npx electron-builder --mac
-          --publish always
-          --config.directories.output=release
+        run: |
+          set -o pipefail
+          npx electron-builder --mac \
+            --publish always \
+            --config.directories.output=release 2>&1 | tee mac-build.log
+
+      - name: Require the architecture gate to have actually run and PASSED
+        shell: bash
+        # The gate is an afterPack hook: it legitimately no-ops on the
+        # per-arch temp packs and asserts only on the assembled universal
+        # app. That means "no failure" is NOT evidence it ran — if the
+        # universal split ever stops being produced (mergeASARs flipped,
+        # arch changed) the gate silently skips forever and the exact
+        # defect class that shipped boot-crashing Intel DMGs for three
+        # releases becomes reachable again with CI fully green.
+        # Requiring the PASS marker turns that silence into a red build.
+        run: |
+          if ! grep -q '\[mac-arch-gate\] PASS' mac-build.log; then
+            echo "::error::The macOS architecture gate never reported PASS. Either it did not run on the assembled universal app, or the universal split was not produced. Refusing to ship an unverified macOS build."
+            grep -n 'mac-arch-gate' mac-build.log || echo "(no mac-arch-gate output at all)"
+            exit 1
+          fi
+          echo "Architecture gate PASSED on the assembled universal app:"
+          grep -n '\[mac-arch-gate\]' mac-build.log
 
       - name: Diagnostic — direct notarytool submit (only on failure)
         if: failure() || cancelled()
@@ -206,7 +271,7 @@ jobs:
             echo "APP_PATH: $APP_PATH"
             echo "APPLE_API_KEY: $APPLE_API_KEY"
             ls -la "$APPLE_API_KEY" 2>&1
-          } | tee diagnostic/notarytool-direct.log
+          } > diagnostic/notarytool-direct.log
           if [ -z "$APP_PATH" ]; then
             echo "No .app found — electron-builder failed before signing produced a bundle" >> diagnostic/notarytool-direct.log
             exit 0
@@ -225,24 +290,180 @@ jobs:
               --wait \
               --verbose \
               --timeout 25m 2>&1
-            NT_EXIT=$?
-            echo "=== notarytool exit code: $NT_EXIT ==="
-            SUB_ID=$(grep -oE "id: [a-f0-9-]{36}" diagnostic/notarytool-direct.log | head -1 | awk '{print $2}')
-            if [ -n "$SUB_ID" ]; then
-              echo "=== notarytool log $SUB_ID ==="
-              xcrun notarytool log "$SUB_ID" \
-                --key "$APPLE_API_KEY" \
-                --key-id "$APPLE_API_KEY_ID" \
-                --issuer "$APPLE_API_ISSUER" 2>&1
-            else
-              echo "Could not extract submission ID from log."
-            fi
-          } | tee -a diagnostic/notarytool-direct.log
+            echo "=== notarytool exit code: $? ==="
+          } >> diagnostic/notarytool-direct.log 2>&1
+          # Read the submission ID back from the COMPLETED log, not from a
+          # file still being streamed into (the old `tee -a` + grep read a
+          # log it was concurrently writing).
+          SUB_ID=$(grep -oE "id: [a-f0-9-]{36}" diagnostic/notarytool-direct.log | head -1 | awk '{print $2}')
+          if [ -n "$SUB_ID" ]; then
+            echo "=== notarytool log $SUB_ID ===" >> diagnostic/notarytool-direct.log
+            xcrun notarytool log "$SUB_ID" \
+              --key "$APPLE_API_KEY" \
+              --key-id "$APPLE_API_KEY_ID" \
+              --issuer "$APPLE_API_ISSUER" >> diagnostic/notarytool-direct.log 2>&1
+          else
+            echo "Could not extract submission ID from log." >> diagnostic/notarytool-direct.log
+          fi
+          cat diagnostic/notarytool-direct.log
 
       - name: Diagnostic — upload raw notarytool log
         if: failure() || cancelled()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: notarytool-diagnostic
           path: diagnostic/
           retention-days: 7
+
+  # ── macOS runtime validation ────────────────────────────────────────────────
+  # The architecture gate is a STATIC Mach-O header check. It proves the bytes
+  # are the right shape; it cannot prove the app starts. That gap is not
+  # theoretical: v1.0.0 through v1.2.0 shipped signed, notarized DMGs that
+  # crashed at launch on every Intel Mac, and the defect was found by a field
+  # report 74 days later because nothing in the pipeline had ever RUN the
+  # macOS build.
+  #
+  # So: package the real universal app on each architecture and launch it.
+  # On the Intel runner macOS executes the x64 slice and loads the x64 half's
+  # better_sqlite3.node — exactly the combination that was broken. Intel is
+  # first here deliberately; it is the half that shipped broken.
+  #
+  # Unsigned and never published: this needs no credential, so it also runs on
+  # workflow_dispatch. finalize-release waits on it, which means a macOS build
+  # that does not start leaves the release an unpublished draft.
+  smoke-macos:
+    needs: gates
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Labels per actions/runner-images: macos-latest is arm64, and
+          # macos-15-intel is the x64 image. Do not infer the architecture
+          # from an older label — macos-13 was Intel, macos-latest is not.
+          - runner: macos-15-intel
+            arch: x64 (Intel)
+          - runner: macos-latest
+            arch: arm64 (Apple Silicon)
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: "npm"
+
+      - name: Install dependencies (immutable)
+        run: npm ci
+
+      - name: Generate macOS .icns from designer iconset
+        run: iconutil -c icns brand/icons/sermonforge.iconset -o build/icon.icns
+
+      - name: Build Vite
+        run: npx vite build
+
+      - name: Package the universal app (unsigned, never published)
+        env:
+          # Same hard-link setting as the release build — this must reproduce
+          # the real packaging conditions to be worth anything.
+          USE_HARD_LINKS: "false"
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+        # Deliberately NO --config.mac.target override. Passing a bare target
+        # (e.g. `dir`) REPLACES the package.json target array and takes its
+        # `arch: universal` with it, so electron-builder would build the host
+        # architecture only. That produces no app-x64/app-arm64 asar split, the
+        # arch gate would correctly report `skipping — no split asar halves`
+        # instead of PASS, and the marker check below would fail on every run —
+        # blocking every release, since finalize-release needs this job. Using
+        # the real targets also means this smoke launches the ACTUAL shipped
+        # universal artifact rather than a lookalike.
+        run: |
+          set -o pipefail
+          npx electron-builder --mac             --publish never             --config.mac.notarize=false             --config.directories.output=release 2>&1 | tee mac-build.log
+
+      - name: Require the architecture gate to have actually run and PASSED
+        run: |
+          if ! grep -q '\[mac-arch-gate\] PASS' mac-build.log; then
+            echo "::error::The macOS architecture gate never reported PASS on ${{ matrix.arch }}."
+            grep -n 'mac-arch-gate' mac-build.log || echo "(no mac-arch-gate output at all)"
+            exit 1
+          fi
+          grep -n '\[mac-arch-gate\]' mac-build.log
+
+      - name: Launch the packaged app on ${{ matrix.arch }}
+        # The same bounded smoke the Windows job runs: the app must start,
+        # initialize its schema through better_sqlite3, load the preload
+        # bridge, render real application DOM, and exit cleanly.
+        run: |
+          APP_DIR=$(find release -maxdepth 2 -type d -name "*.app" | head -1 | xargs dirname)
+          echo "Launching from $APP_DIR on $(uname -m)"
+          node scripts/packaged-smoke.cjs "$APP_DIR"
+
+  # ── Release finalization ────────────────────────────────────────────────────
+  # Both platforms publish into a DRAFT release (package.json
+  # build.publish.releaseType = "draft"). Nothing is public until this job
+  # proves the release is complete and flips it.
+  #
+  # This closes three defects at once:
+  #   • H2 — the release used to go public the moment the FIRST platform
+  #     uploaded, so every release had a window where the website's
+  #     hardcoded Mac download 404'd (v1.2.0: ~27 hours).
+  #   • H1 — nothing verified the release actually carried its artifacts.
+  #   • The >2h publisher skip — electron-builder refuses to touch a
+  #     PUBLISHED release older than two hours, logs "skipped publishing"
+  #     and exits SUCCESS. Drafts always accept uploads, so a re-run the
+  #     next day works instead of silently uploading nothing.
+  finalize-release:
+    runs-on: ubuntu-latest
+    needs: [build-windows, build-macos, smoke-macos]
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: "npm"
+
+      - name: Install dependencies (immutable)
+        run: npm ci
+
+      - name: Verify the release is complete before anyone can download it
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # Derives the expected artifact set from the packaging contract and
+        # checks every one against the real release: presence, non-zero size,
+        # feed/tag version agreement, feed→asset size agreement, real sha512
+        # of the downloaded bytes, the macOS ZIP updater payload, and the
+        # filenames the website hardcodes. Fails closed.
+        run: node scripts/release-manifest.cjs --tag "${GITHUB_REF_NAME}"
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # The ONLY transition from private to public in the entire pipeline.
+        run: |
+          gh release edit "${GITHUB_REF_NAME}" --draft=false --latest
+          echo "Published ${GITHUB_REF_NAME}"
+
+      - name: Confirm the public release actually serves its downloads
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # A release can be marked public and still not resolve through the
+        # `releases/latest` alias the website links to. Check the real URLs.
+        run: |
+          set -euo pipefail
+          for asset in SermonForge-Setup.exe SermonForge-Setup.dmg SermonForge-Setup.zip latest.yml latest-mac.yml; do
+            url="https://github.com/teamofoxen/sermonforge/releases/latest/download/$asset"
+            code=$(curl -sSL -o /dev/null -w '%{http_code}' "$url")
+            if [ "$code" != "200" ]; then
+              echo "::error::$url returned HTTP $code — the public release does not serve this asset."
+              exit 1
+            fi
+            echo "OK  $asset ($code)"
+          done

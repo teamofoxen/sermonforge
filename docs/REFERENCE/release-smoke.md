@@ -13,9 +13,25 @@ deploy. **If any step fails, do not tag.**
 > build. The Windows job then packages with `--publish never`, runs the
 > bounded packaged smoke (`node scripts/packaged-smoke.cjs` — the real
 > unpacked app must launch, initialize/migrate its schema, load the preload
-> bridge, render the window, and exit cleanly, in an isolated userData), and
-> only then publishes. That automation is why the manual half below is a
-> single check.
+> bridge, render **real application DOM**, and exit cleanly, in an isolated
+> userData), and only then publishes **the exact directory it smoked**
+> (`--prepackaged`). Probing the window alone was not enough: the old check
+> passed on a blank white screen. A `smoke-macos` job packages and LAUNCHES
+> the app on both an Intel (`macos-15-intel`) and an Apple Silicon runner —
+> the static architecture gate cannot prove the app starts, which is how a
+> boot crash reached every Intel Mac for three releases. That automation is
+> why the manual half below is a single check.
+
+> **Nothing is public until it is verified (2026-07-20).** Both platform jobs
+> upload into a DRAFT release. A `finalize-release` job then runs
+> `node scripts/release-manifest.cjs --tag <tag>` — every expected artifact
+> present and non-empty, feeds agreeing with the tag and with the real
+> SHA-512 of the published bytes, the macOS ZIP updater payload present, the
+> website's hardcoded filenames present — and only then flips the release
+> public and checks the live download URLs. **The completion signal is the
+> `finalize-release` job going green.** A release still showing as a draft
+> has not shipped; that is the safe state, not an incident. Never publish a
+> draft by hand — that is precisely the check you would be skipping.
 
 > Local builds never auto-update: only CI stamps `sfReleaseChannel` into
 > package.json, and `electron/updater.js` is inert without it. This is what
