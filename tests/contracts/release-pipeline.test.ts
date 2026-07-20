@@ -178,8 +178,16 @@ describe("macOS architecture controls (the Intel boot-crash class)", () => {
   });
 
   it("the arch gate is wired as afterPack and the universal split it depends on is preserved", () => {
-    expect(pkg.build?.afterPack).toBe("./scripts/mac-arch-gate.cjs");
+    // afterPack is the composite pre-publish guard: credential scan on every
+    // platform, then the architecture gate on macOS. electron-builder allows
+    // only one hook, and on macOS pack→sign→notarize→publish is a single
+    // invocation, so this is the last place a bad build can be refused.
+    expect(pkg.build?.afterPack).toBe("./scripts/after-pack.cjs");
+    const afterPack = read("scripts/after-pack.cjs");
+    expect(afterPack).toMatch(/mac-arch-gate/);
+    expect(afterPack).toMatch(/check-packaged-secrets/);
     expect(fs.existsSync(path.resolve(ROOT, "scripts/mac-arch-gate.cjs"))).toBe(true);
+    expect(fs.existsSync(path.resolve(ROOT, "scripts/check-packaged-secrets.cjs"))).toBe(true);
     // mergeASARs:false is what produces the two app-*.asar.unpacked halves
     // the gate inspects; app-builder-lib defaults it to true. Flipping it, or
     // changing arch away from universal, turns the gate into a permanent
