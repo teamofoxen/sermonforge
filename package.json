@@ -5,7 +5,7 @@
   "author": "SermonForge",
   "main": "electron/main.js",
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "scripts": {
     "start": "vite build && electron .",
@@ -47,6 +47,7 @@
     "eslint-plugin-sermonforge": "file:eslint-plugin-sermonforge",
     "glob": "^13.0.6",
     "husky": "^9.1.7",
+    "js-yaml": "^4.3.0",
     "jsdom": "^29.1.1",
     "lint-staged": "^16.4.0",
     "typescript": "^5.4.0",
@@ -62,7 +63,7 @@
       "provider": "github",
       "owner": "teamofoxen",
       "repo": "sermonforge",
-      "releaseType": "release"
+      "releaseType": "draft"
     },
     "files": [
       "dist/**/*",
@@ -125,9 +126,13 @@
         {
           "target": "dmg",
           "arch": "universal"
+        },
+        {
+          "target": "zip",
+          "arch": "universal"
         }
       ],
-      "artifactName": "SermonForge-Setup.dmg"
+      "artifactName": "SermonForge-Setup.${ext}"
     },
     "dmg": {
       "title": "SermonForge ${version}",
