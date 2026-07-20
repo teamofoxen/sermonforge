@@ -25,8 +25,12 @@
    without also adding a migration.
 3. Always verify `npm start` works after changes.
 4. Never mark an issue as fixed without verifying it actually works.
-5. This app ships cross-platform — Windows NSIS installer + notarized macOS DMG (since
-   v1.1.0) — always use `path.join()`, never hardcode path separators.
+5. This app ships cross-platform — Windows NSIS installer (unsigned; Windows signing
+   has never been implemented) + signed/notarized macOS DMG, both since **v1.0.0**
+   (2026-05-07; the "since v1.1.0" note was a 2026-07-01 editorial error — v1.0.0's
+   release carries a 353 MB DMG). Since 2026-07-20 macOS also ships a
+   `SermonForge-Setup.zip` — the updater payload, not a second installer. Always use
+   `path.join()`, never hardcode path separators.
 6. Installers are built by `/release` (rewritten 2026-06-10 — the old rule
    demanded `npm run build` after every change set, a pre-distribution-era
    habit). A local `npm run build` is required only when the change touches
