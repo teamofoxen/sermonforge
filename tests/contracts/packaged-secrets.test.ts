@@ -69,6 +69,20 @@ describe("packaged credential guard", () => {
     expect(scan(root)).toEqual([]);
   });
 
+  it("a dev run cannot overwrite the packaged install's stored key", () => {
+    // keystore.js does NOT use the data/data-dev split, and on Windows the
+    // dev and packaged userData folders differ only by case — the same
+    // folder. A dev SetupScreen save therefore wrote straight over the
+    // packaged install's sf-esv.enc, invisibly, because an unpackaged run
+    // reads .env and never reads the file back (2026-07-20 audit, lead 4).
+    const src = fs.readFileSync(path.resolve(__dirname, "..", "..", "electron", "keystore.js"), "utf8");
+    const keyFileFn = src.slice(src.indexOf("function keyFile"), src.indexOf("function saveNamedKey"));
+    expect(keyFileFn, "the key filename must be namespaced by packaged state").toMatch(/isPackaged/);
+    // The packaged filename must stay exactly sf-<name>.enc, or every
+    // existing install silently loses its key.
+    expect(keyFileFn).toMatch(/isPackaged \? "" :/);
+  });
+
   it("reports a path, and nothing that could be a value", () => {
     const secret = "github_pat_THIS_MUST_NEVER_APPEAR";
     const root = build({ "resources/.env": `TOKEN=${secret}`, "SermonForge.exe": "x" });

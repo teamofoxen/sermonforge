@@ -13,8 +13,18 @@ const { isPackaged } = require("./config");
 
 // ── Generic named-key storage ─────────────────────────────────────────────────
 
+// Dev and packaged runs SHARE app.getPath("userData") on Windows — the folder
+// name differs only by case, which is the whole reason electron/config.js
+// splits data/ from data-dev/. This path deliberately does not go through that
+// split, so before 2026-07-20 a dev SetupScreen save wrote sf-esv.enc straight
+// over the packaged install's key. Nothing surfaced it, because an unpackaged
+// run READS from .env and never reads the file back — so the damage was
+// invisible from the run that caused it.
+//
+// The packaged filename is unchanged, so no existing install loses its key;
+// only dev writes are namespaced.
 function keyFile(name) {
-  return path.join(app.getPath("userData"), `sf-${name}.enc`);
+  return path.join(app.getPath("userData"), `sf-${name}${isPackaged ? "" : "-dev"}.enc`);
 }
 
 function saveNamedKey(name, value) {
