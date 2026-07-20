@@ -2,6 +2,15 @@
 
 ---
 
+## 2026-07-18 — docs: reduce the release smoke test to a single run-the-build check
+
+- Pastor's ruling: at today's distribution (one user, testing on his own machine) the 14-item manual walkthrough is overkill — `docs/REFERENCE/release-smoke.md` now carries one item: run the packaged installer, use the app, confirm an edit survives relaunch. `/release` Step 4 reads the doc fresh each run, so the gate shrinks to one question with no skill change.
+- The full checklist is parked verbatim at `docs/ARCHIVE/release-smoke-full-checklist.md` with an explicit reinstatement condition (wider distribution) and a re-verify warning — surfaces drift while a checklist sits parked.
+- CI's automated gates are untouched and are what earn the light manual half: tag → tests + persistence matrix + lint + spine + build, then the Windows packaged smoke before publish.
+- Operational, same session — v1.2.0 completed on both platforms: `build-macos` had failed 2026-07-17 on the known notarytool pending-agreement 403 (plaintext body crashes `@electron/notarize`'s JSON parser). After the Apple Developer agreement was accepted, the re-run signed + notarized clean, but electron-builder **silently skipped uploading** all Mac assets ("existing release published more than 2 hours ago" — the job still exits green, and the DMG dies with the runner). Recovery: draft-toggle the release, full re-run, re-publish — v1.2.0 now carries all 6 assets from one coherent run; `releases/latest` + both download URLs verified.
+
+---
+
 ## 2026-07-16 — refactor: collapse the smoke visibility wait to a single expression
 
 - Style-only follow-up to the previous commit, applying its simplify-pass finding: the `let visible` + `if (!visible)` reassignment becomes one `const` with `||` short-circuit; behavior identical.
