@@ -25,7 +25,7 @@ const ROOT = path.resolve(__dirname, "..", "..");
 const read = (rel: string) => fs.readFileSync(path.resolve(ROOT, rel), "utf8");
 
 type Step = { name?: string; uses?: string; run?: string; if?: string; with?: Record<string, unknown>; env?: Record<string, string> };
-type Job = { needs?: string | string[]; if?: string; steps: Step[]; outputs?: Record<string, string>; "runs-on"?: string };
+type Job = { needs?: string | string[]; if?: string; steps: Step[]; outputs?: Record<string, string>; "runs-on"?: string; strategy?: { matrix?: { include?: Array<Record<string, string>> } } };
 type Workflow = { on: Record<string, unknown>; jobs: Record<string, Job> };
 
 const buildWf = yaml.load(read(".github/workflows/build.yml")) as Workflow;
@@ -196,6 +196,30 @@ describe("macOS architecture controls (the Intel boot-crash class)", () => {
     for (const t of pkg.build?.mac?.target ?? []) expect(t.arch).toBe("universal");
   });
 
+  it("the packaged macOS app is LAUNCHED on both architectures, Intel included", () => {
+    // The arch gate is a static header check; it cannot prove the app
+    // starts. v1.0.0–v1.2.0 shipped signed, notarized DMGs that crashed at
+    // launch on every Intel Mac, found by a field report 74 days later,
+    // because nothing in the pipeline had ever run the macOS build.
+    const smoke = job("smoke-macos");
+    const runners = (smoke.strategy?.matrix?.include ?? []).map((e: { runner: string }) => e.runner);
+    // macos-latest is arm64 per actions/runner-images; Intel needs its own
+    // label. A matrix of one architecture would silently retest arm64 twice.
+    expect(runners, "the Intel half is the one that shipped broken").toContain("macos-15-intel");
+    expect(runners.length).toBeGreaterThan(1);
+    expect(smoke.steps.some((s) => /packaged-smoke\.cjs/.test(s.run ?? ""))).toBe(true);
+  });
+
+  it("the macOS runtime smoke cannot publish, and a failure keeps the release private", () => {
+    const smoke = job("smoke-macos");
+    for (const s of smoke.steps) {
+      expect(s.run ?? "", "the runtime smoke must never publish").not.toMatch(/--publish always/);
+    }
+    // Draft-first makes this composable: if the app does not start, the
+    // finalizer never runs and the release stays an unpublished draft.
+    expect(needsOf(job("finalize-release"))).toContain("smoke-macos");
+  });
+
   it("CI requires the gate to have actually reported PASS — silence is not evidence", () => {
     const check = mac.steps.find((s) => /mac-arch-gate\\?\] PASS/.test(s.run ?? ""));
     expect(check, "build-macos must assert the [mac-arch-gate] PASS marker appeared").toBeDefined();
@@ -211,8 +235,11 @@ describe("the updater activation stamp (the double gate)", () => {
     for (const name of ["build-windows", "build-macos"]) {
       const stamp = job(name).steps.find((s) => /npm pkg set sfReleaseChannel=stable/.test(s.run ?? ""));
       expect(stamp, `${name} must stamp sfReleaseChannel`).toBeDefined();
-      // A validation run must NOT be stampable, or it could auto-update.
-      expect(stamp!.if).toMatch(/refs\/tags\/v/);
+      // A validation run must NOT be stampable, or something unsigned and
+      // unpublished could still auto-update. The guard may sit on the step
+      // or on the whole job — build-macos is tag-only outright.
+      const guarded = /refs\/tags\/v/.test(stamp!.if ?? "") || /refs\/tags\/v/.test(job(name).if ?? "");
+      expect(guarded, `${name} must not stamp a non-tag run`).toBe(true);
     }
   });
 

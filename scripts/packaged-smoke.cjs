@@ -35,15 +35,30 @@ const unpackedDir =
     ? "C:\\Projects\\SermonForgeBuilds\\win-unpacked"
     : path.join(process.cwd(), "release", "win-unpacked"));
 
-const exe = process.platform === "win32"
-  ? path.join(unpackedDir, "SermonForge.exe")
-  : path.join(unpackedDir, "SermonForge");
+// Resolve the launchable binary. On macOS the executable lives inside the
+// .app bundle, and the caller may point at either the bundle or the
+// directory containing it — the arch-gated Mac runtime smoke passes the
+// latter.
+function resolveExecutable(dir) {
+  if (process.platform === "win32") return path.join(dir, "SermonForge.exe");
+  if (process.platform === "darwin") {
+    const bundle = dir.endsWith(".app")
+      ? dir
+      : (fs.existsSync(dir) ? fs.readdirSync(dir).filter((n) => n.endsWith(".app")).map((n) => path.join(dir, n))[0] : undefined);
+    if (!bundle) return path.join(dir, "SermonForge");
+    return path.join(bundle, "Contents", "MacOS", "SermonForge");
+  }
+  return path.join(dir, "SermonForge");
+}
+
+const exe = resolveExecutable(unpackedDir);
 
 if (!fs.existsSync(exe)) {
   console.error(`[packaged-smoke] executable not found: ${exe}`);
   console.error("[packaged-smoke] build first (npm run build), or pass the unpacked dir as argv[2].");
   process.exit(2);
 }
+console.log(`[packaged-smoke] platform: ${process.platform}/${process.arch}`);
 
 const smokeUserData = fs.mkdtempSync(path.join(os.tmpdir(), "sf-smoke-"));
 console.log(`[packaged-smoke] launching ${exe}`);
