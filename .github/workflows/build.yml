@@ -371,9 +371,18 @@ jobs:
           # the real packaging conditions to be worth anything.
           USE_HARD_LINKS: "false"
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
+        # Deliberately NO --config.mac.target override. Passing a bare target
+        # (e.g. `dir`) REPLACES the package.json target array and takes its
+        # `arch: universal` with it, so electron-builder would build the host
+        # architecture only. That produces no app-x64/app-arm64 asar split, the
+        # arch gate would correctly report `skipping — no split asar halves`
+        # instead of PASS, and the marker check below would fail on every run —
+        # blocking every release, since finalize-release needs this job. Using
+        # the real targets also means this smoke launches the ACTUAL shipped
+        # universal artifact rather than a lookalike.
         run: |
           set -o pipefail
-          npx electron-builder --mac             --publish never             --config.mac.notarize=false             --config.mac.target=dir             --config.directories.output=release 2>&1 | tee mac-build.log
+          npx electron-builder --mac             --publish never             --config.mac.notarize=false             --config.directories.output=release 2>&1 | tee mac-build.log
 
       - name: Require the architecture gate to have actually run and PASSED
         run: |

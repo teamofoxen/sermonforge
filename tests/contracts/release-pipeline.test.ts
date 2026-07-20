@@ -210,6 +210,19 @@ describe("macOS architecture controls (the Intel boot-crash class)", () => {
     expect(smoke.steps.some((s) => /packaged-smoke\.cjs/.test(s.run ?? ""))).toBe(true);
   });
 
+  it("the macOS smoke does not override the target list, which would destroy the universal split", () => {
+    // Passing a bare `--config.mac.target=<x>` REPLACES the package.json
+    // target array and takes `arch: universal` with it, so only the host
+    // architecture gets built. There would then be no app-x64/app-arm64 asar
+    // split, the arch gate would correctly report "skipping" rather than
+    // PASS, and the marker check would fail on EVERY run — blocking every
+    // release, since finalize-release needs this job. Caught before it ever
+    // ran; this keeps it from coming back.
+    for (const s of job("smoke-macos").steps) {
+      expect(s.run ?? "", `"${s.name}" must not override mac.target`).not.toMatch(/--config\.mac\.target/);
+    }
+  });
+
   it("the macOS runtime smoke cannot publish, and a failure keeps the release private", () => {
     const smoke = job("smoke-macos");
     for (const s of smoke.steps) {
