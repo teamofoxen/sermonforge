@@ -57,6 +57,7 @@
   "build": {
     "appId": "com.sermonforge.app",
     "productName": "SermonForge",
+    "afterPack": "./scripts/mac-arch-gate.cjs",
     "publish": {
       "provider": "github",
       "owner": "teamofoxen",

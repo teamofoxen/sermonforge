@@ -172,6 +172,14 @@ jobs:
       - name: Build and publish macOS DMG
         timeout-minutes: 30
         env:
+          # Hard links are the mechanism behind the v1.0.0–v1.2.0 Intel-half
+          # corruption: electron-builder links node_modules files into the
+          # packaged x64 half, then the arm64 rebuild truncate-writes
+          # better_sqlite3.node in place (same filename both arches) and
+          # silently rewrites the file inside the already-packaged x64 app.
+          # Real copies make the halves independent. The afterPack arch gate
+          # (scripts/mac-arch-gate.cjs) then proves both halves before signing.
+          USE_HARD_LINKS: "false"
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}

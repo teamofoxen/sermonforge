@@ -2,6 +2,16 @@
 
 ---
 
+## 2026-07-20 — fix: Mac DMG's Intel half shipped the arm64 database binary — real copies + arch gate
+
+- Field report from an Intel MacBook Pro: the app dies at boot (`dlopen … incompatible architecture`); extracting the shipped v1.2.0 and v1.1.0 DMGs confirmed `app-x64.asar.unpacked/…/better_sqlite3.node` is arm64 in every universal DMG since v1.0.0 — Intel Macs never worked; Apple Silicon unaffected.
+- Mechanism: electron-builder hard-links `node_modules` into the packaged x64 half, then the arm64 rebuild truncate-writes `better_sqlite3.node` in place (one filename for both arches), rewriting the file inside the already-packaged half while the build log stays clean.
+- `USE_HARD_LINKS: "false"` on the mac build step makes the halves independent real copies.
+- New `scripts/mac-arch-gate.cjs` (electron-builder `afterPack`) proves both halves' Mach-O architectures, `better_sqlite3.node` presence, and a fat main binary before signing — verified locally: FAILs on the real shipped v1.2.0 app, PASSes once the x64 binary is swapped in.
+- `distribution.md` §14 trued up (mac step 5, failure table).
+
+---
+
 ## 2026-07-18 — docs: true up distribution.md §14 to the as-built release pipeline
 
 - §14 ("the current operational reference") still described the pre-gates pipeline: two parallel CI jobs on Node 20 with `npm install`, and Windows publishing straight from `--publish always`. As built: a `gates` job (2026-07-13) runs the full suite + persistence matrix + lint + spine integrity + Vite build first, both platform jobs `needs:`-depend on it on Node 24 with `npm ci` (2026-07-14), the stamp step also sets `sfReleaseChannel=stable`, and Windows goes package (`--publish never`) → packaged smoke → publish — order asserted by `tests/contracts/release-pipeline.test.ts`. Noted in passing that the smoke gate is Windows-only.
