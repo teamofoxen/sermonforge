@@ -220,13 +220,21 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
       // a blank page (no movements yet); an established plan — the sample, any
       // series with sections — and every topical series open on their clean
       // Outline. A remembered id for a since-removed tab falls back to Outline.
-      const saved = localStorage.getItem(`sermonforge_planner_tab_${seriesId}`);
+      //
+      // The has-sections rule is a FIRST-OPEN default, NOT a re-entry rule, so we
+      // PERSIST whatever we resolve: a new book series that opened on Discover then
+      // stays on Discover across reloads even after its movements make
+      // sects.length > 0 — otherwise the pastor gets bounced to Outline mid-walk on
+      // reload (the else-branch would re-fire). The first decision sticks; an
+      // explicit tab click still overrides it thereafter.
+      const tabKey = `sermonforge_planner_tab_${seriesId}`;
+      const saved = localStorage.getItem(tabKey);
       const validIds = plannerTabsFor(s.kind).map((t) => t.id);
-      if (saved && validIds.includes(saved)) {
-        setActiveTab(saved);
-      } else {
-        setActiveTab(s.kind !== "topical" && sects.length === 0 ? "discover" : "book-outline");
-      }
+      const landing = (saved && validIds.includes(saved))
+        ? saved
+        : (s.kind !== "topical" && sects.length === 0 ? "discover" : "book-outline");
+      setActiveTab(landing);
+      localStorage.setItem(tabKey, landing);
     } catch (e) {
       console.error("SeriesPlanner load error:", e);
       setLoadError(true);
