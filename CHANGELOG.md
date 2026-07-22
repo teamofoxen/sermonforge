@@ -2,6 +2,52 @@
 
 ---
 
+## 2026-07-22 — feat: Series Discovery — the exegetical front screen of a book series (schema v34)
+
+A **book** series now leads with **Discover** — Discover · Outline · Schedule ·
+Study guide — an 8-step exegetical walk that produces the plan: Read the Book ·
+Understand the Book · Map the Major Movements · Identify the Preaching Texts ·
+Test Every Passage · Difficult Decisions · Propose the Series Big Idea ·
+Planner-Ready Review. Topical series keep their exact journey (no Topical
+Discovery). *What & why:* `docs/PROPOSALS/series-discovery.md`.
+
+**Discovery and Outline are two views of ONE series, never two planning systems.**
+A major movement the pastor creates in Discover **is** a real Series Section
+(`createSection`); a preaching text **is** a real Sermon under it (`createSermon`,
+always with `section_id` — a section-less in-series book sermon would make the
+spine fabricate a phantom "Section 1"). Their canonical Title/Passage/Big idea/
+Overview edit through the SAME parent savers, so a Discover edit is instantly what
+Outline shows — no shadow outline, no "Generate/Import/Convert" step. Only the
+exegetical *reasoning* that can't live in a clean planner field is new state.
+
+**Nothing is generated for the pastor.** No suggested divisions, movements, texts,
+big ideas, or syntheses; he writes two candidate series big ideas and explicitly
+establishes the canonical one. The system only surfaces objective conditions in
+his own work — gaps, overlaps, unreadable refs, out-of-range sermons — via the
+deterministic `computeCoverage` (Steps 5 + 8). AI-free by construction.
+
+**Schema v34** — a nullable JSON `discovery` column on **each** of `series`,
+`series_sections`, and `sermons` (a flat envelope; parse/merge via
+`src/utils/discovery.js`). Additive, no backfill, rides create-then-update via the
+existing `update-series`/`update-section`/`update-sermon` ops (no new IPC); added
+to all three `*_COLUMNS` allowlist mirrors; `assertSchemaContract` extended to
+also check `SECTION_COLUMNS`; **not** indexed into `sermon_search`.
+
+**Architecture** — the section/sermon create·commit·delete·reorder path was lifted
+from `OutlineTab` up to the parent `SeriesPlanner` and is shared by both tabs (one
+`commitDraft`, not two that drift). `CoveragePanel`/`CoverageBar` were extracted to
+their own file so Schedule and Discover share one readout without a cyclic import.
+Discovery reasoning routes through the existing debounced savers, inheriting the
+topbar Saving/Saved/Failed+Retry, flush-on-exit, and leave-guard. A book series
+with no sections opens on Discover; the sample and any established plan open on
+Outline; a remembered tab always wins; the current Discovery step persists per
+series. Full suite green (631); rendered-route render check (Discover's 8 steps +
+Outline/topical non-regression at 1024×700, console clean); shared-truth and
+discovery-persistence proven against the real persistence seam and a stateful
+component render.
+
+---
+
 ## 2026-07-20 — release: v1.2.2 published — macOS auto-update works for the first time
 
 - CI run 29782198767: all six jobs green including the new `finalize-release`; v1.2.2 published with **8 assets**, the derived manifest exactly, and holds `releases/latest`.

@@ -3,12 +3,14 @@
 > Revived 2026-06-21; **rebuilt around the pastor's real content model
 > 2026-06-24** (the four-movement workbench and the melodic-line model are gone);
 > **Topical Series mode + the sermon-grained Series Arc / "What I've Preached"
-> home shipped 2026-06-25** (schema v30–v32). **AI-free.** This doc is the
-> *how & where* (mechanics). The *what & why* — the decision that series planning
-> is a distinct macro/architect mode, and the content-model ruling — lives in
-> [`docs/PROPOSALS/series-planner-revival-charter.md`](../PROPOSALS/series-planner-revival-charter.md)
+> home shipped 2026-06-25** (schema v30–v32); **Series Discovery — the exegetical
+> front screen of a BOOK series — shipped 2026-07-22 (schema v34).** **AI-free.**
+> This doc is the *how & where* (mechanics). The *what & why* — the decision that
+> series planning is a distinct macro/architect mode, and the content-model ruling
+> — lives in [`docs/PROPOSALS/series-planner-revival-charter.md`](../PROPOSALS/series-planner-revival-charter.md)
 > ("2026-06-24 — Content-model rebuild"); the Topical-mode + coverage rulings live
-> in [`docs/PROPOSALS/coverage-initiative.md`](../PROPOSALS/coverage-initiative.md).
+> in [`docs/PROPOSALS/coverage-initiative.md`](../PROPOSALS/coverage-initiative.md);
+> the Discovery *what & why* lives in [`docs/PROPOSALS/series-discovery.md`](../PROPOSALS/series-discovery.md).
 
 A series is one of **two kinds**, set at creation and stored explicitly as
 `series.kind` (`'book'` | `'topical'`) — never inferred:
@@ -88,16 +90,39 @@ overlap).
 No Analyze / Generate / Assist / Chat / scheduling-advisor. Every field is
 pastor-authored. Enforced by `sermonforge/no-direct-ai`. Do not reintroduce AI.
 
-## 3. The three screens (`SeriesPlanner.jsx`)
+## 3. The screens (`SeriesPlanner.jsx`)
 
 The topbar reuses the workspace `.topbar` (Back · color dot · status eyebrow
 showing the current screen · serif title · Saving/Saved indicator · Mark Series
 Complete · How this works · feedback flag). The tab bar reuses `.stage-tabs`.
-The tab id for Outline is **`book-outline`** (the bare literal `"outline"` is a
-forbidden pre-Pilot-B stage alias under the `canonical-stage-name` lint rule; the
-human label is "Outline"). A remembered `localStorage` tab id for a removed tab
-(the old `book-study`/`design`/`calendar`/`overview`) falls back to Outline.
 
+**Kind-aware tabs (`plannerTabsFor(kind)`).** A **book** series leads with
+**Discover** — four tabs: Discover · Outline · Schedule · Study guide. A
+**topical** series keeps its three (Outline · Schedule · Study guide) — there is
+no Topical Discovery. The tab id for Outline is **`book-outline`** (the bare
+literal `"outline"` is a forbidden pre-Pilot-B stage alias under the
+`canonical-stage-name` lint rule; the human label is "Outline"); Discover's id is
+`discover`. **Landing tab** (resolved in `load()` once `kind` + sections are
+known): a remembered `localStorage` tab id wins ("return where you were"); with
+none, a book series opens on **Discover only when it has no sections yet** (a blank
+page) and on **Outline** once it has any (the sample, any established plan) — and
+every topical series opens on Outline. A remembered id for a removed tab (the old
+`book-study`/`design`/`calendar`/`overview`) falls back to Outline.
+
+- **Discover** (`SeriesDiscover.jsx`, **book series only**) — the exegetical front
+  screen: an 8-step walk (Read · Understand · Map the Major Movements · Identify
+  the Preaching Texts · Test Every Passage · Difficult Decisions · Propose the
+  Series Big Idea · Planner-Ready Review) that produces the plan. **A major
+  movement IS a real Series Section (`createSection`); a preaching text IS a real
+  Sermon under it (`createSermon`, always with `section_id`)** — their canonical
+  Title/Passage/Big idea/Overview edit through the SAME parent savers, so a Discover
+  edit is instantly what Outline shows (two views of one series, no shadow outline,
+  no generate/convert step). Only the exegetical *reasoning* is stored apart, in the
+  per-entity `discovery` JSON (§4). Steps 5 + 8 reuse `computeCoverage` via the
+  shared `CoveragePanel.jsx` (extracted from this file so Schedule + Discover share
+  one readout with no cyclic import). The current step persists per series
+  (`sermonforge_discover_step_<id>`). Full walk + envelope shapes:
+  [`docs/PROPOSALS/series-discovery.md`](../PROPOSALS/series-discovery.md).
 - **Outline** (`OutlineTab`) — the series as one live outline. Its shape is
   `kind`-aware (`SeriesPlanner.jsx` branches on `series.kind === 'topical'`).
 
@@ -215,10 +240,28 @@ production alike). The sermon's
 columns the same create-then-update way — never on the INSERT: `series.kind`
 (v30), `sermons.sort_order` (v30, the topical pastor-authored order),
 `sermons.book_id` (v31, the structured per-sermon book for topical), and
-`sermons.tags` (v32, free-form topic tags). The planner-owned schema additions
-run through **v32**; the application schema itself is at **v33** (the
-2026-07-02 OEM workspace restructure — a workspace migration, not a planner
-change). All four planner columns are in the three allowlist mirrors.
+`sermons.tags` (v32, free-form topic tags). **Series Discovery added a nullable
+JSON `discovery` column on EACH of `series` / `series_sections` / `sermons` (v34)**
+— the per-entity reasoning envelope (a flat object; parse/merge via
+`src/utils/discovery.js`; `mergeDiscovery` is a shallow spread that can't drop a
+sibling). It rides create-then-update via `updateSeries/Section/Sermon` (the
+Discover walk routes its reasoning writes through the SAME debounced savers as the
+canonical fields, so it inherits the topbar Saving/Saved/Failed+Retry, flush-on-
+exit, and leave-guard). `discovery` is deliberately **not** in `sermon_search`
+(reasoning, not manuscript content); `assertSchemaContract` was extended to also
+check `SECTION_COLUMNS` (its first writable column beyond the CREATE TABLE set).
+The planner-owned schema additions now run through **v34** (the application schema
+is also v34); every planner column is in the three allowlist mirrors.
+
+**The section/sermon entity mutations are the PARENT's, shared by both tabs.**
+`addSection` / `deleteSectionRow` / `moveSection` / `moveSermon` / `addSermon` /
+`commitDraft` / `handleSermonRowField` / `removeSermonRow` / `clearDraftError` were
+lifted out of `OutlineTab` up to `SeriesPlanner` and passed as props to BOTH
+`OutlineTab` and `SeriesDiscover` — one create/commit/delete/reorder path, so the
+two tabs can't drift into separate planning systems (the subtle one is
+`commitDraft`; a second copy would be exactly the duplicated derivation State #6
+forbids). Genuinely per-view UI reactions (scroll-to a new card, section collapse)
+stay in the consuming tab, fed by the ids these return.
 
 ## 5. Sermon draft / commit
 
@@ -306,5 +349,6 @@ both are AI-free and **descriptive, never a scorecard**:
 
 - *what & why / decisions (planner):* [`docs/PROPOSALS/series-planner-revival-charter.md`](../PROPOSALS/series-planner-revival-charter.md)
 - *what & why / decisions (topical mode + Arc + tags):* [`docs/PROPOSALS/coverage-initiative.md`](../PROPOSALS/coverage-initiative.md)
-- *schema:* `series` (+ `kind`) + `series_sections` + the `sermons` columns through **v32** (`sort_order`, `book_id`, `tags`) in [`docs/REFERENCE/schema.md`](../REFERENCE/schema.md)
-- *IPC:* the series spine ops + `series-export-study-guide` + `get-all-tags` in [`docs/REFERENCE/ipc-channels.md`](../REFERENCE/ipc-channels.md)
+- *what & why (Series Discovery — the exegetical front screen):* [`docs/PROPOSALS/series-discovery.md`](../PROPOSALS/series-discovery.md)
+- *schema:* `series` (+ `kind`) + `series_sections` + the `sermons` columns through **v32** (`sort_order`, `book_id`, `tags`), and the per-entity `discovery` JSON on all three (**v34**), in [`docs/REFERENCE/schema.md`](../REFERENCE/schema.md)
+- *IPC:* the series spine ops + `series-export-study-guide` + `get-all-tags` in [`docs/REFERENCE/ipc-channels.md`](../REFERENCE/ipc-channels.md) (Discovery adds no new IPC — `discovery` rides the existing `update-series`/`update-section`/`update-sermon` ops)
