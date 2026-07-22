@@ -112,6 +112,47 @@ describe("production persistence seam — real SQLite", () => {
     expect(sermon.section_id).toBe(sections[0].id);
   });
 
+  it("3b. Series Discovery reasoning (v34) round-trips on all three entities via create-then-update; the create INSERTs leave it NULL", () => {
+    // The Discover walk creates real sections/sermons (shared with Outline) and
+    // writes only its reasoning to the per-entity `discovery` JSON. Prove the
+    // column is writable through the real spine ops and reads straight back.
+    const seriesId = p.validateAndCommit("create-series", { name: "Luke" }).value.id;
+    const sectionId = p.validateAndCommit("create-section", { series_id: seriesId, title: "Movement 1", sort_order: 0 }).value.id;
+    const sermonId = p.validateAndCommit("create-sermon", { name: "Zechariah", series_id: seriesId, section_id: sectionId, passage: "Luke 1:5-25" }).value.id;
+
+    // create-then-update ruling: the create INSERTs never widen to `discovery`.
+    expect(p.queryOne("SELECT discovery FROM series WHERE id = ?", [seriesId]).discovery).toBeNull();
+    expect(p.queryOne("SELECT discovery FROM series_sections WHERE id = ?", [sectionId]).discovery).toBeNull();
+    expect(p.queryOne("SELECT discovery FROM sermons WHERE id = ?", [sermonId]).discovery).toBeNull();
+
+    // Write each entity's reasoning envelope through the SAME update ops the
+    // canonical fields use (buildUpdate must accept `discovery` in every allowlist).
+    const seriesDisc = JSON.stringify({ readNotes: "reversal everywhere", bigIdeaCandidateA: "Reintroducing Jesus." });
+    const sectionDisc = JSON.stringify({ whyBegin: "the prologue opens the work", whyEnd: "the temptation closes preparation" });
+    const sermonDisc = JSON.stringify({ whyBegin: "scene-shift to the temple", subject: "a faithful priest", complement: "God answers in His time", authorialFunction: "Encouraging" });
+    expect(p.validateAndCommit("update-series", { id: seriesId, fields: { discovery: seriesDisc } }).ok).toBe(true);
+    expect(p.validateAndCommit("update-section", { id: sectionId, fields: { discovery: sectionDisc } }).ok).toBe(true);
+    expect(p.validateAndCommit("update-sermon", { id: sermonId, fields: { discovery: sermonDisc } }).ok).toBe(true);
+
+    // Reads (SELECT *) carry `discovery` straight through.
+    expect(p.spineRead("get-series", seriesId).discovery).toBe(seriesDisc);
+    const section = p.spineRead("get-sections-by-series", seriesId).find((s: any) => s.id === sectionId);
+    expect(section.discovery).toBe(sectionDisc);
+    const serm = p.spineRead("get-sermons-by-series", seriesId).find((s: any) => s.id === sermonId);
+    expect(JSON.parse(serm.discovery).authorialFunction).toBe("Encouraging");
+
+    // And a canonical edit does NOT disturb the reasoning envelope (they are
+    // independent columns — two views of one row, not one blob).
+    expect(p.validateAndCommit("update-sermon", { id: sermonId, fields: { big_idea: "God uses the faithful" } }).ok).toBe(true);
+    const after = p.spineRead("get-sermons-by-series", seriesId).find((s: any) => s.id === sermonId);
+    expect(after.big_idea).toBe("God uses the faithful");
+    expect(after.discovery).toBe(sermonDisc);
+
+    // `discovery` is NOT indexed into sermon_search (reasoning, not manuscript content).
+    const searchCols = new Set(p.queryAll("PRAGMA table_info(sermon_search)", []).map((r: any) => r.name));
+    expect(searchCols.has("discovery")).toBe(false);
+  });
+
   it("4. soft-deletes and restores a sermon (tombstone + search row lifecycle)", () => {
     const { value: { id } } = p.validateAndCommit("create-sermon", { name: "Tombstone" });
     expect(p.queryOne("SELECT sermon_id FROM sermon_search WHERE sermon_id = ?", [id])).not.toBeNull();
