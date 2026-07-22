@@ -54,10 +54,11 @@ no shared statements.
 
 ## Schema Version
 
-Current schema version: **33** (the full migration ledger lives in
-[`docs/REFERENCE/schema.md`](../REFERENCE/schema.md); v33 = the OEM
-restructure's `last_manuscript_subphase` + position rewrite. This line said
-"32" until the Session-4 drift correction, 2026-07-13).
+Current schema version: **34** (the full migration ledger lives in
+[`docs/REFERENCE/schema.md`](../REFERENCE/schema.md); v34 = Series Discovery's
+per-entity `discovery` JSON column on `series` / `series_sections` / `sermons`;
+v33 = the OEM restructure's `last_manuscript_subphase` + position rewrite. This
+line said "32" until the Session-4 drift correction, 2026-07-13).
 
 The version is stored in the `meta` table under key `schema_version`.
 Read via IPC `"db-getSchemaVersion"`.

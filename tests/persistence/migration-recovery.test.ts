@@ -157,7 +157,7 @@ describe("migration matrix — the production ladder against real historical sta
     db.close();
   });
 
-  it("schema 32 becomes 33 correctly: Equip/Frame positions rewritten, per-stage memory seeded (proof 10)", () => {
+  it("schema 32 migrates forward: v33 Equip/Frame positions rewritten, per-stage memory seeded; ladder reaches head 34 (proof 10)", () => {
     // FIXTURE: the v32 contract — position columns present per the shipped
     // v17/v21 ALTERs (same DDL text), OEM-era in-flight positions on disk.
     const file = path.join(tmpDir, "v32.db");
@@ -173,7 +173,9 @@ describe("migration matrix — the production ladder against real historical sta
              VALUES ('s-legacy-ms', 'Old manuscript', 'Manuscript', 'Manuscript', 'Manuscript/Manuscript/manuscript')`);
     setVersion(p, 32);
     p.migrate();
-    expect(version(p)).toBe(33);
+    // migrate() runs the full ladder to head — v33 (this proof's substance) plus
+    // v34 (Series Discovery's discovery columns). Head is 34 since 2026-07-22.
+    expect(version(p)).toBe(34);
     expect(columns(p, "sermons").has("last_manuscript_subphase")).toBe(true);
 
     const equip = p.queryOne("SELECT * FROM sermons WHERE id = 's-equip'", []);
@@ -191,6 +193,43 @@ describe("migration matrix — the production ladder against real historical sta
     const legacy = p.queryOne("SELECT * FROM sermons WHERE id = 's-legacy-ms'", []);
     expect(legacy.current_sub_phase).toBe("IntroTransitionsConclusion");
     expect(legacy.last_touched_position).toBe("Manuscript/IntroTransitionsConclusion/manuscript");
+    db.close();
+  });
+
+  it("schema 33 becomes 34: the per-entity `discovery` column is added to series, series_sections, AND sermons; nullable, no backfill (proof 11)", () => {
+    // FIXTURE: a v33 library — bootstrap floor + version 33. v34 (Series
+    // Discovery) is the only block that runs.
+    const file = path.join(tmpDir, "v33.db");
+    const { db, p } = open(file);
+    p.bootstrapSchema();
+    addPositionColumns(p);
+    p.dbRun("ALTER TABLE sermons ADD COLUMN deleted_at TEXT DEFAULT NULL");
+    // A pre-existing row on each table, so we can prove the additive column
+    // reads NULL with no backfill (existing plans are unaffected).
+    p.dbRun("INSERT INTO series (id, title) VALUES ('ser-d', 'Pre-v34 series')");
+    p.dbRun("INSERT INTO series_sections (id, series_id, title) VALUES ('sec-d', 'ser-d', 'Pre-v34 movement')");
+    p.dbRun("INSERT INTO sermons (id, title) VALUES ('serm-d', 'Pre-v34 sermon')");
+    setVersion(p, 33);
+
+    // Before: discovery is on none of the three tables.
+    expect(columns(p, "series").has("discovery")).toBe(false);
+    expect(columns(p, "series_sections").has("discovery")).toBe(false);
+    expect(columns(p, "sermons").has("discovery")).toBe(false);
+
+    p.migrate();
+
+    expect(version(p)).toBe(34);
+    // After: discovery is on all three, additive and nullable (existing rows NULL).
+    expect(columns(p, "series").has("discovery")).toBe(true);
+    expect(columns(p, "series_sections").has("discovery")).toBe(true);
+    expect(columns(p, "sermons").has("discovery")).toBe(true);
+    expect(p.queryOne("SELECT discovery FROM series WHERE id = 'ser-d'", []).discovery).toBeNull();
+    expect(p.queryOne("SELECT discovery FROM series_sections WHERE id = 'sec-d'", []).discovery).toBeNull();
+    expect(p.queryOne("SELECT discovery FROM sermons WHERE id = 'serm-d'", []).discovery).toBeNull();
+    // (assertSchemaContract's clean pass — now including SECTION_COLUMNS — is
+    // proven against the FULL ladder in production-persistence.test.ts proof 9,
+    // where every allowlist column exists; this partial v33 fixture deliberately
+    // skips v2–v33's columns, so it is not the place for that check.)
     db.close();
   });
 

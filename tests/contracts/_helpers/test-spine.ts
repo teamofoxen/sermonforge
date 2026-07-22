@@ -98,6 +98,9 @@ export const SERMON_COLUMNS = new Set([
   // v32 — Coverage Initiative (Phase 3) (mirrors contracts): sermon-level topic
   // tags, a JSON array of free-form topic strings (thresholds_seen pattern).
   "tags",
+  // v34 — Series Discovery (mirrors contracts): the preaching-text's Discovery-only
+  // reasoning envelope ({ whyBegin, whyEnd, subject, complement, authorialFunction }).
+  "discovery",
 ]);
 
 // v27 — Series Planner content-model rebuild retired the book-study prompts +
@@ -109,10 +112,17 @@ export const SERIES_COLUMNS = new Set([
   // v30 — Topical Series mode (mirrors contracts): explicit planner-mode
   // discriminator ('book' | 'topical').
   "kind",
+  // v34 — Series Discovery (mirrors contracts): the series-level Discovery-only
+  // reasoning envelope (Read/Understand notes, Difficult Decisions, Big-Idea
+  // candidates + reasoning).
+  "discovery",
 ]);
 
 export const SECTION_COLUMNS = new Set([
   "title", "passage_range", "big_idea", "overview", "sort_order",
+  // v34 — Series Discovery (mirrors contracts): the movement's Discovery-only
+  // boundary reasoning ({ whyBegin, whyEnd }).
+  "discovery",
 ]);
 
 export const STRUCTURED_FIELDS = new Set([

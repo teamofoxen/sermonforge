@@ -396,6 +396,13 @@ export const SERMON_COLUMNS: ReadonlySet<string> = Object.freeze(new Set([
   // at prep in the workspace. Powers the Topics lens + own-tag autocomplete.
   // Rides the workspace autosave — the create-sermon INSERT is never widened.
   "tags",
+  // v34 — Series Discovery. The preaching-text's Discovery-only reasoning
+  // envelope: { whyBegin, whyEnd, subject, complement, authorialFunction } — the
+  // boundary reasoning + subject/complement/authorial-function the pastor authors
+  // in the Discover walk, none of which fit a clean planner field. Nullable JSON,
+  // fail-soft parse; rides create-then-update — the create-sermon INSERT is never
+  // widened. NOT in sermon_search (reasoning, not manuscript content).
+  "discovery",
 ])) as ReadonlySet<string>;
 
 // v27 — Series Planner content-model rebuild retired the four book-study
@@ -412,10 +419,21 @@ export const SERIES_COLUMNS: ReadonlySet<string> = Object.freeze(new Set([
   // v30 — Topical Series mode. Explicit planner-mode discriminator
   // ('book' | 'topical'); persisted via updateSeries, never the create INSERT.
   "kind",
+  // v34 — Series Discovery. The series-level Discovery-only reasoning envelope:
+  // { read, understand, decisions[], seriesBigIdea } — Read notes, Understand
+  // answers, up to three Difficult Decisions, and the two Series-Big-Idea
+  // candidates + reasoning. Nullable JSON, fail-soft parse; persisted via
+  // updateSeries, never the create INSERT. The final canonical Series Big Idea is
+  // `big_idea` and the Overview is `overview` — this holds only the working-out.
+  "discovery",
 ])) as ReadonlySet<string>;
 
 export const SECTION_COLUMNS: ReadonlySet<string> = Object.freeze(new Set([
   "title", "passage_range", "big_idea", "overview", "sort_order",
+  // v34 — Series Discovery. The movement's Discovery-only boundary reasoning:
+  // { whyBegin, whyEnd }. Nullable JSON, fail-soft parse; persisted via
+  // updateSection, never the create INSERT.
+  "discovery",
 ])) as ReadonlySet<string>;
 
 // Spine-controlled columns. The spine's `transitionState` position-writer that

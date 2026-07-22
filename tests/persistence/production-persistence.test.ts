@@ -22,7 +22,7 @@ import * as path from "node:path";
 const requireCjs = createRequire(import.meta.url);
 const BetterSqlite3 = requireCjs("better-sqlite3-node");
 const { createPersistence } = requireCjs("../../electron/persistence.cjs");
-const { MUTATION_KIND, STAGE, SUB_PHASE, SERMON_COLUMNS } = requireCjs("../../electron/contracts.cjs");
+const { MUTATION_KIND, STAGE, SUB_PHASE, SERMON_COLUMNS, SERIES_COLUMNS, SECTION_COLUMNS } = requireCjs("../../electron/contracts.cjs");
 
 type Persistence = ReturnType<typeof createPersistence>;
 
@@ -178,13 +178,27 @@ describe("production persistence seam — real SQLite", () => {
     const v2 = Number(p.queryOne("SELECT value FROM meta WHERE key = 'schema_version'", []).value);
     expect(v2).toBe(v1);
 
-    // And the live schema satisfies the SERMON_COLUMNS contract —
-    // assertSchemaContract logs nothing (its ERROR path stays silent).
+    // And the live schema satisfies the SERMON / SERIES / SECTION column
+    // contracts — assertSchemaContract logs nothing (its ERROR path stays
+    // silent). v34 extended the canary to series_sections; the full ladder must
+    // satisfy all three allowlists, including each table's `discovery` column.
     const before = loggedErrors.length;
     p.assertSchemaContract();
     expect(loggedErrors.length).toBe(before);
     for (const col of SERMON_COLUMNS) {
       expect(cols.has(col), `sermons.${col} missing after full ladder`).toBe(true);
     }
+    const seriesCols = new Set(p.queryAll("PRAGMA table_info(series)", []).map((r: any) => r.name));
+    for (const col of SERIES_COLUMNS) {
+      expect(seriesCols.has(col), `series.${col} missing after full ladder`).toBe(true);
+    }
+    const sectionCols = new Set(p.queryAll("PRAGMA table_info(series_sections)", []).map((r: any) => r.name));
+    for (const col of SECTION_COLUMNS) {
+      expect(sectionCols.has(col), `series_sections.${col} missing after full ladder`).toBe(true);
+    }
+    // The v34 additions specifically — Series Discovery's per-entity reasoning columns.
+    expect(cols.has("discovery"), "sermons.discovery (v34) missing").toBe(true);
+    expect(seriesCols.has("discovery"), "series.discovery (v34) missing").toBe(true);
+    expect(sectionCols.has("discovery"), "series_sections.discovery (v34) missing").toBe(true);
   });
 });

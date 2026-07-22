@@ -966,6 +966,46 @@ function createPersistence({ getDb, logError = console.error, logInfo = () => {}
       version = 33;
     }
 
+    if (version < 34) {
+      // v34 (Series Discovery, feature/series-discovery) — the exegetical front
+      // screen of the Series Planner. Discovery and Outline are two views of ONE
+      // pastor-authored series: a "major movement" IS a real series_sections row,
+      // a "preaching text" IS a real sermons row, and their canonical fields
+      // (title/passage/big_idea/overview) are shared, not duplicated. Only the
+      // Discovery-only *reasoning* — the pastor's own words that cannot truthfully
+      // live in a clean planner field — is new state (charter:
+      // docs/PROPOSALS/series-discovery.md).
+      //
+      // One nullable JSON envelope column named `discovery` per entity, mirroring
+      // the house idiom (study_guide_extras, sermon_frame, the Study sub-phase
+      // columns): fail-soft parsed, explicit keys, never an opaque blob. Per-entity
+      // so it rides the existing update* create-then-update paths AND shares each
+      // row's lifecycle — a deleted section/sermon takes its Discovery reasoning
+      // with it (no ghost, no orphan cleanup).
+      //
+      //   series.discovery          — { read, understand, decisions[], seriesBigIdea }
+      //                               (Read notes, Understand answers, ≤3 Difficult
+      //                               Decisions, the two Series-Big-Idea candidates
+      //                               + reasoning). The FINAL canonical Series Big
+      //                               Idea stays series.big_idea; the Overview stays
+      //                               series.overview.
+      //   series_sections.discovery — { whyBegin, whyEnd } (movement boundaries).
+      //   sermons.discovery         — { whyBegin, whyEnd, subject, complement,
+      //                               authorialFunction } (preaching-text boundaries
+      //                               + subject/complement/authorial function).
+      //
+      // All three additive + nullable (no backfill, no columns dropped) and in the
+      // *_COLUMNS writable sets, so they persist via updateSeries/Section/Sermon —
+      // the create INSERTs are NEVER widened (do-not-widen-INSERT ruling). `discovery`
+      // is deliberately NOT added to sermon_search: it is reasoning, not manuscript
+      // content.
+      safeAlter("ALTER TABLE series ADD COLUMN discovery TEXT DEFAULT NULL");
+      safeAlter("ALTER TABLE series_sections ADD COLUMN discovery TEXT DEFAULT NULL");
+      safeAlter("ALTER TABLE sermons ADD COLUMN discovery TEXT DEFAULT NULL");
+      dbRun("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema_version', '34')");
+      version = 34;
+    }
+
     // True when at least one block actually ran. Lets initDatabase skip the
     // boot-time flush on a clean boot of an up-to-date DB — so a healthy library
     // is never re-serialized and rotated over its own backup for no reason.
@@ -989,6 +1029,16 @@ function createPersistence({ getDb, logError = console.error, logInfo = () => {}
     const actualSeries = new Set(seriesInfo.map(r => r.name));
     for (const col of SERIES_COLUMNS) {
       if (!actualSeries.has(col)) missing.push(`series.${col}`);
+    }
+    // series_sections joined the canary in v34 (Series Discovery), when the
+    // section allowlist gained its first column beyond the CREATE TABLE set
+    // (`discovery`). A missing writable section column rejects the whole
+    // updateSection in production exactly as a missing sermon/series column
+    // does, so it deserves the same boot-time canary.
+    const sectionInfo = queryAll("PRAGMA table_info(series_sections)");
+    const actualSections = new Set(sectionInfo.map(r => r.name));
+    for (const col of SECTION_COLUMNS) {
+      if (!actualSections.has(col)) missing.push(`series_sections.${col}`);
     }
     if (missing.length > 0) {
       logError(
