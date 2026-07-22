@@ -5,10 +5,11 @@ import SeriesPlanner from "./SeriesPlanner";
 // verified in a browser preview without Electron/SQLite. Never used in prod.
 //
 // Routes:
-//   ?planner                         book series, Outline (default)
-//   ?planner=schedule|study-guide    book series, that tab
-//   ?planner&kind=topical            topical series, Outline
-//   ?planner=schedule&kind=topical   topical series, that tab
+//   ?planner                          book series, Outline (default)
+//   ?planner=discover                 book series, the Discover walk
+//   ?planner=schedule|study-guide     book series, that tab
+//   ?planner&kind=topical             topical series, Outline
+//   ?planner=schedule&kind=topical    topical series, that tab
 //
 // The BOOK seed mirrors the pastor's real artifact (Jesus of Luke), so the
 // preview shows the three-level model on its native shape: Book ▸ Section ▸
@@ -34,6 +35,25 @@ const SERIES = {
     "Luke is the first of a two-part work (the second being Acts), an orderly, well-researched account of the things accomplished among us, written so that a man familiar with Jesus might see Him again for the first time. We are just as susceptible to the same Jesus drift — Luke reintroduces us to a Jesus glorious enough to shape everything about us around His mission.",
   structural_outline:
     "I. Seeing Jesus through Others' Eyes (1:1–4:13)\nII. Seeing Jesus with New Eyes (4:14–9:50)\nIII. Walking with Jesus: Discipleship in Real Life (9:51–19:27)\nIV. Taking the Message on Mission (19:28–24:53)",
+  // Discovery-only reasoning (v34) — a JSON string, as the DB returns it. Seeds the
+  // Discover walk so the preview shows populated fields.
+  discovery: JSON.stringify({
+    readNotes: "Repeated: 'today', 'salvation', table scenes, the Spirit. Reversal everywhere — the low lifted, the high sent away. Journey to Jerusalem from 9:51.",
+    understandWhyWritten: "So Theophilus would have certainty about what he'd been taught (1:3-4).",
+    understandSituation: "A believer familiar with Jesus, needing an orderly account he can stand on.",
+    understandProblem: "Jesus drift — knowing about Jesus while missing who He really is.",
+    understandResponse: "See Jesus again, clearly, and follow Him on His mission.",
+    understandWantsReaderTo: "…see a Jesus glorious enough to reorder his whole life around the mission.",
+    decisions: [
+      { id: "dec-fixture-1", optionA: "End movement I at 4:13 (temptation)", optionB: "End at 4:15 (Galilee summary)", evidenceA: "4:14 opens 'in the power of the Spirit' — a new phase.", evidenceB: "The summary rounds off the opening.", preference: "A", why: "The Spirit-empowered return reads as a fresh start." },
+    ],
+    bigIdeaBurden: "Jesus is the center of God's mission, and to know Him is to join it.",
+    bigIdeaRecurring: "Reversal, table fellowship, the Spirit, 'today'.",
+    bigIdeaResponse: "Follow Jesus courageously as a witness.",
+    bigIdeaUnifier: "Every sermon shows more of who Jesus really is.",
+    bigIdeaCandidateA: "Reintroducing Jesus to people who are familiar with Him.",
+    bigIdeaCandidateB: "The mission of God runs through the person of Jesus — and through us.",
+  }),
 };
 
 const SECTIONS = [
@@ -44,6 +64,10 @@ const SECTIONS = [
     big_idea: "Appreciating Jesus through the power of testimony.",
     overview:
       "The first part of Luke's Gospel tells the story of God's promised redemption through a series of testimonies — some from ordinary people, others from divine beings. As we glimpse Jesus through the eyes of others, we are reminded that He is far more than we often see on our own.",
+    discovery: JSON.stringify({
+      whyBegin: "The formal prologue (1:1-4) opens the whole work.",
+      whyEnd: "The temptation closes the preparation; 4:14 begins the Galilean ministry 'in the power of the Spirit'.",
+    }),
   },
   {
     id: "sec-2", series_id: "fixture-series", sort_order: 1,
@@ -68,6 +92,13 @@ const SERMONS = [
     big_idea: "God in His goodness uses ordinary, faithful people to do big things.",
     overview:
       "Zechariah was an ordinary priest God used to bring the forerunner of Christ into the world. There was nothing spectacular about his life; he was simply faithful. Faithfulness over a lifetime always produces fruit to God's glory.",
+    discovery: JSON.stringify({
+      whyBegin: "A clean scene-shift to the temple and Zechariah (1:5).",
+      whyEnd: "Zechariah's muteness closes the episode before Gabriel goes to Mary (1:26).",
+      subject: "God's response to a faithful, childless priest.",
+      complement: "He answers long prayer in His own time, and discipline can accompany doubt.",
+      authorialFunction: "Encouraging",
+    }),
   },
   {
     id: "serm-3", series_id: "fixture-series", section_id: "sec-2", stage: "in_progress",
@@ -141,7 +172,7 @@ export default function SeriesPlannerFixture() {
   const params = new URLSearchParams(window.location.search);
   const tabParam = params.get("planner");
   const isTopical = params.get("kind") === "topical";
-  const activeTab = ["schedule", "study-guide"].includes(tabParam) ? tabParam : "book-outline";
+  const activeTab = ["discover", "schedule", "study-guide"].includes(tabParam) ? tabParam : "book-outline";
   const fixture = isTopical
     ? { series: TOPICAL_SERIES, sections: [], sermons: TOPICAL_SERMONS, calNotes: [], activeTab }
     : { series: SERIES, sections: SECTIONS, sermons: SERMONS, calNotes: [], activeTab };

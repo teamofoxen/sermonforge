@@ -16,12 +16,13 @@ import {
 } from "../core/contracts";
 import { getSeasonForDate, getUpcomingSundays, addWeek } from "../utils/churchCalendar";
 import { computePacing } from "../utils/pacing";
-import { computeCoverage } from "../utils/coverage";
 import { buildStudyGuideModel } from "../utils/studyGuideModel";
 import { GENRES, bookById, bookSpan } from "../data/canonicalBooks";
 import { composePassage, refFromPassage, repointPassage } from "../utils/topicalPassage";
 import { parsePassageRef } from "../utils/passageRef";
+import { mergeDiscovery } from "../utils/discovery";
 import BookSelect from "./BookSelect";
+import CoveragePanel from "./CoveragePanel";
 import { formatDate, autoResize, parseLocalDate } from "../utils";
 import { buttonKeydown } from "../utils/buttonKeydown";
 import DeleteButton from "./DeleteButton";
@@ -33,6 +34,7 @@ import BackButton from "./primitives/BackButton";
 import TextButton from "./primitives/TextButton";
 import FeedbackFlag from "./FeedbackFlag";
 import UnsavedLeaveConfirm from "./UnsavedLeaveConfirm";
+import SeriesDiscover from "./SeriesDiscover";
 
 // ── The three screens ─────────────────────────────────────────────────────────
 // The planner is a top-down way to understand the book at three levels —
@@ -41,12 +43,20 @@ import UnsavedLeaveConfirm from "./UnsavedLeaveConfirm";
 // scheduled on one Sunday (the series→sections→sermons spine). Every level is the
 // same unit: Title + range · Big idea · Overview. The four-movement workbench and
 // the melodic-line model were retired in the 2026-06-24 content-model rebuild.
-const PLANNER_TABS = [
+// A BOOK series leads with Discover — the exegetical front screen where the walk's
+// questions produce the plan (Discover · Outline · Schedule · Study guide). A
+// TOPICAL series keeps its existing journey unchanged (no Topical Discovery in this
+// initiative): Outline · Schedule · Study guide. The tab id "book-outline" is kept
+// (the bare "outline" is a forbidden pre-Pilot-B stage alias under the lint rule).
+const DISCOVER_TAB = { id: "discover", label: "Discover" };
+const BASE_PLANNER_TABS = [
   { id: "book-outline", label: "Outline" },
   { id: "schedule",    label: "Schedule" },
   { id: "study-guide", label: "Study guide" },
 ];
-const PLANNER_TAB_IDS = PLANNER_TABS.map((t) => t.id);
+function plannerTabsFor(kind) {
+  return kind === "topical" ? BASE_PLANNER_TABS : [DISCOVER_TAB, ...BASE_PLANNER_TABS];
+}
 
 // The "Biblical Category" dropdown — the 7 Dever genres (single source) plus an
 // Unclassified state for legacy/never-set rows. Picking a book auto-fills it.
@@ -99,6 +109,10 @@ function saveKey(target, fields) {
   return `${target}:${Object.keys(fields || {}).sort().join(",")}`;
 }
 
+// A draft (UI-only, no DB row) sermon id. Drafts stay UI-only until their first
+// non-empty title commits them (createSermon throws on an empty name, State #3).
+const isDraftId = (id) => typeof id === "string" && id.startsWith("draft-");
+
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture }) {
   // _fixture — preview seam (mirrors SermonWorkspace's _fixtureSermon). When set,
@@ -121,6 +135,14 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
   const [drafts, setDrafts] = useState([]);
   const [draftErrors, setDraftErrors] = useState({});
   const [expandedSermons, setExpandedSermons] = useState(() => new Set());
+  // Mirror the latest drafts for async commit re-reads — commitDraft (below) can
+  // keep reading the newest draft while its createSermon round-trip is in flight,
+  // so keystrokes typed during the commit aren't lost. inFlightRef dedupes
+  // concurrent commits of the same draft. Both moved up from OutlineTab when the
+  // entity-mutation path was lifted to the parent so Outline AND Discover share it.
+  const draftsRef = useRef(drafts);
+  draftsRef.current = drafts;
+  const inFlightRef = useRef(new Map());
   // Failed RETRYABLE writes (idempotent field edits — updateSeries/Section/
   // Sermon), keyed by target+field, so the topbar Retry re-runs the real writes.
   // A MAP keyed by target, not a single slot and not a plain list:
@@ -146,10 +168,9 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
     setDrafts([]);
     setDraftErrors({});
     setExpandedSermons(new Set());
-    const saved = localStorage.getItem(`sermonforge_planner_tab_${seriesId}`);
-    // A remembered id for a since-removed tab (the old book-study / design /
-    // calendar / overview) must not stick — fall back to Outline.
-    setActiveTab(PLANNER_TAB_IDS.includes(saved) ? saved : "book-outline");
+    // The landing tab is resolved in load() once kind + sections are known — a
+    // book series' Discover-vs-Outline default depends on both. During the load
+    // the "Loading…" screen shows, so activeTab's interim value isn't seen.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seriesId]);
 
@@ -194,6 +215,18 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
       setSections(sects);
       setSermons(serms);
       setCalNotes(notes);
+      // Landing tab. A remembered id (from a prior visit) wins — that's "return
+      // where you were". With none, a BOOK series opens on Discover only when it's
+      // a blank page (no movements yet); an established plan — the sample, any
+      // series with sections — and every topical series open on their clean
+      // Outline. A remembered id for a since-removed tab falls back to Outline.
+      const saved = localStorage.getItem(`sermonforge_planner_tab_${seriesId}`);
+      const validIds = plannerTabsFor(s.kind).map((t) => t.id);
+      if (saved && validIds.includes(saved)) {
+        setActiveTab(saved);
+      } else {
+        setActiveTab(s.kind !== "topical" && sects.length === 0 ? "discover" : "book-outline");
+      }
     } catch (e) {
       console.error("SeriesPlanner load error:", e);
       setLoadError(true);
@@ -376,6 +409,226 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
     return true;
   }, [runSave, seriesId, reloadPlannerTruth]);
 
+  // ── Section + sermon entity mutations — SHARED by Outline and Discover ───────
+  // Lifted from OutlineTab so BOTH the Outline tab and the Discover walk drive
+  // ONE create/commit/delete/reorder path — two views of the same series, never
+  // two planning systems. A "major movement" IS a real section; a "preaching
+  // text" IS a real sermon; both are born and edited here. The subtle one is
+  // commitDraft (re-read-latest during the createSermon round-trip, then
+  // promote-then-retryable follow-up that fixed the double-create) — a second
+  // copy would drift. Genuinely per-view UI reactions (scroll-to / collapse /
+  // focus) stay in the consuming tab, fed by the ids these return.
+
+  const clearDraftError = useCallback((id) => {
+    setDraftErrors((prev) => {
+      if (!(id in prev)) return prev;
+      const next = { ...prev }; delete next[id]; return next;
+    });
+  }, []);
+
+  const toggleSermon = useCallback((id) => {
+    setExpandedSermons((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }, []);
+
+  // Create a real Series Section (a "major movement" in Discover). Returns the
+  // new section id (or null on failure) so the caller can scroll/focus/expand it.
+  // Routed through runSave like the sibling section mutations so a DB-busy failure
+  // surfaces the topbar Save-failed + Retry; state is touched only after resolve.
+  const addSection = useCallback(async () => {
+    const nextOrder = sections.length ? Math.max(...sections.map((s) => s.sort_order ?? 0)) + 1 : 0;
+    let newId = null;
+    await runSave(async () => {
+      const result = await createSection({ series_id: seriesId, sort_order: nextOrder });
+      const updated = await getSectionsBySeries(seriesId);
+      setSections(updated);
+      newId = result?.id ?? null;
+    }, { retryable: false }); // create thunk — never queue for topbar Retry (would duplicate the section)
+    return newId;
+  }, [sections, runSave, seriesId]);
+
+  const deleteSectionRow = useCallback(async (id) => {
+    // Mirror the server (no section-less limbo): the deleted section's sermons
+    // move to the first remaining section; if it was the LAST section they leave
+    // the series (become standalone) and drop out of the planner.
+    const target = sections
+      .filter((s) => s.id !== id)
+      .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))[0];
+    setSections((prev) => prev.filter((s) => s.id !== id));
+    if (target) {
+      setSermons((prev) => prev.map((s) => (s.section_id === id ? { ...s, section_id: target.id } : s)));
+    } else {
+      setSermons((prev) => prev.filter((s) => s.section_id !== id));
+    }
+    const ok = await runSave(() => deleteSection(id), { retryable: false });
+    if (!ok) {
+      const [secs, serms] = await Promise.all([getSectionsBySeries(seriesId), getSermonsBySeries(seriesId)]);
+      setSections(secs);
+      setSermons(serms);
+    } else if (!target) {
+      // Last section deleted — its sermons left the series (standalone), so the
+      // series end_date must recompute over what remains (usually nothing).
+      syncSeriesEndDate(sermons.filter((s) => s.section_id !== id));
+    }
+  }, [sections, sermons, runSave, seriesId, syncSeriesEndDate]);
+
+  const moveSection = useCallback(async (id, direction) => {
+    const idx = sections.findIndex((s) => s.id === id);
+    const newIdx = idx + direction;
+    if (newIdx < 0 || newIdx >= sections.length) return;
+    const reordered = [...sections];
+    [reordered[idx], reordered[newIdx]] = [reordered[newIdx], reordered[idx]];
+    setSections(reordered);
+    // One gesture, one transaction (Session-3): the per-section sort_order writes
+    // are the `reorder-sections` spine op — a failure can't leave half moved.
+    const ok = await runSave(() => reorderSections(seriesId, reordered.map((s) => s.id)), { retryable: false });
+    if (!ok) setSections(await getSectionsBySeries(seriesId));
+  }, [sections, runSave, seriesId]);
+
+  // Topical-only reorder over the pastor's ARRANGEMENT (sort_order), not the raw
+  // dated-first list (audit finding 24). Discover doesn't reorder; Outline's
+  // topical layout does.
+  const moveSermon = useCallback(async (id, direction) => {
+    const ordered = arrangedTopicalSermons(sermons);
+    const idx = ordered.findIndex((s) => s.id === id);
+    const newIdx = idx + direction;
+    if (idx < 0 || newIdx < 0 || newIdx >= ordered.length) return;
+    const reordered = [...ordered];
+    [reordered[idx], reordered[newIdx]] = [reordered[newIdx], reordered[idx]];
+    const withOrder = reordered.map((s, i) => ({ ...s, sort_order: i }));
+    setSermons(withOrder);
+    const ok = await runSave(() => reorderSeriesSermons(seriesId, withOrder.map((s) => s.id)), { retryable: false });
+    if (!ok) setSermons(await getSermonsBySeries(seriesId));
+  }, [sermons, runSave, seriesId]);
+
+  // Create a UI-only draft preaching text under a movement. In Discover ALWAYS
+  // pass an existing movement's sectionId — a section-less in-series BOOK sermon
+  // makes the spine auto-fabricate a phantom "Section 1" (create-sermon net).
+  const addSermon = useCallback((sectionId) => {
+    const id = `draft-${crypto.randomUUID()}`;
+    setDrafts((prev) => [...prev, {
+      id, _draft: true, series_id: seriesId, section_id: sectionId,
+      title: "", passage: "", book_id: "", big_idea: "", overview: "", date: "",
+      stage: SERMON_STATUS.InProgress,
+    }]);
+    setExpandedSermons((prev) => new Set(prev).add(id));
+    return id;
+  }, [seriesId]);
+
+  // Commit a draft to the spine. The create-sermon INSERT is never widened —
+  // big_idea / overview / book_id / discovery (if typed before commit) follow with
+  // an updateSermon, the create-then-update shape. See the double-create fix in
+  // the comments below (promote the row, then a retryable follow-up — never await
+  // the follow-up here, or a failed follow-up re-runs the create).
+  const commitDraft = useCallback((draftId) => {
+    if (inFlightRef.current.has(draftId)) return inFlightRef.current.get(draftId);
+    const draft = draftsRef.current.find((d) => d.id === draftId);
+    if (!draft) return Promise.resolve(null);
+    const name = draft.title?.trim();
+    if (!name) return Promise.resolve(null);
+    clearDraftError(draftId);
+    const promise = (async () => {
+      try {
+        const result = await createSermon({
+          name, series_id: draft.series_id, section_id: draft.section_id,
+          passage: draft.passage || "", date: draft.date || "", is_one_off: 0,
+        });
+        const newId = result.id;
+        // Re-read the draft as it stands NOW — the pastor may have kept typing
+        // during the createSermon round-trip, so the pre-await snapshot is stale.
+        const latest = draftsRef.current.find((d) => d.id === draftId) || draft;
+        const followUp = {};
+        if (latest.big_idea?.trim?.()) followUp.big_idea = latest.big_idea;
+        if (latest.overview?.trim?.()) followUp.overview = latest.overview;
+        if ((latest.passage || "") !== (draft.passage || "")) followUp.passage = latest.passage || "";
+        if (latest.book_id) followUp.book_id = latest.book_id;
+        // discovery reasoning typed on the draft (Discover) rides the same
+        // create-then-update follow-up so it's never lost at commit.
+        if (latest.discovery) followUp.discovery = latest.discovery;
+        const realSlot = {
+          id: newId, series_id: draft.series_id, section_id: draft.section_id,
+          title: name, passage: latest.passage || "", date: latest.date || "",
+          book_id: latest.book_id || null,
+          big_idea: latest.big_idea || "", overview: latest.overview || "",
+          discovery: latest.discovery || null,
+          stage: SERMON_STATUS.InProgress,
+        };
+        // Promote the draft to the committed row NOW; the follow-up is an
+        // idempotent field write on an existing row (retryable), never awaited —
+        // awaiting let a failed follow-up throw to the catch, which re-ran the
+        // create and made a SECOND sermon.
+        setSermons((prev) => [...prev, realSlot]);
+        setDrafts((prev) => prev.filter((d) => d.id !== draftId));
+        if (Object.keys(followUp).length) runSave(() => updateSermon(newId, followUp), { key: saveKey(`sermon:${newId}`, followUp) });
+        setExpandedSermons((prev) => {
+          const n = new Set(prev); n.delete(draftId); n.add(newId); return n;
+        });
+        return newId;
+      } catch (e) {
+        console.error("[commitDraft]", e);
+        setDraftErrors((prev) => ({ ...prev, [draftId]: e?.message || "Could not create the sermon." }));
+        return null;
+      } finally {
+        inFlightRef.current.delete(draftId);
+      }
+    })();
+    inFlightRef.current.set(draftId, promise);
+    return promise;
+  }, [runSave, clearDraftError]);
+
+  // Accepts either a single (field, value) or an object of fields (so a topical
+  // Book pick can write book_id + the recomposed passage in one DB write). Draft
+  // rows mutate local draft state; committed rows go through the debounced saver.
+  const handleSermonRowField = useCallback((id, fieldOrFields, value) => {
+    const fields = typeof fieldOrFields === "string" ? { [fieldOrFields]: value } : fieldOrFields;
+    if (isDraftId(id)) {
+      setDrafts((prev) => prev.map((s) => (s.id === id ? { ...s, ...fields } : s)));
+      return;
+    }
+    handleSermonField(id, fields);
+  }, [handleSermonField]);
+
+  const removeSermonRow = useCallback(async (id) => {
+    if (isDraftId(id)) { setDrafts((prev) => prev.filter((s) => s.id !== id)); clearDraftError(id); return; }
+    setSermons((prev) => prev.filter((s) => s.id !== id));
+    const ok = await runSave(() => deleteSermon(id), { retryable: false });
+    if (!ok) {
+      // The delete failed but the row was optimistically removed — reload so the
+      // "deleted" sermon doesn't silently reappear on the next load.
+      setSermons(await getSermonsBySeries(seriesId));
+      return;
+    }
+    // end_date mirrors the LAST dated sermon — recompute once this one is gone.
+    syncSeriesEndDate(sermons.filter((s) => s.id !== id));
+  }, [runSave, seriesId, sermons, syncSeriesEndDate, clearDraftError]);
+
+  // ── Discovery reasoning (v34) — merge a sub-field patch into the entity's
+  // `discovery` JSON envelope and route through the SAME debounced saver as the
+  // canonical fields, so Discovery inherits the topbar Saving / Saved / Save-failed
+  // + Retry, flush-on-exit, and leave-guard for free (Mutation #3). No parallel
+  // save path. Each Discover edit sends a sub-field's COMPLETE new value, so the
+  // merge (a spread over the latest render's envelope) can never drop a sibling.
+  function handleSeriesDiscovery(patch) {
+    handleSeriesField("discovery", mergeDiscovery(series?.discovery, patch));
+  }
+  function handleSectionDiscovery(id, patch) {
+    const cur = sections.find((s) => s.id === id)?.discovery;
+    handleSectionField(id, { discovery: mergeDiscovery(cur, patch) });
+  }
+  function handleSermonDiscovery(id, patch) {
+    // A draft has no DB row — hold reasoning on the draft; commitDraft carries it
+    // forward in the create-then-update follow-up so nothing typed pre-commit is lost.
+    if (isDraftId(id)) {
+      setDrafts((prev) => prev.map((d) => (d.id === id ? { ...d, discovery: mergeDiscovery(d.discovery, patch) } : d)));
+      return;
+    }
+    const cur = sermons.find((s) => s.id === id)?.discovery;
+    handleSermonField(id, { discovery: mergeDiscovery(cur, patch) });
+  }
+
   // Drain the failed-write queue. Each entry is an idempotent field write, safe
   // to replay; the queued key is removed before replay and re-added only if it
   // fails again — so a fresh edit to that field arriving mid-retry (which sets
@@ -464,6 +717,8 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
     );
   }
 
+  // Kind-aware tabs: a book series leads with Discover; topical keeps its journey.
+  const PLANNER_TABS = plannerTabsFor(series.kind);
   const activeTabLabel = (PLANNER_TABS.find((t) => t.id === activeTab) || {}).label;
 
   return (
@@ -559,27 +814,54 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
           region. This wrapper must be a bounded column flex container so that
           engages. */}
       <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", overflow: "hidden", background: "var(--parchment)" }}>
+        {activeTab === "discover" && (
+          <SeriesDiscover
+            series={series}
+            sections={sections}
+            sermons={sermons}
+            seriesId={seriesId}
+            drafts={drafts}
+            draftErrors={draftErrors}
+            expandedSermons={expandedSermons}
+            onSeriesField={handleSeriesField}
+            onSectionField={handleSectionField}
+            onSeriesDiscovery={handleSeriesDiscovery}
+            onSectionDiscovery={handleSectionDiscovery}
+            onSermonDiscovery={handleSermonDiscovery}
+            addSection={addSection}
+            deleteSectionRow={deleteSectionRow}
+            addSermon={addSermon}
+            commitDraft={commitDraft}
+            handleSermonRowField={handleSermonRowField}
+            removeSermonRow={removeSermonRow}
+            clearDraftError={clearDraftError}
+            toggleSermon={toggleSermon}
+            onOpenSermon={openSermonGuarded}
+            onNavigate={handleTabChange}
+          />
+        )}
         {activeTab === "book-outline" && (
           <OutlineTab
             series={series}
             sections={sections}
             sermons={sermons}
-            seriesId={seriesId}
             onSeriesField={handleSeriesField}
             onSelectBook={handleSelectBook}
             onSectionField={handleSectionField}
-            onSermonField={handleSermonField}
-            onSectionsChange={setSections}
-            onSermonsChange={setSermons}
             onOpenSermon={openSermonGuarded}
-            onSyncEndDate={syncSeriesEndDate}
             drafts={drafts}
-            setDrafts={setDrafts}
             draftErrors={draftErrors}
-            setDraftErrors={setDraftErrors}
             expandedSermons={expandedSermons}
-            setExpandedSermons={setExpandedSermons}
-            runSave={runSave}
+            addSection={addSection}
+            deleteSectionRow={deleteSectionRow}
+            moveSection={moveSection}
+            moveSermon={moveSermon}
+            addSermon={addSermon}
+            commitDraft={commitDraft}
+            handleSermonRowField={handleSermonRowField}
+            removeSermonRow={removeSermonRow}
+            clearDraftError={clearDraftError}
+            toggleSermon={toggleSermon}
           />
         )}
         {activeTab === "schedule" && (
@@ -623,79 +905,9 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
 
 // ── Shared readouts ───────────────────────────────────────────────────────────
 
-// The coverage meter — a track with a sage fill at `percent`.
-function CoverageBar({ percent, animate = false }) {
-  return (
-    <div style={{ height: "8px", borderRadius: "4px", background: "var(--parchment-deep)", overflow: "hidden" }}>
-      <div style={{
-        width: `${percent}%`, height: "100%", background: "var(--sage)",
-        ...(animate ? { transition: "width 200ms" } : {}),
-      }} />
-    </div>
-  );
-}
-
-// A read-only picture of how the sermons partition the series' book: a
-// proportional bar + plain notes on gaps, overlaps, out-of-order sermons, and any
-// unreadable passage refs. Purely informational (src/utils/coverage.js) — never
-// a gate. Clamped to the declared passage_range when it parses.
-function CoveragePanel({ series, sermons, onNavigate }) {
-  const cov = computeCoverage(series?.book_id, sermons, series?.passage_range);
-  const book = bookById(series?.book_id);
-
-  if (cov.noBook || !book) {
-    return (
-      <div style={{
-        padding: "10px 14px",
-        background: "var(--parchment-warm)", border: "1px dashed var(--parchment-deep)",
-        borderRadius: "var(--radius)", fontSize: "12.5px", color: "var(--ink-ghost)",
-      }}>
-        Pick a canonical book in <strong>Book details</strong> on the{" "}
-        <TextButton onClick={() => onNavigate?.("book-outline")} style={{ fontSize: "inherit", padding: 0, verticalAlign: "baseline" }}>Outline</TextButton>{" "}
-        to see how your sermons cover it.
-      </div>
-    );
-  }
-
-  const notes = [];
-  if (cov.gaps.length) notes.push({ key: "gaps", label: "Uncovered", text: cov.gaps.join(", ") });
-  if (cov.overlaps.length) notes.push({ key: "overlaps", label: "Overlap", text: cov.overlaps.map((o) => `sermons ${o.a} & ${o.b}`).join(", ") });
-  if (cov.outOfOrder.length) notes.push({ key: "order", label: "Out of order", text: cov.outOfOrder.map((n) => `sermon ${n}`).join(", ") });
-  if (cov.unreadable.length) {
-    notes.push({
-      key: "unreadable", label: "Couldn't read",
-      text: cov.unreadable.map((n) => {
-        const p = sermons[n - 1] && sermons[n - 1].passage;
-        return p ? `sermon ${n} ("${p}")` : `sermon ${n}`;
-      }).join(", "),
-    });
-  }
-
-  return (
-    <div style={{
-      padding: "12px 14px", background: "var(--white)",
-      border: "1px solid var(--parchment-deep)", borderRadius: "var(--radius)",
-    }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "10px" }}>
-        <span className="field-label" style={{ marginBottom: 0 }}>Coverage</span>
-        <span style={{ fontSize: "13px", color: "var(--ink-soft)" }}>
-          {cov.percent}% of {book.name}{cov.scopeLabel ? ` ${cov.scopeLabel}` : ""}{cov.mode === "chapter" ? " (by chapter)" : ""}
-        </span>
-      </div>
-      <CoverageBar percent={cov.percent} animate />
-      <div style={{ marginTop: "12px", display: "flex", flexDirection: "column", gap: "5px" }}>
-        {notes.length === 0 ? (
-          <div style={{ fontSize: "12.5px", color: "var(--sage)" }}>Every verse covered exactly once, in order.</div>
-        ) : notes.map((n) => (
-          <div key={n.key} style={{ fontSize: "12.5px", color: "var(--ink-soft)" }}>
-            <span style={{ fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", fontSize: "10.5px", marginRight: "8px", color: "var(--ink-ghost)" }}>{n.label}</span>
-            {n.text}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
+// CoverageBar + CoveragePanel were extracted to ./CoveragePanel.jsx so the
+// Schedule screen AND the Discover walk (Test Every Passage / Planner-Ready
+// Review) share one readout without a cyclic import. Imported at the top.
 
 // A compact, read-only mirror of the series' shape — sermon count, approximate
 // weeks/months, projected end date, a neutral length band, liturgical seasons,
@@ -766,25 +978,21 @@ function arrangedTopicalSermons(sermons) {
 // at-a-glance. Draft-row/commit is preserved for new sermons (createSermon
 // throws on an empty name, State #3). AI-free throughout.
 function OutlineTab({
-  series, sections, sermons, seriesId,
-  onSeriesField, onSelectBook, onSectionField, onSermonField,
-  onSectionsChange, onSermonsChange, onOpenSermon, onSyncEndDate,
-  drafts, setDrafts, draftErrors, setDraftErrors, expandedSermons, setExpandedSermons,
-  runSave,
+  series, sections, sermons,
+  onSeriesField, onSelectBook, onSectionField, onOpenSermon,
+  drafts, draftErrors, expandedSermons,
+  addSection, deleteSectionRow, moveSection, moveSermon,
+  addSermon, commitDraft, handleSermonRowField, removeSermonRow,
+  clearDraftError, toggleSermon,
 }) {
   const [referenceOpen, setReferenceOpen] = useState(false);
   // Sections default expanded; collapse state is OutlineTab-local (resets on a
-  // tab switch — fine). drafts / draftErrors / expandedSermons are lifted to the
-  // parent so an unfinished, not-yet-titled draft survives a tab switch.
+  // tab switch — fine). The section/sermon entity mutations (add/commit/delete/
+  // reorder) were lifted to the parent (SeriesPlanner) so Outline and the Discover
+  // walk drive ONE create/commit path — two views of the same series. This tab
+  // consumes them as props and keeps only its own view state.
   const [collapsedSections, setCollapsedSections] = useState(() => new Set());
-  // Mirror the latest drafts for async commit re-reads (see commitDraft): the
-  // pastor can keep typing into a draft during its createSermon round-trip.
-  const draftsRef = useRef(drafts);
-  draftsRef.current = drafts;
-  const inFlightRef = useRef(new Map());
   const [justCreatedSectionId, setJustCreatedSectionId] = useState(null);
-
-  const isDraftId = (id) => typeof id === "string" && id.startsWith("draft-");
 
   function toggleSection(id) {
     setCollapsedSections((prev) => {
@@ -793,195 +1001,24 @@ function OutlineTab({
       return next;
     });
   }
-  function toggleSermon(id) {
-    setExpandedSermons((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
+
+  // Create a section (parent's addSection), then react locally: reveal + focus
+  // the new card. The create and its optimistic state live in the parent, so
+  // Outline and Discover create movements identically; only the scroll-to is ours.
+  async function handleAddSection() {
+    const id = await addSection();
+    if (id) {
+      setCollapsedSections((prev) => { const n = new Set(prev); n.delete(id); return n; });
+      setJustCreatedSectionId(id);
+    }
   }
 
-  // ── Section CRUD ──────────────────────────────────────────────────────────
-  async function addSection() {
-    const nextOrder = sections.length ? Math.max(...sections.map((s) => s.sort_order ?? 0)) + 1 : 0;
-    // Route through runSave like the sibling section mutations (delete/move) so a
-    // DB-busy / file-lock failure surfaces the topbar Save-failed + Retry instead
-    // of a silent no-op. State is only touched after the writes resolve.
-    await runSave(async () => {
-      const result = await createSection({ series_id: seriesId, sort_order: nextOrder });
-      const updated = await getSectionsBySeries(seriesId);
-      onSectionsChange(updated);
-      if (result?.id) {
-        setCollapsedSections((prev) => { const n = new Set(prev); n.delete(result.id); return n; });
-        setJustCreatedSectionId(result.id);
-      }
-    }, { retryable: false }); // create thunk — never queue for topbar Retry (would duplicate the section)
-  }
-  async function deleteSectionRow(id) {
-    // Mirror the server (no section-less limbo): the deleted section's sermons
-    // move to the first remaining section; if it was the LAST section they leave
-    // the series (become standalone) and drop out of the planner.
-    const target = sections
-      .filter((s) => s.id !== id)
-      .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))[0];
-    onSectionsChange((prev) => prev.filter((s) => s.id !== id));
-    if (target) {
-      onSermonsChange((prev) => prev.map((s) => (s.section_id === id ? { ...s, section_id: target.id } : s)));
-    } else {
-      onSermonsChange((prev) => prev.filter((s) => s.section_id !== id));
-    }
-    const ok = await runSave(() => deleteSection(id), { retryable: false });
-    if (!ok) {
-      const [secs, serms] = await Promise.all([getSectionsBySeries(seriesId), getSermonsBySeries(seriesId)]);
-      onSectionsChange(secs);
-      onSermonsChange(serms);
-    } else if (!target) {
-      // Last section deleted — its sermons left the series (standalone), so the
-      // series end_date must recompute over what remains (usually nothing).
-      onSyncEndDate(sermons.filter((s) => s.section_id !== id));
-    }
-  }
-  async function moveSection(id, direction) {
-    const idx = sections.findIndex((s) => s.id === id);
-    const newIdx = idx + direction;
-    if (newIdx < 0 || newIdx >= sections.length) return;
-    const reordered = [...sections];
-    [reordered[idx], reordered[newIdx]] = [reordered[newIdx], reordered[idx]];
-    onSectionsChange(reordered);
-    // One gesture, one transaction (Session-3): the fan-out of per-section
-    // sort_order writes moved into the `reorder-sections` spine op — a failure
-    // mid-reorder can no longer leave half the sections moved.
-    const ok = await runSave(() => reorderSections(seriesId, reordered.map((s) => s.id)), { retryable: false });
-    if (!ok) onSectionsChange(await getSectionsBySeries(seriesId));
-  }
-
-  // Topical reorder — the pastor-authored sequence over the flat sermon list
-  // (a theme has no book reading order). Only committed sermons carry a
-  // sort_order; reassign it = index and persist. Drafts (no DB row) aren't
-  // reorderable and live at the end until committed. The Schedule + breadcrumb
-  // read the same sort_order via seriesSermonOrderBy, so this one write reorders
-  // everywhere.
-  async function moveSermon(id, direction) {
-    // Reorder over the ARRANGEMENT order the pastor sees (sort_order), NOT the raw
-    // dated-first `sermons` — otherwise a move rewrites sort_order from date-driven
-    // positions and scrambles the arrangement (audit finding 24).
-    const ordered = arrangedTopicalSermons(sermons);
-    const idx = ordered.findIndex((s) => s.id === id);
-    const newIdx = idx + direction;
-    if (idx < 0 || newIdx < 0 || newIdx >= ordered.length) return;
-    const reordered = [...ordered];
-    [reordered[idx], reordered[newIdx]] = [reordered[newIdx], reordered[idx]];
-    const withOrder = reordered.map((s, i) => ({ ...s, sort_order: i }));
-    onSermonsChange(withOrder);
-    // One gesture, one transaction (Session-3): the per-sermon sort_order
-    // fan-out moved into the `reorder-series-sermons` spine op.
-    const ok = await runSave(() => reorderSeriesSermons(seriesId, withOrder.map((s) => s.id)), { retryable: false });
-    if (!ok) onSermonsChange(await getSermonsBySeries(seriesId));
-  }
-
-  // ── Sermon draft / commit ──────────────────────────────────────────────
-  function addSermon(sectionId) {
-    const id = `draft-${crypto.randomUUID()}`;
-    setDrafts((prev) => [...prev, {
-      id, _draft: true, series_id: seriesId, section_id: sectionId,
-      title: "", passage: "", book_id: "", big_idea: "", overview: "", date: "",
-      stage: SERMON_STATUS.InProgress,
-    }]);
-    setExpandedSermons((prev) => new Set(prev).add(id));
-  }
-  function clearDraftError(id) {
-    setDraftErrors((prev) => {
-      if (!(id in prev)) return prev;
-      const next = { ...prev }; delete next[id]; return next;
-    });
-  }
-  // Commit a draft to the spine. The create-sermon INSERT is never widened —
-  // big_idea / overview (if typed before commit) follow with an updateSermon,
-  // exactly the create-then-update shape the old study_guide_note follow-up used.
-  function commitDraft(draftId) {
-    if (inFlightRef.current.has(draftId)) return inFlightRef.current.get(draftId);
-    const draft = drafts.find((d) => d.id === draftId);
-    if (!draft) return Promise.resolve(null);
-    const name = draft.title?.trim();
-    if (!name) return Promise.resolve(null);
-    clearDraftError(draftId);
-    const promise = (async () => {
-      try {
-        const result = await createSermon({
-          name, series_id: draft.series_id, section_id: draft.section_id,
-          passage: draft.passage || "", date: draft.date || "", is_one_off: 0,
-        });
-        const newId = result.id;
-        // Re-read the draft as it stands NOW — the pastor may have kept typing big
-        // idea / overview / passage during the createSermon round-trip, so the
-        // snapshot taken before the await is stale. Persist + render the latest.
-        const latest = draftsRef.current.find((d) => d.id === draftId) || draft;
-        const followUp = {};
-        if (latest.big_idea?.trim?.()) followUp.big_idea = latest.big_idea;
-        if (latest.overview?.trim?.()) followUp.overview = latest.overview;
-        if ((latest.passage || "") !== (draft.passage || "")) followUp.passage = latest.passage || "";
-        // book_id rides the same create-then-update follow-up (the create-sermon
-        // INSERT is never widened) — a topical draft may carry a picked book.
-        if (latest.book_id) followUp.book_id = latest.book_id;
-        const realSlot = {
-          id: newId, series_id: draft.series_id, section_id: draft.section_id,
-          title: name, passage: latest.passage || "", date: latest.date || "",
-          book_id: latest.book_id || null,
-          big_idea: latest.big_idea || "", overview: latest.overview || "",
-          stage: SERMON_STATUS.InProgress,
-        };
-        // The sermon row is COMMITTED — promote the draft to it now. The follow-up
-        // fields are an idempotent field write on an existing row, so route it
-        // through the retryable save path rather than awaiting it here. Awaiting
-        // let a failed follow-up throw to the catch below, which left the draft in
-        // place under a misleading "could not create" error — and re-committing
-        // created a SECOND sermon. Now a follow-up failure is a visible, retryable
-        // field save on the real row; the create is never re-run.
-        onSermonsChange((prev) => [...prev, realSlot]);
-        setDrafts((prev) => prev.filter((d) => d.id !== draftId));
-        if (Object.keys(followUp).length) runSave(() => updateSermon(newId, followUp), { key: saveKey(`sermon:${newId}`, followUp) });
-        // Carry the expanded state from the draft row to the committed row.
-        setExpandedSermons((prev) => {
-          const n = new Set(prev); n.delete(draftId); n.add(newId); return n;
-        });
-        return newId;
-      } catch (e) {
-        console.error("[commitDraft]", e);
-        setDraftErrors((prev) => ({ ...prev, [draftId]: e?.message || "Could not create the sermon." }));
-        return null;
-      } finally {
-        inFlightRef.current.delete(draftId);
-      }
-    })();
-    inFlightRef.current.set(draftId, promise);
-    return promise;
-  }
-  // Accepts either a single (field, value) — the keystroke fields — or an object
-  // of fields, so a topical Book pick can write book_id + the recomposed passage
-  // in one go (and one DB write) without the two ever landing out of step.
-  function handleSermonRowField(id, fieldOrFields, value) {
-    const fields = typeof fieldOrFields === "string" ? { [fieldOrFields]: value } : fieldOrFields;
-    if (isDraftId(id)) {
-      setDrafts((prev) => prev.map((s) => (s.id === id ? { ...s, ...fields } : s)));
-      return;
-    }
-    onSermonField(id, fields);
-  }
-  async function removeSermonRow(id) {
-    if (isDraftId(id)) { setDrafts((prev) => prev.filter((s) => s.id !== id)); clearDraftError(id); return; }
-    onSermonsChange((prev) => prev.filter((s) => s.id !== id));
-    const ok = await runSave(() => deleteSermon(id), { retryable: false });
-    if (!ok) {
-      // The delete failed but the row was optimistically removed — reload so the
-      // "deleted" sermon doesn't silently reappear on the next load (it never
-      // left the DB). Mirrors deleteSectionRow's rollback.
-      onSermonsChange(await getSermonsBySeries(seriesId));
-      return;
-    }
-    // end_date mirrors the LAST dated sermon — recompute once this one is gone, or
-    // deleting the latest-dated sermon strands a phantom end date on the booklet/Arc.
-    onSyncEndDate(sermons.filter((s) => s.id !== id));
-  }
+  // (Section + sermon entity mutations — addSection / deleteSectionRow /
+  // moveSection / moveSermon / addSermon / commitDraft / handleSermonRowField /
+  // removeSermonRow / clearDraftError — were lifted to the parent SeriesPlanner
+  // and arrive as props, so Outline and the Discover walk drive one shared
+  // create/commit/delete path. Only handleAddSection's local scroll-to reaction
+  // stays here.)
 
   // Group committed sermons + drafts by section. Drafts merge in so they render
   // in the right place; downstream tabs read `sermons` directly so drafts never
@@ -1242,11 +1279,11 @@ function OutlineTab({
               No sections yet. Start by dividing the book into its major movements — each section holds a title and
               passage range, a one-line big idea, and the sermons inside it. Add your first section to begin.
             </p>
-            <SecondaryButton size="sm" onClick={addSection}>+ Add section</SecondaryButton>
+            <SecondaryButton size="sm" onClick={handleAddSection}>+ Add section</SecondaryButton>
           </div>
         ) : (
           <div>
-            <SecondaryButton size="sm" onClick={addSection}>+ Add section</SecondaryButton>
+            <SecondaryButton size="sm" onClick={handleAddSection}>+ Add section</SecondaryButton>
           </div>
         )}
       </div>
@@ -2142,9 +2179,9 @@ function StudyGuidePage({ sermon, onSermonExtras }) {
 }
 
 // ── "How this works" front door ───────────────────────────────────────────────
-// Pure copy — no AI, no DB. Orients the three screens (Outline · Schedule ·
-// Study guide). Auto-opens once per series (write-only localStorage flag) and
-// stays re-readable forever via the topbar button.
+// Pure copy — no AI, no DB. Orients the planner's screens (a book series leads with
+// Discover; topical keeps Outline · Schedule · Study guide). Auto-opens once per
+// series (write-only localStorage flag) and stays re-readable via the topbar button.
 function SeriesHowItWorksModal({ onClose, kind }) {
   const dialogRef = useModalA11y(onClose);
   const isTopical = kind === "topical";
@@ -2153,13 +2190,14 @@ function SeriesHowItWorksModal({ onClose, kind }) {
     { name: "Schedule", body: "Lay each sermon on a Sunday. Liturgical seasons and your special-date notes ride along. Dates save as you go — the Schedule is the one place they live." },
     { name: "Study guide", body: "Build a congregational booklet from your outline — an introduction and a page per sermon. Add questions, cross-references, and quotes; export to Word." },
   ] : [
-    { name: "Outline", body: "Plan the book from the top down in three labeled levels — Book, Section, and the Sermons inside each section. Every level holds a title and passage range, a one-line big idea, and a short overview." },
+    { name: "Discover", body: "The exegetical walk that produces the plan. Read the whole book, understand why it was written, then create its major movements and the preaching texts inside them — each with your own reasoning. A major movement becomes a section in Outline; a preaching text becomes a sermon under it. Ends by proposing the series big idea. Nothing is generated — you author every conclusion." },
+    { name: "Outline", body: "The clean view of the same plan — Book, Section, and the Sermons inside each section. Every level holds a title and passage range, a one-line big idea, and a short overview. Edits here and in Discover are the same series." },
     { name: "Schedule", body: "Lay each sermon on a Sunday. Liturgical seasons and your special-date notes ride along. Dates save as you go — the Schedule is the one place they live." },
     { name: "Study guide", body: "Build a congregational booklet from your outline — an introduction, a part per section, and a page per sermon. Add questions, cross-references, and quotes; export to Word." },
   ];
   const intro = isTopical
     ? "Gather a theme into one series — a Big Idea, then a sermon for each passage (from any book) that sounds it. A sermon is one passage on one Sunday. Three screens:"
-    : "Plan a book as one nested outline at three levels — Book ▸ Section ▸ Sermon — where every level is the same unit: a title and range, a one-line big idea, and an overview. A sermon is one passage on one Sunday. Three screens:";
+    : "Plan a book from a first reading down to a preaching map. Discover asks the questions; Outline shows the clean plan your answers produce — two views of one series. A sermon is one passage on one Sunday. Four screens:";
   return (
     <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal" style={{ width: "640px" }} ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="series-how-title">

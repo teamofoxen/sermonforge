@@ -115,21 +115,25 @@ plan already exists the moment he authors it.
 Only the reasoning that cannot truthfully live in a clean planner field is new
 state. It is stored per-entity, in one nullable JSON column named `discovery` on
 each of the three tables — the house idiom (`study_guide_extras`, `sermon_frame`,
-the Study sub-phase envelopes), fail-soft parsed, explicit keys, never an opaque
-grab-bag. Per-entity means it rides the existing `update*` create-then-update
-paths and shares each row's lifecycle (no orphan cleanup, no ghost on delete).
+the Study sub-phase envelopes), fail-soft parsed (`src/utils/discovery.js`). Each
+envelope is a **flat** object of well-known keys, so merging one edited sub-field
+is a plain spread that can never drop a sibling — no opaque grab-bag, no nested
+merge. Per-entity means it rides the existing `update*` create-then-update paths
+and shares each row's lifecycle (no orphan cleanup, no ghost on delete).
 
-- **`series.discovery`** — `{ read:{acknowledged,notes}, understand:{whyWritten,
-  situation, problem, desiredResponse, wantsReaderTo}, decisions:[{optionA,
-  optionB, evidenceA, evidenceB, preference, why}], seriesBigIdea:{reasoning:
-  {burden, recurring, responseSought, unifier}, candidateA, candidateB} }`
-  (Steps 1, 2, 6, 7's *reasoning + candidates*).
+- **`series.discovery`** — `readNotes` (1); `understandWhyWritten`,
+  `understandSituation`, `understandProblem`, `understandResponse`,
+  `understandWantsReaderTo` (2); `decisions:[{id, optionA, optionB, evidenceA,
+  evidenceB, preference, why}]` (6, ≤3); `bigIdeaBurden`, `bigIdeaRecurring`,
+  `bigIdeaResponse`, `bigIdeaUnifier`, `bigIdeaCandidateA`, `bigIdeaCandidateB` (7).
 - **`series_sections.discovery`** — `{ whyBegin, whyEnd }` (Step 3 boundaries).
 - **`sermons.discovery`** — `{ whyBegin, whyEnd, subject, complement,
-  authorialFunction }` (Step 4 boundaries + subject/complement/function).
+  authorialFunction, authorialFunctionOther }` (Step 4 boundaries +
+  subject/complement/function; `authorialFunction` is one of a fixed vocabulary the
+  pastor *picks*, or "Other" + the free text — never a suggestion).
 
 Steps 5 and 8 store **nothing** — they are read-only reviews over the canonical
-plan and the deterministic coverage engine.
+plan and the deterministic coverage engine (`computeCoverage`).
 
 ---
 

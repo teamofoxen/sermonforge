@@ -63,6 +63,11 @@ async function renderPlanner(series: Record<string, unknown>) {
   spine.getSeries.mockResolvedValue(series);
   // Suppress the first-open "How this works" auto-modal so it can't overlay clicks.
   localStorage.setItem(`sermonforge_planner_intro_${series.id}`, "1");
+  // Land on the Outline tab. Since v34 (Series Discovery) a NEW book series with no
+  // sections opens on the Discover walk by default; a remembered tab wins, so this
+  // pins these save-retry tests to the Outline where "+ Add section" and the topical
+  // theme/big-idea fields live. (Topical has no Discover tab; this is a no-op there.)
+  localStorage.setItem(`sermonforge_planner_tab_${series.id}`, "book-outline");
   await act(async () => {
     render(<SeriesPlanner seriesId={series.id as string} onBack={() => {}} onOpenSermon={() => {}} />);
   });
