@@ -40,11 +40,16 @@ their own file so Schedule and Discover share one readout without a cyclic impor
 Discovery reasoning routes through the existing debounced savers, inheriting the
 topbar Saving/Saved/Failed+Retry, flush-on-exit, and leave-guard. A book series
 with no sections opens on Discover; the sample and any established plan open on
-Outline; a remembered tab always wins; the current Discovery step persists per
-series. Full suite green (631); rendered-route render check (Discover's 8 steps +
-Outline/topical non-regression at 1024×700, console clean); shared-truth and
-discovery-persistence proven against the real persistence seam and a stateful
-component render.
+Outline; a remembered tab always wins, and the first-open landing is persisted so
+re-entry stays put (the has-sections rule is first-open only — it can't bounce a
+pastor mid-walk to Outline once his movements exist); the current Discovery step
+also persists per series. Full suite green (636); rendered-route render check
+(Discover's 8 steps + Outline/topical non-regression at 1024×700, console clean);
+shared-truth (movement→section AND preaching-text→sermon, draft reasoning surviving
+commit), re-entry, and coverage readouts proven against the real persistence seam
+and stateful component/leaf renders. `npm start` (full Electron GUI) was not run —
+substituted by the production build + the real persistence-seam integration tests
++ the rendered route; the build-and-run installer smoke stays the pre-release step.
 
 ---
 
