@@ -9,7 +9,7 @@
 // The envelope is a FLAT object of well-known keys per entity (below), so merging
 // a single sub-field is a plain spread and can never drop a sibling. Fail-soft:
 // null / non-string / malformed / wrong-shape all degrade to {} — never throws,
-// never blocks (mirrors parseStudyGuideExtras).
+// never blocks (shares parseJsonObject with parseStudyGuideExtras).
 //
 //   series.discovery          — Read notes, Understand answers, Difficult
 //                               Decisions (array), Series-Big-Idea reasoning +
@@ -20,16 +20,11 @@
 //   sermons.discovery         — { whyBegin, whyEnd, subject, complement,
 //                               authorialFunction } (preaching-text reasoning).
 
+import { parseJsonObject } from "./json";
+
 // Parse a `discovery` column value into a plain object. Fail-soft to {}.
 export function parseDiscovery(raw) {
-  if (!raw || typeof raw !== "string") return {};
-  try {
-    const obj = JSON.parse(raw);
-    if (!obj || typeof obj !== "object" || Array.isArray(obj)) return {};
-    return obj;
-  } catch {
-    return {};
-  }
+  return parseJsonObject(raw);
 }
 
 // Merge a shallow patch into the parsed envelope and return the JSON string to

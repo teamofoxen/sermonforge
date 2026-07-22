@@ -21,6 +21,7 @@ import { GENRES, bookById, bookSpan } from "../data/canonicalBooks";
 import { composePassage, refFromPassage, repointPassage } from "../utils/topicalPassage";
 import { parsePassageRef } from "../utils/passageRef";
 import { mergeDiscovery } from "../utils/discovery";
+import { parseJsonObject } from "../utils/json";
 import BookSelect from "./BookSelect";
 import CoveragePanel from "./CoveragePanel";
 import { formatDate, autoResize, parseLocalDate } from "../utils";
@@ -80,25 +81,18 @@ const DEFAULT_NOTES_LINES = 8;
 // notesLines: int }. Fail-soft: null / non-string / malformed / wrong-shape all
 // degrade to the empty default — never throws, never blocks.
 function parseStudyGuideExtras(raw) {
-  const empty = { additions: [], notesLines: DEFAULT_NOTES_LINES };
-  if (!raw || typeof raw !== "string") return empty;
-  try {
-    const obj = JSON.parse(raw);
-    if (!obj || typeof obj !== "object" || Array.isArray(obj)) return empty;
-    const additions = Array.isArray(obj.additions)
-      ? obj.additions
-          .filter((a) => a && typeof a === "object" && typeof a.text === "string")
-          .map((a) => ({
-            id: typeof a.id === "string" ? a.id : crypto.randomUUID(),
-            type: ADDITION_LABEL[a.type] ? a.type : "question",
-            text: a.text,
-          }))
-      : [];
-    const notesLines = Number.isInteger(obj.notesLines) ? Math.max(0, Math.min(20, obj.notesLines)) : DEFAULT_NOTES_LINES;
-    return { additions, notesLines };
-  } catch {
-    return empty;
-  }
+  const obj = parseJsonObject(raw);
+  const additions = Array.isArray(obj.additions)
+    ? obj.additions
+        .filter((a) => a && typeof a === "object" && typeof a.text === "string")
+        .map((a) => ({
+          id: typeof a.id === "string" ? a.id : crypto.randomUUID(),
+          type: ADDITION_LABEL[a.type] ? a.type : "question",
+          text: a.text,
+        }))
+    : [];
+  const notesLines = Number.isInteger(obj.notesLines) ? Math.max(0, Math.min(20, obj.notesLines)) : DEFAULT_NOTES_LINES;
+  return { additions, notesLines };
 }
 
 // Stable retry-queue key for a field write: "<target>:<sorted field names>". A
