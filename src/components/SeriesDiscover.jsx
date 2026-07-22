@@ -629,11 +629,11 @@ function TestStep({ series, sermons, sections, onNavigate }) {
         </ul>
       </div>
 
-      {series.kind !== "topical" && (
-        <div style={{ marginBottom: "16px" }}>
-          <CoveragePanel series={series} sermons={sermons} onNavigate={onNavigate} />
-        </div>
-      )}
+      {/* SeriesDiscover only mounts for a BOOK series, so there is always a book
+          to measure; CoveragePanel self-handles the no-book empty state. */}
+      <div style={{ marginBottom: "16px" }}>
+        <CoveragePanel series={series} sermons={sermons} onNavigate={onNavigate} />
+      </div>
 
       <div className="card">
         <div className="field-label" style={{ marginBottom: "8px" }}>Your preaching texts</div>
@@ -778,6 +778,7 @@ function BigIdeaCandidate({ id, label, value, onChange, onUse }) {
 // ── Step 8 · Planner-Ready Review (read-only projection; not a gate) ──────────────
 function ReviewStep({ series, sections, sermons, onNavigate }) {
   const missing = (v) => !String(v || "").trim();
+  const named = sermons.filter((s) => !s._draft); // committed preaching texts only
   return (
     <>
       <StepLead>
@@ -811,9 +812,9 @@ function ReviewStep({ series, sections, sermons, onNavigate }) {
 
       <div className="card" style={{ marginBottom: "16px" }}>
         <SgPart>Sermons</SgPart>
-        {sermons.filter((s) => !s._draft).length === 0 ? (
+        {named.length === 0 ? (
           <ReviewEmpty>No preaching texts yet — add them in Preaching texts.</ReviewEmpty>
-        ) : sermons.filter((s) => !s._draft).map((s, i, arr) => (
+        ) : named.map((s, i, arr) => (
           <div key={s.id} style={{ paddingBottom: "10px", marginBottom: "10px", borderBottom: i < arr.length - 1 ? "1px solid var(--parchment-deep)" : "none" }}>
             <div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
               <span style={{ fontFamily: "var(--font-mono)", fontSize: "12px", color: "var(--ink-soft)" }}>{s.passage || "No passage"}</span>
@@ -825,11 +826,11 @@ function ReviewStep({ series, sections, sermons, onNavigate }) {
         ))}
       </div>
 
-      {series.kind !== "topical" && (
-        <div style={{ marginBottom: "16px" }}>
-          <CoveragePanel series={series} sermons={sermons} onNavigate={onNavigate} />
-        </div>
-      )}
+      {/* SeriesDiscover only mounts for a BOOK series, so there is always a book
+          to measure; CoveragePanel self-handles the no-book empty state. */}
+      <div style={{ marginBottom: "16px" }}>
+        <CoveragePanel series={series} sermons={sermons} onNavigate={onNavigate} />
+      </div>
 
       <div className="card" style={{ borderTop: "3px solid var(--gold)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px" }}>
         <div style={{ fontFamily: "var(--font-serif)", fontSize: "14px", color: "var(--ink-soft)" }}>

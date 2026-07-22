@@ -983,16 +983,20 @@ function createPersistence({ getDb, logError = console.error, logInfo = () => {}
       // row's lifecycle — a deleted section/sermon takes its Discovery reasoning
       // with it (no ghost, no orphan cleanup).
       //
-      //   series.discovery          — { read, understand, decisions[], seriesBigIdea }
-      //                               (Read notes, Understand answers, ≤3 Difficult
-      //                               Decisions, the two Series-Big-Idea candidates
-      //                               + reasoning). The FINAL canonical Series Big
-      //                               Idea stays series.big_idea; the Overview stays
+      // Each envelope is a FLAT object of well-known keys (fail-soft parse +
+      // shallow merge in src/utils/discovery.js — a spread can't drop a sibling):
+      //   series.discovery          — readNotes; understand{WhyWritten,Situation,
+      //                               Problem,Response,WantsReaderTo}; decisions[]
+      //                               (≤3); bigIdea{Burden,Recurring,Response,
+      //                               Unifier,CandidateA,CandidateB}. The FINAL
+      //                               canonical Series Big Idea stays
+      //                               series.big_idea; the Overview stays
       //                               series.overview.
       //   series_sections.discovery — { whyBegin, whyEnd } (movement boundaries).
       //   sermons.discovery         — { whyBegin, whyEnd, subject, complement,
-      //                               authorialFunction } (preaching-text boundaries
-      //                               + subject/complement/authorial function).
+      //                               authorialFunction, authorialFunctionOther }
+      //                               (preaching-text boundaries + subject/
+      //                               complement/authorial function).
       //
       // All three additive + nullable (no backfill, no columns dropped) and in the
       // *_COLUMNS writable sets, so they persist via updateSeries/Section/Sermon —

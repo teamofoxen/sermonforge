@@ -419,12 +419,12 @@ export const SERIES_COLUMNS: ReadonlySet<string> = Object.freeze(new Set([
   // v30 — Topical Series mode. Explicit planner-mode discriminator
   // ('book' | 'topical'); persisted via updateSeries, never the create INSERT.
   "kind",
-  // v34 — Series Discovery. The series-level Discovery-only reasoning envelope:
-  // { read, understand, decisions[], seriesBigIdea } — Read notes, Understand
-  // answers, up to three Difficult Decisions, and the two Series-Big-Idea
-  // candidates + reasoning. Nullable JSON, fail-soft parse; persisted via
-  // updateSeries, never the create INSERT. The final canonical Series Big Idea is
-  // `big_idea` and the Overview is `overview` — this holds only the working-out.
+  // v34 — Series Discovery. The series-level Discovery-only reasoning envelope, a
+  // FLAT object (fail-soft parse via src/utils/discovery.js): readNotes; the five
+  // understand* answers; decisions[] (≤3 difficult divisions); the bigIdea*
+  // reasoning + the two candidates (bigIdeaCandidateA/B). Nullable JSON; persisted
+  // via updateSeries, never the create INSERT. The final canonical Series Big Idea
+  // is `big_idea` and the Overview is `overview` — this holds only the working-out.
   "discovery",
 ])) as ReadonlySet<string>;
 
