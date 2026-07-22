@@ -10,6 +10,9 @@ import SeriesPlanner from "./SeriesPlanner";
 //   ?planner=schedule|study-guide     book series, that tab
 //   ?planner&kind=topical             topical series, Outline
 //   ?planner=schedule&kind=topical    topical series, that tab
+//   ...&empty=1                       book series with NO sections/sermons and
+//                                     blank rich fields — the first-open state
+//                                     (Discover empty states, Step 4 guard)
 //
 // The BOOK seed mirrors the pastor's real artifact (Jesus of Luke), so the
 // preview shows the three-level model on its native shape: Book ▸ Section ▸
@@ -44,9 +47,6 @@ const SERIES = {
     understandProblem: "Jesus drift — knowing about Jesus while missing who He really is.",
     understandResponse: "See Jesus again, clearly, and follow Him on His mission.",
     understandWantsReaderTo: "…see a Jesus glorious enough to reorder his whole life around the mission.",
-    decisions: [
-      { id: "dec-fixture-1", optionA: "End movement I at 4:13 (temptation)", optionB: "End at 4:15 (Galilee summary)", evidenceA: "4:14 opens 'in the power of the Spirit' — a new phase.", evidenceB: "The summary rounds off the opening.", preference: "A", why: "The Spirit-empowered return reads as a fresh start." },
-    ],
     bigIdeaBurden: "Jesus is the center of God's mission, and to know Him is to join it.",
     bigIdeaRecurring: "Reversal, table fellowship, the Spirit, 'today'.",
     bigIdeaResponse: "Follow Jesus courageously as a witness.",
@@ -172,10 +172,19 @@ export default function SeriesPlannerFixture() {
   const params = new URLSearchParams(window.location.search);
   const tabParam = params.get("planner");
   const isTopical = params.get("kind") === "topical";
+  const isEmpty = params.get("empty") === "1";
   const activeTab = ["discover", "schedule", "study-guide"].includes(tabParam) ? tabParam : "book-outline";
+  // The empty seed mirrors a just-created book series (book picked, nothing
+  // authored) so the Discover walk's empty states render for cold-read checks.
+  const EMPTY_SERIES = {
+    ...SERIES, title: "Luke", big_idea: "", overview: "", structural_outline: "",
+    discovery: null, start_date: "", end_date: "",
+  };
   const fixture = isTopical
     ? { series: TOPICAL_SERIES, sections: [], sermons: TOPICAL_SERMONS, calNotes: [], activeTab }
-    : { series: SERIES, sections: SECTIONS, sermons: SERMONS, calNotes: [], activeTab };
+    : isEmpty
+      ? { series: EMPTY_SERIES, sections: [], sermons: [], calNotes: [], activeTab }
+      : { series: SERIES, sections: SECTIONS, sermons: SERMONS, calNotes: [], activeTab };
   return (
     <SeriesPlanner
       seriesId={isTopical ? "fixture-topical" : "fixture-series"}

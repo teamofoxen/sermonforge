@@ -421,16 +421,18 @@ export const SERIES_COLUMNS: ReadonlySet<string> = Object.freeze(new Set([
   "kind",
   // v34 — Series Discovery. The series-level Discovery-only reasoning envelope, a
   // FLAT object (fail-soft parse via src/utils/discovery.js): readNotes; the five
-  // understand* answers; decisions[] (≤3 difficult divisions); the bigIdea*
-  // reasoning + the two candidates (bigIdeaCandidateA/B). Nullable JSON; persisted
-  // via updateSeries, never the create INSERT. The final canonical Series Big Idea
-  // is `big_idea` and the Overview is `overview` — this holds only the working-out.
+  // understand* answers; the bigIdea* reasoning + the two candidates
+  // (bigIdeaCandidateA/B). (A retired `decisions` key from the removed Difficult
+  // Decisions step may linger in old envelopes; the fail-soft parse ignores it.)
+  // Nullable JSON; persisted via updateSeries, never the create INSERT. The final
+  // canonical Series Big Idea is `big_idea` and the Overview is `overview` — this
+  // holds only the working-out.
   "discovery",
 ])) as ReadonlySet<string>;
 
 export const SECTION_COLUMNS: ReadonlySet<string> = Object.freeze(new Set([
   "title", "passage_range", "big_idea", "overview", "sort_order",
-  // v34 — Series Discovery. The movement's Discovery-only boundary reasoning:
+  // v34 — Series Discovery. The major section's Discovery-only boundary reasoning:
   // { whyBegin, whyEnd }. Nullable JSON, fail-soft parse; persisted via
   // updateSection, never the create INSERT.
   "discovery",

@@ -5,9 +5,9 @@ import TextButton from "./primitives/TextButton";
 // Shared coverage readout for a BOOK series — the deterministic, AI-free picture
 // of how the sermons partition the book (src/utils/coverage.js): percent covered,
 // gaps, overlaps, out-of-order sermons, unreadable refs. Extracted from
-// SeriesPlanner so the Series Planner's Schedule AND the Discover walk (Test Every
-// Passage / Planner-Ready Review) render the SAME readout without one importing the
-// other (no cycle). Purely informational — it exposes the pastor's own work; it
+// SeriesPlanner as its own file; the Schedule is its one home (the 2026-07-22
+// simplification removed it from the Discover walk — Discovery carries no coverage
+// or scoring surface). Purely informational — it exposes the pastor's own work; it
 // never gates. Hidden for topical series by the caller (a many-book theme has no
 // single book to measure).
 

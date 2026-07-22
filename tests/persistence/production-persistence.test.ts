@@ -117,7 +117,7 @@ describe("production persistence seam — real SQLite", () => {
     // writes only its reasoning to the per-entity `discovery` JSON. Prove the
     // column is writable through the real spine ops and reads straight back.
     const seriesId = p.validateAndCommit("create-series", { name: "Luke" }).value.id;
-    const sectionId = p.validateAndCommit("create-section", { series_id: seriesId, title: "Movement 1", sort_order: 0 }).value.id;
+    const sectionId = p.validateAndCommit("create-section", { series_id: seriesId, title: "Major Section 1", sort_order: 0 }).value.id;
     const sermonId = p.validateAndCommit("create-sermon", { name: "Zechariah", series_id: seriesId, section_id: sectionId, passage: "Luke 1:5-25" }).value.id;
 
     // create-then-update ruling: the create INSERTs never widen to `discovery`.

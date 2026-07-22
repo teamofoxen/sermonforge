@@ -969,7 +969,7 @@ function createPersistence({ getDb, logError = console.error, logInfo = () => {}
     if (version < 34) {
       // v34 (Series Discovery, feature/series-discovery) — the exegetical front
       // screen of the Series Planner. Discovery and Outline are two views of ONE
-      // pastor-authored series: a "major movement" IS a real series_sections row,
+      // pastor-authored series: a "major section" IS a real series_sections row,
       // a "preaching text" IS a real sermons row, and their canonical fields
       // (title/passage/big_idea/overview) are shared, not duplicated. Only the
       // Discovery-only *reasoning* — the pastor's own words that cannot truthfully
@@ -986,13 +986,17 @@ function createPersistence({ getDb, logError = console.error, logInfo = () => {}
       // Each envelope is a FLAT object of well-known keys (fail-soft parse +
       // shallow merge in src/utils/discovery.js — a spread can't drop a sibling):
       //   series.discovery          — readNotes; understand{WhyWritten,Situation,
-      //                               Problem,Response,WantsReaderTo}; decisions[]
-      //                               (≤3); bigIdea{Burden,Recurring,Response,
-      //                               Unifier,CandidateA,CandidateB}. The FINAL
+      //                               Problem,Response,WantsReaderTo};
+      //                               bigIdea{Burden,Recurring,Response,
+      //                               Unifier,CandidateA,CandidateB}. (A retired
+      //                               `decisions` key from the removed Difficult
+      //                               Decisions step may linger in old envelopes;
+      //                               the fail-soft parse ignores it.) The FINAL
       //                               canonical Series Big Idea stays
       //                               series.big_idea; the Overview stays
       //                               series.overview.
-      //   series_sections.discovery — { whyBegin, whyEnd } (movement boundaries).
+      //   series_sections.discovery — { whyBegin, whyEnd } (major-section
+      //                               boundaries).
       //   sermons.discovery         — { whyBegin, whyEnd, subject, complement,
       //                               authorialFunction, authorialFunctionOther }
       //                               (preaching-text boundaries + subject/

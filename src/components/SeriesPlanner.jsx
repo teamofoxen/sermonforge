@@ -211,13 +211,13 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
       setCalNotes(notes);
       // Landing tab. A remembered id (from a prior visit) wins — that's "return
       // where you were". With none, a BOOK series opens on Discover only when it's
-      // a blank page (no movements yet); an established plan — the sample, any
+      // a blank page (no sections yet); an established plan — the sample, any
       // series with sections — and every topical series open on their clean
       // Outline. A remembered id for a since-removed tab falls back to Outline.
       //
       // The has-sections rule is a FIRST-OPEN default, NOT a re-entry rule, so we
       // PERSIST whatever we resolve: a new book series that opened on Discover then
-      // stays on Discover across reloads even after its movements make
+      // stays on Discover across reloads even after its major sections make
       // sects.length > 0 — otherwise the pastor gets bounced to Outline mid-walk on
       // reload (the else-branch would re-fire). The first decision sticks; an
       // explicit tab click still overrides it thereafter.
@@ -414,8 +414,8 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
   // ── Section + sermon entity mutations — SHARED by Outline and Discover ───────
   // Lifted from OutlineTab so BOTH the Outline tab and the Discover walk drive
   // ONE create/commit/delete/reorder path — two views of the same series, never
-  // two planning systems. A "major movement" IS a real section; a "preaching
-  // text" IS a real sermon; both are born and edited here. The subtle one is
+  // two planning systems. A major section in Discover IS a real section; a
+  // "preaching text" IS a real sermon; both are born and edited here. The subtle one is
   // commitDraft (re-read-latest during the createSermon round-trip, then
   // promote-then-retryable follow-up that fixed the double-create) — a second
   // copy would drift. Genuinely per-view UI reactions (scroll-to / collapse /
@@ -436,7 +436,7 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
     });
   }, []);
 
-  // Create a real Series Section (a "major movement" in Discover). Returns the
+  // Create a real Series Section (a "major section" in Discover). Returns the
   // new section id (or null on failure) so the caller can scroll/focus/expand it.
   // Routed through runSave like the sibling section mutations so a DB-busy failure
   // surfaces the topbar Save-failed + Retry; state is touched only after resolve.
@@ -506,9 +506,9 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
     if (!ok) setSermons(await getSermonsBySeries(seriesId));
   }, [sermons, runSave, seriesId]);
 
-  // Create a UI-only draft preaching text under a movement. In Discover ALWAYS
-  // pass an existing movement's sectionId — a section-less in-series BOOK sermon
-  // makes the spine auto-fabricate a phantom "Section 1" (create-sermon net).
+  // Create a UI-only draft preaching text under a section. In Discover ALWAYS
+  // pass an existing major section's sectionId — a section-less in-series BOOK
+  // sermon makes the spine auto-fabricate a phantom "Section 1" (create-sermon net).
   const addSermon = useCallback((sectionId) => {
     const id = `draft-${crypto.randomUUID()}`;
     setDrafts((prev) => [...prev, {
@@ -907,9 +907,9 @@ export default function SeriesPlanner({ seriesId, onBack, onOpenSermon, _fixture
 
 // ── Shared readouts ───────────────────────────────────────────────────────────
 
-// CoverageBar + CoveragePanel were extracted to ./CoveragePanel.jsx so the
-// Schedule screen AND the Discover walk (Test Every Passage / Planner-Ready
-// Review) share one readout without a cyclic import. Imported at the top.
+// CoverageBar + CoveragePanel live in ./CoveragePanel.jsx (extracted from this
+// file); the Schedule is their one surface — the 2026-07-22 simplification
+// removed the readout from the Discover walk. Imported at the top.
 
 // A compact, read-only mirror of the series' shape — sermon count, approximate
 // weeks/months, projected end date, a neutral length band, liturgical seasons,
@@ -1006,7 +1006,7 @@ function OutlineTab({
 
   // Create a section (parent's addSection), then react locally: reveal + focus
   // the new card. The create and its optimistic state live in the parent, so
-  // Outline and Discover create movements identically; only the scroll-to is ours.
+  // Outline and Discover create sections identically; only the scroll-to is ours.
   async function handleAddSection() {
     const id = await addSection();
     if (id) {
@@ -1229,7 +1229,7 @@ function OutlineTab({
         <Disclosure open={referenceOpen} onToggle={() => setReferenceOpen((o) => !o)} label="Reference (commentary outline)">
           <div className="field-group" style={{ marginTop: "12px", marginBottom: 0 }}>
             <p className="field-caption" style={{ margin: "0 0 8px" }}>
-              The book's outline — its movements and turning points. Build it yourself, or paste from a commentary.
+              The book's outline — its sections and turning points. Build it yourself, or paste from a commentary.
             </p>
             <textarea
               className="field-textarea large" rows={5}
@@ -1244,9 +1244,9 @@ function OutlineTab({
         </Disclosure>
       </div>
 
-      {/* ── SECTION LEVEL — the book's major movements ─────────────────────── */}
+      {/* ── SECTION LEVEL — the book's major sections ──────────────────────── */}
       <TierBand step={2} label="Section level">
-        Divide the book into its major movements. Give each section a title and passage range, its one-line big idea,
+        Divide the book into its major sections. Give each section a title and passage range, its one-line big idea,
         and a short overview. Your sermons live inside these sections — that's the next level down.
       </TierBand>
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
@@ -1278,7 +1278,7 @@ function OutlineTab({
         {sections.length === 0 ? (
           <div className="card" style={{ textAlign: "center", padding: "28px 24px" }}>
             <p style={{ fontFamily: "var(--font-serif)", color: "var(--ink-soft)", fontSize: "14px", margin: "0 auto 14px", maxWidth: "520px", lineHeight: 1.6 }}>
-              No sections yet. Start by dividing the book into its major movements — each section holds a title and
+              No sections yet. Start by dividing the book into its major sections — each holds a title and
               passage range, a one-line big idea, and the sermons inside it. Add your first section to begin.
             </p>
             <SecondaryButton size="sm" onClick={handleAddSection}>+ Add section</SecondaryButton>
@@ -2192,7 +2192,7 @@ function SeriesHowItWorksModal({ onClose, kind }) {
     { name: "Schedule", body: "Lay each sermon on a Sunday. Liturgical seasons and your special-date notes ride along. Dates save as you go — the Schedule is the one place they live." },
     { name: "Study guide", body: "Build a congregational booklet from your outline — an introduction and a page per sermon. Add questions, cross-references, and quotes; export to Word." },
   ] : [
-    { name: "Discover", body: "The exegetical walk that produces the plan. Read the whole book, understand why it was written, then create its major movements and the preaching texts inside them — each with your own reasoning. A major movement becomes a section in Outline; a preaching text becomes a sermon under it. Ends by proposing the series big idea. Nothing is generated — you author every conclusion." },
+    { name: "Discover", body: "The exegetical walk that produces the plan, in seven parts. Immerse yourself in the whole book, understand why it was written, then map its major sections and identify the preaching texts inside them — each with your own reasoning. After a simple review, it ends by proposing the series big idea. Discover holds the questions behind the plan; Outline shows the clean plan those answers produced. Nothing is generated — you author every conclusion." },
     { name: "Outline", body: "The clean view of the same plan — Book, Section, and the Sermons inside each section. Every level holds a title and passage range, a one-line big idea, and a short overview. Edits here and in Discover are the same series." },
     { name: "Schedule", body: "Lay each sermon on a Sunday. Liturgical seasons and your special-date notes ride along. Dates save as you go — the Schedule is the one place they live." },
     { name: "Study guide", body: "Build a congregational booklet from your outline — an introduction, a part per section, and a page per sermon. Add questions, cross-references, and quotes; export to Word." },

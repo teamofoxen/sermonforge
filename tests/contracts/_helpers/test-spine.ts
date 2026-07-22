@@ -113,14 +113,14 @@ export const SERIES_COLUMNS = new Set([
   // discriminator ('book' | 'topical').
   "kind",
   // v34 — Series Discovery (mirrors contracts): the series-level Discovery-only
-  // reasoning envelope (Read/Understand notes, Difficult Decisions, Big-Idea
-  // candidates + reasoning).
+  // reasoning envelope (Immerse/Understand notes, Big-Idea candidates +
+  // reasoning; a retired `decisions` key may linger in old envelopes).
   "discovery",
 ]);
 
 export const SECTION_COLUMNS = new Set([
   "title", "passage_range", "big_idea", "overview", "sort_order",
-  // v34 — Series Discovery (mirrors contracts): the movement's Discovery-only
+  // v34 — Series Discovery (mirrors contracts): the major section's Discovery-only
   // boundary reasoning ({ whyBegin, whyEnd }).
   "discovery",
 ]);

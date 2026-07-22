@@ -7,9 +7,10 @@ import { installTestSpine, resetTestSpine, insertSeriesRow } from "./_helpers/te
 // Series Discovery — the load-bearing product guarantee: Discover and Outline are
 // TWO VIEWS OF ONE SERIES, not two planning systems. These render the real
 // SeriesPlanner against the stateful in-memory spine (installTestSpine), so a
-// movement created in the Discover walk is a REAL section the Outline then shows —
-// the shared-truth acceptance criteria (#6, #16), plus the re-entry (#17), the
-// preaching-text-needs-a-movement guard, and topical non-regression (#20).
+// major section created in the Discover walk is a REAL section the Outline then
+// shows — the shared-truth acceptance criteria (#6, #16), plus the re-entry (#17),
+// the preaching-text-needs-a-section guard, topical non-regression (#20), and the
+// seven-part walk shape (2026-07-22 simplification ruling).
 //
 // The spine is NOT mocked here (unlike series-planner-save-retry) — the real
 // src/core/spine.ts runs against the test-spine bridge, so create/read/update
@@ -32,7 +33,7 @@ beforeEach(() => {
   installTestSpine();
   resetTestSpine();
   // jsdom implements neither scrollIntoView nor focus({preventScroll}); the
-  // just-created movement/text cards call scrollIntoView on mount. Stub it (it
+  // just-created section/text cards call scrollIntoView on mount. Stub it (it
   // works in the real browser — verified in the preview render check).
   (window.HTMLElement.prototype as any).scrollIntoView = vi.fn();
 });
@@ -57,16 +58,16 @@ async function renderPlanner(id: string) {
 }
 
 describe("Series Discovery — one series, two views", () => {
-  it("a new book series opens on Discover; a movement created there is the same section Outline shows (#6, #16)", async () => {
+  it("a new book series opens on Discover; a major section created there is the same section Outline shows (#6, #16)", async () => {
     seedSeries("book", "sb1");
     await renderPlanner("sb1");
 
     // Landed on the Discover walk (book series, no sections yet).
-    expect(screen.getByRole("heading", { name: "Read the Book" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Immerse in the Book" })).toBeTruthy();
 
-    // Go to Step 3 and create a major movement (a REAL section via the spine).
-    await act(async () => { fireEvent.click(screen.getByRole("tab", { name: "Step 3: Map the Major Movements" })); });
-    await act(async () => { fireEvent.click(screen.getByText("+ Add major movement")); });
+    // Go to Step 3 and create a major section (a REAL section via the spine).
+    await act(async () => { fireEvent.click(screen.getByRole("tab", { name: "Step 3: Map the Major Sections" })); });
+    await act(async () => { fireEvent.click(screen.getByText("+ Add major section")); });
     const titleInput = await screen.findByPlaceholderText("e.g. Seeing Jesus Through Others' Eyes");
 
     // Name it — this edits the section's canonical `title` (shared with Outline).
@@ -82,13 +83,13 @@ describe("Series Discovery — one series, two views", () => {
     expect(sectionsRead).toHaveLength(1);
   });
 
-  it("a preaching text created in Discover is the sermon Outline shows under its movement; reasoning typed on the draft survives commit (#8)", async () => {
+  it("a preaching text created in Discover is the sermon Outline shows under its section; reasoning typed on the draft survives commit (#8)", async () => {
     seedSeries("book", "sb5");
     await renderPlanner("sb5");
 
-    // Step 3: create a movement (a real section to hold the text).
-    await act(async () => { fireEvent.click(screen.getByRole("tab", { name: "Step 3: Map the Major Movements" })); });
-    await act(async () => { fireEvent.click(screen.getByText("+ Add major movement")); });
+    // Step 3: create a major section (a real section to hold the text).
+    await act(async () => { fireEvent.click(screen.getByRole("tab", { name: "Step 3: Map the Major Sections" })); });
+    await act(async () => { fireEvent.click(screen.getByText("+ Add major section")); });
     await screen.findByPlaceholderText("e.g. Seeing Jesus Through Others' Eyes");
 
     // Step 4: add a preaching text under it. The draft card auto-expands.
@@ -118,28 +119,28 @@ describe("Series Discovery — one series, two views", () => {
     });
   });
 
-  it("a preaching text cannot be created before a movement exists — the walk redirects (no phantom Section 1)", async () => {
+  it("a preaching text cannot be created before a major section exists — the walk redirects (no phantom Section 1)", async () => {
     seedSeries("book", "sb2");
     await renderPlanner("sb2");
 
     await act(async () => { fireEvent.click(screen.getByRole("tab", { name: "Step 4: Identify the Preaching Texts" })); });
-    // With no movements, Step 4 refuses to create and points back to Movements.
-    expect(screen.getByText(/Preaching texts live inside a movement/)).toBeTruthy();
-    expect(screen.getByText("← Back to Map the Major Movements")).toBeTruthy();
+    // With no sections, Step 4 refuses to create and points back to Sections.
+    expect(screen.getByText(/Preaching texts live inside a major section/)).toBeTruthy();
+    expect(screen.getByText("← Back to Map the Major Sections")).toBeTruthy();
     expect(screen.queryByText("+ Add preaching text")).toBeNull();
   });
 
-  it("re-entry after building movements: reload returns to Discover at the saved step, not Outline (#17 + the has-sections-is-first-open-only rule)", async () => {
+  it("re-entry after mapping sections: reload returns to Discover at the saved step, not Outline (#17 + the has-sections-is-first-open-only rule)", async () => {
     seedSeries("book", "sb3");
     await renderPlanner("sb3");
-    expect(screen.getByRole("heading", { name: "Read the Book" })).toBeTruthy(); // landed on Discover
+    expect(screen.getByRole("heading", { name: "Immerse in the Book" })).toBeTruthy(); // landed on Discover
 
-    // Create a movement — now sections EXIST, so the has-sections landing default
-    // would resolve to Outline. Then move to Step 5.
-    await act(async () => { fireEvent.click(screen.getByRole("tab", { name: "Step 3: Map the Major Movements" })); });
-    await act(async () => { fireEvent.click(screen.getByText("+ Add major movement")); });
+    // Create a major section — now sections EXIST, so the has-sections landing
+    // default would resolve to Outline. Then move to Step 5.
+    await act(async () => { fireEvent.click(screen.getByRole("tab", { name: "Step 3: Map the Major Sections" })); });
+    await act(async () => { fireEvent.click(screen.getByText("+ Add major section")); });
     await screen.findByPlaceholderText("e.g. Seeing Jesus Through Others' Eyes");
-    await act(async () => { fireEvent.click(screen.getByRole("tab", { name: "Step 5: Test Every Passage" })); });
+    await act(async () => { fireEvent.click(screen.getByRole("tab", { name: "Step 5: Review the Preaching Texts" })); });
     expect(localStorage.getItem("sermonforge_discover_step_sb3")).toBe("4"); // 0-indexed step 5
 
     // Reload = unmount + remount. Despite sections now existing, the FIRST-OPEN
@@ -147,8 +148,8 @@ describe("Series Discovery — one series, two views", () => {
     // not step 1, and NOT bounced to Outline (the landing default is first-open only).
     cleanup();
     await renderPlanner("sb3");
-    expect(screen.getByRole("heading", { name: "Test Every Passage" })).toBeTruthy();
-    expect(screen.queryByRole("heading", { name: "Read the Book" })).toBeNull();
+    expect(screen.getByRole("heading", { name: "Review the Preaching Texts" })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "Immerse in the Book" })).toBeNull();
     expect(screen.getByRole("button", { name: "Discover" }).getAttribute("aria-current")).toBe("page");
   });
 
@@ -157,8 +158,27 @@ describe("Series Discovery — one series, two views", () => {
     await renderPlanner("st1");
 
     expect(screen.queryByRole("button", { name: "Discover" })).toBeNull();
-    expect(screen.queryByRole("tab", { name: /Map the Major Movements/ })).toBeNull();
+    expect(screen.queryByRole("tab", { name: /Map the Major Sections/ })).toBeNull();
     // The topical Outline (theme field) is what shows.
     expect(screen.getByPlaceholderText("e.g. The Mission of God")).toBeTruthy();
+  });
+
+  it("the Discover walk is exactly seven steps, in the ruled order, with no Difficult Decisions (2026-07-22 simplification)", async () => {
+    seedSeries("book", "sb7");
+    await renderPlanner("sb7");
+
+    // The stepper chips are the only role="tab" elements on the planner (the
+    // planner's own tab bar renders role="button"), so this reads the whole rail.
+    const rail = screen.getAllByRole("tab").map((t) => t.getAttribute("aria-label"));
+    expect(rail).toEqual([
+      "Step 1: Immerse in the Book",
+      "Step 2: Understand the Book",
+      "Step 3: Map the Major Sections",
+      "Step 4: Identify the Preaching Texts",
+      "Step 5: Review the Preaching Texts",
+      "Step 6: Propose the Series Big Idea",
+      "Step 7: Planner-Ready Output",
+    ]);
+    expect(screen.queryByText(/Difficult Decisions/)).toBeNull();
   });
 });

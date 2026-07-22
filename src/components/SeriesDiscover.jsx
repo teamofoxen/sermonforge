@@ -1,9 +1,7 @@
 import { useState, useEffect, useRef } from "react";
-import { parseDiscovery, AUTHORIAL_FUNCTIONS, MAX_DIFFICULT_DECISIONS } from "../utils/discovery";
-import { parsePassageRef } from "../utils/passageRef";
+import { parseDiscovery, AUTHORIAL_FUNCTIONS } from "../utils/discovery";
 import { autoResize } from "../utils";
 import { buttonKeydown } from "../utils/buttonKeydown";
-import CoveragePanel from "./CoveragePanel";
 import PrimaryButton from "./primitives/PrimaryButton";
 import SecondaryButton from "./primitives/SecondaryButton";
 import TextButton from "./primitives/TextButton";
@@ -12,20 +10,23 @@ import DeleteButton from "./DeleteButton";
 import InlineError from "./InlineError";
 
 // ── Series Discovery — the exegetical front screen of the Series Planner ─────────
-// Discovery shows the QUESTIONS behind the plan; Outline shows the clean plan those
-// answers produced. They are two views of the SAME pastor-authored series, never
-// two planning systems: a "major movement" IS a real Series Section (createSection);
-// a "preaching text" IS a real Sermon under it (createSermon); their canonical
-// fields (title/passage/big_idea/overview, section_id) edit through the SAME parent
-// savers, so an edit here is instantly what Outline shows. Only the Discovery-only
-// REASONING (why a boundary sits here, subject/complement/authorial function, the
-// candidate big ideas) is stored apart, in the per-entity `discovery` JSON (v34).
+// A straightforward exegetical worksheet made native to SermonForge — not a
+// workflow platform. Discovery shows the QUESTIONS behind the plan; Outline shows
+// the clean plan those answers produced. They are two views of the SAME
+// pastor-authored series, never two planning systems: a major section here IS a
+// real Series Section (createSection); a preaching text IS a real Sermon under it
+// (createSermon); their canonical fields (title/passage/big_idea/overview,
+// section_id) edit through the SAME parent savers, so an edit here is instantly
+// what Outline shows. Only the Discovery-only REASONING (why a boundary sits here,
+// subject/complement/authorial function, the candidate big ideas) is stored apart,
+// in the per-entity `discovery` JSON (v34).
 //
 // SermonForge supplies the pressure; the pastor supplies the clarity. Nothing is
-// generated for him — no suggested divisions, movements, texts, or big ideas. The
-// only automatic thing is the deterministic coverage readout, which exposes his own
-// work (gaps, overlaps, unreadable refs); it never completes it. Book series only —
-// topical keeps its existing journey. AI-free by construction.
+// generated for him — no suggested divisions, sections, texts, or big ideas.
+// Book series only — topical keeps its existing journey. AI-free by construction.
+// (The 2026-07-22 simplification ruling cut the walk from eight parts to seven —
+// the Difficult Decisions step was removed outright — and moved the coverage
+// readout wholly to the Schedule; Discovery holds no coverage or scoring surface.)
 //
 // The entity mutations (addSection / addSermon / commitDraft / delete / field edits)
 // are the parent SeriesPlanner's — the SAME functions the Outline tab uses — passed
@@ -33,14 +34,13 @@ import InlineError from "./InlineError";
 // docs/PROPOSALS/series-discovery.md.
 
 const STEPS = [
-  { key: "read",       label: "Read",            title: "Read the Book" },
+  { key: "immerse",    label: "Immerse",         title: "Immerse in the Book" },
   { key: "understand", label: "Understand",      title: "Understand the Book" },
-  { key: "movements",  label: "Movements",       title: "Map the Major Movements" },
+  { key: "sections",   label: "Sections",        title: "Map the Major Sections" },
   { key: "texts",      label: "Preaching texts", title: "Identify the Preaching Texts" },
-  { key: "test",       label: "Test",            title: "Test Every Passage" },
-  { key: "decisions",  label: "Decisions",       title: "Difficult Decisions" },
+  { key: "review",     label: "Review",          title: "Review the Preaching Texts" },
   { key: "bigidea",    label: "Series big idea", title: "Propose the Series Big Idea" },
-  { key: "review",     label: "Planner-ready",   title: "Planner-Ready Review" },
+  { key: "output",     label: "Planner-ready",   title: "Planner-Ready Output" },
 ];
 
 // Book-series sermons sort by their section's order, then within-section by
@@ -67,11 +67,14 @@ export default function SeriesDiscover({
 }) {
   // Current step is remembered per series (write-on-change localStorage, the same
   // set-once idiom as the planner's tab + intro flags) so reload restores position
-  // — a pastor on Step 7 comes back to Step 7, not Step 1. Re-read on series change.
+  // — a pastor on Step 6 comes back to Step 6, not Step 1. Re-read on series change.
+  // Out-of-range values (e.g. an index saved by the retired eight-step walk) clamp
+  // to the nearest live step instead of resetting to the start.
   const stepKey = `sermonforge_discover_step_${seriesId}`;
   const readStep = () => {
     const saved = Number(localStorage.getItem(stepKey));
-    return Number.isInteger(saved) && saved >= 0 && saved < STEPS.length ? saved : 0;
+    if (!Number.isInteger(saved)) return 0;
+    return Math.max(0, Math.min(STEPS.length - 1, saved));
   };
   const [stepIdx, setStepIdx] = useState(readStep);
   useEffect(() => { setStepIdx(readStep()); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [seriesId]);
@@ -92,8 +95,8 @@ export default function SeriesDiscover({
         <div className="page-title">Discover</div>
         <div className="page-subtitle">
           Work the book from a first reading down to a preaching map and a series big idea — in your own words.
-          Your answers become the plan as you make them. Each major movement here is a section in your Outline,
-          and each preaching text is a sermon under it — the same series, two views. You can open Outline any time.
+          Your answers become the plan as you make them. Discover holds the questions behind the plan; Outline
+          shows the clean plan those answers produced — one plan, two views. You can open Outline any time.
         </div>
       </div>
 
@@ -107,10 +110,10 @@ export default function SeriesDiscover({
         </div>
         <h2 style={{ fontFamily: "var(--font-serif)", fontSize: "22px", color: "var(--ink)", margin: "0 0 16px" }}>{step.title}</h2>
 
-        {step.key === "read" && <ReadStep disc={disc} onSeriesDiscovery={onSeriesDiscovery} />}
+        {step.key === "immerse" && <ImmerseStep disc={disc} onSeriesDiscovery={onSeriesDiscovery} />}
         {step.key === "understand" && <UnderstandStep disc={disc} onSeriesDiscovery={onSeriesDiscovery} />}
-        {step.key === "movements" && (
-          <MovementsStep
+        {step.key === "sections" && (
+          <SectionsStep
             sections={orderedSections}
             sermons={sermons}
             onSectionField={onSectionField}
@@ -134,18 +137,17 @@ export default function SeriesDiscover({
             clearDraftError={clearDraftError}
             toggleSermon={toggleSermon}
             onOpenSermon={onOpenSermon}
-            onGoMovements={() => goStep(2)}
+            onGoSections={() => goStep(2)}
           />
         )}
-        {step.key === "test" && (
-          <TestStep series={series} sermons={orderedSermons} sections={orderedSections} onNavigate={onNavigate} />
+        {step.key === "review" && (
+          <ReviewTextsStep sermons={orderedSermons} sections={orderedSections} />
         )}
-        {step.key === "decisions" && <DecisionsStep disc={disc} onSeriesDiscovery={onSeriesDiscovery} />}
         {step.key === "bigidea" && (
           <BigIdeaStep series={series} disc={disc} onSeriesField={onSeriesField} onSeriesDiscovery={onSeriesDiscovery} />
         )}
-        {step.key === "review" && (
-          <ReviewStep series={series} sections={orderedSections} sermons={orderedSermons} onNavigate={onNavigate} />
+        {step.key === "output" && (
+          <PlannerReadyStep series={series} sections={orderedSections} sermons={orderedSermons} onNavigate={onNavigate} />
         )}
       </div>
 
@@ -261,15 +263,15 @@ function ReasoningBlock({ children }) {
   );
 }
 
-// ── Step 1 · Read the Book ──────────────────────────────────────────────────────
-function ReadStep({ disc, onSeriesDiscovery }) {
+// ── Step 1 · Immerse in the Book ────────────────────────────────────────────────
+function ImmerseStep({ disc, onSeriesDiscovery }) {
   return (
     <>
       <StepLead>
-        Read the whole book several times, as one finished letter — not yet as a stack of sermons. Watch for what
-        repeats: repeated words and themes, commands, warnings, promises, examples, contrasts, the hinge-words
-        (&ldquo;therefore,&rdquo; &ldquo;but,&rdquo; &ldquo;so that&rdquo;), and the places where the author&rsquo;s
-        thought seems to turn. Don&rsquo;t divide it into sermons yet. Just listen to the whole.
+        Read the whole book several times, as one complete work. Look for repeated words and phrases, commands,
+        warnings, promises, examples, contrasts, transitional words (&ldquo;therefore,&rdquo; &ldquo;but,&rdquo;
+        &ldquo;so that&rdquo;), and changes in subject, tone, audience, or argument. Do not worry about sermon
+        divisions yet — just listen to the whole.
       </StepLead>
       <div className="card">
         <FieldTextarea
@@ -314,8 +316,8 @@ function UnderstandStep({ disc, onSeriesDiscovery }) {
   );
 }
 
-// ── Step 3 · Map the Major Movements (real Series Sections) ──────────────────────
-function MovementsStep({ sections, sermons, onSectionField, onSectionDiscovery, addSection, deleteSectionRow }) {
+// ── Step 3 · Map the Major Sections (real Series Sections) ───────────────────────
+function SectionsStep({ sections, sermons, onSectionField, onSectionDiscovery, addSection, deleteSectionRow }) {
   const [justCreatedId, setJustCreatedId] = useState(null);
   async function handleAdd() {
     const id = await addSection();
@@ -324,23 +326,23 @@ function MovementsStep({ sections, sermons, onSectionField, onSectionDiscovery, 
   return (
     <>
       <StepLead>
-        A <strong>major movement</strong> organizes preaching texts — it is not automatically one sermon. You create each
-        one yourself. Every movement you add here <strong>becomes a section in your Outline</strong> — the same plan, two
-        views. Give it a title and passage range, its big idea and overview, and note why its boundaries fall where they do.
+        A <strong>major section</strong> organizes preaching texts — it is not automatically one sermon. You create each
+        one yourself. Give it a title and passage range, its big idea and overview, and note why its boundaries fall
+        where they do.
       </StepLead>
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
         {sections.length === 0 ? (
           <div className="card" style={{ textAlign: "center", padding: "28px 24px" }}>
             <p style={{ fontFamily: "var(--font-serif)", color: "var(--ink-soft)", fontSize: "14px", margin: "0 auto 14px", maxWidth: "520px", lineHeight: 1.6 }}>
-              No movements yet. Add the book&rsquo;s first major movement — where its opening section begins and ends, and
+              No major sections yet. Add the first one — where the book&rsquo;s opening stretch begins and ends, and
               the one idea that holds it together.
             </p>
-            <SecondaryButton size="sm" onClick={handleAdd}>+ Add major movement</SecondaryButton>
+            <SecondaryButton size="sm" onClick={handleAdd}>+ Add major section</SecondaryButton>
           </div>
         ) : (
           <>
             {sections.map((section, i) => (
-              <MovementCard
+              <SectionCard
                 key={section.id}
                 section={section}
                 index={i}
@@ -351,7 +353,7 @@ function MovementsStep({ sections, sermons, onSectionField, onSectionDiscovery, 
                 onDelete={() => deleteSectionRow(section.id)}
               />
             ))}
-            <SecondaryButton size="sm" onClick={handleAdd} style={{ alignSelf: "flex-start" }}>+ Add major movement</SecondaryButton>
+            <SecondaryButton size="sm" onClick={handleAdd} style={{ alignSelf: "flex-start" }}>+ Add major section</SecondaryButton>
           </>
         )}
       </div>
@@ -359,7 +361,7 @@ function MovementsStep({ sections, sermons, onSectionField, onSectionDiscovery, 
   );
 }
 
-function MovementCard({ section, index, sermonCount, justCreated, onSectionField, onSectionDiscovery, onDelete }) {
+function SectionCard({ section, index, sermonCount, justCreated, onSectionField, onSectionDiscovery, onDelete }) {
   const disc = parseDiscovery(section.discovery);
   const cardRef = useRef(null);
   const titleRef = useRef(null);
@@ -374,55 +376,55 @@ function MovementCard({ section, index, sermonCount, justCreated, onSectionField
     <div ref={cardRef} className="card" style={{ borderLeft: "3px solid var(--gold)" }}>
       <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "14px" }}>
         <span style={{ fontFamily: "var(--font-mono)", fontSize: "11px", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--ink-soft)" }}>
-          Movement {index + 1}
+          Major Section {index + 1}
         </span>
         <span style={{ flex: 1, fontSize: "11px", color: "var(--ink-ghost)" }}>
-          {sermonCount} preaching text{sermonCount === 1 ? "" : "s"} · becomes a section in Outline
+          {sermonCount} preaching text{sermonCount === 1 ? "" : "s"}
         </span>
         <DeleteButton small onDelete={onDelete} />
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px" }}>
-        <FieldInput id={`mv-${section.id}-title`} label="Title" inputRef={titleRef} value={section.title}
+        <FieldInput id={`ms-${section.id}-title`} label="Title" inputRef={titleRef} value={section.title}
           onChange={(v) => set("title", v)} placeholder="e.g. Seeing Jesus Through Others' Eyes" />
-        <FieldInput id={`mv-${section.id}-range`} label="Passage" value={section.passage_range}
+        <FieldInput id={`ms-${section.id}-range`} label="Passage" value={section.passage_range}
           onChange={(v) => set("passage_range", v)} placeholder="e.g. 1:1–4:13" />
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-        <FieldInput id={`mv-${section.id}-big`} label="Big idea" value={section.big_idea}
-          onChange={(v) => set("big_idea", v)} placeholder="The one thing this movement is about, in a line." />
-        <FieldTextarea id={`mv-${section.id}-overview`} label="Overview" value={section.overview}
-          onChange={(v) => set("overview", v)} placeholder="What this movement accomplishes — the shift that happens across it." />
+        <FieldInput id={`ms-${section.id}-big`} label="Big idea" value={section.big_idea}
+          onChange={(v) => set("big_idea", v)} placeholder="The one thing this section is about, in a line." />
+        <FieldTextarea id={`ms-${section.id}-overview`} label="Overview" value={section.overview}
+          onChange={(v) => set("overview", v)} placeholder="What this section accomplishes — the shift that happens across it." />
       </div>
       <ReasoningBlock>
-        <FieldTextarea id={`mv-${section.id}-begin`} label="Why does this movement begin here?" value={disc.whyBegin}
+        <FieldTextarea id={`ms-${section.id}-begin`} label="Why does this section begin here?" value={disc.whyBegin}
           onChange={(v) => onSectionDiscovery(section.id, { whyBegin: v })}
           placeholder="What in the text marks the start — a new setting, audience, or turn of thought." rows={2} />
-        <FieldTextarea id={`mv-${section.id}-end`} label="Why does it end here?" value={disc.whyEnd}
+        <FieldTextarea id={`ms-${section.id}-end`} label="Why does it end here?" value={disc.whyEnd}
           onChange={(v) => onSectionDiscovery(section.id, { whyEnd: v })}
-          placeholder="What closes it off before the next movement opens." rows={2} />
+          placeholder="What closes it off before the next section opens." rows={2} />
       </ReasoningBlock>
     </div>
   );
 }
 
-// ── Step 4 · Identify the Preaching Texts (real Sermons under a movement) ────────
+// ── Step 4 · Identify the Preaching Texts (real Sermons under a major section) ───
 function PreachingTextsStep({
   sections, sermons, drafts, draftErrors, expandedSermons,
   onRowField, onSermonDiscovery, addSermon, commitDraft, removeSermonRow,
-  clearDraftError, toggleSermon, onOpenSermon, onGoMovements,
+  clearDraftError, toggleSermon, onOpenSermon, onGoSections,
 }) {
-  // The advisor's trap: a preaching text with no parent movement makes the spine
+  // The advisor's trap: a preaching text with no parent section makes the spine
   // fabricate a phantom "Section 1". So a preaching text can ONLY be created inside
-  // an existing movement, and always with that movement's section_id.
+  // an existing major section, and always with that section's section_id.
   if (sections.length === 0) {
     return (
       <>
         <StepLead>
-          Preaching texts live inside a movement. Map at least one major movement first, then come back to gather the
-          passages you&rsquo;ll preach within it.
+          Preaching texts live inside a major section. Map at least one major section first, then come back to gather
+          the passages you&rsquo;ll preach within it.
         </StepLead>
         <div className="card" style={{ textAlign: "center", padding: "24px" }}>
-          <SecondaryButton size="sm" onClick={onGoMovements}>← Back to Map the Major Movements</SecondaryButton>
+          <SecondaryButton size="sm" onClick={onGoSections}>← Back to Map the Major Sections</SecondaryButton>
         </div>
       </>
     );
@@ -430,10 +432,9 @@ function PreachingTextsStep({
   return (
     <>
       <StepLead>
-        Within each movement, gather the individual passages you&rsquo;ll preach — one preaching text each. Every text you
-        add <strong>becomes a sermon under that movement in your Outline</strong>. Follow the text; don&rsquo;t force an
-        arbitrary number of sermons. Set the passage and a working title, then reason about its boundaries and what the
-        author is doing.
+        Within each major section, identify the smaller literary units that will become sermons — one preaching text
+        each. Most major sections will contain multiple preaching texts. Set the passage and a working title, then
+        reason about its boundaries and what the author is doing.
       </StepLead>
       <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
         {sections.map((section) => {
@@ -445,10 +446,10 @@ function PreachingTextsStep({
             <div key={section.id} className="card" style={{ borderLeft: "3px solid var(--parchment-deep)" }}>
               <div style={{ marginBottom: "12px" }}>
                 <div style={{ fontFamily: "var(--font-serif)", fontSize: "15px", fontWeight: 600, color: section.title ? "var(--ink)" : "var(--ink-ghost)", fontStyle: section.title ? "normal" : "italic" }}>
-                  {section.title || "Untitled movement"}
+                  {section.title || "Untitled section"}
                   {section.passage_range && <span style={{ fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--ink-soft)", marginLeft: "8px" }}>{section.passage_range}</span>}
                 </div>
-                <div className="field-caption" style={{ marginTop: "2px" }}>Preaching texts in this movement</div>
+                <div className="field-caption" style={{ marginTop: "2px" }}>Preaching texts in this major section</div>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                 {rows.length === 0 && (
@@ -564,10 +565,10 @@ function PreachingTextCard({ sermon: p, expanded, onToggle, onRowField, onSermon
                 onChange={(v) => onSermonDiscovery(p.id, { whyEnd: v })} rows={2}
                 placeholder="What completes it — is a command kept with its reason, an example with its point?" />
             </div>
-            <FieldTextarea id={`pt-${p.id}-subject`} label="What is the author talking about? (subject)" value={disc.subject}
+            <FieldTextarea id={`pt-${p.id}-subject`} label="What is the author talking about?" value={disc.subject}
               onChange={(v) => onSermonDiscovery(p.id, { subject: v })} rows={2}
               placeholder="The thing the passage is about." />
-            <FieldTextarea id={`pt-${p.id}-complement`} label="What is he saying about it? (complement)" value={disc.complement}
+            <FieldTextarea id={`pt-${p.id}-complement`} label="What is the author saying about it?" value={disc.complement}
               onChange={(v) => onSermonDiscovery(p.id, { complement: v })} rows={2}
               placeholder="What he asserts about that subject." />
             <div className="field-group" style={{ marginBottom: 0 }}>
@@ -599,62 +600,52 @@ function PreachingTextCard({ sermon: p, expanded, onToggle, onRowField, onSermon
   );
 }
 
-// ── Step 5 · Test Every Passage (pressure, not checkbox theater; no stored state) ─
-const PASSAGE_TESTS = [
-  "Does this passage express one coherent thought?",
-  "Does the beginning make sense as a beginning?",
+// ── Step 5 · Review the Preaching Texts (a simple review; nothing stored) ────────
+const REVIEW_QUESTIONS = [
+  "Does the passage express one coherent movement of thought?",
+  "Does the beginning make sense?",
   "Does the ending complete the thought?",
-  "Am I separating a command from its reason?",
-  "Am I separating an example from the point it supports?",
-  "Is this passage too large? Too small?",
-  "Does the big idea cover the whole passage?",
-  "Am I following the text — not forcing an arbitrary number of sermons?",
+  "Has a command been separated from its reason?",
+  "Has an example been separated from the point it supports?",
+  "Is the passage too large? Is it too small?",
+  "Does the big idea account for the whole passage?",
+  "Is the text driving the plan rather than an arbitrary sermon count?",
 ];
-function TestStep({ series, sermons, sections, onNavigate }) {
+function ReviewTextsStep({ sermons, sections }) {
   const named = sermons.filter((s) => !s._draft);
   return (
     <>
       <StepLead>
-        Hold each preaching text up to the light. These questions apply the pressure; you answer them in your own
-        judgment — nothing here is stored or checked off. Below, SermonForge shows the objective coverage of your book
-        so far: where verses are uncovered, doubled, or unreadable.
+        Read each preaching text against these questions, in your own judgment. Nothing here is checked off or
+        stored — if a passage needs to change, adjust it back in Identify the Preaching Texts.
       </StepLead>
 
       <div className="card" style={{ marginBottom: "16px" }}>
         <div className="field-label" style={{ marginBottom: "8px" }}>Ask of every passage</div>
         <ul style={{ margin: 0, paddingLeft: "20px", display: "flex", flexDirection: "column", gap: "6px" }}>
-          {PASSAGE_TESTS.map((q) => (
+          {REVIEW_QUESTIONS.map((q) => (
             <li key={q} style={{ fontFamily: "var(--font-serif)", fontSize: "13.5px", color: "var(--ink-mid)", lineHeight: 1.5 }}>{q}</li>
           ))}
         </ul>
-      </div>
-
-      {/* SeriesDiscover only mounts for a BOOK series, so there is always a book
-          to measure; CoveragePanel self-handles the no-book empty state. */}
-      <div style={{ marginBottom: "16px" }}>
-        <CoveragePanel series={series} sermons={sermons} onNavigate={onNavigate} />
       </div>
 
       <div className="card">
         <div className="field-label" style={{ marginBottom: "8px" }}>Your preaching texts</div>
         {named.length === 0 ? (
           <div style={{ fontSize: "13px", fontStyle: "italic", color: "var(--ink-ghost)" }}>
-            No preaching texts yet — add them in Preaching texts.
+            No preaching texts yet — add them in Step 4.
           </div>
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
             {named.map((s, i) => {
-              const ref = parsePassageRef(s.passage || "", series.book_id);
-              const unreadable = (s.passage || "").trim() !== "" && ref.error === true;
               const sectionTitle = sections.find((sec) => sec.id === s.section_id)?.title || "—";
               return (
                 <div key={s.id} style={{ display: "flex", alignItems: "baseline", gap: "10px", fontSize: "13px", padding: "6px 0", borderBottom: i < named.length - 1 ? "1px solid var(--parchment-deep)" : "none" }}>
-                  <span style={{ fontFamily: "var(--font-mono)", fontSize: "12px", color: unreadable ? "var(--crimson-soft)" : "var(--ink-soft)", minWidth: "110px" }}>
+                  <span style={{ fontFamily: "var(--font-mono)", fontSize: "12px", color: "var(--ink-soft)", minWidth: "110px" }}>
                     {s.passage || "No passage"}
                   </span>
                   <span style={{ flex: 1, color: "var(--ink)", fontFamily: "var(--font-serif)" }}>{s.title || "Untitled"}</span>
                   <span style={{ fontSize: "11px", color: "var(--ink-ghost)", fontFamily: "var(--font-mono)" }}>{sectionTitle}</span>
-                  {unreadable && <span style={{ fontSize: "11px", color: "var(--crimson-soft)", fontFamily: "var(--font-mono)" }}>couldn&rsquo;t read</span>}
                 </div>
               );
             })}
@@ -665,55 +656,7 @@ function TestStep({ series, sermons, sections, onNavigate }) {
   );
 }
 
-// ── Step 6 · Difficult Decisions (up to three; never blocks) ─────────────────────
-function DecisionsStep({ disc, onSeriesDiscovery }) {
-  const decisions = Array.isArray(disc.decisions) ? disc.decisions : [];
-  function update(nextList) { onSeriesDiscovery({ decisions: nextList }); }
-  function add() {
-    if (decisions.length >= MAX_DIFFICULT_DECISIONS) return;
-    update([...decisions, { id: crypto.randomUUID(), optionA: "", optionB: "", evidenceA: "", evidenceB: "", preference: "", why: "" }]);
-  }
-  function patch(id, field, value) {
-    update(decisions.map((d) => (d.id === id ? { ...d, [field]: value } : d)));
-  }
-  function remove(id) { update(decisions.filter((d) => d.id !== id)); }
-  return (
-    <>
-      <StepLead>
-        Some divisions stay genuinely uncertain. Keep up to three of them honestly here — the two options, the evidence
-        for each, and which way you&rsquo;re leaning and why. This never blocks your plan; it just preserves the question
-        so you can return to it.
-      </StepLead>
-      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-        {decisions.map((d, i) => (
-          <div key={d.id} className="card" style={{ borderLeft: "3px solid var(--slate)" }}>
-            <div style={{ display: "flex", alignItems: "center", marginBottom: "12px" }}>
-              <span style={{ flex: 1, fontFamily: "var(--font-mono)", fontSize: "11px", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "var(--ink-soft)" }}>Decision {i + 1}</span>
-              <DeleteButton small onDelete={() => remove(d.id)} />
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px" }}>
-              <FieldInput id={`dec-${d.id}-a`} label="Option A" value={d.optionA} onChange={(v) => patch(d.id, "optionA", v)} placeholder="e.g. Break at 9:50" />
-              <FieldInput id={`dec-${d.id}-b`} label="Option B" value={d.optionB} onChange={(v) => patch(d.id, "optionB", v)} placeholder="e.g. Break at 9:62" />
-              <FieldTextarea id={`dec-${d.id}-ea`} label="Evidence for A" value={d.evidenceA} onChange={(v) => patch(d.id, "evidenceA", v)} rows={2} />
-              <FieldTextarea id={`dec-${d.id}-eb`} label="Evidence for B" value={d.evidenceB} onChange={(v) => patch(d.id, "evidenceB", v)} rows={2} />
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "12px" }}>
-              <FieldInput id={`dec-${d.id}-pref`} label="Currently leaning" value={d.preference} onChange={(v) => patch(d.id, "preference", v)} placeholder="A or B — for now" />
-              <FieldTextarea id={`dec-${d.id}-why`} label="Why" value={d.why} onChange={(v) => patch(d.id, "why", v)} rows={2} />
-            </div>
-          </div>
-        ))}
-        {decisions.length < MAX_DIFFICULT_DECISIONS ? (
-          <SecondaryButton size="sm" onClick={add} style={{ alignSelf: "flex-start" }}>+ Add a difficult decision</SecondaryButton>
-        ) : (
-          <div className="field-caption">That&rsquo;s the three worth keeping — resolve one to add another.</div>
-        )}
-      </div>
-    </>
-  );
-}
-
-// ── Step 7 · Propose the Series Big Idea ─────────────────────────────────────────
+// ── Step 6 · Propose the Series Big Idea ─────────────────────────────────────────
 function BigIdeaStep({ series, disc, onSeriesField, onSeriesDiscovery }) {
   return (
     <>
@@ -775,16 +718,15 @@ function BigIdeaCandidate({ id, label, value, onChange, onUse }) {
   );
 }
 
-// ── Step 8 · Planner-Ready Review (read-only projection; not a gate) ──────────────
-function ReviewStep({ series, sections, sermons, onNavigate }) {
+// ── Step 7 · Planner-Ready Output (read-only projection; not a gate) ──────────────
+function PlannerReadyStep({ series, sections, sermons, onNavigate }) {
   const missing = (v) => !String(v || "").trim();
   const named = sermons.filter((s) => !s._draft); // committed preaching texts only
   return (
     <>
       <StepLead>
-        A clean read of what you&rsquo;ve produced. Anything still missing is marked plainly, and the objective coverage
-        of your book is shown below. This is not a gate — open Outline whenever you&rsquo;re ready; it&rsquo;s the same
-        plan without the Discovery scaffolding.
+        A clean read of the plan you&rsquo;ve produced. This is not a gate — open Outline whenever you&rsquo;re
+        ready; it&rsquo;s the same plan without the questions.
       </StepLead>
 
       <div className="card" style={{ marginBottom: "16px" }}>
@@ -795,13 +737,13 @@ function ReviewStep({ series, sections, sermons, onNavigate }) {
       </div>
 
       <div className="card" style={{ marginBottom: "16px" }}>
-        <SgPart>Major movements</SgPart>
+        <SgPart>Major Sections</SgPart>
         {sections.length === 0 ? (
-          <ReviewEmpty>No movements yet — map them in Movements.</ReviewEmpty>
+          <ReviewEmpty>No major sections yet — map them in Step 3.</ReviewEmpty>
         ) : sections.map((s, i) => (
           <div key={s.id} style={{ paddingBottom: "10px", marginBottom: "10px", borderBottom: i < sections.length - 1 ? "1px solid var(--parchment-deep)" : "none" }}>
             <div style={{ fontFamily: "var(--font-serif)", fontSize: "15px", fontWeight: 600, color: s.title ? "var(--ink)" : "var(--ink-ghost)" }}>
-              {i + 1}. {s.title || <em>Untitled movement</em>}
+              {i + 1}. {s.title || <em>Untitled section</em>}
               {s.passage_range && <span style={{ fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--ink-soft)", marginLeft: "8px" }}>{s.passage_range}</span>}
             </div>
             <ReviewLine label="Big idea" value={s.big_idea} missing={missing(s.big_idea)} indent />
@@ -813,7 +755,7 @@ function ReviewStep({ series, sections, sermons, onNavigate }) {
       <div className="card" style={{ marginBottom: "16px" }}>
         <SgPart>Sermons</SgPart>
         {named.length === 0 ? (
-          <ReviewEmpty>No preaching texts yet — add them in Preaching texts.</ReviewEmpty>
+          <ReviewEmpty>No preaching texts yet — add them in Step 4.</ReviewEmpty>
         ) : named.map((s, i, arr) => (
           <div key={s.id} style={{ paddingBottom: "10px", marginBottom: "10px", borderBottom: i < arr.length - 1 ? "1px solid var(--parchment-deep)" : "none" }}>
             <div style={{ display: "flex", alignItems: "baseline", gap: "8px" }}>
@@ -824,12 +766,6 @@ function ReviewStep({ series, sections, sermons, onNavigate }) {
             <ReviewLine label="Overview" value={s.overview} missing={missing(s.overview)} indent multiline />
           </div>
         ))}
-      </div>
-
-      {/* SeriesDiscover only mounts for a BOOK series, so there is always a book
-          to measure; CoveragePanel self-handles the no-book empty state. */}
-      <div style={{ marginBottom: "16px" }}>
-        <CoveragePanel series={series} sermons={sermons} onNavigate={onNavigate} />
       </div>
 
       <div className="card" style={{ borderTop: "3px solid var(--gold)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px" }}>
@@ -853,7 +789,7 @@ function ReviewLine({ label, value, missing = false, indent = false, multiline =
     <div style={{ marginTop: "6px", marginLeft: indent ? "14px" : 0 }}>
       <span style={{ fontFamily: "var(--font-mono)", fontSize: "10.5px", fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", color: "var(--ink-ghost)", marginRight: "8px" }}>{label}</span>
       {missing
-        ? <span style={{ fontSize: "12.5px", color: "var(--crimson-soft)", fontStyle: "italic" }}>not written yet</span>
+        ? <span style={{ fontSize: "12.5px", color: "var(--ink-ghost)", fontStyle: "italic" }}>Not written yet</span>
         : <span style={{ fontSize: "13.5px", color: "var(--ink)", fontFamily: "var(--font-serif)", lineHeight: 1.55, whiteSpace: multiline ? "pre-wrap" : "normal" }}>{value}</span>}
     </div>
   );

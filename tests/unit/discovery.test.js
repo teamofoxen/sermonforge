@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  parseDiscovery, mergeDiscovery, decisionsOf,
-  AUTHORIAL_FUNCTIONS, MAX_DIFFICULT_DECISIONS,
+  parseDiscovery, mergeDiscovery, AUTHORIAL_FUNCTIONS,
 } from "../../src/utils/discovery.js";
 
 // The Series Discovery envelope helpers (v34). Fail-soft parse + a shallow merge
@@ -42,26 +41,16 @@ describe("mergeDiscovery — shallow merge that preserves siblings", () => {
     expect(JSON.parse(mergeDiscovery(null, { readNotes: "x" }))).toEqual({ readNotes: "x" });
     expect(JSON.parse(mergeDiscovery("", { readNotes: "x" }))).toEqual({ readNotes: "x" });
   });
-  it("replaces an array field (decisions) wholesale — the caller owns the array", () => {
-    const start = JSON.stringify({ decisions: [{ id: "1" }, { id: "2" }], readNotes: "keep" });
-    const merged = mergeDiscovery(start, { decisions: [{ id: "1" }] });
-    expect(JSON.parse(merged)).toEqual({ decisions: [{ id: "1" }], readNotes: "keep" });
+  it("a retired key in an old envelope survives untouched — the merge never prunes", () => {
+    // The removed Difficult Decisions step (2026-07-22) may have left a
+    // `decisions` array in envelopes written before the simplification. Nothing
+    // reads or writes it anymore, but a merge must not destroy it either.
+    const start = JSON.stringify({ decisions: [{ id: "1" }], readNotes: "keep" });
+    const merged = mergeDiscovery(start, { readNotes: "new" });
+    expect(JSON.parse(merged)).toEqual({ decisions: [{ id: "1" }], readNotes: "new" });
   });
   it("a malformed current envelope degrades to {} then takes the patch (never throws)", () => {
     expect(JSON.parse(mergeDiscovery("{broken", { subject: "s" }))).toEqual({ subject: "s" });
-  });
-});
-
-describe("decisionsOf — fail-soft array read", () => {
-  it("returns the decisions array when present", () => {
-    const raw = JSON.stringify({ decisions: [{ id: "a" }] });
-    expect(decisionsOf(raw)).toEqual([{ id: "a" }]);
-  });
-  it("returns [] when absent, non-array, or the envelope is malformed", () => {
-    expect(decisionsOf(JSON.stringify({ readNotes: "x" }))).toEqual([]);
-    expect(decisionsOf(JSON.stringify({ decisions: "nope" }))).toEqual([]);
-    expect(decisionsOf(null)).toEqual([]);
-    expect(decisionsOf("{broken")).toEqual([]);
   });
 });
 
@@ -72,8 +61,5 @@ describe("fixed vocabularies (AI-free — the pastor PICKS, the system never sug
       expect(AUTHORIAL_FUNCTIONS).toContain(f);
     }
     expect(AUTHORIAL_FUNCTIONS[AUTHORIAL_FUNCTIONS.length - 1]).toBe("Other");
-  });
-  it("caps difficult decisions at three", () => {
-    expect(MAX_DIFFICULT_DECISIONS).toBe(3);
   });
 });

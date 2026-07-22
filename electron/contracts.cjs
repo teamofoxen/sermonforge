@@ -189,8 +189,9 @@ const SERIES_COLUMNS = Object.freeze(new Set([
   // discriminator ('book' | 'topical'); persisted via updateSeries.
   "kind",
   // v34 — Series Discovery (mirrors contracts): the series-level Discovery-only
-  // reasoning envelope (Read notes, Understand answers, Difficult Decisions, and
-  // the two Series-Big-Idea candidates + reasoning). Nullable JSON, fail-soft
+  // reasoning envelope (Immerse notes, Understand answers, and the two
+  // Series-Big-Idea candidates + reasoning; a retired `decisions` key may linger
+  // in old envelopes — the fail-soft parse ignores it). Nullable JSON, fail-soft
   // parse; rides updateSeries — the create-series INSERT is never widened. The
   // FINAL canonical Series Big Idea stays `big_idea`; the Overview stays `overview`.
   "discovery",
@@ -198,7 +199,7 @@ const SERIES_COLUMNS = Object.freeze(new Set([
 
 const SECTION_COLUMNS = Object.freeze(new Set([
   "title", "passage_range", "big_idea", "overview", "sort_order",
-  // v34 — Series Discovery (mirrors contracts): the movement's Discovery-only
+  // v34 — Series Discovery (mirrors contracts): the major section's Discovery-only
   // boundary reasoning ({ whyBegin, whyEnd }). Nullable JSON, fail-soft parse;
   // rides updateSection — the create-section INSERT is never widened.
   "discovery",

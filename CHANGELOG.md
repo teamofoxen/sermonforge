@@ -2,6 +2,73 @@
 
 ---
 
+## 2026-07-22 — refactor: Series Discovery simplified to a seven-part worksheet (product-owner ruling)
+
+Remediation of the completed product/UX audit, on the same unmerged
+`feature/series-discovery` branch. The ruling: Series Discovery is a
+**straightforward exegetical worksheet made native to SermonForge — not a
+workflow platform.** The shared-truth architecture (one canonical Series /
+Section / Sermon spine, the lifted parent mutation path, schema v34's
+per-entity `discovery` envelopes, the debounced save model, landing + re-entry
+rules, the Series Big Idea candidate flow, topical + standalone journeys) is
+untouched; the visible experience is simpler. Ruling of record:
+`docs/PROPOSALS/series-discovery.md` §0.
+
+- **Difficult Decisions is gone** — the step, `DecisionsStep`, `decisionsOf`,
+  `MAX_DIFFICULT_DECISIONS`, all writes to `series.discovery.decisions`, its
+  fixture seed, and its tests. No replacement, and no schema migration: the
+  fail-soft parse simply ignores a `decisions` key lingering in old envelopes
+  (a new merge test pins that it survives untouched, never pruned).
+- **The visible walk is seven parts:** Immerse in the Book · Understand the
+  Book · Map the Major Sections · Identify the Preaching Texts · Review the
+  Preaching Texts · Propose the Series Big Idea · Planner-Ready Output.
+  A remembered step index from the retired eight-step walk clamps to the
+  nearest live step on re-entry instead of resetting to Step 1.
+- **"Major Sections" is the only live pastor-facing term for the middle tier.**
+  Discover step titles/labels, section cards ("Major Section 1", "Untitled
+  section", "+ Add major section"), empty states, Planner-Ready Output,
+  Outline's tier band + empty state + Reference caption, and the "How this
+  works" modal all use it; `MovementsStep`/`MovementCard` renamed
+  `SectionsStep`/`SectionCard` (`ReadStep` → `ImmerseStep`, `TestStep` →
+  `ReviewTextsStep`, `ReviewStep` → `PlannerReadyStep`). The "a movement
+  becomes a section in Outline" translation copy is deleted everywhere — a
+  major section here already IS an Outline section.
+- **The hierarchy is unmistakable:** Step 4 says preaching texts are the
+  smaller literary units *within* each major section and that most major
+  sections will contain multiple preaching texts; the nested per-section cards
+  and per-section "+ Add preaching text" controls stay; no parent-section
+  dropdown was added (the nesting supplies the parent).
+- **Step 5 is a simple review, not an audit** — renamed from Test Every
+  Passage; third-person questions (no first-person wording), a plain readout
+  of the preaching texts, no checkboxes, completion states, scores, or
+  per-row "couldn't read" flagging — and no CoveragePanel.
+- **Step 7 (Planner-Ready Output, renamed from Planner-Ready Review) is a
+  clean read, not a grading report** — Book / Major Sections / Sermons with
+  missing fields marked "Not written yet" in quiet neutral styling
+  (ink-ghost, not crimson); no CoveragePanel; the "plan is live in Outline"
+  closing line and the explicit Open Outline action stay; no
+  generate/import/convert, no gates, no percentages.
+- **Coverage now renders on the Schedule only.** The shared `CoveragePanel`
+  component and its tests are intact — only Discovery's two usages were
+  removed. Classroom parentheticals — "(subject)", "(complement)" — dropped
+  from the preaching-text reasoning labels; the five reasoning fields and the
+  fixed authorial-function vocabulary (+ Other) are unchanged.
+- Tests updated in place: copy assertions moved to the new vocabulary; the
+  four Difficult-Decisions-only tests removed; a new focused assertion pins
+  the rail at exactly seven steps in the ruled order with no Difficult
+  Decisions. Full suite **634 green** (was 636: −4 decisions tests, +2 — the
+  seven-step pin and the retired-key merge guard); eslint clean on every
+  touched file. Docs trued to the seven-part product:
+  `docs/SYSTEMS/series-planner.md` (walk, file list — `CoveragePanel.jsx` no
+  longer described as an in-file component), `docs/PROPOSALS/series-discovery.md`
+  (dated §0 ruling + live sections), `docs/REFERENCE/schema.md` (v34 ledger +
+  `discovery` column rows).
+- Housekeeping first: fast-forwarded the branch onto the cleanup chip's
+  `82435e4` (shared fail-soft `parseJsonObject` util) so the remediation
+  builds on the extracted helper.
+
+---
+
 ## 2026-07-22 — feat: Series Discovery — the exegetical front screen of a book series (schema v34)
 
 A **book** series now leads with **Discover** — Discover · Outline · Schedule ·

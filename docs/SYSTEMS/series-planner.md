@@ -4,7 +4,9 @@
 > 2026-06-24** (the four-movement workbench and the melodic-line model are gone);
 > **Topical Series mode + the sermon-grained Series Arc / "What I've Preached"
 > home shipped 2026-06-25** (schema v30–v32); **Series Discovery — the exegetical
-> front screen of a BOOK series — shipped 2026-07-22 (schema v34).** **AI-free.**
+> front screen of a BOOK series — shipped 2026-07-22 (schema v34) and was
+> simplified to a seven-part walk the same day (product-owner ruling — see the
+> proposal).** **AI-free.**
 > This doc is the *how & where* (mechanics). The *what & why* — the decision that
 > series planning is a distinct macro/architect mode, and the content-model ruling
 > — lives in [`docs/PROPOSALS/series-planner-revival-charter.md`](../PROPOSALS/series-planner-revival-charter.md)
@@ -59,11 +61,12 @@ Persistence is create-then-update in both cases — the `create-series` INSERT i
 never widened (`kind`/`book_id` ride the follow-up `updateSeries`).
 `onCreated(result.id)` navigates straight into the planner.
 
-Files: `src/components/Planning.jsx`, `SeriesPlanner.jsx` (the three-screen
-workbench — `CoveragePanel` is an in-file component of `SeriesPlanner.jsx`,
-not a separate file), `NewSeriesModal.jsx`, `BookSelect.jsx`,
+Files: `src/components/Planning.jsx`, `SeriesPlanner.jsx` (the planner
+workbench), `SeriesDiscover.jsx` (the Discover walk), `CoveragePanel.jsx`
+(the shared coverage readout, extracted from `SeriesPlanner.jsx`; rendered on
+the Schedule), `NewSeriesModal.jsx`, `BookSelect.jsx`,
 `src/utils/coverage.js` (the coverage computation),
-`SeriesPlannerFixture.jsx` (preview fixture, `?planner[=schedule|study-guide]`
+`SeriesPlannerFixture.jsx` (preview fixture, `?planner[=discover|schedule|study-guide]`
 route, `&kind=topical` for the topical seed; default Outline; the book seed is
 the real Jesus-of-Luke artifact, the topical seed is "The Mission of God").
 
@@ -110,18 +113,25 @@ every topical series opens on Outline. A remembered id for a removed tab (the ol
 `book-study`/`design`/`calendar`/`overview`) falls back to Outline.
 
 - **Discover** (`SeriesDiscover.jsx`, **book series only**) — the exegetical front
-  screen: an 8-step walk (Read · Understand · Map the Major Movements · Identify
-  the Preaching Texts · Test Every Passage · Difficult Decisions · Propose the
-  Series Big Idea · Planner-Ready Review) that produces the plan. **A major
-  movement IS a real Series Section (`createSection`); a preaching text IS a real
-  Sermon under it (`createSermon`, always with `section_id`)** — their canonical
-  Title/Passage/Big idea/Overview edit through the SAME parent savers, so a Discover
-  edit is instantly what Outline shows (two views of one series, no shadow outline,
-  no generate/convert step). Only the exegetical *reasoning* is stored apart, in the
-  per-entity `discovery` JSON (§4). Steps 5 + 8 reuse `computeCoverage` via the
-  shared `CoveragePanel.jsx` (extracted from this file so Schedule + Discover share
-  one readout with no cyclic import). The current step persists per series
-  (`sermonforge_discover_step_<id>`). Full walk + envelope shapes:
+  screen: a **seven-part** walk (Immerse in the Book · Understand the Book · Map
+  the Major Sections · Identify the Preaching Texts · Review the Preaching Texts ·
+  Propose the Series Big Idea · Planner-Ready Output) that produces the plan — a
+  straightforward exegetical worksheet, not a workflow layer. Discover holds the
+  questions behind the plan; Outline shows the clean plan those answers produced.
+  **A major section IS a real Series Section (`createSection`); a preaching text
+  IS a real Sermon under it (`createSermon`, always with `section_id` — preaching
+  texts are smaller literary units *within* their major section)** — their
+  canonical Title/Passage/Big idea/Overview edit through the SAME parent savers,
+  so a Discover edit is instantly what Outline shows (two views of one series, no
+  shadow outline, no generate/convert step). Only the exegetical *reasoning* is
+  stored apart, in the per-entity `discovery` JSON (§4). Discovery carries **no
+  coverage readout, checkboxes, or scores** — `CoveragePanel` renders on the
+  Schedule only. (The 2026-07-22 simplification ruling cut the original eight-step
+  walk to these seven: the Difficult Decisions step was removed outright, with no
+  replacement; its `decisions` envelope key may linger in old envelopes and is
+  ignored by the fail-soft parse.) The current step persists per series
+  (`sermonforge_discover_step_<id>`; out-of-range saved steps clamp to the nearest
+  live step). Full walk + envelope shapes:
   [`docs/PROPOSALS/series-discovery.md`](../PROPOSALS/series-discovery.md).
 - **Outline** (`OutlineTab`) — the series as one live outline. Its shape is
   `kind`-aware (`SeriesPlanner.jsx` branches on `series.kind === 'topical'`).

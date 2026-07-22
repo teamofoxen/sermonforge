@@ -4,11 +4,12 @@ import { render, screen } from "@testing-library/react";
 import * as React from "react";
 import CoveragePanel from "../../src/components/CoveragePanel";
 
-// The shared coverage readout (extracted for Schedule + the Discover walk). The
-// gap/overlap/unreadable DERIVATIONS are `computeCoverage`'s, tested in
+// The shared coverage readout — the Schedule's book-series panel (the 2026-07-22
+// simplification removed it from the Discover walk; coverage lives on Schedule
+// only). The gap/overlap/unreadable DERIVATIONS are `computeCoverage`'s, tested in
 // tests/unit/coverage.test.js; this pins that CoveragePanel RENDERS each objective
-// condition the pastor needs to see — the deterministic pressure Discovery Steps 5
-// and 8 apply (it exposes his own work; it never gates or completes it).
+// condition the pastor needs to see (it exposes his own work; it never gates or
+// completes it).
 
 const luke = { book_id: "luke", passage_range: "", kind: "book" };
 
