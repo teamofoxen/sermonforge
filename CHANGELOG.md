@@ -2,6 +2,24 @@
 
 ---
 
+## 2026-07-24 — docs: web migration exploration, v1 design, and build sequence
+
+- `docs/web-migration-exploration.md` — inventory for a Next.js + Prisma +
+  Postgres move (ports / reworks / deletes); the theology-vector stack is
+  confirmed dormant with zero UI consumers, and `sermon_search` is a LIKE
+  table, not FTS5.
+- `docs/web-v1-design.md` — the settled design: durable `SermonSlot` vs.
+  transient `SermonWork` (seam verified column by column), Prisma schema, work
+  generations, whole-row PUT with `rev` preconditions, and the archive/discard
+  deletion ceremony.
+- `docs/web-v1-build-sequence.md` — build order: ten pre-cutover units ending
+  in one real sermon preached from its Drive export; deletion, planner
+  expansion, Discover, Schedule, and the study guide all land after cutover.
+- Planning only — no code, schema, or dependency changes. The CORE no-backend
+  amendment is the first build unit, before any contradicting code.
+
+---
+
 ## 2026-07-22 — refactor: Series Discovery simplified to a seven-part worksheet (product-owner ruling)
 
 Remediation of the completed product/UX audit, on the same unmerged
