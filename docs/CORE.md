@@ -8,6 +8,27 @@
 
 ---
 
+## Successor development notice (2026-07-24)
+
+**SermonForge Web is now being developed in `C:\Projects\SermonForge-Web`** — a
+separate repository, per the ruling in [`docs/web-v1-build-sequence.md`](web-v1-build-sequence.md).
+
+- **This repository remains the operating desktop application until cutover.** The
+  desktop app is not retired. Cutover has not happened; it is the week a new sermon
+  is first prepared in the browser.
+- **No web implementation belongs in this repository.** The Next.js app, the Prisma
+  schema, the Postgres data model, auth, and the Drive export all live in the
+  successor repository.
+- **After cutover this repository will be frozen, not maintained in parallel.** No
+  parallel feature development, and no final release is planned.
+- **The local-first rules below continue to describe this desktop codebase** and
+  remain fully binding here — the no-backend boundary, the userData-path law, the
+  IPC and better-sqlite3 boundaries, all of it. The successor repository amended
+  its own carried copy of CORE for the web architecture; that amendment has no
+  effect on this document.
+
+---
+
 ## Project Identity
 
 SermonForge is a **local-first Electron desktop app** built by a pastor who

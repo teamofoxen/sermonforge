@@ -2,6 +2,20 @@
 
 ---
 
+## 2026-07-24 — docs: successor-development notice in CORE (web Unit 0)
+
+- `docs/CORE.md` — a notice at the top: SermonForge Web is now being developed in
+  `C:\Projects\SermonForge-Web`; this repository remains the operating desktop
+  application until cutover; no web implementation belongs here; after cutover this
+  repository is frozen rather than maintained in parallel; the local-first rules
+  below continue to describe this desktop codebase and remain binding here.
+- The desktop app is **not** retired — cutover has not happened.
+- Docs only. No application code, dependency, configuration, test, packaging, or
+  behavior change. The web repository's own carried copy of CORE was amended for
+  the web architecture; that amendment has no effect on this document.
+
+---
+
 ## 2026-07-24 — docs: web migration exploration, v1 design, and build sequence
 
 - `docs/web-migration-exploration.md` — inventory for a Next.js + Prisma +
